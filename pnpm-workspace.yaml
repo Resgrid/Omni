@@ -181,7 +181,7 @@ catalog:
   tsx: '^4.20.6'
   typescript: '~6.0.3'
   wait-on: '9.0.3'
-  zod: '3.23.8'
+  zod: '4.6.6'
   zustand: '4.5.7'
 
 # Carried from the legacy apps (identical in all five): gluestack ActionsheetContent uses a fixed
