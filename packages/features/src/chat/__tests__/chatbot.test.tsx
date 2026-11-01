@@ -147,7 +147,9 @@ describe('ChatbotScreen', () => {
     const { rerender } = render(<ChatbotScreen />);
     expect(screen.getByTestId('chatbot-loading')).toBeOnTheScreen();
 
-    act(() => useChatStore.setState({ errors: { chatbot: { code: 'not_found', status: 404, messageKey: 'errors.data.not_found' } } }));
+    act(() => {
+      useChatStore.setState({ errors: { chatbot: { code: 'not_found', status: 404, messageKey: 'errors.data.not_found' } } });
+    });
     rerender(<ChatbotScreen />);
     expect(screen.getByTestId('chatbot-unavailable')).toBeOnTheScreen();
     expect(screen.queryByTestId('chatbot-retry')).toBeNull();
@@ -243,7 +245,9 @@ describe('ChatbotScreen', () => {
     fireEvent.press(screen.getByTestId('message-action-copy', q));
     await waitFor(() => expect(mockSetString).toHaveBeenCalledWith('Answer r1'));
 
-    act(() => securityStore.setState({ rights: { IsAdmin: true } as DepartmentRightsResultData }));
+    act(() => {
+      securityStore.setState({ rights: { IsAdmin: true } as DepartmentRightsResultData });
+    });
     fireEvent(screen.getByTestId('chat-message-r1'), 'longPress');
     fireEvent.press(screen.getByTestId('message-action-pin', q));
     await waitFor(() => expect(mockPin).toHaveBeenCalledWith('r1', true));

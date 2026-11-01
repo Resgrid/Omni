@@ -130,7 +130,9 @@ describe('PendingCallsScreen', () => {
     act(() => emitRealtimeEvent('callAdded', '9'));
     expect(mockFetchPending).toHaveBeenCalledWith(expect.objectContaining({ bypassCache: true }));
     unmount();
-    act(() => useCallsStore.setState({ pendingCalls: [] }));
+    act(() => {
+      useCallsStore.setState({ pendingCalls: [] });
+    });
     render(<PendingCallsScreen realtime={false} />);
     expect(screen.getByText('pending_calls.no_pending_calls')).toBeTruthy();
   });

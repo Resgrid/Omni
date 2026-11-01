@@ -40,7 +40,7 @@ catalog:
   '@expo/metro-runtime': '~58.0.16'
   '@gluestack-ui/core': '^5.0.15'
   '@gluestack-ui/utils': '^5.0.6'
-  '@hookform/resolvers': '3.9.1'
+  '@hookform/resolvers': '7.0.1'
   '@legendapp/motion': '2.5.3'
   '@livekit/react-native': '2.12.0'
   '@livekit/react-native-expo-plugin': '1.0.2'
@@ -173,8 +173,8 @@ catalog:
   tailwindcss: '^4.2.0'
   tsx: '^4.23.15'
   typescript: '~6.0.3'
-  zod: '3.23.8'
-  zustand: '4.5.7'
+  zod: '4.6.7'
+  zustand: '5.0.16'
 
 # Carried from the legacy apps (identical in all five): gluestack ActionsheetContent uses a fixed
 # window height (broken in landscape). The react-native-webview iOS thread-safety fix is upstream since 14.0.1.

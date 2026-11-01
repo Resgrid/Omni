@@ -124,12 +124,16 @@ describe('AwaitingResourcesScreen', () => {
   });
 
   it('shows the empty state, and "not enabled" once flags resolved off', () => {
-    act(() => useAwaitingResourcesStore.setState({ calls: [] }));
+    act(() => {
+      useAwaitingResourcesStore.setState({ calls: [] });
+    });
     const { unmount } = render(<AwaitingResourcesScreen now={() => NOW} />);
     expect(screen.getByText('awaiting_resources.empty_title')).toBeTruthy();
     unmount();
     mockFetchAwaiting.mockClear();
-    act(() => enable(false));
+    act(() => {
+      enable(false);
+    });
     render(<AwaitingResourcesScreen now={() => NOW} />);
     expect(screen.getByText('awaiting_resources.not_enabled')).toBeTruthy();
     expect(mockFetchAwaiting).not.toHaveBeenCalled();
@@ -154,7 +158,7 @@ describe('banner, alerts and sync', () => {
     expect(handle).toHaveBeenCalledWith('0', '{}');
     expect(useToastStore.getState().toasts[0]).toMatchObject({ type: 'info', message: 'M-7 auto-dispatched' });
 
-    act(() =>
+    act(() => {
       useAwaitingResourcesStore.setState({
         unitAlerts: [
           {
@@ -167,8 +171,8 @@ describe('banner, alerts and sync', () => {
             calls: [{ callId: 1, callNumber: '26-1', callName: null, priority: 1, label: 'MUG', responseSeconds: 60, ageMinutes: 3 }],
           },
         ],
-      })
-    );
+      });
+    });
     expect(screen.getByText('awaiting_resources.unit_available_title:M-7 (MUG)')).toBeTruthy();
     await act(async () => fireEvent.press(screen.getByTestId('unit-available-alert-7-dispatch-1')));
     expect(mockDispatchUnit).toHaveBeenCalledWith(1, 7);

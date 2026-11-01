@@ -114,7 +114,9 @@ describe('PendingApprovalWatcher', () => {
     const { rerender } = render(<PendingApprovalWatcher />);
     expect(mockFetch).not.toHaveBeenCalled();
 
-    act(() => useAuthStore.setState({ status: 'signedIn' }));
+    act(() => {
+      useAuthStore.setState({ status: 'signedIn' });
+    });
     rerender(<PendingApprovalWatcher />);
     await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
   });

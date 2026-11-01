@@ -60,7 +60,9 @@ describe('ShiftsScreen', () => {
     const { rerender } = render(<ShiftsScreen />);
     expect(screen.queryByTestId('shifts-segment-approvals')).toBeNull();
 
-    act(() => useShiftsStore.setState({ pendingApprovals: { IsSupervisor: true, Signups: [makeSignup('p1')], Trades: [] } }));
+    act(() => {
+      useShiftsStore.setState({ pendingApprovals: { IsSupervisor: true, Signups: [makeSignup('p1')], Trades: [] } });
+    });
     rerender(<ShiftsScreen />);
     expect(screen.getByTestId('shifts-segment-badge-approvals')).toHaveTextContent('1');
 

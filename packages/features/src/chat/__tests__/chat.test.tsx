@@ -134,7 +134,9 @@ describe('ChatGate', () => {
       </ChatGate>
     );
     expect(screen.getByTestId('chat-gate-loading')).toBeTruthy();
-    act(() => enableChat());
+    act(() => {
+      enableChat();
+    });
     rerender(
       <ChatGate>
         <Text>chat</Text>

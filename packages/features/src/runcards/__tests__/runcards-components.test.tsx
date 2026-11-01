@@ -178,7 +178,9 @@ describe('alarm level and escalation', () => {
     expect(screen.queryByTestId('alarm-level-badge')).toBeNull();
     rerender(<AlarmLevelBadge alarmLevel={3} />);
     expect(screen.getByText('run_cards.alarm_level:3')).toBeTruthy();
-    act(() => featureFlagsStore.setState({ flags: {} as never }));
+    act(() => {
+      featureFlagsStore.setState({ flags: {} as never });
+    });
     rerender(<AlarmLevelBadge alarmLevel={3} />);
     expect(screen.queryByTestId('alarm-level-badge')).toBeNull();
   });

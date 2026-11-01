@@ -281,7 +281,9 @@ describe('registered providers', () => {
       mounted();
       return <>{children}</>;
     });
-    act(() => useAuthStore.setState({ status: 'signedOut', accessToken: null, userId: null }));
+    act(() => {
+      useAuthStore.setState({ status: 'signedOut', accessToken: null, userId: null });
+    });
 
     await renderShell('dispatch');
     expect(screen.getByTestId('shell-gate')).toBeTruthy();

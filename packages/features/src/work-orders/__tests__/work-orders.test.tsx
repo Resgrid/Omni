@@ -141,7 +141,9 @@ describe('WorkOrdersGate', () => {
     featureFlagsStore.setState({ flags: {}, isLoaded: false } as never);
     const { rerender } = render(<WorkOrdersScreen />);
     expect(screen.getByTestId('work-orders-gate-loading')).toBeTruthy();
-    act(() => enable(false));
+    act(() => {
+      enable(false);
+    });
     rerender(<WorkOrdersScreen />);
     expect(screen.getByTestId('redirect')).toHaveTextContent('/home');
     expect(store.fetchWorkOrders).not.toHaveBeenCalled();
@@ -291,7 +293,9 @@ describe('WorkOrderDetailScreen', () => {
     expect(screen.getByTestId('work-order-notice')).toHaveTextContent('workOrders.photoAdded');
     fireEvent.press(screen.getByTestId('work-order-file-f1'));
     expect(store.fetchImage).toHaveBeenCalledWith('f1');
-    act(() => useWorkOrdersStore.setState({ imagesById: { f1: 'data:image/jpeg;base64,AAA' } }));
+    act(() => {
+      useWorkOrdersStore.setState({ imagesById: { f1: 'data:image/jpeg;base64,AAA' } });
+    });
     expect(screen.getByTestId('work-order-image-f1')).toBeTruthy();
   });
 
