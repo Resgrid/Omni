@@ -6,7 +6,7 @@ Canonical instructions for every coding agent in this repository (Claude Code re
 
 Resgrid Omni is **one Expo (prebuild/CNG) React Native codebase that builds the five Resgrid client apps** — Responder, Unit, IC, Dispatch, BigBoard — each for **iOS, Android, web (Docker) and Electron (Windows, macOS, Linux)**. It replaces five forked repos (`../Responder`, `../Unit`, `../IC`, `../Dispatch`, `../BigBoard`) whose common code drifted.
 
-- **Status (2026-10-31): planning; owner decisions recorded in plan §15.** The plan is `docs/architecture/omni-plan.md`. Read the relevant section before building anything; when code and plan disagree, the code wins and the plan gets updated in the same change.
+- **Status (2026-11-01): Phases 0–4 code complete (all five apps' modules, routes and tests); device verification, store releases and the open items are tracked in `docs/implementation-status.md`. Owner decisions are recorded in plan §15.** The plan is `docs/architecture/omni-plan.md`. Read the relevant section before building anything; when code and plan disagree, the code wins and the plan gets updated in the same change.
 - Related plans (in `../int-Coordination/docs/architecture`): `maplibre-mapping-routing-navigation-plan.md` (maps, offline maps, Unit navigation), `offline-first-architecture.md`, `mobile-feature-exposure.md` (which app gets which module), `identifier-allocation-registry.md` (server ids, settings, migrations).
 
 ## Stack
