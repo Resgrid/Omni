@@ -1,0 +1,1262 @@
+{
+  "app": {
+    "open_menu": "Apri menu",
+    "realtime_offline_description": "Riconnessione in corso. Nuove chiamate e messaggi potrebbero non essere visualizzati.",
+    "realtime_offline_title": "Aggiornamenti in tempo reale non disponibili"
+  },
+  "audio_streams": {
+    "error_loading_stream": "Impossibile caricare il flusso audio"
+  },
+  "bluetooth": {
+    "audio_active": "Audio attivo",
+    "button_control_available": "Controllo tramite pulsanti disponibile",
+    "button_event": {
+      "double_press": "{{button}} doppio",
+      "long_press": "{{button}} lungo"
+    },
+    "button_event_applied": "Applicato",
+    "buttons": {
+      "mute": "Muto",
+      "ptt_start": "Avvio PTT",
+      "ptt_stop": "Fine PTT",
+      "unknown": "Sconosciuto",
+      "volume_down": "Volume -",
+      "volume_up": "Volume +"
+    },
+    "checking_status": "Verifica dello stato del Bluetooth...",
+    "connection_error": "Errore di connessione",
+    "livekit_active": "LiveKit attivo",
+    "powered_off_message": "Il Bluetooth è disattivato. Attiva il Bluetooth per connettere dispositivi audio.",
+    "recent_button_events": "Eventi pulsanti recenti",
+    "rssi_dbm": "{{rssi}} dBm",
+    "rssi_value": "RSSI: {{rssi}}dBm",
+    "start_scanning": "Avvia ricerca",
+    "stop_scan": "Interrompi ricerca",
+    "unauthorized_message": "Autorizzazione Bluetooth negata. Concedi i permessi Bluetooth nelle Impostazioni."
+  },
+  "calendar": {
+    "allDay": "Tutto il giorno",
+    "attendanceUpdated": {
+      "signedUp": "Si è iscritto/a con successo a questo evento.",
+      "title": "Partecipazione aggiornata",
+      "unsignedUp": "È stato/a rimosso/a da questo evento."
+    },
+    "attendees": {
+      "title": "Partecipanti"
+    },
+    "attendeesCount": "{{count}} partecipante",
+    "attendeesCount_plural": "{{count}} partecipanti",
+    "confirmSignup": "Conferma",
+    "confirmUnsignup": {
+      "message": "È sicuro/a di voler annullare la propria partecipazione a questo evento?",
+      "title": "Conferma annullamento"
+    },
+    "createdBy": "Creato da",
+    "daysOfWeek": {
+      "fri": "Ven",
+      "mon": "Lun",
+      "sat": "Sab",
+      "sun": "Dom",
+      "thu": "Gio",
+      "tue": "Mar",
+      "wed": "Mer"
+    },
+    "description": "Descrizione",
+    "error": {
+      "attendanceUpdate": "Impossibile aggiornare la partecipazione. Riprovare.",
+      "title": "Errore"
+    },
+    "eventsCount": "{{count}} evento",
+    "eventsCount_plural": "{{count}} eventi",
+    "loading": {
+      "date": "Caricamento eventi per la data selezionata...",
+      "today": "Caricamento eventi di oggi...",
+      "upcoming": "Caricamento eventi in programma..."
+    },
+    "noEvents": "Nessun evento in programma",
+    "optional": "Facoltativo",
+    "required": "Obbligatorio",
+    "selectDate": "Selezionare una data per visualizzare gli eventi",
+    "selectedDate": {
+      "empty": "Nessun evento in programma per questa data.",
+      "title": "Eventi del {{date}}"
+    },
+    "signedUp": "Iscritto/a",
+    "signup": {
+      "button": "Iscriviti",
+      "notePlaceholder": "Inserire la nota qui...",
+      "notePrompt": "Aggiungere una nota (facoltativo):",
+      "title": "Iscrizione all'evento"
+    },
+    "signupAvailable": "Iscrizione disponibile",
+    "tabs": {
+      "calendar": "Calendario",
+      "today": "Oggi",
+      "upcoming": "In programma"
+    },
+    "tapToSignUp": "Toccare per iscriversi",
+    "title": "Calendario",
+    "today": {
+      "empty": {
+        "description": "Non ha eventi in programma per oggi.",
+        "title": "Nessun evento oggi"
+      }
+    },
+    "todayButton": "Oggi",
+    "unsignup": "Annulla partecipazione",
+    "upcoming": {
+      "empty": {
+        "description": "Non ha eventi in programma nei prossimi 7 giorni.",
+        "title": "Nessun evento in programma"
+      }
+    }
+  },
+  "callImages": {
+    "capture_error": "Errore durante l'acquisizione della foto. Riprovare.",
+    "permission_denied_settings": "Autorizzazione negata. Abilitare l'accesso nelle impostazioni del dispositivo.",
+    "select_error": "Errore durante la selezione dell'immagine. Riprovare.",
+    "upload_success": "Immagine caricata con successo",
+    "url_label": "URL: {{url}}"
+  },
+  "callNotes": {
+    "addNoteError": "Impossibile aggiungere la nota. Riprovare."
+  },
+  "call_detail": {
+    "route_to_destination": "Percorso verso la destinazione",
+    "tabs": {
+      "command": "Comando"
+    }
+  },
+  "calls": {
+    "assigned_to_me": "Assegnata a me",
+    "destination_load_error": "Impossibile caricare i POI di destinazione",
+    "destination_placeholder": "Seleziona destinazione",
+    "external_id": "ID esterno",
+    "only_calls_im_on": "Solo chiamate a cui sono assegnato",
+    "personnel": "Personale",
+    "protocols": "Protocolli",
+    "reference_id": "ID di riferimento",
+    "required_fields_missing": "Il tuo dipartimento richiede questi campi prima di poter salvare una chiamata: {{fields}}",
+    "search_address": "Cerca indirizzo",
+    "search_coordinates": "Cerca coordinate",
+    "search_plus_code": "Cerca plus code",
+    "search_what3words": "Cerca indirizzo what3words"
+  },
+  "certifications": {
+    "add": "Aggiungi",
+    "addHours": "Aggiungi ore",
+    "addHoursWithPhoto": "Aggiungi ore con foto",
+    "areaIs": "Ambito: {{area}}",
+    "back": "Indietro",
+    "cancel": "Annulla",
+    "category": "Categoria (corso, esercitazione, convegno)",
+    "certificateAttached": "certificato allegato",
+    "creditAdded": "Ore aggiunte.",
+    "creditDate": "Data (oggi per impostazione predefinita)",
+    "creditNote": "Di cosa si trattava",
+    "credits": "{{hours}} su {{required}} ore di formazione continua",
+    "creditsTitle": "{{hours}} ore di formazione continua",
+    "dateInvalid": "Inserisci le date come aaaa-mm-gg.",
+    "edit": "Modifica",
+    "errors": {
+      "certifications_file_invalid": "Impossibile leggere la foto.",
+      "certifications_file_too_large": "La foto è troppo grande.",
+      "denied": "Non hai accesso a questa certificazione.",
+      "locked": "Sblocca i dati protetti per continuare.",
+      "retry": "Impossibile raggiungere il server. Riprova.",
+      "validation": "Il server ha rifiutato la modifica."
+    },
+    "expired": "Scaduta il {{date}}",
+    "expires": "Scade il {{date}} ({{days}} giorni)",
+    "form": {
+      "area": "Ambito o livello",
+      "choosePhoto": "Scegli foto",
+      "expiresOn": "Scade",
+      "issuedBy": "Rilasciata da",
+      "name": "Nome",
+      "number": "Numero",
+      "otherType": "Altro (inserisci un nome)",
+      "photoAttached": "Foto allegata.",
+      "receivedOn": "Conseguita",
+      "save": "Salva",
+      "takePhoto": "Foto della tessera",
+      "type": "Certificazione"
+    },
+    "hasFile": "In archivio è presente una tessera o un certificato",
+    "hours": "Ore",
+    "hoursInvalid": "Inserisci più di 0 ore.",
+    "issuedByIs": "Rilasciata da {{name}}",
+    "nameRequired": "Scegli un tipo o inserisci un nome.",
+    "newExpiry": "Nuova data di scadenza",
+    "newNumber": "Nuovo numero (facoltativo)",
+    "noExpiry": "Non scade",
+    "none": "Non hai ancora aggiunto certificazioni.",
+    "notVerified": "Non ancora verificata dall'organizzazione",
+    "numberIs": "Numero {{number}}",
+    "photoDenied": "Consenti l'accesso alla fotocamera o alle foto per allegare una foto.",
+    "receivedOn": "Conseguita il {{date}}",
+    "remove": "Rimuovi",
+    "removeBody": "Verrà rimossa dal tuo fascicolo. La tua organizzazione vede comunque lo storico.",
+    "removeTitle": "Rimuovere la certificazione?",
+    "renew": "Rinnova",
+    "renewSave": "Salva rinnovo",
+    "renewed": "Rinnovo salvato.",
+    "status": {
+      "0": "Attiva",
+      "1": "Scaduta",
+      "2": "Sospesa",
+      "3": "Revocata",
+      "4": "In attesa di verifica",
+      "5": "In formazione"
+    },
+    "title": "Le mie certificazioni",
+    "untitled": "Certificazione",
+    "verifiedOn": "Verificata il {{date}}"
+  },
+  "chat": {
+    "attach": "Allega",
+    "back_to_chats": "Torna alle chat",
+    "new_conversation": "Nuova conversazione"
+  },
+  "check_in": {
+    "add_note": "Aggiungi Nota (Opzionale)",
+    "confirm_check_in": "Conferma Check-In",
+    "duration": "Durata",
+    "gps_coordinates": "GPS: {{latitude}}, {{longitude}}",
+    "history": "Cronologia Check-In",
+    "minutes_ago": "{{count}} min fa",
+    "no_timers": "Nessun timer check-in configurato",
+    "offline_queued": "Check-in in coda per quando online",
+    "progress": "{{elapsed}} / {{total}} min",
+    "timer_interval": "Ogni {{minutes}} min",
+    "type_hazmat": "Esposizione Hazmat",
+    "type_ic": "Comandante Incidente",
+    "unknown_unit": "Unità sconosciuta"
+  },
+  "checklists": {
+    "labels": {
+      "AssignmentAutomatic": "Assegnazione automatica"
+    }
+  },
+  "common": {
+    "active": "Attivo",
+    "all": "Tutti",
+    "deleting": "Eliminazione...",
+    "discard": "Ignora",
+    "navigation": "Navigazione",
+    "noActiveUnit": "Nessuna unità attiva",
+    "noActiveUnitDescription": "Selezionare un'unità attiva per visualizzare gli stati disponibili",
+    "no_data_available": "Nessun dato disponibile",
+    "success": "Successo",
+    "system": "Sistema"
+  },
+  "contacts": {
+    "descriptionLabel": "Descrizione",
+    "errorTitle": "Errore",
+    "openAppError": "Impossibile aprire l'app {{action}}",
+    "openLinkFailed": "Impossibile aprire il link {{action}}:"
+  },
+  "home": {
+    "active_call": {
+      "clear_active": "Cancella Chiamata Attiva",
+      "no_active_call": "Nessuna chiamata attiva selezionata",
+      "select_call": "Seleziona una chiamata da tracciare",
+      "set_active": "Imposta come Chiamata Attiva",
+      "title": "Chiamata Attiva",
+      "view_details": "Visualizza Dettagli Chiamata"
+    },
+    "error": {
+      "no_user_id": "ID utente non disponibile"
+    },
+    "sidebar": {
+      "audio": "Audio",
+      "ptt": "PTT"
+    },
+    "staffing": {
+      "add_note": "Aggiungi nota",
+      "add_note_action": "Aggiungi una nota",
+      "confirm_staffing": "Conferma personale: {{staffing}}",
+      "missing_required_info": "Informazioni richieste mancanti",
+      "no_options_available": "Nessuna opzione di personale disponibile",
+      "no_staffing_options": "Nessuna opzione di personale disponibile",
+      "note": "Nota",
+      "note_placeholder": "Inserire una nota (facoltativo)...",
+      "note_required_hint": "Apre un modulo per inserire la nota obbligatoria",
+      "quick_set_hint": "Imposta subito la tua disponibilità. Tieni premuto per aggiungere una nota.",
+      "review_and_confirm": "Rivedi e conferma",
+      "select_staffing_level": "Seleziona livello di personale",
+      "select_staffing_level_description": "Scegliere il proprio stato di personale attuale",
+      "selected_staffing": "Personale selezionato",
+      "set_staffing": "Imposta personale",
+      "staffing_level": "Livello di personale",
+      "update_failed": "Impossibile aggiornare il personale",
+      "updated_successfully": "Personale aggiornato con successo"
+    },
+    "stats": {
+      "open_calls": "Chiamate aperte",
+      "personnel_in_service": "Personale in servizio",
+      "units_in_service": "Unità in servizio"
+    },
+    "status": {
+      "no_options_available": "Nessuna opzione di stato disponibile",
+      "update_failed": "Impossibile aggiornare lo stato",
+      "updated_successfully": "Stato aggiornato con successo"
+    },
+    "summary": {
+      "active_calls": "Chiamate attive",
+      "active_severe_weather_alerts": "Allerte meteo gravi/di emergenza attive",
+      "calls_im_on": "Chiamate a cui sono assegnato",
+      "pending_missed_checkins": "Check-in in sospeso/mancati"
+    },
+    "tabs": {
+      "call": "Chiamata",
+      "dashboard": "Pannello",
+      "map": "Mappa",
+      "staffing": "Personale",
+      "status": "Stato"
+    },
+    "user": {
+      "my_staffing": "Il mio personale",
+      "my_status": "Il mio stato",
+      "staffing_unknown": "Personale sconosciuto",
+      "status_unknown": "Stato sconosciuto",
+      "updated": "Aggiornato"
+    }
+  },
+  "incident_command": {
+    "assigned_since": "Assegnato dal",
+    "empty_state": "Nessun comando incidente attivo per questa chiamata",
+    "error_loading": "Impossibile caricare le informazioni del comando incidente",
+    "my_assignment": "La mia assegnazione",
+    "need_category_equipment": "Attrezzatura",
+    "need_category_logistics": "Logistica",
+    "need_category_medical": "Medica",
+    "need_category_other": "Altra",
+    "need_category_resource": "Risorsa",
+    "need_category_staffing": "Personale",
+    "need_status_cancelled": "Annullata",
+    "need_status_met": "Soddisfatta",
+    "need_status_open": "Aperta",
+    "need_status_partially_met": "Parzialmente soddisfatta",
+    "objective_status_complete": "Completato",
+    "objective_status_in_progress": "In corso",
+    "objective_status_pending": "In attesa",
+    "objective_type_benchmark": "Traguardo",
+    "objective_type_general": "Generale",
+    "objective_type_safety": "Sicurezza",
+    "percent_complete": "{{percent}}%",
+    "quantity": "{{fulfilled}}/{{requested}}"
+  },
+  "livekit": {
+    "connection_failed": "Impossibile accedere al canale vocale",
+    "double_click_action": "Azione doppio clic",
+    "headset_button_ptt": "Pulsante auricolare PTT",
+    "headset_monitoring_active": "Monitoraggio auricolare attivo",
+    "headset_monitoring_inactive": "Monitoraggio auricolare inattivo",
+    "headset_ptt_description": "Usare il pulsante AirPods o degli auricolari Bluetooth per attivare/disattivare il microfono",
+    "headset_ptt_disabled": "PTT auricolare disabilitato",
+    "headset_ptt_enabled": "PTT auricolare abilitato",
+    "long_press_action": "Azione pressione prolungata",
+    "no_action": "Nessuna azione",
+    "play_pause_action": "Azione pulsante riproduzione/pausa",
+    "ptt_mode": "Modalità PTT",
+    "ptt_mode_disabled": "Disabilitato",
+    "ptt_mode_push": "Push-to-Talk (tenere premuto per parlare)",
+    "ptt_mode_toggle": "Commutazione (toccare per attivare/disattivare il silenziamento)",
+    "sound_feedback": "Feedback sonoro",
+    "tap_to_toggle_mute": "Toccare il pulsante dell'auricolare per attivare/disattivare il silenziamento",
+    "toggle_mute": "Attiva/disattiva silenziamento"
+  },
+  "location": {
+    "tracking_notification_body": "Condivisione della tua posizione con il tuo dipartimento."
+  },
+  "login": {
+    "change_server_url": "Modifica URL server",
+    "select_language": "Seleziona lingua",
+    "sso": {
+      "back": "Indietro",
+      "change_department": "Cambia nome utente",
+      "continue_button": "Continua",
+      "department_code_label": "Codice dipartimento",
+      "department_code_placeholder": "Inserire il codice del dipartimento",
+      "department_code_required": "Il codice del dipartimento è obbligatorio",
+      "department_description": "Inserire il codice del dipartimento per accedere",
+      "department_id_invalid": "L'ID del dipartimento deve essere un numero",
+      "department_id_label": "ID dipartimento (facoltativo)",
+      "department_id_placeholder": "Inserire l'ID del dipartimento se noto",
+      "department_not_found": "Dipartimento non trovato. Verificare il codice e riprovare.",
+      "login_with_sso_button": "Accedi con SSO",
+      "looking_up": "Ricerca dell'account...",
+      "lookup_network_error": "Impossibile raggiungere il server. Verificare la connessione e riprovare.",
+      "or_sign_in_with_password": "— oppure accedere con password —",
+      "page_title": "Accesso con SSO",
+      "sign_in_with_sso": "Accedi con SSO",
+      "sso_not_enabled": "SSO non è abilitato per questo account. Utilizzare il nome utente e la password.",
+      "user_description": "Inserire il nome utente o l'e-mail Resgrid per accedere con SSO",
+      "user_not_found": "Account non trovato. Verificare il nome utente e riprovare.",
+      "username_label": "Nome utente o e-mail",
+      "username_placeholder": "Inserire il nome utente o l'e-mail",
+      "username_required": "Il nome utente è obbligatorio"
+    }
+  },
+  "map": {
+    "loading_markers": "Caricamento indicatori mappa...",
+    "openSideMenu": "Apri menu laterale",
+    "tabs": {
+      "map": "Mappa",
+      "pois": "POI"
+    }
+  },
+  "maps": {
+    "contact_administrator": "Contattare l'amministratore per configurare i servizi di mappatura.",
+    "failed_to_load": "Impossibile caricare la mappa. Verificare la connessione Internet.",
+    "legend": {
+      "error": "Impossibile caricare la legenda della mappa.",
+      "loading": "Caricamento della legenda della mappa...",
+      "no_meaning": "Nessun significato",
+      "open": "Apri la legenda della mappa",
+      "other": "Altro",
+      "statuses": "Stati",
+      "style": {
+        "unknown": "Nessun significato o nessuno stato"
+      }
+    },
+    "mapbox_not_configured": "Mapbox non è configurato. Contattare l'amministratore."
+  },
+  "messages": {
+    "all_messages": "Tutti i messaggi",
+    "attending": "Parteciperò",
+    "calendar_rsvp": "RSVP calendario",
+    "compose": "Componi",
+    "compose_new_message": "Nuovo messaggio",
+    "date_unknown": "Data sconosciuta",
+    "delete_confirmation_message": "È sicuro/a di voler eliminare {{count}} messaggio/i?",
+    "delete_confirmation_title": "Elimina messaggi",
+    "delete_single_confirmation_message": "È sicuro/a di voler eliminare questo messaggio?",
+    "enter_expiration_date": "Inserire la data di scadenza",
+    "enter_message_body": "Inserire il messaggio",
+    "enter_note": "Inserire una nota facoltativa",
+    "enter_response": "Inserire la risposta",
+    "enter_subject": "Inserire l'oggetto del messaggio",
+    "error": "Errore",
+    "expiration_date_format": "Formato: AAAA-MM-GG HH:MM",
+    "expiration_date_optional": "Data di scadenza (facoltativo)",
+    "expired": "Scaduto",
+    "expires_on": "Scade il",
+    "from": "Da",
+    "inbox": "Posta in arrivo",
+    "message_body": "Corpo del messaggio",
+    "message_content": "Contenuto del messaggio",
+    "message_type": "Tipo di messaggio",
+    "no_content": "Nessun contenuto",
+    "no_messages": "Nessun messaggio trovato",
+    "no_messages_description": "Inviare il primo messaggio per iniziare",
+    "no_subject": "Senza oggetto",
+    "not_attending": "Non parteciperò",
+    "note_optional": "Nota (facoltativo)",
+    "people": "Persone",
+    "recipients": "Destinatari",
+    "recipients_count": "{{count}} destinatari",
+    "recipients_selected": "{{count}} destinatari selezionati",
+    "respond_failed": "Impossibile rispondere al messaggio",
+    "respond_to_message": "Rispondi al messaggio",
+    "responded": "Risposto",
+    "responded_on": "Risposto il",
+    "responding": "Risposta in corso...",
+    "response": "Risposta",
+    "response_required": "La risposta è obbligatoria",
+    "search_placeholder": "Cerca messaggi...",
+    "select_all": "Seleziona tutto",
+    "select_message": "Seleziona messaggio",
+    "select_message_type": "Seleziona tipo di messaggio",
+    "select_recipients": "Seleziona destinatari",
+    "selected_count": "{{count}} selezionato/i",
+    "send": "Invia",
+    "send_first_message": "Invia il primo messaggio",
+    "send_response": "Invia risposta",
+    "sending": "Invio in corso...",
+    "sent": "Inviato",
+    "showing_count": "Visualizzazione di {{count}} messaggi",
+    "subject": "Oggetto",
+    "title": "Messaggi",
+    "types": {
+      "alert": "Avviso",
+      "calendar_rsvp": "RSVP calendario",
+      "message": "Messaggio",
+      "poll": "Sondaggio"
+    },
+    "unsaved_changes": "Modifiche non salvate",
+    "unsaved_changes_message": "Sono presenti modifiche non salvate. Procedere comunque?",
+    "validation": {
+      "body_required": "Il corpo del messaggio è obbligatorio",
+      "recipients_required": "È necessario almeno un destinatario",
+      "subject_required": "L'oggetto è obbligatorio"
+    }
+  },
+  "mfa": {
+    "approve": {
+      "app": "App: {{app}}",
+      "approve": "Approva",
+      "approved": "Approvato. Puoi tornare all’altro schermo.",
+      "denied": "Rifiutato. Non è stato approvato nulla.",
+      "deny": "Rifiuta",
+      "department": "Reparto: {{department}}",
+      "done": "Fatto",
+      "expires": "Scade alle {{time}}",
+      "installation": "Dispositivo: {{label}}",
+      "none": "Niente attende la tua approvazione.",
+      "not_me": "Non ero io",
+      "number_body": "Inserisci il numero mostrato sull’altro schermo, poi conferma con la tua passkey. Approva solo se l’hai avviato tu.",
+      "number_mismatch": "Non è il numero dell’altro schermo. Tentativi rimasti: {{count}}.",
+      "number_placeholder": "Numero",
+      "origin": "Vicino a: {{origin}}",
+      "purpose": {
+        "adp": "Qualcuno vuole vedere informazioni protette",
+        "department_entry": "Qualcuno sta passando a un reparto come te",
+        "login": "Qualcuno sta accedendo al tuo account",
+        "step_up": "Qualcuno sta confermando un’azione con il tuo account",
+        "unlock": "Qualcuno sta sbloccando un dispositivo condiviso come te"
+      },
+      "shared": "Su un dispositivo condiviso",
+      "title": "Approvare l’accesso?",
+      "unknown_app": "Un’altra app Resgrid"
+    }
+  },
+  "not_found": {
+    "go_home": "Vai alla schermata iniziale!",
+    "message": "Questa schermata non esiste.",
+    "title": "Ops!"
+  },
+  "notifications": {
+    "additionalInformation": "Informazioni aggiuntive",
+    "bulkDeleteError": "Impossibile rimuovere le notifiche",
+    "bulkDeleteSuccess": "{{count}} notifica/e rimossa/e",
+    "confirmDelete": {
+      "message": "È sicuro/a di voler eliminare {{count}} notifica/e? Questa azione non può essere annullata.",
+      "title": "Conferma eliminazione"
+    },
+    "deleteError": "Impossibile rimuovere la notifica",
+    "deleteSuccess": "Notifica rimossa",
+    "deselectAll": "Deseleziona tutto",
+    "loadError": "Impossibile caricare le notifiche",
+    "notAvailable": "N/D",
+    "selectAll": "Seleziona tutto",
+    "selectedCount": "{{count}} selezionato/i",
+    "viewCall": "Visualizza chiamata",
+    "viewChat": "Visualizza chat",
+    "viewMessage": "Visualizza messaggio",
+    "viewReference": "Visualizza {{referenceType}}",
+    "viewWorkOrder": "Visualizza ordine di lavoro"
+  },
+  "onboarding": {
+    "get_started": "Iniziamo",
+    "slides": {
+      "calls": {
+        "description": "Visualizza facilmente le informazioni sulle chiamate e collabora con il tuo team per una risposta di emergenza efficiente",
+        "title": "Interagisci con le chiamate"
+      },
+      "notifications": {
+        "description": "Ricevi avvisi immediati per le emergenze e aggiornamenti importanti dal tuo dipartimento",
+        "title": "Notifiche istantanee"
+      },
+      "responder": {
+        "description": "Gestisci il tuo stato e il personale e interagisci con la tua organizzazione in tempo reale",
+        "title": "{{appName}}"
+      }
+    }
+  },
+  "operations": {
+    "time": {
+      "coveredBy": "Queste ore sono già nel rapporto #{{number}} di questo giorno.",
+      "crewReport": "Rapporto ore dell'equipaggio #{{number}} · {{name}}",
+      "individualReport": "Rapporto ore #{{number}} · {{name}}",
+      "report": "Rapporto #{{number}}"
+    }
+  },
+  "personnel": {
+    "contactInformation": "Informazioni di contatto",
+    "currentStatus": "Stato attuale",
+    "emptyDescription": "Nessun personale corrisponde ai criteri di ricerca o nessun dato di personale è disponibile.",
+    "filter": {
+      "description": "Selezionare i filtri per affinare l'elenco del personale. Le modifiche vengono applicate automaticamente.",
+      "empty": "Nessuna opzione di filtro disponibile",
+      "emptyDescription": "Le opzioni di filtro appariranno qui quando disponibili.",
+      "title": "Filtra personale"
+    },
+    "id": "ID",
+    "status": {
+      "add_note": "Aggiungi nota",
+      "calls_tab": "Chiamate",
+      "current": "Attuale",
+      "current_status": "Stato attuale",
+      "destination_required": "Per questo stato è richiesta una destinazione",
+      "general_status": "Aggiornamento stato generale",
+      "gps_required": "Per questo stato è richiesta la posizione GPS",
+      "hold_to_set_hint": "Tieni premuto per 2 secondi per impostare lo stato",
+      "hold_to_set_instructions": "Tieni premuto uno stato per 2 secondi per impostarlo",
+      "hold_to_submit": "Tieni premuto per inviare",
+      "loading_pois": "Caricamento POI...",
+      "loading_stations": "Caricamento stazioni...",
+      "missing_required_info": "Informazioni richieste mancanti",
+      "no_destination": "Nessuna destinazione",
+      "no_stations_available": "Nessuna stazione disponibile",
+      "note": "Nota",
+      "note_placeholder": "Inserire una nota (facoltativo)...",
+      "note_required": "Per questo stato è richiesta una nota",
+      "pois_tab": "POI",
+      "responding_to_placeholder": "Inserire a cosa si sta rispondendo...",
+      "saved_offline": "Lo stato è stato salvato offline e verrà inviato quando la connessione sarà ripristinata",
+      "select_call_to_respond_to": "Seleziona la chiamata a cui rispondere",
+      "select_destination": "Seleziona destinazione",
+      "select_responding_to": "Imposta stato: {{status}}",
+      "selected_call": "Chiamata selezionata",
+      "set_status": "Imposta stato personale",
+      "show_all_statuses": "Mostra tutti gli stati (altri {{count}})",
+      "show_next_statuses": "Mostra solo gli stati successivi",
+      "stations_tab": "Stazioni",
+      "status": "Stato"
+    }
+  },
+  "pois": {
+    "address_label": "Indirizzo",
+    "coordinates_label": "Coordinate",
+    "destination_enabled": "Destinazione consentita",
+    "empty_description": "Nessun POI corrisponde al filtro corrente.",
+    "empty_title": "Nessun POI trovato",
+    "filter_all_types": "Tutti i tipi",
+    "filter_label": "Filtro",
+    "filter_sort_title": "Filtra e ordina",
+    "invalid_description": "Per visualizzare i dettagli del POI è necessario un ID POI.",
+    "invalid_title": "POI non valido",
+    "list_description": "Sfoglia i POI del dipartimento, filtra per tipo e torna alla mappa.",
+    "load_error_title": "Impossibile caricare il POI",
+    "not_found": "POI non trovato",
+    "note_label": "Nota",
+    "reset_filters": "Reimposta",
+    "results_count": "{{count}} POI",
+    "results_count_plural": "{{count}} POIs",
+    "search_placeholder": "Cerca POI...",
+    "set_status_destination": "Usa come destinazione dello stato",
+    "sort_label": "Ordina",
+    "sort_name": "Nome",
+    "sort_type": "Tipo",
+    "title": "POI",
+    "type_label": "Tipo",
+    "view_details": "Visualizza dettagli",
+    "view_on_map": "Mostra sulla mappa",
+    "view_on_map_hint": "Tieni aperta la mappa per vedere insieme la tua posizione e il POI selezionato."
+  },
+  "push_notifications": {
+    "communication_test_confirmed": "Ricezione confermata. Grazie.",
+    "communication_test_failed": "Impossibile confermare la ricezione. Riprova.",
+    "communication_test_prompt": "Questo è solo un test. Conferma la ricezione affinché il tuo dipartimento sappia di poterti raggiungere.",
+    "confirm_receipt": "Conferma ricezione",
+    "confirming_receipt": "Conferma in corso...",
+    "types": {
+      "communication_test": "Test di comunicazione",
+      "weather": "Allerta meteo",
+      "work_order": "Ordine di lavoro"
+    },
+    "view_alert": "Visualizza allerta",
+    "view_chat": "Visualizza chat",
+    "view_work_order": "Visualizza ordine di lavoro"
+  },
+  "settings": {
+    "logout_confirm_cancel": "Annulla",
+    "logout_confirm_yes": "Sì, disconnetti",
+    "notifications_badge_overflow": "99+",
+    "notifications_button": "Notifiche"
+  },
+  "shifts": {
+    "actions": {
+      "accept": "Accetta",
+      "add_person": "Aggiungi persona",
+      "apply": "Candidati per prenderlo",
+      "approve": "Approva",
+      "cancel_request_admin": "Annulla richiesta",
+      "cancel_trade": "Annulla richiesta di scambio",
+      "confirm": "Conferma",
+      "confirm_signup": "Conferma iscrizione",
+      "decline": "Rifiuta",
+      "deny": "Nega",
+      "remove": "Rimuovi",
+      "request_trade": "Richiedi scambio",
+      "send_request": "Invia richiesta",
+      "withdraw_application": "Ritira candidatura"
+    },
+    "add_panel": {
+      "group": "Gruppo",
+      "no_options": "Nessun altro può essere aggiunto.",
+      "person": "Persona",
+      "search_placeholder": "Cerca personale",
+      "submit": "Aggiungi al turno",
+      "title": "Aggiungi una persona per questo giorno"
+    },
+    "all_shifts": "Tutti i turni",
+    "already_signed_up": "Già iscritto/a",
+    "approval_required": "Approvazione richiesta",
+    "approvals": {
+      "signups": "Iscrizioni",
+      "trades": "Scambi"
+    },
+    "assigned": "Assegnato",
+    "assignment_type": {
+      "assigned": "Assegnato",
+      "signup": "Iscrizione",
+      "workshift": "Turno di lavoro"
+    },
+    "automatic": "Automatico",
+    "available": "Disponibile",
+    "calendar": "Calendario",
+    "calendar_export": {
+      "add_all": "Aggiungi i miei turni al calendario ({{count}})",
+      "add_all_hint": "Aggiunge al calendario del dispositivo tutti i turni in cui lavori nei prossimi 30 giorni",
+      "add_hint": "Aggiunge questo turno al calendario del dispositivo o lo aggiorna se è già presente",
+      "add_one": "Aggiungi al calendario",
+      "added_many": "Turni nel tuo calendario: {{count}}",
+      "added_one": "Aggiunto al tuo calendario",
+      "event_footer": "Aggiunto da Resgrid",
+      "event_place": "Con: {{place}}",
+      "event_title": "Turno {{name}}",
+      "failed": "Impossibile aggiungere il turno al tuo calendario.",
+      "nothing_to_add": "Solo i turni in cui lavori possono essere aggiunti al tuo calendario.",
+      "permission_denied": "L'accesso al calendario è disattivato. Consentilo nelle Impostazioni per aggiungere i turni.",
+      "updated_one": "Aggiornato nel tuo calendario"
+    },
+    "calendar_view": {
+      "day_a11y": "{{date}}: turni {{count}}, posti liberi {{open}}",
+      "filter_a11y": "Filtra il calendario per turno",
+      "legend_filled": "Al completo",
+      "legend_mine": "I miei turni",
+      "legend_open": "Posti liberi",
+      "next_month": "Mese successivo",
+      "previous_month": "Mese precedente",
+      "select_day": "Seleziona un giorno per vederne i turni",
+      "shift_info": "Dettagli del turno"
+    },
+    "card_a11y_hint": "Apre i dettagli di questo giorno di turno",
+    "current_signups": "Iscrizioni attuali",
+    "day": {
+      "covering_for": "Sostituisce {{name}}",
+      "denied_note": "La tua iscrizione per questo giorno è stata negata.",
+      "group_filled": "Al completo",
+      "group_open": "Liberi: {{count}}",
+      "no_group": "Nessun gruppo",
+      "no_role_requirements": "Nessun ruolo richiesto",
+      "open_needs": "Posti da coprire",
+      "pending_note": "La tua iscrizione è in attesa dell'approvazione di un supervisore. Non sei in servizio finché non viene approvata.",
+      "require_approval_note": "Le iscrizioni e gli scambi di questo turno richiedono l'approvazione di un supervisore.",
+      "roster": "Personale in turno",
+      "roster_empty": "Nessuno è ancora in turno in questo giorno.",
+      "trade_pending_note": "Hai chiesto ai colleghi di coprire questo turno."
+    },
+    "day_details": "Dettagli giorno turno",
+    "details": "Dettagli turno",
+    "empty": {
+      "approvals_description": "Qui compaiono le iscrizioni e gli scambi in attesa della tua approvazione.",
+      "approvals_title": "Niente da approvare",
+      "calendar_day": "Nessun turno in questo giorno",
+      "mine_description": "Qui compaiono i turni a cui sei assegnato o iscritto nei prossimi 30 giorni.",
+      "mine_title": "Nessun turno in programma",
+      "on_duty_description": "Al momento nessuno è in un turno attivo.",
+      "on_duty_title": "Nessuno in servizio",
+      "open_trades_description": "Quando qualcuno chiede di cedere un turno, la richiesta compare qui per chiunque possa prenderlo.",
+      "open_trades_title": "Nessuna richiesta di scambio aperta",
+      "signup_description": "Qui compaiono i giorni di turno con iscrizione in cui c'è posto per te nei prossimi 30 giorni.",
+      "signup_title": "Niente a cui iscriversi",
+      "trades_description": "Qui compaiono le richieste di scambio che invii o ricevi.",
+      "trades_title": "Nessuno scambio di turno"
+    },
+    "end_time": "Ora di fine",
+    "errors": {
+      "already_on_roster": "Questa persona è già in turno in questo giorno.",
+      "already_signed_up": "Sei già iscritto per questo giorno.",
+      "day_in_past": "Questo giorno di turno è già passato.",
+      "invalid_group": "Questo gruppo non fa parte del turno.",
+      "invalid_offer": "Questa offerta non è più valida.",
+      "invalid_request": "La richiesta non era valida. Riprova.",
+      "network": "Sembra che tu sia offline. Riprova.",
+      "no_users": "Scegli almeno una persona.",
+      "not_allowed": "Non hai il permesso di farlo.",
+      "not_eligible": "Non hai i ruoli richiesti per questo posto.",
+      "not_found": "Questo turno, iscrizione o scambio non esiste più.",
+      "not_on_shift": "Non sei in turno in questo giorno.",
+      "not_pending": "Questa richiesta non è più in attesa.",
+      "trade_exists": "Esiste già uno scambio aperto per questo giorno.",
+      "unknown": "Si è verificato un errore. Riprova."
+    },
+    "groups": "Gruppi",
+    "hours": "Orario",
+    "in_shift": "In turno",
+    "legend": "Legenda",
+    "load_error": "Impossibile caricare i turni",
+    "loading": "Caricamento turni...",
+    "loading_details": "Caricamento dettagli turno...",
+    "loading_signup": "Elaborazione...",
+    "manual": "Manuale",
+    "mine_sections": {
+      "active": "In servizio ora",
+      "pending": "In attesa di approvazione",
+      "upcoming": "In programma"
+    },
+    "my_standing_shifts": "I turni di cui faccio parte",
+    "my_upcoming_days": "Prossimi giorni",
+    "needed": "Necessario",
+    "needs": "Necessità",
+    "next_day": "Giorno successivo",
+    "no_positions_available": "Nessuna posizione disponibile per l'iscrizione",
+    "no_shifts": "Nessun turno disponibile",
+    "no_shifts_description": "Contattare il proprio supervisore se si ritiene di dover avere assegnazioni di turno",
+    "no_shifts_today": "Nessun turno in programma per oggi",
+    "no_shifts_today_description": "Controllare più tardi o contattare il proprio supervisore per le assegnazioni di turno",
+    "no_signups_yet": "Nessuna iscrizione ancora",
+    "note_label": "Nota",
+    "note_optional_placeholder": "Aggiungi una nota (facoltativa)",
+    "on_duty": {
+      "count": "In servizio: {{count}}",
+      "until": "Fino alle {{time}}"
+    },
+    "optional": "Facoltativo",
+    "overnight": "(giorno dopo)",
+    "personnel_count": "Numero di personale",
+    "position_needs": "Necessità della posizione",
+    "remove_panel": {
+      "description": "Verrà rimosso solo da questo giorno. Gli altri turni non cambiano.",
+      "remove_person": "Rimuovi {{name}} da questo giorno",
+      "title": "Rimuovere {{name}}?"
+    },
+    "required": "Obbligatorio",
+    "required_count": "Richiesti: {{count}}",
+    "review": {
+      "approve_person": "Approva {{name}}",
+      "approve_signup_title": "Approvare questa iscrizione?",
+      "approve_trade_title": "Approvare questo scambio?",
+      "deny_person": "Nega {{name}}",
+      "deny_signup_title": "Negare questa iscrizione?",
+      "deny_trade_title": "Negare questo scambio?",
+      "requested_at": "Richiesto il {{date}}",
+      "trade_summary": "{{from}} cede questo turno a {{to}}"
+    },
+    "roles": "Ruoli",
+    "roster_source": {
+      "scheduled": "Pianificato",
+      "signup": "Iscritto",
+      "supervisor": "Aggiunto dal supervisore",
+      "trade": "Scambio"
+    },
+    "schedule_type": {
+      "custom": "Personalizzato",
+      "forty_eight_ninety_six": "48/96",
+      "manual": "Manuale",
+      "twenty_four_forty_eight": "24/48",
+      "twenty_four_seventy_two": "24/72"
+    },
+    "scheduled_for": "In programma per",
+    "search_placeholder": "Cerca turni...",
+    "segments": {
+      "a11y_hint": "Mostra questa vista dei turni",
+      "approvals": "Approvazioni",
+      "calendar": "Calendario",
+      "mine": "I miei turni",
+      "on_duty": "In servizio",
+      "signup": "Iscrizioni",
+      "today": "Oggi",
+      "trades": "Scambi",
+      "with_count": "{{label}}, {{count}} in attesa"
+    },
+    "shift_card_a11y_hint": "Apre i dettagli di questo turno",
+    "shift_code": "Codice turno",
+    "shift_day": "Giorno turno",
+    "shift_name": "Nome turno",
+    "shift_type": {
+      "emergency": "Emergenza",
+      "label": "Tipo di turno",
+      "regular": "Regolare",
+      "training": "Formazione",
+      "unknown": "Sconosciuto"
+    },
+    "signed_up": "Iscritto/a",
+    "signup": "Iscriviti",
+    "signup_error": "Impossibile iscriversi al turno",
+    "signup_panel": {
+      "approval_notice": "Un supervisore deve approvare questa iscrizione prima che tu sia in servizio.",
+      "description": "Scegli il gruppo (squadra) con cui ti iscrivi per questo giorno.",
+      "hint": "Scegli una squadra e conferma l'iscrizione",
+      "no_groups": "Questo turno non ha gruppi a cui iscriversi.",
+      "title": "Scegli la tua squadra"
+    },
+    "signup_status": "Stato iscrizione",
+    "signup_success": "Iscrizione al turno completata con successo",
+    "signup_view": {
+      "description": "Giorni di turno a cui puoi iscriverti nei prossimi 30 giorni. Tocca un giorno per scegliere la tua squadra.",
+      "filter_all": "Tutti i giorni",
+      "filter_needed": "Serve personale"
+    },
+    "signups": "Iscrizioni",
+    "start_time": "Ora di inizio",
+    "status": {
+      "active_now": "Attivo ora",
+      "denied": "Negato",
+      "filled": "Al completo",
+      "on_roster": "Sei in turno",
+      "open_slots": "Posti liberi: {{count}}",
+      "pending_approval": "In attesa di approvazione",
+      "trade_requested": "Scambio richiesto"
+    },
+    "title": "Turni",
+    "toast": {
+      "approved": "Approvato",
+      "denied": "Negato",
+      "person_added": "Persona aggiunta al turno",
+      "person_removed": "Persona rimossa dal turno",
+      "signup_pending": "Iscritto. In attesa dell'approvazione di un supervisore.",
+      "trade_accepted": "La tua offerta è stata inviata",
+      "trade_application_withdrawn": "La tua candidatura è stata ritirata",
+      "trade_applied": "Candidatura inviata",
+      "trade_cancelled": "Richiesta di scambio annullata",
+      "trade_declined": "Scambio rifiutato",
+      "trade_finished": "Scambio completato",
+      "trade_finished_pending": "Scambio inviato per approvazione",
+      "trade_requested": "Richiesta di scambio inviata",
+      "trade_requested_open": "Richiesta di scambio inviata a chiunque possa prenderlo"
+    },
+    "today": "Oggi",
+    "todays_shifts": "Turni di oggi",
+    "trade": {
+      "accept_description": "Puoi offrire in cambio uno dei tuoi prossimi turni oppure prendere semplicemente questo.",
+      "accept_title": "Accettare questo scambio?",
+      "applicant_conflict": "Già in turno su {{name}} in questo orario",
+      "applicant_count": "Candidati: {{count}}",
+      "applicants": "Candidati",
+      "applied_at": "Candidatura del {{date}}",
+      "apply_description": "{{name}} e chi decide sugli scambi vedranno la tua candidatura. Puoi offrire in cambio uno dei tuoi turni.",
+      "apply_title": "Candidarti per prendere questo turno?",
+      "cancel_description": "Le offerte ricevute verranno scartate.",
+      "cancel_description_open": "Tutti i candidati verranno informati che la richiesta è stata annullata.",
+      "cancel_title": "Annullare questa richiesta di scambio?",
+      "decline_description": "Chi ha fatto la richiesta vedrà che hai rifiutato.",
+      "decline_title": "Rifiutare questo scambio?",
+      "details_a11y": "Scambio per {{shift}} del {{date}}",
+      "details_hint": "Apre lo scambio con i suoi candidati",
+      "filter_mine": "Mie ({{count}})",
+      "filter_open": "Richieste aperte ({{count}})",
+      "finish_give_description": "{{name}} prenderà questo turno.",
+      "finish_pending_note": "Un supervisore deve approvare questo scambio prima che abbia effetto.",
+      "finish_swap_description": "{{name}} prende questo turno e tu prendi il suo turno {{shift}} del {{date}}.",
+      "finish_title": "Scegliere questa offerta?",
+      "from": "Da {{name}}",
+      "give_to": "Cedi a {{name}}",
+      "incoming": "Ricevuto",
+      "ineligible": {
+        "already_on_day": "Sei già in turno in questo giorno.",
+        "missing_roles": "Non hai i ruoli richiesti per questo posto.",
+        "not_allowed": "Non puoi prendere questo turno."
+      },
+      "my_state": {
+        "accepted": "Copri tu questo turno",
+        "declined": "Hai rifiutato",
+        "denied": "Negato da un supervisore",
+        "filled": "L'ha preso qualcun altro",
+        "open": "In attesa della tua risposta",
+        "pending_approval": "In attesa dell'approvazione di un supervisore",
+        "proposed": "Hai fatto un'offerta"
+      },
+      "nearby_workload": "Entro una settimana da questo giorno: turni {{count}}, {{hours}} h",
+      "no_applicants": "Nessuno si è ancora candidato",
+      "no_certifications": "Nessuna certificazione valida",
+      "no_offers": "Nessuna risposta per ora",
+      "no_swap": "Non offrire un turno in cambio",
+      "offer_back": "Offri un turno in cambio",
+      "offers": "Risposte",
+      "open_request": "Aperto a tutti",
+      "outgoing": "Inviato",
+      "pick_as_approver_note": "Decidi questo scambio come approvatore: la tua scelta ha effetto immediato.",
+      "pick_note": "Scegli chi prende questo turno.",
+      "requested_at": "Richiesto il {{date}}",
+      "requested_by": "Richiesto da {{name}}",
+      "reviewed_by": "Esaminato da {{name}}",
+      "section_active": "In corso",
+      "section_applied": "Le tue candidature",
+      "section_attention": "Richiede la tua attenzione",
+      "section_can_apply": "Puoi prendere questi",
+      "section_other_requests": "Altre richieste",
+      "section_recent": "Recenti",
+      "select_applicant": "Cedi a {{name}}",
+      "status": {
+        "cancelled": "Annullato",
+        "completed": "Completato",
+        "denied": "Negato",
+        "open": "Aperto",
+        "pending_approval": "In attesa di approvazione"
+      },
+      "swap_back": "Scambio di ritorno il {{date}}",
+      "swap_for": "Scambia con {{shift}} del {{date}}",
+      "taken_by": "Preso da {{name}}",
+      "user_declined": "Ha rifiutato",
+      "user_offered": "Ha offerto",
+      "user_waiting": "Nessuna risposta",
+      "user_withdrew": "Si è ritirato",
+      "withdraw_description": "Chi ha fatto la richiesta vedrà che non sei più disponibile.",
+      "withdraw_title": "Ritirare la tua candidatura?"
+    },
+    "trade_panel": {
+      "description": "Scegli chi vorresti che prendesse questo turno. Ogni persona scelta riceve la richiesta, poi tu scegli tra le offerte.",
+      "mode_open": "Chiunque possa prenderlo",
+      "mode_open_hint": "Persone che riceveranno la notifica: {{count}}",
+      "mode_specific": "Solo le persone che scelgo",
+      "mode_specific_hint": "Chiedi invece a colleghi specifici",
+      "no_candidates": "Nessuno è disponibile a prendere questo turno.",
+      "open_description": "Chiunque sia libero quel giorno e abbia i ruoli richiesti per il tuo posto riceve un'e-mail e una notifica push e può candidarsi. Poi scegli tu chi lo prende, oppure lo fa il tuo supervisore.",
+      "open_description_workshift": "Chiunque sia libero quel giorno riceve un'e-mail e una notifica push e può candidarsi per prendere il tuo posto nell'unità.",
+      "selected_count": "Selezionati: {{count}}",
+      "title": "Richiedi uno scambio"
+    },
+    "type_emergency": "Emergenza",
+    "type_regular": "Regolare",
+    "type_training": "Formazione",
+    "type_unknown": "Sconosciuto",
+    "unknown": "Sconosciuto",
+    "upcoming_shift_days": "Prossimi giorni di turno",
+    "view_calendar": "Vedi nel calendario",
+    "view_calendar_hint": "Mostra questo turno nel calendario",
+    "withdraw": "Ritira iscrizione",
+    "withdraw_error": "Impossibile ritirare l'iscrizione dal turno",
+    "withdraw_panel": {
+      "description": "Verrai rimosso dal personale in turno del {{date}}.",
+      "title": "Ritirarti da questo turno?"
+    },
+    "withdraw_success": "Iscrizione al turno ritirata con successo",
+    "you": "Lei",
+    "you_are_signed_up": "Lei è iscritto/a a questo turno"
+  },
+  "sidebar": {
+    "audio": "Flusso",
+    "ptt": "Voce"
+  },
+  "tabs": {
+    "personnel": "Personale",
+    "units": "Unità",
+    "weatherAlerts": "Allerte Meteo"
+  },
+  "units": {
+    "coordinates": "Coordinate",
+    "emptyDescription": "Nessuna unità è disponibile nel proprio dipartimento",
+    "features": "Caratteristiche",
+    "fourWheelDrive": "4x4",
+    "lastUpdate": "Ultimo aggiornamento",
+    "location": "Posizione",
+    "maps_error": "Impossibile aprire le mappe",
+    "notes": "Note",
+    "plateNumber": "Numero di targa",
+    "specialPermit": "Permesso speciale",
+    "tapToOpenMaps": "Toccare per aprire nelle mappe",
+    "vehicleInfo": "Informazioni sul veicolo"
+  },
+  "video_feeds": {
+    "add_feed": "Add Video Feed",
+    "delete_confirm": "Are you sure you want to delete this video feed?",
+    "delete_feed": "Delete Video Feed",
+    "edit_feed": "Edit Video Feed",
+    "form_description": "Description",
+    "form_feed_format": "Feed Format",
+    "form_feed_type": "Feed Type",
+    "form_name": "Name",
+    "form_sort_order": "Sort Order",
+    "form_status": "Status",
+    "form_url": "URL",
+    "format_youtube": "YouTube",
+    "no_feeds": "No video feeds for this call",
+    "type_satellite": "Satellite Feed",
+    "type_webcam": "Webcam",
+    "unsupported_format": "This format is not supported for in-app playback. Copy the URL to open in an external player."
+  },
+  "weather_alerts": {
+    "banner": {
+      "moreAlerts": "+{{count}} altre"
+    },
+    "category": {
+      "CBRNE": "CBRNE",
+      "Env": "Ambientale",
+      "Fire": "Incendio",
+      "Geo": "Geologico",
+      "Health": "Salute",
+      "Infra": "Infrastruttura",
+      "Met": "Meteorologico",
+      "Other": "Altro",
+      "Transport": "Trasporto"
+    },
+    "certainty": {
+      "Likely": "Probabile",
+      "Observed": "Osservato",
+      "Possible": "Possibile",
+      "Unknown": "Sconosciuto",
+      "Unlikely": "Improbabile",
+      "label": "Certezza"
+    },
+    "detail": {
+      "load_error": "Avviso non disponibile",
+      "load_error_description": "Impossibile caricare questo avviso meteo. Potrebbe essere scaduto o la richiesta non è riuscita.",
+      "metadata": "Dettagli",
+      "status": "Stato"
+    },
+    "search": "Cerca avvisi...",
+    "severity": {
+      "Extreme": "Estremo",
+      "Minor": "Lieve",
+      "Moderate": "Moderato",
+      "Severe": "Grave",
+      "Unknown": "Sconosciuto"
+    },
+    "status": {
+      "Active": "Attivo",
+      "Actual": "Reale",
+      "Cancelled": "Annullato",
+      "Draft": "Bozza",
+      "Exercise": "Esercitazione",
+      "Expired": "Scaduto",
+      "System": "Sistema",
+      "Test": "Test",
+      "Updated": "Aggiornato"
+    },
+    "urgency": {
+      "Expected": "Prevista",
+      "Future": "Futura",
+      "Immediate": "Immediata",
+      "Past": "Passata",
+      "Unknown": "Sconosciuta",
+      "label": "Urgenza"
+    }
+  },
+  "welcome": "Benvenuto/a su {{appName}}",
+  "workOrders": {
+    "accept": "Accetta l'assegnazione",
+    "activity": "Attività",
+    "activityType": {
+      "0": "Creato",
+      "1": "Aggiornato",
+      "2": "Stato cambiato",
+      "3": "Assegnato",
+      "4": "Assegnazione accettata",
+      "5": "Commento",
+      "6": "Ore registrate",
+      "7": "Ricambio aggiunto",
+      "8": "Ricambio annullato",
+      "9": "File aggiunto",
+      "10": "File rimosso",
+      "11": "Blocco di sicurezza",
+      "12": "Blocco di sicurezza rimosso",
+      "13": "Rinviato",
+      "14": "Scalato"
+    },
+    "addComment": "Aggiungi commento",
+    "allMine": "Tutti quelli che vedo",
+    "assetIs": "Attrezzatura: {{name}}",
+    "assignedToMe": "Assegnati a me",
+    "back": "Indietro",
+    "cannotReport": "La tua organizzazione al momento non può accettare nuovi ordini di lavoro.",
+    "choosePhoto": "Scegli foto",
+    "commentHint": "Aggiungi un commento",
+    "due": "Scadenza {{date}}",
+    "errors": {
+      "AcceptAssignmentFirst": "Accetta prima l'assegnazione.",
+      "Conflict": "Qualcun altro ha modificato questo ordine di lavoro. Controllalo e riprova.",
+      "IndependentVerificationRequired": "Deve chiuderlo una persona diversa da chi ha fatto il lavoro.",
+      "InvalidFile": "Si possono allegare solo file JPEG, PNG o PDF fino a 10 MB.",
+      "PartBalanceOutstanding": "Ci sono ancora ricambi da consegnare, restituire o attestare.",
+      "ReadinessProRequired": "La tua organizzazione ha bisogno di Readiness Pro per questo.",
+      "RevisionConflict": "Qualcun altro ha modificato questo ordine di lavoro. Controllalo e riprova.",
+      "SafetyRequirements": "Prima vanno registrati procedura di sicurezza, permesso, isolamento e personale qualificato.",
+      "ScanRequired": "Il file è ancora in fase di scansione. Riprova tra poco.",
+      "SpendingApprovalRequired": "Serve l'approvazione della spesa prima di questo passaggio.",
+      "TasksIncomplete": "Conferma che tutti i passaggi sono completati.",
+      "denied": "Non hai accesso a questo ordine di lavoro.",
+      "locked": "Sblocca i dati protetti per continuare.",
+      "photo_denied": "Consenti l'accesso alla fotocamera o alle foto per allegare una foto.",
+      "readiness_required": "La tua organizzazione ha bisogno di Readiness Pro per questo.",
+      "retry": "Impossibile raggiungere il server. Riprova."
+    },
+    "files": "Foto e file",
+    "form": {
+      "asset": "Attrezzatura",
+      "description": "Dettagli",
+      "descriptionHint": "Cosa è successo, cosa hai visto, cosa deve sapere l'officina",
+      "group": "Sede",
+      "location": "Posizione",
+      "locationHint": "Dove esattamente (box, vano, stanza)",
+      "none": "Nessuno",
+      "photosAfter": "Potrai aggiungere foto una volta salvata la segnalazione.",
+      "priority": "Priorità",
+      "safetyCritical": "Critico per la sicurezza",
+      "submit": "Invia segnalazione",
+      "title": "Titolo",
+      "titleHint": "Cosa non va, in poche parole",
+      "type": "Tipo di lavoro",
+      "unit": "Mezzo"
+    },
+    "groupIs": "Sede: {{name}}",
+    "hours": "Ore",
+    "hoursInvalid": "Inserisci ore tra 0 e 24.",
+    "hoursLogged": "{{hours}} h registrate",
+    "hoursNote": "Cosa è stato fatto",
+    "locationIs": "Posizione: {{location}}",
+    "logHours": "Registra ore",
+    "more": "Carica altri",
+    "none": "Nessun ordine di lavoro.",
+    "noneAssigned": "Non hai nulla di assegnato.",
+    "photoAdded": "Foto aggiunta.",
+    "priority": {
+      "0": "Bassa",
+      "1": "Normale",
+      "2": "Alta",
+      "3": "Emergenza"
+    },
+    "readOnly": "Puoi vedere gli ordini di lavoro; segnalarli e aggiornarli richiede {{product}}.",
+    "report": "Segnala un problema",
+    "resolutionIs": "Risoluzione: {{text}}",
+    "safety": "Lavoro critico per la sicurezza o pericoloso",
+    "saveHours": "Salva ore",
+    "status": {
+      "0": "Richiesto",
+      "1": "Accettato",
+      "2": "Assegnato",
+      "3": "In corso",
+      "4": "In attesa",
+      "5": "Completato",
+      "6": "Chiuso",
+      "7": "Rifiutato",
+      "8": "Duplicato",
+      "9": "Annullato"
+    },
+    "steps": "Passaggi",
+    "takePhoto": "Scatta foto",
+    "title": "Ordini di lavoro",
+    "transition": {
+      "apply": "Aggiorna stato",
+      "cause": "Causa",
+      "confirmTasks": "Tutti i passaggi sono completati",
+      "duplicateOf": "Numero dell'ordine duplicato",
+      "missing": {
+        "cause": "Inserisci la causa.",
+        "confirmTasks": "Conferma che i passaggi sono completati.",
+        "duplicateOf": "Inserisci l'ordine duplicato.",
+        "reason": "Inserisci un motivo.",
+        "resolution": "Descrivi cosa è stato fatto.",
+        "verification": "Descrivi come è stato verificato."
+      },
+      "pick": "Scegli il nuovo stato",
+      "reason": "Motivo",
+      "resolution": "Cosa è stato fatto per risolvere",
+      "title": "Cambia stato",
+      "verification": "Come è stato verificato"
+    },
+    "type": {
+      "0": "Riparazione",
+      "1": "Preventivo",
+      "2": "Ispezione",
+      "3": "Struttura",
+      "4": "Altro"
+    },
+    "unitIs": "Mezzo: {{name}}",
+    "viewPhoto": "Vedi foto {{name}}"
+  }
+}

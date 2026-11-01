@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.base.json",
+  "include": ["packages/*/src/**/*", "apps/omni/**/*.ts", "apps/omni/**/*.tsx", "types/**/*.d.ts"],
+  "exclude": ["node_modules", "**/dist", "apps/omni/ios", "apps/omni/android", "apps/desktop"]
+}

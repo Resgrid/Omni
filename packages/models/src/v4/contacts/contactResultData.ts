@@ -1,0 +1,105 @@
+import { type UdfFieldValueResultData } from '../userDefinedFields/udfFieldValueResultData';
+import { type ContactCategoryResultData } from './contactCategoryResultData';
+
+export enum ContactType {
+  Person = 0,
+  Company = 1,
+}
+
+export interface ContactResultData {
+  /** Legacy display fields some app screens read; not part of Core's ContactResultData (always absent on the wire). */
+  Mobile?: string | null;
+  Address?: string | null;
+  City?: string | null;
+  State?: string | null;
+  Zip?: string | null;
+  Notes?: string | null;
+  ImageUrl?: string | null;
+  Name?: string;
+  IsImportant?: boolean;
+  Phone?: string | null;
+  ContactId: string;
+  ContactType: ContactType;
+  OtherName?: string;
+  ContactCategoryId?: string;
+  Category?: ContactCategoryResultData;
+  FirstName?: string;
+  MiddleName?: string;
+  LastName?: string;
+  CompanyName?: string;
+  Email?: string;
+  PhysicalAddressId?: number;
+  MailingAddressId?: number;
+  Website?: string;
+  Twitter?: string;
+  Facebook?: string;
+  LinkedIn?: string;
+  Instagram?: string;
+  Threads?: string;
+  Bluesky?: string;
+  Mastodon?: string;
+  LocationGpsCoordinates?: string;
+  EntranceGpsCoordinates?: string;
+  ExitGpsCoordinates?: string;
+  LocationGeofence?: string;
+  CountryIssuedIdNumber?: string;
+  CountryIdName?: string;
+  StateIdNumber?: string;
+  StateIdName?: string;
+  StateIdCountryName?: string;
+  Description?: string;
+  OtherInfo?: string;
+  HomePhoneNumber?: string;
+  CellPhoneNumber?: string;
+  FaxPhoneNumber?: string;
+  OfficePhoneNumber?: string;
+  /** Base64 image bytes (Core byte[]). */
+  Image?: string | null;
+  IsDeleted: boolean;
+  AddedOnUtc: string;
+  AddedOn?: string;
+  AddedByUserId?: string;
+  AddedByUserName?: string;
+  EditedOnUtc?: string | null;
+  EditedOn?: string;
+  EditedByUserId?: string;
+  EditedByUserName?: string;
+  /**
+   * Catalog field ids the server withheld from THIS contact (ADP plan 7.2). Per row, not a union
+   * across the list: a field withheld on one contact must not mark it on every other one.
+   */
+  RedactedFields?: string[];
+  IsProtected?: boolean;
+  ProtectedReason?: string | null;
+  /** The contact category's name and color (both list rows and the detail read). */
+  CategoryName?: string | null;
+  CategoryColor?: string | null;
+  /** Resolved addresses (GetContactById only). */
+  PhysicalAddress?: ContactAddressData | null;
+  MailingAddress?: ContactAddressData | null;
+  /** Mobile-visible custom field values with their labels, in form order (GetContactById only). */
+  CustomFields?: ContactCustomFieldData[];
+  UdfValues?: UdfFieldValueResultData[];
+}
+
+export interface ContactAddressData {
+  Address1?: string | null;
+  City?: string | null;
+  State?: string | null;
+  PostalCode?: string | null;
+  Country?: string | null;
+  /** One-line form for display and for a maps app. */
+  Formatted?: string | null;
+}
+
+export interface ContactCustomFieldData {
+  UdfFieldId: string;
+  Label: string;
+  /** The stored value; for option fields this is the option key. */
+  Value: string;
+  /** What to show: option keys resolved to labels, booleans as Yes/No. Older servers do not send it. */
+  DisplayValue?: string | null;
+  FieldDataType: number;
+  GroupName?: string | null;
+  SortOrder: number;
+}

@@ -1,0 +1,16 @@
+# Launches the app under test from a clean state. For a dev-client build, run-maestro.mjs passes the
+# dev-client deep link (exp+<slug>://expo-development-client/?url=<metro>) and the bundle is opened through it.
+# Variables: APP_ID, DEV_CLIENT_URL ('none' for builds with an embedded bundle), DEV_CLIENT_LINK.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- runFlow:
+    when:
+      true: ${DEV_CLIENT_URL != 'none'}
+    commands:
+      - openLink: ${DEV_CLIENT_LINK}
+      # The first dev-client launch shows the developer-menu onboarding sheet.
+      - tapOn:
+          text: 'Continue'
+          optional: true

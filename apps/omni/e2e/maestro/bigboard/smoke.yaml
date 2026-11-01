@@ -1,0 +1,10 @@
+# BigBoard smoke: the app launches and reaches its home screen. The app id comes from the variant manifest
+# through run-maestro.mjs (-e APP_ID=…); add BigBoard-only flows (e.g. status change, call detail) to this folder.
+appId: ${APP_ID}
+name: BigBoard — launch and home
+tags:
+  - smoke
+  - bigboard
+---
+- runFlow: ../shared/launch.yaml
+- runFlow: ../shared/home-visible.yaml

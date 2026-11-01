@@ -1,0 +1,17 @@
+{
+  "name": "@resgrid/offline",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Durable storage (frozen MMKV identity, SQLite), outbox, reset/wipe registry, sync primitives and storage maintenance for Resgrid Omni (layer L2)",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "dependencies": {
+    "@react-native-community/netinfo": "catalog:",
+    "@resgrid/config": "workspace:*",
+    "expo-crypto": "catalog:",
+    "expo-secure-store": "catalog:",
+    "expo-sqlite": "catalog:",
+    "react-native-mmkv": "catalog:",
+    "zustand": "catalog:"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "@resgrid/jest-preset",
+  "version": "0.0.0",
+  "private": true,
+  "main": "node.js"
+}

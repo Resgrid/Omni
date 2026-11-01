@@ -1,0 +1,85 @@
+import { type CallContactResultData } from './callSiteInfoResult';
+
+export class CallResultData {
+  public CallId: string = '';
+  public Priority: number = 0;
+  public Name: string = '';
+  public Nature: string = '';
+  public Note: string = '';
+  public Address: string = '';
+  public DestinationPoiId: number | null = null;
+  public DestinationName: string = '';
+  public DestinationAddress: string = '';
+  public DestinationTypeName: string = '';
+  public DestinationPoiTypeId: number | null = null;
+  public DestinationLatitude: number | null = null;
+  public DestinationLongitude: number | null = null;
+  public Geolocation: string = '';
+  public LoggedOn: string = '';
+  /**
+   * Core CallStates (int): 0 Active, 1 Closed, 2 Cancelled, 3 Unfounded, 4 Founded, 5 Minor, 6 Transferred,
+   * 7 False Alarm, 8 Pending (saved, not dispatched). A scheduled call is Active with a future DispatchedOnUtc.
+   */
+  public State: number = 0;
+  public Number: string = '';
+  public NotesCount: number = 0;
+  public AudioCount: number = 0;
+  public ImgagesCount: number = 0;
+  public FileCount: number = 0;
+  public What3Words: string = '';
+  public ContactName: string = '';
+  public ContactInfo: string = '';
+  public ReferenceId: string = '';
+  public ExternalId: string = '';
+  public IncidentId: string = '';
+  public AudioFileId: string = '';
+  public Type: string = 'No Type';
+  /** Id of the department call type the call was logged with (survives a rename); null when it matches none, undefined from older servers. */
+  public TypeId?: string | null;
+  /** The department's uploaded icon for the call's type (absolute URL, anonymous GET, 128x128 PNG); null when none was uploaded or from older servers. */
+  public TypeIconUrl?: string | null = null;
+  /** The built-in map icon the call's type picked (lowercase MAP_ICONS key, e.g. "fire"); null when none or from older servers. */
+  public TypeMapIcon?: string | null = null;
+  /**
+   * Current alarm level (1-based). Only moves above 1 when the call has been escalated through a
+   * run card; the server normalises pre-run-card calls to 1.
+   */
+  public AlarmLevel: number = 1;
+  /** The run card driving this call's dispatch, or null when no card matched. */
+  public ActiveRunCardId: number | null = null;
+  public LoggedOnUtc: string = '';
+  /** When the call was closed, in the department's time; null while it is open, undefined from older servers. */
+  public ClosedOn?: string | null;
+  /** When the call was closed, UTC; null while it is open, undefined from older servers. */
+  public ClosedOnUtc?: string | null;
+  /** Who closed the call; null while it is open, undefined from older servers. */
+  public ClosedByUserId?: string | null;
+  public DispatchedOn: string = '';
+  public DispatchedOnUtc: string = '';
+  public ScheduledOn: string = '';
+  public ScheduledOnUtc: string = '';
+  public Latitude: string = '';
+  public Longitude: string = '';
+  public Protocols: unknown[] = [];
+  public UdfValues: unknown[] = [];
+  public CheckInTimersEnabled: boolean = false;
+  /**
+   * Contacts linked to the call (primary first) with pre-plan / alert / hazard indicators. Populated by
+   * GetCall and GetActiveCalls; absent on other list endpoints. GetCallSiteInfo carries the full site knowledge.
+   */
+  public Contacts?: CallContactResultData[];
+  /**
+   * Catalog field ids the server withheld from this response (ADP plan 7.2). Empty for a
+   * department without the addon, and empty again once a grant reveals the record.
+   *
+   * Left undefined rather than defaulted to `[]`: a server that never sends the list must stay
+   * distinguishable from one that sends an empty one, because isFieldRedacted() only falls back to
+   * sentinel-sniffing for the former.
+   */
+  public RedactedFields?: string[];
+  /** Advanced Data Protection: true when the server withheld protected fields; absent from older servers. */
+  public IsProtected?: boolean;
+  public ProtectedReason?: string | null;
+  /** 42 CFR Part 2 consent flag (Core); absent from older servers. */
+  public Part2ConsentOnFile?: boolean;
+}

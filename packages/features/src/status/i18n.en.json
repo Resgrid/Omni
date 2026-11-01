@@ -1,0 +1,21 @@
+{
+  "status.availability.all": "All",
+  "status.availability.available": "Available",
+  "status.availability.committed": "Committed",
+  "status.availability.delayed": "Delayed",
+  "status.availability.unavailable": "Unavailable",
+  "status.availability.unknown": "Unknown",
+  "status.current": "Current",
+  "status.hold_to_set_hint": "Press and hold a status to set it",
+  "status.no_calls_available": "No calls available",
+  "status.no_staffing_available": "No staffing levels available",
+  "status.on_behalf_of": "For {{name}}",
+  "status.pending_sync": "Pending sync",
+  "status.select_staffing": "Select Staffing",
+  "status.select_unit_status": "Select Unit Status",
+  "status.show_all_statuses": "Show all statuses ({{count}} more)",
+  "status.show_next_statuses": "Show next statuses only",
+  "status.staffing_tab": "Staffing",
+  "status.status_queued": "Saved on this device. It will be sent when the connection is back.",
+  "status.status_tab": "Status"
+}

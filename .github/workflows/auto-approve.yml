@@ -1,0 +1,31 @@
+# Owner approval by PR comment, same as the legacy app repos (baseline: Relay, which has the PR-only and comment-author fixes).
+# A comment containing "Approve" from ucswift on a pull request submits an APPROVE review as github-actions[bot].
+# Needs repo setting: Actions > General > "Allow GitHub Actions to create and approve pull requests".
+name: Auto approve
+
+on:
+  issue_comment:
+    types:
+      - created
+
+permissions: {}
+
+jobs:
+  auto-approve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/github-script@v9.0.0
+        name: Approve LGTM Review
+        if: github.event.issue.pull_request && github.event.comment.user.login == 'ucswift' && contains(github.event.comment.body, 'Approve')
+        with:
+          script: |
+            await github.rest.pulls.createReview({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              event: 'APPROVE',
+              body: 'This PR is approved.'
+            })

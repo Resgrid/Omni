@@ -1,0 +1,5 @@
+# Playwright and Maestro output
+test-results/
+playwright-report/
+results/
+maestro-output/

@@ -1,0 +1,1262 @@
+{
+  "app": {
+    "open_menu": "Відкрити меню",
+    "realtime_offline_description": "Повторне підключення. Нові виклики та повідомлення можуть не з’являтися.",
+    "realtime_offline_title": "Оновлення в реальному часі недоступні"
+  },
+  "audio_streams": {
+    "error_loading_stream": "Не вдалося завантажити аудіопотік"
+  },
+  "bluetooth": {
+    "audio_active": "Аудіо активне",
+    "button_control_available": "Доступне керування кнопками",
+    "button_event": {
+      "double_press": "Подвійне {{button}}",
+      "long_press": "Довге {{button}}"
+    },
+    "button_event_applied": "Застосовано",
+    "buttons": {
+      "mute": "Вимкнути звук",
+      "ptt_start": "PTT Старт",
+      "ptt_stop": "PTT Стоп",
+      "unknown": "Невідомо",
+      "volume_down": "Гучність -",
+      "volume_up": "Гучність +"
+    },
+    "checking_status": "Перевірка стану Bluetooth...",
+    "connection_error": "Помилка підключення",
+    "livekit_active": "LiveKit активний",
+    "powered_off_message": "Bluetooth вимкнено. Увімкніть Bluetooth, щоб підключити аудіопристрої.",
+    "recent_button_events": "Останні події кнопок",
+    "rssi_dbm": "{{rssi}} dBm",
+    "rssi_value": "RSSI: {{rssi}}dBm",
+    "start_scanning": "Почати сканування",
+    "stop_scan": "Зупинити сканування",
+    "unauthorized_message": "Дозвіл на Bluetooth відхилено. Надайте дозволи Bluetooth у Налаштуваннях."
+  },
+  "calendar": {
+    "allDay": "Весь день",
+    "attendanceUpdated": {
+      "signedUp": "Вас успішно зареєстровано на цю подію.",
+      "title": "Відвідуваність оновлено",
+      "unsignedUp": "Вас видалено з цієї події."
+    },
+    "attendees": {
+      "title": "Учасники"
+    },
+    "attendeesCount": "{{count}} учасник",
+    "attendeesCount_plural": "{{count}} учасників",
+    "confirmSignup": "Підтвердити",
+    "confirmUnsignup": {
+      "message": "Ви впевнені, що хочете скасувати свою участь у цій події?",
+      "title": "Підтвердити скасування"
+    },
+    "createdBy": "Створено",
+    "daysOfWeek": {
+      "fri": "Пт",
+      "mon": "Пн",
+      "sat": "Сб",
+      "sun": "Нд",
+      "thu": "Чт",
+      "tue": "Вт",
+      "wed": "Ср"
+    },
+    "description": "Опис",
+    "error": {
+      "attendanceUpdate": "Не вдалося оновити відвідуваність. Будь ласка, спробуйте ще раз.",
+      "title": "Помилка"
+    },
+    "eventsCount": "{{count}} подія",
+    "eventsCount_plural": "{{count}} подій",
+    "loading": {
+      "date": "Завантаження подій для вибраної дати...",
+      "today": "Завантаження сьогоднішніх подій...",
+      "upcoming": "Завантаження майбутніх подій..."
+    },
+    "noEvents": "Заплановані події відсутні",
+    "optional": "Необов'язково",
+    "required": "Обов'язково",
+    "selectDate": "Виберіть дату для перегляду подій",
+    "selectedDate": {
+      "empty": "На цю дату події не заплановано.",
+      "title": "Події на {{date}}"
+    },
+    "signedUp": "Зареєстровано",
+    "signup": {
+      "button": "Зареєструватися",
+      "notePlaceholder": "Введіть примітку тут...",
+      "notePrompt": "Додати примітку (необов'язково):",
+      "title": "Реєстрація на подію"
+    },
+    "signupAvailable": "Реєстрація доступна",
+    "tabs": {
+      "calendar": "Календар",
+      "today": "Сьогодні",
+      "upcoming": "Майбутні"
+    },
+    "tapToSignUp": "Натисніть, щоб зареєструватися",
+    "title": "Календар",
+    "today": {
+      "empty": {
+        "description": "У вас немає запланованих подій на сьогодні.",
+        "title": "Сьогодні подій немає"
+      }
+    },
+    "todayButton": "Сьогодні",
+    "unsignup": "Скасувати участь",
+    "upcoming": {
+      "empty": {
+        "description": "У вас немає запланованих подій протягом наступних 7 днів.",
+        "title": "Майбутніх подій немає"
+      }
+    }
+  },
+  "callImages": {
+    "capture_error": "Помилка під час зйомки фото. Будь ласка, спробуйте ще раз.",
+    "permission_denied_settings": "У доступі відмовлено. Будь ласка, увімкніть доступ у налаштуваннях пристрою.",
+    "select_error": "Помилка під час вибору фото. Будь ласка, спробуйте ще раз.",
+    "upload_success": "Фото успішно завантажено",
+    "url_label": "URL: {{url}}"
+  },
+  "callNotes": {
+    "addNoteError": "Не вдалося додати примітку. Будь ласка, спробуйте ще раз."
+  },
+  "call_detail": {
+    "route_to_destination": "Прокласти маршрут до пункту призначення",
+    "tabs": {
+      "command": "Командування"
+    }
+  },
+  "calls": {
+    "assigned_to_me": "Призначено мені",
+    "destination_load_error": "Не вдалося завантажити POI для пункту призначення",
+    "destination_placeholder": "Виберіть пункт призначення",
+    "external_id": "Зовнішній ідентифікатор",
+    "only_calls_im_on": "Лише виклики, у яких я беру участь",
+    "personnel": "Особи",
+    "protocols": "Протоколи",
+    "reference_id": "Ідентифікатор посилання",
+    "required_fields_missing": "Ваш відділ вимагає ці поля перед збереженням виклику: {{fields}}",
+    "search_address": "Пошук адреси",
+    "search_coordinates": "Пошук координат",
+    "search_plus_code": "Пошук plus code",
+    "search_what3words": "Пошук адреси what3words"
+  },
+  "certifications": {
+    "add": "Додати",
+    "addHours": "Додати години",
+    "addHoursWithPhoto": "Додати години з фото",
+    "areaIs": "Напрям: {{area}}",
+    "back": "Назад",
+    "cancel": "Скасувати",
+    "category": "Категорія (курс, навчання, конференція)",
+    "certificateAttached": "сертифікат додано",
+    "creditAdded": "Години додано.",
+    "creditDate": "Дата (за замовчуванням сьогодні)",
+    "creditNote": "Що це було",
+    "credits": "{{hours}} з {{required}} годин підвищення кваліфікації",
+    "creditsTitle": "{{hours}} годин підвищення кваліфікації",
+    "dateInvalid": "Вводьте дати у форматі рррр-мм-дд.",
+    "edit": "Редагувати",
+    "errors": {
+      "certifications_file_invalid": "Не вдалося прочитати фото.",
+      "certifications_file_too_large": "Фото завелике.",
+      "denied": "Ви не маєте доступу до цього посвідчення.",
+      "locked": "Розблокуйте захищені дані, щоб продовжити.",
+      "retry": "Не вдалося зв'язатися із сервером. Спробуйте ще раз.",
+      "validation": "Сервер відхилив зміну."
+    },
+    "expired": "Закінчилося {{date}}",
+    "expires": "Закінчується {{date}} ({{days}} дн.)",
+    "form": {
+      "area": "Напрям або рівень",
+      "choosePhoto": "Вибрати фото",
+      "expiresOn": "Закінчується",
+      "issuedBy": "Ким видано",
+      "name": "Назва",
+      "number": "Номер",
+      "otherType": "Інше (введіть назву)",
+      "photoAttached": "Фото додано.",
+      "receivedOn": "Отримано",
+      "save": "Зберегти",
+      "takePhoto": "Фото картки",
+      "type": "Посвідчення"
+    },
+    "hasFile": "У справі є картка або сертифікат",
+    "hours": "Години",
+    "hoursInvalid": "Введіть кількість годин більше 0.",
+    "issuedByIs": "Видано: {{name}}",
+    "nameRequired": "Виберіть тип або введіть назву.",
+    "newExpiry": "Нова дата закінчення",
+    "newNumber": "Новий номер (необов'язково)",
+    "noExpiry": "Безстрокове",
+    "none": "Ви ще не додали жодних посвідчень.",
+    "notVerified": "Організація ще не перевірила",
+    "numberIs": "Номер {{number}}",
+    "photoDenied": "Дозвольте доступ до камери або фото, щоб додати фото.",
+    "receivedOn": "Отримано {{date}}",
+    "remove": "Видалити",
+    "removeBody": "Його буде видалено з вашого запису. Організація й надалі бачить історію.",
+    "removeTitle": "Видалити посвідчення?",
+    "renew": "Поновити",
+    "renewSave": "Зберегти поновлення",
+    "renewed": "Поновлення збережено.",
+    "status": {
+      "0": "Чинне",
+      "1": "Прострочене",
+      "2": "Призупинене",
+      "3": "Відкликане",
+      "4": "Очікує перевірки",
+      "5": "Стажист"
+    },
+    "title": "Мої посвідчення",
+    "untitled": "Посвідчення",
+    "verifiedOn": "Перевірено {{date}}"
+  },
+  "chat": {
+    "attach": "Прикріпити",
+    "back_to_chats": "Назад до чатів",
+    "new_conversation": "Нова розмова"
+  },
+  "check_in": {
+    "add_note": "Додати Примітку (Необов'язково)",
+    "confirm_check_in": "Підтвердити Реєстрацію",
+    "duration": "Тривалість",
+    "gps_coordinates": "GPS: {{latitude}}, {{longitude}}",
+    "history": "Історія Реєстрацій",
+    "minutes_ago": "{{count}} хв тому",
+    "no_timers": "Таймери реєстрації не налаштовані",
+    "offline_queued": "Реєстрацію поставлено в чергу для онлайн",
+    "progress": "{{elapsed}} / {{total}} хв",
+    "timer_interval": "Кожні {{minutes}} хв",
+    "type_hazmat": "Небезпечні Речовини",
+    "type_ic": "Командир Інциденту",
+    "unknown_unit": "Невідомий підрозділ"
+  },
+  "checklists": {
+    "labels": {
+      "AssignmentAutomatic": "Автоматичне призначення"
+    }
+  },
+  "common": {
+    "active": "Активний",
+    "all": "Всі",
+    "deleting": "Видалення...",
+    "discard": "Відхилити",
+    "navigation": "Навігація",
+    "noActiveUnit": "Активний підрозділ відсутній",
+    "noActiveUnitDescription": "Будь ласка, виберіть активний підрозділ, щоб побачити доступні статуси",
+    "no_data_available": "Дані недоступні",
+    "success": "Успіх",
+    "system": "Система"
+  },
+  "contacts": {
+    "descriptionLabel": "Опис",
+    "errorTitle": "Помилка",
+    "openAppError": "Не вдалося відкрити програму {{action}}",
+    "openLinkFailed": "Не вдалося відкрити посилання {{action}}:"
+  },
+  "home": {
+    "active_call": {
+      "clear_active": "Очистити Активний Виклик",
+      "no_active_call": "Активний виклик не вибрано",
+      "select_call": "Виберіть виклик для відстеження",
+      "set_active": "Встановити як Активний Виклик",
+      "title": "Активний Виклик",
+      "view_details": "Переглянути Деталі Виклику"
+    },
+    "error": {
+      "no_user_id": "Ідентифікатор користувача недоступний"
+    },
+    "sidebar": {
+      "audio": "Аудіо",
+      "ptt": "PTT"
+    },
+    "staffing": {
+      "add_note": "Додати примітку",
+      "add_note_action": "Додати примітку",
+      "confirm_staffing": "Підтвердити укомплектування: {{staffing}}",
+      "missing_required_info": "Бракує обов’язкової інформації",
+      "no_options_available": "Параметри укомплектування недоступні",
+      "no_staffing_options": "Параметри укомплектування недоступні",
+      "note": "Примітка",
+      "note_placeholder": "Введіть примітку (необов'язково)...",
+      "note_required_hint": "Відкриває форму для обов'язкової примітки",
+      "quick_set_hint": "Одразу встановлює ваше укомплектування. Утримуйте, щоб додати примітку.",
+      "review_and_confirm": "Перегляньте та підтвердіть",
+      "select_staffing_level": "Вибрати рівень укомплектування",
+      "select_staffing_level_description": "Виберіть свій поточний статус укомплектування",
+      "selected_staffing": "Вибране укомплектування",
+      "set_staffing": "Встановити укомплектування персоналу",
+      "staffing_level": "Рівень укомплектування",
+      "update_failed": "Не вдалося оновити укомплектування",
+      "updated_successfully": "Укомплектування успішно оновлено"
+    },
+    "stats": {
+      "open_calls": "Відкриті виклики",
+      "personnel_in_service": "Персонал на службі",
+      "units_in_service": "Підрозділи на службі"
+    },
+    "status": {
+      "no_options_available": "Параметри статусу недоступні",
+      "update_failed": "Не вдалося оновити статус",
+      "updated_successfully": "Статус успішно оновлено"
+    },
+    "summary": {
+      "active_calls": "Активні виклики",
+      "active_severe_weather_alerts": "Активні серйозні/аварійні погодні попередження",
+      "calls_im_on": "Виклики, у яких я беру участь",
+      "pending_missed_checkins": "Очікуючі/пропущені check-in"
+    },
+    "tabs": {
+      "call": "Виклик",
+      "dashboard": "Панель",
+      "map": "Карта",
+      "staffing": "Укомплектування",
+      "status": "Статус"
+    },
+    "user": {
+      "my_staffing": "Моє укомплектування",
+      "my_status": "Мій статус",
+      "staffing_unknown": "Укомплектування невідоме",
+      "status_unknown": "Статус невідомий",
+      "updated": "Оновлено"
+    }
+  },
+  "incident_command": {
+    "assigned_since": "Призначено з",
+    "empty_state": "Для цього виклику немає активного командування інцидентом",
+    "error_loading": "Не вдалося завантажити інформацію про командування інцидентом",
+    "my_assignment": "Моє призначення",
+    "need_category_equipment": "Обладнання",
+    "need_category_logistics": "Логістика",
+    "need_category_medical": "Медична",
+    "need_category_other": "Інша",
+    "need_category_resource": "Ресурс",
+    "need_category_staffing": "Персонал",
+    "need_status_cancelled": "Скасовано",
+    "need_status_met": "Задоволено",
+    "need_status_open": "Відкрито",
+    "need_status_partially_met": "Частково задоволено",
+    "objective_status_complete": "Виконано",
+    "objective_status_in_progress": "Виконується",
+    "objective_status_pending": "Очікує",
+    "objective_type_benchmark": "Контрольна точка",
+    "objective_type_general": "Загальна",
+    "objective_type_safety": "Безпека",
+    "percent_complete": "{{percent}}%",
+    "quantity": "{{fulfilled}}/{{requested}}"
+  },
+  "livekit": {
+    "connection_failed": "Не вдалося приєднатися до голосового каналу",
+    "double_click_action": "Дія подвійного натискання",
+    "headset_button_ptt": "Кнопка гарнітури PTT",
+    "headset_monitoring_active": "Моніторинг гарнітури активний",
+    "headset_monitoring_inactive": "Моніторинг гарнітури неактивний",
+    "headset_ptt_description": "Використовуйте кнопку AirPods або навушників Bluetooth для увімкнення/вимкнення звуку",
+    "headset_ptt_disabled": "PTT гарнітури вимкнено",
+    "headset_ptt_enabled": "PTT гарнітури увімкнено",
+    "long_press_action": "Дія тривалого натискання",
+    "no_action": "Немає дії",
+    "play_pause_action": "Дія кнопки відтворення/паузи",
+    "ptt_mode": "Режим PTT",
+    "ptt_mode_disabled": "Вимкнено",
+    "ptt_mode_push": "Push-to-Talk (утримуйте для розмови)",
+    "ptt_mode_toggle": "Перемикач (натисніть для зміни звуку)",
+    "sound_feedback": "Звуковий зворотній зв'язок",
+    "tap_to_toggle_mute": "Натисніть кнопку гарнітури для перемикання звуку",
+    "toggle_mute": "Перемкнути звук"
+  },
+  "location": {
+    "tracking_notification_body": "Ваше місцезнаходження надається вашому підрозділу."
+  },
+  "login": {
+    "change_server_url": "Змінити URL сервера",
+    "select_language": "Вибрати мову",
+    "sso": {
+      "back": "Назад",
+      "change_department": "Змінити ім'я користувача",
+      "continue_button": "Продовжити",
+      "department_code_label": "Код підрозділу",
+      "department_code_placeholder": "Введіть код підрозділу",
+      "department_code_required": "Код підрозділу є обов'язковим",
+      "department_description": "Введіть код підрозділу для входу",
+      "department_id_invalid": "Ідентифікатор підрозділу має бути числом",
+      "department_id_label": "Ідентифікатор підрозділу (необов'язково)",
+      "department_id_placeholder": "Введіть ідентифікатор підрозділу, якщо відомо",
+      "department_not_found": "Підрозділ не знайдено. Будь ласка, перевірте код і спробуйте ще раз.",
+      "login_with_sso_button": "Увійти через SSO",
+      "looking_up": "Пошук облікового запису...",
+      "lookup_network_error": "Не вдалося зв'язатися з сервером. Будь ласка, перевірте підключення та спробуйте ще раз.",
+      "or_sign_in_with_password": "— або увійдіть з паролем —",
+      "page_title": "Вхід через SSO",
+      "sign_in_with_sso": "Увійти через SSO",
+      "sso_not_enabled": "SSO не увімкнено для цього облікового запису. Будь ласка, використовуйте ім'я користувача та пароль.",
+      "user_description": "Введіть ім'я користувача або електронну адресу Resgrid для входу через SSO",
+      "user_not_found": "Обліковий запис не знайдено. Будь ласка, перевірте ім'я користувача та спробуйте ще раз.",
+      "username_label": "Ім'я користувача або електронна пошта",
+      "username_placeholder": "Введіть ім'я користувача або електронну пошту",
+      "username_required": "Ім'я користувача є обов'язковим"
+    }
+  },
+  "map": {
+    "loading_markers": "Завантаження маркерів карти...",
+    "openSideMenu": "Відкрити бічне меню",
+    "tabs": {
+      "map": "Карта",
+      "pois": "POI"
+    }
+  },
+  "maps": {
+    "contact_administrator": "Будь ласка, зверніться до адміністратора для налаштування картографічних служб.",
+    "failed_to_load": "Не вдалося завантажити карту. Будь ласка, перевірте підключення до Інтернету.",
+    "legend": {
+      "error": "Не вдалося завантажити легенду карти.",
+      "loading": "Завантаження легенди карти...",
+      "no_meaning": "Без значення",
+      "open": "Відкрити легенду карти",
+      "other": "Інше",
+      "statuses": "Статуси",
+      "style": {
+        "unknown": "Без значення або без статусу"
+      }
+    },
+    "mapbox_not_configured": "Mapbox не налаштовано. Будь ласка, зверніться до адміністратора."
+  },
+  "messages": {
+    "all_messages": "Всі повідомлення",
+    "attending": "Відвідаю",
+    "calendar_rsvp": "Відповідь на подію",
+    "compose": "Написати",
+    "compose_new_message": "Нове повідомлення",
+    "date_unknown": "Дата невідома",
+    "delete_confirmation_message": "Ви впевнені, що хочете видалити {{count}} повідомлення(нь)?",
+    "delete_confirmation_title": "Видалити повідомлення",
+    "delete_single_confirmation_message": "Ви впевнені, що хочете видалити це повідомлення?",
+    "enter_expiration_date": "Введіть дату закінчення терміну дії",
+    "enter_message_body": "Введіть повідомлення",
+    "enter_note": "Введіть необов'язкову примітку",
+    "enter_response": "Введіть відповідь",
+    "enter_subject": "Введіть тему повідомлення",
+    "error": "Помилка",
+    "expiration_date_format": "Формат: РРРР-ММ-ДД ГГ:ХХ",
+    "expiration_date_optional": "Дата закінчення терміну (необов'язково)",
+    "expired": "Термін дії закінчився",
+    "expires_on": "Термін дії закінчується",
+    "from": "Від",
+    "inbox": "Вхідні",
+    "message_body": "Текст повідомлення",
+    "message_content": "Вміст повідомлення",
+    "message_type": "Тип повідомлення",
+    "no_content": "Вміст відсутній",
+    "no_messages": "Повідомлення не знайдено",
+    "no_messages_description": "Надішліть перше повідомлення для початку роботи",
+    "no_subject": "Тема відсутня",
+    "not_attending": "Не відвідаю",
+    "note_optional": "Примітка (необов'язково)",
+    "people": "Особи",
+    "recipients": "Одержувачі",
+    "recipients_count": "{{count}} одержувачів",
+    "recipients_selected": "Вибрано {{count}} одержувачів",
+    "respond_failed": "Не вдалося відповісти на повідомлення",
+    "respond_to_message": "Відповісти на повідомлення",
+    "responded": "Відповідь надіслано",
+    "responded_on": "Відповідь надіслано",
+    "responding": "Відповідь надсилається...",
+    "response": "Відповідь",
+    "response_required": "Відповідь є обов'язковою",
+    "search_placeholder": "Шукати повідомлення...",
+    "select_all": "Вибрати всі",
+    "select_message": "Вибрати повідомлення",
+    "select_message_type": "Вибрати тип повідомлення",
+    "select_recipients": "Вибрати одержувачів",
+    "selected_count": "Вибрано {{count}}",
+    "send": "Надіслати",
+    "send_first_message": "Надіслати перше повідомлення",
+    "send_response": "Надіслати відповідь",
+    "sending": "Надсилання...",
+    "sent": "Надіслано",
+    "showing_count": "Показано {{count}} повідомлень",
+    "subject": "Тема",
+    "title": "Повідомлення",
+    "types": {
+      "alert": "Сповіщення",
+      "calendar_rsvp": "Відповідь на подію",
+      "message": "Повідомлення",
+      "poll": "Опитування"
+    },
+    "unsaved_changes": "Незбережені зміни",
+    "unsaved_changes_message": "У вас є незбережені зміни. Ви впевнені, що хочете їх відхилити?",
+    "validation": {
+      "body_required": "Текст повідомлення є обов'язковим",
+      "recipients_required": "Потрібен принаймні один одержувач",
+      "subject_required": "Тема є обов'язковою"
+    }
+  },
+  "mfa": {
+    "approve": {
+      "app": "Застосунок: {{app}}",
+      "approve": "Підтвердити",
+      "approved": "Підтверджено. Можете повернутися до іншого екрана.",
+      "denied": "Відхилено. Нічого не підтверджено.",
+      "deny": "Відхилити",
+      "department": "Підрозділ: {{department}}",
+      "done": "Готово",
+      "expires": "Діє до {{time}}",
+      "installation": "Пристрій: {{label}}",
+      "none": "Нічого не очікує вашого підтвердження.",
+      "not_me": "Це був не я",
+      "number_body": "Введіть число з іншого екрана та підтвердьте ключем доступу. Підтверджуйте, лише якщо ви це почали самі.",
+      "number_mismatch": "Це не число з іншого екрана. Залишилося спроб: {{count}}.",
+      "number_placeholder": "Число",
+      "origin": "Поблизу: {{origin}}",
+      "purpose": {
+        "adp": "Хтось хоче переглянути захищену інформацію",
+        "department_entry": "Хтось переходить до підрозділу від вашого імені",
+        "login": "Хтось входить у ваш обліковий запис",
+        "step_up": "Хтось підтверджує дію вашим обліковим записом",
+        "unlock": "Хтось розблоковує спільний пристрій від вашого імені"
+      },
+      "shared": "На спільному пристрої",
+      "title": "Підтвердити вхід?",
+      "unknown_app": "Інший застосунок Resgrid"
+    }
+  },
+  "not_found": {
+    "go_home": "Перейти на головний екран!",
+    "message": "Цей екран не існує.",
+    "title": "Ой!"
+  },
+  "notifications": {
+    "additionalInformation": "Додаткова інформація",
+    "bulkDeleteError": "Не вдалося видалити сповіщення",
+    "bulkDeleteSuccess": "Видалено {{count}} сповіщення(нь)",
+    "confirmDelete": {
+      "message": "Ви впевнені, що хочете видалити {{count}} сповіщення(нь)? Цю дію неможливо скасувати.",
+      "title": "Підтвердити видалення"
+    },
+    "deleteError": "Не вдалося видалити сповіщення",
+    "deleteSuccess": "Сповіщення видалено",
+    "deselectAll": "Зняти вибір з усіх",
+    "loadError": "Не вдалося завантажити сповіщення",
+    "notAvailable": "Н/Д",
+    "selectAll": "Вибрати всі",
+    "selectedCount": "Вибрано {{count}}",
+    "viewCall": "Переглянути виклик",
+    "viewChat": "Переглянути чат",
+    "viewMessage": "Переглянути повідомлення",
+    "viewReference": "Переглянути {{referenceType}}",
+    "viewWorkOrder": "Переглянути наряд"
+  },
+  "onboarding": {
+    "get_started": "Почнімо",
+    "slides": {
+      "calls": {
+        "description": "Легко переглядайте інформацію про виклики та взаємодійте з командою для ефективного реагування",
+        "title": "Взаємодія з викликами"
+      },
+      "notifications": {
+        "description": "Отримуйте негайні сповіщення про надзвичайні ситуації та важливі оновлення від вашого підрозділу",
+        "title": "Миттєві сповіщення"
+      },
+      "responder": {
+        "description": "Керуйте своїм статусом і укомплектуванням та взаємодійте зі своєю організацією в реальному часі",
+        "title": "{{appName}}"
+      }
+    }
+  },
+  "operations": {
+    "time": {
+      "coveredBy": "Цей час уже є у звіті #{{number}} за цей день.",
+      "crewReport": "Звіт про час екіпажу #{{number}} · {{name}}",
+      "individualReport": "Звіт про час #{{number}} · {{name}}",
+      "report": "Звіт #{{number}}"
+    }
+  },
+  "personnel": {
+    "contactInformation": "Контактна інформація",
+    "currentStatus": "Поточний статус",
+    "emptyDescription": "Жоден персонал не відповідає критеріям пошуку або дані про персонал відсутні.",
+    "filter": {
+      "description": "Виберіть фільтри для уточнення списку персоналу. Зміни застосовуються автоматично.",
+      "empty": "Параметри фільтрування недоступні",
+      "emptyDescription": "Параметри фільтрування з'являться тут, коли будуть доступні.",
+      "title": "Фільтрувати персонал"
+    },
+    "id": "Ідентифікатор",
+    "status": {
+      "add_note": "Додати примітку",
+      "calls_tab": "Виклики",
+      "current": "Поточний",
+      "current_status": "Поточний статус",
+      "destination_required": "Для цього статусу потрібен пункт призначення",
+      "general_status": "Загальне оновлення статусу",
+      "gps_required": "Для цього статусу потрібне GPS-місцезнаходження",
+      "hold_to_set_hint": "Утримуйте 2 секунди, щоб встановити статус",
+      "hold_to_set_instructions": "Утримуйте статус 2 секунди, щоб встановити його",
+      "hold_to_submit": "Утримуйте, щоб надіслати",
+      "loading_pois": "Завантаження POI...",
+      "loading_stations": "Завантаження станцій...",
+      "missing_required_info": "Бракує обов’язкової інформації",
+      "no_destination": "Пункт призначення відсутній",
+      "no_stations_available": "Станції недоступні",
+      "note": "Примітка",
+      "note_placeholder": "Введіть примітку (необов'язково)...",
+      "note_required": "Для цього статусу потрібна примітка",
+      "pois_tab": "POI",
+      "responding_to_placeholder": "Введіть, на що ви реагуєте...",
+      "saved_offline": "Статус збережено офлайн і буде надіслано після відновлення з’єднання",
+      "select_call_to_respond_to": "Вибрати виклик для реагування",
+      "select_destination": "Вибрати пункт призначення",
+      "select_responding_to": "Встановити статус: {{status}}",
+      "selected_call": "Вибраний виклик",
+      "set_status": "Встановити статус персоналу",
+      "show_all_statuses": "Показати всі статуси (ще {{count}})",
+      "show_next_statuses": "Показати лише наступні статуси",
+      "stations_tab": "Станції",
+      "status": "Статус"
+    }
+  },
+  "pois": {
+    "address_label": "Адреса",
+    "coordinates_label": "Координати",
+    "destination_enabled": "Доступно як пункт призначення",
+    "empty_description": "Жоден POI не відповідає поточному фільтру.",
+    "empty_title": "POI не знайдено",
+    "filter_all_types": "Усі типи",
+    "filter_label": "Фільтр",
+    "filter_sort_title": "Фільтр та сортування",
+    "invalid_description": "Щоб переглянути деталі POI, потрібен ідентифікатор POI.",
+    "invalid_title": "Недійсний POI",
+    "list_description": "Переглядайте POI підрозділу, фільтруйте за типом і повертайтеся до карти.",
+    "load_error_title": "Не вдалося завантажити POI",
+    "not_found": "POI не знайдено",
+    "note_label": "Примітка",
+    "reset_filters": "Скинути",
+    "results_count": "{{count}} POI",
+    "results_count_plural": "{{count}} POIs",
+    "search_placeholder": "Пошук POI...",
+    "set_status_destination": "Використати як пункт призначення статусу",
+    "sort_label": "Сортувати",
+    "sort_name": "Назва",
+    "sort_type": "Тип",
+    "title": "POI",
+    "type_label": "Тип",
+    "view_details": "Переглянути деталі",
+    "view_on_map": "Показати на карті",
+    "view_on_map_hint": "Залишайте карту відкритою, щоб одночасно бачити своє місцезнаходження і вибраний POI."
+  },
+  "push_notifications": {
+    "communication_test_confirmed": "Отримання підтверджено. Дякуємо.",
+    "communication_test_failed": "Не вдалося підтвердити отримання. Спробуйте ще раз.",
+    "communication_test_prompt": "Це лише тест. Підтвердьте отримання, щоб ваш підрозділ знав, що може з вами зв’язатися.",
+    "confirm_receipt": "Підтвердити отримання",
+    "confirming_receipt": "Підтвердження...",
+    "types": {
+      "communication_test": "Тест зв’язку",
+      "weather": "Погодне попередження",
+      "work_order": "Наряд на роботу"
+    },
+    "view_alert": "Переглянути попередження",
+    "view_chat": "Переглянути чат",
+    "view_work_order": "Переглянути наряд"
+  },
+  "settings": {
+    "logout_confirm_cancel": "Скасувати",
+    "logout_confirm_yes": "Так, вийти",
+    "notifications_badge_overflow": "99+",
+    "notifications_button": "Сповіщення"
+  },
+  "shifts": {
+    "actions": {
+      "accept": "Прийняти",
+      "add_person": "Додати особу",
+      "apply": "Подати заявку",
+      "approve": "Затвердити",
+      "cancel_request_admin": "Скасувати запит",
+      "cancel_trade": "Скасувати запит на обмін",
+      "confirm": "Підтвердити",
+      "confirm_signup": "Підтвердити запис",
+      "decline": "Відхилити",
+      "deny": "Відмовити",
+      "remove": "Вилучити",
+      "request_trade": "Запросити обмін",
+      "send_request": "Надіслати запит",
+      "withdraw_application": "Відкликати заявку"
+    },
+    "add_panel": {
+      "group": "Група",
+      "no_options": "Більше нікого не можна додати.",
+      "person": "Особа",
+      "search_placeholder": "Пошук персоналу",
+      "submit": "Додати до зміни",
+      "title": "Додати особу на цей день"
+    },
+    "all_shifts": "Всі зміни",
+    "already_signed_up": "Вже зареєстровано",
+    "approval_required": "Потрібне затвердження",
+    "approvals": {
+      "signups": "Записи",
+      "trades": "Обміни"
+    },
+    "assigned": "Призначено",
+    "assignment_type": {
+      "assigned": "Призначена",
+      "signup": "Запис",
+      "workshift": "Робоча зміна"
+    },
+    "automatic": "Автоматично",
+    "available": "Доступно",
+    "calendar": "Календар",
+    "calendar_export": {
+      "add_all": "Додати мої зміни до календаря ({{count}})",
+      "add_all_hint": "Додає до календаря пристрою всі зміни, на яких ви працюєте протягом наступних 30 днів",
+      "add_hint": "Додає цю зміну до календаря пристрою або оновлює її, якщо вона вже там є",
+      "add_one": "Додати до календаря",
+      "added_many": "Змін у вашому календарі: {{count}}",
+      "added_one": "Додано до вашого календаря",
+      "event_footer": "Додано з Resgrid",
+      "event_place": "У складі: {{place}}",
+      "event_title": "Зміна {{name}}",
+      "failed": "Не вдалося додати зміну до вашого календаря.",
+      "nothing_to_add": "До календаря можна додати лише зміни, на яких ви працюєте.",
+      "permission_denied": "Доступ до календаря вимкнено. Дозвольте його в Налаштуваннях, щоб додавати зміни.",
+      "updated_one": "Оновлено у вашому календарі"
+    },
+    "calendar_view": {
+      "day_a11y": "{{date}}: змін {{count}}, вільних місць {{open}}",
+      "filter_a11y": "Фільтрувати календар за зміною",
+      "legend_filled": "Повністю укомплектовано",
+      "legend_mine": "Мої зміни",
+      "legend_open": "Вільні місця",
+      "next_month": "Наступний місяць",
+      "previous_month": "Попередній місяць",
+      "select_day": "Виберіть день, щоб побачити його зміни",
+      "shift_info": "Деталі зміни"
+    },
+    "card_a11y_hint": "Відкриває деталі цього дня зміни",
+    "current_signups": "Поточні реєстрації",
+    "day": {
+      "covering_for": "Замінює: {{name}}",
+      "denied_note": "Ваш запис на цей день відхилено.",
+      "group_filled": "Укомплектовано",
+      "group_open": "Вільно: {{count}}",
+      "no_group": "Без групи",
+      "no_role_requirements": "Немає вимог до ролей",
+      "open_needs": "Незаповнені місця",
+      "pending_note": "Ваш запис очікує затвердження керівником. До затвердження ви не на чергуванні.",
+      "require_approval_note": "Записи та обміни на цій зміні потребують затвердження керівником.",
+      "roster": "Склад",
+      "roster_empty": "На цей день ще ніхто не записаний.",
+      "trade_pending_note": "Ви попросили колег взяти цю зміну."
+    },
+    "day_details": "Деталі дня зміни",
+    "details": "Деталі зміни",
+    "empty": {
+      "approvals_description": "Тут з’являються записи та обміни, що очікують вашого затвердження.",
+      "approvals_title": "Немає що затверджувати",
+      "calendar_day": "Цього дня змін немає",
+      "mine_description": "Тут з’являються зміни, на які вас призначено або на які ви записалися на найближчі 30 днів.",
+      "mine_title": "Немає майбутніх змін",
+      "on_duty_description": "Зараз ніхто не на активній зміні.",
+      "on_duty_title": "Ніхто не чергує",
+      "open_trades_description": "Коли хтось просить передати свою зміну, запит з’являється тут для всіх, хто може її взяти.",
+      "open_trades_title": "Немає відкритих запитів на обмін",
+      "signup_description": "Тут з’являються дні змін із записом, де є місце для вас протягом наступних 30 днів.",
+      "signup_title": "Немає на що записатися",
+      "trades_description": "Тут з’являються запити на обмін, які ви надсилаєте або отримуєте.",
+      "trades_title": "Немає обмінів змінами"
+    },
+    "end_time": "Час закінчення",
+    "errors": {
+      "already_on_roster": "Ця особа вже є у складі на цей день.",
+      "already_signed_up": "Ви вже записані на цей день.",
+      "day_in_past": "Цей день зміни вже минув.",
+      "invalid_group": "Ця група не входить до цієї зміни.",
+      "invalid_offer": "Ця пропозиція вже недійсна.",
+      "invalid_request": "Запит недійсний. Спробуйте ще раз.",
+      "network": "Схоже, ви офлайн. Спробуйте ще раз.",
+      "no_users": "Виберіть принаймні одну особу.",
+      "not_allowed": "У вас немає дозволу на цю дію.",
+      "not_eligible": "У вас немає ролей, потрібних для цього місця.",
+      "not_found": "Ця зміна, запис або обмін більше не існує.",
+      "not_on_shift": "Ви не на цій зміні цього дня.",
+      "not_pending": "Цей запит більше не очікує рішення.",
+      "trade_exists": "На цей день уже є відкритий обмін.",
+      "unknown": "Щось пішло не так. Спробуйте ще раз."
+    },
+    "groups": "Групи",
+    "hours": "Години",
+    "in_shift": "У зміні",
+    "legend": "Легенда",
+    "load_error": "Не вдалося завантажити зміни",
+    "loading": "Завантаження змін...",
+    "loading_details": "Завантаження деталей зміни...",
+    "loading_signup": "Обробка...",
+    "manual": "Вручну",
+    "mine_sections": {
+      "active": "Зараз на чергуванні",
+      "pending": "Очікує затвердження",
+      "upcoming": "Майбутні"
+    },
+    "my_standing_shifts": "Мої постійні зміни",
+    "my_upcoming_days": "Найближчі дні",
+    "needed": "Потрібно",
+    "needs": "Потреби",
+    "next_day": "Наступний день",
+    "no_positions_available": "Вакантні посади для реєстрації відсутні",
+    "no_shifts": "Зміни недоступні",
+    "no_shifts_description": "Зверніться до свого керівника, якщо вважаєте, що вам мають бути призначені зміни",
+    "no_shifts_today": "На сьогодні зміни не заплановано",
+    "no_shifts_today_description": "Перевірте пізніше або зверніться до свого керівника щодо призначення змін",
+    "no_signups_yet": "Реєстрацій ще немає",
+    "note_label": "Примітка",
+    "note_optional_placeholder": "Додати примітку (необов’язково)",
+    "on_duty": {
+      "count": "На чергуванні: {{count}}",
+      "until": "До {{time}}"
+    },
+    "optional": "Необов'язково",
+    "overnight": "(наступного дня)",
+    "personnel_count": "Кількість персоналу",
+    "position_needs": "Потреби посади",
+    "remove_panel": {
+      "description": "Особу буде вилучено лише з цього дня. Інші її зміни не зміняться.",
+      "remove_person": "Вилучити {{name}} з цього дня",
+      "title": "Вилучити {{name}}?"
+    },
+    "required": "Обов'язково",
+    "required_count": "Потрібно: {{count}}",
+    "review": {
+      "approve_person": "Затвердити: {{name}}",
+      "approve_signup_title": "Затвердити цей запис?",
+      "approve_trade_title": "Затвердити цей обмін?",
+      "deny_person": "Відмовити: {{name}}",
+      "deny_signup_title": "Відхилити цей запис?",
+      "deny_trade_title": "Відхилити цей обмін?",
+      "requested_at": "Запит від {{date}}",
+      "trade_summary": "{{from}} передає цю зміну: {{to}}"
+    },
+    "roles": "Ролі",
+    "roster_source": {
+      "scheduled": "За розкладом",
+      "signup": "Записаний",
+      "supervisor": "Додано керівником",
+      "trade": "Обмін"
+    },
+    "schedule_type": {
+      "custom": "Власний",
+      "forty_eight_ninety_six": "48/96",
+      "manual": "Ручний",
+      "twenty_four_forty_eight": "24/48",
+      "twenty_four_seventy_two": "24/72"
+    },
+    "scheduled_for": "Заплановано на",
+    "search_placeholder": "Шукати зміни...",
+    "segments": {
+      "a11y_hint": "Показує цей вигляд змін",
+      "approvals": "Затвердження",
+      "calendar": "Календар",
+      "mine": "Мої зміни",
+      "on_duty": "На чергуванні",
+      "signup": "Запис",
+      "today": "Сьогодні",
+      "trades": "Обміни",
+      "with_count": "{{label}}, очікують: {{count}}"
+    },
+    "shift_card_a11y_hint": "Відкриває деталі цієї зміни",
+    "shift_code": "Код зміни",
+    "shift_day": "День зміни",
+    "shift_name": "Назва зміни",
+    "shift_type": {
+      "emergency": "Аварійна",
+      "label": "Тип зміни",
+      "regular": "Звичайна",
+      "training": "Навчальна",
+      "unknown": "Невідомо"
+    },
+    "signed_up": "Зареєстровано",
+    "signup": "Зареєструватися",
+    "signup_error": "Не вдалося зареєструватися на зміну",
+    "signup_panel": {
+      "approval_notice": "Керівник має затвердити цей запис, перш ніж ви будете на чергуванні.",
+      "description": "Виберіть групу (команду), з якою ви записуєтеся на цей день.",
+      "hint": "Виберіть команду та підтвердьте запис",
+      "no_groups": "У цій зміні немає груп для запису.",
+      "title": "Виберіть свою команду"
+    },
+    "signup_status": "Статус реєстрації",
+    "signup_success": "Успішно зареєстровано на зміну",
+    "signup_view": {
+      "description": "Дні змін, на які ви можете записатися протягом наступних 30 днів. Торкніться дня, щоб вибрати свою команду.",
+      "filter_all": "Усі дні",
+      "filter_needed": "Потрібні люди"
+    },
+    "signups": "Реєстрації",
+    "start_time": "Час початку",
+    "status": {
+      "active_now": "Триває зараз",
+      "denied": "Відхилено",
+      "filled": "Повністю укомплектовано",
+      "on_roster": "Ви у складі",
+      "open_slots": "Вільні місця: {{count}}",
+      "pending_approval": "Очікує затвердження",
+      "trade_requested": "Запитано обмін"
+    },
+    "title": "Зміни",
+    "toast": {
+      "approved": "Затверджено",
+      "denied": "Відхилено",
+      "person_added": "Особу додано до зміни",
+      "person_removed": "Особу вилучено зі зміни",
+      "signup_pending": "Записано. Очікує затвердження керівником.",
+      "trade_accepted": "Вашу пропозицію надіслано",
+      "trade_application_withdrawn": "Вашу заявку відкликано",
+      "trade_applied": "Заявку надіслано",
+      "trade_cancelled": "Запит на обмін скасовано",
+      "trade_declined": "Обмін відхилено",
+      "trade_finished": "Обмін завершено",
+      "trade_finished_pending": "Обмін надіслано на затвердження",
+      "trade_requested": "Запит на обмін надіслано",
+      "trade_requested_open": "Запит на обмін надіслано всім, хто може взяти зміну"
+    },
+    "today": "Сьогодні",
+    "todays_shifts": "Сьогоднішні зміни",
+    "trade": {
+      "accept_description": "Ви можете запропонувати натомість одну зі своїх майбутніх змін або просто взяти цю.",
+      "accept_title": "Прийняти цей обмін?",
+      "applicant_conflict": "У цей час уже працює на зміні {{name}}",
+      "applicant_count": "Кандидати: {{count}}",
+      "applicants": "Кандидати",
+      "applied_at": "Заявка від {{date}}",
+      "apply_description": "{{name}} і ті, хто ухвалює рішення щодо обмінів, побачать вашу заявку. Ви можете запропонувати натомість одну зі своїх змін.",
+      "apply_title": "Подати заявку на цю зміну?",
+      "cancel_description": "Отримані пропозиції буде відкинуто.",
+      "cancel_description_open": "Усі, хто подав заявку, отримають повідомлення, що запит скасовано.",
+      "cancel_title": "Скасувати цей запит на обмін?",
+      "decline_description": "Ініціатор побачить, що ви відмовилися.",
+      "decline_title": "Відхилити цей обмін?",
+      "details_a11y": "Обмін зміни {{shift}} {{date}}",
+      "details_hint": "Відкриває обмін і його кандидатів",
+      "filter_mine": "Мої ({{count}})",
+      "filter_open": "Відкриті запити ({{count}})",
+      "finish_give_description": "{{name}} візьме цю зміну.",
+      "finish_pending_note": "Керівник має затвердити цей обмін, перш ніж він набуде чинності.",
+      "finish_swap_description": "{{name}} бере цю зміну, а ви берете зміну {{shift}} {{date}}.",
+      "finish_title": "Вибрати цю пропозицію?",
+      "from": "Від: {{name}}",
+      "give_to": "Передати: {{name}}",
+      "incoming": "Вхідний",
+      "ineligible": {
+        "already_on_day": "Ви вже працюєте цього дня.",
+        "missing_roles": "У вас немає ролей, потрібних для цього місця.",
+        "not_allowed": "Ви не можете взяти цю зміну."
+      },
+      "my_state": {
+        "accepted": "Ви берете цю зміну",
+        "declined": "Ви відмовилися",
+        "denied": "Відхилено керівником",
+        "filled": "Її взяв хтось інший",
+        "open": "Очікує вашої відповіді",
+        "pending_approval": "Очікує затвердження керівником",
+        "proposed": "Ви зробили пропозицію"
+      },
+      "nearby_workload": "У межах тижня від цього дня: змін {{count}}, {{hours}} год",
+      "no_applicants": "Заявок ще немає",
+      "no_certifications": "Немає чинних посвідчень",
+      "no_offers": "Відповідей ще немає",
+      "no_swap": "Не пропонувати зміну натомість",
+      "offer_back": "Запропонувати зміну натомість",
+      "offers": "Відповіді",
+      "open_request": "Відкрито для всіх",
+      "outgoing": "Вихідний",
+      "pick_as_approver_note": "Ви ухвалюєте рішення щодо цього обміну як затверджувач: ваш вибір набуває чинності одразу.",
+      "pick_note": "Виберіть, хто візьме цю зміну.",
+      "requested_at": "Запит від {{date}}",
+      "requested_by": "Ініціатор: {{name}}",
+      "reviewed_by": "Розглянув: {{name}}",
+      "section_active": "У процесі",
+      "section_applied": "Ваші заявки",
+      "section_attention": "Потребує вашої уваги",
+      "section_can_apply": "Ви можете взяти",
+      "section_other_requests": "Інші запити",
+      "section_recent": "Нещодавні",
+      "select_applicant": "Передати: {{name}}",
+      "status": {
+        "cancelled": "Скасовано",
+        "completed": "Завершено",
+        "denied": "Відхилено",
+        "open": "Відкрито",
+        "pending_approval": "Очікує затвердження"
+      },
+      "swap_back": "Зворотний обмін: {{date}}",
+      "swap_for": "Обміняти на {{shift}} {{date}}",
+      "taken_by": "Взяв: {{name}}",
+      "user_declined": "Відмовився",
+      "user_offered": "Запропонував",
+      "user_waiting": "Ще немає відповіді",
+      "user_withdrew": "Відкликав заявку",
+      "withdraw_description": "Ініціатор побачить, що ви більше не доступні.",
+      "withdraw_title": "Відкликати вашу заявку?"
+    },
+    "trade_panel": {
+      "description": "Виберіть, хто має взяти цю зміну. Кожен вибраний отримає запит, а потім ви виберете з пропозицій.",
+      "mode_open": "Усі, хто може її взяти",
+      "mode_open_hint": "Отримають сповіщення: {{count}}",
+      "mode_specific": "Лише вибрані мною люди",
+      "mode_specific_hint": "Натомість запитати конкретних колег",
+      "no_candidates": "Ніхто не може взяти цю зміну.",
+      "open_description": "Усі, хто вільний цього дня і має ролі, потрібні для вашого місця, отримають електронний лист і push-сповіщення та зможуть подати заявку. Потім ви вирішуєте, хто візьме зміну, або це робить ваш керівник.",
+      "open_description_workshift": "Усі, хто вільний цього дня, отримають електронний лист і push-сповіщення та зможуть подати заявку, щоб зайняти ваше місце в екіпажі підрозділу.",
+      "selected_count": "Вибрано: {{count}}",
+      "title": "Запросити обмін"
+    },
+    "type_emergency": "Аварійна",
+    "type_regular": "Звичайна",
+    "type_training": "Навчальна",
+    "type_unknown": "Невідомо",
+    "unknown": "Невідомо",
+    "upcoming_shift_days": "Майбутні дні змін",
+    "view_calendar": "Показати в календарі",
+    "view_calendar_hint": "Показує цю зміну в календарі",
+    "withdraw": "Відкликатися",
+    "withdraw_error": "Не вдалося відкликатися від зміни",
+    "withdraw_panel": {
+      "description": "Вас буде вилучено зі складу на {{date}}.",
+      "title": "Відмовитися від цієї зміни?"
+    },
+    "withdraw_success": "Успішно відкликано від зміни",
+    "you": "Ви",
+    "you_are_signed_up": "Ви зареєстровані на цю зміну"
+  },
+  "sidebar": {
+    "audio": "Потік",
+    "ptt": "Голос"
+  },
+  "tabs": {
+    "personnel": "Люди",
+    "units": "Підрозділи",
+    "weatherAlerts": "Погодні Сповіщення"
+  },
+  "units": {
+    "coordinates": "Координати",
+    "emptyDescription": "У вашому підрозділі немає доступних одиниць",
+    "features": "Характеристики",
+    "fourWheelDrive": "Повний привід",
+    "lastUpdate": "Останнє оновлення",
+    "location": "Місцезнаходження",
+    "maps_error": "Не вдалося відкрити карти",
+    "notes": "Примітки",
+    "plateNumber": "Номерний знак",
+    "specialPermit": "Спеціальний дозвіл",
+    "tapToOpenMaps": "Натисніть, щоб відкрити в картах",
+    "vehicleInfo": "Інформація про транспортний засіб"
+  },
+  "video_feeds": {
+    "add_feed": "Додати відеотрансляцію",
+    "delete_confirm": "Ви впевнені, що хочете видалити цю відеотрансляцію?",
+    "delete_feed": "Видалити відеотрансляцію",
+    "edit_feed": "Редагувати відеотрансляцію",
+    "form_description": "Опис",
+    "form_feed_format": "Формат трансляції",
+    "form_feed_type": "Тип трансляції",
+    "form_name": "Назва",
+    "form_sort_order": "Порядок сортування",
+    "form_status": "Статус",
+    "form_url": "URL",
+    "format_youtube": "YouTube",
+    "no_feeds": "Немає відеотрансляцій для цього виклику",
+    "type_satellite": "Супутникова трансляція",
+    "type_webcam": "Вебкамера",
+    "unsupported_format": "Цей формат не підтримується для відтворення в додатку. Скопіюйте URL, щоб відкрити у зовнішньому програвачі."
+  },
+  "weather_alerts": {
+    "banner": {
+      "moreAlerts": "+{{count}} ще"
+    },
+    "category": {
+      "CBRNE": "ХБРЯ",
+      "Env": "Екологічний",
+      "Fire": "Пожежа",
+      "Geo": "Геологічний",
+      "Health": "Здоров'я",
+      "Infra": "Інфраструктура",
+      "Met": "Метеорологічний",
+      "Other": "Інше",
+      "Transport": "Транспорт"
+    },
+    "certainty": {
+      "Likely": "Ймовірно",
+      "Observed": "Спостережено",
+      "Possible": "Можливо",
+      "Unknown": "Невідомо",
+      "Unlikely": "Малоймовірно",
+      "label": "Впевненість"
+    },
+    "detail": {
+      "load_error": "Сповіщення недоступне",
+      "load_error_description": "Не вдалося завантажити це погодне сповіщення. Можливо, воно застаріло або запит не вдався.",
+      "metadata": "Деталі",
+      "status": "Статус"
+    },
+    "search": "Пошук сповіщень...",
+    "severity": {
+      "Extreme": "Екстремальний",
+      "Minor": "Незначний",
+      "Moderate": "Помірний",
+      "Severe": "Серйозний",
+      "Unknown": "Невідомо"
+    },
+    "status": {
+      "Active": "Активний",
+      "Actual": "Фактичний",
+      "Cancelled": "Скасовано",
+      "Draft": "Чернетка",
+      "Exercise": "Навчання",
+      "Expired": "Термін дії минув",
+      "System": "Система",
+      "Test": "Тест",
+      "Updated": "Оновлено"
+    },
+    "urgency": {
+      "Expected": "Очікувана",
+      "Future": "Майбутня",
+      "Immediate": "Негайна",
+      "Past": "Минула",
+      "Unknown": "Невідома",
+      "label": "Терміновість"
+    }
+  },
+  "welcome": "Ласкаво просимо до {{appName}}",
+  "workOrders": {
+    "accept": "Прийняти призначення",
+    "activity": "Активність",
+    "activityType": {
+      "0": "Створено",
+      "1": "Оновлено",
+      "2": "Статус змінено",
+      "3": "Призначено",
+      "4": "Призначення прийнято",
+      "5": "Коментар",
+      "6": "Години записано",
+      "7": "Деталь додано",
+      "8": "Деталь анульовано",
+      "9": "Файл додано",
+      "10": "Файл вилучено",
+      "11": "Зупинка з безпеки",
+      "12": "Зупинку з безпеки знято",
+      "13": "Відкладено",
+      "14": "Ескальовано"
+    },
+    "addComment": "Додати коментар",
+    "allMine": "Усі, які я бачу",
+    "assetIs": "Обладнання: {{name}}",
+    "assignedToMe": "Призначені мені",
+    "back": "Назад",
+    "cannotReport": "Ваша організація зараз не може приймати нові наряди.",
+    "choosePhoto": "Вибрати фото",
+    "commentHint": "Додайте коментар",
+    "due": "Термін {{date}}",
+    "errors": {
+      "AcceptAssignmentFirst": "Спершу прийміть призначення.",
+      "Conflict": "Хтось інший змінив цей наряд. Перевірте його та спробуйте ще раз.",
+      "IndependentVerificationRequired": "Закрити наряд має інша особа, ніж та, що виконувала роботу.",
+      "InvalidFile": "Можна додавати лише файли JPEG, PNG або PDF до 10 МБ.",
+      "PartBalanceOutstanding": "Деталі ще потрібно видати, повернути або засвідчити.",
+      "ReadinessProRequired": "Вашій організації для цього потрібен Readiness Pro.",
+      "RevisionConflict": "Хтось інший змінив цей наряд. Перевірте його та спробуйте ще раз.",
+      "SafetyRequirements": "Спершу потрібно записати процедуру безпеки, дозвіл, ізоляцію та кваліфікований персонал.",
+      "ScanRequired": "Файл ще перевіряється. Спробуйте трохи згодом.",
+      "SpendingApprovalRequired": "Перед цим кроком потрібне погодження витрат.",
+      "TasksIncomplete": "Підтвердьте, що всі кроки виконано.",
+      "denied": "Ви не маєте доступу до цього наряду.",
+      "locked": "Розблокуйте захищені дані, щоб продовжити.",
+      "photo_denied": "Дозвольте доступ до камери або фото, щоб додати фото.",
+      "readiness_required": "Вашій організації для цього потрібен Readiness Pro.",
+      "retry": "Не вдалося зв'язатися із сервером. Спробуйте ще раз."
+    },
+    "files": "Фото та файли",
+    "form": {
+      "asset": "Обладнання",
+      "description": "Подробиці",
+      "descriptionHint": "Що сталося, що ви бачили, що має знати механік",
+      "group": "Підрозділ",
+      "location": "Місце",
+      "locationHint": "Де саме (бокс, відсік, приміщення)",
+      "none": "Немає",
+      "photosAfter": "Фото можна додати після збереження повідомлення.",
+      "priority": "Пріоритет",
+      "safetyCritical": "Критично для безпеки",
+      "submit": "Надіслати повідомлення",
+      "title": "Назва",
+      "titleHint": "Що не так, кількома словами",
+      "type": "Вид роботи",
+      "unit": "Техніка"
+    },
+    "groupIs": "Підрозділ: {{name}}",
+    "hours": "Години",
+    "hoursInvalid": "Введіть від 0 до 24 годин.",
+    "hoursLogged": "Записано {{hours}} год",
+    "hoursNote": "Що було зроблено",
+    "locationIs": "Місце: {{location}}",
+    "logHours": "Записати години",
+    "more": "Завантажити ще",
+    "none": "Немає нарядів.",
+    "noneAssigned": "Вам нічого не призначено.",
+    "photoAdded": "Фото додано.",
+    "priority": {
+      "0": "Низький",
+      "1": "Звичайний",
+      "2": "Високий",
+      "3": "Терміновий"
+    },
+    "readOnly": "Ви можете переглядати наряди; повідомлення та оновлення потребують {{product}}.",
+    "report": "Повідомити про проблему",
+    "resolutionIs": "Рішення: {{text}}",
+    "safety": "Робота, критична для безпеки, або небезпечна",
+    "saveHours": "Зберегти години",
+    "status": {
+      "0": "Запитано",
+      "1": "Прийнято",
+      "2": "Призначено",
+      "3": "У роботі",
+      "4": "Призупинено",
+      "5": "Виконано",
+      "6": "Закрито",
+      "7": "Відхилено",
+      "8": "Дублікат",
+      "9": "Скасовано"
+    },
+    "steps": "Кроки",
+    "takePhoto": "Зробити фото",
+    "title": "Наряди на роботу",
+    "transition": {
+      "apply": "Оновити статус",
+      "cause": "Першопричина",
+      "confirmTasks": "Усі кроки виконано",
+      "duplicateOf": "Номер наряду, який дублюється",
+      "missing": {
+        "cause": "Введіть першопричину.",
+        "confirmTasks": "Підтвердьте, що кроки виконано.",
+        "duplicateOf": "Введіть наряд, який дублюється.",
+        "reason": "Введіть причину.",
+        "resolution": "Опишіть, що було зроблено.",
+        "verification": "Опишіть, як перевірено."
+      },
+      "pick": "Виберіть новий статус",
+      "reason": "Причина",
+      "resolution": "Що зроблено для усунення",
+      "title": "Змінити статус",
+      "verification": "Як перевірено"
+    },
+    "type": {
+      "0": "Ремонт",
+      "1": "Профілактика",
+      "2": "Огляд",
+      "3": "Будівлі",
+      "4": "Інше"
+    },
+    "unitIs": "Техніка: {{name}}",
+    "viewPhoto": "Переглянути фото {{name}}"
+  }
+}

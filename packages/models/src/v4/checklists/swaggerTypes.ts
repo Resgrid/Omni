@@ -1,0 +1,31 @@
+// Core v4 request/response shapes no legacy app modelled, generated from Swagger v4 (packages/api/contract/swagger-v4.json). Resgrid.Model entities referenced by them are typed as records until modelled.
+
+import type { ChecklistInput } from './checklists';
+
+/** Core `v4.Checklists.ChecklistStartInput` (generated from Swagger v4). */
+export interface ChecklistStartInput {
+  OccurrenceId?: string | null;
+  DefinitionId?: string | null;
+  VersionId?: string | null;
+  TargetId?: string | null;
+  CompletionId?: string | null;
+}
+
+/** Core `v4.Checklists.ChecklistWitnessInput` (generated from Swagger v4). */
+export interface ChecklistWitnessInput {
+  Id?: string | null;
+  SubmissionHash?: string | null;
+  Attestation?: string | null;
+}
+
+/** Core `v4.Checklists.ChecklistProgressInput` (Core ChecklistApiContracts.cs; the Swagger snapshot carries no schemas). */
+export interface ChecklistProgressInput {
+  Id?: string | null;
+  Input?: ChecklistInput | null;
+}
+
+/** Core `v4.Checklists.ChecklistCommandInput` (Core ChecklistApiContracts.cs). */
+export interface ChecklistCommandInput {
+  Id?: string | null;
+  Revision: number;
+}

@@ -1,0 +1,29 @@
+{
+  "name": "@resgrid/notifications",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Push (native, web, Electron), notification channels and categories, event-code deep links, push modal, desktop toasts, Novu inbox configuration and modern notification sounds for Resgrid Omni (layer L3)",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "dependencies": {
+    "@notifee/react-native": "catalog:",
+    "@novu/react-native": "catalog:",
+    "@resgrid/api": "workspace:*",
+    "@resgrid/config": "workspace:*",
+    "@resgrid/core": "workspace:*",
+    "@resgrid/i18n": "workspace:*",
+    "@resgrid/models": "workspace:*",
+    "expo-asset": "catalog:",
+    "expo-audio": "catalog:",
+    "expo-device": "catalog:",
+    "expo-notifications": "catalog:",
+    "expo-router": "catalog:",
+    "firebase": "catalog:",
+    "react": "catalog:",
+    "react-native": "catalog:",
+    "zustand": "catalog:"
+  },
+  "devDependencies": {
+    "react-test-renderer": "catalog:"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "operations.expenses.queued": "Expense saved on this device. It sends when you are back online.",
+  "operations.time.queued": "Entries saved on this device. They send when you are back online.",
+  "operations.time.rejected": "The server refused these entries. Review them in Pending sync.",
+  "operations.time.saved": "Entries saved."
+}

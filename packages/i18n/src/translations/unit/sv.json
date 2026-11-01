@@ -1,0 +1,244 @@
+{
+  "app": {
+    "initialization_failed": "Det gick inte att läsa in appdata. Kontrollera din anslutning och försök igen."
+  },
+  "callImages": {
+    "not_signed_in": "Du måste vara inloggad för att ladda upp bilder",
+    "upload_error": "Det gick inte att ladda upp bilden"
+  },
+  "calls": {
+    "directions_to_destination": "Vägbeskrivning till destinationen",
+    "dispatch_on": "Utskickstid",
+    "dispatch_on_too_soon": "Utskickstiden måste vara minst {{minutes}} minuter fram i tiden",
+    "errors": {
+      "load_failed": "Det gick inte att läsa in samtalen"
+    },
+    "files": {
+      "sharing_unavailable": "Delning är inte tillgängligt på den här enheten"
+    },
+    "required_fields_missing": "Din avdelning kräver dessa fält innan samtalet kan sparas: {{fields}}",
+    "view_on_map": "Visa på kartan"
+  },
+  "chat": {
+    "chatting_as": "Chattar som {{name}}"
+  },
+  "common": {
+    "no_location": "Ingen platsdata tillgänglig",
+    "no_unit": "Ingen enhet",
+    "unknown_error": "Ett okänt fel uppstod"
+  },
+  "contacts": {
+    "unknown_company": "Okänt företag",
+    "unknown_person": "Okänd person"
+  },
+  "incident_command": {
+    "error": "Det gick inte att ladda information om insatsledningen",
+    "need_category": {
+      "equipment": "Utrustning",
+      "logistics": "Logistik",
+      "medical": "Medicinskt",
+      "other": "Övrigt",
+      "resource": "Resurs",
+      "staffing": "Bemanning"
+    },
+    "need_status": {
+      "cancelled": "Avbrutet",
+      "met": "Uppfyllt",
+      "open": "Öppet",
+      "partially_met": "Delvis uppfyllt"
+    },
+    "no_active_command": "Ingen insatsledning är aktiv för detta samtal",
+    "objective_status": {
+      "complete": "Slutfört",
+      "in_progress": "Pågår",
+      "pending": "Väntande"
+    },
+    "objective_type": {
+      "benchmark": "Milstolpe",
+      "general": "Allmänt",
+      "safety": "Säkerhet"
+    },
+    "progress": "{{percent}} % slutfört",
+    "quantity_fulfilled": "{{fulfilled}} av {{requested}} uppfyllda"
+  },
+  "inventory": {
+    "assetStatus": {
+      "0": "I tjänst",
+      "1": "Utlämnad",
+      "2": "På reparation",
+      "3": "Skadad",
+      "4": "Förlorad",
+      "5": "Förbrukad",
+      "6": "Avvecklad"
+    },
+    "awaitingWitness": "En kontrollerad artikel ändrades; en andra person måste bevittna inventeringen på webben.",
+    "back": "Tillbaka",
+    "cancel": "Avbryt",
+    "cancelBody": "Inget av det som räknats bokförs.",
+    "cancelCount": "Avbryt inventering",
+    "cancelTitle": "Avbryta inventeringen?",
+    "cannotCount": "Inventering kräver behörigheten Justera förråd för den här enheten.",
+    "complete": "Avsluta",
+    "completeBody": "{{count}} artiklar avviker från det förväntade. Avslutning bokför avvikelserna.",
+    "completeNoChanges": "Allt stämmer med det förväntade.",
+    "completeTitle": "Avsluta inventeringen?",
+    "completed": "Inventeringen är klar.",
+    "count": "Inventering",
+    "countName": "Kontroll {{name}} {{date}}",
+    "countStatus": {
+      "0": "Pågår",
+      "1": "Väntar på vittne",
+      "2": "Klar",
+      "3": "Avbruten"
+    },
+    "counts": "Senaste inventeringar",
+    "differences": "{{count}} avvikelser",
+    "disabled": "Förrådet är avstängt för er organisation.",
+    "empty": "Här finns inget.",
+    "errors": {
+      "CountAlreadyExists": "Inventeringen finns redan.",
+      "CountEmpty": "Det finns inget att räkna här.",
+      "CountScopeTooLarge": "För många artiklar för en inventering. Räkna ett fack i taget.",
+      "CountSnapshotChanged": "Enhetens förråd ändrades medan du räknade. Avbryt och börja om.",
+      "CountStateConflict": "Inventeringen ändrades på en annan enhet. Öppna den igen.",
+      "InvalidCount": "Kontrollera de räknade värdena och försök igen.",
+      "InventoryDisabled": "Förrådet är avstängt för er organisation.",
+      "LocationUnavailable": "Platsen är inte tillgänglig.",
+      "MembershipRequired": "Du är inte aktiv medlem i organisationen.",
+      "MigrationRequired": "Förrådet håller på att sättas upp för er organisation.",
+      "PermissionRequired": "Du har inte behörighet att göra detta.",
+      "ProtectedDataRequired": "Lås upp skyddade uppgifter för att fortsätta.",
+      "ReturnAssetFirst": "En artikel som markerats saknad är fortfarande utlämnad. Återlämna den först på webben.",
+      "locked": "Lås upp skyddade uppgifter för att fortsätta.",
+      "retry": "Kunde inte nå servern. Försök igen."
+    },
+    "expected": "Förväntat {{quantity}} {{unit}}",
+    "keep": "Fortsätt räkna",
+    "less": "En mindre",
+    "matches": "Stämmer",
+    "missing": "Saknas",
+    "more": "En till",
+    "noLocations": "Ingen utrustning är kopplad till den här enheten.",
+    "notMigrated": "Förrådet håller på att sättas upp för er organisation.",
+    "pickLocation": "Var inventeringen görs",
+    "present": "Finns",
+    "progress": "{{counted}} av {{total}} räknade",
+    "quantity": "× {{quantity}}",
+    "save": "Spara läget",
+    "selectUnit": "Välj din enhet först.",
+    "serial": "Serienr {{serial}}",
+    "start": "Starta inventering",
+    "startCount": "Inventera",
+    "startHelp": "Räkna det som faktiskt finns på enheten. Avvikelser bokförs när inventeringen avslutas.",
+    "title": "Förråd",
+    "titleFor": "Förråd · {{name}}",
+    "unnamedItem": "Artikel",
+    "unnamedLocation": "Fack",
+    "wholeUnit": "Hela enheten: {{name}}"
+  },
+  "login": {
+    "hide_password": "Dölj lösenord",
+    "login_button": "Logga in",
+    "login_button_loading": "Loggar in...",
+    "show_password": "Visa lösenord",
+    "title": "Logga in"
+  },
+  "map": {
+    "legend": {
+      "built_in_unit_statuses": "Inbyggda enhetsstatusar",
+      "button": "Kartförklaring",
+      "calls": "Larm",
+      "error": "Det gick inte att läsa in kartförklaringen.",
+      "hydrant": "Brandpost",
+      "list_separator": ", ",
+      "loading": "Läser in kartförklaringen…",
+      "name_list": "{{label}}: {{names}}",
+      "no_call_type": "Larm utan typ",
+      "no_role_icon": "Medlemmar utan rollikon",
+      "no_unit_type": "Enheter utan typ",
+      "other": "Stationer och intressepunkter",
+      "other_note": "Dessa ikoner ändras inte med status.",
+      "other_with_hydrants": "Stationer, brandposter och intressepunkter",
+      "personnel": "Personal",
+      "personnel_note": "En medlem visar ikonen för den första roll de har, i rollordning, som har en. En medlem ”På enhet” får färgen för sin enhets status.",
+      "priorities": "Prioriteter",
+      "priority_colors": "Prioritetsfärger",
+      "priority_unknown": "Ingen betydelse",
+      "station": "Station",
+      "status_colors": "Statusfärger",
+      "statuses": "Statusar: {{name}}",
+      "style": {
+        "available": "Tillgänglig",
+        "delayed": "Rast",
+        "dispatched": "Larmad",
+        "emergency": "Akut",
+        "high": "Hög",
+        "low": "Låg",
+        "medium": "Medel",
+        "onscene": "På plats",
+        "responding": "På väg",
+        "returning": "Återvänder",
+        "staging": "Uppställning och beredskap",
+        "transporting": "Transporterar",
+        "unavailable": "Inte tillgänglig",
+        "unknown": "Ingen betydelse eller ingen status"
+      },
+      "title": "Förklaring till kartikoner",
+      "units": "Enheter"
+    },
+    "lock_map": "Lås kartan till enheten",
+    "unlock_map": "Lås upp kartan"
+  },
+  "notifications": {
+    "confirm_delete_message_count": "Är du säker på att du vill ta bort {{count}} aviseringar? Åtgärden kan inte ångras.",
+    "delete_selected": "Ta bort markerade aviseringar",
+    "enter_selection_mode": "Markera aviseringar",
+    "open": "Öppna aviseringar",
+    "remove_failed_count": "Det gick inte att ta bort aviseringarna",
+    "remove_failed_one": "Det gick inte att ta bort aviseringen",
+    "removed_count": "{{count}} aviseringar har tagits bort",
+    "removed_one": "Aviseringen har tagits bort",
+    "unable_to_load": "Det gick inte att läsa in aviseringarna"
+  },
+  "push_notifications": {
+    "unknown_type_warning": "Denna aviseringstyp känns inte igen. Kontakta supporten om du fortsätter att se detta meddelande."
+  },
+  "roles": {
+    "assignedElsewhere": "I en annan roll",
+    "clearAssignment": "Rensa den aktuella tilldelningen",
+    "noUsersFound": "Inga användare hittades",
+    "saved_successfully": "Rolltilldelningarna har sparats",
+    "searchUsers": "Sök efter namn eller grupp...",
+    "selectUserDescription": "Välj en person för den här rollen",
+    "selectUserForRole": "Tilldela: {{role}}",
+    "selectUserLabel": "Välj {{name}}",
+    "tapToAssign": "Tryck för att tilldela en användare till {{role}}",
+    "title": "Rolltilldelning för enheten"
+  },
+  "routes": {
+    "traffic_heavy": "Tät trafik",
+    "traffic_light": "Lite trafik",
+    "traffic_moderate": "Måttlig trafik",
+    "traffic_no_data": "Inga trafikdata",
+    "traffic_severe": "Mycket tät trafik"
+  },
+  "settings": {
+    "audio_device_selection": {
+      "speaker_device": "Högtalarenhet"
+    },
+    "logout_confirm_message": "Är du säker på att du vill logga ut? Detta rensar all appdata, cachade värden och inställningar.",
+    "no_units_available_help": "Inga enheter är tilldelade dig. Be din avdelningsadministratör lägga till dig i en enhets stationsgrupp.",
+    "realtime_geolocation_warning": "Den här funktionen skickar den här enhetens position till din avdelning medan appen är öppen och ansluter till realtidsnavet för att ta emot andra enheters positioner. Det kräver en aktiv nätverksanslutning.",
+    "units_load_failed": "Det gick inte att läsa in enheter. Kontrollera anslutningen och försök igen."
+  },
+  "status": {
+    "current": "Aktuell",
+    "current_status": "Aktuell status",
+    "hold_to_set_hint": "Håll in i 2 sekunder för att sätta statusen",
+    "hold_to_set_instructions": "Håll in en status i 2 sekunder för att sätta den",
+    "hold_to_submit": "Håll in för att skicka",
+    "show_all_statuses": "Visa alla statusar ({{count}} till)",
+    "show_next_statuses": "Visa bara nästa statusar",
+    "status_queued": "Status sparad på den här enheten. Den skickas automatiskt."
+  }
+}

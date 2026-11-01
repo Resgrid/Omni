@@ -1,0 +1,21 @@
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/preflight.css' layer(base);
+@import 'tailwindcss/utilities.css';
+@import 'nativewind/theme';
+
+@import './theme-tokens.css';
+
+/* Tailwind 4 only generates classes it finds in scanned sources; shared UI lives in workspace packages. */
+@source '../../packages/*/src/**/*.{ts,tsx}';
+@source './variants/**/*.{ts,tsx}';
+
+/* Native dark mode: the colour-scheme media query, which react-native-css drives from Appearance.
+   GluestackUIProvider calls Appearance.setColorScheme() for explicit light/dark choices, so this
+   covers a user-selected theme as well as the system one, and it is the same query the tokens flip on.
+
+   There is deliberately no theme class on native. The provider used to put one on the View wrapping
+   the whole app, and any className on that wrapper stops every native ScrollView beneath it from
+   starting a pan: a drag on plain content did nothing app-wide, and only a Pressable handing the
+   responder off could scroll anything. Keep this selector-free — react-native-css silently drops
+   rules whose selectors it cannot evaluate, which takes dark mode with them. */
+@custom-variant dark (@media (prefers-color-scheme: dark));

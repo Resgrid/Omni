@@ -1,0 +1,244 @@
+{
+  "app": {
+    "initialization_failed": "تعذر تحميل بيانات التطبيق. يرجى التحقق من اتصالك والمحاولة مرة أخرى."
+  },
+  "callImages": {
+    "not_signed_in": "يجب تسجيل الدخول لرفع الصور",
+    "upload_error": "خطأ في رفع الصورة"
+  },
+  "calls": {
+    "directions_to_destination": "الاتجاهات إلى الوجهة",
+    "dispatch_on": "وقت الإرسال",
+    "dispatch_on_too_soon": "يجب أن يكون وقت الإرسال بعد {{minutes}} دقيقة على الأقل من الآن",
+    "errors": {
+      "load_failed": "فشل تحميل المكالمات"
+    },
+    "files": {
+      "sharing_unavailable": "المشاركة غير متاحة على هذا الجهاز"
+    },
+    "required_fields_missing": "يطلب قسمك هذه الحقول قبل حفظ البلاغ: {{fields}}",
+    "view_on_map": "عرض على الخريطة"
+  },
+  "chat": {
+    "chatting_as": "الدردشة باسم {{name}}"
+  },
+  "common": {
+    "no_location": "لا توجد بيانات موقع متاحة",
+    "no_unit": "لا توجد وحدة",
+    "unknown_error": "حدث خطأ غير معروف"
+  },
+  "contacts": {
+    "unknown_company": "شركة غير معروفة",
+    "unknown_person": "شخص غير معروف"
+  },
+  "incident_command": {
+    "error": "فشل في تحميل معلومات قيادة الحادث",
+    "need_category": {
+      "equipment": "معدات",
+      "logistics": "لوجستيات",
+      "medical": "طبي",
+      "other": "أخرى",
+      "resource": "موارد",
+      "staffing": "طاقم عمل"
+    },
+    "need_status": {
+      "cancelled": "ملغي",
+      "met": "ملبى",
+      "open": "مفتوح",
+      "partially_met": "ملبى جزئيًا"
+    },
+    "no_active_command": "لا توجد قيادة حادث نشطة لهذه المكالمة",
+    "objective_status": {
+      "complete": "مكتمل",
+      "in_progress": "قيد التنفيذ",
+      "pending": "قيد الانتظار"
+    },
+    "objective_type": {
+      "benchmark": "نقطة مرجعية",
+      "general": "عام",
+      "safety": "السلامة"
+    },
+    "progress": "اكتمل {{percent}}%",
+    "quantity_fulfilled": "تم تلبية {{fulfilled}} من {{requested}}"
+  },
+  "inventory": {
+    "assetStatus": {
+      "0": "في الخدمة",
+      "1": "مصروف",
+      "2": "قيد الإصلاح",
+      "3": "تالف",
+      "4": "مفقود",
+      "5": "مستهلك",
+      "6": "متقاعد"
+    },
+    "awaitingWitness": "تغير عنصر خاضع للرقابة؛ يجب أن يشهد شخص ثانٍ على هذا الجرد عبر الويب.",
+    "back": "رجوع",
+    "cancel": "إلغاء",
+    "cancelBody": "لن يُسجل أي شيء تم جرده حتى الآن.",
+    "cancelCount": "إلغاء الجرد",
+    "cancelTitle": "إلغاء هذا الجرد؟",
+    "cannotCount": "يتطلب الجرد صلاحية تعديل المخزون في هذه الوحدة.",
+    "complete": "إكمال",
+    "completeBody": "تختلف {{count}} عناصر عن المتوقع. سيؤدي الإكمال إلى تسجيل الفروقات.",
+    "completeNoChanges": "كل شيء مطابق للمتوقع.",
+    "completeTitle": "إكمال الجرد؟",
+    "completed": "اكتمل الجرد.",
+    "count": "جرد المخزون",
+    "countName": "فحص {{name}} {{date}}",
+    "countStatus": {
+      "0": "قيد التنفيذ",
+      "1": "بانتظار شاهد",
+      "2": "مكتمل",
+      "3": "ملغى"
+    },
+    "counts": "عمليات الجرد الأخيرة",
+    "differences": "{{count}} فروقات",
+    "disabled": "المخزون متوقف لإدارتك.",
+    "empty": "لا شيء هنا.",
+    "errors": {
+      "CountAlreadyExists": "هذا الجرد موجود بالفعل.",
+      "CountEmpty": "لا يوجد ما يُجرد هنا.",
+      "CountScopeTooLarge": "عناصر كثيرة جدًا لجرد واحد. اجرد حجرة واحدة في كل مرة.",
+      "CountSnapshotChanged": "تغير المخزون في هذه الوحدة أثناء الجرد. ألغِ هذا الجرد وابدأ من جديد.",
+      "CountStateConflict": "تغير هذا الجرد على جهاز آخر. افتحه مجددًا وحاول مرة أخرى.",
+      "InvalidCount": "تحقق من القيم المجرودة وحاول مرة أخرى.",
+      "InventoryDisabled": "المخزون متوقف لإدارتك.",
+      "LocationUnavailable": "هذا الموقع غير متاح.",
+      "MembershipRequired": "لست عضوًا نشطًا في هذه الإدارة.",
+      "MigrationRequired": "يجري إعداد المخزون لإدارتك.",
+      "PermissionRequired": "ليست لديك صلاحية للقيام بذلك.",
+      "ProtectedDataRequired": "افتح البيانات المحمية للمتابعة.",
+      "ReturnAssetFirst": "عنصر معلّم كمفقود لا يزال مصروفًا لشخص ما. أرجعه أولًا عبر الويب.",
+      "locked": "افتح البيانات المحمية للمتابعة.",
+      "retry": "تعذر الوصول إلى الخادم. حاول مرة أخرى."
+    },
+    "expected": "المتوقع {{quantity}} {{unit}}",
+    "keep": "متابعة الجرد",
+    "less": "واحد أقل",
+    "matches": "مطابق",
+    "missing": "مفقود",
+    "more": "واحد أكثر",
+    "noLocations": "لا يوجد مخزون مخصص لهذه الوحدة.",
+    "notMigrated": "يجري إعداد المخزون لإدارتك.",
+    "pickLocation": "أين يتم الجرد",
+    "present": "موجود",
+    "progress": "تم جرد {{counted}} من {{total}}",
+    "quantity": "× {{quantity}}",
+    "save": "حفظ التقدم",
+    "selectUnit": "اختر وحدتك أولًا.",
+    "serial": "الرقم التسلسلي {{serial}}",
+    "start": "بدء الجرد",
+    "startCount": "جرد المخزون",
+    "startHelp": "اجرد ما هو موجود فعلًا في الوحدة. تُسجل الفروقات عند إكمال الجرد.",
+    "title": "المخزون",
+    "titleFor": "المخزون · {{name}}",
+    "unnamedItem": "عنصر",
+    "unnamedLocation": "حجرة",
+    "wholeUnit": "الوحدة بالكامل: {{name}}"
+  },
+  "login": {
+    "hide_password": "إخفاء كلمة المرور",
+    "login_button": "تسجيل الدخول",
+    "login_button_loading": "تسجيل الدخول...",
+    "show_password": "إظهار كلمة المرور",
+    "title": "تسجيل الدخول"
+  },
+  "map": {
+    "legend": {
+      "built_in_unit_statuses": "حالات الوحدات المدمجة",
+      "button": "دليل الخريطة",
+      "calls": "البلاغات",
+      "error": "تعذّر تحميل دليل الخريطة.",
+      "hydrant": "صنبور إطفاء",
+      "list_separator": "، ",
+      "loading": "جارٍ تحميل دليل الخريطة…",
+      "name_list": "{{label}}: {{names}}",
+      "no_call_type": "بلاغات بلا نوع",
+      "no_role_icon": "أعضاء بلا رمز دور",
+      "no_unit_type": "وحدات بلا نوع",
+      "other": "المحطات ونقاط الاهتمام",
+      "other_note": "لا تتغير هذه الرموز بتغير الحالة.",
+      "other_with_hydrants": "المحطات وصنابير الإطفاء ونقاط الاهتمام",
+      "personnel": "الأفراد",
+      "personnel_note": "يعرض العضو رمز أول دور يشغله، بترتيب الأدوار، له رمز. ويأخذ العضو «على وحدة» لون حالة وحدته.",
+      "priorities": "الأولويات",
+      "priority_colors": "ألوان الأولويات",
+      "priority_unknown": "بلا معنى",
+      "station": "محطة",
+      "status_colors": "ألوان الحالات",
+      "statuses": "الحالات: {{name}}",
+      "style": {
+        "available": "متاح",
+        "delayed": "في استراحة",
+        "dispatched": "مُرسَل",
+        "emergency": "طارئة",
+        "high": "عالية",
+        "low": "منخفضة",
+        "medium": "متوسطة",
+        "onscene": "في الموقع",
+        "responding": "يستجيب",
+        "returning": "عائد",
+        "staging": "تجمّع واستعداد",
+        "transporting": "ينقل",
+        "unavailable": "غير متاح",
+        "unknown": "بلا معنى أو بلا حالة"
+      },
+      "title": "دليل رموز الخريطة",
+      "units": "الوحدات"
+    },
+    "lock_map": "تثبيت الخريطة على الوحدة",
+    "unlock_map": "إلغاء تثبيت الخريطة"
+  },
+  "notifications": {
+    "confirm_delete_message_count": "هل أنت متأكد من حذف {{count}} إشعارات؟ لا يمكن التراجع عن هذا الإجراء.",
+    "delete_selected": "حذف الإشعارات المحددة",
+    "enter_selection_mode": "تحديد الإشعارات",
+    "open": "فتح الإشعارات",
+    "remove_failed_count": "فشل حذف الإشعارات",
+    "remove_failed_one": "فشل حذف الإشعار",
+    "removed_count": "تم حذف {{count}} إشعارات",
+    "removed_one": "تم حذف الإشعار",
+    "unable_to_load": "تعذر تحميل الإشعارات"
+  },
+  "push_notifications": {
+    "unknown_type_warning": "نوع هذا الإشعار غير معروف. يرجى الاتصال بالدعم إذا استمر ظهور هذه الرسالة."
+  },
+  "roles": {
+    "assignedElsewhere": "في دور آخر",
+    "clearAssignment": "مسح الإسناد الحالي",
+    "noUsersFound": "لم يتم العثور على مستخدمين",
+    "saved_successfully": "تم حفظ إسناد الأدوار بنجاح",
+    "searchUsers": "ابحث بالاسم أو المجموعة...",
+    "selectUserDescription": "اختر شخصًا لهذا الدور",
+    "selectUserForRole": "إسناد: {{role}}",
+    "selectUserLabel": "تحديد {{name}}",
+    "tapToAssign": "اضغط لإسناد مستخدم إلى {{role}}",
+    "title": "إسناد أدوار الوحدة"
+  },
+  "routes": {
+    "traffic_heavy": "ازدحام كثيف",
+    "traffic_light": "ازدحام خفيف",
+    "traffic_moderate": "ازدحام معتدل",
+    "traffic_no_data": "لا توجد بيانات مرور",
+    "traffic_severe": "ازدحام شديد"
+  },
+  "settings": {
+    "audio_device_selection": {
+      "speaker_device": "جهاز مكبر صوت"
+    },
+    "logout_confirm_message": "هل أنت متأكد من رغبتك في تسجيل الخروج؟ سيؤدي هذا إلى مسح جميع بيانات التطبيق والقيم المخزنة مؤقتاً والإعدادات.",
+    "no_units_available_help": "لم يتم تعيين أي وحدات لك. اطلب من مسؤول القسم إضافتك إلى مجموعة محطة إحدى الوحدات.",
+    "realtime_geolocation_warning": "ترسل هذه الميزة موقع هذه الوحدة إلى إدارتك أثناء فتح التطبيق، وتتصل بمركز الموقع في الوقت الفعلي لاستقبال مواقع الوحدات الأخرى. وهي تتطلب اتصال شبكة نشطًا.",
+    "units_load_failed": "تعذر تحميل الوحدات. تحقق من اتصالك وحاول مرة أخرى."
+  },
+  "status": {
+    "current": "الحالية",
+    "current_status": "الحالة الحالية",
+    "hold_to_set_hint": "اضغط مطولاً لمدة ثانيتين لتعيين الحالة",
+    "hold_to_set_instructions": "اضغط مطولاً على حالة لمدة ثانيتين لتعيينها",
+    "hold_to_submit": "اضغط مطولاً للإرسال",
+    "show_all_statuses": "إظهار كل الحالات ({{count}} أخرى)",
+    "show_next_statuses": "إظهار الحالات التالية فقط",
+    "status_queued": "تم حفظ الحالة على هذا الجهاز وسيتم إرسالها تلقائيًا."
+  }
+}

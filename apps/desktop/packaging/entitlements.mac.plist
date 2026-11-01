@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Hardened-runtime entitlements for every variant (from the legacy Unit app, minus Apple Events automation, which no
+     variant uses). The usage descriptions for microphone, camera and location are set in packaging/builder-config.js. -->
+<plist version="1.0">
+<dict>
+    <!-- Electron / V8 -->
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+    <!-- Resgrid API, SignalR, push -->
+    <key>com.apple.security.network.client</key>
+    <true/>
+    <!-- Push-to-talk and voice -->
+    <key>com.apple.security.device.audio-input</key>
+    <true/>
+    <!-- Video sessions and photo capture -->
+    <key>com.apple.security.device.camera</key>
+    <true/>
+    <!-- Map position -->
+    <key>com.apple.security.personal-information.location</key>
+    <true/>
+</dict>
+</plist>

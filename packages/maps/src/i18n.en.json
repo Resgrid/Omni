@@ -1,0 +1,21 @@
+{
+  "maps.unavailable": "Map unavailable",
+  "maps.legend.loading": "Loading map legend…",
+  "maps.legend.style.unknown": "No meaning or no status",
+  "maps.legend.no_meaning": "No meaning",
+  "maps.map_layers": "Map layers",
+  "maps.no_layers": "No map layers",
+  "maps.picker.tap_to_select": "Tap the map to choose a location",
+  "maps.picker.looking_up_address": "Looking up address…",
+  "maps.poi.filter_title": "Filter points of interest",
+  "maps.poi.type": "Type",
+  "maps.poi.all_types": "All types",
+  "maps.poi.sort_by": "Sort by",
+  "maps.poi.sort_name": "Name",
+  "maps.poi.sort_type": "Type",
+  "maps.poi.reset": "Reset",
+  "maps.poi.view_on_map": "View on map",
+  "maps.poi.search_placeholder": "Search points of interest…",
+  "maps.poi.results": "{{count}} points of interest",
+  "maps.poi.results_one": "{{count}} point of interest"
+}

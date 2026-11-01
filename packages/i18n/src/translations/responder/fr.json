@@ -1,0 +1,1262 @@
+{
+  "app": {
+    "open_menu": "Ouvrir le menu",
+    "realtime_offline_description": "Reconnexion en cours. Les nouveaux appels et messages peuvent ne pas s'afficher.",
+    "realtime_offline_title": "Mises à jour en direct indisponibles"
+  },
+  "audio_streams": {
+    "error_loading_stream": "Échec du chargement du flux audio"
+  },
+  "bluetooth": {
+    "audio_active": "Audio actif",
+    "button_control_available": "Commande par bouton disponible",
+    "button_event": {
+      "double_press": "{{button}} double",
+      "long_press": "{{button}} long"
+    },
+    "button_event_applied": "Appliqué",
+    "buttons": {
+      "mute": "Muet",
+      "ptt_start": "Début PTT",
+      "ptt_stop": "Fin PTT",
+      "unknown": "Inconnu",
+      "volume_down": "Volume -",
+      "volume_up": "Volume +"
+    },
+    "checking_status": "Vérification de l'état du Bluetooth...",
+    "connection_error": "Erreur de connexion",
+    "livekit_active": "LiveKit actif",
+    "powered_off_message": "Le Bluetooth est désactivé. Activez le Bluetooth pour connecter des appareils audio.",
+    "recent_button_events": "Événements de bouton récents",
+    "rssi_dbm": "{{rssi}} dBm",
+    "rssi_value": "RSSI: {{rssi}}dBm",
+    "start_scanning": "Démarrer la recherche",
+    "stop_scan": "Arrêter la recherche",
+    "unauthorized_message": "Autorisation Bluetooth refusée. Accordez les autorisations Bluetooth dans les Réglages."
+  },
+  "calendar": {
+    "allDay": "Toute la journée",
+    "attendanceUpdated": {
+      "signedUp": "Vous vous êtes inscrit(e) avec succès à cet événement.",
+      "title": "Participation mise à jour",
+      "unsignedUp": "Vous avez été retiré(e) de cet événement."
+    },
+    "attendees": {
+      "title": "Participants"
+    },
+    "attendeesCount": "{{count}} participant",
+    "attendeesCount_plural": "{{count}} participants",
+    "confirmSignup": "Confirmer",
+    "confirmUnsignup": {
+      "message": "Êtes-vous sûr(e) de vouloir annuler votre participation à cet événement ?",
+      "title": "Confirmer l'annulation"
+    },
+    "createdBy": "Créé par",
+    "daysOfWeek": {
+      "fri": "Ven",
+      "mon": "Lun",
+      "sat": "Sam",
+      "sun": "Dim",
+      "thu": "Jeu",
+      "tue": "Mar",
+      "wed": "Mer"
+    },
+    "description": "Description",
+    "error": {
+      "attendanceUpdate": "Échec de la mise à jour de la participation. Veuillez réessayer.",
+      "title": "Erreur"
+    },
+    "eventsCount": "{{count}} événement",
+    "eventsCount_plural": "{{count}} événements",
+    "loading": {
+      "date": "Chargement des événements pour la date sélectionnée...",
+      "today": "Chargement des événements d'aujourd'hui...",
+      "upcoming": "Chargement des événements à venir..."
+    },
+    "noEvents": "Aucun événement planifié",
+    "optional": "Facultatif",
+    "required": "Obligatoire",
+    "selectDate": "Sélectionner une date pour afficher les événements",
+    "selectedDate": {
+      "empty": "Aucun événement planifié pour cette date.",
+      "title": "Événements du {{date}}"
+    },
+    "signedUp": "Inscrit(e)",
+    "signup": {
+      "button": "S'inscrire",
+      "notePlaceholder": "Saisissez votre note ici...",
+      "notePrompt": "Ajouter une note (facultatif) :",
+      "title": "Inscription à l'événement"
+    },
+    "signupAvailable": "Inscription disponible",
+    "tabs": {
+      "calendar": "Calendrier",
+      "today": "Aujourd'hui",
+      "upcoming": "À venir"
+    },
+    "tapToSignUp": "Appuyez pour vous inscrire",
+    "title": "Calendrier",
+    "today": {
+      "empty": {
+        "description": "Vous n'avez aucun événement planifié pour aujourd'hui.",
+        "title": "Aucun événement aujourd'hui"
+      }
+    },
+    "todayButton": "Aujourd'hui",
+    "unsignup": "Annuler la participation",
+    "upcoming": {
+      "empty": {
+        "description": "Vous n'avez aucun événement planifié dans les 7 prochains jours.",
+        "title": "Aucun événement à venir"
+      }
+    }
+  },
+  "callImages": {
+    "capture_error": "Erreur lors de la capture de la photo. Veuillez réessayer.",
+    "permission_denied_settings": "Permission refusée. Veuillez activer l'accès dans les paramètres de votre appareil.",
+    "select_error": "Erreur lors de la sélection de l'image. Veuillez réessayer.",
+    "upload_success": "Image téléversée avec succès",
+    "url_label": "URL: {{url}}"
+  },
+  "callNotes": {
+    "addNoteError": "Échec de l'ajout de la note. Veuillez réessayer."
+  },
+  "call_detail": {
+    "route_to_destination": "Itinéraire vers la destination",
+    "tabs": {
+      "command": "Commandement"
+    }
+  },
+  "calls": {
+    "assigned_to_me": "Assigné à moi",
+    "destination_load_error": "Impossible de charger les POI de destination",
+    "destination_placeholder": "Sélectionner une destination",
+    "external_id": "ID externe",
+    "only_calls_im_on": "Seulement les appels auxquels je participe",
+    "personnel": "Personnel",
+    "protocols": "Protocoles",
+    "reference_id": "ID de référence",
+    "required_fields_missing": "Votre département exige ces champs avant qu'un appel puisse être enregistré : {{fields}}",
+    "search_address": "Rechercher l'adresse",
+    "search_coordinates": "Rechercher les coordonnées",
+    "search_plus_code": "Rechercher le plus code",
+    "search_what3words": "Rechercher l'adresse what3words"
+  },
+  "certifications": {
+    "add": "Ajouter",
+    "addHours": "Ajouter des heures",
+    "addHoursWithPhoto": "Ajouter des heures avec une photo",
+    "areaIs": "Domaine : {{area}}",
+    "back": "Retour",
+    "cancel": "Annuler",
+    "category": "Catégorie (cours, exercice, congrès)",
+    "certificateAttached": "certificat joint",
+    "creditAdded": "Heures ajoutées.",
+    "creditDate": "Date (aujourd’hui par défaut)",
+    "creditNote": "De quoi il s'agit",
+    "credits": "{{hours}} sur {{required}} heures de formation continue",
+    "creditsTitle": "{{hours}} heures de formation continue",
+    "dateInvalid": "Saisissez les dates au format aaaa-mm-jj.",
+    "edit": "Modifier",
+    "errors": {
+      "certifications_file_invalid": "La photo n'a pas pu être lue.",
+      "certifications_file_too_large": "La photo est trop volumineuse.",
+      "denied": "Vous n'avez pas accès à cette certification.",
+      "locked": "Déverrouillez les données protégées pour continuer.",
+      "retry": "Impossible de joindre le serveur. Réessayez.",
+      "validation": "Le serveur a refusé la modification."
+    },
+    "expired": "Expirée le {{date}}",
+    "expires": "Expire le {{date}} ({{days}} jours)",
+    "form": {
+      "area": "Domaine ou niveau",
+      "choosePhoto": "Choisir une photo",
+      "expiresOn": "Expire",
+      "issuedBy": "Délivrée par",
+      "name": "Nom",
+      "number": "Numéro",
+      "otherType": "Autre (saisir un nom)",
+      "photoAttached": "Photo jointe.",
+      "receivedOn": "Obtenue",
+      "save": "Enregistrer",
+      "takePhoto": "Photo de la carte",
+      "type": "Certification"
+    },
+    "hasFile": "Une carte ou un certificat est au dossier",
+    "hours": "Heures",
+    "hoursInvalid": "Saisissez un nombre d'heures supérieur à 0.",
+    "issuedByIs": "Délivrée par {{name}}",
+    "nameRequired": "Choisissez un type ou saisissez un nom.",
+    "newExpiry": "Nouvelle date d'expiration",
+    "newNumber": "Nouveau numéro (facultatif)",
+    "noExpiry": "N'expire pas",
+    "none": "Vous n'avez encore ajouté aucune certification.",
+    "notVerified": "Pas encore vérifiée par l'organisation",
+    "numberIs": "Numéro {{number}}",
+    "photoDenied": "Autorisez l'accès à l'appareil photo ou aux photos pour joindre une photo.",
+    "receivedOn": "Obtenue le {{date}}",
+    "remove": "Supprimer",
+    "removeBody": "Elle sera retirée de votre dossier. Votre organisation voit toujours l'historique.",
+    "removeTitle": "Supprimer la certification ?",
+    "renew": "Renouveler",
+    "renewSave": "Enregistrer le renouvellement",
+    "renewed": "Renouvellement enregistré.",
+    "status": {
+      "0": "Active",
+      "1": "Expirée",
+      "2": "Suspendue",
+      "3": "Révoquée",
+      "4": "En attente de vérification",
+      "5": "Stagiaire"
+    },
+    "title": "Mes certifications",
+    "untitled": "Certification",
+    "verifiedOn": "Vérifiée le {{date}}"
+  },
+  "chat": {
+    "attach": "Joindre",
+    "back_to_chats": "Retour aux discussions",
+    "new_conversation": "Nouvelle conversation"
+  },
+  "check_in": {
+    "add_note": "Ajouter une Note (Optionnel)",
+    "confirm_check_in": "Confirmer le Pointage",
+    "duration": "Durée",
+    "gps_coordinates": "GPS: {{latitude}}, {{longitude}}",
+    "history": "Historique des Pointages",
+    "minutes_ago": "il y a {{count}} min",
+    "no_timers": "Aucun minuteur de pointage configuré",
+    "offline_queued": "Pointage en file d'attente pour la connexion",
+    "progress": "{{elapsed}} / {{total}} min",
+    "timer_interval": "Toutes les {{minutes}} min",
+    "type_hazmat": "Exposition Hazmat",
+    "type_ic": "Commandant d'Incident",
+    "unknown_unit": "Unité inconnue"
+  },
+  "checklists": {
+    "labels": {
+      "AssignmentAutomatic": "Attribution automatique"
+    }
+  },
+  "common": {
+    "active": "Actif",
+    "all": "Tous",
+    "deleting": "Suppression...",
+    "discard": "Ignorer",
+    "navigation": "Navigation",
+    "noActiveUnit": "Aucune unité active",
+    "noActiveUnitDescription": "Veuillez sélectionner une unité active pour voir les statuts disponibles",
+    "no_data_available": "Aucune donnée disponible",
+    "success": "Succès",
+    "system": "Système"
+  },
+  "contacts": {
+    "descriptionLabel": "Description",
+    "errorTitle": "Erreur",
+    "openAppError": "Impossible d'ouvrir l'application {{action}}",
+    "openLinkFailed": "Échec de l'ouverture du lien {{action}} :"
+  },
+  "home": {
+    "active_call": {
+      "clear_active": "Effacer l'Appel Actif",
+      "no_active_call": "Aucun appel actif sélectionné",
+      "select_call": "Sélectionner un appel à suivre",
+      "set_active": "Définir comme Appel Actif",
+      "title": "Appel Actif",
+      "view_details": "Voir les Détails de l'Appel"
+    },
+    "error": {
+      "no_user_id": "ID utilisateur non disponible"
+    },
+    "sidebar": {
+      "audio": "Audio",
+      "ptt": "PTT"
+    },
+    "staffing": {
+      "add_note": "Ajouter une note",
+      "add_note_action": "Ajouter une note",
+      "confirm_staffing": "Confirmer l'effectif : {{staffing}}",
+      "missing_required_info": "Informations requises manquantes",
+      "no_options_available": "Aucune option d'effectif disponible",
+      "no_staffing_options": "Aucune option d'effectif disponible",
+      "note": "Note",
+      "note_placeholder": "Saisir une note (facultatif)...",
+      "note_required_hint": "Ouvre un formulaire pour saisir la note obligatoire",
+      "quick_set_hint": "Définit votre effectif immédiatement. Appui long pour ajouter une note.",
+      "review_and_confirm": "Vérifier et confirmer",
+      "select_staffing_level": "Sélectionner le niveau d'effectif",
+      "select_staffing_level_description": "Choisissez votre statut d'effectif actuel",
+      "selected_staffing": "Effectif sélectionné",
+      "set_staffing": "Définir l'effectif du personnel",
+      "staffing_level": "Niveau d'effectif",
+      "update_failed": "Échec de la mise à jour de l'effectif",
+      "updated_successfully": "Effectif mis à jour avec succès"
+    },
+    "stats": {
+      "open_calls": "Appels ouverts",
+      "personnel_in_service": "Personnel en service",
+      "units_in_service": "Unités en service"
+    },
+    "status": {
+      "no_options_available": "Aucune option de statut disponible",
+      "update_failed": "Échec de la mise à jour du statut",
+      "updated_successfully": "Statut mis à jour avec succès"
+    },
+    "summary": {
+      "active_calls": "Appels actifs",
+      "active_severe_weather_alerts": "Alertes météo sévères/d'urgence actives",
+      "calls_im_on": "Appels auxquels je participe",
+      "pending_missed_checkins": "Check-ins en attente/manqués"
+    },
+    "tabs": {
+      "call": "Appel",
+      "dashboard": "Tableau de bord",
+      "map": "Carte",
+      "staffing": "Effectif",
+      "status": "Statut"
+    },
+    "user": {
+      "my_staffing": "Mon effectif",
+      "my_status": "Mon statut",
+      "staffing_unknown": "Effectif inconnu",
+      "status_unknown": "Statut inconnu",
+      "updated": "Mis à jour"
+    }
+  },
+  "incident_command": {
+    "assigned_since": "Assigné depuis",
+    "empty_state": "Aucun commandement d'incident actif pour cet appel",
+    "error_loading": "Échec du chargement des informations du commandement d'incident",
+    "my_assignment": "Mon affectation",
+    "need_category_equipment": "Équipement",
+    "need_category_logistics": "Logistique",
+    "need_category_medical": "Médical",
+    "need_category_other": "Autre",
+    "need_category_resource": "Ressource",
+    "need_category_staffing": "Effectif",
+    "need_status_cancelled": "Annulé",
+    "need_status_met": "Satisfait",
+    "need_status_open": "Ouvert",
+    "need_status_partially_met": "Partiellement satisfait",
+    "objective_status_complete": "Terminé",
+    "objective_status_in_progress": "En cours",
+    "objective_status_pending": "En attente",
+    "objective_type_benchmark": "Jalon",
+    "objective_type_general": "Général",
+    "objective_type_safety": "Sécurité",
+    "percent_complete": "{{percent}}%",
+    "quantity": "{{fulfilled}}/{{requested}}"
+  },
+  "livekit": {
+    "connection_failed": "Impossible de rejoindre le canal vocal",
+    "double_click_action": "Action double-clic",
+    "headset_button_ptt": "Bouton casque PTT",
+    "headset_monitoring_active": "Surveillance du casque active",
+    "headset_monitoring_inactive": "Surveillance du casque inactive",
+    "headset_ptt_description": "Utiliser le bouton AirPods ou écouteurs Bluetooth pour activer/désactiver le micro",
+    "headset_ptt_disabled": "PTT casque désactivé",
+    "headset_ptt_enabled": "PTT casque activé",
+    "long_press_action": "Action appui long",
+    "no_action": "Aucune action",
+    "play_pause_action": "Action bouton lecture/pause",
+    "ptt_mode": "Mode PTT",
+    "ptt_mode_disabled": "Désactivé",
+    "ptt_mode_push": "Push-to-Talk (maintenir pour parler)",
+    "ptt_mode_toggle": "Bascule (appuyer pour activer/désactiver le micro)",
+    "sound_feedback": "Retour sonore",
+    "tap_to_toggle_mute": "Appuyer sur le bouton du casque pour activer/désactiver le micro",
+    "toggle_mute": "Activer/désactiver le micro"
+  },
+  "location": {
+    "tracking_notification_body": "Partage de votre position avec votre département."
+  },
+  "login": {
+    "change_server_url": "Modifier l'URL du serveur",
+    "select_language": "Choisir la langue",
+    "sso": {
+      "back": "Retour",
+      "change_department": "Changer de nom d'utilisateur",
+      "continue_button": "Continuer",
+      "department_code_label": "Code du département",
+      "department_code_placeholder": "Saisir le code du département",
+      "department_code_required": "Le code du département est obligatoire",
+      "department_description": "Saisissez votre code de département pour vous connecter",
+      "department_id_invalid": "L'ID du département doit être un nombre",
+      "department_id_label": "ID du département (facultatif)",
+      "department_id_placeholder": "Saisir l'ID du département si connu",
+      "department_not_found": "Département introuvable. Veuillez vérifier le code et réessayer.",
+      "login_with_sso_button": "Connexion avec SSO",
+      "looking_up": "Recherche du compte...",
+      "lookup_network_error": "Impossible de joindre le serveur. Veuillez vérifier votre connexion et réessayer.",
+      "or_sign_in_with_password": "— ou se connecter avec un mot de passe —",
+      "page_title": "Connexion avec SSO",
+      "sign_in_with_sso": "Se connecter avec SSO",
+      "sso_not_enabled": "SSO n'est pas activé pour ce compte. Veuillez utiliser votre nom d'utilisateur et votre mot de passe.",
+      "user_description": "Saisissez votre nom d'utilisateur ou e-mail Resgrid pour vous connecter avec SSO",
+      "user_not_found": "Compte introuvable. Veuillez vérifier votre nom d'utilisateur et réessayer.",
+      "username_label": "Nom d'utilisateur ou e-mail",
+      "username_placeholder": "Saisir votre nom d'utilisateur ou e-mail",
+      "username_required": "Le nom d'utilisateur est obligatoire"
+    }
+  },
+  "map": {
+    "loading_markers": "Chargement des marqueurs de carte...",
+    "openSideMenu": "Ouvrir le menu latéral",
+    "tabs": {
+      "map": "Carte",
+      "pois": "POI"
+    }
+  },
+  "maps": {
+    "contact_administrator": "Veuillez contacter votre administrateur pour configurer les services de cartographie.",
+    "failed_to_load": "Échec du chargement de la carte. Veuillez vérifier votre connexion Internet.",
+    "legend": {
+      "error": "Impossible de charger la légende de la carte.",
+      "loading": "Chargement de la légende de la carte...",
+      "no_meaning": "Sans signification",
+      "open": "Ouvrir la légende de la carte",
+      "other": "Autres",
+      "statuses": "Statuts",
+      "style": {
+        "unknown": "Sans signification ou sans statut"
+      }
+    },
+    "mapbox_not_configured": "Mapbox n'est pas configuré. Veuillez contacter votre administrateur."
+  },
+  "messages": {
+    "all_messages": "Tous les messages",
+    "attending": "Présent",
+    "calendar_rsvp": "Réponse au calendrier",
+    "compose": "Composer",
+    "compose_new_message": "Nouveau message",
+    "date_unknown": "Date inconnue",
+    "delete_confirmation_message": "Êtes-vous sûr(e) de vouloir supprimer {{count}} message(s) ?",
+    "delete_confirmation_title": "Supprimer les messages",
+    "delete_single_confirmation_message": "Êtes-vous sûr(e) de vouloir supprimer ce message ?",
+    "enter_expiration_date": "Saisir la date d'expiration",
+    "enter_message_body": "Saisir votre message",
+    "enter_note": "Saisir une note facultative",
+    "enter_response": "Saisir votre réponse",
+    "enter_subject": "Saisir l'objet du message",
+    "error": "Erreur",
+    "expiration_date_format": "Format : AAAA-MM-JJ HH:MM",
+    "expiration_date_optional": "Date d'expiration (facultatif)",
+    "expired": "Expiré",
+    "expires_on": "Expire le",
+    "from": "De",
+    "inbox": "Boîte de réception",
+    "message_body": "Corps du message",
+    "message_content": "Contenu du message",
+    "message_type": "Type de message",
+    "no_content": "Aucun contenu",
+    "no_messages": "Aucun message trouvé",
+    "no_messages_description": "Envoyez votre premier message pour commencer",
+    "no_subject": "Sans objet",
+    "not_attending": "Absent",
+    "note_optional": "Note (facultatif)",
+    "people": "Personnes",
+    "recipients": "Destinataires",
+    "recipients_count": "{{count}} destinataires",
+    "recipients_selected": "{{count}} destinataires sélectionnés",
+    "respond_failed": "Échec de la réponse au message",
+    "respond_to_message": "Répondre au message",
+    "responded": "Répondu",
+    "responded_on": "Répondu le",
+    "responding": "Réponse en cours...",
+    "response": "Réponse",
+    "response_required": "Une réponse est obligatoire",
+    "search_placeholder": "Rechercher des messages...",
+    "select_all": "Tout sélectionner",
+    "select_message": "Sélectionner un message",
+    "select_message_type": "Sélectionner le type de message",
+    "select_recipients": "Sélectionner les destinataires",
+    "selected_count": "{{count}} sélectionné(s)",
+    "send": "Envoyer",
+    "send_first_message": "Envoyer le premier message",
+    "send_response": "Envoyer la réponse",
+    "sending": "Envoi en cours...",
+    "sent": "Envoyé",
+    "showing_count": "Affichage de {{count}} messages",
+    "subject": "Objet",
+    "title": "Messages",
+    "types": {
+      "alert": "Alerte",
+      "calendar_rsvp": "Réponse au calendrier",
+      "message": "Message",
+      "poll": "Sondage"
+    },
+    "unsaved_changes": "Modifications non enregistrées",
+    "unsaved_changes_message": "Vous avez des modifications non enregistrées. Êtes-vous sûr(e) de vouloir les ignorer ?",
+    "validation": {
+      "body_required": "Le corps du message est obligatoire",
+      "recipients_required": "Au moins un destinataire est obligatoire",
+      "subject_required": "L'objet est obligatoire"
+    }
+  },
+  "mfa": {
+    "approve": {
+      "app": "Application : {{app}}",
+      "approve": "Approuver",
+      "approved": "Approuvé. Vous pouvez revenir à l’autre écran.",
+      "denied": "Refusé. Rien n’a été approuvé.",
+      "deny": "Refuser",
+      "department": "Service : {{department}}",
+      "done": "Terminé",
+      "expires": "Expire à {{time}}",
+      "installation": "Appareil : {{label}}",
+      "none": "Rien n’attend votre approbation.",
+      "not_me": "Ce n’était pas moi",
+      "number_body": "Saisissez le nombre affiché sur l’autre écran, puis confirmez avec votre clé d’accès. N’approuvez que si vous en êtes à l’origine.",
+      "number_mismatch": "Ce n’est pas le nombre de l’autre écran. Tentatives restantes : {{count}}.",
+      "number_placeholder": "Nombre",
+      "origin": "Près de : {{origin}}",
+      "purpose": {
+        "adp": "Quelqu’un veut consulter des informations protégées",
+        "department_entry": "Quelqu’un passe à un service en votre nom",
+        "login": "Quelqu’un se connecte à votre compte",
+        "step_up": "Quelqu’un confirme une action avec votre compte",
+        "unlock": "Quelqu’un déverrouille un appareil partagé en votre nom"
+      },
+      "shared": "Sur un appareil partagé",
+      "title": "Approuver la connexion ?",
+      "unknown_app": "Une autre application Resgrid"
+    }
+  },
+  "not_found": {
+    "go_home": "Aller à l'écran d'accueil !",
+    "message": "Cet écran n'existe pas.",
+    "title": "Oups !"
+  },
+  "notifications": {
+    "additionalInformation": "Informations supplémentaires",
+    "bulkDeleteError": "Échec de la suppression des notifications",
+    "bulkDeleteSuccess": "{{count}} notification{{count, plural, one {} other {s}}} supprimée(s)",
+    "confirmDelete": {
+      "message": "Êtes-vous sûr(e) de vouloir supprimer {{count}} notification{{count, plural, one {} other {s}}} ? Cette action est irréversible.",
+      "title": "Confirmer la suppression"
+    },
+    "deleteError": "Échec de la suppression de la notification",
+    "deleteSuccess": "Notification supprimée",
+    "deselectAll": "Tout désélectionner",
+    "loadError": "Impossible de charger les notifications",
+    "notAvailable": "N/D",
+    "selectAll": "Tout sélectionner",
+    "selectedCount": "{{count}} sélectionné(s)",
+    "viewCall": "Voir l'appel",
+    "viewChat": "Voir la discussion",
+    "viewMessage": "Voir le message",
+    "viewReference": "Voir {{referenceType}}",
+    "viewWorkOrder": "Voir le bon de travail"
+  },
+  "onboarding": {
+    "get_started": "C'est parti",
+    "slides": {
+      "calls": {
+        "description": "Consultez facilement les informations d'intervention et échangez avec votre équipe pour une réponse d'urgence efficace",
+        "title": "Interagir avec les interventions"
+      },
+      "notifications": {
+        "description": "Recevez des alertes immédiates pour les urgences et les mises à jour importantes de votre service",
+        "title": "Notifications instantanées"
+      },
+      "responder": {
+        "description": "Gérez votre statut et vos effectifs et interagissez avec votre organisation en temps réel",
+        "title": "{{appName}}"
+      }
+    }
+  },
+  "operations": {
+    "time": {
+      "coveredBy": "Ce temps figure déjà sur le rapport #{{number}} de ce jour.",
+      "crewReport": "Rapport de temps d'équipage #{{number}} · {{name}}",
+      "individualReport": "Rapport de temps #{{number}} · {{name}}",
+      "report": "Rapport #{{number}}"
+    }
+  },
+  "personnel": {
+    "contactInformation": "Coordonnées",
+    "currentStatus": "Statut actuel",
+    "emptyDescription": "Aucun personnel ne correspond à vos critères de recherche ou aucune donnée de personnel n'est disponible.",
+    "filter": {
+      "description": "Sélectionner des filtres pour affiner la liste du personnel. Les modifications sont appliquées automatiquement.",
+      "empty": "Aucune option de filtre disponible",
+      "emptyDescription": "Les options de filtre apparaîtront ici lorsqu'elles seront disponibles.",
+      "title": "Filtrer le personnel"
+    },
+    "id": "ID",
+    "status": {
+      "add_note": "Ajouter une note",
+      "calls_tab": "Appels",
+      "current": "Actuel",
+      "current_status": "Statut actuel",
+      "destination_required": "Une destination est requise pour ce statut",
+      "general_status": "Mise à jour générale du statut",
+      "gps_required": "La position GPS est requise pour ce statut",
+      "hold_to_set_hint": "Maintenez appuyé 2 secondes pour définir le statut",
+      "hold_to_set_instructions": "Maintenez un statut appuyé 2 secondes pour le définir",
+      "hold_to_submit": "Maintenir pour envoyer",
+      "loading_pois": "Chargement des POI...",
+      "loading_stations": "Chargement des postes...",
+      "missing_required_info": "Informations requises manquantes",
+      "no_destination": "Aucune destination",
+      "no_stations_available": "Aucun poste disponible",
+      "note": "Note",
+      "note_placeholder": "Saisir une note (facultatif)...",
+      "note_required": "Une note est requise pour ce statut",
+      "pois_tab": "POI",
+      "responding_to_placeholder": "Saisir ce à quoi vous répondez...",
+      "saved_offline": "Le statut a été enregistré hors ligne et sera envoyé lorsque la connexion sera rétablie",
+      "select_call_to_respond_to": "Sélectionner l'appel auquel répondre",
+      "select_destination": "Sélectionner la destination",
+      "select_responding_to": "Définir le statut : {{status}}",
+      "selected_call": "Appel sélectionné",
+      "set_status": "Définir le statut du personnel",
+      "show_all_statuses": "Afficher tous les statuts ({{count}} de plus)",
+      "show_next_statuses": "Afficher uniquement les statuts suivants",
+      "stations_tab": "Postes",
+      "status": "Statut"
+    }
+  },
+  "pois": {
+    "address_label": "Adresse",
+    "coordinates_label": "Coordonnées",
+    "destination_enabled": "Destination autorisée",
+    "empty_description": "Aucun POI ne correspond au filtre actuel.",
+    "empty_title": "Aucun POI trouvé",
+    "filter_all_types": "Tous les types",
+    "filter_label": "Filtre",
+    "filter_sort_title": "Filtrer et trier",
+    "invalid_description": "Un identifiant de POI est requis pour afficher les détails.",
+    "invalid_title": "POI invalide",
+    "list_description": "Parcourez les POI du service, filtrez par type et revenez à la carte.",
+    "load_error_title": "Impossible de charger le POI",
+    "not_found": "POI introuvable",
+    "note_label": "Remarque",
+    "reset_filters": "Réinitialiser",
+    "results_count": "{{count}} POI",
+    "results_count_plural": "{{count}} POIs",
+    "search_placeholder": "Rechercher des POI...",
+    "set_status_destination": "Utiliser comme destination du statut",
+    "sort_label": "Trier",
+    "sort_name": "Nom",
+    "sort_type": "Type",
+    "title": "POI",
+    "type_label": "Type",
+    "view_details": "Voir les détails",
+    "view_on_map": "Voir sur la carte",
+    "view_on_map_hint": "Gardez la carte ouverte pour voir votre position et le POI sélectionné ensemble."
+  },
+  "push_notifications": {
+    "communication_test_confirmed": "Réception confirmée. Merci.",
+    "communication_test_failed": "Impossible de confirmer la réception. Veuillez réessayer.",
+    "communication_test_prompt": "Ceci n'est qu'un test. Confirmez la réception afin que votre service sache qu'il peut vous joindre.",
+    "confirm_receipt": "Confirmer la réception",
+    "confirming_receipt": "Confirmation...",
+    "types": {
+      "communication_test": "Test de communication",
+      "weather": "Alerte météo",
+      "work_order": "Bon de travail"
+    },
+    "view_alert": "Voir l'alerte",
+    "view_chat": "Voir la discussion",
+    "view_work_order": "Voir le bon de travail"
+  },
+  "settings": {
+    "logout_confirm_cancel": "Annuler",
+    "logout_confirm_yes": "Oui, se déconnecter",
+    "notifications_badge_overflow": "99+",
+    "notifications_button": "Notifications"
+  },
+  "shifts": {
+    "actions": {
+      "accept": "Accepter",
+      "add_person": "Ajouter une personne",
+      "apply": "Postuler pour le reprendre",
+      "approve": "Approuver",
+      "cancel_request_admin": "Annuler la demande",
+      "cancel_trade": "Annuler la demande d'échange",
+      "confirm": "Confirmer",
+      "confirm_signup": "Confirmer l'inscription",
+      "decline": "Refuser",
+      "deny": "Rejeter",
+      "remove": "Retirer",
+      "request_trade": "Demander un échange",
+      "send_request": "Envoyer la demande",
+      "withdraw_application": "Retirer la candidature"
+    },
+    "add_panel": {
+      "group": "Groupe",
+      "no_options": "Personne d'autre ne peut être ajouté.",
+      "person": "Personne",
+      "search_placeholder": "Rechercher du personnel",
+      "submit": "Ajouter au quart",
+      "title": "Ajouter une personne pour ce jour"
+    },
+    "all_shifts": "Tous les quarts",
+    "already_signed_up": "Déjà inscrit(e)",
+    "approval_required": "Approbation requise",
+    "approvals": {
+      "signups": "Inscriptions",
+      "trades": "Échanges"
+    },
+    "assigned": "Attribué",
+    "assignment_type": {
+      "assigned": "Assigné",
+      "signup": "Inscription",
+      "workshift": "Vacation"
+    },
+    "automatic": "Automatique",
+    "available": "Disponible",
+    "calendar": "Calendrier",
+    "calendar_export": {
+      "add_all": "Ajouter mes quarts au calendrier ({{count}})",
+      "add_all_hint": "Ajoute au calendrier de votre appareil tous les quarts où vous travaillez dans les 30 prochains jours",
+      "add_hint": "Ajoute ce quart au calendrier de votre appareil, ou le met à jour s'il y figure déjà",
+      "add_one": "Ajouter au calendrier",
+      "added_many": "Quarts dans votre calendrier : {{count}}",
+      "added_one": "Ajouté à votre calendrier",
+      "event_footer": "Ajouté depuis Resgrid",
+      "event_place": "Avec : {{place}}",
+      "event_title": "Quart {{name}}",
+      "failed": "Le quart n'a pas pu être ajouté à votre calendrier.",
+      "nothing_to_add": "Seuls les quarts où vous travaillez peuvent être ajoutés à votre calendrier.",
+      "permission_denied": "L'accès au calendrier est désactivé. Autorisez-le dans les Paramètres pour ajouter des quarts.",
+      "updated_one": "Mis à jour dans votre calendrier"
+    },
+    "calendar_view": {
+      "day_a11y": "{{date}} : quarts {{count}}, places libres {{open}}",
+      "filter_a11y": "Filtrer le calendrier par quart",
+      "legend_filled": "Complet",
+      "legend_mine": "Mes quarts",
+      "legend_open": "Places libres",
+      "next_month": "Mois suivant",
+      "previous_month": "Mois précédent",
+      "select_day": "Sélectionnez un jour pour voir ses quarts",
+      "shift_info": "Détails du quart"
+    },
+    "card_a11y_hint": "Ouvre les détails de ce jour de quart",
+    "current_signups": "Inscriptions actuelles",
+    "day": {
+      "covering_for": "Remplace {{name}}",
+      "denied_note": "Votre inscription pour ce jour a été rejetée.",
+      "group_filled": "Complet",
+      "group_open": "Libres : {{count}}",
+      "no_group": "Aucun groupe",
+      "no_role_requirements": "Aucun rôle requis",
+      "open_needs": "Besoins à pourvoir",
+      "pending_note": "Votre inscription attend l'approbation d'un superviseur. Vous n'êtes pas en service tant qu'elle n'est pas approuvée.",
+      "require_approval_note": "Les inscriptions et les échanges de ce quart doivent être approuvés par un superviseur.",
+      "roster": "Effectif du jour",
+      "roster_empty": "Personne n'est encore inscrit ce jour-là.",
+      "trade_pending_note": "Vous avez demandé à des collègues de reprendre ce quart."
+    },
+    "day_details": "Détails du jour de quart",
+    "details": "Détails du quart",
+    "empty": {
+      "approvals_description": "Les inscriptions et échanges en attente de votre approbation apparaissent ici.",
+      "approvals_title": "Rien à approuver",
+      "calendar_day": "Aucun quart ce jour-là",
+      "mine_description": "Les quarts auxquels vous êtes affecté ou inscrit dans les 30 prochains jours apparaissent ici.",
+      "mine_title": "Aucun quart à venir",
+      "on_duty_description": "Personne n'est actuellement sur un quart actif.",
+      "on_duty_title": "Personne en service",
+      "open_trades_description": "Lorsqu'une personne demande à céder un quart, la demande apparaît ici pour toute personne pouvant le reprendre.",
+      "open_trades_title": "Aucune demande d'échange ouverte",
+      "signup_description": "Les jours de quart ouverts aux inscriptions où il reste de la place pour vous dans les 30 prochains jours apparaissent ici.",
+      "signup_title": "Aucune inscription possible",
+      "trades_description": "Les demandes d'échange que vous envoyez ou recevez apparaissent ici.",
+      "trades_title": "Aucun échange de quart"
+    },
+    "end_time": "Heure de fin",
+    "errors": {
+      "already_on_roster": "Cette personne est déjà inscrite ce jour-là.",
+      "already_signed_up": "Vous êtes déjà inscrit pour ce jour.",
+      "day_in_past": "Ce jour de quart est déjà passé.",
+      "invalid_group": "Ce groupe ne fait pas partie de ce quart.",
+      "invalid_offer": "Cette offre n'est plus valide.",
+      "invalid_request": "La demande n'était pas valide. Veuillez réessayer.",
+      "network": "Vous semblez hors ligne. Veuillez réessayer.",
+      "no_users": "Choisissez au moins une personne.",
+      "not_allowed": "Vous n'avez pas l'autorisation de faire cela.",
+      "not_eligible": "Vous n'avez pas les rôles requis pour cette place.",
+      "not_found": "Ce quart, cette inscription ou cet échange n'existe plus.",
+      "not_on_shift": "Vous n'êtes pas inscrit à ce jour de quart.",
+      "not_pending": "Cette demande n'est plus en attente.",
+      "trade_exists": "Un échange est déjà ouvert pour ce jour.",
+      "unknown": "Une erreur s'est produite. Veuillez réessayer."
+    },
+    "groups": "Groupes",
+    "hours": "Horaires",
+    "in_shift": "En quart",
+    "legend": "Légende",
+    "load_error": "Impossible de charger les quarts",
+    "loading": "Chargement des quarts...",
+    "loading_details": "Chargement des détails du quart...",
+    "loading_signup": "Traitement...",
+    "manual": "Manuel",
+    "mine_sections": {
+      "active": "En service maintenant",
+      "pending": "En attente d'approbation",
+      "upcoming": "À venir"
+    },
+    "my_standing_shifts": "Mes quarts réguliers",
+    "my_upcoming_days": "Prochains jours",
+    "needed": "Nécessaire",
+    "needs": "Besoins",
+    "next_day": "Jour suivant",
+    "no_positions_available": "Aucun poste disponible pour l'inscription",
+    "no_shifts": "Aucun quart disponible",
+    "no_shifts_description": "Contactez votre supérieur si vous pensez devoir avoir des attributions de quarts",
+    "no_shifts_today": "Aucun quart planifié pour aujourd'hui",
+    "no_shifts_today_description": "Vérifiez plus tard ou contactez votre supérieur pour les attributions de quarts",
+    "no_signups_yet": "Aucune inscription pour l'instant",
+    "note_label": "Note",
+    "note_optional_placeholder": "Ajouter une note (facultatif)",
+    "on_duty": {
+      "count": "En service : {{count}}",
+      "until": "Jusqu'à {{time}}"
+    },
+    "optional": "Facultatif",
+    "overnight": "(lendemain)",
+    "personnel_count": "Nombre de personnel",
+    "position_needs": "Besoins du poste",
+    "remove_panel": {
+      "description": "La personne est retirée de ce jour uniquement. Ses autres quarts ne sont pas modifiés.",
+      "remove_person": "Retirer {{name}} de ce jour",
+      "title": "Retirer {{name}} ?"
+    },
+    "required": "Obligatoire",
+    "required_count": "Requis : {{count}}",
+    "review": {
+      "approve_person": "Approuver {{name}}",
+      "approve_signup_title": "Approuver cette inscription ?",
+      "approve_trade_title": "Approuver cet échange ?",
+      "deny_person": "Rejeter {{name}}",
+      "deny_signup_title": "Rejeter cette inscription ?",
+      "deny_trade_title": "Rejeter cet échange ?",
+      "requested_at": "Demandé le {{date}}",
+      "trade_summary": "{{from}} cède ce quart à {{to}}"
+    },
+    "roles": "Rôles",
+    "roster_source": {
+      "scheduled": "Planifié",
+      "signup": "Inscrit",
+      "supervisor": "Ajouté par un superviseur",
+      "trade": "Échange"
+    },
+    "schedule_type": {
+      "custom": "Personnalisé",
+      "forty_eight_ninety_six": "48/96",
+      "manual": "Manuel",
+      "twenty_four_forty_eight": "24/48",
+      "twenty_four_seventy_two": "24/72"
+    },
+    "scheduled_for": "Planifié pour",
+    "search_placeholder": "Rechercher des quarts...",
+    "segments": {
+      "a11y_hint": "Affiche cette vue des quarts",
+      "approvals": "Approbations",
+      "calendar": "Calendrier",
+      "mine": "Mes quarts",
+      "on_duty": "En service",
+      "signup": "Inscriptions",
+      "today": "Aujourd'hui",
+      "trades": "Échanges",
+      "with_count": "{{label}}, {{count}} en attente"
+    },
+    "shift_card_a11y_hint": "Ouvre les détails de ce quart",
+    "shift_code": "Code de quart",
+    "shift_day": "Jour de quart",
+    "shift_name": "Nom du quart",
+    "shift_type": {
+      "emergency": "Urgence",
+      "label": "Type de quart",
+      "regular": "Régulier",
+      "training": "Formation",
+      "unknown": "Inconnu"
+    },
+    "signed_up": "Inscrit(e)",
+    "signup": "S'inscrire",
+    "signup_error": "Échec de l'inscription au quart",
+    "signup_panel": {
+      "approval_notice": "Un superviseur doit approuver cette inscription avant que vous soyez en service.",
+      "description": "Choisissez le groupe (équipe) avec lequel vous vous inscrivez pour ce jour.",
+      "hint": "Choisissez une équipe et confirmez votre inscription",
+      "no_groups": "Ce quart n'a aucun groupe auquel s'inscrire.",
+      "title": "Choisissez votre équipe"
+    },
+    "signup_status": "Statut d'inscription",
+    "signup_success": "Inscription au quart réussie",
+    "signup_view": {
+      "description": "Jours de quart auxquels vous pouvez vous inscrire dans les 30 prochains jours. Touchez un jour pour choisir votre équipe.",
+      "filter_all": "Tous les jours",
+      "filter_needed": "Besoin de personnel"
+    },
+    "signups": "Inscriptions",
+    "start_time": "Heure de début",
+    "status": {
+      "active_now": "En cours",
+      "denied": "Rejeté",
+      "filled": "Complet",
+      "on_roster": "Vous êtes inscrit",
+      "open_slots": "Places libres : {{count}}",
+      "pending_approval": "En attente d'approbation",
+      "trade_requested": "Échange demandé"
+    },
+    "title": "Quarts",
+    "toast": {
+      "approved": "Approuvé",
+      "denied": "Rejeté",
+      "person_added": "Personne ajoutée au quart",
+      "person_removed": "Personne retirée du quart",
+      "signup_pending": "Inscrit. En attente de l'approbation d'un superviseur.",
+      "trade_accepted": "Votre offre a été envoyée",
+      "trade_application_withdrawn": "Votre candidature a été retirée",
+      "trade_applied": "Candidature envoyée",
+      "trade_cancelled": "Demande d'échange annulée",
+      "trade_declined": "Échange refusé",
+      "trade_finished": "Échange effectué",
+      "trade_finished_pending": "Échange envoyé pour approbation",
+      "trade_requested": "Demande d'échange envoyée",
+      "trade_requested_open": "Demande d'échange envoyée à toutes les personnes pouvant reprendre le quart"
+    },
+    "today": "Aujourd'hui",
+    "todays_shifts": "Quarts d'aujourd'hui",
+    "trade": {
+      "accept_description": "Vous pouvez proposer en retour l'un de vos prochains quarts, ou simplement reprendre celui-ci.",
+      "accept_title": "Accepter cet échange ?",
+      "applicant_conflict": "Déjà affecté à {{name}} à ce moment-là",
+      "applicant_count": "Candidats : {{count}}",
+      "applicants": "Candidats",
+      "applied_at": "Candidature du {{date}}",
+      "apply_description": "{{name}} et les personnes qui décident des échanges verront votre candidature. Vous pouvez proposer l'un de vos quarts en retour.",
+      "apply_title": "Postuler pour reprendre ce quart ?",
+      "cancel_description": "Les offres reçues seront abandonnées.",
+      "cancel_description_open": "Toutes les personnes qui ont postulé seront informées de l'annulation de la demande.",
+      "cancel_title": "Annuler cette demande d'échange ?",
+      "decline_description": "Le demandeur verra que vous avez refusé.",
+      "decline_title": "Refuser cet échange ?",
+      "details_a11y": "Échange pour {{shift}} le {{date}}",
+      "details_hint": "Ouvre l'échange et ses candidats",
+      "filter_mine": "Les miennes ({{count}})",
+      "filter_open": "Demandes ouvertes ({{count}})",
+      "finish_give_description": "{{name}} reprendra ce quart.",
+      "finish_pending_note": "Un superviseur doit approuver cet échange avant qu'il ne prenne effet.",
+      "finish_swap_description": "{{name}} reprend ce quart et vous reprenez son quart {{shift}} le {{date}}.",
+      "finish_title": "Choisir cette offre ?",
+      "from": "De {{name}}",
+      "give_to": "Céder à {{name}}",
+      "incoming": "Reçu",
+      "ineligible": {
+        "already_on_day": "Vous travaillez déjà ce jour-là.",
+        "missing_roles": "Vous n'avez pas les rôles requis pour cette place.",
+        "not_allowed": "Vous ne pouvez pas reprendre ce quart."
+      },
+      "my_state": {
+        "accepted": "Vous reprenez ce quart",
+        "declined": "Vous avez refusé",
+        "denied": "Rejeté par un superviseur",
+        "filled": "Quelqu'un d'autre l'a repris",
+        "open": "En attente de votre réponse",
+        "pending_approval": "En attente de l'approbation d'un superviseur",
+        "proposed": "Vous avez fait une offre"
+      },
+      "nearby_workload": "Dans la semaine autour de ce jour : quarts {{count}}, {{hours}} h",
+      "no_applicants": "Personne n'a encore postulé",
+      "no_certifications": "Aucune certification valide",
+      "no_offers": "Aucune réponse pour le moment",
+      "no_swap": "Ne pas proposer de quart en retour",
+      "offer_back": "Proposer un quart en retour",
+      "offers": "Réponses",
+      "open_request": "Ouvert à tous",
+      "outgoing": "Envoyé",
+      "pick_as_approver_note": "Vous décidez de cet échange en tant qu'approbateur : votre choix prend effet immédiatement.",
+      "pick_note": "Choisissez qui reprend ce quart.",
+      "requested_at": "Demandé le {{date}}",
+      "requested_by": "Demandé par {{name}}",
+      "reviewed_by": "Examiné par {{name}}",
+      "section_active": "En cours",
+      "section_applied": "Vos candidatures",
+      "section_attention": "Requiert votre attention",
+      "section_can_apply": "Vous pouvez les reprendre",
+      "section_other_requests": "Autres demandes",
+      "section_recent": "Récents",
+      "select_applicant": "Céder à {{name}}",
+      "status": {
+        "cancelled": "Annulé",
+        "completed": "Effectué",
+        "denied": "Rejeté",
+        "open": "Ouvert",
+        "pending_approval": "En attente d'approbation"
+      },
+      "swap_back": "Échange retour le {{date}}",
+      "swap_for": "Échanger contre {{shift}} le {{date}}",
+      "taken_by": "Repris par {{name}}",
+      "user_declined": "A refusé",
+      "user_offered": "A proposé",
+      "user_waiting": "Pas encore de réponse",
+      "user_withdrew": "S'est retiré",
+      "withdraw_description": "Le demandeur verra que vous n'êtes plus disponible.",
+      "withdraw_title": "Retirer votre candidature ?"
+    },
+    "trade_panel": {
+      "description": "Choisissez qui vous souhaitez voir reprendre ce quart. Chaque personne choisie est sollicitée, puis vous choisissez parmi les offres.",
+      "mode_open": "Toute personne pouvant le reprendre",
+      "mode_open_hint": "Personnes qui seront notifiées : {{count}}",
+      "mode_specific": "Seulement les personnes que je choisis",
+      "mode_specific_hint": "Solliciter plutôt des collègues précis",
+      "no_candidates": "Personne n'est disponible pour reprendre ce quart.",
+      "open_description": "Toute personne libre ce jour-là et ayant les rôles requis pour votre place reçoit un e-mail et une notification push, et peut postuler. Vous choisissez ensuite qui reprend le quart, ou votre superviseur le fait.",
+      "open_description_workshift": "Toute personne libre ce jour-là reçoit un e-mail et une notification push, et peut postuler pour prendre votre place dans l'unité.",
+      "selected_count": "Sélectionnés : {{count}}",
+      "title": "Demander un échange"
+    },
+    "type_emergency": "Urgence",
+    "type_regular": "Régulier",
+    "type_training": "Formation",
+    "type_unknown": "Inconnu",
+    "unknown": "Inconnu",
+    "upcoming_shift_days": "Jours de quarts à venir",
+    "view_calendar": "Voir dans le calendrier",
+    "view_calendar_hint": "Affiche ce quart dans le calendrier",
+    "withdraw": "Se désinscrire",
+    "withdraw_error": "Échec de la désinscription du quart",
+    "withdraw_panel": {
+      "description": "Vous serez retiré de l'effectif du {{date}}.",
+      "title": "Se désinscrire de ce quart ?"
+    },
+    "withdraw_success": "Désinscription du quart réussie",
+    "you": "Vous",
+    "you_are_signed_up": "Vous êtes inscrit(e) à ce quart"
+  },
+  "sidebar": {
+    "audio": "Flux",
+    "ptt": "Voix"
+  },
+  "tabs": {
+    "personnel": "Personnel",
+    "units": "Unités",
+    "weatherAlerts": "Alertes Météo"
+  },
+  "units": {
+    "coordinates": "Coordonnées",
+    "emptyDescription": "Aucune unité n'est disponible dans votre département",
+    "features": "Fonctionnalités",
+    "fourWheelDrive": "4x4",
+    "lastUpdate": "Dernière mise à jour",
+    "location": "Localisation",
+    "maps_error": "Impossible d'ouvrir les cartes",
+    "notes": "Notes",
+    "plateNumber": "Numéro de plaque",
+    "specialPermit": "Permis spécial",
+    "tapToOpenMaps": "Appuyer pour ouvrir dans les cartes",
+    "vehicleInfo": "Informations sur le véhicule"
+  },
+  "video_feeds": {
+    "add_feed": "Add Video Feed",
+    "delete_confirm": "Are you sure you want to delete this video feed?",
+    "delete_feed": "Delete Video Feed",
+    "edit_feed": "Edit Video Feed",
+    "form_description": "Description",
+    "form_feed_format": "Feed Format",
+    "form_feed_type": "Feed Type",
+    "form_name": "Name",
+    "form_sort_order": "Sort Order",
+    "form_status": "Status",
+    "form_url": "URL",
+    "format_youtube": "YouTube",
+    "no_feeds": "No video feeds for this call",
+    "type_satellite": "Satellite Feed",
+    "type_webcam": "Webcam",
+    "unsupported_format": "This format is not supported for in-app playback. Copy the URL to open in an external player."
+  },
+  "weather_alerts": {
+    "banner": {
+      "moreAlerts": "+{{count}} de plus"
+    },
+    "category": {
+      "CBRNE": "CBRNE",
+      "Env": "Environnemental",
+      "Fire": "Incendie",
+      "Geo": "Géologique",
+      "Health": "Santé",
+      "Infra": "Infrastructure",
+      "Met": "Météorologique",
+      "Other": "Autre",
+      "Transport": "Transport"
+    },
+    "certainty": {
+      "Likely": "Probable",
+      "Observed": "Observé",
+      "Possible": "Possible",
+      "Unknown": "Inconnu",
+      "Unlikely": "Improbable",
+      "label": "Certitude"
+    },
+    "detail": {
+      "load_error": "Alerte indisponible",
+      "load_error_description": "Cette alerte météo n'a pas pu être chargée. Elle a peut-être expiré ou la requête a échoué.",
+      "metadata": "Détails",
+      "status": "Statut"
+    },
+    "search": "Rechercher des alertes...",
+    "severity": {
+      "Extreme": "Extrême",
+      "Minor": "Mineur",
+      "Moderate": "Modéré",
+      "Severe": "Sévère",
+      "Unknown": "Inconnu"
+    },
+    "status": {
+      "Active": "Actif",
+      "Actual": "Réel",
+      "Cancelled": "Annulé",
+      "Draft": "Brouillon",
+      "Exercise": "Exercice",
+      "Expired": "Expiré",
+      "System": "Système",
+      "Test": "Test",
+      "Updated": "Mis à jour"
+    },
+    "urgency": {
+      "Expected": "Attendue",
+      "Future": "Future",
+      "Immediate": "Immédiate",
+      "Past": "Passée",
+      "Unknown": "Inconnue",
+      "label": "Urgence"
+    }
+  },
+  "welcome": "Bienvenue sur {{appName}}",
+  "workOrders": {
+    "accept": "Accepter l'affectation",
+    "activity": "Activité",
+    "activityType": {
+      "0": "Créé",
+      "1": "Mis à jour",
+      "2": "Statut modifié",
+      "3": "Assigné",
+      "4": "Affectation acceptée",
+      "5": "Commentaire",
+      "6": "Heures saisies",
+      "7": "Pièce ajoutée",
+      "8": "Pièce annulée",
+      "9": "Fichier ajouté",
+      "10": "Fichier retiré",
+      "11": "Arrêt de sécurité",
+      "12": "Arrêt de sécurité levé",
+      "13": "Reporté",
+      "14": "Escaladé"
+    },
+    "addComment": "Publier le commentaire",
+    "allMine": "Tous ceux que je vois",
+    "assetIs": "Équipement : {{name}}",
+    "assignedToMe": "Qui me sont assignés",
+    "back": "Retour",
+    "cannotReport": "Votre organisation ne peut pas accepter de nouveaux bons de travail pour le moment.",
+    "choosePhoto": "Choisir une photo",
+    "commentHint": "Ajouter un commentaire",
+    "due": "Échéance {{date}}",
+    "errors": {
+      "AcceptAssignmentFirst": "Acceptez d'abord l'affectation.",
+      "Conflict": "Quelqu'un d'autre a modifié ce bon de travail. Vérifiez-le et réessayez.",
+      "IndependentVerificationRequired": "Une autre personne que celle qui a fait le travail doit le clôturer.",
+      "InvalidFile": "Seuls les fichiers JPEG, PNG ou PDF de 10 Mo maximum peuvent être joints.",
+      "PartBalanceOutstanding": "Des pièces doivent encore être sorties, retournées ou attestées.",
+      "ReadinessProRequired": "Votre organisation a besoin de Readiness Pro pour cela.",
+      "RevisionConflict": "Quelqu'un d'autre a modifié ce bon de travail. Vérifiez-le et réessayez.",
+      "SafetyRequirements": "La procédure de sécurité, le permis, la consignation et le personnel qualifié doivent d'abord être renseignés.",
+      "ScanRequired": "Le fichier est encore en cours d'analyse. Réessayez sous peu.",
+      "SpendingApprovalRequired": "Une approbation de dépense est nécessaire avant cette étape.",
+      "TasksIncomplete": "Confirmez que toutes les étapes sont terminées.",
+      "denied": "Vous n'avez pas accès à ce bon de travail.",
+      "locked": "Déverrouillez les données protégées pour continuer.",
+      "photo_denied": "Autorisez l'accès à l'appareil photo ou aux photos pour joindre une photo.",
+      "readiness_required": "Votre organisation a besoin de Readiness Pro pour cela.",
+      "retry": "Impossible de joindre le serveur. Réessayez."
+    },
+    "files": "Photos et fichiers",
+    "form": {
+      "asset": "Équipement",
+      "description": "Détails",
+      "descriptionHint": "Ce qui est arrivé, ce que vous avez vu, ce que le mécanicien doit savoir",
+      "group": "Caserne",
+      "location": "Lieu",
+      "locationHint": "Où exactement (remise, coffre, pièce)",
+      "none": "Aucun",
+      "photosAfter": "Vous pourrez ajouter des photos une fois le signalement enregistré.",
+      "priority": "Priorité",
+      "safetyCritical": "Critique pour la sécurité",
+      "submit": "Envoyer le signalement",
+      "title": "Titre",
+      "titleHint": "Ce qui ne va pas, en quelques mots",
+      "type": "Type de travail",
+      "unit": "Véhicule"
+    },
+    "groupIs": "Caserne : {{name}}",
+    "hours": "Heures",
+    "hoursInvalid": "Saisissez entre 0 et 24 heures.",
+    "hoursLogged": "{{hours}} h saisies",
+    "hoursNote": "Ce qui a été fait",
+    "locationIs": "Lieu : {{location}}",
+    "logHours": "Saisir des heures",
+    "more": "Charger plus",
+    "none": "Aucun bon de travail.",
+    "noneAssigned": "Rien ne vous est assigné.",
+    "photoAdded": "Photo ajoutée.",
+    "priority": {
+      "0": "Basse",
+      "1": "Normale",
+      "2": "Haute",
+      "3": "Urgence"
+    },
+    "readOnly": "Vous pouvez consulter les bons de travail ; les signaler et les mettre à jour nécessite {{product}}.",
+    "report": "Signaler un problème",
+    "resolutionIs": "Résolution : {{text}}",
+    "safety": "Travail critique pour la sécurité ou dangereux",
+    "saveHours": "Enregistrer les heures",
+    "status": {
+      "0": "Demandé",
+      "1": "Accepté",
+      "2": "Assigné",
+      "3": "En cours",
+      "4": "En attente",
+      "5": "Terminé",
+      "6": "Clôturé",
+      "7": "Rejeté",
+      "8": "Doublon",
+      "9": "Annulé"
+    },
+    "steps": "Étapes",
+    "takePhoto": "Prendre une photo",
+    "title": "Bons de travail",
+    "transition": {
+      "apply": "Mettre à jour le statut",
+      "cause": "Cause",
+      "confirmTasks": "Toutes les étapes sont terminées",
+      "duplicateOf": "Numéro du bon en doublon",
+      "missing": {
+        "cause": "Saisissez la cause.",
+        "confirmTasks": "Confirmez que les étapes sont terminées.",
+        "duplicateOf": "Saisissez le bon en doublon.",
+        "reason": "Saisissez un motif.",
+        "resolution": "Décrivez ce qui a été fait.",
+        "verification": "Décrivez comment cela a été vérifié."
+      },
+      "pick": "Choisissez le nouveau statut",
+      "reason": "Motif",
+      "resolution": "Ce qui a été fait pour réparer",
+      "title": "Changer le statut",
+      "verification": "Comment cela a été vérifié"
+    },
+    "type": {
+      "0": "Réparation",
+      "1": "Préventif",
+      "2": "Inspection",
+      "3": "Bâtiment",
+      "4": "Autre"
+    },
+    "unitIs": "Véhicule : {{name}}",
+    "viewPhoto": "Voir la photo {{name}}"
+  }
+}

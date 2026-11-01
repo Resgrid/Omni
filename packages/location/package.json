@@ -1,0 +1,29 @@
+{
+  "name": "@resgrid/location",
+  "version": "0.0.0",
+  "private": true,
+  "description": "One location transmitter (person or unit target), the background location task, outbox handlers for location fixes and location hooks for Resgrid Omni (layer L3)",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./background-task": "./src/background-task.ts",
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "@resgrid/api": "workspace:*",
+    "@resgrid/config": "workspace:*",
+    "@resgrid/core": "workspace:*",
+    "@resgrid/i18n": "workspace:*",
+    "@resgrid/models": "workspace:*",
+    "@resgrid/offline": "workspace:*",
+    "expo-constants": "catalog:",
+    "expo-location": "catalog:",
+    "expo-task-manager": "catalog:",
+    "react": "catalog:",
+    "react-native": "catalog:"
+  },
+  "devDependencies": {
+    "react-test-renderer": "catalog:"
+  }
+}

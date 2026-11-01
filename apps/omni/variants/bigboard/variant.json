@@ -1,0 +1,139 @@
+{
+  "id": "bigboard",
+  "displayName": "BigBoard",
+  "identity": {
+    "name": "Resgrid BigBoard",
+    "slug": "resgrid-bigboard",
+    "easProjectId": "c775a10a-3bd5-499b-b0cb-79333e6ab8fe",
+    "clientId": "bigboard",
+    "ios": {
+      "bundleIdentifier": "com.resgrid.bigboard",
+      "associatedDomains": [],
+      "appGroup": null
+    },
+    "android": {
+      "package": "com.resgrid.bigboard"
+    },
+    "schemes": ["ResgridBigBoard"],
+    "ssoReturnScheme": "resgridbigboard",
+    "electron": {
+      "appId": "com.resgrid.bigboard",
+      "productName": "BigBoard",
+      "protocol": null
+    },
+    "web": {
+      "dockerImage": "resgridllc/bigboard",
+      "legacyEnvPrefix": "BIGBOARD_"
+    },
+    "sentryProject": "bigboard",
+    "notificationColor": "#2a7dd5",
+    "adaptiveIconBackground": "#2484c4",
+    "splashBackground": "#2a7dd5",
+    "owner": "resgrid"
+  },
+  "storage": {
+    "mmkvId": "ResgridUnit",
+    "keySecret": "BIGBOARD_MMKV_KEY",
+    "extraInstances": ["auth-storage", "security-storage", "mmkv.default"]
+  },
+  "versioning": {
+    "tagPrefix": "bigboard-v",
+    "major": 4,
+    "buildNumberBase": 100000
+  },
+  "capabilities": {
+    "calls": {
+      "create": "none",
+      "dispatch": false,
+      "close": false,
+      "queues": false,
+      "runCards": false
+    },
+    "status": {
+      "subject": "personnel",
+      "onBehalf": false,
+      "staffing": false
+    },
+    "incidentCommand": "none",
+    "checkIn": {
+      "self": false,
+      "others": false,
+      "actions": false
+    },
+    "videoFeeds": "none",
+    "weatherAlerts": {
+      "admin": false
+    },
+    "voice": {
+      "ptt": false,
+      "callKeep": false,
+      "bluetoothPtt": false,
+      "headsetButtonPtt": false,
+      "desktopPtt": false
+    },
+    "location": {
+      "background": false,
+      "transmission": "none",
+      "geoHubDefault": true
+    },
+    "push": {
+      "subject": "user",
+      "desktopPush": true,
+      "liveActivity": false,
+      "approveSignIns": false
+    },
+    "auth": {
+      "mfa": true,
+      "passkeys": false,
+      "brokeredSso": true,
+      "sharedDevice": false,
+      "personalLock": false,
+      "neverLogoutOnTransientError": true,
+      "appAccessRight": null
+    },
+    "realtime": {
+      "chatHub": false,
+      "hubWatchdog": true
+    },
+    "maps": {
+      "layers": true,
+      "customIndoor": false,
+      "navigationInApp": false
+    },
+    "platform": {
+      "webEdition": true,
+      "electron": true,
+      "onboarding": false,
+      "maintenanceMode": true
+    }
+  },
+  "modules": ["dashboard"],
+  "native": {
+    "modules": ["secure-store", "maplibre", "sqlite", "notifee"],
+    "iosBackgroundModes": ["remote-notification"],
+    "androidPermissions": ["android.permission.WAKE_LOCK", "android.permission.POST_NOTIFICATIONS"],
+    "androidBlockedPermissions": [
+      "android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE",
+      "android.permission.ACCESS_BACKGROUND_LOCATION",
+      "android.permission.FOREGROUND_SERVICE_LOCATION",
+      "android.permission.RECORD_AUDIO",
+      "android.permission.FOREGROUND_SERVICE_MICROPHONE"
+    ],
+    "iosUseStaticFrameworks": false
+  },
+  "offline": {
+    "cacheTtl": "short",
+    "storageBudgetMb": 100,
+    "mapPacks": "display"
+  },
+  "shell": {
+    "kind": "drawer-slot",
+    "sidebar": {
+      "phone": "drawer",
+      "tablet": "drawer",
+      "desktop": "drawer"
+    },
+    "sidebarContent": "menu",
+    "homeRoute": "/home"
+  }
+}

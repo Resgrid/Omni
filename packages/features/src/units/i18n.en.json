@@ -1,0 +1,17 @@
+{
+  "units.clear_filters": "Clear filters",
+  "units.crew": "Crew",
+  "units.destination": "Destination",
+  "units.details": "Unit Details",
+  "units.filter": "Filter",
+  "units.four_wheel_drive": "Four-wheel drive",
+  "units.no_crew": "No crew assigned",
+  "units.no_filters_available": "No filters available",
+  "units.not_found": "Unit not found",
+  "units.note": "Note",
+  "units.plate_number": "Plate number",
+  "units.special_permit": "Special permit",
+  "units.status_info": "Status",
+  "units.status_updated": "Status updated",
+  "units.yes": "Yes"
+}

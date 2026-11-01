@@ -1,0 +1,244 @@
+{
+  "app": {
+    "initialization_failed": "Impossible de charger les données de l'application. Vérifiez votre connexion et réessayez."
+  },
+  "callImages": {
+    "not_signed_in": "Vous devez être connecté pour envoyer des images",
+    "upload_error": "Erreur lors de l'envoi de l'image"
+  },
+  "calls": {
+    "directions_to_destination": "Itinéraire vers la destination",
+    "dispatch_on": "Heure d'envoi",
+    "dispatch_on_too_soon": "L'heure d'envoi doit être au moins {{minutes}} minutes dans le futur",
+    "errors": {
+      "load_failed": "Échec du chargement des appels"
+    },
+    "files": {
+      "sharing_unavailable": "Le partage n'est pas disponible sur cet appareil"
+    },
+    "required_fields_missing": "Votre département exige ces champs avant que l'appel puisse être enregistré : {{fields}}",
+    "view_on_map": "Voir sur la carte"
+  },
+  "chat": {
+    "chatting_as": "Discussion en tant que {{name}}"
+  },
+  "common": {
+    "no_location": "Aucune donnée de localisation disponible",
+    "no_unit": "Aucune unité",
+    "unknown_error": "Une erreur inconnue s'est produite"
+  },
+  "contacts": {
+    "unknown_company": "Entreprise inconnue",
+    "unknown_person": "Personne inconnue"
+  },
+  "incident_command": {
+    "error": "Échec du chargement des informations du commandement de l'incident",
+    "need_category": {
+      "equipment": "Équipement",
+      "logistics": "Logistique",
+      "medical": "Médical",
+      "other": "Autre",
+      "resource": "Ressource",
+      "staffing": "Personnel"
+    },
+    "need_status": {
+      "cancelled": "Annulé",
+      "met": "Satisfait",
+      "open": "Ouvert",
+      "partially_met": "Partiellement satisfait"
+    },
+    "no_active_command": "Aucun commandement d'incident n'est actif pour cet appel",
+    "objective_status": {
+      "complete": "Terminé",
+      "in_progress": "En cours",
+      "pending": "En attente"
+    },
+    "objective_type": {
+      "benchmark": "Jalon",
+      "general": "Général",
+      "safety": "Sécurité"
+    },
+    "progress": "{{percent}} % terminé",
+    "quantity_fulfilled": "{{fulfilled}} sur {{requested}} satisfaits"
+  },
+  "inventory": {
+    "assetStatus": {
+      "0": "En service",
+      "1": "Remis",
+      "2": "En réparation",
+      "3": "Endommagé",
+      "4": "Perdu",
+      "5": "Consommé",
+      "6": "Retiré"
+    },
+    "awaitingWitness": "Un article contrôlé a changé ; une seconde personne doit attester ce comptage sur le web.",
+    "back": "Retour",
+    "cancel": "Annuler",
+    "cancelBody": "Rien de ce qui a été compté n'est enregistré.",
+    "cancelCount": "Annuler le comptage",
+    "cancelTitle": "Annuler ce comptage ?",
+    "cannotCount": "Le comptage nécessite l'autorisation d'ajuster l'inventaire sur ce véhicule.",
+    "complete": "Terminer",
+    "completeBody": "{{count}} articles diffèrent de l'attendu. Terminer enregistre les écarts.",
+    "completeNoChanges": "Tout correspond à l'attendu.",
+    "completeTitle": "Terminer le comptage ?",
+    "completed": "Comptage terminé.",
+    "count": "Comptage d'inventaire",
+    "countName": "Contrôle {{name}} {{date}}",
+    "countStatus": {
+      "0": "En cours",
+      "1": "En attente de témoin",
+      "2": "Terminé",
+      "3": "Annulé"
+    },
+    "counts": "Comptages récents",
+    "differences": "{{count}} écarts",
+    "disabled": "L'inventaire est désactivé pour votre organisation.",
+    "empty": "Rien ici.",
+    "errors": {
+      "CountAlreadyExists": "Ce comptage existe déjà.",
+      "CountEmpty": "Il n'y a rien à compter ici.",
+      "CountScopeTooLarge": "Trop d'articles pour un comptage. Comptez un coffre à la fois.",
+      "CountSnapshotChanged": "L'inventaire de ce véhicule a changé pendant le comptage. Annulez et recommencez.",
+      "CountStateConflict": "Ce comptage a changé sur un autre appareil. Rouvrez-le et réessayez.",
+      "InvalidCount": "Vérifiez les valeurs comptées et réessayez.",
+      "InventoryDisabled": "L'inventaire est désactivé pour votre organisation.",
+      "LocationUnavailable": "Cet emplacement n'est pas disponible.",
+      "MembershipRequired": "Vous n'êtes pas membre actif de cette organisation.",
+      "MigrationRequired": "L'inventaire est en cours de configuration pour votre organisation.",
+      "PermissionRequired": "Vous n'avez pas l'autorisation de faire cela.",
+      "ProtectedDataRequired": "Déverrouillez les données protégées pour continuer.",
+      "ReturnAssetFirst": "Un article marqué manquant est encore remis à quelqu'un. Rendez-le d'abord sur le web.",
+      "locked": "Déverrouillez les données protégées pour continuer.",
+      "retry": "Impossible de joindre le serveur. Réessayez."
+    },
+    "expected": "Attendu {{quantity}} {{unit}}",
+    "keep": "Continuer le comptage",
+    "less": "Un de moins",
+    "matches": "Conforme",
+    "missing": "Manquant",
+    "more": "Un de plus",
+    "noLocations": "Aucun inventaire n'est affecté à ce véhicule.",
+    "notMigrated": "L'inventaire est en cours de configuration pour votre organisation.",
+    "pickLocation": "Où compter",
+    "present": "Présent",
+    "progress": "{{counted}} sur {{total}} comptés",
+    "quantity": "× {{quantity}}",
+    "save": "Enregistrer la progression",
+    "selectUnit": "Sélectionnez d'abord votre véhicule.",
+    "serial": "N° de série {{serial}}",
+    "start": "Commencer le comptage",
+    "startCount": "Compter l'inventaire",
+    "startHelp": "Comptez ce qui est réellement sur le véhicule. Les écarts sont enregistrés à la fin du comptage.",
+    "title": "Inventaire",
+    "titleFor": "Inventaire · {{name}}",
+    "unnamedItem": "Article",
+    "unnamedLocation": "Coffre",
+    "wholeUnit": "Véhicule entier : {{name}}"
+  },
+  "login": {
+    "hide_password": "Masquer le mot de passe",
+    "login_button": "Se connecter",
+    "login_button_loading": "Connexion en cours...",
+    "show_password": "Afficher le mot de passe",
+    "title": "Connexion"
+  },
+  "map": {
+    "legend": {
+      "built_in_unit_statuses": "Statuts d'unité intégrés",
+      "button": "Légende de la carte",
+      "calls": "Appels",
+      "error": "Impossible de charger la légende de la carte.",
+      "hydrant": "Borne d'incendie",
+      "list_separator": ", ",
+      "loading": "Chargement de la légende de la carte…",
+      "name_list": "{{label}} : {{names}}",
+      "no_call_type": "Appels sans type",
+      "no_role_icon": "Membres sans icône de rôle",
+      "no_unit_type": "Unités sans type",
+      "other": "Casernes et points d'intérêt",
+      "other_note": "Ces icônes ne changent pas avec le statut.",
+      "other_with_hydrants": "Casernes, bornes d'incendie et points d'intérêt",
+      "personnel": "Personnel",
+      "personnel_note": "Un membre affiche l'icône du premier de ses rôles, dans l'ordre des rôles, qui en a une. Un membre « Sur une unité » prend la couleur du statut de son unité.",
+      "priorities": "Priorités",
+      "priority_colors": "Couleurs des priorités",
+      "priority_unknown": "Sans signification",
+      "station": "Caserne",
+      "status_colors": "Couleurs des statuts",
+      "statuses": "Statuts : {{name}}",
+      "style": {
+        "available": "Disponible",
+        "delayed": "En pause",
+        "dispatched": "Engagé",
+        "emergency": "Urgence",
+        "high": "Haute",
+        "low": "Basse",
+        "medium": "Moyenne",
+        "onscene": "Sur les lieux",
+        "responding": "En intervention",
+        "returning": "En retour",
+        "staging": "Regroupement et attente",
+        "transporting": "En transport",
+        "unavailable": "Indisponible",
+        "unknown": "Sans signification ou sans statut"
+      },
+      "title": "Légende des icônes de la carte",
+      "units": "Unités"
+    },
+    "lock_map": "Verrouiller la carte sur l'unité",
+    "unlock_map": "Déverrouiller la carte"
+  },
+  "notifications": {
+    "confirm_delete_message_count": "Voulez-vous vraiment supprimer {{count}} notifications ? Cette action est irréversible.",
+    "delete_selected": "Supprimer les notifications sélectionnées",
+    "enter_selection_mode": "Sélectionner des notifications",
+    "open": "Ouvrir les notifications",
+    "remove_failed_count": "Échec de la suppression des notifications",
+    "remove_failed_one": "Échec de la suppression de la notification",
+    "removed_count": "{{count}} notifications supprimées",
+    "removed_one": "Notification supprimée",
+    "unable_to_load": "Impossible de charger les notifications"
+  },
+  "push_notifications": {
+    "unknown_type_warning": "Ce type de notification n'est pas reconnu. Veuillez contacter le support si vous continuez à voir ce message."
+  },
+  "roles": {
+    "assignedElsewhere": "Dans un autre rôle",
+    "clearAssignment": "Effacer l'attribution actuelle",
+    "noUsersFound": "Aucun utilisateur trouvé",
+    "saved_successfully": "Attributions de rôles enregistrées",
+    "searchUsers": "Rechercher par nom ou groupe...",
+    "selectUserDescription": "Choisissez une personne pour ce rôle",
+    "selectUserForRole": "Attribuer : {{role}}",
+    "selectUserLabel": "Sélectionner {{name}}",
+    "tapToAssign": "Appuyez pour attribuer un utilisateur à {{role}}",
+    "title": "Attribution des rôles de l'unité"
+  },
+  "routes": {
+    "traffic_heavy": "Trafic dense",
+    "traffic_light": "Trafic fluide",
+    "traffic_moderate": "Trafic modéré",
+    "traffic_no_data": "Aucune donnée de trafic",
+    "traffic_severe": "Trafic très dense"
+  },
+  "settings": {
+    "audio_device_selection": {
+      "speaker_device": "Appareil haut-parleur"
+    },
+    "logout_confirm_message": "Êtes-vous sûr de vouloir vous déconnecter ? Cela effacera toutes les données de l'application, les valeurs mises en cache et les paramètres.",
+    "no_units_available_help": "Aucune unité ne vous est attribuée. Demandez à votre administrateur de service de vous ajouter au groupe de caserne d'une unité.",
+    "realtime_geolocation_warning": "Cette fonction envoie la position de cette unité à votre département lorsque l'application est ouverte et se connecte au hub de localisation en temps réel pour recevoir la position des autres unités. Une connexion réseau active est requise.",
+    "units_load_failed": "Impossible de charger les unités. Vérifiez votre connexion et réessayez."
+  },
+  "status": {
+    "current": "Actuel",
+    "current_status": "Statut actuel",
+    "hold_to_set_hint": "Maintenez appuyé 2 secondes pour définir le statut",
+    "hold_to_set_instructions": "Maintenez un statut appuyé 2 secondes pour le définir",
+    "hold_to_submit": "Maintenir pour envoyer",
+    "show_all_statuses": "Afficher tous les statuts ({{count}} de plus)",
+    "show_next_statuses": "Afficher uniquement les statuts suivants",
+    "status_queued": "Statut enregistré sur cet appareil. Il sera envoyé automatiquement."
+  }
+}

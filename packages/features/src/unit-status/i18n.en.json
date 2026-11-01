@@ -1,0 +1,6 @@
+{
+  "unit_status.console_title": "Status console",
+  "unit_status.responding_to": "Responding to {{name}}",
+  "unit_status.since": "Since {{time}}",
+  "unit_status.switch_operator_body": "This ends your shift on this device and signs you out so the next operator can sign in. Unsent changes stay on the device."
+}

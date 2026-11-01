@@ -1,0 +1,140 @@
+{
+  "id": "dispatch",
+  "displayName": "Dispatch",
+  "identity": {
+    "name": "Resgrid Dispatch",
+    "slug": "resgrid-dispatch",
+    "easProjectId": "a46a953a-2a9e-4545-b28d-87e5838db146",
+    "clientId": "dispatch",
+    "ios": {
+      "bundleIdentifier": "com.resgrid.dispatch",
+      "associatedDomains": ["webcredentials:dispatch.resgrid.com", "webcredentials:dispatch-eu-central.resgrid.com"],
+      "appGroup": null
+    },
+    "android": {
+      "package": "com.resgrid.dispatch"
+    },
+    "schemes": ["ResgridDispatch", "resgriddispatch"],
+    "ssoReturnScheme": "resgriddispatch",
+    "electron": {
+      "appId": "com.resgrid.dispatch",
+      "productName": "Resgrid Dispatch",
+      "protocol": "resgriddispatch"
+    },
+    "web": {
+      "dockerImage": "resgridllc/dispatch",
+      "legacyEnvPrefix": "DISPATCH_"
+    },
+    "sentryProject": "dispatch",
+    "notificationColor": "#2a7dd5",
+    "adaptiveIconBackground": "#2484c4",
+    "splashBackground": "#2a7dd5",
+    "owner": "resgrid"
+  },
+  "storage": {
+    "mmkvId": "ResgridDispatch",
+    "keySecret": "DISPATCH_MMKV_KEY",
+    "extraInstances": ["auth-storage", "security-storage"]
+  },
+  "versioning": {
+    "tagPrefix": "dispatch-v",
+    "major": 2,
+    "buildNumberBase": 100000
+  },
+  "capabilities": {
+    "calls": {
+      "create": "full",
+      "dispatch": true,
+      "close": true,
+      "queues": true,
+      "runCards": true
+    },
+    "status": {
+      "subject": "personnel",
+      "onBehalf": true,
+      "staffing": false
+    },
+    "incidentCommand": "assist",
+    "checkIn": {
+      "self": false,
+      "others": true,
+      "actions": false
+    },
+    "videoFeeds": "manage",
+    "weatherAlerts": {
+      "admin": true
+    },
+    "voice": {
+      "ptt": true,
+      "callKeep": false,
+      "bluetoothPtt": true,
+      "headsetButtonPtt": false,
+      "desktopPtt": true
+    },
+    "location": {
+      "background": false,
+      "transmission": "none",
+      "geoHubDefault": true
+    },
+    "push": {
+      "subject": "user",
+      "desktopPush": true,
+      "liveActivity": false,
+      "approveSignIns": false
+    },
+    "auth": {
+      "mfa": true,
+      "passkeys": true,
+      "brokeredSso": true,
+      "sharedDevice": true,
+      "personalLock": true,
+      "neverLogoutOnTransientError": false,
+      "appAccessRight": "CanLoginToDispatchApp"
+    },
+    "realtime": {
+      "chatHub": true,
+      "hubWatchdog": true
+    },
+    "maps": {
+      "layers": true,
+      "customIndoor": true,
+      "navigationInApp": false
+    },
+    "platform": {
+      "webEdition": true,
+      "electron": true,
+      "onboarding": true,
+      "maintenanceMode": true
+    }
+  },
+  "modules": ["dispatch-console", "runcards", "call-queues", "awaiting-resources"],
+  "native": {
+    "modules": ["livekit", "ble-manager", "secure-store", "passkey", "maplibre", "sqlite", "notifee"],
+    "iosBackgroundModes": ["remote-notification", "audio", "bluetooth-central", "voip"],
+    "androidPermissions": [
+      "android.permission.WAKE_LOCK",
+      "android.permission.RECORD_AUDIO",
+      "android.permission.CAPTURE_AUDIO_OUTPUT",
+      "android.permission.POST_NOTIFICATIONS",
+      "android.permission.FOREGROUND_SERVICE",
+      "android.permission.FOREGROUND_SERVICE_MICROPHONE"
+    ],
+    "androidBlockedPermissions": ["android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE", "android.permission.ACCESS_BACKGROUND_LOCATION", "android.permission.FOREGROUND_SERVICE_LOCATION"],
+    "iosUseStaticFrameworks": false
+  },
+  "offline": {
+    "cacheTtl": "short",
+    "storageBudgetMb": 200,
+    "mapPacks": "full"
+  },
+  "shell": {
+    "kind": "drawer-slot",
+    "sidebar": {
+      "phone": "drawer",
+      "tablet": "drawer",
+      "desktop": "toggle-panel"
+    },
+    "sidebarContent": "menu",
+    "homeRoute": "/"
+  }
+}

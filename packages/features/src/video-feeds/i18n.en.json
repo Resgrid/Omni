@@ -1,0 +1,5 @@
+{
+  "video_feeds.loading": "Loading video feeds...",
+  "video_feeds.name_required": "Enter a name for the feed",
+  "video_feeds.url_invalid": "Enter a valid http, https or rtsp address"
+}

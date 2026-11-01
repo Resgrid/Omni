@@ -1,0 +1,11 @@
+{
+  "check_in.enable_timers": "Enable check-in timers",
+  "check_in.par.check_in_person": "Check in {{name}}",
+  "check_in.par.minutes_remaining": "{{count}} min remaining",
+  "check_in.par.needs": "Needs check-in",
+  "check_in.par.ok": "Checked in",
+  "check_in.par.overdue": "Overdue",
+  "check_in.par.title": "Personnel accountability (PAR)",
+  "check_in.toggle_error": "Could not change the check-in timers. Check your connection and try again.",
+  "check_in.unnamed_target": "Unassigned"
+}

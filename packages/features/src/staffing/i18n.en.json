@@ -1,0 +1,16 @@
+{
+  "home.staffing.add_note": "Add Note",
+  "home.staffing.add_note_action": "Add a note",
+  "home.staffing.no_options_available": "No staffing options available",
+  "home.staffing.note": "Note",
+  "home.staffing.note_placeholder": "Enter a note (optional)...",
+  "home.staffing.note_required_hint": "Opens a form to add the required note",
+  "home.staffing.quick_set_hint": "Sets your staffing now. Long press to add a note.",
+  "home.staffing.update_failed": "Failed to update staffing",
+  "home.staffing.updated_successfully": "Staffing updated successfully",
+  "home.user.my_staffing": "My Staffing",
+  "home.user.staffing_unknown": "Unknown Staffing",
+  "home.user.updated": "Updated",
+  "staffing.note_optional": "Add an optional note for this staffing change.",
+  "staffing.note_required": "This staffing level needs a note."
+}

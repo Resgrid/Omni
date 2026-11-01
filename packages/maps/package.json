@@ -1,0 +1,31 @@
+{
+  "name": "@resgrid/maps",
+  "version": "0.0.0",
+  "private": true,
+  "description": "MapLibre wrapper (rg: native over @maplibre/maplibre-react-native, web over maplibre-gl), map provider with style resolution and the shared map components for Resgrid Omni (layer L3)",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "dependencies": {
+    "@maplibre/maplibre-react-native": "catalog:",
+    "@react-native-community/netinfo": "catalog:",
+    "@resgrid/api": "workspace:*",
+    "@resgrid/config": "workspace:*",
+    "@resgrid/core": "workspace:*",
+    "@resgrid/i18n": "workspace:*",
+    "@resgrid/models": "workspace:*",
+    "@resgrid/offline": "workspace:*",
+    "expo-asset": "catalog:",
+    "expo-file-system": "catalog:",
+    "lucide-react-native": "catalog:",
+    "maplibre-gl": "catalog:",
+    "pmtiles": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "react-native": "catalog:",
+    "react-native-safe-area-context": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@testing-library/react-native": "catalog:"
+  }
+}

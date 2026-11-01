@@ -1,0 +1,1262 @@
+{
+  "app": {
+    "open_menu": "افتح القائمة",
+    "realtime_offline_description": "جارٍ إعادة الاتصال. قد لا تظهر المكالمات والرسائل الجديدة.",
+    "realtime_offline_title": "التحديثات المباشرة غير متاحة"
+  },
+  "audio_streams": {
+    "error_loading_stream": "خطأ في تحميل البث الصوتي"
+  },
+  "bluetooth": {
+    "audio_active": "الصوت نشط",
+    "button_control_available": "التحكم بالأزرار متاح",
+    "button_event": {
+      "double_press": "{{button}} مزدوج",
+      "long_press": "{{button}} طويل"
+    },
+    "button_event_applied": "مطبق",
+    "buttons": {
+      "mute": "كتم",
+      "ptt_start": "بدء PTT",
+      "ptt_stop": "إيقاف PTT",
+      "unknown": "غير معروف",
+      "volume_down": "الصوت -",
+      "volume_up": "الصوت +"
+    },
+    "checking_status": "جارٍ التحقق من حالة البلوتوث...",
+    "connection_error": "خطأ في الاتصال",
+    "livekit_active": "LiveKit نشط",
+    "powered_off_message": "البلوتوث مغلق. يرجى تفعيل البلوتوث لتوصيل أجهزة الصوت.",
+    "recent_button_events": "أحداث الأزرار الأخيرة",
+    "rssi_dbm": "{{rssi}} dBm",
+    "rssi_value": "RSSI: {{rssi}}dBm",
+    "start_scanning": "بدء البحث",
+    "stop_scan": "إيقاف البحث",
+    "unauthorized_message": "تم رفض إذن البلوتوث. يرجى منح أذونات البلوتوث في الإعدادات."
+  },
+  "calendar": {
+    "allDay": "طوال اليوم",
+    "attendanceUpdated": {
+      "signedUp": "لقد تم تسجيلك بنجاح في هذا الحدث.",
+      "title": "تم تحديث الحضور",
+      "unsignedUp": "تم إلغاء تسجيلك من هذا الحدث."
+    },
+    "attendees": {
+      "title": "الحاضرون"
+    },
+    "attendeesCount": "{{count}} حاضر",
+    "attendeesCount_plural": "{{count}} حاضرين",
+    "confirmSignup": "تأكيد",
+    "confirmUnsignup": {
+      "message": "هل أنت متأكد من أنك تريد إلغاء حضورك لهذا الحدث؟",
+      "title": "تأكيد الإلغاء"
+    },
+    "createdBy": "أنشأه",
+    "daysOfWeek": {
+      "fri": "جمعة",
+      "mon": "اثنين",
+      "sat": "سبت",
+      "sun": "أحد",
+      "thu": "خميس",
+      "tue": "ثلاثاء",
+      "wed": "أربعاء"
+    },
+    "description": "الوصف",
+    "error": {
+      "attendanceUpdate": "فشل في تحديث الحضور. حاول مرة أخرى.",
+      "title": "خطأ"
+    },
+    "eventsCount": "{{count}} حدث",
+    "eventsCount_plural": "{{count}} أحداث",
+    "loading": {
+      "date": "جاري تحميل أحداث التاريخ المحدد...",
+      "today": "جاري تحميل أحداث اليوم...",
+      "upcoming": "جاري تحميل الأحداث القادمة..."
+    },
+    "noEvents": "لا توجد أحداث مجدولة",
+    "optional": "اختياري",
+    "required": "مطلوب",
+    "selectDate": "اختر تاريخاً لعرض الأحداث",
+    "selectedDate": {
+      "empty": "لا توجد أحداث مجدولة لهذا التاريخ.",
+      "title": "أحداث {{date}}"
+    },
+    "signedUp": "مسجل",
+    "signup": {
+      "button": "سجل",
+      "notePlaceholder": "أدخل ملاحظتك هنا...",
+      "notePrompt": "إضافة ملاحظة (اختياري):",
+      "title": "تسجيل الحدث"
+    },
+    "signupAvailable": "التسجيل متاح",
+    "tabs": {
+      "calendar": "التقويم",
+      "today": "اليوم",
+      "upcoming": "القادم"
+    },
+    "tapToSignUp": "اضغط للتسجيل",
+    "title": "التقويم",
+    "today": {
+      "empty": {
+        "description": "ليس لديك أحداث مجدولة لليوم.",
+        "title": "لا توجد أحداث اليوم"
+      }
+    },
+    "todayButton": "اليوم",
+    "unsignup": "إلغاء الحضور",
+    "upcoming": {
+      "empty": {
+        "description": "ليس لديك أحداث مجدولة في الأيام السبعة القادمة.",
+        "title": "لا توجد أحداث قادمة"
+      }
+    }
+  },
+  "callImages": {
+    "capture_error": "خطأ في التقاط الصورة. يرجى المحاولة مرة أخرى.",
+    "permission_denied_settings": "تم رفض الإذن. يرجى تمكين الوصول في إعدادات جهازك.",
+    "select_error": "خطأ في اختيار الصورة. يرجى المحاولة مرة أخرى.",
+    "upload_success": "تم رفع الصورة بنجاح",
+    "url_label": "URL: {{url}}"
+  },
+  "callNotes": {
+    "addNoteError": "فشل إضافة الملاحظة. يرجى المحاولة مرة أخرى."
+  },
+  "call_detail": {
+    "route_to_destination": "المسار إلى الوجهة",
+    "tabs": {
+      "command": "القيادة"
+    }
+  },
+  "calls": {
+    "assigned_to_me": "مخصص لي",
+    "destination_load_error": "تعذر تحميل نقاط الاهتمام الخاصة بالوجهة",
+    "destination_placeholder": "اختر وجهة",
+    "external_id": "المعرف الخارجي",
+    "only_calls_im_on": "فقط المكالمات التي أنا ضمنها",
+    "personnel": "الأشخاص",
+    "protocols": "البروتوكولات",
+    "reference_id": "معرف المرجع",
+    "required_fields_missing": "يطلب قسمك هذه الحقول قبل حفظ البلاغ: {{fields}}",
+    "search_address": "البحث عن العنوان",
+    "search_coordinates": "البحث عن الإحداثيات",
+    "search_plus_code": "البحث عن Plus Code",
+    "search_what3words": "البحث عن عنوان what3words"
+  },
+  "certifications": {
+    "add": "إضافة",
+    "addHours": "إضافة ساعات",
+    "addHoursWithPhoto": "إضافة ساعات مع صورة",
+    "areaIs": "المجال: {{area}}",
+    "back": "رجوع",
+    "cancel": "إلغاء",
+    "category": "الفئة (دورة، تمرين، مؤتمر)",
+    "certificateAttached": "الشهادة مرفقة",
+    "creditAdded": "تمت إضافة الساعات.",
+    "creditDate": "التاريخ (اليوم افتراضيًا)",
+    "creditNote": "ما هو",
+    "credits": "{{hours}} من {{required}} ساعة تعليم مستمر",
+    "creditsTitle": "{{hours}} ساعة تعليم مستمر",
+    "dateInvalid": "أدخل التواريخ بصيغة yyyy-mm-dd.",
+    "edit": "تعديل",
+    "errors": {
+      "certifications_file_invalid": "تعذرت قراءة الصورة.",
+      "certifications_file_too_large": "الصورة كبيرة جدًا.",
+      "denied": "ليس لديك وصول إلى هذه الشهادة.",
+      "locked": "افتح البيانات المحمية للمتابعة.",
+      "retry": "تعذر الوصول إلى الخادم. حاول مرة أخرى.",
+      "validation": "رفض الخادم التغيير."
+    },
+    "expired": "انتهت في {{date}}",
+    "expires": "تنتهي في {{date}} ({{days}} يومًا)",
+    "form": {
+      "area": "المجال أو المستوى",
+      "choosePhoto": "اختيار صورة",
+      "expiresOn": "تاريخ الانتهاء",
+      "issuedBy": "الجهة المصدرة",
+      "name": "الاسم",
+      "number": "الرقم",
+      "otherType": "أخرى (أدخل اسمًا)",
+      "photoAttached": "تم إرفاق الصورة.",
+      "receivedOn": "تاريخ الحصول",
+      "save": "حفظ",
+      "takePhoto": "صورة البطاقة",
+      "type": "الشهادة"
+    },
+    "hasFile": "توجد بطاقة أو شهادة في الملف",
+    "hours": "الساعات",
+    "hoursInvalid": "أدخل عدد ساعات أكبر من 0.",
+    "issuedByIs": "صادرة عن {{name}}",
+    "nameRequired": "اختر نوعًا أو أدخل اسمًا.",
+    "newExpiry": "تاريخ الانتهاء الجديد",
+    "newNumber": "رقم جديد (اختياري)",
+    "noExpiry": "لا تنتهي",
+    "none": "لم تضف أي شهادات بعد.",
+    "notVerified": "لم تتحقق منها الإدارة بعد",
+    "numberIs": "الرقم {{number}}",
+    "photoDenied": "اسمح بالوصول إلى الكاميرا أو الصور لإرفاق صورة.",
+    "receivedOn": "تم الحصول عليها في {{date}}",
+    "remove": "إزالة",
+    "removeBody": "سيؤدي هذا إلى إزالتها من سجلك. يظل بإمكان إدارتك رؤية السجل.",
+    "removeTitle": "إزالة الشهادة؟",
+    "renew": "تجديد",
+    "renewSave": "حفظ التجديد",
+    "renewed": "تم حفظ التجديد.",
+    "status": {
+      "0": "سارية",
+      "1": "منتهية",
+      "2": "موقوفة",
+      "3": "ملغاة",
+      "4": "بانتظار التحقق",
+      "5": "متدرب"
+    },
+    "title": "شهاداتي",
+    "untitled": "شهادة",
+    "verifiedOn": "تم التحقق في {{date}}"
+  },
+  "chat": {
+    "attach": "إرفاق",
+    "back_to_chats": "العودة إلى المحادثات",
+    "new_conversation": "محادثة جديدة"
+  },
+  "check_in": {
+    "add_note": "إضافة ملاحظة (اختياري)",
+    "confirm_check_in": "تأكيد التسجيل",
+    "duration": "المدة",
+    "gps_coordinates": "GPS: {{latitude}}, {{longitude}}",
+    "history": "سجل تسجيل الحضور",
+    "minutes_ago": "قبل {{count}} دقيقة",
+    "no_timers": "لا توجد مؤقتات تسجيل حضور مكونة",
+    "offline_queued": "تم وضع التسجيل في قائمة الانتظار للاتصال",
+    "progress": "{{elapsed}} / {{total}} دقيقة",
+    "timer_interval": "كل {{minutes}} دقيقة",
+    "type_hazmat": "التعرض للمواد الخطرة",
+    "type_ic": "قائد الحادث",
+    "unknown_unit": "وحدة غير معروفة"
+  },
+  "checklists": {
+    "labels": {
+      "AssignmentAutomatic": "إسناد تلقائي"
+    }
+  },
+  "common": {
+    "active": "نشط",
+    "all": "الكل",
+    "deleting": "جاري الحذف...",
+    "discard": "تجاهل",
+    "navigation": "التنقل",
+    "noActiveUnit": "لم يتم تعيين وحدة نشطة",
+    "noActiveUnitDescription": "يرجى تعيين وحدة نشطة من صفحة الإعدادات للوصول إلى عناصر التحكم في الحالة",
+    "no_data_available": "لا توجد بيانات متاحة",
+    "success": "نجح",
+    "system": "النظام"
+  },
+  "contacts": {
+    "descriptionLabel": "الوصف",
+    "errorTitle": "خطأ",
+    "openAppError": "غير قادر على فتح تطبيق {{action}}",
+    "openLinkFailed": "فشل في فتح رابط {{action}}:"
+  },
+  "home": {
+    "active_call": {
+      "clear_active": "مسح النداء النشط",
+      "no_active_call": "لم يتم اختيار نداء نشط",
+      "select_call": "اختر نداءً للتتبع",
+      "set_active": "تعيين كنداء نشط",
+      "title": "نداء نشط",
+      "view_details": "عرض تفاصيل النداء"
+    },
+    "error": {
+      "no_user_id": "معرف المستخدم غير متاح"
+    },
+    "sidebar": {
+      "audio": "الصوت",
+      "ptt": "زر التحدث"
+    },
+    "staffing": {
+      "add_note": "إضافة ملاحظة",
+      "add_note_action": "إضافة ملاحظة",
+      "confirm_staffing": "تأكيد التوظيف: {{staffing}}",
+      "missing_required_info": "المعلومات المطلوبة مفقودة",
+      "no_options_available": "لا توجد خيارات توظيف متاحة",
+      "no_staffing_options": "لا توجد خيارات توظيف متاحة",
+      "note": "ملاحظة",
+      "note_placeholder": "أدخل ملاحظة (اختيارية)...",
+      "note_required_hint": "يفتح نموذجًا لإضافة الملاحظة المطلوبة",
+      "quick_set_hint": "يضبط حالة التوظيف فورًا. اضغط مطولًا لإضافة ملاحظة.",
+      "review_and_confirm": "مراجعة وتأكيد",
+      "select_staffing_level": "اختر مستوى التوظيف",
+      "select_staffing_level_description": "اختر حالة التوظيف الحالية",
+      "selected_staffing": "التوظيف المختار",
+      "set_staffing": "تحديد التوظيف",
+      "staffing_level": "مستوى التوظيف",
+      "update_failed": "فشل في تحديث التوظيف",
+      "updated_successfully": "تم تحديث التوظيف بنجاح"
+    },
+    "stats": {
+      "open_calls": "المكالمات المفتوحة",
+      "personnel_in_service": "الموظفون في الخدمة",
+      "units_in_service": "الوحدات في الخدمة"
+    },
+    "status": {
+      "no_options_available": "لا توجد خيارات حالة متاحة",
+      "update_failed": "فشل في تحديث الحالة",
+      "updated_successfully": "تم تحديث الحالة بنجاح"
+    },
+    "summary": {
+      "active_calls": "المكالمات النشطة",
+      "active_severe_weather_alerts": "تنبيهات الطقس الشديدة/الطارئة النشطة",
+      "calls_im_on": "المكالمات التي أنا ضمنها",
+      "pending_missed_checkins": "عمليات تسجيل الحضور المعلقة/الفائتة"
+    },
+    "tabs": {
+      "call": "نداء",
+      "dashboard": "لوحة القيادة",
+      "map": "الخريطة",
+      "staffing": "التوظيف",
+      "status": "الحالة"
+    },
+    "user": {
+      "my_staffing": "توظيفي",
+      "my_status": "حالتي",
+      "staffing_unknown": "توظيف غير معروف",
+      "status_unknown": "حالة غير معروفة",
+      "updated": "محدث"
+    }
+  },
+  "incident_command": {
+    "assigned_since": "مُعيَّن منذ",
+    "empty_state": "لا توجد قيادة حادث نشطة لهذه المكالمة",
+    "error_loading": "فشل في تحميل معلومات قيادة الحادث",
+    "my_assignment": "مهمتي",
+    "need_category_equipment": "معدات",
+    "need_category_logistics": "لوجستيات",
+    "need_category_medical": "طبي",
+    "need_category_other": "أخرى",
+    "need_category_resource": "موارد",
+    "need_category_staffing": "أفراد",
+    "need_status_cancelled": "ملغى",
+    "need_status_met": "تمت تلبيته",
+    "need_status_open": "مفتوح",
+    "need_status_partially_met": "تمت تلبيته جزئيًا",
+    "objective_status_complete": "مكتمل",
+    "objective_status_in_progress": "قيد التنفيذ",
+    "objective_status_pending": "قيد الانتظار",
+    "objective_type_benchmark": "نقطة مرجعية",
+    "objective_type_general": "عام",
+    "objective_type_safety": "السلامة",
+    "percent_complete": "{{percent}}%",
+    "quantity": "{{fulfilled}}/{{requested}}"
+  },
+  "livekit": {
+    "connection_failed": "تعذر الانضمام إلى القناة الصوتية",
+    "double_click_action": "إجراء النقر المزدوج",
+    "headset_button_ptt": "PTT بزر السماعة",
+    "headset_monitoring_active": "مراقبة السماعة نشطة",
+    "headset_monitoring_inactive": "مراقبة السماعة غير نشطة",
+    "headset_ptt_description": "استخدم زر AirPods أو سماعات البلوتوث لكتم/إلغاء الكتم",
+    "headset_ptt_disabled": "PTT بالسماعة معطل",
+    "headset_ptt_enabled": "PTT بالسماعة مفعل",
+    "long_press_action": "إجراء الضغط المطول",
+    "no_action": "لا إجراء",
+    "play_pause_action": "إجراء زر التشغيل/الإيقاف",
+    "ptt_mode": "وضع PTT",
+    "ptt_mode_disabled": "معطل",
+    "ptt_mode_push": "اضغط للتحدث (اضغط مع الاستمرار)",
+    "ptt_mode_toggle": "تبديل (اضغط للتغيير)",
+    "sound_feedback": "ردود فعل صوتية",
+    "tap_to_toggle_mute": "اضغط على زر السماعة لتبديل الكتم",
+    "toggle_mute": "تبديل الكتم"
+  },
+  "location": {
+    "tracking_notification_body": "تتم مشاركة موقعك مع إدارتك."
+  },
+  "login": {
+    "change_server_url": "تغيير عنوان URL للخادم",
+    "select_language": "اللغة",
+    "sso": {
+      "back": "رجوع",
+      "change_department": "تغيير المستخدم",
+      "continue_button": "متابعة",
+      "department_code_label": "رمز القسم",
+      "department_code_placeholder": "أدخل رمز القسم",
+      "department_code_required": "رمز القسم مطلوب",
+      "department_description": "أدخل رمز قسمك لتسجيل الدخول",
+      "department_id_invalid": "يجب أن يكون معرف القسم رقمًا",
+      "department_id_label": "معرف القسم (اختياري)",
+      "department_id_placeholder": "أدخل معرف القسم إن عرفته",
+      "department_not_found": "القسم غير موجود. يرجى التحقق من الرمز والمحاولة مرة أخرى.",
+      "login_with_sso_button": "تسجيل الدخول عبر SSO",
+      "looking_up": "جارٍ البحث عن الحساب...",
+      "lookup_network_error": "تعذّر الاتصال بالخادم. يرجى التحقق من اتصالك والمحاولة مرة أخرى.",
+      "or_sign_in_with_password": "— أو سجّل الدخول بكلمة المرور —",
+      "page_title": "تسجيل الدخول عبر SSO",
+      "sign_in_with_sso": "تسجيل الدخول عبر SSO",
+      "sso_not_enabled": "SSO غير مفعّل لهذا الحساب. يرجى استخدام اسم المستخدم وكلمة المرور.",
+      "user_description": "أدخل اسم مستخدم Resgrid أو بريدك الإلكتروني لتسجيل الدخول عبر SSO",
+      "user_not_found": "الحساب غير موجود. يرجى التحقق من اسم المستخدم والمحاولة مرة أخرى.",
+      "username_label": "اسم المستخدم أو البريد الإلكتروني",
+      "username_placeholder": "أدخل اسم المستخدم أو بريدك الإلكتروني",
+      "username_required": "اسم المستخدم مطلوب"
+    }
+  },
+  "map": {
+    "loading_markers": "جارٍ تحميل علامات الخريطة...",
+    "openSideMenu": "افتح القائمة الجانبية",
+    "tabs": {
+      "map": "الخريطة",
+      "pois": "نقاط الاهتمام"
+    }
+  },
+  "maps": {
+    "contact_administrator": "يرجى الاتصال بالمسؤول لتكوين خدمات الخرائط.",
+    "failed_to_load": "فشل في تحميل الخريطة. يرجى فحص اتصالك بالإنترنت.",
+    "legend": {
+      "error": "تعذّر تحميل دليل الخريطة.",
+      "loading": "جارٍ تحميل دليل الخريطة...",
+      "no_meaning": "بلا معنى",
+      "open": "فتح دليل الخريطة",
+      "other": "أخرى",
+      "statuses": "الحالات",
+      "style": {
+        "unknown": "بلا معنى أو بلا حالة"
+      }
+    },
+    "mapbox_not_configured": "Mapbox غير مُكوَّن. يرجى الاتصال بالمسؤول."
+  },
+  "messages": {
+    "all_messages": "جميع الرسائل",
+    "attending": "سأحضر",
+    "calendar_rsvp": "الرد على دعوة التقويم",
+    "compose": "إنشاء",
+    "compose_new_message": "إنشاء رسالة جديدة",
+    "date_unknown": "تاريخ غير معروف",
+    "delete_confirmation_message": "هل أنت متأكد من أنك تريد حذف {{count}} رسالة؟",
+    "delete_confirmation_title": "حذف الرسائل",
+    "delete_single_confirmation_message": "هل أنت متأكد من أنك تريد حذف هذه الرسالة؟",
+    "enter_expiration_date": "أدخل تاريخ انتهاء الصلاحية",
+    "enter_message_body": "أدخل رسالتك",
+    "enter_note": "أدخل ملاحظة اختيارية",
+    "enter_response": "أدخل ردك",
+    "enter_subject": "أدخل موضوع الرسالة",
+    "error": "خطأ",
+    "expiration_date_format": "التنسيق: YYYY-MM-DD HH:MM",
+    "expiration_date_optional": "تاريخ انتهاء الصلاحية (اختياري)",
+    "expired": "منتهية الصلاحية",
+    "expires_on": "تنتهي في",
+    "from": "من",
+    "inbox": "صندوق الوارد",
+    "message_body": "محتوى الرسالة",
+    "message_content": "محتوى الرسالة",
+    "message_type": "نوع الرسالة",
+    "no_content": "بدون محتوى",
+    "no_messages": "لم يتم العثور على رسائل",
+    "no_messages_description": "أرسل رسالتك الأولى للبدء",
+    "no_subject": "بدون موضوع",
+    "not_attending": "لن أحضر",
+    "note_optional": "ملاحظة (اختيارية)",
+    "people": "الأشخاص",
+    "recipients": "المستقبلين",
+    "recipients_count": "{{count}} مستقبل",
+    "recipients_selected": "{{count}} مستقبل محدد",
+    "respond_failed": "فشل في الرد على الرسالة",
+    "respond_to_message": "الرد على الرسالة",
+    "responded": "تم الرد",
+    "responded_on": "تم الرد في",
+    "responding": "جاري الرد...",
+    "response": "الرد",
+    "response_required": "الرد مطلوب",
+    "search_placeholder": "البحث في الرسائل...",
+    "select_all": "تحديد الكل",
+    "select_message": "تحديد الرسالة",
+    "select_message_type": "اختر نوع الرسالة",
+    "select_recipients": "اختيار المستقبلين",
+    "selected_count": "{{count}} محدد",
+    "send": "إرسال",
+    "send_first_message": "إرسال أول رسالة",
+    "send_response": "إرسال الرد",
+    "sending": "جاري الإرسال...",
+    "sent": "المرسلة",
+    "showing_count": "عرض {{count}} رسائل",
+    "subject": "الموضوع",
+    "title": "الرسائل",
+    "types": {
+      "alert": "تنبيه",
+      "calendar_rsvp": "الرد على دعوة التقويم",
+      "message": "رسالة",
+      "poll": "استطلاع"
+    },
+    "unsaved_changes": "تغييرات غير محفوظة",
+    "unsaved_changes_message": "لديك تغييرات غير محفوظة. هل أنت متأكد أنك تريد تجاهلها؟",
+    "validation": {
+      "body_required": "نص الرسالة مطلوب",
+      "recipients_required": "مطلوب مستلم واحد على الأقل",
+      "subject_required": "الموضوع مطلوب"
+    }
+  },
+  "mfa": {
+    "approve": {
+      "app": "التطبيق: {{app}}",
+      "approve": "موافقة",
+      "approved": "تمت الموافقة. يمكنك العودة إلى الشاشة الأخرى.",
+      "denied": "تم الرفض. لم تتم الموافقة على أي شيء.",
+      "deny": "رفض",
+      "department": "القسم: {{department}}",
+      "done": "تم",
+      "expires": "تنتهي الصلاحية في {{time}}",
+      "installation": "الجهاز: {{label}}",
+      "none": "لا يوجد شيء بانتظار موافقتك.",
+      "not_me": "لم أكن أنا",
+      "number_body": "أدخل الرقم الظاهر على الشاشة الأخرى، ثم أكّد بمفتاح المرور. وافق فقط إذا بدأت هذا بنفسك.",
+      "number_mismatch": "هذا ليس الرقم الموجود على الشاشة الأخرى. المحاولات المتبقية: {{count}}.",
+      "number_placeholder": "الرقم",
+      "origin": "بالقرب من: {{origin}}",
+      "purpose": {
+        "adp": "شخص ما يريد عرض معلومات محمية",
+        "department_entry": "شخص ما ينتقل إلى قسم باسمك",
+        "login": "شخص ما يسجّل الدخول إلى حسابك",
+        "step_up": "شخص ما يؤكد إجراءً بحسابك",
+        "unlock": "شخص ما يفتح جهازًا مشتركًا باسمك"
+      },
+      "shared": "على جهاز مشترك",
+      "title": "الموافقة على تسجيل الدخول؟",
+      "unknown_app": "تطبيق Resgrid آخر"
+    }
+  },
+  "not_found": {
+    "go_home": "اذهب إلى الشاشة الرئيسية!",
+    "message": "هذه الشاشة غير موجودة.",
+    "title": "عذرًا!"
+  },
+  "notifications": {
+    "additionalInformation": "معلومات إضافية",
+    "bulkDeleteError": "فشل في حذف الإشعارات",
+    "bulkDeleteSuccess": "تم حذف {{count}} إشعار{{count, plural, one {} other {ات}}}",
+    "confirmDelete": {
+      "message": "هل أنت متأكد من أنك تريد حذف {{count}} إشعار{{count, plural, one {} other {ات}}}؟ لا يمكن التراجع عن هذا الإجراء.",
+      "title": "تأكيد الحذف"
+    },
+    "deleteError": "فشل في حذف الإشعار",
+    "deleteSuccess": "تم حذف الإشعار",
+    "deselectAll": "إلغاء تحديد الكل",
+    "loadError": "غير قادر على تحميل الإشعارات",
+    "notAvailable": "غير متوفر",
+    "selectAll": "تحديد الكل",
+    "selectedCount": "{{count}} محدد",
+    "viewCall": "عرض المكالمة",
+    "viewChat": "عرض المحادثة",
+    "viewMessage": "عرض الرسالة",
+    "viewReference": "عرض {{referenceType}}",
+    "viewWorkOrder": "عرض أمر العمل"
+  },
+  "onboarding": {
+    "get_started": "لنبدأ",
+    "slides": {
+      "calls": {
+        "description": "اطّلع بسهولة على معلومات البلاغ وتفاعل مع أعضاء فريقك لاستجابة طارئة فعّالة",
+        "title": "التفاعل مع البلاغات"
+      },
+      "notifications": {
+        "description": "احصل على تنبيهات فورية للحالات الطارئة والتحديثات المهمة من إدارتك",
+        "title": "إشعارات فورية"
+      },
+      "responder": {
+        "description": "أدر حالتك وملاك الأفراد وتفاعل مع مؤسستك في الوقت الفعلي",
+        "title": "{{appName}}"
+      }
+    }
+  },
+  "operations": {
+    "time": {
+      "coveredBy": "هذا الوقت مسجل بالفعل في التقرير #{{number}} لهذا اليوم.",
+      "crewReport": "تقرير وقت الطاقم #{{number}} · {{name}}",
+      "individualReport": "تقرير الوقت #{{number}} · {{name}}",
+      "report": "التقرير #{{number}}"
+    }
+  },
+  "personnel": {
+    "contactInformation": "معلومات الاتصال",
+    "currentStatus": "الحالة الحالية",
+    "emptyDescription": "لا يتطابق أي شخص مع معايير البحث أو لا توجد بيانات شخصية متاحة.",
+    "filter": {
+      "description": "اختر المرشحات لتحسين قائمة الأشخاص. يتم تطبيق التغييرات تلقائياً.",
+      "empty": "لا توجد خيارات مرشحات متاحة",
+      "emptyDescription": "ستظهر خيارات المرشحات هنا عند توفرها.",
+      "title": "تصفية الأشخاص"
+    },
+    "id": "رقم التعريف",
+    "status": {
+      "add_note": "إضافة ملاحظة",
+      "calls_tab": "المكالمات",
+      "current": "الحالية",
+      "current_status": "الحالة الحالية",
+      "destination_required": "هذه الحالة تتطلب وجهة",
+      "general_status": "تحديث الحالة العامة",
+      "gps_required": "موقع GPS مطلوب لهذه الحالة",
+      "hold_to_set_hint": "اضغط مطولاً لمدة ثانيتين لتعيين الحالة",
+      "hold_to_set_instructions": "اضغط مطولاً على حالة لمدة ثانيتين لتعيينها",
+      "hold_to_submit": "اضغط مطولاً للإرسال",
+      "loading_pois": "جارٍ تحميل نقاط الاهتمام...",
+      "loading_stations": "تحميل المحطات...",
+      "missing_required_info": "المعلومات المطلوبة مفقودة",
+      "no_destination": "لا وجهة",
+      "no_stations_available": "لا توجد محطات متاحة",
+      "note": "ملاحظة",
+      "note_placeholder": "أدخل ملاحظة (اختيارية)...",
+      "note_required": "هذه الحالة تتطلب ملاحظة",
+      "pois_tab": "نقاط الاهتمام",
+      "responding_to_placeholder": "أدخل ما تستجيب إليه...",
+      "saved_offline": "تم حفظ الحالة دون اتصال وسيتم إرسالها عند استعادة الاتصال",
+      "select_call_to_respond_to": "اختر المكالمة للرد عليها",
+      "select_destination": "اختر الوجهة",
+      "select_responding_to": "تعيين الحالة: {{status}}",
+      "selected_call": "المكالمة المختارة",
+      "set_status": "تعيين حالة الموظفين",
+      "show_all_statuses": "إظهار كل الحالات ({{count}} أخرى)",
+      "show_next_statuses": "إظهار الحالات التالية فقط",
+      "stations_tab": "المحطات",
+      "status": "الحالة"
+    }
+  },
+  "pois": {
+    "address_label": "العنوان",
+    "coordinates_label": "الإحداثيات",
+    "destination_enabled": "يمكن استخدامها كوجهة",
+    "empty_description": "لا توجد نقاط اهتمام تطابق عامل التصفية الحالي.",
+    "empty_title": "لم يتم العثور على نقاط اهتمام",
+    "filter_all_types": "كل الأنواع",
+    "filter_label": "تصفية",
+    "filter_sort_title": "فلترة وفرز",
+    "invalid_description": "مطلوب معرّف نقطة اهتمام لعرض التفاصيل.",
+    "invalid_title": "نقطة اهتمام غير صالحة",
+    "list_description": "تصفح نقاط الاهتمام الخاصة بالقسم، وقم بالتصفية حسب النوع، ثم ارجع إلى الخريطة.",
+    "load_error_title": "تعذر تحميل نقطة الاهتمام",
+    "not_found": "تعذر العثور على نقطة الاهتمام",
+    "note_label": "ملاحظة",
+    "reset_filters": "إعادة تعيين",
+    "results_count": "{{count}} نقطة اهتمام",
+    "results_count_plural": "{{count}} نقاط اهتمام",
+    "search_placeholder": "البحث في نقاط الاهتمام...",
+    "set_status_destination": "استخدامها كوجهة للحالة",
+    "sort_label": "ترتيب",
+    "sort_name": "الاسم",
+    "sort_type": "النوع",
+    "title": "نقطة اهتمام",
+    "type_label": "النوع",
+    "view_details": "عرض التفاصيل",
+    "view_on_map": "عرض على الخريطة",
+    "view_on_map_hint": "أبقِ الخريطة مفتوحة لرؤية موقعك ونقطة الاهتمام المحددة معًا."
+  },
+  "push_notifications": {
+    "communication_test_confirmed": "تم تأكيد الاستلام. شكرًا لك.",
+    "communication_test_failed": "تعذّر تأكيد الاستلام. يرجى المحاولة مرة أخرى.",
+    "communication_test_prompt": "هذا اختبار فقط. أكِّد الاستلام ليعرف قسمك أنه يستطيع الوصول إليك.",
+    "confirm_receipt": "تأكيد الاستلام",
+    "confirming_receipt": "جارٍ التأكيد...",
+    "types": {
+      "communication_test": "اختبار الاتصال",
+      "weather": "تنبيه الطقس",
+      "work_order": "أمر عمل"
+    },
+    "view_alert": "عرض التنبيه",
+    "view_chat": "عرض المحادثة",
+    "view_work_order": "عرض أمر العمل"
+  },
+  "settings": {
+    "logout_confirm_cancel": "إلغاء",
+    "logout_confirm_yes": "نعم، تسجيل الخروج",
+    "notifications_badge_overflow": "99+",
+    "notifications_button": "الإشعارات"
+  },
+  "shifts": {
+    "actions": {
+      "accept": "قبول",
+      "add_person": "إضافة شخص",
+      "apply": "التقدم لتوليها",
+      "approve": "موافقة",
+      "cancel_request_admin": "إلغاء الطلب",
+      "cancel_trade": "إلغاء طلب التبديل",
+      "confirm": "تأكيد",
+      "confirm_signup": "تأكيد التسجيل",
+      "decline": "رفض",
+      "deny": "رفض الطلب",
+      "remove": "إزالة",
+      "request_trade": "طلب تبديل",
+      "send_request": "إرسال الطلب",
+      "withdraw_application": "سحب طلب التقدم"
+    },
+    "add_panel": {
+      "group": "المجموعة",
+      "no_options": "لا يوجد أي شخص آخر متاح للإضافة.",
+      "person": "الشخص",
+      "search_placeholder": "البحث في الأفراد",
+      "submit": "إضافة إلى النوبة",
+      "title": "إضافة شخص لهذا اليوم"
+    },
+    "all_shifts": "كل النوبات",
+    "already_signed_up": "مسجل بالفعل",
+    "approval_required": "تتطلب موافقة",
+    "approvals": {
+      "signups": "التسجيلات",
+      "trades": "التبديلات"
+    },
+    "assigned": "مُعيَّن",
+    "assignment_type": {
+      "assigned": "بالتعيين",
+      "signup": "بالتسجيل",
+      "workshift": "وردية العمل"
+    },
+    "automatic": "تلقائي",
+    "available": "متاح",
+    "calendar": "التقويم",
+    "calendar_export": {
+      "add_all": "إضافة نوباتي إلى التقويم ({{count}})",
+      "add_all_hint": "يضيف إلى تقويم جهازك كل النوبات التي تعمل فيها خلال الثلاثين يومًا القادمة",
+      "add_hint": "يضيف هذه النوبة إلى تقويم جهازك، أو يحدّثها إن كانت موجودة بالفعل",
+      "add_one": "إضافة إلى التقويم",
+      "added_many": "النوبات في تقويمك: {{count}}",
+      "added_one": "تمت الإضافة إلى تقويمك",
+      "event_footer": "أُضيفت من Resgrid",
+      "event_place": "مع: {{place}}",
+      "event_title": "نوبة {{name}}",
+      "failed": "تعذّرت إضافة النوبة إلى تقويمك.",
+      "nothing_to_add": "لا يمكن أن تُضاف إلى تقويمك إلا النوبات التي تعمل فيها.",
+      "permission_denied": "الوصول إلى التقويم متوقف. اسمح به من الإعدادات لإضافة النوبات.",
+      "updated_one": "تم التحديث في تقويمك"
+    },
+    "calendar_view": {
+      "day_a11y": "{{date}}: النوبات {{count}}، الأماكن الشاغرة {{open}}",
+      "filter_a11y": "تصفية التقويم حسب النوبة",
+      "legend_filled": "مكتملة",
+      "legend_mine": "نوباتي",
+      "legend_open": "أماكن شاغرة",
+      "next_month": "الشهر التالي",
+      "previous_month": "الشهر السابق",
+      "select_day": "اختر يومًا لعرض نوباته",
+      "shift_info": "تفاصيل النوبة"
+    },
+    "card_a11y_hint": "يفتح تفاصيل يوم النوبة هذا",
+    "current_signups": "التسجيلات الحالية",
+    "day": {
+      "covering_for": "بدلًا من {{name}}",
+      "denied_note": "تم رفض تسجيلك لهذا اليوم.",
+      "group_filled": "مكتملة",
+      "group_open": "شاغرة: {{count}}",
+      "no_group": "بدون مجموعة",
+      "no_role_requirements": "لا توجد متطلبات أدوار",
+      "open_needs": "الاحتياجات المفتوحة",
+      "pending_note": "تسجيلك بانتظار موافقة المشرف. لن تكون في الخدمة حتى تتم الموافقة عليه.",
+      "require_approval_note": "التسجيلات والتبديلات في هذه النوبة تحتاج إلى موافقة المشرف.",
+      "roster": "قائمة المناوبين",
+      "roster_empty": "لا يوجد أحد في هذا اليوم بعد.",
+      "trade_pending_note": "لقد طلبت من زملائك تولي هذه النوبة."
+    },
+    "day_details": "تفاصيل يوم النوبة",
+    "details": "تفاصيل النوبة",
+    "empty": {
+      "approvals_description": "تظهر هنا التسجيلات والتبديلات التي تنتظر موافقتك.",
+      "approvals_title": "لا يوجد ما يحتاج إلى موافقة",
+      "calendar_day": "لا توجد نوبات في هذا اليوم",
+      "mine_description": "تظهر هنا النوبات المعيّن فيها أو المسجل بها خلال الثلاثين يومًا القادمة.",
+      "mine_title": "لا توجد نوبات قادمة",
+      "on_duty_description": "لا يوجد أحد في نوبة نشطة الآن.",
+      "on_duty_title": "لا أحد في الخدمة",
+      "open_trades_description": "عندما يطلب أحدهم التخلي عن نوبة، يظهر الطلب هنا لكل من يمكنه توليها.",
+      "open_trades_title": "لا توجد طلبات تبديل مفتوحة",
+      "signup_description": "تظهر هنا أيام النوبات المفتوحة للتسجيل التي فيها مكان لك خلال الثلاثين يومًا القادمة.",
+      "signup_title": "لا يوجد ما يمكن التسجيل فيه",
+      "trades_description": "تظهر هنا طلبات التبديل التي ترسلها أو تتلقاها.",
+      "trades_title": "لا توجد تبديلات نوبات"
+    },
+    "end_time": "وقت الانتهاء",
+    "errors": {
+      "already_on_roster": "هذا الشخص موجود بالفعل في هذا اليوم.",
+      "already_signed_up": "أنت مسجل بالفعل في هذا اليوم.",
+      "day_in_past": "لقد انقضى يوم النوبة هذا بالفعل.",
+      "invalid_group": "هذه المجموعة ليست جزءًا من هذه النوبة.",
+      "invalid_offer": "هذا العرض لم يعد صالحًا.",
+      "invalid_request": "الطلب غير صالح. يرجى المحاولة مرة أخرى.",
+      "network": "يبدو أنك غير متصل. يرجى المحاولة مرة أخرى.",
+      "no_users": "اختر شخصًا واحدًا على الأقل.",
+      "not_allowed": "ليست لديك صلاحية للقيام بذلك.",
+      "not_eligible": "ليست لديك الأدوار التي يتطلبها هذا الموقع.",
+      "not_found": "هذه النوبة أو التسجيل أو التبديل لم يعد موجودًا.",
+      "not_on_shift": "أنت لست ضمن يوم النوبة هذا.",
+      "not_pending": "هذا الطلب لم يعد معلقًا.",
+      "trade_exists": "يوجد بالفعل تبديل مفتوح لهذا اليوم.",
+      "unknown": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
+    },
+    "groups": "المجموعات",
+    "hours": "ساعات العمل",
+    "in_shift": "في النوبة",
+    "legend": "دليل",
+    "load_error": "تعذر تحميل النوبات",
+    "loading": "جاري تحميل النوبات...",
+    "loading_details": "جاري تحميل تفاصيل النوبة...",
+    "loading_signup": "جاري المعالجة...",
+    "manual": "يدوي",
+    "mine_sections": {
+      "active": "في الخدمة الآن",
+      "pending": "بانتظار الموافقة",
+      "upcoming": "القادمة"
+    },
+    "my_standing_shifts": "النوبات التي أنتمي إليها",
+    "my_upcoming_days": "الأيام القادمة",
+    "needed": "مطلوب",
+    "needs": "الاحتياجات",
+    "next_day": "اليوم التالي",
+    "no_positions_available": "لا توجد مناصب متاحة للتسجيل",
+    "no_shifts": "لا توجد نوبات متاحة",
+    "no_shifts_description": "تواصل مع مشرفك إذا كنت تعتقد أن لديك مهام نوبات",
+    "no_shifts_today": "لا توجد نوبات مجدولة لليوم",
+    "no_shifts_today_description": "تحقق مرة أخرى لاحقاً أو تواصل مع مشرفك لمهام النوبات",
+    "no_signups_yet": "لا توجد تسجيلات بعد",
+    "note_label": "ملاحظة",
+    "note_optional_placeholder": "أضف ملاحظة (اختياري)",
+    "on_duty": {
+      "count": "في الخدمة: {{count}}",
+      "until": "حتى {{time}}"
+    },
+    "optional": "اختياري",
+    "overnight": "(اليوم التالي)",
+    "personnel_count": "عدد الأفراد",
+    "position_needs": "احتياجات المنصب",
+    "remove_panel": {
+      "description": "ستتم إزالته من هذا اليوم فقط. لن تتأثر نوباته الأخرى.",
+      "remove_person": "إزالة {{name}} من هذا اليوم",
+      "title": "إزالة {{name}}؟"
+    },
+    "required": "مطلوب",
+    "required_count": "المطلوب: {{count}}",
+    "review": {
+      "approve_person": "الموافقة على {{name}}",
+      "approve_signup_title": "الموافقة على هذا التسجيل؟",
+      "approve_trade_title": "الموافقة على هذا التبديل؟",
+      "deny_person": "رفض {{name}}",
+      "deny_signup_title": "رفض هذا التسجيل؟",
+      "deny_trade_title": "رفض هذا التبديل؟",
+      "requested_at": "تم الطلب في {{date}}",
+      "trade_summary": "{{from}} يسلّم هذه النوبة إلى {{to}}"
+    },
+    "roles": "الأدوار",
+    "roster_source": {
+      "scheduled": "مجدول",
+      "signup": "مسجل",
+      "supervisor": "أضافه المشرف",
+      "trade": "تبديل"
+    },
+    "schedule_type": {
+      "custom": "مخصص",
+      "forty_eight_ninety_six": "48/96",
+      "manual": "يدوي",
+      "twenty_four_forty_eight": "24/48",
+      "twenty_four_seventy_two": "24/72"
+    },
+    "scheduled_for": "مجدولة لـ",
+    "search_placeholder": "البحث في النوبات...",
+    "segments": {
+      "a11y_hint": "يعرض طريقة عرض النوبات هذه",
+      "approvals": "الموافقات",
+      "calendar": "التقويم",
+      "mine": "نوباتي",
+      "on_duty": "في الخدمة",
+      "signup": "التسجيل",
+      "today": "اليوم",
+      "trades": "التبديلات",
+      "with_count": "{{label}}، المعلقة {{count}}"
+    },
+    "shift_card_a11y_hint": "يفتح تفاصيل هذه النوبة",
+    "shift_code": "كود النوبة",
+    "shift_day": "يوم النوبة",
+    "shift_name": "اسم النوبة",
+    "shift_type": {
+      "emergency": "طوارئ",
+      "label": "نوع النوبة",
+      "regular": "عادي",
+      "training": "تدريب",
+      "unknown": "غير معروف"
+    },
+    "signed_up": "مسجل",
+    "signup": "التسجيل",
+    "signup_error": "فشل في التسجيل للنوبة",
+    "signup_panel": {
+      "approval_notice": "يجب أن يوافق المشرف على هذا التسجيل قبل أن تكون في الخدمة.",
+      "description": "اختر المجموعة (الفريق) التي تسجل معها في هذا اليوم.",
+      "hint": "اختر فريقًا وأكّد تسجيلك",
+      "no_groups": "لا توجد مجموعات في هذه النوبة للتسجيل بها.",
+      "title": "اختر فريقك"
+    },
+    "signup_status": "حالة التسجيل",
+    "signup_success": "تم التسجيل بنجاح للنوبة",
+    "signup_view": {
+      "description": "أيام النوبات التي يمكنك التسجيل فيها خلال الثلاثين يومًا القادمة. اضغط على يوم لاختيار فريقك.",
+      "filter_all": "كل الأيام",
+      "filter_needed": "بحاجة إلى أفراد"
+    },
+    "signups": "التسجيلات",
+    "start_time": "وقت البداية",
+    "status": {
+      "active_now": "نشطة الآن",
+      "denied": "مرفوض",
+      "filled": "مكتملة",
+      "on_roster": "أنت ضمن المناوبين",
+      "open_slots": "الأماكن الشاغرة: {{count}}",
+      "pending_approval": "بانتظار الموافقة",
+      "trade_requested": "تم طلب تبديل"
+    },
+    "title": "النوبات",
+    "toast": {
+      "approved": "تمت الموافقة",
+      "denied": "تم الرفض",
+      "person_added": "تمت إضافة الشخص إلى النوبة",
+      "person_removed": "تمت إزالة الشخص من النوبة",
+      "signup_pending": "تم التسجيل. بانتظار موافقة المشرف.",
+      "trade_accepted": "تم إرسال عرضك",
+      "trade_application_withdrawn": "تم سحب طلب تقدمك",
+      "trade_applied": "تم إرسال طلب التقدم",
+      "trade_cancelled": "تم إلغاء طلب التبديل",
+      "trade_declined": "تم رفض التبديل",
+      "trade_finished": "اكتمل التبديل",
+      "trade_finished_pending": "تم إرسال التبديل للموافقة",
+      "trade_requested": "تم إرسال طلب التبديل",
+      "trade_requested_open": "تم إرسال طلب التبديل إلى كل من يمكنه تولي النوبة"
+    },
+    "today": "اليوم",
+    "todays_shifts": "نوبات اليوم",
+    "trade": {
+      "accept_description": "يمكنك أن تعرض إحدى نوباتك القادمة في المقابل، أو ببساطة تتولى هذه النوبة.",
+      "accept_title": "قبول هذا التبديل؟",
+      "applicant_conflict": "يعمل بالفعل في {{name}} في هذا الوقت",
+      "applicant_count": "المتقدمون: {{count}}",
+      "applicants": "المتقدمون",
+      "applied_at": "تقدّم في {{date}}",
+      "apply_description": "سيرى {{name}} والأشخاص الذين يقررون في التبديلات طلب تقدمك. يمكنك أن تعرض إحدى نوباتك في المقابل.",
+      "apply_title": "التقدم لتولي هذه النوبة؟",
+      "cancel_description": "سيتم تجاهل العروض التي تلقيتها.",
+      "cancel_description_open": "سيتم إبلاغ كل من تقدّم بأن الطلب قد أُلغي.",
+      "cancel_title": "إلغاء طلب التبديل هذا؟",
+      "decline_description": "سيرى صاحب الطلب أنك رفضت.",
+      "decline_title": "رفض هذا التبديل؟",
+      "details_a11y": "تبديل {{shift}} في {{date}}",
+      "details_hint": "يفتح التبديل مع المتقدمين إليه",
+      "filter_mine": "طلباتي ({{count}})",
+      "filter_open": "الطلبات المفتوحة ({{count}})",
+      "finish_give_description": "سيتولى {{name}} هذه النوبة.",
+      "finish_pending_note": "يجب أن يوافق المشرف على هذا التبديل قبل أن يسري.",
+      "finish_swap_description": "يتولى {{name}} هذه النوبة وتتولى أنت نوبته {{shift}} في {{date}}.",
+      "finish_title": "اختيار هذا العرض؟",
+      "from": "من {{name}}",
+      "give_to": "التسليم إلى {{name}}",
+      "incoming": "وارد",
+      "ineligible": {
+        "already_on_day": "أنت تعمل بالفعل في هذا اليوم.",
+        "missing_roles": "ليست لديك الأدوار التي يتطلبها هذا الموقع.",
+        "not_allowed": "لا يمكنك تولي هذه النوبة."
+      },
+      "my_state": {
+        "accepted": "ستتولى هذه النوبة",
+        "declined": "لقد رفضت",
+        "denied": "رفضه المشرف",
+        "filled": "تولاها شخص آخر",
+        "open": "بانتظار ردك",
+        "pending_approval": "بانتظار موافقة المشرف",
+        "proposed": "لقد قدمت عرضًا"
+      },
+      "nearby_workload": "خلال أسبوع من هذا اليوم: النوبات {{count}}، الساعات {{hours}}",
+      "no_applicants": "لم يتقدم أحد بعد",
+      "no_certifications": "لا توجد شهادات سارية",
+      "no_offers": "لا توجد ردود بعد",
+      "no_swap": "عدم عرض نوبة في المقابل",
+      "offer_back": "عرض نوبة في المقابل",
+      "offers": "الردود",
+      "open_request": "مفتوح للجميع",
+      "outgoing": "صادر",
+      "pick_as_approver_note": "أنت تقرر في هذا التبديل بصفتك معتمِدًا: يسري اختيارك فورًا.",
+      "pick_note": "اختر من سيتولى هذه النوبة.",
+      "requested_at": "تم الطلب في {{date}}",
+      "requested_by": "طلبه {{name}}",
+      "reviewed_by": "راجعه {{name}}",
+      "section_active": "قيد التنفيذ",
+      "section_applied": "تقدمت إليها",
+      "section_attention": "تحتاج إلى انتباهك",
+      "section_can_apply": "يمكنك توليها",
+      "section_other_requests": "طلبات أخرى",
+      "section_recent": "الأخيرة",
+      "select_applicant": "التسليم إلى {{name}}",
+      "status": {
+        "cancelled": "ملغى",
+        "completed": "مكتمل",
+        "denied": "مرفوض",
+        "open": "مفتوح",
+        "pending_approval": "بانتظار الموافقة"
+      },
+      "swap_back": "التبديل العكسي في {{date}}",
+      "swap_for": "التبديل مقابل {{shift}} في {{date}}",
+      "taken_by": "تولاها {{name}}",
+      "user_declined": "رفض",
+      "user_offered": "قدّم عرضًا",
+      "user_waiting": "لا يوجد رد بعد",
+      "user_withdrew": "انسحب",
+      "withdraw_description": "سيرى صاحب الطلب أنك لم تعد متاحًا.",
+      "withdraw_title": "سحب طلب تقدمك؟"
+    },
+    "trade_panel": {
+      "description": "اختر من تريد أن يتولى هذه النوبة. سيُسأل كل من تختاره، ثم تختار من بين عروضهم.",
+      "mode_open": "كل من يمكنه توليها",
+      "mode_open_hint": "الأشخاص الذين سيتم إشعارهم: {{count}}",
+      "mode_specific": "الأشخاص الذين أختارهم فقط",
+      "mode_specific_hint": "اطلب من زملاء محددين بدلًا من ذلك",
+      "no_candidates": "لا يوجد أحد متاح لتولي هذه النوبة.",
+      "open_description": "كل من يكون متفرغًا في ذلك اليوم ولديه الأدوار التي يتطلبها موقعك يتلقى بريدًا إلكترونيًا وإشعارًا فوريًا ويمكنه التقدم. بعد ذلك تختار أنت من يتولاها، أو يختار مشرفك.",
+      "open_description_workshift": "كل من يكون متفرغًا في ذلك اليوم يتلقى بريدًا إلكترونيًا وإشعارًا فوريًا ويمكنه التقدم ليحل محلك في الوحدة.",
+      "selected_count": "المحدد: {{count}}",
+      "title": "طلب تبديل"
+    },
+    "type_emergency": "طوارئ",
+    "type_regular": "عادي",
+    "type_training": "تدريب",
+    "type_unknown": "غير معروف",
+    "unknown": "غير معروف",
+    "upcoming_shift_days": "أيام النوبات القادمة",
+    "view_calendar": "عرض في التقويم",
+    "view_calendar_hint": "يعرض هذه النوبة في التقويم",
+    "withdraw": "الانسحاب",
+    "withdraw_error": "فشل في الانسحاب من النوبة",
+    "withdraw_panel": {
+      "description": "ستتم إزالتك من قائمة المناوبين في {{date}}.",
+      "title": "الانسحاب من هذه النوبة؟"
+    },
+    "withdraw_success": "تم الانسحاب بنجاح من النوبة",
+    "you": "أنت",
+    "you_are_signed_up": "أنت مسجل في هذه النوبة"
+  },
+  "sidebar": {
+    "audio": "تدفق",
+    "ptt": "صوت"
+  },
+  "tabs": {
+    "personnel": "العاملين",
+    "units": "الوحدات",
+    "weatherAlerts": "تنبيهات الطقس"
+  },
+  "units": {
+    "coordinates": "الإحداثيات",
+    "emptyDescription": "لا توجد وحدات متاحة في قسمك",
+    "features": "المميزات",
+    "fourWheelDrive": "دفع رباعي",
+    "lastUpdate": "آخر تحديث",
+    "location": "الموقع",
+    "maps_error": "غير قادر على فتح الخرائط",
+    "notes": "الملاحظات",
+    "plateNumber": "رقم اللوحة",
+    "specialPermit": "تصريح خاص",
+    "tapToOpenMaps": "اضغط لفتح في الخرائط",
+    "vehicleInfo": "معلومات المركبة"
+  },
+  "video_feeds": {
+    "add_feed": "Add Video Feed",
+    "delete_confirm": "Are you sure you want to delete this video feed?",
+    "delete_feed": "Delete Video Feed",
+    "edit_feed": "Edit Video Feed",
+    "form_description": "Description",
+    "form_feed_format": "Feed Format",
+    "form_feed_type": "Feed Type",
+    "form_name": "Name",
+    "form_sort_order": "Sort Order",
+    "form_status": "Status",
+    "form_url": "URL",
+    "format_youtube": "YouTube",
+    "no_feeds": "No video feeds for this call",
+    "type_satellite": "Satellite Feed",
+    "type_webcam": "Webcam",
+    "unsupported_format": "This format is not supported for in-app playback. Copy the URL to open in an external player."
+  },
+  "weather_alerts": {
+    "banner": {
+      "moreAlerts": "+{{count}} المزيد"
+    },
+    "category": {
+      "CBRNE": "كيميائي حيوي",
+      "Env": "بيئي",
+      "Fire": "حريق",
+      "Geo": "جيولوجي",
+      "Health": "صحة",
+      "Infra": "بنية تحتية",
+      "Met": "أرصاد جوية",
+      "Other": "أخرى",
+      "Transport": "نقل"
+    },
+    "certainty": {
+      "Likely": "محتمل",
+      "Observed": "مرصود",
+      "Possible": "ممكن",
+      "Unknown": "غير معروف",
+      "Unlikely": "غير مرجح",
+      "label": "اليقين"
+    },
+    "detail": {
+      "load_error": "التنبيه غير متاح",
+      "load_error_description": "تعذّر تحميل تنبيه الطقس هذا. ربما انتهت صلاحيته أو فشل الطلب.",
+      "metadata": "التفاصيل",
+      "status": "الحالة"
+    },
+    "search": "ابحث عن التنبيهات...",
+    "severity": {
+      "Extreme": "شديد للغاية",
+      "Minor": "طفيف",
+      "Moderate": "معتدل",
+      "Severe": "شديد",
+      "Unknown": "غير معروف"
+    },
+    "status": {
+      "Active": "نشط",
+      "Actual": "فعلي",
+      "Cancelled": "ملغى",
+      "Draft": "مسودة",
+      "Exercise": "تمرين",
+      "Expired": "منتهي الصلاحية",
+      "System": "نظام",
+      "Test": "اختبار",
+      "Updated": "محدث"
+    },
+    "urgency": {
+      "Expected": "متوقع",
+      "Future": "مستقبلي",
+      "Immediate": "فوري",
+      "Past": "سابق",
+      "Unknown": "غير معروف",
+      "label": "الإلحاح"
+    }
+  },
+  "welcome": "مرحبًا بك في {{appName}}",
+  "workOrders": {
+    "accept": "قبول الإسناد",
+    "activity": "النشاط",
+    "activityType": {
+      "0": "تم الإنشاء",
+      "1": "تم التحديث",
+      "2": "تغيرت الحالة",
+      "3": "تم الإسناد",
+      "4": "تم قبول الإسناد",
+      "5": "تعليق",
+      "6": "تم تسجيل ساعات",
+      "7": "أضيفت قطعة",
+      "8": "ألغيت قطعة",
+      "9": "أضيف ملف",
+      "10": "أزيل ملف",
+      "11": "إيقاف للسلامة",
+      "12": "رفع إيقاف السلامة",
+      "13": "مؤجل",
+      "14": "مصعّد"
+    },
+    "addComment": "إضافة تعليق",
+    "allMine": "كل ما يمكنني رؤيته",
+    "assetIs": "المعدات: {{name}}",
+    "assignedToMe": "المسندة إليّ",
+    "back": "رجوع",
+    "cannotReport": "لا يمكن لإدارتك قبول أوامر عمل جديدة حاليًا.",
+    "choosePhoto": "اختيار صورة",
+    "commentHint": "أضف تعليقًا",
+    "due": "مستحق في {{date}}",
+    "errors": {
+      "AcceptAssignmentFirst": "اقبل الإسناد أولًا.",
+      "Conflict": "قام شخص آخر بتغيير أمر العمل هذا. تحقق منه وحاول مرة أخرى.",
+      "IndependentVerificationRequired": "يجب أن يغلقه شخص غير من قام بالعمل.",
+      "InvalidFile": "يمكن إرفاق ملفات JPEG أو PNG أو PDF حتى 10 ميغابايت فقط.",
+      "PartBalanceOutstanding": "لا تزال هناك قطع يجب صرفها أو إرجاعها أو الإشهاد عليها.",
+      "ReadinessProRequired": "تحتاج إدارتك إلى Readiness Pro لهذا.",
+      "RevisionConflict": "قام شخص آخر بتغيير أمر العمل هذا. تحقق منه وحاول مرة أخرى.",
+      "SafetyRequirements": "يجب تسجيل إجراء السلامة والتصريح والعزل والأفراد المؤهلين أولًا.",
+      "ScanRequired": "لا يزال الملف قيد الفحص. حاول بعد قليل.",
+      "SpendingApprovalRequired": "يلزم اعتماد الإنفاق قبل هذه الخطوة.",
+      "TasksIncomplete": "أكد أن جميع الخطوات مكتملة.",
+      "denied": "ليس لديك وصول إلى أمر العمل هذا.",
+      "locked": "افتح البيانات المحمية للمتابعة.",
+      "photo_denied": "اسمح بالوصول إلى الكاميرا أو الصور لإرفاق صورة.",
+      "readiness_required": "تحتاج إدارتك إلى Readiness Pro لهذا.",
+      "retry": "تعذر الوصول إلى الخادم. حاول مرة أخرى."
+    },
+    "files": "الصور والملفات",
+    "form": {
+      "asset": "المعدات",
+      "description": "التفاصيل",
+      "descriptionHint": "ما الذي حدث وما رأيته وأي شيء يجب أن يعرفه الفني",
+      "group": "المحطة",
+      "location": "الموقع",
+      "locationHint": "أين بالتحديد (الحجرة، المقصورة، الغرفة)",
+      "none": "لا شيء",
+      "photosAfter": "يمكنك إضافة الصور بعد حفظ البلاغ.",
+      "priority": "الأولوية",
+      "safetyCritical": "حرج للسلامة",
+      "submit": "إرسال البلاغ",
+      "title": "العنوان",
+      "titleHint": "ما المشكلة، بكلمات قليلة",
+      "type": "نوع العمل",
+      "unit": "المركبة"
+    },
+    "groupIs": "المحطة: {{name}}",
+    "hours": "الساعات",
+    "hoursInvalid": "أدخل عدد ساعات بين 0 و24.",
+    "hoursLogged": "تم تسجيل {{hours}} ساعة",
+    "hoursNote": "ما الذي تم إنجازه",
+    "locationIs": "الموقع: {{location}}",
+    "logHours": "تسجيل الساعات",
+    "more": "تحميل المزيد",
+    "none": "لا توجد أوامر عمل.",
+    "noneAssigned": "لا يوجد شيء مسند إليك.",
+    "photoAdded": "تمت إضافة الصورة.",
+    "priority": {
+      "0": "منخفضة",
+      "1": "عادية",
+      "2": "مرتفعة",
+      "3": "طارئة"
+    },
+    "readOnly": "يمكنك عرض أوامر العمل؛ الإبلاغ عنها وتحديثها يتطلب {{product}}.",
+    "report": "الإبلاغ عن مشكلة",
+    "resolutionIs": "الحل: {{text}}",
+    "safety": "عمل حرج للسلامة أو خطر",
+    "saveHours": "حفظ الساعات",
+    "status": {
+      "0": "مطلوب",
+      "1": "مقبول",
+      "2": "مسند",
+      "3": "قيد التنفيذ",
+      "4": "معلّق",
+      "5": "مكتمل",
+      "6": "مغلق",
+      "7": "مرفوض",
+      "8": "مكرر",
+      "9": "ملغى"
+    },
+    "steps": "الخطوات",
+    "takePhoto": "التقاط صورة",
+    "title": "أوامر العمل",
+    "transition": {
+      "apply": "تحديث الحالة",
+      "cause": "السبب الجذري",
+      "confirmTasks": "جميع الخطوات مكتملة",
+      "duplicateOf": "رقم أمر العمل المكرر",
+      "missing": {
+        "cause": "أدخل السبب الجذري.",
+        "confirmTasks": "أكد أن الخطوات مكتملة.",
+        "duplicateOf": "أدخل أمر العمل المكرر.",
+        "reason": "أدخل سببًا.",
+        "resolution": "صف ما تم إنجازه.",
+        "verification": "صف كيف تم التحقق."
+      },
+      "pick": "اختر الحالة الجديدة",
+      "reason": "السبب",
+      "resolution": "ما الذي تم لإصلاحه",
+      "title": "تغيير الحالة",
+      "verification": "كيف تم التحقق"
+    },
+    "type": {
+      "0": "إصلاح",
+      "1": "وقائي",
+      "2": "فحص",
+      "3": "مرافق",
+      "4": "أخرى"
+    },
+    "unitIs": "المركبة: {{name}}",
+    "viewPhoto": "عرض الصورة {{name}}"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "inventory.complete_needs_connection": "Completing a count needs a connection. Your counted values are saved on this device.",
+  "inventory.save_rejected": "The server refused the counted values. Review them in Pending sync.",
+  "inventory.saved": "Progress saved",
+  "inventory.saved_offline": "Saved on this device. It will be sent when you are back online.",
+  "inventory.unsaved": "{{count}} counted values not saved yet"
+}

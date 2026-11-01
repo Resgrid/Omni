@@ -1,0 +1,168 @@
+# Pull-request and merge-queue checks (omni-plan §6.6.3, §12). Target: < 12 min wall clock.
+# Branch protection should require the single "ci-ok" job; it fails when any job below failed or was cancelled.
+name: CI
+
+on:
+  pull_request:
+  merge_group:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  EXPO_NO_TELEMETRY: '1'
+  EXPO_NO_DOTENV: '1'
+  # Matches scripts/ci/run-playwright.mjs; bump both (and the root devDependency once added) together.
+  PLAYWRIGHT_VERSION: '1.64.1'
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-workspace
+      - name: Restore ESLint cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules/.cache/eslint
+          key: eslint-${{ hashFiles('pnpm-lock.yaml', 'eslint.config.mjs') }}-${{ github.sha }}
+          restore-keys: eslint-${{ hashFiles('pnpm-lock.yaml', 'eslint.config.mjs') }}-
+      - run: pnpm lint
+
+  type-check:
+    name: type-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-workspace
+      - run: pnpm type-check
+
+  checks:
+    name: translations · dependency rules · variants · eas.json · workflows
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-workspace
+      - name: Translation parity
+        run: pnpm i18n:check
+      - name: Dependency rules (dependency-cruiser)
+        run: pnpm deps:check
+      - name: Variant manifests
+        run: pnpm variants:check
+      - name: eas.json is up to date
+        run: pnpm eas:check
+      - name: Workflow files
+        run: node scripts/ci/validate-workflows.mjs
+      # Contract suites from plan §12; they run as soon as the root scripts exist.
+      - name: API contract tests
+        run: pnpm run --if-present contract:check
+      - name: Route contract tests
+        run: pnpm run --if-present routes:check
+
+  jest:
+    name: jest (${{ matrix.shard }}/4)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-workspace
+      - name: Jest
+        env:
+          JEST_JUNIT_OUTPUT_DIR: reports/jest
+          JEST_JUNIT_OUTPUT_NAME: junit-${{ matrix.shard }}.xml
+        run: pnpm exec jest --ci --shard=${{ matrix.shard }}/4 --passWithNoTests --coverage --reporters=default --reporters=jest-junit
+      - name: Upload test results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: jest-${{ matrix.shard }}
+          path: |
+            reports/jest
+            coverage/lcov.info
+            coverage/cobertura-coverage.xml
+          retention-days: 7
+          if-no-files-found: ignore
+
+  variant:
+    name: variant (${{ matrix.variant }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [responder, unit, ic, dispatch, bigboard]
+    env:
+      APP_VARIANT: ${{ matrix.variant }}
+      APP_ENV: production
+      E2E_VARIANT: ${{ matrix.variant }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-workspace
+
+      - name: expo config sanity (production, internal, development)
+        run: node scripts/ci/expo-config-sanity.mjs --variant "$APP_VARIANT" --out expo-config
+
+      - name: Web export
+        run: pnpm --filter @resgrid/omni web:export
+
+      - name: Restore Playwright browsers
+        uses: actions/cache@v4
+        id: pw-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ env.PLAYWRIGHT_VERSION }}-chromium
+
+      - name: Install Playwright Chromium
+        run: |
+          if [ "${{ steps.pw-cache.outputs.cache-hit }}" = true ]; then
+            node scripts/ci/run-playwright.mjs install-deps chromium
+          else
+            bash scripts/ci/retry.sh 3 15 node scripts/ci/run-playwright.mjs install --with-deps chromium
+          fi
+
+      - name: Web acceptance tests (Playwright)
+        run: node scripts/ci/run-playwright.mjs test -c apps/omni/e2e/playwright.config.ts --project "web-${APP_VARIANT}"
+
+      - name: Upload expo config and Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: variant-${{ matrix.variant }}
+          path: |
+            expo-config
+            apps/omni/e2e/playwright-report
+            apps/omni/e2e/results
+            apps/omni/e2e/test-results
+          retention-days: 7
+          if-no-files-found: ignore
+
+  ci-ok:
+    name: ci-ok
+    if: ${{ always() }}
+    needs: [lint, type-check, checks, jest, variant]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: All required jobs passed
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Job results: $RESULTS"
+          for r in $RESULTS; do
+            if [ "$r" != success ]; then
+              echo "::error::A required CI job did not succeed ($r)."
+              exit 1
+            fi
+          done

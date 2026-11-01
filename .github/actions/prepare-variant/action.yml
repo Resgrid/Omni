@@ -1,0 +1,75 @@
+name: Prepare variant build environment
+description: >-
+  Runs identically in every job that resolves a runtime version for a variant (release.yml fingerprint, android, ios and
+  ota jobs; ota.yml). It exports APP_VARIANT / APP_ENV and the MMKV key under the manifest's name, decodes the Firebase
+  config files to $RUNNER_TEMP (GOOGLE_SERVICES_FILE / IOS_GOOGLE_SERVICES_FILE) and derives the channel's eas.json release
+  profiles. Expo fingerprints hash the expo config, eas.json and the Firebase file contents, so doing this in one place is
+  what keeps the fingerprint of a binary equal to the one its OTA updates are published for.
+inputs:
+  variant:
+    description: Variant id (responder, unit, ic, dispatch, bigboard)
+    required: true
+  channel:
+    description: Update channel (production, staging, internal); also the APP_ENV
+    required: true
+  google-services-json-base64:
+    description: Android google-services.json, base64 (secret GOOGLE_SERVICES_JSON_BASE64)
+    required: false
+    default: ''
+  google-service-info-plist-base64:
+    description: iOS GoogleService-Info.plist, base64 (secret GOOGLE_SERVICE_INFO_PLIST_BASE64)
+    required: false
+    default: ''
+  mmkv-key:
+    description: MMKV encryption key (secret MMKV_KEY), exported under the manifest's storage.keySecret name
+    required: false
+    default: ''
+outputs:
+  android-profile:
+    description: eas.json profile for the Android release build (AAB)
+    value: ${{ steps.profiles.outputs.android_profile }}
+  ios-profile:
+    description: eas.json profile for the iOS release build (App Store IPA)
+    value: ${{ steps.profiles.outputs.ios_profile }}
+runs:
+  using: composite
+  steps:
+    - name: Variant environment
+      shell: bash
+      env:
+        VARIANT: ${{ inputs.variant }}
+        CHANNEL: ${{ inputs.channel }}
+        MMKV_KEY: ${{ inputs.mmkv-key }}
+      run: node scripts/ci/variant-env.mjs --variant "$VARIANT" --channel "$CHANNEL" >> "$GITHUB_ENV"
+
+    # Outside the repository on purpose: never part of an EAS archive, artifact or cache. The fingerprint ignores
+    # the path and hashes the contents, so Linux and macOS jobs agree.
+    - name: Firebase config files
+      shell: bash
+      env:
+        GS_JSON: ${{ inputs.google-services-json-base64 }}
+        GS_PLIST: ${{ inputs.google-service-info-plist-base64 }}
+      run: |
+        set -euo pipefail
+        dir="$RUNNER_TEMP/firebase"
+        mkdir -p "$dir" && chmod 700 "$dir"
+        if [ -n "$GS_JSON" ]; then
+          printf '%s' "$GS_JSON" | base64 --decode > "$dir/google-services.json"
+          echo "GOOGLE_SERVICES_FILE=$dir/google-services.json" >> "$GITHUB_ENV"
+        else
+          echo "::warning::GOOGLE_SERVICES_JSON_BASE64 is not set; Android builds will have no Firebase config."
+        fi
+        if [ -n "$GS_PLIST" ]; then
+          printf '%s' "$GS_PLIST" | base64 --decode > "$dir/GoogleService-Info.plist"
+          echo "IOS_GOOGLE_SERVICES_FILE=$dir/GoogleService-Info.plist" >> "$GITHUB_ENV"
+        else
+          echo "::warning::GOOGLE_SERVICE_INFO_PLIST_BASE64 is not set; iOS builds will have no Firebase config."
+        fi
+
+    - name: eas.json release profiles
+      id: profiles
+      shell: bash
+      env:
+        VARIANT: ${{ inputs.variant }}
+        CHANNEL: ${{ inputs.channel }}
+      run: node scripts/ci/eas-profile.mjs release --variant "$VARIANT" --channel "$CHANNEL"
