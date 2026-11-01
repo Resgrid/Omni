@@ -1,13 +1,15 @@
 # Git hooks (omni-plan §6.1) — installed by `pnpm install` via the `prepare` script.
+# Commands run repo-wide with caches instead of passing staged file lists: large commits exceed the
+# Windows command-line limit, and cached runs only re-check changed files anyway.
 pre-commit:
   parallel: true
   commands:
     lint:
       glob: '*.{ts,tsx,js,mjs,cjs}'
-      run: pnpm exec eslint --max-warnings 0 --no-warn-ignored {staged_files}
+      run: pnpm exec eslint . --max-warnings 0 --cache --cache-location node_modules/.cache/eslint
     format:
       glob: '*.{ts,tsx,js,mjs,cjs,json,yml,yaml,css}'
-      run: pnpm exec prettier --check {staged_files}
+      run: pnpm exec prettier --check --cache "**/*.{ts,tsx,js,mjs,cjs,json,yml,yaml,css}"
 commit-msg:
   commands:
     commitlint:

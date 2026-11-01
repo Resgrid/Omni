@@ -1,0 +1,10 @@
+# Unit smoke: the app launches and reaches its home screen. The app id comes from the variant manifest
+# through run-maestro.mjs (-e APP_ID=…); add Unit-only flows (e.g. status change, call detail) to this folder.
+appId: ${APP_ID}
+name: Unit — launch and home
+tags:
+  - smoke
+  - unit
+---
+- runFlow: ../shared/launch.yaml
+- runFlow: ../shared/home-visible.yaml

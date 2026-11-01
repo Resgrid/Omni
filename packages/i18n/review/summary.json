@@ -1,0 +1,26 @@
+{
+  "rules": "see header of packages/i18n/scripts/merge-legacy-translations.mjs",
+  "namespaces": {
+    "common": 1998,
+    "responder": 1008,
+    "unit": 186,
+    "ic": 715,
+    "dispatch": 877,
+    "bigboard": 215
+  },
+  "enConflicts": 69,
+  "enConflictOverrides": 55,
+  "translationDivergence": 2464,
+  "placeholderMismatches": 2,
+  "missingTranslations": {
+    "ar": 0,
+    "de": 0,
+    "el": 0,
+    "es": 0,
+    "fr": 0,
+    "it": 0,
+    "pl": 0,
+    "sv": 0,
+    "uk": 0
+  }
+}

@@ -22,9 +22,15 @@ const profiles = {
   'production-aab': { distribution: 'store', channel: 'production', credentialsSource: 'local', ...images, envBase: 'production' },
   'production-apk': { distribution: 'store', channel: 'production', credentialsSource: 'local', ios: images.ios, android: { buildType: 'apk', image: 'latest' }, envBase: 'production' },
   staging: { channel: 'staging', ios: images.ios, android: { buildType: 'apk', image: 'latest' }, envBase: 'staging' },
+  // The channel is baked into the binary, so master (internal) and staging release builds need their own
+  // store/AAB profiles rather than reusing production's (release.yml stage 1).
+  'staging-store': { distribution: 'store', channel: 'staging', ...images, envBase: 'staging' },
+  'staging-aab': { distribution: 'store', channel: 'staging', credentialsSource: 'local', ...images, envBase: 'staging' },
   internal: { distribution: 'internal', channel: 'internal', ios: images.ios, android: { buildType: 'apk', image: 'latest' }, envBase: 'internal' },
+  'internal-store': { distribution: 'store', channel: 'internal', ...images, envBase: 'internal' },
+  'internal-aab': { distribution: 'store', channel: 'internal', credentialsSource: 'local', ...images, envBase: 'internal' },
   development: { developmentClient: true, distribution: 'internal', ios: images.ios, android: { buildType: 'apk', image: 'latest' }, envBase: 'development' },
-  'dev-sim': { developmentClient: true, ios: { simulator: true, image: 'latest' }, android: { buildType: 'apk', image: 'latest' }, envBase: 'development' },
+  'dev-sim': { developmentClient: true, ios: { simulator: true, image: 'latest' }, android: { buildType: 'apk', image: 'latest', withoutCredentials: true }, envBase: 'development' },
   simulator: { ios: { simulator: true, image: 'latest' }, android: { image: 'latest' }, envBase: 'development' },
 };
 

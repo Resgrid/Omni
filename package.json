@@ -24,15 +24,18 @@
     "deps:check": "depcruise packages apps --config .dependency-cruiser.cjs",
     "variants:check": "tsx scripts/variants-check.ts",
     "eas:generate": "node scripts/generate-eas-json.mjs",
-    "check-all": "pnpm lint && pnpm type-check && pnpm i18n:check && pnpm deps:check && pnpm variants:check && pnpm eas:check",
+    "check-all": "pnpm lint && pnpm type-check && pnpm i18n:check && pnpm deps:check && pnpm variants:check && pnpm eas:check && pnpm workflows:check",
     "skills:sync": "node scripts/sync-agent-skills.mjs",
     "prepare": "lefthook install || true",
-    "eas:check": "node scripts/generate-eas-json.mjs --check"
+    "eas:check": "node scripts/generate-eas-json.mjs --check",
+    "e2e:web": "playwright test -c apps/omni/e2e/playwright.config.ts",
+    "workflows:check": "node scripts/ci/validate-workflows.mjs"
   },
   "devDependencies": {
     "@babel/core": "catalog:",
     "@commitlint/cli": "catalog:",
     "@commitlint/config-conventional": "catalog:",
+    "@playwright/test": "catalog:",
     "@types/jest": "catalog:",
     "@types/node": "catalog:",
     "@typescript-eslint/eslint-plugin": "catalog:",
@@ -52,7 +55,8 @@
     "lint-staged": "catalog:",
     "prettier": "catalog:",
     "tsx": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "yaml": "catalog:"
   },
   "dependencies": {
     "@resgrid/config": "workspace:*",

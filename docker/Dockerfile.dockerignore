@@ -1,0 +1,6 @@
+# Build context is the repository root; the image needs only the prebuilt web exports and docker/.
+# (BuildKit reads <Dockerfile>.dockerignore next to the Dockerfile.)
+*
+!apps/omni/dist/
+!docker/
+apps/omni/dist/**/*.map

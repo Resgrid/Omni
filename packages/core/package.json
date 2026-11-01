@@ -2,6 +2,12 @@
   "name": "@resgrid/core",
   "version": "0.0.0",
   "private": true,
+  "description": "Platform core for Resgrid Omni: env, platform detection, logging, Sentry, analytics, date/router/request utilities (layer L1)",
   "main": "src/index.ts",
-  "types": "src/index.ts"
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts",
+    "./package.json": "./package.json"
+  }
 }

@@ -115,7 +115,7 @@ All five working trees are clean (2026-10-31 12:00), `develop` = `origin/develop
 |---|---|---|
 | D1 | **One Expo project** (`apps/omni`) builds every variant, selected by `APP_VARIANT` × `APP_ENV` — **owner decision 2026-10-31.** Spikes S1–S3 (§11.1) work out the mechanics (route roots, per-variant native-module exclusion, five EAS projects); if a mechanic fails, solve it inside the single project before considering per-variant packages. | One `package.json` means one Expo upgrade, one plugin list, one patch set. |
 | D2 | **Five EAS projects stay** (existing project IDs, credentials, push keys, store bindings). `app.config.ts` sets `extra.eas.projectId` from the variant. | Store listings, APNs/FCM keys and credentials are bound per project; moving them risks the listings. |
-| D3 | **Variant manifest is the single source of per-app truth** (`apps/omni/variants/<v>/variant.ts`): identity, storage identity, auth/push identity, capabilities, native modules + permissions, navigation shell, offline scope, versioning. `app.config.ts`, env, Electron, Docker and the CI matrix all read it. | Today the same facts are hand-copied into app.config, eas.json, env.js, Electron config, Dockerfiles and CI per repo — the main source of drift. |
+| D3 | **Variant manifest is the single source of per-app truth** (`apps/omni/variants/<v>/variant.json`, validated by the zod schema in `@resgrid/config`; `variant.ts` loads it at runtime): identity, storage identity, auth/push identity, capabilities, native modules + permissions, navigation shell, offline scope, versioning. `app.config.ts`, env, Electron, Docker and the CI matrix all read it. | Today the same facts are hand-copied into app.config, eas.json, env.js, Electron config, Dockerfiles and CI per repo — the main source of drift. |
 | D4 | **Specialize in this order:** capability → form factor → platform file at the leaf → variant-only screen (home + signature modules only). | Keeps shared screens shared; Dispatch's duplicated `.web` screens (~6.3k lines) are the cautionary example. |
 | D5 | **Each variant has its own expo-router tree** (`variants/<v>/app`, set through the expo-router `root` option) of thin route files that mount shared screens; canonical paths across variants; typed route contract + per-variant test. | Route sets genuinely differ per app; thin files keep them cheap. The contract test catches links to routes a variant lacks (Dispatch/BigBoard push `/messages/:id` today). |
 | D6 | **pnpm 10 workspaces, `node-linker=hoisted`, catalogs, `patchedDependencies`** (owner-confirmed). No Turborepo/Nx initially (add Turborepo later if CI time demands). | Five lockfiles must be re-resolved into one anyway; catalogs stop version drift. Hoisted is required by notifee's relative Maven path, the U/I zustand Metro paths, a phantom `@expo/config-plugins` import and the CallKeep git dependency. Expo auto-configures Metro for monorepos since SDK 52. |
@@ -140,14 +140,14 @@ All five working trees are clean (2026-10-31 12:00), `develop` = `origin/develop
 Omni/
   apps/
     omni/                          # THE Expo project — iOS, Android, web
-      app.config.ts                # createAppConfig(variant, env) from variants/<v>/variant.ts
+      app.config.ts                # createAppConfig(variant, env) from variants/<v>/variant.json
       eas.json                     # <variant>-<env> profiles; APP_VARIANT/APP_ENV in env
       index.ts                     # entry: registers background tasks, then expo-router/entry
       metro.config.js              # shared preset + per-variant cache dir + web stubs
       babel.config.js  tsconfig.json  global.css  global.web.css
       react-native.config.js       # per-variant autolinking exclusions (generated from the manifest)
       variants/
-        responder/  variant.ts  app/ (route tree)  assets/  theme.css
+        responder/  variant.json  variant.ts  app/ (route tree)  assets/  theme.css
         unit/  ic/  dispatch/  bigboard/
     desktop/                       # Electron shell; packages apps/omni web export per variant
       src/main/  src/preload/  push-receiver.ts  updater.ts  electron-builder.config.ts
@@ -199,7 +199,9 @@ L8  apps/omni variants (routes, manifests) · apps/desktop
 
 ### 5.3 Variant system
 
-#### 5.3.1 Manifest (`variants/<v>/variant.ts`)
+#### 5.3.1 Manifest (`variants/<v>/variant.json`)
+
+> Implementation note (Phase 0): the manifest is JSON so Expo's config loader, CI scripts, Electron and Docker can read it without a TypeScript transform. `variant.ts` parses it with the zod schema at runtime; build-time code reads it through `@resgrid/config-plugins` (CommonJS). The example below shows the shape in TypeScript notation.
 
 ```ts
 export default defineVariant({

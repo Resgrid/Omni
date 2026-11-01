@@ -1,0 +1,244 @@
+{
+  "app": {
+    "initialization_failed": "Nie można załadować danych aplikacji. Sprawdź połączenie i spróbuj ponownie."
+  },
+  "callImages": {
+    "not_signed_in": "Aby przesyłać obrazy, musisz się zalogować",
+    "upload_error": "Błąd podczas przesyłania obrazu"
+  },
+  "calls": {
+    "directions_to_destination": "Trasa do celu",
+    "dispatch_on": "Czas wysłania",
+    "dispatch_on_too_soon": "Czas wysłania musi przypadać co najmniej {{minutes}} minut w przyszłości",
+    "errors": {
+      "load_failed": "Nie udało się załadować zgłoszeń"
+    },
+    "files": {
+      "sharing_unavailable": "Udostępnianie nie jest dostępne na tym urządzeniu"
+    },
+    "required_fields_missing": "Twoja jednostka wymaga tych pól przed zapisaniem zgłoszenia: {{fields}}",
+    "view_on_map": "Pokaż na mapie"
+  },
+  "chat": {
+    "chatting_as": "Czatujesz jako {{name}}"
+  },
+  "common": {
+    "no_location": "Brak danych lokalizacji",
+    "no_unit": "Brak jednostki",
+    "unknown_error": "Wystąpił nieznany błąd"
+  },
+  "contacts": {
+    "unknown_company": "Nieznana firma",
+    "unknown_person": "Nieznana osoba"
+  },
+  "incident_command": {
+    "error": "Nie udało się załadować informacji o dowodzeniu incydentem",
+    "need_category": {
+      "equipment": "Sprzęt",
+      "logistics": "Logistyka",
+      "medical": "Medyczne",
+      "other": "Inne",
+      "resource": "Zasób",
+      "staffing": "Personel"
+    },
+    "need_status": {
+      "cancelled": "Anulowana",
+      "met": "Zaspokojona",
+      "open": "Otwarta",
+      "partially_met": "Częściowo zaspokojona"
+    },
+    "no_active_command": "Brak aktywnego dowodzenia incydentem dla tego zgłoszenia",
+    "objective_status": {
+      "complete": "Zakończony",
+      "in_progress": "W trakcie",
+      "pending": "Oczekujący"
+    },
+    "objective_type": {
+      "benchmark": "Kamień milowy",
+      "general": "Ogólny",
+      "safety": "Bezpieczeństwo"
+    },
+    "progress": "Ukończono {{percent}}%",
+    "quantity_fulfilled": "Zaspokojono {{fulfilled}} z {{requested}}"
+  },
+  "inventory": {
+    "assetStatus": {
+      "0": "W użyciu",
+      "1": "Wydane",
+      "2": "W naprawie",
+      "3": "Uszkodzone",
+      "4": "Zgubione",
+      "5": "Zużyte",
+      "6": "Wycofane"
+    },
+    "awaitingWitness": "Zmieniła się pozycja kontrolowana; druga osoba musi poświadczyć to liczenie w przeglądarce.",
+    "back": "Wstecz",
+    "cancel": "Anuluj",
+    "cancelBody": "Nic z policzonego nie zostanie zaksięgowane.",
+    "cancelCount": "Anuluj liczenie",
+    "cancelTitle": "Anulować to liczenie?",
+    "cannotCount": "Liczenie wymaga uprawnienia do korekty wyposażenia w tym pojeździe.",
+    "complete": "Zakończ",
+    "completeBody": "{{count}} pozycji różni się od oczekiwanych. Zakończenie zaksięguje różnice.",
+    "completeNoChanges": "Wszystko zgadza się z oczekiwanym.",
+    "completeTitle": "Zakończyć liczenie?",
+    "completed": "Liczenie zakończone.",
+    "count": "Liczenie wyposażenia",
+    "countName": "Kontrola {{name}} {{date}}",
+    "countStatus": {
+      "0": "W toku",
+      "1": "Oczekuje na świadka",
+      "2": "Zakończone",
+      "3": "Anulowane"
+    },
+    "counts": "Ostatnie liczenia",
+    "differences": "{{count}} różnic",
+    "disabled": "Wyposażenie jest wyłączone w Twojej organizacji.",
+    "empty": "Nic tu nie ma.",
+    "errors": {
+      "CountAlreadyExists": "To liczenie już istnieje.",
+      "CountEmpty": "Nie ma tu nic do policzenia.",
+      "CountScopeTooLarge": "Zbyt wiele pozycji na jedno liczenie. Liczy po jednej skrytce.",
+      "CountSnapshotChanged": "Wyposażenie pojazdu zmieniło się podczas liczenia. Anuluj i zacznij od nowa.",
+      "CountStateConflict": "To liczenie zmieniło się na innym urządzeniu. Otwórz je ponownie.",
+      "InvalidCount": "Sprawdź policzone wartości i spróbuj ponownie.",
+      "InventoryDisabled": "Wyposażenie jest wyłączone w Twojej organizacji.",
+      "LocationUnavailable": "To miejsce jest niedostępne.",
+      "MembershipRequired": "Nie jesteś aktywnym członkiem tej organizacji.",
+      "MigrationRequired": "Wyposażenie jest konfigurowane dla Twojej organizacji.",
+      "PermissionRequired": "Nie masz uprawnień do tej czynności.",
+      "ProtectedDataRequired": "Odblokuj chronione dane, aby kontynuować.",
+      "ReturnAssetFirst": "Pozycja oznaczona jako brakująca jest nadal komuś wydana. Najpierw przyjmij zwrot w przeglądarce.",
+      "locked": "Odblokuj chronione dane, aby kontynuować.",
+      "retry": "Nie udało się połączyć z serwerem. Spróbuj ponownie."
+    },
+    "expected": "Oczekiwano {{quantity}} {{unit}}",
+    "keep": "Liczę dalej",
+    "less": "O jeden mniej",
+    "matches": "Zgadza się",
+    "missing": "Brak",
+    "more": "O jeden więcej",
+    "noLocations": "Do tego pojazdu nie przypisano wyposażenia.",
+    "notMigrated": "Wyposażenie jest konfigurowane dla Twojej organizacji.",
+    "pickLocation": "Gdzie liczyć",
+    "present": "Jest",
+    "progress": "Policzono {{counted}} z {{total}}",
+    "quantity": "× {{quantity}}",
+    "save": "Zapisz postęp",
+    "selectUnit": "Najpierw wybierz swój pojazd.",
+    "serial": "Nr seryjny {{serial}}",
+    "start": "Rozpocznij liczenie",
+    "startCount": "Policz wyposażenie",
+    "startHelp": "Policz to, co faktycznie jest w pojeździe. Różnice zostaną zaksięgowane po zakończeniu.",
+    "title": "Wyposażenie",
+    "titleFor": "Wyposażenie · {{name}}",
+    "unnamedItem": "Pozycja",
+    "unnamedLocation": "Skrytka",
+    "wholeUnit": "Cały pojazd: {{name}}"
+  },
+  "login": {
+    "hide_password": "Ukryj hasło",
+    "login_button": "Zaloguj się",
+    "login_button_loading": "Logowanie...",
+    "show_password": "Pokaż hasło",
+    "title": "Zaloguj się"
+  },
+  "map": {
+    "legend": {
+      "built_in_unit_statuses": "Wbudowane statusy jednostek",
+      "button": "Legenda mapy",
+      "calls": "Zgłoszenia",
+      "error": "Nie udało się wczytać legendy mapy.",
+      "hydrant": "Hydrant",
+      "list_separator": ", ",
+      "loading": "Wczytywanie legendy mapy…",
+      "name_list": "{{label}}: {{names}}",
+      "no_call_type": "Zgłoszenia bez typu",
+      "no_role_icon": "Członkowie bez ikony roli",
+      "no_unit_type": "Jednostki bez typu",
+      "other": "Stacje i punkty zainteresowania",
+      "other_note": "Te ikony nie zmieniają się wraz ze statusem.",
+      "other_with_hydrants": "Stacje, hydranty i punkty zainteresowania",
+      "personnel": "Personel",
+      "personnel_note": "Członek pokazuje ikonę pierwszej posiadanej roli, w kolejności ról, która ją ma. Członek „W jednostce” przyjmuje kolor statusu swojej jednostki.",
+      "priorities": "Priorytety",
+      "priority_colors": "Kolory priorytetów",
+      "priority_unknown": "Brak znaczenia",
+      "station": "Stacja",
+      "status_colors": "Kolory statusów",
+      "statuses": "Statusy: {{name}}",
+      "style": {
+        "available": "Dostępny",
+        "delayed": "Przerwa",
+        "dispatched": "Zadysponowany",
+        "emergency": "Nagły",
+        "high": "Wysoki",
+        "low": "Niski",
+        "medium": "Średni",
+        "onscene": "Na miejscu",
+        "responding": "W drodze",
+        "returning": "Powrót",
+        "staging": "Strefa wyczekiwania i gotowość",
+        "transporting": "W transporcie",
+        "unavailable": "Niedostępny",
+        "unknown": "Brak znaczenia lub statusu"
+      },
+      "title": "Legenda ikon mapy",
+      "units": "Jednostki"
+    },
+    "lock_map": "Zablokuj mapę na jednostce",
+    "unlock_map": "Odblokuj mapę"
+  },
+  "notifications": {
+    "confirm_delete_message_count": "Czy na pewno chcesz usunąć powiadomienia w liczbie {{count}}? Tej operacji nie można cofnąć.",
+    "delete_selected": "Usuń zaznaczone powiadomienia",
+    "enter_selection_mode": "Zaznacz powiadomienia",
+    "open": "Otwórz powiadomienia",
+    "remove_failed_count": "Nie udało się usunąć powiadomień",
+    "remove_failed_one": "Nie udało się usunąć powiadomienia",
+    "removed_count": "Usunięto powiadomienia: {{count}}",
+    "removed_one": "Powiadomienie usunięte",
+    "unable_to_load": "Nie można załadować powiadomień"
+  },
+  "push_notifications": {
+    "unknown_type_warning": "Ten typ powiadomienia nie jest rozpoznawany. Skontaktuj się z pomocą techniczną, jeśli ten komunikat będzie się powtarzał."
+  },
+  "roles": {
+    "assignedElsewhere": "W innej funkcji",
+    "clearAssignment": "Wyczyść bieżący przydział",
+    "noUsersFound": "Nie znaleziono użytkowników",
+    "saved_successfully": "Zapisano przydział funkcji",
+    "searchUsers": "Szukaj według nazwiska lub grupy...",
+    "selectUserDescription": "Wybierz osobę do tej funkcji",
+    "selectUserForRole": "Przypisz: {{role}}",
+    "selectUserLabel": "Wybierz: {{name}}",
+    "tapToAssign": "Dotknij, aby przypisać użytkownika do: {{role}}",
+    "title": "Przydział funkcji w jednostce"
+  },
+  "routes": {
+    "traffic_heavy": "Duży ruch",
+    "traffic_light": "Mały ruch",
+    "traffic_moderate": "Umiarkowany ruch",
+    "traffic_no_data": "Brak danych o ruchu",
+    "traffic_severe": "Bardzo duży ruch"
+  },
+  "settings": {
+    "audio_device_selection": {
+      "speaker_device": "Urządzenie głośnikowe"
+    },
+    "logout_confirm_message": "Czy na pewno chcesz się wylogować? Spowoduje to wyczyszczenie wszystkich danych aplikacji, wartości w pamięci podręcznej i ustawień.",
+    "no_units_available_help": "Nie przypisano Ci żadnych jednostek. Poproś administratora jednostki o dodanie Cię do grupy stacji.",
+    "realtime_geolocation_warning": "Ta funkcja wysyła lokalizację tej jednostki do Twojej jednostki organizacyjnej, gdy aplikacja jest otwarta, i łączy się z centrum lokalizacji w czasie rzeczywistym, aby odbierać pozycje innych jednostek. Wymaga aktywnego połączenia sieciowego.",
+    "units_load_failed": "Nie udało się wczytać jednostek. Sprawdź połączenie i spróbuj ponownie."
+  },
+  "status": {
+    "current": "Bieżący",
+    "current_status": "Bieżący status",
+    "hold_to_set_hint": "Przytrzymaj przez 2 sekundy, aby ustawić status",
+    "hold_to_set_instructions": "Przytrzymaj status przez 2 sekundy, aby go ustawić",
+    "hold_to_submit": "Przytrzymaj, aby wysłać",
+    "show_all_statuses": "Pokaż wszystkie statusy (jeszcze {{count}})",
+    "show_next_statuses": "Pokaż tylko następne statusy",
+    "status_queued": "Status zapisany na tym urządzeniu. Zostanie wysłany automatycznie."
+  }
+}

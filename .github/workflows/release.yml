@@ -1,0 +1,1094 @@
+# Release pipeline for all five apps (omni-plan §6.6.2–6.6.5). NEVER rename this file: its run number is M in every
+# version (Responder 11.M, Unit 8.M, IC 2.M, Dispatch 2.M, BigBoard 4.M; build number = base + M).
+#
+#   push to master        → every variant, channel internal (GitHub prerelease)
+#   push tag <variant>-v* → that variant, channel production. The tag is only a trigger: the release itself is named
+#                           <variant>-v<major>.<M> from this run's number (tags created here with GITHUB_TOKEN do not
+#                           re-trigger workflows).
+#   workflow_dispatch     → chosen variants / targets / channel, optional force_native and store submit
+#
+# Stage 0  plan → fingerprint (per variant) → decide       versions once; native build only where the fingerprint changed
+# Stage 1  web · android · ios · ota                        one AAB (+ universal APK), one App Store IPA (+ re-signed ad-hoc IPA)
+# Stage 2  docker · electron                                both consume the web-<variant> artifact; nothing rebuilds the app
+# Stage 3  release (per variant)                            GitHub Release + SHA256SUMS + fingerprints.json, Firebase, Changerawr, Electron feed
+# Stage 4  store-submit (optional)                          eas submit behind the store-<variant> approval environment
+#
+# Secrets and variables: docs/build/ci-secrets.md. Third-party actions are pinned to major versions (SHA pinning is a follow-up).
+name: Release
+
+on:
+  push:
+    branches: [master]
+    tags: ['*-v*']
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.claude/**'
+      - '.agents/**'
+  workflow_dispatch:
+    inputs:
+      variants:
+        description: 'Variants: all, or comma-separated (responder,unit,ic,dispatch,bigboard)'
+        type: string
+        default: all
+      targets:
+        description: 'Targets: all, or comma-separated (ios,android,web,docker,electron)'
+        type: string
+        default: all
+      channel:
+        description: 'Update channel (also APP_ENV)'
+        type: choice
+        options: [internal, staging, production]
+        default: internal
+      force_native:
+        description: 'Build native binaries even when the fingerprint is unchanged'
+        type: boolean
+        default: false
+      submit:
+        description: 'Submit the new store binaries with eas submit (production channel only; needs approval)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  EXPO_NO_TELEMETRY: '1'
+  EXPO_NO_DOTENV: '1'
+  # Exact tool versions; bump deliberately.
+  EAS_CLI_VERSION: '24.14.0'
+  BUNDLETOOL_VERSION: '1.18.3'
+  FIREBASE_TOOLS_VERSION: '15.34.0'
+  PLAYWRIGHT_VERSION: '1.64.1'
+
+jobs:
+  # ── Stage 0 ──────────────────────────────────────────────────────────────────────────────────────────────────────
+  plan:
+    name: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      run_number: ${{ steps.trigger.outputs.run_number }}
+      channel: ${{ steps.trigger.outputs.channel }}
+      force_native: ${{ steps.trigger.outputs.force_native }}
+      submit: ${{ steps.trigger.outputs.submit }}
+      platforms: ${{ steps.targets.outputs.platforms }}
+      has_web: ${{ steps.targets.outputs.has_web }}
+      has_electron: ${{ steps.targets.outputs.has_electron }}
+      variants: ${{ steps.plan.outputs.variants }}
+      versions: ${{ steps.plan.outputs.versions }}
+      matrix_web: ${{ steps.plan.outputs.matrix_web }}
+      matrix_electron: ${{ steps.plan.outputs.matrix_electron }}
+      docker: ${{ steps.plan.outputs.docker }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-workspace
+
+      - name: Resolve trigger
+        id: trigger
+        env:
+          EVENT: ${{ github.event_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+          IN_VARIANTS: ${{ inputs.variants }}
+          IN_TARGETS: ${{ inputs.targets }}
+          IN_CHANNEL: ${{ inputs.channel }}
+          IN_FORCE: ${{ inputs.force_native }}
+          IN_SUBMIT: ${{ inputs.submit }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" = workflow_dispatch ]; then
+            variants="${IN_VARIANTS:-all}"; targets="${IN_TARGETS:-all}"; channel="${IN_CHANNEL:-internal}"; force="${IN_FORCE:-false}"; submit="${IN_SUBMIT:-false}"
+          elif [ "$REF_TYPE" = tag ]; then
+            variants="${REF_NAME%%-v*}"; targets=all; channel=production; force=false; submit=false
+          else
+            variants=all; targets=all; channel=internal; force=false; submit=false
+          fi
+          variants="${variants// /}"; targets="${targets// /}"
+          {
+            echo "variants=$variants"
+            echo "targets=$targets"
+            echo "channel=$channel"
+            echo "force_native=$force"
+            echo "submit=$submit"
+            echo "run_number=$GITHUB_RUN_NUMBER"
+          } >> "$GITHUB_OUTPUT"
+          echo "Release run $GITHUB_RUN_NUMBER: variants=$variants targets=$targets channel=$channel force_native=$force submit=$submit"
+
+      - name: Versions and build matrix
+        id: plan
+        env:
+          RUN: ${{ steps.trigger.outputs.run_number }}
+          VARIANTS: ${{ steps.trigger.outputs.variants }}
+          TARGETS: ${{ steps.trigger.outputs.targets }}
+        run: node scripts/release-plan.mjs --run "$RUN" --variants "$VARIANTS" --targets "$TARGETS"
+
+      - name: Targets
+        id: targets
+        env:
+          TARGETS: ${{ steps.trigger.outputs.targets }}
+        run: |
+          set -euo pipefail
+          t=",${TARGETS},"
+          if [ "$TARGETS" = all ]; then t=",ios,android,web,docker,electron,"; fi
+          platforms=""
+          case "$t" in *,android,*) platforms="android" ;; esac
+          case "$t" in *,ios,*) platforms="${platforms:+$platforms,}ios" ;; esac
+          has_web=false; case "$t" in *,web,* | *,docker,* | *,electron,*) has_web=true ;; esac
+          has_electron=false; case "$t" in *,electron,*) has_electron=true ;; esac
+          { echo "platforms=$platforms"; echo "has_web=$has_web"; echo "has_electron=$has_electron"; } >> "$GITHUB_OUTPUT"
+
+      - name: Summary
+        env:
+          VERSIONS: ${{ steps.plan.outputs.versions }}
+          CHANNEL: ${{ steps.trigger.outputs.channel }}
+        run: |
+          {
+            echo "### Release run ${GITHUB_RUN_NUMBER} — channel \`${CHANNEL}\`"
+            echo
+            echo "| Variant | Version | Build number | Electron | Tag | Docker |"
+            echo "|---|---|---|---|---|---|"
+            echo "$VERSIONS" | jq -r 'to_entries[] | "| \(.key) | \(.value.version) | \(.value.buildNumber) | \(.value.electronVersion) | \(.value.tag) | \(.value.dockerImage) |"'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  fingerprint:
+    name: fingerprint (${{ matrix.variant }})
+    needs: plan
+    if: needs.plan.outputs.platforms != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: ${{ matrix.variant }}
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: ${{ fromJSON(needs.plan.outputs.variants) }}
+    # Same build environment as the android / ios / ota jobs: the client env is part of the expo config and therefore
+    # of the fingerprint.
+    env:
+      RELEASE_RUN_NUMBER: ${{ needs.plan.outputs.run_number }}
+      BASE_API_URL: ${{ secrets.BASE_API_URL }}
+      LOGGING_KEY: ${{ secrets.LOGGING_KEY }}
+      APP_KEY: ${{ secrets.APP_KEY }}
+      SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+      COUNTLY_APP_KEY: ${{ secrets.COUNTLY_APP_KEY }}
+      COUNTLY_SERVER_URL: ${{ secrets.COUNTLY_SERVER_URL }}
+      IOS_APPLE_TEAM_ID: ${{ secrets.IOS_APPLE_TEAM_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-workspace
+      - uses: ./.github/actions/prepare-variant
+        with:
+          variant: ${{ matrix.variant }}
+          channel: ${{ needs.plan.outputs.channel }}
+          google-services-json-base64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+          google-service-info-plist-base64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_BASE64 }}
+          mmkv-key: ${{ secrets.MMKV_KEY }}
+
+      - name: Native or OTA
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          VARIANT: ${{ matrix.variant }}
+          CHANNEL: ${{ needs.plan.outputs.channel }}
+          PLATFORMS: ${{ needs.plan.outputs.platforms }}
+          TAG: ${{ fromJSON(needs.plan.outputs.versions)[matrix.variant].tag }}
+          FORCE: ${{ needs.plan.outputs.force_native }}
+        run: |
+          set -euo pipefail
+          args=(decide --variant "$VARIANT" --channel "$CHANNEL" --platforms "$PLATFORMS" --tag "$TAG" --out "decisions/decision-$VARIANT.json")
+          if [ "$FORCE" = true ]; then args+=(--force-native); fi
+          node scripts/ci/fingerprint.mjs "${args[@]}"
+
+      - name: Remove Firebase config
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/firebase"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: decision-${{ matrix.variant }}
+          path: decisions/
+          retention-days: 7
+          if-no-files-found: error
+
+  decide:
+    name: native or OTA
+    needs: [plan, fingerprint]
+    if: ${{ !cancelled() && needs.plan.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      matrix_android: ${{ steps.merge.outputs.matrix_android }}
+      matrix_ios: ${{ steps.merge.outputs.matrix_ios }}
+      matrix_ota: ${{ steps.merge.outputs.matrix_ota }}
+      matrix_submit: ${{ steps.merge.outputs.matrix_submit }}
+      has_android: ${{ steps.merge.outputs.has_android }}
+      has_ios: ${{ steps.merge.outputs.has_ios }}
+      has_ota: ${{ steps.merge.outputs.has_ota }}
+      has_submit: ${{ steps.merge.outputs.has_submit }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-workspace
+        with:
+          install: none
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: decision-*
+          path: decisions
+          merge-multiple: true
+      - name: Merge decisions
+        id: merge
+        env:
+          VARIANTS: ${{ needs.plan.outputs.variants }}
+          PLATFORMS: ${{ needs.plan.outputs.platforms }}
+          CHANNEL: ${{ needs.plan.outputs.channel }}
+          SUBMIT: ${{ needs.plan.outputs.submit }}
+        run: node scripts/ci/fingerprint.mjs merge --dir decisions --variants "$VARIANTS" --platforms "$PLATFORMS" --channel "$CHANNEL" --submit "$SUBMIT"
+
+  # ── Stage 1 ──────────────────────────────────────────────────────────────────────────────────────────────────────
+  web:
+    name: web (${{ matrix.variant }})
+    needs: plan
+    if: needs.plan.outputs.has_web == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: ${{ matrix.variant }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix_web) }}
+    # Baked defaults for Electron; Docker overrides them at runtime (window.__ENV__ merged over the build env).
+    env:
+      RELEASE_RUN_NUMBER: ${{ needs.plan.outputs.run_number }}
+      BASE_API_URL: ${{ secrets.BASE_API_URL }}
+      LOGGING_KEY: ${{ secrets.LOGGING_KEY }}
+      APP_KEY: ${{ secrets.APP_KEY }}
+      SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+      COUNTLY_APP_KEY: ${{ secrets.COUNTLY_APP_KEY }}
+      COUNTLY_SERVER_URL: ${{ secrets.COUNTLY_SERVER_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-workspace
+      - name: Variant environment
+        env:
+          MMKV_KEY: ${{ secrets.MMKV_KEY }}
+          VARIANT: ${{ matrix.variant }}
+          CHANNEL: ${{ needs.plan.outputs.channel }}
+        run: node scripts/ci/variant-env.mjs --variant "$VARIANT" --channel "$CHANNEL" >> "$GITHUB_ENV"
+      - name: Web export
+        run: pnpm --filter @resgrid/omni web:export
+      - name: Check export
+        run: test -f "apps/omni/dist/${APP_VARIANT}/index.html"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-${{ matrix.variant }}
+          path: apps/omni/dist/${{ matrix.variant }}
+          retention-days: 7
+          if-no-files-found: error
+
+  android:
+    name: android (${{ matrix.variant }})
+    needs: [plan, decide]
+    if: ${{ !cancelled() && needs.decide.outputs.has_android == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    environment: ${{ matrix.variant }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.decide.outputs.matrix_android) }}
+    env:
+      RELEASE_RUN_NUMBER: ${{ needs.plan.outputs.run_number }}
+      BASE_API_URL: ${{ secrets.BASE_API_URL }}
+      LOGGING_KEY: ${{ secrets.LOGGING_KEY }}
+      APP_KEY: ${{ secrets.APP_KEY }}
+      SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+      COUNTLY_APP_KEY: ${{ secrets.COUNTLY_APP_KEY }}
+      COUNTLY_SERVER_URL: ${{ secrets.COUNTLY_SERVER_URL }}
+      IOS_APPLE_TEAM_ID: ${{ secrets.IOS_APPLE_TEAM_ID }}
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      NODE_OPTIONS: --max_old_space_size=4096
+      VERSION: ${{ fromJSON(needs.plan.outputs.versions)[matrix.variant].version }}
+      PREFIX: ${{ fromJSON(needs.plan.outputs.versions)[matrix.variant].artifactPrefix }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Free disk space and add swap
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost /usr/share/swift /usr/local/.ghcup /usr/lib/jvm/temurin-11-jdk-amd64 || true
+          docker system prune -af > /dev/null 2>&1 || true
+          sudo apt-get clean || true
+          # Native (CMake/clang) and Kotlin compiles run beside 4 GB Gradle and Node heaps; without swap the runner
+          # starves and GitHub drops it. Prefer the /mnt temp disk.
+          sudo swapoff -a || true
+          sudo rm -f /swapfile /mnt/swapfile || true
+          swap=/swapfile; if mountpoint -q /mnt; then swap=/mnt/swapfile; fi
+          if sudo fallocate -l 8G "$swap" && sudo chmod 600 "$swap" && sudo mkswap "$swap" > /dev/null && sudo swapon "$swap"; then echo "8G swap at $swap"; else echo "::warning::Could not enable swap"; fi
+          df -h /; free -h
+
+      # ubuntu-latest mounts /tmp as a small RAM-backed tmpfs and eas build --local works under it by default.
+      - name: Move build temp dirs off tmpfs
+        run: |
+          mkdir -p "$RUNNER_TEMP/tmp" "$RUNNER_TEMP/eas-build"
+          echo "TMPDIR=$RUNNER_TEMP/tmp" >> "$GITHUB_ENV"
+          echo "EAS_LOCAL_BUILD_WORKINGDIR=$RUNNER_TEMP/eas-build" >> "$GITHUB_ENV"
+
+      # JDK 17 pinned: the runner default (JDK 25) breaks AGP's prefab/CMake configure for react-native-worklets.
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - uses: ./.github/actions/setup-workspace
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: ${{ env.EAS_CLI_VERSION }}
+          token: ${{ secrets.EXPO_TOKEN }}
+          packager: npm
+      - name: Restore EAS local build cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.eas-build-local
+          key: eas-build-local-android-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: eas-build-local-android-
+
+      - uses: ./.github/actions/prepare-variant
+        id: prep
+        with:
+          variant: ${{ matrix.variant }}
+          channel: ${{ needs.plan.outputs.channel }}
+          google-services-json-base64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+          google-service-info-plist-base64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_BASE64 }}
+          mmkv-key: ${{ secrets.MMKV_KEY }}
+
+      # Keystore outside the project root (never in the EAS archive or an artifact); credentials.json points at it.
+      - name: Signing material
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          CREDENTIALS_JSON_BASE64: ${{ secrets.CREDENTIALS_JSON_BASE64 }}
+          GRADLE_PROPERTIES: ${{ secrets.GRADLE_PROPERTIES }}
+        run: |
+          set -euo pipefail
+          umask 077
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/keystore.jks"
+          # eas-cli validates the whole credentials.json even for one platform, so drop the iOS block.
+          printf '%s' "$CREDENTIALS_JSON_BASE64" | base64 --decode \
+            | jq --arg ks "$RUNNER_TEMP/keystore.jks" 'del(.ios) | .android.keystore.keystorePath = $ks' > apps/omni/credentials.json
+          jq -e '.android.keystore | .keystorePath and .keystorePassword and .keyAlias and .keyPassword' apps/omni/credentials.json > /dev/null
+          mkdir -p ~/.gradle
+          printf '%s\n' "$GRADLE_PROPERTIES" > ~/.gradle/gradle.properties
+          # Each Gradle worker can drive its own CMake/ninja build; cap workers to keep clang within memory.
+          echo "org.gradle.workers.max=2" >> ~/.gradle/gradle.properties
+
+      - name: Build AAB (eas build --local)
+        working-directory: apps/omni
+        env:
+          PROFILE: ${{ steps.prep.outputs.android-profile }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$GITHUB_WORKSPACE/out"
+          eas build --local --platform android --profile "$PROFILE" --non-interactive --output "$GITHUB_WORKSPACE/out/${PREFIX}-${VERSION}-android.aab"
+
+      # Same keystore, seconds instead of a second Gradle build (plan §6.6.2 principle 1).
+      - name: Universal APK (bundletool)
+        run: |
+          set -euo pipefail
+          umask 077
+          bash scripts/ci/retry.sh 3 10 curl -fsSL -o "$RUNNER_TEMP/bundletool.jar" "https://github.com/google/bundletool/releases/download/${BUNDLETOOL_VERSION}/bundletool-all-${BUNDLETOOL_VERSION}.jar"
+          jq -r '.android.keystore.keystorePassword' apps/omni/credentials.json > "$RUNNER_TEMP/ks-pass"
+          jq -r '.android.keystore.keyPassword' apps/omni/credentials.json > "$RUNNER_TEMP/key-pass"
+          alias="$(jq -r '.android.keystore.keyAlias' apps/omni/credentials.json)"
+          java -jar "$RUNNER_TEMP/bundletool.jar" build-apks --mode=universal \
+            --bundle "out/${PREFIX}-${VERSION}-android.aab" --output "$RUNNER_TEMP/universal.apks" \
+            --ks "$RUNNER_TEMP/keystore.jks" --ks-pass "file:$RUNNER_TEMP/ks-pass" --ks-key-alias "$alias" --key-pass "file:$RUNNER_TEMP/key-pass"
+          unzip -p "$RUNNER_TEMP/universal.apks" universal.apk > "out/${PREFIX}-${VERSION}-android.apk"
+          apksigner="$(ls -d "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)"
+          "$apksigner" verify --print-certs "out/${PREFIX}-${VERSION}-android.apk" | grep -E 'Signer #1 certificate (DN|SHA-256)'
+          ls -lh out
+
+      - name: Remove signing material
+        if: always()
+        run: rm -rf apps/omni/credentials.json "$RUNNER_TEMP/keystore.jks" "$RUNNER_TEMP/ks-pass" "$RUNNER_TEMP/key-pass" "$RUNNER_TEMP/firebase" ~/.gradle/gradle.properties
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-${{ matrix.variant }}
+          path: out/
+          retention-days: 7
+          if-no-files-found: error
+
+  ios:
+    name: ios (${{ matrix.variant }})
+    needs: [plan, decide]
+    if: ${{ !cancelled() && needs.decide.outputs.has_ios == 'true' }}
+    runs-on: macos-26
+    timeout-minutes: 100
+    environment: ${{ matrix.variant }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.decide.outputs.matrix_ios) }}
+    env:
+      RELEASE_RUN_NUMBER: ${{ needs.plan.outputs.run_number }}
+      BASE_API_URL: ${{ secrets.BASE_API_URL }}
+      LOGGING_KEY: ${{ secrets.LOGGING_KEY }}
+      APP_KEY: ${{ secrets.APP_KEY }}
+      SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+      COUNTLY_APP_KEY: ${{ secrets.COUNTLY_APP_KEY }}
+      COUNTLY_SERVER_URL: ${{ secrets.COUNTLY_SERVER_URL }}
+      IOS_APPLE_TEAM_ID: ${{ secrets.IOS_APPLE_TEAM_ID }}
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      EXPO_APPLE_TEAM_ID: ${{ secrets.IOS_APPLE_TEAM_ID }}
+      EXPO_ASC_KEY_ID: ${{ secrets.IOS_ASC_KEY_ID }}
+      EXPO_ASC_ISSUER_ID: ${{ secrets.IOS_ASC_ISSUER_ID }}
+      NODE_OPTIONS: --max_old_space_size=4096
+      VERSION: ${{ fromJSON(needs.plan.outputs.versions)[matrix.variant].version }}
+      PREFIX: ${{ fromJSON(needs.plan.outputs.versions)[matrix.variant].artifactPrefix }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-workspace
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: ${{ env.EAS_CLI_VERSION }}
+          token: ${{ secrets.EXPO_TOKEN }}
+          packager: npm
+      - name: Restore CocoaPods cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Caches/CocoaPods
+            ~/.cocoapods/repos
+          key: pods-${{ matrix.variant }}-${{ hashFiles('pnpm-lock.yaml', format('apps/omni/variants/{0}/variant.json', matrix.variant), 'packages/config-plugins/**') }}
+          restore-keys: pods-${{ matrix.variant }}-
+      - name: Restore EAS local build cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.eas-build-local
+          key: eas-build-local-ios-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: eas-build-local-ios-
+
+      - uses: ./.github/actions/prepare-variant
+        id: prep
+        with:
+          variant: ${{ matrix.variant }}
+          channel: ${{ needs.plan.outputs.channel }}
+          google-services-json-base64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+          google-service-info-plist-base64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_BASE64 }}
+          mmkv-key: ${{ secrets.MMKV_KEY }}
+
+      # iOS signing uses the EAS-managed distribution certificate and profiles (the production profile has no
+      # credentialsSource: local); the App Store Connect API key lets eas-cli validate them non-interactively.
+      - name: App Store Connect API key
+        env:
+          IOS_P8_BASE64: ${{ secrets.IOS_P8_BASE64 }}
+        run: |
+          set -euo pipefail
+          if [ -z "$IOS_P8_BASE64" ]; then echo "::warning::IOS_P8_BASE64 is not set."; exit 0; fi
+          umask 077
+          mkdir -p "$RUNNER_TEMP/asc"
+          printf '%s' "$IOS_P8_BASE64" | base64 --decode > "$RUNNER_TEMP/asc/AuthKey.p8"
+          echo "EXPO_ASC_API_KEY_PATH=$RUNNER_TEMP/asc/AuthKey.p8" >> "$GITHUB_ENV"
+
+      - name: Build App Store IPA (eas build --local)
+        working-directory: apps/omni
+        env:
+          PROFILE: ${{ steps.prep.outputs.ios-profile }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$GITHUB_WORKSPACE/out"
+          eas build --local --platform ios --profile "$PROFILE" --non-interactive --output "$GITHUB_WORKSPACE/out/${PREFIX}-${VERSION}-ios-appstore.ipa"
+
+      # Same app, same distribution certificate, ad-hoc provisioning profile(s) — seconds instead of a second Xcode build.
+      - name: Ad-hoc IPA (fastlane resign)
+        env:
+          IOS_DIST_CERT_P12_BASE64: ${{ secrets.IOS_DIST_CERT_P12_BASE64 }}
+          IOS_DIST_CERT_PASSWORD: ${{ secrets.IOS_DIST_CERT_PASSWORD }}
+          IOS_ADHOC_PROFILE_BASE64: ${{ secrets.IOS_ADHOC_PROFILE_BASE64 }}
+          IOS_ADHOC_WIDGET_PROFILE_BASE64: ${{ secrets.IOS_ADHOC_WIDGET_PROFILE_BASE64 }}
+        run: |
+          set -euo pipefail
+          if [ -z "$IOS_DIST_CERT_P12_BASE64" ] || [ -z "$IOS_ADHOC_PROFILE_BASE64" ]; then
+            echo "::warning::IOS_DIST_CERT_P12_BASE64 / IOS_ADHOC_PROFILE_BASE64 not set; skipping the ad-hoc IPA."
+            exit 0
+          fi
+          umask 077
+          work="$RUNNER_TEMP/resign"; mkdir -p "$work"
+          printf '%s' "$IOS_DIST_CERT_P12_BASE64" | base64 --decode > "$work/dist.p12"
+          printf '%s' "$IOS_ADHOC_PROFILE_BASE64" | base64 --decode > "$work/adhoc.mobileprovision"
+          keychain="$work/resign.keychain-db"
+          kc_pass="$(openssl rand -hex 24)"
+          security create-keychain -p "$kc_pass" "$keychain"
+          security set-keychain-settings -lut 3600 "$keychain"
+          security unlock-keychain -p "$kc_pass" "$keychain"
+          security import "$work/dist.p12" -k "$keychain" -P "$IOS_DIST_CERT_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$kc_pass" "$keychain" > /dev/null
+          # shellcheck disable=SC2046
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          identity="$(security find-identity -v -p codesigning "$keychain" | awk 'NR==1 {print $2}')"
+          bundle_id="$(node -p "require('./apps/omni/variants/${APP_VARIANT}/variant.json').identity.ios.bundleIdentifier")"
+          case "$APP_ENV" in production | internal) ;; *) bundle_id="${bundle_id}.${APP_ENV}" ;; esac
+          profiles=(-p "${bundle_id}=$work/adhoc.mobileprovision")
+          if [ -n "$IOS_ADHOC_WIDGET_PROFILE_BASE64" ]; then
+            printf '%s' "$IOS_ADHOC_WIDGET_PROFILE_BASE64" | base64 --decode > "$work/widget.mobileprovision"
+            profiles+=(-p "${bundle_id}.CheckInTimerWidget=$work/widget.mobileprovision")
+          fi
+          command -v fastlane > /dev/null || brew install fastlane
+          adhoc="out/${PREFIX}-${VERSION}-ios-adhoc.ipa"
+          cp "out/${PREFIX}-${VERSION}-ios-appstore.ipa" "$adhoc"
+          fastlane sigh resign "$adhoc" --signing_identity "$identity" --keychain_path "$keychain" "${profiles[@]}"
+          ls -lh out
+
+      - name: Remove signing material
+        if: always()
+        run: |
+          security delete-keychain "$RUNNER_TEMP/resign/resign.keychain-db" 2> /dev/null || true
+          rm -rf "$RUNNER_TEMP/resign" "$RUNNER_TEMP/asc" "$RUNNER_TEMP/firebase"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios-${{ matrix.variant }}
+          path: out/
+          retention-days: 7
+          if-no-files-found: error
+
+  ota:
+    name: ota (${{ matrix.variant }}, ${{ matrix.platform }})
+    needs: [plan, decide]
+    if: ${{ !cancelled() && needs.decide.outputs.has_ota == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: ${{ matrix.variant }}
+    concurrency:
+      group: ota-${{ matrix.variant }}-${{ needs.plan.outputs.channel }}
+      cancel-in-progress: false
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.decide.outputs.matrix_ota) }}
+    env:
+      RELEASE_RUN_NUMBER: ${{ needs.plan.outputs.run_number }}
+      BASE_API_URL: ${{ secrets.BASE_API_URL }}
+      LOGGING_KEY: ${{ secrets.LOGGING_KEY }}
+      APP_KEY: ${{ secrets.APP_KEY }}
+      SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+      COUNTLY_APP_KEY: ${{ secrets.COUNTLY_APP_KEY }}
+      COUNTLY_SERVER_URL: ${{ secrets.COUNTLY_SERVER_URL }}
+      IOS_APPLE_TEAM_ID: ${{ secrets.IOS_APPLE_TEAM_ID }}
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      CHANNEL: ${{ needs.plan.outputs.channel }}
+      TAG: ${{ fromJSON(needs.plan.outputs.versions)[matrix.variant].tag }}
+      PLATFORM: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-workspace
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: ${{ env.EAS_CLI_VERSION }}
+          token: ${{ secrets.EXPO_TOKEN }}
+          packager: npm
+      - uses: ./.github/actions/prepare-variant
+        with:
+          variant: ${{ matrix.variant }}
+          channel: ${{ needs.plan.outputs.channel }}
+          google-services-json-base64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+          google-service-info-plist-base64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_BASE64 }}
+          mmkv-key: ${{ secrets.MMKV_KEY }}
+
+      - name: Guard — runtime unchanged since the installed binaries
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          platforms="$PLATFORM"; if [ "$PLATFORM" = all ]; then platforms=android,ios; fi
+          node scripts/ci/fingerprint.mjs check --variant "$APP_VARIANT" --channel "$CHANNEL" --platforms "$platforms" --run-number "$RELEASE_RUN_NUMBER" --exclude-tag "$TAG"
+
+      - name: Publish update (eas update)
+        working-directory: apps/omni
+        run: |
+          set -euo pipefail
+          mkdir -p "$GITHUB_WORKSPACE/ota"
+          export OTA_OUT="$GITHUB_WORKSPACE/ota/ota-${APP_VARIANT}.json"
+          export OTA_MESSAGE="${TAG} (${GITHUB_SHA::7})"
+          bash ../../scripts/ci/retry.sh 3 30 bash -c 'eas update --channel "$CHANNEL" --platform "$PLATFORM" --message "$OTA_MESSAGE" --non-interactive --json > "$OTA_OUT"'
+          jq -r '.[] | "\(.platform): group \(.group) runtime \(.runtimeVersion)"' "$OTA_OUT"
+
+      - name: Upload Sentry source maps
+        if: env.SENTRY_AUTH_TOKEN != ''
+        continue-on-error: true
+        working-directory: apps/omni
+        env:
+          SENTRY_URL: https://sentry.resgrid.net/
+          SENTRY_ORG: sentry
+        run: |
+          export SENTRY_PROJECT="$(node -p "require('./variants/${APP_VARIANT}/variant.json').identity.sentryProject")"
+          npx sentry-expo-upload-sourcemaps dist
+
+      - name: Remove Firebase config
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/firebase"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ota-${{ matrix.variant }}
+          path: ota/
+          retention-days: 7
+          if-no-files-found: error
+
+  # ── Stage 2 ──────────────────────────────────────────────────────────────────────────────────────────────────────
+  docker:
+    name: docker (${{ matrix.variant }})
+    needs: [plan, web]
+    if: ${{ !cancelled() && needs.plan.result == 'success' && needs.plan.outputs.docker == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: ${{ matrix.variant }}
+    permissions:
+      contents: read
+      packages: write
+    concurrency:
+      group: docker-${{ matrix.variant }}
+      cancel-in-progress: false
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix_web) }}
+    env:
+      VERSION: ${{ fromJSON(needs.plan.outputs.versions)[matrix.variant].version }}
+      DOCKER_IMAGE: ${{ fromJSON(needs.plan.outputs.versions)[matrix.variant].dockerImage }}
+      CHANNEL: ${{ needs.plan.outputs.channel }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-${{ matrix.variant }}
+          path: apps/omni/dist/${{ matrix.variant }}
+      - name: Check inputs
+        run: |
+          test -f docker/Dockerfile || { echo "::error::docker/Dockerfile is missing."; exit 1; }
+          test -f "apps/omni/dist/${{ matrix.variant }}/index.html"
+
+      - name: Image names
+        id: images
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+        run: |
+          owner="$(echo "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')"
+          ghcr="ghcr.io/${owner}/${DOCKER_IMAGE##*/}"
+          if [ -n "$DOCKER_USERNAME" ] && [ -n "$DOCKER_PASSWORD" ]; then
+            dockerhub=true; images="${DOCKER_IMAGE}"$'\n'"${ghcr}"
+          else
+            dockerhub=false; images="$ghcr"; echo "::warning::Docker Hub credentials not set; pushing to GHCR only."
+          fi
+          { echo "dockerhub=$dockerhub"; echo "images<<EOF"; echo "$images"; echo "EOF"; } >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - name: Log in to Docker Hub
+        if: steps.images.outputs.dockerhub == 'true'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.images.outputs.images }}
+          flavor: latest=false
+          tags: |
+            type=raw,value=${{ env.VERSION }}
+            type=raw,value=latest,enable=${{ needs.plan.outputs.channel == 'production' }}
+            type=raw,value=${{ needs.plan.outputs.channel }},enable=${{ needs.plan.outputs.channel != 'production' }}
+
+      # The image only copies the prebuilt export into the nginx runtime (no app build inside Docker).
+      - name: Build and push (amd64 + arm64)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          push: true
+          platforms: linux/amd64,linux/arm64
+          build-args: |
+            APP_VARIANT=${{ matrix.variant }}
+            APP_VERSION=${{ env.VERSION }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=docker-${{ matrix.variant }}
+          cache-to: type=gha,mode=max,scope=docker-${{ matrix.variant }}
+
+      - name: Record tags
+        env:
+          TAGS: ${{ steps.meta.outputs.tags }}
+        run: mkdir -p docker-out && printf '%s\n' "$TAGS" > docker-out/tags.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: docker-${{ matrix.variant }}
+          path: docker-out/
+          retention-days: 7
+
+  electron:
+    name: electron (${{ matrix.variant }}, ${{ matrix.target }})
+    needs: [plan, web]
+    if: ${{ !cancelled() && needs.plan.result == 'success' && needs.plan.outputs.has_electron == 'true' }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    environment: ${{ matrix.variant }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix_electron) }}
+    env:
+      APP_VARIANT: ${{ matrix.variant }}
+      RELEASE_RUN_NUMBER: ${{ needs.plan.outputs.run_number }}
+      RELEASE_CHANNEL: ${{ needs.plan.outputs.channel }}
+      # Feed root; apps/desktop appends /updates/<variant>/<channel>/ (generic provider, plan §6.6.5). Empty = no auto-update.
+      UPDATE_BASE_URL: ${{ vars.ELECTRON_UPDATE_BASE_URL }}
+      VERSION: ${{ fromJSON(needs.plan.outputs.versions)[matrix.variant].version }}
+      PREFIX: ${{ fromJSON(needs.plan.outputs.versions)[matrix.variant].artifactPrefix }}
+      # apps/desktop/packaging/builder-config.js writes each variant's output to apps/desktop/release/<variant>.
+      ELECTRON_OUTPUT_DIR: apps/desktop/release/${{ matrix.variant }}
+      # Fail instead of shipping unsigned installers once the certificates are configured (repository variable).
+      DESKTOP_REQUIRE_SIGNING: ${{ vars.DESKTOP_REQUIRE_SIGNING }}
+      # Windows signing (only on the win leg): Azure Trusted Signing when configured, else a PFX certificate.
+      AZURE_TRUSTED_SIGNING_ENDPOINT: ${{ matrix.target == 'win' && vars.AZURE_TRUSTED_SIGNING_ENDPOINT || '' }}
+      AZURE_TRUSTED_SIGNING_ACCOUNT: ${{ matrix.target == 'win' && vars.AZURE_TRUSTED_SIGNING_ACCOUNT || '' }}
+      AZURE_TRUSTED_SIGNING_PROFILE: ${{ matrix.target == 'win' && vars.AZURE_TRUSTED_SIGNING_PROFILE || '' }}
+      WIN_PUBLISHER_NAME: ${{ matrix.target == 'win' && vars.WIN_PUBLISHER_NAME || '' }}
+      AZURE_TENANT_ID: ${{ matrix.target == 'win' && secrets.AZURE_TENANT_ID || '' }}
+      AZURE_CLIENT_ID: ${{ matrix.target == 'win' && secrets.AZURE_CLIENT_ID || '' }}
+      AZURE_CLIENT_SECRET: ${{ matrix.target == 'win' && secrets.AZURE_CLIENT_SECRET || '' }}
+      WIN_CSC_LINK: ${{ matrix.target == 'win' && secrets.WIN_CSC_LINK || '' }}
+      WIN_CSC_KEY_PASSWORD: ${{ matrix.target == 'win' && secrets.WIN_CSC_KEY_PASSWORD || '' }}
+      # macOS Developer ID certificate and notarization (only on the mac leg).
+      CSC_LINK: ${{ matrix.target == 'mac' && secrets.MAC_CSC_LINK || '' }}
+      CSC_KEY_PASSWORD: ${{ matrix.target == 'mac' && secrets.MAC_CSC_KEY_PASSWORD || '' }}
+      APPLE_API_KEY_ID: ${{ matrix.target == 'mac' && secrets.APPLE_NOTARY_KEY_ID || '' }}
+      APPLE_API_ISSUER: ${{ matrix.target == 'mac' && secrets.APPLE_NOTARY_ISSUER_ID || '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Electron caches
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/electron-cache
+          key: electron-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: electron-${{ runner.os }}-
+      - name: Point Electron at the cache
+        run: |
+          echo "ELECTRON_CACHE=$RUNNER_TEMP/electron-cache/electron" >> "$GITHUB_ENV"
+          echo "ELECTRON_BUILDER_CACHE=$RUNNER_TEMP/electron-cache/electron-builder" >> "$GITHUB_ENV"
+      # apps/desktop and its workspace deps only — no React Native install on the Electron runners.
+      - uses: ./.github/actions/setup-workspace
+        with:
+          install: desktop
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-${{ matrix.variant }}
+          path: apps/omni/dist/${{ matrix.variant }}
+
+      - name: macOS signing and notarization
+        if: matrix.target == 'mac'
+        env:
+          APPLE_NOTARY_KEY_BASE64: ${{ secrets.APPLE_NOTARY_KEY_BASE64 }}
+        run: |
+          set -euo pipefail
+          if [ -z "$CSC_LINK" ]; then
+            echo "::warning::MAC_CSC_LINK not set; building an unsigned, un-notarized app."
+            echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> "$GITHUB_ENV"
+          fi
+          if [ -n "$APPLE_NOTARY_KEY_BASE64" ]; then
+            umask 077; mkdir -p "$RUNNER_TEMP/notary"
+            printf '%s' "$APPLE_NOTARY_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/notary/AuthKey.p8"
+            echo "APPLE_API_KEY=$RUNNER_TEMP/notary/AuthKey.p8" >> "$GITHUB_ENV"
+          fi
+
+      # No `--` separator: pnpm 10 forwards it literally and scripts/build.mjs (strict parseArgs) rejects it.
+      - name: Build Electron (${{ matrix.target }})
+        run: pnpm --filter @resgrid/desktop build --variant "$APP_VARIANT" --${{ matrix.target }}
+
+      # Launches the unpacked build and checks the variant home renders (apps/omni/e2e/desktop). Non-blocking until
+      # it has been validated against the real desktop package (Electron fuses can block Playwright's launcher).
+      - name: Desktop smoke test (Playwright _electron)
+        if: matrix.target == 'linux'
+        continue-on-error: true
+        env:
+          E2E_DESKTOP_DIR: ${{ env.ELECTRON_OUTPUT_DIR }}
+        run: xvfb-run -a node scripts/ci/run-playwright.mjs test -c apps/omni/e2e/playwright.config.ts --project "desktop-${APP_VARIANT}"
+
+      - name: Collect installers and update feed
+        run: node scripts/ci/electron-assets.mjs --src "$ELECTRON_OUTPUT_DIR" --target "${{ matrix.target }}" --prefix "$PREFIX" --version "$VERSION" --out out/release --feed out/feed
+
+      - name: Remove signing material
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/notary"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: electron-${{ matrix.variant }}-${{ matrix.target }}
+          path: out/release/
+          retention-days: 7
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: feed-${{ matrix.variant }}-${{ matrix.target }}
+          path: out/feed/
+          retention-days: 7
+          if-no-files-found: ignore
+
+  # ── Stage 3 ──────────────────────────────────────────────────────────────────────────────────────────────────────
+  # Runs even when some build legs failed: it publishes what exists and records failed platforms in fingerprints.json
+  # (so the next run rebuilds them). "Re-run failed jobs" re-runs this job too and completes the same release
+  # (allowUpdates; the run number, and therefore every version, is unchanged on re-runs).
+  release:
+    name: release (${{ matrix.variant }})
+    needs: [plan, decide, web, android, ios, ota, docker, electron]
+    if: ${{ !cancelled() && needs.plan.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: ${{ matrix.variant }}
+    permissions:
+      contents: write
+    concurrency:
+      group: release-publish-${{ matrix.variant }}
+      cancel-in-progress: false
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: ${{ fromJSON(needs.plan.outputs.variants) }}
+    env:
+      VARIANT: ${{ matrix.variant }}
+      CHANNEL: ${{ needs.plan.outputs.channel }}
+      RUN: ${{ needs.plan.outputs.run_number }}
+      TAG: ${{ fromJSON(needs.plan.outputs.versions)[matrix.variant].tag }}
+      VERSION: ${{ fromJSON(needs.plan.outputs.versions)[matrix.variant].version }}
+      BUILD_NUMBER: ${{ fromJSON(needs.plan.outputs.versions)[matrix.variant].buildNumber }}
+      PREFIX: ${{ fromJSON(needs.plan.outputs.versions)[matrix.variant].artifactPrefix }}
+      PRODUCT_NAME: ${{ fromJSON(needs.plan.outputs.versions)[matrix.variant].productName }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-workspace
+        with:
+          install: none
+
+      - name: Download web export
+        uses: actions/download-artifact@v4
+        with:
+          pattern: web-${{ matrix.variant }}
+          path: artifacts/web
+          merge-multiple: true
+      - name: Download binaries
+        uses: actions/download-artifact@v4
+        with:
+          pattern: '{android,ios}-${{ matrix.variant }}'
+          path: artifacts/bin
+          merge-multiple: true
+      - name: Download Electron installers
+        uses: actions/download-artifact@v4
+        with:
+          pattern: electron-${{ matrix.variant }}-*
+          path: artifacts/bin
+          merge-multiple: true
+      - name: Download Electron update feed
+        uses: actions/download-artifact@v4
+        with:
+          pattern: feed-${{ matrix.variant }}-*
+          path: artifacts/feed
+          merge-multiple: true
+      - name: Download decision, OTA and Docker records
+        uses: actions/download-artifact@v4
+        with:
+          pattern: '{decision,ota,docker}-${{ matrix.variant }}'
+          path: artifacts/meta
+          merge-multiple: true
+
+      - name: Zip web export
+        run: |
+          mkdir -p artifacts/bin
+          if [ -f artifacts/web/index.html ]; then (cd artifacts/web && zip -qr "$GITHUB_WORKSPACE/artifacts/bin/${PREFIX}-${VERSION}-web.zip" .); fi
+
+      - name: Assemble release assets
+        id: assemble
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tags=""; if [ -f artifacts/meta/tags.txt ]; then tags="$(paste -sd, artifacts/meta/tags.txt)"; fi
+          node scripts/ci/release-assets.mjs --variant "$VARIANT" --tag "$TAG" --version "$VERSION" --build-number "$BUILD_NUMBER" --run "$RUN" \
+            --channel "$CHANNEL" --commit "$GITHUB_SHA" --artifacts artifacts/bin --out release --decision "artifacts/meta/decision-${VARIANT}.json" \
+            --ota-dir artifacts/meta --docker-tags "$tags" --product-name "$PRODUCT_NAME" --summary release-summary.md
+          ls -lh release
+
+      - name: Release notes
+        run: |
+          set -euo pipefail
+          prev="$(git tag --list "${VARIANT}-v*" --sort=-creatordate | grep -vxF "$TAG" | head -n1 || true)"
+          {
+            cat release-summary.md
+            echo
+            echo "### Changes"
+            echo
+            if [ -n "$prev" ]; then
+              git log --no-merges --pretty='- %s (%h)' "${prev}..${GITHUB_SHA}" | head -n 200
+            else
+              git log --no-merges --pretty='- %s (%h)' -n 50 "$GITHUB_SHA"
+            fi
+          } > RELEASE_NOTES.md
+          cat release-summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: GitHub Release
+        if: steps.assemble.outputs.has_assets == 'true'
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ env.TAG }}
+          commit: ${{ github.sha }}
+          name: ${{ env.PRODUCT_NAME }} ${{ env.VERSION }}
+          bodyFile: RELEASE_NOTES.md
+          artifacts: release/*
+          prerelease: ${{ needs.plan.outputs.channel != 'production' }}
+          makeLatest: false
+          allowUpdates: true
+          replacesArtifacts: true
+          artifactErrorsFailBuild: true
+
+      - name: Firebase App Distribution
+        if: steps.assemble.outputs.native_built == 'true'
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON_BASE64: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON_BASE64 }}
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          FIREBASE_ANDROID_APP_ID: ${{ secrets.FIREBASE_ANDROID_APP_ID }}
+          FIREBASE_IOS_APP_ID: ${{ secrets.FIREBASE_IOS_APP_ID }}
+          GROUPS: ${{ vars.FIREBASE_TESTER_GROUPS || 'testers' }}
+          APK: ${{ steps.assemble.outputs.apk }}
+          ADHOC_IPA: ${{ steps.assemble.outputs.adhoc_ipa }}
+        run: |
+          set -euo pipefail
+          if [ -n "$FIREBASE_SERVICE_ACCOUNT_JSON_BASE64" ]; then
+            umask 077
+            printf '%s' "$FIREBASE_SERVICE_ACCOUNT_JSON_BASE64" | base64 --decode > "$RUNNER_TEMP/firebase-sa.json"
+            export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/firebase-sa.json"
+          elif [ -z "$FIREBASE_TOKEN" ]; then
+            echo "::notice::Firebase credentials not configured; skipping App Distribution."; exit 0
+          fi
+          distribute() { bash scripts/ci/retry.sh 3 20 npx --yes "firebase-tools@${FIREBASE_TOOLS_VERSION}" appdistribution:distribute "$1" --app "$2" --groups "$GROUPS" --release-notes-file RELEASE_NOTES.md; }
+          if [ -n "$APK" ] && [ -n "$FIREBASE_ANDROID_APP_ID" ]; then distribute "$APK" "$FIREBASE_ANDROID_APP_ID"; fi
+          if [ -n "$ADHOC_IPA" ] && [ -n "$FIREBASE_IOS_APP_ID" ]; then distribute "$ADHOC_IPA" "$FIREBASE_IOS_APP_ID"; fi
+
+      - name: Changerawr release notes
+        env:
+          CHANGERAWR_API_URL: ${{ secrets.CHANGERAWR_API_URL }}
+          CHANGERAWR_API_KEY: ${{ secrets.CHANGERAWR_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "$CHANGERAWR_API_URL" ] || [ -z "$CHANGERAWR_API_KEY" ]; then
+            echo "::notice::Changerawr not configured; skipping."; exit 0
+          fi
+          payload="$(jq -n --arg version "$VERSION" --arg title "${PRODUCT_NAME} ${VERSION}" --rawfile notes RELEASE_NOTES.md '{version: $version, title: $title, content: $notes}')"
+          code="$(curl -sS -o "$RUNNER_TEMP/changerawr.out" -w '%{http_code}' -X POST "$CHANGERAWR_API_URL" \
+            -H 'Content-Type: application/json' -H "Authorization: Bearer ${CHANGERAWR_API_KEY}" -d "$payload" || echo 000)"
+          if [ "$code" -ge 200 ] && [ "$code" -lt 300 ]; then echo "Changerawr: HTTP $code"; else echo "::warning::Changerawr returned HTTP $code"; fi
+
+      # Installers and blockmaps first, latest*.yml last: clients never see a manifest that points at missing files.
+      - name: Electron update feed
+        env:
+          FEED_BUCKET: ${{ vars.ELECTRON_FEED_BUCKET }}
+          FEED_ENDPOINT: ${{ vars.ELECTRON_FEED_ENDPOINT }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.ELECTRON_FEED_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.ELECTRON_FEED_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ vars.ELECTRON_FEED_REGION || 'auto' }}
+        run: |
+          set -euo pipefail
+          if [ ! -d artifacts/feed ] || [ -z "$(ls -A artifacts/feed 2> /dev/null)" ]; then echo "No Electron feed files in this run."; exit 0; fi
+          if [ -z "$FEED_BUCKET" ] || [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
+            echo "::notice::Electron update feed storage not configured; skipping."; exit 0
+          fi
+          dest="s3://${FEED_BUCKET}/updates/${VARIANT}/${CHANNEL}/"
+          endpoint=(); if [ -n "$FEED_ENDPOINT" ]; then endpoint=(--endpoint-url "$FEED_ENDPOINT"); fi
+          bash scripts/ci/retry.sh 3 15 aws s3 cp artifacts/feed "$dest" --recursive --exclude 'latest*.yml' "${endpoint[@]}"
+          bash scripts/ci/retry.sh 3 15 aws s3 cp artifacts/feed "$dest" --recursive --exclude '*' --include 'latest*.yml' --cache-control 'no-cache, max-age=0' --content-type 'text/yaml' "${endpoint[@]}"
+
+      - name: Remove credentials
+        if: always()
+        run: rm -f "$RUNNER_TEMP/firebase-sa.json"
+
+  # ── Stage 4 ──────────────────────────────────────────────────────────────────────────────────────────────────────
+  # Only for dispatch runs with submit: true on the production channel, only for platforms built natively in this run.
+  # The store-<variant> environment carries required reviewers and the store credentials.
+  store-submit:
+    name: store submit (${{ matrix.variant }}, ${{ matrix.platform }})
+    needs: [plan, decide, android, ios, release]
+    if: ${{ !cancelled() && needs.decide.outputs.has_submit == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: store-${{ matrix.variant }}
+    concurrency:
+      group: store-submit-${{ matrix.variant }}-${{ matrix.platform }}
+      cancel-in-progress: false
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.decide.outputs.matrix_submit) }}
+    env:
+      APP_VARIANT: ${{ matrix.variant }}
+      APP_ENV: production
+      RELEASE_RUN_NUMBER: ${{ needs.plan.outputs.run_number }}
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      PLATFORM: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-workspace
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: ${{ env.EAS_CLI_VERSION }}
+          token: ${{ secrets.EXPO_TOKEN }}
+          packager: npm
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.platform }}-${{ matrix.variant }}
+          path: bin
+
+      - name: Store credentials
+        env:
+          IOS_P8_BASE64: ${{ secrets.IOS_P8_BASE64 }}
+          PLAY_SERVICE_ACCOUNT_JSON_BASE64: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON_BASE64 }}
+        run: |
+          set -euo pipefail
+          umask 077; mkdir -p "$RUNNER_TEMP/store"
+          if [ "$PLATFORM" = ios ] && [ -n "$IOS_P8_BASE64" ]; then
+            printf '%s' "$IOS_P8_BASE64" | base64 --decode > "$RUNNER_TEMP/store/AuthKey.p8"
+            echo "EXPO_ASC_API_KEY_PATH=$RUNNER_TEMP/store/AuthKey.p8" >> "$GITHUB_ENV"
+          fi
+          if [ "$PLATFORM" = android ] && [ -n "$PLAY_SERVICE_ACCOUNT_JSON_BASE64" ]; then
+            printf '%s' "$PLAY_SERVICE_ACCOUNT_JSON_BASE64" | base64 --decode > "$RUNNER_TEMP/store/play.json"
+            echo "PLAY_SERVICE_ACCOUNT_KEY_PATH=$RUNNER_TEMP/store/play.json" >> "$GITHUB_ENV"
+          fi
+
+      - name: Submit profile
+        id: profile
+        env:
+          ASC_APP_ID: ${{ secrets.ASC_APP_ID }}
+          EXPO_ASC_KEY_ID: ${{ secrets.IOS_ASC_KEY_ID }}
+          EXPO_ASC_ISSUER_ID: ${{ secrets.IOS_ASC_ISSUER_ID }}
+          IOS_APPLE_TEAM_ID: ${{ secrets.IOS_APPLE_TEAM_ID }}
+          PLAY_TRACK: ${{ vars.PLAY_TRACK || 'internal' }}
+        run: node scripts/ci/eas-profile.mjs submit --variant "$APP_VARIANT" --platform "$PLATFORM"
+
+      - name: eas submit
+        working-directory: apps/omni
+        env:
+          PROFILE: ${{ steps.profile.outputs.profile }}
+        run: |
+          set -euo pipefail
+          if [ "$PLATFORM" = ios ]; then file="$(ls "$GITHUB_WORKSPACE"/bin/*-ios-appstore.ipa)"; else file="$(ls "$GITHUB_WORKSPACE"/bin/*-android.aab)"; fi
+          bash ../../scripts/ci/retry.sh 2 60 eas submit --platform "$PLATFORM" --profile "$PROFILE" --path "$file" --non-interactive
+
+      - name: Remove credentials
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/store"

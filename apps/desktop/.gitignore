@@ -1,0 +1,4 @@
+# Staging written by scripts/build.mjs (out/app, out/runtime-modules) and scripts/dev.mjs (out/dev-bundle),
+# and electron-builder output. Both are also ignored at the repo root.
+/out/
+/release/

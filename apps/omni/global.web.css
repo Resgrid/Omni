@@ -30,3 +30,11 @@
     color: rgb(var(--color-typography-500));
   }
 }
+
+/* Accessible focus ring for raw DOM inputs/selects in web-only screens (keyboard navigation). Web-only:
+   native has no focus-visible, and react-native-css drops selectors it cannot evaluate. */
+.web-input-accessible:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}

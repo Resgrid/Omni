@@ -6,3 +6,4 @@ apps/omni/ios
 apps/omni/android
 .claude/skills
 .agents
+packages/api/contract/swagger-v4.json

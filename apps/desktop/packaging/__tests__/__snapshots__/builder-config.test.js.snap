@@ -1,0 +1,189 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`createBuilderConfig matches the per-variant snapshot (identity, protocols, artifact names, targets) 1`] = `
+[
+  {
+    "appId": "com.resgrid.responder",
+    "artifactNames": {
+      "dmg": "ResgridResponder-11.12-macos-\${arch}.\${ext}",
+      "linux": "ResgridResponder-11.12-linux.\${ext}",
+      "mac": "ResgridResponder-11.12-macos-\${arch}.\${ext}",
+      "nsis": "ResgridResponder-11.12-windows-setup.\${ext}",
+      "portable": "ResgridResponder-11.12-windows-portable.\${ext}",
+    },
+    "name": "resgrid-responder",
+    "output": "release/responder",
+    "productName": "Resgrid Responder",
+    "protocols": [
+      {
+        "name": "Resgrid Responder",
+        "schemes": [
+          "resgrid",
+        ],
+      },
+    ],
+    "targets": {
+      "linux": [
+        "AppImage:x64",
+        "deb:x64",
+        "rpm:x64",
+      ],
+      "mac": [
+        "dmg:x64+arm64",
+        "zip:x64+arm64",
+      ],
+      "win": [
+        "nsis:x64",
+        "portable:x64",
+      ],
+    },
+    "variant": "responder",
+    "version": "11.12.0",
+  },
+  {
+    "appId": "com.resgrid.unit",
+    "artifactNames": {
+      "dmg": "ResgridUnit-8.12-macos-\${arch}.\${ext}",
+      "linux": "ResgridUnit-8.12-linux.\${ext}",
+      "mac": "ResgridUnit-8.12-macos-\${arch}.\${ext}",
+      "nsis": "ResgridUnit-8.12-windows-setup.\${ext}",
+      "portable": "ResgridUnit-8.12-windows-portable.\${ext}",
+    },
+    "name": "resgrid-unit",
+    "output": "release/unit",
+    "productName": "Resgrid Unit",
+    "protocols": [
+      {
+        "name": "Resgrid Unit",
+        "schemes": [
+          "resgridunit",
+        ],
+      },
+    ],
+    "targets": {
+      "linux": [
+        "AppImage:x64",
+        "deb:x64",
+        "rpm:x64",
+      ],
+      "mac": [
+        "dmg:x64+arm64",
+        "zip:x64+arm64",
+      ],
+      "win": [
+        "nsis:x64",
+        "portable:x64",
+      ],
+    },
+    "variant": "unit",
+    "version": "8.12.0",
+  },
+  {
+    "appId": "com.resgrid.command",
+    "artifactNames": {
+      "dmg": "ResgridIC-2.12-macos-\${arch}.\${ext}",
+      "linux": "ResgridIC-2.12-linux.\${ext}",
+      "mac": "ResgridIC-2.12-macos-\${arch}.\${ext}",
+      "nsis": "ResgridIC-2.12-windows-setup.\${ext}",
+      "portable": "ResgridIC-2.12-windows-portable.\${ext}",
+    },
+    "name": "resgrid-ic",
+    "output": "release/ic",
+    "productName": "Resgrid IC",
+    "protocols": [
+      {
+        "name": "Resgrid IC",
+        "schemes": [
+          "resgridic",
+        ],
+      },
+    ],
+    "targets": {
+      "linux": [
+        "AppImage:x64",
+        "deb:x64",
+        "rpm:x64",
+      ],
+      "mac": [
+        "dmg:x64+arm64",
+        "zip:x64+arm64",
+      ],
+      "win": [
+        "nsis:x64",
+        "portable:x64",
+      ],
+    },
+    "variant": "ic",
+    "version": "2.12.0",
+  },
+  {
+    "appId": "com.resgrid.dispatch",
+    "artifactNames": {
+      "dmg": "ResgridDispatch-2.12-macos-\${arch}.\${ext}",
+      "linux": "ResgridDispatch-2.12-linux.\${ext}",
+      "mac": "ResgridDispatch-2.12-macos-\${arch}.\${ext}",
+      "nsis": "ResgridDispatch-2.12-windows-setup.\${ext}",
+      "portable": "ResgridDispatch-2.12-windows-portable.\${ext}",
+    },
+    "name": "resgrid-dispatch",
+    "output": "release/dispatch",
+    "productName": "Resgrid Dispatch",
+    "protocols": [
+      {
+        "name": "Resgrid Dispatch",
+        "schemes": [
+          "resgriddispatch",
+        ],
+      },
+    ],
+    "targets": {
+      "linux": [
+        "AppImage:x64",
+        "deb:x64",
+        "rpm:x64",
+      ],
+      "mac": [
+        "dmg:x64+arm64",
+        "zip:x64+arm64",
+      ],
+      "win": [
+        "nsis:x64",
+        "portable:x64",
+      ],
+    },
+    "variant": "dispatch",
+    "version": "2.12.0",
+  },
+  {
+    "appId": "com.resgrid.bigboard",
+    "artifactNames": {
+      "dmg": "ResgridBigBoard-4.12-macos-\${arch}.\${ext}",
+      "linux": "ResgridBigBoard-4.12-linux.\${ext}",
+      "mac": "ResgridBigBoard-4.12-macos-\${arch}.\${ext}",
+      "nsis": "ResgridBigBoard-4.12-windows-setup.\${ext}",
+      "portable": "ResgridBigBoard-4.12-windows-portable.\${ext}",
+    },
+    "name": "resgrid-bigboard",
+    "output": "release/bigboard",
+    "productName": "BigBoard",
+    "protocols": [],
+    "targets": {
+      "linux": [
+        "AppImage:x64",
+        "deb:x64",
+        "rpm:x64",
+      ],
+      "mac": [
+        "dmg:x64+arm64",
+        "zip:x64+arm64",
+      ],
+      "win": [
+        "nsis:x64",
+        "portable:x64",
+      ],
+    },
+    "variant": "bigboard",
+    "version": "4.12.0",
+  },
+]
+`;

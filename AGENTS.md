@@ -16,7 +16,7 @@ Expo SDK 57 · React Native 0.86 (New Architecture, Hermes) · React 19.2 · Typ
 ## Layout (target — see plan §5.1)
 
 ```
-apps/omni/                 the one Expo project; variants/<v>/{variant.ts, app/, assets/, theme.css}
+apps/omni/                 the one Expo project; variants/<v>/{variant.json, variant.ts, app/, assets/, theme.css}
 apps/desktop/              Electron shell (packages each variant's web export)
 packages/<name>/           @resgrid/{config,core,models,api,offline,auth,data,realtime,notifications,
                            location,voice,maps,navigation,i18n,ui,app-shell,features,config-plugins}
@@ -28,7 +28,7 @@ docs/                      architecture/, build/, subsystems/
 
 ## How the five apps differ
 
-Never fork code per app. In order of preference: **capability** (`useCapability()` from the variant manifest) → **form factor** (`useFormFactor()`) → **platform file at a leaf** (`.web.tsx` only for renderers/platform APIs) → **variant-only screen** (only each app's home and signature modules). Per-app facts live only in `apps/omni/variants/<v>/variant.ts`. Use the `omni-variants` skill for any change that applies to some apps but not others.
+Never fork code per app. In order of preference: **capability** (`useCapability()` from the variant manifest) → **form factor** (`useFormFactor()`) → **platform file at a leaf** (`.web.tsx` only for renderers/platform APIs) → **variant-only screen** (only each app's home and signature modules). Per-app facts live only in `apps/omni/variants/<v>/variant.json` (read at build time by `@resgrid/config-plugins` and at runtime through `variant.ts`, validated by the zod schema in `@resgrid/config`). Use the `omni-variants` skill for any change that applies to some apps but not others.
 
 **Never change without a migration and an upgrade test:** bundle ids/packages (Responder's `wtdt.resgrid.andriod` typo is permanent), EAS project ids, URL and SSO schemes, associated domains, App Group, **MMKV ids/keys and persisted store names**, Electron appIds/protocols, Docker image names, legacy runtime env names, Novu subscriber formats, push `Source`, client ids.
 

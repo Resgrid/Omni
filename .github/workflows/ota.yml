@@ -1,0 +1,146 @@
+# JavaScript-only update for chosen variants and channel (omni-plan §6.6.3, D18). Refuses — before publishing anything
+# for that variant — when the current fingerprint differs from the runtime of the binaries installed on the channel
+# (fingerprints.json on that variant's newest release for the channel). Use release.yml when native code changed.
+name: OTA update
+
+on:
+  workflow_dispatch:
+    inputs:
+      variants:
+        description: 'Variants: all, or comma-separated (responder,unit,ic,dispatch,bigboard)'
+        type: string
+        default: all
+      channel:
+        description: 'Update channel'
+        type: choice
+        options: [internal, staging, production]
+        default: internal
+      platforms:
+        description: 'Platforms'
+        type: choice
+        options: [all, android, ios]
+        default: all
+      message:
+        description: 'Update message (shown in EAS)'
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  EXPO_NO_TELEMETRY: '1'
+  EXPO_NO_DOTENV: '1'
+  EAS_CLI_VERSION: '24.14.0'
+
+jobs:
+  plan:
+    name: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      variants: ${{ steps.select.outputs.variants }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-workspace
+        with:
+          install: none
+      - name: Select variants
+        id: select
+        env:
+          VARIANTS: ${{ inputs.variants }}
+        run: node scripts/ci/variants-matrix.mjs --variants "$VARIANTS"
+
+  update:
+    name: ota (${{ matrix.variant }})
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: ${{ matrix.variant }}
+    # Shared with release.yml's ota job: updates for one variant and channel never interleave.
+    concurrency:
+      group: ota-${{ matrix.variant }}-${{ inputs.channel }}
+      cancel-in-progress: false
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: ${{ fromJSON(needs.plan.outputs.variants) }}
+    # Same build environment as the release jobs — part of the fingerprint.
+    env:
+      BASE_API_URL: ${{ secrets.BASE_API_URL }}
+      LOGGING_KEY: ${{ secrets.LOGGING_KEY }}
+      APP_KEY: ${{ secrets.APP_KEY }}
+      SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+      COUNTLY_APP_KEY: ${{ secrets.COUNTLY_APP_KEY }}
+      COUNTLY_SERVER_URL: ${{ secrets.COUNTLY_SERVER_URL }}
+      IOS_APPLE_TEAM_ID: ${{ secrets.IOS_APPLE_TEAM_ID }}
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      CHANNEL: ${{ inputs.channel }}
+      PLATFORM: ${{ inputs.platforms }}
+      MESSAGE: ${{ inputs.message }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-workspace
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: ${{ env.EAS_CLI_VERSION }}
+          token: ${{ secrets.EXPO_TOKEN }}
+          packager: npm
+      - uses: ./.github/actions/prepare-variant
+        with:
+          variant: ${{ matrix.variant }}
+          channel: ${{ inputs.channel }}
+          google-services-json-base64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+          google-service-info-plist-base64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_BASE64 }}
+          mmkv-key: ${{ secrets.MMKV_KEY }}
+
+      # Resolves the fingerprint with the run number of the release whose binaries are installed, so the update
+      # also reports that version; exits 1 on any mismatch.
+      - name: Guard — runtime matches the installed binaries
+        id: guard
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          platforms="$PLATFORM"; if [ "$PLATFORM" = all ]; then platforms=android,ios; fi
+          node scripts/ci/fingerprint.mjs check --variant "$APP_VARIANT" --channel "$CHANNEL" --platforms "$platforms"
+
+      - name: Publish update (eas update)
+        working-directory: apps/omni
+        env:
+          RELEASE_RUN_NUMBER: ${{ steps.guard.outputs.run_number }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$GITHUB_WORKSPACE/ota"
+          export OTA_OUT="$GITHUB_WORKSPACE/ota/ota-${APP_VARIANT}.json"
+          bash ../../scripts/ci/retry.sh 3 30 bash -c 'eas update --channel "$CHANNEL" --platform "$PLATFORM" --message "$MESSAGE" --non-interactive --json > "$OTA_OUT"'
+          {
+            echo "### ${APP_VARIANT} — OTA on \`${CHANNEL}\`"
+            echo
+            jq -r '.[] | "- \(.platform): group `\(.group)`, runtime `\(.runtimeVersion)`"' "$OTA_OUT"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Sentry source maps
+        if: env.SENTRY_AUTH_TOKEN != ''
+        continue-on-error: true
+        working-directory: apps/omni
+        env:
+          SENTRY_URL: https://sentry.resgrid.net/
+          SENTRY_ORG: sentry
+        run: |
+          export SENTRY_PROJECT="$(node -p "require('./variants/${APP_VARIANT}/variant.json').identity.sentryProject")"
+          npx sentry-expo-upload-sourcemaps dist
+
+      - name: Remove Firebase config
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/firebase"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ota-${{ matrix.variant }}
+          path: ota/
+          retention-days: 30

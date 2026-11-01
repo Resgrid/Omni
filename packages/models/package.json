@@ -2,6 +2,11 @@
   "name": "@resgrid/models",
   "version": "0.0.0",
   "private": true,
+  "description": "Resgrid Core v4 request/response models, PascalCase fields mirroring Core (layer L0, pure TypeScript)",
   "main": "src/index.ts",
-  "types": "src/index.ts"
+  "types": "src/index.ts",
+  "sideEffects": false,
+  "devDependencies": {
+    "@types/geojson": "catalog:"
+  }
 }

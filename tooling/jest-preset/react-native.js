@@ -8,7 +8,7 @@ module.exports = {
   setupFilesAfterEnv: [path.join(__dirname, 'setup-react-native.js')],
   testMatch: ['**/__tests__/**/*.test.[jt]s?(x)', '**/*.test.[jt]s?(x)'],
   transformIgnorePatterns: [
-    'node_modules/(?!((jest-)?react-native|@react-native(-community)?|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/react-native|native-base|react-native-svg|@gluestack-ui|nativewind|react-native-css|lucide-react-native|@shopify/flash-list|@livekit|livekit-client|@notifee|@novu|zustand))',
+    'node_modules/(?!((jest-)?react-native|@react-native(-community)?|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/react-native|native-base|react-native-svg|@gluestack-ui|nativewind|react-native-css|lucide-react-native|@shopify/flash-list|@livekit|livekit-client|@notifee|@novu|@legendapp|zustand))',
   ],
   clearMocks: true,
 };

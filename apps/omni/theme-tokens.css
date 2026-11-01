@@ -704,3 +704,17 @@
     opacity: 0.75;
   }
 }
+
+/* Auto-scrolling dispatch ticker (BigBoard/Dispatch). react-native-web has no native animated module,
+   so every RN `Animated` value is driven from JS at 60fps; long-running loops are handed to CSS so they
+   run on the compositor. The marquee track holds two identical halves, so translating it by -50% of its
+   own width advances exactly one half and lands back on a pixel-identical frame — seamless without
+   measuring anything in JS. */
+@keyframes dispatch-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}

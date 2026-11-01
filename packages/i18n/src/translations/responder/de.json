@@ -1,0 +1,1262 @@
+{
+  "app": {
+    "open_menu": "Menü öffnen",
+    "realtime_offline_description": "Verbindung wird wiederhergestellt. Neue Einsätze und Nachrichten werden möglicherweise nicht angezeigt.",
+    "realtime_offline_title": "Live-Updates nicht verfügbar"
+  },
+  "audio_streams": {
+    "error_loading_stream": "Audiostream konnte nicht geladen werden"
+  },
+  "bluetooth": {
+    "audio_active": "Audio aktiv",
+    "button_control_available": "Tastensteuerung verfügbar",
+    "button_event": {
+      "double_press": "Doppelt {{button}}",
+      "long_press": "Lang {{button}}"
+    },
+    "button_event_applied": "Angewendet",
+    "buttons": {
+      "mute": "Stumm",
+      "ptt_start": "PTT Start",
+      "ptt_stop": "PTT Stopp",
+      "unknown": "Unbekannt",
+      "volume_down": "Lautstärke -",
+      "volume_up": "Lautstärke +"
+    },
+    "checking_status": "Bluetooth-Status wird geprüft...",
+    "connection_error": "Verbindungsfehler",
+    "livekit_active": "LiveKit aktiv",
+    "powered_off_message": "Bluetooth ist ausgeschaltet. Bitte aktivieren Sie Bluetooth, um Audiogeräte zu verbinden.",
+    "recent_button_events": "Letzte Tastenereignisse",
+    "rssi_dbm": "{{rssi}} dBm",
+    "rssi_value": "RSSI: {{rssi}}dBm",
+    "start_scanning": "Suche starten",
+    "stop_scan": "Suche stoppen",
+    "unauthorized_message": "Bluetooth-Berechtigung verweigert. Bitte erteilen Sie die Bluetooth-Berechtigung in den Einstellungen."
+  },
+  "calendar": {
+    "allDay": "Ganztägig",
+    "attendanceUpdated": {
+      "signedUp": "Sie haben sich erfolgreich für diese Veranstaltung angemeldet.",
+      "title": "Teilnahme aktualisiert",
+      "unsignedUp": "Sie wurden von dieser Veranstaltung abgemeldet."
+    },
+    "attendees": {
+      "title": "Teilnehmer"
+    },
+    "attendeesCount": "{{count}} Teilnehmer",
+    "attendeesCount_plural": "{{count}} Teilnehmer",
+    "confirmSignup": "Bestätigen",
+    "confirmUnsignup": {
+      "message": "Sind Sie sicher, dass Sie Ihre Teilnahme an dieser Veranstaltung absagen möchten?",
+      "title": "Absage bestätigen"
+    },
+    "createdBy": "Erstellt von",
+    "daysOfWeek": {
+      "fri": "Fr",
+      "mon": "Mo",
+      "sat": "Sa",
+      "sun": "So",
+      "thu": "Do",
+      "tue": "Di",
+      "wed": "Mi"
+    },
+    "description": "Beschreibung",
+    "error": {
+      "attendanceUpdate": "Teilnahme konnte nicht aktualisiert werden. Bitte versuchen Sie es erneut.",
+      "title": "Fehler"
+    },
+    "eventsCount": "{{count}} Ereignis",
+    "eventsCount_plural": "{{count}} Ereignisse",
+    "loading": {
+      "date": "Ereignisse für das ausgewählte Datum werden geladen...",
+      "today": "Heutige Ereignisse werden geladen...",
+      "upcoming": "Kommende Ereignisse werden geladen..."
+    },
+    "noEvents": "Keine geplanten Ereignisse",
+    "optional": "Optional",
+    "required": "Erforderlich",
+    "selectDate": "Wählen Sie ein Datum, um Ereignisse anzuzeigen",
+    "selectedDate": {
+      "empty": "Keine Ereignisse für dieses Datum geplant.",
+      "title": "Ereignisse für {{date}}"
+    },
+    "signedUp": "Angemeldet",
+    "signup": {
+      "button": "Anmelden",
+      "notePlaceholder": "Geben Sie hier Ihre Notiz ein...",
+      "notePrompt": "Notiz hinzufügen (optional):",
+      "title": "Veranstaltungsanmeldung"
+    },
+    "signupAvailable": "Anmeldung verfügbar",
+    "tabs": {
+      "calendar": "Kalender",
+      "today": "Heute",
+      "upcoming": "Bevorstehend"
+    },
+    "tapToSignUp": "Tippen zum Anmelden",
+    "title": "Kalender",
+    "today": {
+      "empty": {
+        "description": "Sie haben heute keine geplanten Ereignisse.",
+        "title": "Keine heutigen Ereignisse"
+      }
+    },
+    "todayButton": "Heute",
+    "unsignup": "Teilnahme absagen",
+    "upcoming": {
+      "empty": {
+        "description": "Sie haben in den nächsten 7 Tagen keine geplanten Ereignisse.",
+        "title": "Keine bevorstehenden Ereignisse"
+      }
+    }
+  },
+  "callImages": {
+    "capture_error": "Fehler beim Aufnehmen des Fotos. Bitte versuchen Sie es erneut.",
+    "permission_denied_settings": "Zugriff verweigert. Bitte aktivieren Sie den Zugriff in den Geräteeinstellungen.",
+    "select_error": "Fehler beim Auswählen des Bildes. Bitte versuchen Sie es erneut.",
+    "upload_success": "Bild erfolgreich hochgeladen",
+    "url_label": "URL: {{url}}"
+  },
+  "callNotes": {
+    "addNoteError": "Notiz konnte nicht hinzugefügt werden. Bitte versuchen Sie es erneut."
+  },
+  "call_detail": {
+    "route_to_destination": "Route zum Ziel",
+    "tabs": {
+      "command": "Führung"
+    }
+  },
+  "calls": {
+    "assigned_to_me": "Mir zugewiesen",
+    "destination_load_error": "Ziel-POIs konnten nicht geladen werden",
+    "destination_placeholder": "Ziel auswählen",
+    "external_id": "Externe ID",
+    "only_calls_im_on": "Nur Einsätze, auf denen ich bin",
+    "personnel": "Personal",
+    "protocols": "Protokolle",
+    "reference_id": "Referenz-ID",
+    "required_fields_missing": "Ihre Abteilung benötigt diese Felder, bevor ein Einsatz gespeichert werden kann: {{fields}}",
+    "search_address": "Adresse suchen",
+    "search_coordinates": "Koordinaten suchen",
+    "search_plus_code": "Plus Code suchen",
+    "search_what3words": "what3words-Adresse suchen"
+  },
+  "certifications": {
+    "add": "Hinzufügen",
+    "addHours": "Stunden hinzufügen",
+    "addHoursWithPhoto": "Stunden mit Foto hinzufügen",
+    "areaIs": "Bereich: {{area}}",
+    "back": "Zurück",
+    "cancel": "Abbrechen",
+    "category": "Kategorie (Lehrgang, Übung, Tagung)",
+    "certificateAttached": "Zertifikat angehängt",
+    "creditAdded": "Stunden hinzugefügt.",
+    "creditDate": "Datum (standardmäßig heute)",
+    "creditNote": "Was es war",
+    "credits": "{{hours}} von {{required}} Fortbildungsstunden",
+    "creditsTitle": "{{hours}} Fortbildungsstunden",
+    "dateInvalid": "Geben Sie Daten als jjjj-mm-tt ein.",
+    "edit": "Bearbeiten",
+    "errors": {
+      "certifications_file_invalid": "Das Foto konnte nicht gelesen werden.",
+      "certifications_file_too_large": "Das Foto ist zu groß.",
+      "denied": "Sie haben keinen Zugriff auf diese Qualifikation.",
+      "locked": "Entsperren Sie geschützte Daten, um fortzufahren.",
+      "retry": "Server nicht erreichbar. Versuchen Sie es erneut.",
+      "validation": "Der Server hat die Änderung abgelehnt."
+    },
+    "expired": "Abgelaufen {{date}}",
+    "expires": "Läuft ab {{date}} ({{days}} Tage)",
+    "form": {
+      "area": "Bereich oder Stufe",
+      "choosePhoto": "Foto auswählen",
+      "expiresOn": "Läuft ab",
+      "issuedBy": "Ausgestellt von",
+      "name": "Name",
+      "number": "Nummer",
+      "otherType": "Andere (Namen eingeben)",
+      "photoAttached": "Foto angehängt.",
+      "receivedOn": "Erworben",
+      "save": "Speichern",
+      "takePhoto": "Foto des Ausweises",
+      "type": "Qualifikation"
+    },
+    "hasFile": "Ausweis oder Zertifikat ist hinterlegt",
+    "hours": "Stunden",
+    "hoursInvalid": "Geben Sie mehr als 0 Stunden ein.",
+    "issuedByIs": "Ausgestellt von {{name}}",
+    "nameRequired": "Wählen Sie einen Typ oder geben Sie einen Namen ein.",
+    "newExpiry": "Neues Ablaufdatum",
+    "newNumber": "Neue Nummer (optional)",
+    "noExpiry": "Läuft nicht ab",
+    "none": "Sie haben noch keine Qualifikationen hinzugefügt.",
+    "notVerified": "Noch nicht von der Organisation geprüft",
+    "numberIs": "Nummer {{number}}",
+    "photoDenied": "Erlauben Sie den Zugriff auf Kamera oder Fotos, um ein Foto anzuhängen.",
+    "receivedOn": "Erworben {{date}}",
+    "remove": "Entfernen",
+    "removeBody": "Sie wird aus Ihrem Nachweis entfernt. Ihre Organisation sieht den Verlauf weiterhin.",
+    "removeTitle": "Qualifikation entfernen?",
+    "renew": "Verlängern",
+    "renewSave": "Verlängerung speichern",
+    "renewed": "Verlängerung gespeichert.",
+    "status": {
+      "0": "Gültig",
+      "1": "Abgelaufen",
+      "2": "Ausgesetzt",
+      "3": "Widerrufen",
+      "4": "Wartet auf Prüfung",
+      "5": "In Ausbildung"
+    },
+    "title": "Meine Qualifikationen",
+    "untitled": "Qualifikation",
+    "verifiedOn": "Geprüft {{date}}"
+  },
+  "chat": {
+    "attach": "Anhängen",
+    "back_to_chats": "Zurück zu den Chats",
+    "new_conversation": "Neue Unterhaltung"
+  },
+  "check_in": {
+    "add_note": "Notiz hinzufügen (Optional)",
+    "confirm_check_in": "Check-In bestätigen",
+    "duration": "Dauer",
+    "gps_coordinates": "GPS: {{latitude}}, {{longitude}}",
+    "history": "Check-In Verlauf",
+    "minutes_ago": "vor {{count}} Min",
+    "no_timers": "Keine Check-In Timer konfiguriert",
+    "offline_queued": "Check-In in Warteschlange für Online-Verbindung",
+    "progress": "{{elapsed}} / {{total}} Min",
+    "timer_interval": "Alle {{minutes}} Min",
+    "type_hazmat": "Gefahrstoff-Exposition",
+    "type_ic": "Einsatzleiter",
+    "unknown_unit": "Unbekannte Einheit"
+  },
+  "checklists": {
+    "labels": {
+      "AssignmentAutomatic": "Automatische Zuordnung"
+    }
+  },
+  "common": {
+    "active": "Aktiv",
+    "all": "Alle",
+    "deleting": "Wird gelöscht...",
+    "discard": "Verwerfen",
+    "navigation": "Navigation",
+    "noActiveUnit": "Keine aktive Einheit",
+    "noActiveUnitDescription": "Bitte wählen Sie eine aktive Einheit aus, um verfügbare Status anzuzeigen",
+    "no_data_available": "Keine Daten verfügbar",
+    "success": "Erfolgreich",
+    "system": "System"
+  },
+  "contacts": {
+    "descriptionLabel": "Beschreibung",
+    "errorTitle": "Fehler",
+    "openAppError": "{{action}}-App konnte nicht geöffnet werden",
+    "openLinkFailed": "{{action}}-Link konnte nicht geöffnet werden:"
+  },
+  "home": {
+    "active_call": {
+      "clear_active": "Aktiven Einsatz löschen",
+      "no_active_call": "Kein aktiver Einsatz ausgewählt",
+      "select_call": "Einsatz zum Verfolgen auswählen",
+      "set_active": "Als aktiven Einsatz setzen",
+      "title": "Aktiver Einsatz",
+      "view_details": "Einsatzdetails anzeigen"
+    },
+    "error": {
+      "no_user_id": "Benutzer-ID nicht verfügbar"
+    },
+    "sidebar": {
+      "audio": "Audio",
+      "ptt": "PTT"
+    },
+    "staffing": {
+      "add_note": "Notiz hinzufügen",
+      "add_note_action": "Notiz hinzufügen",
+      "confirm_staffing": "Besetzung bestätigen: {{staffing}}",
+      "missing_required_info": "Erforderliche Informationen fehlen",
+      "no_options_available": "Keine Besetzungsoptionen verfügbar",
+      "no_staffing_options": "Keine Besetzungsoptionen verfügbar",
+      "note": "Notiz",
+      "note_placeholder": "Notiz eingeben (optional)...",
+      "note_required_hint": "Öffnet ein Formular für die erforderliche Notiz",
+      "quick_set_hint": "Setzt Ihre Besetzung sofort. Lange drücken, um eine Notiz hinzuzufügen.",
+      "review_and_confirm": "Überprüfen und bestätigen",
+      "select_staffing_level": "Besetzungsstufe auswählen",
+      "select_staffing_level_description": "Aktuellen Besetzungsstatus auswählen",
+      "selected_staffing": "Ausgewählte Besetzung",
+      "set_staffing": "Personalbesetzung festlegen",
+      "staffing_level": "Besetzungsstufe",
+      "update_failed": "Besetzung konnte nicht aktualisiert werden",
+      "updated_successfully": "Besetzung erfolgreich aktualisiert"
+    },
+    "stats": {
+      "open_calls": "Offene Einsätze",
+      "personnel_in_service": "Personal im Dienst",
+      "units_in_service": "Einheiten im Dienst"
+    },
+    "status": {
+      "no_options_available": "Keine Statusoptionen verfügbar",
+      "update_failed": "Status konnte nicht aktualisiert werden",
+      "updated_successfully": "Status erfolgreich aktualisiert"
+    },
+    "summary": {
+      "active_calls": "Aktive Einsätze",
+      "active_severe_weather_alerts": "Aktive Unwetter-/Notfallwarnungen",
+      "calls_im_on": "Einsätze, auf denen ich bin",
+      "pending_missed_checkins": "Ausstehende/verpasste Check-ins"
+    },
+    "tabs": {
+      "call": "Einsatz",
+      "dashboard": "Dashboard",
+      "map": "Karte",
+      "staffing": "Besetzung",
+      "status": "Status"
+    },
+    "user": {
+      "my_staffing": "Meine Besetzung",
+      "my_status": "Mein Status",
+      "staffing_unknown": "Unbekannte Besetzung",
+      "status_unknown": "Unbekannter Status",
+      "updated": "Aktualisiert"
+    }
+  },
+  "incident_command": {
+    "assigned_since": "Zugewiesen seit",
+    "empty_state": "Für diesen Einsatz ist keine Einsatzleitung aktiv",
+    "error_loading": "Einsatzleitungsinformationen konnten nicht geladen werden",
+    "my_assignment": "Meine Zuweisung",
+    "need_category_equipment": "Ausrüstung",
+    "need_category_logistics": "Logistik",
+    "need_category_medical": "Medizinisch",
+    "need_category_other": "Sonstiges",
+    "need_category_resource": "Ressource",
+    "need_category_staffing": "Personal",
+    "need_status_cancelled": "Abgebrochen",
+    "need_status_met": "Erfüllt",
+    "need_status_open": "Offen",
+    "need_status_partially_met": "Teilweise erfüllt",
+    "objective_status_complete": "Abgeschlossen",
+    "objective_status_in_progress": "In Bearbeitung",
+    "objective_status_pending": "Ausstehend",
+    "objective_type_benchmark": "Zwischenziel",
+    "objective_type_general": "Allgemein",
+    "objective_type_safety": "Sicherheit",
+    "percent_complete": "{{percent}}%",
+    "quantity": "{{fulfilled}}/{{requested}}"
+  },
+  "livekit": {
+    "connection_failed": "Sprachkanal konnte nicht betreten werden",
+    "double_click_action": "Doppelklick-Aktion",
+    "headset_button_ptt": "Headset-Taste PTT",
+    "headset_monitoring_active": "Headset-Überwachung aktiv",
+    "headset_monitoring_inactive": "Headset-Überwachung inaktiv",
+    "headset_ptt_description": "AirPods- oder Bluetooth-Ohrhörer-Taste zum Stummschalten/Aufheben verwenden",
+    "headset_ptt_disabled": "Headset PTT deaktiviert",
+    "headset_ptt_enabled": "Headset PTT aktiviert",
+    "long_press_action": "Langdruck-Aktion",
+    "no_action": "Keine Aktion",
+    "play_pause_action": "Wiedergabe/Pause-Taste-Aktion",
+    "ptt_mode": "PTT-Modus",
+    "ptt_mode_disabled": "Deaktiviert",
+    "ptt_mode_push": "Push-to-Talk (gedrückt halten zum Sprechen)",
+    "ptt_mode_toggle": "Umschalten (tippen zum Wechseln der Stummschaltung)",
+    "sound_feedback": "Tonfeedback",
+    "tap_to_toggle_mute": "Headset-Taste tippen zum Umschalten der Stummschaltung",
+    "toggle_mute": "Stummschaltung umschalten"
+  },
+  "location": {
+    "tracking_notification_body": "Ihr Standort wird mit Ihrer Abteilung geteilt."
+  },
+  "login": {
+    "change_server_url": "Server-URL ändern",
+    "select_language": "Sprache wählen",
+    "sso": {
+      "back": "Zurück",
+      "change_department": "Benutzernamen ändern",
+      "continue_button": "Weiter",
+      "department_code_label": "Abteilungscode",
+      "department_code_placeholder": "Abteilungscode eingeben",
+      "department_code_required": "Abteilungscode ist erforderlich",
+      "department_description": "Geben Sie Ihren Abteilungscode ein, um sich anzumelden",
+      "department_id_invalid": "Abteilungs-ID muss eine Zahl sein",
+      "department_id_label": "Abteilungs-ID (optional)",
+      "department_id_placeholder": "Abteilungs-ID eingeben, falls bekannt",
+      "department_not_found": "Abteilung nicht gefunden. Bitte überprüfen Sie den Code und versuchen Sie es erneut.",
+      "login_with_sso_button": "Mit SSO anmelden",
+      "looking_up": "Konto wird gesucht...",
+      "lookup_network_error": "Server konnte nicht erreicht werden. Bitte überprüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+      "or_sign_in_with_password": "— oder mit Passwort anmelden —",
+      "page_title": "Mit SSO anmelden",
+      "sign_in_with_sso": "Mit SSO anmelden",
+      "sso_not_enabled": "SSO ist für dieses Konto nicht aktiviert. Bitte verwenden Sie Ihren Benutzernamen und Ihr Passwort.",
+      "user_description": "Geben Sie Ihren Resgrid-Benutzernamen oder Ihre E-Mail-Adresse ein, um sich mit SSO anzumelden",
+      "user_not_found": "Konto nicht gefunden. Bitte überprüfen Sie Ihren Benutzernamen und versuchen Sie es erneut.",
+      "username_label": "Benutzername oder E-Mail",
+      "username_placeholder": "Benutzernamen oder E-Mail eingeben",
+      "username_required": "Benutzername ist erforderlich"
+    }
+  },
+  "map": {
+    "loading_markers": "Lade Kartenmarkierungen...",
+    "openSideMenu": "Seitenmenü öffnen",
+    "tabs": {
+      "map": "Karte",
+      "pois": "POIs"
+    }
+  },
+  "maps": {
+    "contact_administrator": "Bitte kontaktieren Sie Ihren Administrator, um Kartendienste zu konfigurieren.",
+    "failed_to_load": "Karte konnte nicht geladen werden. Bitte überprüfen Sie Ihre Internetverbindung.",
+    "legend": {
+      "error": "Die Kartenlegende konnte nicht geladen werden.",
+      "loading": "Kartenlegende wird geladen...",
+      "no_meaning": "Keine Bedeutung",
+      "open": "Kartenlegende öffnen",
+      "other": "Sonstiges",
+      "statuses": "Status",
+      "style": {
+        "unknown": "Keine Bedeutung oder kein Status"
+      }
+    },
+    "mapbox_not_configured": "Mapbox ist nicht konfiguriert. Bitte kontaktieren Sie Ihren Administrator."
+  },
+  "messages": {
+    "all_messages": "Alle Nachrichten",
+    "attending": "Ich nehme teil",
+    "calendar_rsvp": "Kalender-RSVP",
+    "compose": "Verfassen",
+    "compose_new_message": "Neue Nachricht",
+    "date_unknown": "Datum unbekannt",
+    "delete_confirmation_message": "Sind Sie sicher, dass Sie {{count}} Nachricht(en) löschen möchten?",
+    "delete_confirmation_title": "Nachrichten löschen",
+    "delete_single_confirmation_message": "Sind Sie sicher, dass Sie diese Nachricht löschen möchten?",
+    "enter_expiration_date": "Ablaufdatum eingeben",
+    "enter_message_body": "Nachricht eingeben",
+    "enter_note": "Optionale Notiz eingeben",
+    "enter_response": "Antwort eingeben",
+    "enter_subject": "Betreff eingeben",
+    "error": "Fehler",
+    "expiration_date_format": "Format: JJJJ-MM-TT SS:MM",
+    "expiration_date_optional": "Ablaufdatum (optional)",
+    "expired": "Abgelaufen",
+    "expires_on": "Läuft ab am",
+    "from": "Von",
+    "inbox": "Posteingang",
+    "message_body": "Nachrichtentext",
+    "message_content": "Nachrichteninhalt",
+    "message_type": "Nachrichtentyp",
+    "no_content": "Kein Inhalt",
+    "no_messages": "Keine Nachrichten gefunden",
+    "no_messages_description": "Senden Sie Ihre erste Nachricht, um zu beginnen",
+    "no_subject": "Kein Betreff",
+    "not_attending": "Ich nehme nicht teil",
+    "note_optional": "Notiz (optional)",
+    "people": "Personen",
+    "recipients": "Empfänger",
+    "recipients_count": "{{count}} Empfänger",
+    "recipients_selected": "{{count}} Empfänger ausgewählt",
+    "respond_failed": "Auf Nachricht konnte nicht geantwortet werden",
+    "respond_to_message": "Auf Nachricht antworten",
+    "responded": "Beantwortet",
+    "responded_on": "Beantwortet am",
+    "responding": "Wird geantwortet...",
+    "response": "Antwort",
+    "response_required": "Antwort ist erforderlich",
+    "search_placeholder": "Nachrichten suchen...",
+    "select_all": "Alle auswählen",
+    "select_message": "Nachricht auswählen",
+    "select_message_type": "Nachrichtentyp auswählen",
+    "select_recipients": "Empfänger auswählen",
+    "selected_count": "{{count}} ausgewählt",
+    "send": "Senden",
+    "send_first_message": "Erste Nachricht senden",
+    "send_response": "Antwort senden",
+    "sending": "Wird gesendet...",
+    "sent": "Gesendet",
+    "showing_count": "{{count}} Nachrichten werden angezeigt",
+    "subject": "Betreff",
+    "title": "Nachrichten",
+    "types": {
+      "alert": "Benachrichtigung",
+      "calendar_rsvp": "Kalender-RSVP",
+      "message": "Nachricht",
+      "poll": "Umfrage"
+    },
+    "unsaved_changes": "Nicht gespeicherte Änderungen",
+    "unsaved_changes_message": "Sie haben nicht gespeicherte Änderungen. Sind Sie sicher, dass Sie diese verwerfen möchten?",
+    "validation": {
+      "body_required": "Nachrichtentext ist erforderlich",
+      "recipients_required": "Mindestens ein Empfänger ist erforderlich",
+      "subject_required": "Betreff ist erforderlich"
+    }
+  },
+  "mfa": {
+    "approve": {
+      "app": "App: {{app}}",
+      "approve": "Bestätigen",
+      "approved": "Bestätigt. Sie können zum anderen Bildschirm zurückkehren.",
+      "denied": "Abgelehnt. Es wurde nichts bestätigt.",
+      "deny": "Ablehnen",
+      "department": "Abteilung: {{department}}",
+      "done": "Fertig",
+      "expires": "Läuft ab um {{time}}",
+      "installation": "Gerät: {{label}}",
+      "none": "Nichts wartet auf Ihre Bestätigung.",
+      "not_me": "Das war ich nicht",
+      "number_body": "Geben Sie die Zahl vom anderen Bildschirm ein und bestätigen Sie mit Ihrem Passkey. Bestätigen Sie nur, wenn Sie dies selbst begonnen haben.",
+      "number_mismatch": "Das ist nicht die Zahl vom anderen Bildschirm. Verbleibende Versuche: {{count}}.",
+      "number_placeholder": "Zahl",
+      "origin": "In der Nähe von: {{origin}}",
+      "purpose": {
+        "adp": "Jemand möchte geschützte Informationen ansehen",
+        "department_entry": "Jemand wechselt als Sie in eine Abteilung",
+        "login": "Jemand meldet sich bei Ihrem Konto an",
+        "step_up": "Jemand bestätigt eine Aktion mit Ihrem Konto",
+        "unlock": "Jemand entsperrt ein gemeinsames Gerät als Sie"
+      },
+      "shared": "Auf einem gemeinsamen Gerät",
+      "title": "Anmeldung bestätigen?",
+      "unknown_app": "Eine andere Resgrid-App"
+    }
+  },
+  "not_found": {
+    "go_home": "Zur Startseite!",
+    "message": "Diese Seite existiert nicht.",
+    "title": "Hoppla!"
+  },
+  "notifications": {
+    "additionalInformation": "Zusätzliche Informationen",
+    "bulkDeleteError": "Benachrichtigungen konnten nicht entfernt werden",
+    "bulkDeleteSuccess": "{{count}} Benachrichtigung(en) entfernt",
+    "confirmDelete": {
+      "message": "Sind Sie sicher, dass Sie {{count}} Benachrichtigung(en) löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
+      "title": "Löschen bestätigen"
+    },
+    "deleteError": "Benachrichtigung konnte nicht entfernt werden",
+    "deleteSuccess": "Benachrichtigung entfernt",
+    "deselectAll": "Alle abwählen",
+    "loadError": "Benachrichtigungen konnten nicht geladen werden",
+    "notAvailable": "N/V",
+    "selectAll": "Alle auswählen",
+    "selectedCount": "{{count}} ausgewählt",
+    "viewCall": "Einsatz anzeigen",
+    "viewChat": "Chat anzeigen",
+    "viewMessage": "Nachricht anzeigen",
+    "viewReference": "{{referenceType}} anzeigen",
+    "viewWorkOrder": "Arbeitsauftrag anzeigen"
+  },
+  "onboarding": {
+    "get_started": "Los geht's",
+    "slides": {
+      "calls": {
+        "description": "Sieh Einsatzinformationen nahtlos ein und arbeite für eine effiziente Notfallreaktion mit deinem Team zusammen",
+        "title": "Mit Einsätzen interagieren"
+      },
+      "notifications": {
+        "description": "Erhalte sofortige Alarme bei Notfällen und wichtige Updates deiner Organisation",
+        "title": "Sofortige Benachrichtigungen"
+      },
+      "responder": {
+        "description": "Verwalte deinen Status und deine Besetzung und interagiere in Echtzeit mit deiner Organisation",
+        "title": "{{appName}}"
+      }
+    }
+  },
+  "operations": {
+    "time": {
+      "coveredBy": "Diese Zeit steht an diesem Tag bereits in Bericht #{{number}}.",
+      "crewReport": "Besatzungszeitbericht #{{number}} · {{name}}",
+      "individualReport": "Zeitbericht #{{number}} · {{name}}",
+      "report": "Bericht #{{number}}"
+    }
+  },
+  "personnel": {
+    "contactInformation": "Kontaktinformationen",
+    "currentStatus": "Aktueller Status",
+    "emptyDescription": "Kein Personal entspricht Ihren Suchkriterien oder es sind keine Personaldaten verfügbar.",
+    "filter": {
+      "description": "Wählen Sie Filter aus, um die Personalliste zu verfeinern. Änderungen werden automatisch übernommen.",
+      "empty": "Keine Filteroptionen verfügbar",
+      "emptyDescription": "Filteroptionen werden hier angezeigt, wenn sie verfügbar sind.",
+      "title": "Personal filtern"
+    },
+    "id": "ID",
+    "status": {
+      "add_note": "Notiz hinzufügen",
+      "calls_tab": "Einsätze",
+      "current": "Aktuell",
+      "current_status": "Aktueller Status",
+      "destination_required": "Für diesen Status ist ein Ziel erforderlich",
+      "general_status": "Allgemeine Statusaktualisierung",
+      "gps_required": "Für diesen Status ist ein GPS-Standort erforderlich",
+      "hold_to_set_hint": "Zwei Sekunden gedrückt halten, um den Status zu setzen",
+      "hold_to_set_instructions": "Einen Status zwei Sekunden gedrückt halten, um ihn zu setzen",
+      "hold_to_submit": "Zum Senden gedrückt halten",
+      "loading_pois": "Lade POIs...",
+      "loading_stations": "Stationen werden geladen...",
+      "missing_required_info": "Erforderliche Informationen fehlen",
+      "no_destination": "Kein Ziel",
+      "no_stations_available": "Keine Stationen verfügbar",
+      "note": "Notiz",
+      "note_placeholder": "Notiz eingeben (optional)...",
+      "note_required": "Für diesen Status ist eine Notiz erforderlich",
+      "pois_tab": "POIs",
+      "responding_to_placeholder": "Eingeben, worauf Sie reagieren...",
+      "saved_offline": "Status wurde offline gespeichert und wird nach Wiederherstellung der Verbindung gesendet",
+      "select_call_to_respond_to": "Einsatz zum Reagieren auswählen",
+      "select_destination": "Ziel auswählen",
+      "select_responding_to": "Status festlegen: {{status}}",
+      "selected_call": "Ausgewählter Einsatz",
+      "set_status": "Personalstatus festlegen",
+      "show_all_statuses": "Alle Status anzeigen ({{count}} weitere)",
+      "show_next_statuses": "Nur nächste Status anzeigen",
+      "stations_tab": "Stationen",
+      "status": "Status"
+    }
+  },
+  "pois": {
+    "address_label": "Adresse",
+    "coordinates_label": "Koordinaten",
+    "destination_enabled": "Als Ziel verfügbar",
+    "empty_description": "Keine POIs entsprechen dem aktuellen Filter.",
+    "empty_title": "Keine POIs gefunden",
+    "filter_all_types": "Alle Typen",
+    "filter_label": "Filter",
+    "filter_sort_title": "Filter & Sortierung",
+    "invalid_description": "Zum Anzeigen der POI-Details ist eine POI-ID erforderlich.",
+    "invalid_title": "Ungültiger POI",
+    "list_description": "Durchsuchen Sie die Abteilungs-POIs, filtern Sie nach Typ und kehren Sie zur Karte zurück.",
+    "load_error_title": "POI konnte nicht geladen werden",
+    "not_found": "POI nicht gefunden",
+    "note_label": "Hinweis",
+    "reset_filters": "Zurücksetzen",
+    "results_count": "{{count}} POI",
+    "results_count_plural": "{{count}} POIs",
+    "search_placeholder": "POIs durchsuchen...",
+    "set_status_destination": "Als Statusziel verwenden",
+    "sort_label": "Sortieren",
+    "sort_name": "Name",
+    "sort_type": "Typ",
+    "title": "POI",
+    "type_label": "Typ",
+    "view_details": "Details anzeigen",
+    "view_on_map": "Auf Karte anzeigen",
+    "view_on_map_hint": "Lassen Sie die Karte geöffnet, um Ihren Standort und den ausgewählten POI zusammen zu sehen."
+  },
+  "push_notifications": {
+    "communication_test_confirmed": "Empfang bestätigt. Vielen Dank.",
+    "communication_test_failed": "Empfang konnte nicht bestätigt werden. Bitte erneut versuchen.",
+    "communication_test_prompt": "Dies ist nur ein Test. Bestätigen Sie den Empfang, damit Ihre Abteilung weiß, dass sie Sie erreichen kann.",
+    "confirm_receipt": "Empfang bestätigen",
+    "confirming_receipt": "Wird bestätigt...",
+    "types": {
+      "communication_test": "Kommunikationstest",
+      "weather": "Wetterwarnung",
+      "work_order": "Arbeitsauftrag"
+    },
+    "view_alert": "Warnung anzeigen",
+    "view_chat": "Chat anzeigen",
+    "view_work_order": "Arbeitsauftrag anzeigen"
+  },
+  "settings": {
+    "logout_confirm_cancel": "Abbrechen",
+    "logout_confirm_yes": "Ja, abmelden",
+    "notifications_badge_overflow": "99+",
+    "notifications_button": "Benachrichtigungen"
+  },
+  "shifts": {
+    "actions": {
+      "accept": "Annehmen",
+      "add_person": "Person hinzufügen",
+      "apply": "Zur Übernahme bewerben",
+      "approve": "Genehmigen",
+      "cancel_request_admin": "Anfrage abbrechen",
+      "cancel_trade": "Tauschanfrage zurückziehen",
+      "confirm": "Bestätigen",
+      "confirm_signup": "Anmeldung bestätigen",
+      "decline": "Ablehnen",
+      "deny": "Verweigern",
+      "remove": "Entfernen",
+      "request_trade": "Tausch anfragen",
+      "send_request": "Anfrage senden",
+      "withdraw_application": "Bewerbung zurückziehen"
+    },
+    "add_panel": {
+      "group": "Gruppe",
+      "no_options": "Niemand sonst kann hinzugefügt werden.",
+      "person": "Person",
+      "search_placeholder": "Personal suchen",
+      "submit": "Zur Schicht hinzufügen",
+      "title": "Person für diesen Tag hinzufügen"
+    },
+    "all_shifts": "Alle Schichten",
+    "already_signed_up": "Bereits angemeldet",
+    "approval_required": "Genehmigung erforderlich",
+    "approvals": {
+      "signups": "Anmeldungen",
+      "trades": "Schichttausche"
+    },
+    "assigned": "Zugewiesen",
+    "assignment_type": {
+      "assigned": "Zugewiesen",
+      "signup": "Anmeldung",
+      "workshift": "Dienstschicht"
+    },
+    "automatic": "Automatisch",
+    "available": "Verfügbar",
+    "calendar": "Kalender",
+    "calendar_export": {
+      "add_all": "Meine Schichten zum Kalender hinzufügen ({{count}})",
+      "add_all_hint": "Fügt alle Schichten, in denen Sie in den nächsten 30 Tagen Dienst haben, Ihrem Gerätekalender hinzu",
+      "add_hint": "Fügt diese Schicht Ihrem Gerätekalender hinzu oder aktualisiert sie, falls sie bereits vorhanden ist",
+      "add_one": "Zum Kalender hinzufügen",
+      "added_many": "Schichten in Ihrem Kalender: {{count}}",
+      "added_one": "Zu Ihrem Kalender hinzugefügt",
+      "event_footer": "Aus Resgrid hinzugefügt",
+      "event_place": "Mit: {{place}}",
+      "event_title": "Schicht {{name}}",
+      "failed": "Die Schicht konnte nicht zu Ihrem Kalender hinzugefügt werden.",
+      "nothing_to_add": "Nur Schichten, in denen Sie Dienst haben, können Ihrem Kalender hinzugefügt werden.",
+      "permission_denied": "Der Kalenderzugriff ist deaktiviert. Erlauben Sie ihn in den Einstellungen, um Schichten hinzuzufügen.",
+      "updated_one": "In Ihrem Kalender aktualisiert"
+    },
+    "calendar_view": {
+      "day_a11y": "{{date}}: Schichten {{count}}, offene Plätze {{open}}",
+      "filter_a11y": "Kalender nach Schicht filtern",
+      "legend_filled": "Voll besetzt",
+      "legend_mine": "Meine Schichten",
+      "legend_open": "Offene Plätze",
+      "next_month": "Nächster Monat",
+      "previous_month": "Vorheriger Monat",
+      "select_day": "Wählen Sie einen Tag, um seine Schichten zu sehen",
+      "shift_info": "Schichtdetails"
+    },
+    "card_a11y_hint": "Öffnet die Details dieses Schichttags",
+    "current_signups": "Aktuelle Anmeldungen",
+    "day": {
+      "covering_for": "Vertritt {{name}}",
+      "denied_note": "Ihre Anmeldung für diesen Tag wurde abgelehnt.",
+      "group_filled": "Besetzt",
+      "group_open": "Offen: {{count}}",
+      "no_group": "Keine Gruppe",
+      "no_role_requirements": "Keine Rollenanforderungen",
+      "open_needs": "Offener Bedarf",
+      "pending_note": "Ihre Anmeldung wartet auf die Genehmigung durch eine Aufsicht. Bis dahin sind Sie nicht im Dienst.",
+      "require_approval_note": "Anmeldungen und Tausche für diese Schicht müssen von einer Aufsicht genehmigt werden.",
+      "roster": "Dienstplan",
+      "roster_empty": "Für diesen Tag ist noch niemand eingetragen.",
+      "trade_pending_note": "Sie haben Kollegen gebeten, diese Schicht zu übernehmen."
+    },
+    "day_details": "Schicht-Tagesdetails",
+    "details": "Schichtdetails",
+    "empty": {
+      "approvals_description": "Anmeldungen und Tausche, die auf Ihre Genehmigung warten, erscheinen hier.",
+      "approvals_title": "Nichts zu genehmigen",
+      "calendar_day": "Keine Schichten an diesem Tag",
+      "mine_description": "Schichten, für die Sie in den nächsten 30 Tagen eingeteilt oder angemeldet sind, erscheinen hier.",
+      "mine_title": "Keine anstehenden Schichten",
+      "on_duty_description": "Derzeit ist niemand in einer aktiven Schicht.",
+      "on_duty_title": "Niemand im Dienst",
+      "open_trades_description": "Wenn jemand eine Schicht abgeben möchte, erscheint die Anfrage hier für alle, die sie übernehmen können.",
+      "open_trades_title": "Keine offenen Tauschanfragen",
+      "signup_description": "Schichttage zur Anmeldung, an denen in den nächsten 30 Tagen noch Platz für Sie ist, erscheinen hier.",
+      "signup_title": "Nichts zum Anmelden",
+      "trades_description": "Tauschanfragen, die Sie senden oder erhalten, erscheinen hier.",
+      "trades_title": "Keine Schichttausche"
+    },
+    "end_time": "Endzeit",
+    "errors": {
+      "already_on_roster": "Diese Person ist an diesem Tag bereits eingetragen.",
+      "already_signed_up": "Sie sind für diesen Tag bereits angemeldet.",
+      "day_in_past": "Dieser Schichttag ist bereits vorbei.",
+      "invalid_group": "Diese Gruppe gehört nicht zu dieser Schicht.",
+      "invalid_offer": "Dieses Angebot ist nicht mehr gültig.",
+      "invalid_request": "Die Anfrage war ungültig. Bitte versuchen Sie es erneut.",
+      "network": "Sie scheinen offline zu sein. Bitte versuchen Sie es erneut.",
+      "no_users": "Wählen Sie mindestens eine Person aus.",
+      "not_allowed": "Sie haben keine Berechtigung dafür.",
+      "not_eligible": "Sie haben nicht die Rollen, die dieser Platz erfordert.",
+      "not_found": "Diese Schicht, Anmeldung oder dieser Tausch existiert nicht mehr.",
+      "not_on_shift": "Sie sind an diesem Schichttag nicht eingeteilt.",
+      "not_pending": "Diese Anfrage ist nicht mehr offen.",
+      "trade_exists": "Für diesen Tag gibt es bereits einen offenen Tausch.",
+      "unknown": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut."
+    },
+    "groups": "Gruppen",
+    "hours": "Dienstzeit",
+    "in_shift": "In Schicht",
+    "legend": "Legende",
+    "load_error": "Schichten konnten nicht geladen werden",
+    "loading": "Schichten werden geladen...",
+    "loading_details": "Schichtdetails werden geladen...",
+    "loading_signup": "Wird verarbeitet...",
+    "manual": "Manuell",
+    "mine_sections": {
+      "active": "Jetzt im Dienst",
+      "pending": "Wartet auf Genehmigung",
+      "upcoming": "Anstehend"
+    },
+    "my_standing_shifts": "Meine festen Schichten",
+    "my_upcoming_days": "Anstehende Tage",
+    "needed": "Benötigt",
+    "needs": "Bedarf",
+    "next_day": "Nächster Tag",
+    "no_positions_available": "Keine Positionen für die Anmeldung verfügbar",
+    "no_shifts": "Keine Schichten verfügbar",
+    "no_shifts_description": "Kontaktieren Sie Ihren Vorgesetzten, wenn Sie glauben, dass Sie Schichtzuweisungen haben sollten",
+    "no_shifts_today": "Für heute keine Schichten geplant",
+    "no_shifts_today_description": "Schauen Sie später nach oder kontaktieren Sie Ihren Vorgesetzten für Schichtzuweisungen",
+    "no_signups_yet": "Noch keine Anmeldungen",
+    "note_label": "Notiz",
+    "note_optional_placeholder": "Notiz hinzufügen (optional)",
+    "on_duty": {
+      "count": "Im Dienst: {{count}}",
+      "until": "Bis {{time}}"
+    },
+    "optional": "Optional",
+    "overnight": "(Folgetag)",
+    "personnel_count": "Personalanzahl",
+    "position_needs": "Positionsbedarf",
+    "remove_panel": {
+      "description": "Die Person wird nur von diesem Tag entfernt. Andere Schichten sind nicht betroffen.",
+      "remove_person": "{{name}} von diesem Tag entfernen",
+      "title": "{{name}} entfernen?"
+    },
+    "required": "Erforderlich",
+    "required_count": "Benötigt: {{count}}",
+    "review": {
+      "approve_person": "{{name}} genehmigen",
+      "approve_signup_title": "Diese Anmeldung genehmigen?",
+      "approve_trade_title": "Diesen Tausch genehmigen?",
+      "deny_person": "{{name}} ablehnen",
+      "deny_signup_title": "Diese Anmeldung ablehnen?",
+      "deny_trade_title": "Diesen Tausch ablehnen?",
+      "requested_at": "Angefragt am {{date}}",
+      "trade_summary": "{{from}} übergibt diese Schicht an {{to}}"
+    },
+    "roles": "Rollen",
+    "roster_source": {
+      "scheduled": "Eingeplant",
+      "signup": "Angemeldet",
+      "supervisor": "Von Aufsicht hinzugefügt",
+      "trade": "Tausch"
+    },
+    "schedule_type": {
+      "custom": "Benutzerdefiniert",
+      "forty_eight_ninety_six": "48/96",
+      "manual": "Manuell",
+      "twenty_four_forty_eight": "24/48",
+      "twenty_four_seventy_two": "24/72"
+    },
+    "scheduled_for": "Geplant für",
+    "search_placeholder": "Schichten suchen...",
+    "segments": {
+      "a11y_hint": "Zeigt diese Schichtansicht",
+      "approvals": "Genehmigungen",
+      "calendar": "Kalender",
+      "mine": "Meine Schichten",
+      "on_duty": "Im Dienst",
+      "signup": "Anmelden",
+      "today": "Heute",
+      "trades": "Tausche",
+      "with_count": "{{label}}, {{count}} offen"
+    },
+    "shift_card_a11y_hint": "Öffnet die Details dieser Schicht",
+    "shift_code": "Schichtcode",
+    "shift_day": "Schichttag",
+    "shift_name": "Schichtname",
+    "shift_type": {
+      "emergency": "Notfallschicht",
+      "label": "Schichttyp",
+      "regular": "Regulär",
+      "training": "Ausbildung",
+      "unknown": "Unbekannt"
+    },
+    "signed_up": "Angemeldet",
+    "signup": "Anmelden",
+    "signup_error": "Anmeldung zur Schicht fehlgeschlagen",
+    "signup_panel": {
+      "approval_notice": "Eine Aufsicht muss diese Anmeldung genehmigen, bevor Sie im Dienst sind.",
+      "description": "Wählen Sie die Gruppe (das Team), mit der Sie sich für diesen Tag anmelden.",
+      "hint": "Team wählen und Anmeldung bestätigen",
+      "no_groups": "Diese Schicht hat keine Gruppen zur Anmeldung.",
+      "title": "Team wählen"
+    },
+    "signup_status": "Anmeldestatus",
+    "signup_success": "Erfolgreich für die Schicht angemeldet",
+    "signup_view": {
+      "description": "Schichttage, für die Sie sich in den nächsten 30 Tagen anmelden können. Tippen Sie auf einen Tag, um Ihr Team zu wählen.",
+      "filter_all": "Alle Tage",
+      "filter_needed": "Personal benötigt"
+    },
+    "signups": "Anmeldungen",
+    "start_time": "Startzeit",
+    "status": {
+      "active_now": "Jetzt aktiv",
+      "denied": "Abgelehnt",
+      "filled": "Voll besetzt",
+      "on_roster": "Sie sind eingeteilt",
+      "open_slots": "Offene Plätze: {{count}}",
+      "pending_approval": "Genehmigung ausstehend",
+      "trade_requested": "Tausch angefragt"
+    },
+    "title": "Schichten",
+    "toast": {
+      "approved": "Genehmigt",
+      "denied": "Abgelehnt",
+      "person_added": "Person zur Schicht hinzugefügt",
+      "person_removed": "Person aus der Schicht entfernt",
+      "signup_pending": "Angemeldet. Wartet auf Genehmigung durch eine Aufsicht.",
+      "trade_accepted": "Ihr Angebot wurde gesendet",
+      "trade_application_withdrawn": "Ihre Bewerbung wurde zurückgezogen",
+      "trade_applied": "Bewerbung gesendet",
+      "trade_cancelled": "Tauschanfrage zurückgezogen",
+      "trade_declined": "Tausch abgelehnt",
+      "trade_finished": "Tausch abgeschlossen",
+      "trade_finished_pending": "Tausch zur Genehmigung gesendet",
+      "trade_requested": "Tauschanfrage gesendet",
+      "trade_requested_open": "Tauschanfrage an alle gesendet, die sie übernehmen können"
+    },
+    "today": "Heute",
+    "todays_shifts": "Heutige Schichten",
+    "trade": {
+      "accept_description": "Sie können im Gegenzug eine Ihrer anstehenden Schichten anbieten oder diese einfach übernehmen.",
+      "accept_title": "Diesen Tausch annehmen?",
+      "applicant_conflict": "Zu dieser Zeit bereits in {{name}} eingeteilt",
+      "applicant_count": "Bewerber: {{count}}",
+      "applicants": "Bewerber",
+      "applied_at": "Beworben am {{date}}",
+      "apply_description": "{{name}} und die Personen, die über Tausche entscheiden, sehen Ihre Bewerbung. Sie können im Gegenzug eine Ihrer Schichten anbieten.",
+      "apply_title": "Für die Übernahme dieser Schicht bewerben?",
+      "cancel_description": "Bereits erhaltene Angebote werden verworfen.",
+      "cancel_description_open": "Alle, die sich beworben haben, erfahren, dass die Anfrage zurückgezogen wurde.",
+      "cancel_title": "Diese Tauschanfrage zurückziehen?",
+      "decline_description": "Die anfragende Person sieht, dass Sie abgelehnt haben.",
+      "decline_title": "Diesen Tausch ablehnen?",
+      "details_a11y": "Tausch für {{shift}} am {{date}}",
+      "details_hint": "Öffnet den Tausch mit seinen Bewerbern",
+      "filter_mine": "Meine ({{count}})",
+      "filter_open": "Offene Anfragen ({{count}})",
+      "finish_give_description": "{{name}} übernimmt diese Schicht.",
+      "finish_pending_note": "Eine Aufsicht muss diesen Tausch genehmigen, bevor er wirksam wird.",
+      "finish_swap_description": "{{name}} übernimmt diese Schicht und Sie übernehmen dafür {{shift}} am {{date}}.",
+      "finish_title": "Dieses Angebot wählen?",
+      "from": "Von {{name}}",
+      "give_to": "An {{name}} abgeben",
+      "incoming": "Eingehend",
+      "ineligible": {
+        "already_on_day": "Sie haben an diesem Tag bereits Dienst.",
+        "missing_roles": "Sie haben nicht die Rollen, die dieser Platz erfordert.",
+        "not_allowed": "Sie können diese Schicht nicht übernehmen."
+      },
+      "my_state": {
+        "accepted": "Sie übernehmen diese Schicht",
+        "declined": "Sie haben abgelehnt",
+        "denied": "Von einer Aufsicht abgelehnt",
+        "filled": "Jemand anderes hat übernommen",
+        "open": "Wartet auf Ihre Antwort",
+        "pending_approval": "Wartet auf Genehmigung",
+        "proposed": "Sie haben ein Angebot gemacht"
+      },
+      "nearby_workload": "Innerhalb einer Woche um diesen Tag: Schichten {{count}}, {{hours}} h",
+      "no_applicants": "Noch keine Bewerbungen",
+      "no_certifications": "Keine aktuellen Qualifikationen",
+      "no_offers": "Noch keine Antworten",
+      "no_swap": "Keine Schicht im Gegenzug anbieten",
+      "offer_back": "Schicht im Gegenzug anbieten",
+      "offers": "Antworten",
+      "open_request": "Offen für alle",
+      "outgoing": "Ausgehend",
+      "pick_as_approver_note": "Sie entscheiden als genehmigende Person über diesen Tausch: Ihre Auswahl wird sofort wirksam.",
+      "pick_note": "Wählen Sie, wer diese Schicht übernimmt.",
+      "requested_at": "Angefragt am {{date}}",
+      "requested_by": "Angefragt von {{name}}",
+      "reviewed_by": "Geprüft von {{name}}",
+      "section_active": "In Bearbeitung",
+      "section_applied": "Ihre Bewerbungen",
+      "section_attention": "Erfordert Ihre Aufmerksamkeit",
+      "section_can_apply": "Können Sie übernehmen",
+      "section_other_requests": "Weitere Anfragen",
+      "section_recent": "Kürzlich",
+      "select_applicant": "An {{name}} abgeben",
+      "status": {
+        "cancelled": "Zurückgezogen",
+        "completed": "Abgeschlossen",
+        "denied": "Abgelehnt",
+        "open": "Offen",
+        "pending_approval": "Genehmigung ausstehend"
+      },
+      "swap_back": "Rücktausch am {{date}}",
+      "swap_for": "Tausch gegen {{shift}} am {{date}}",
+      "taken_by": "Übernommen von {{name}}",
+      "user_declined": "Abgelehnt",
+      "user_offered": "Angeboten",
+      "user_waiting": "Noch keine Antwort",
+      "user_withdrew": "Zurückgezogen",
+      "withdraw_description": "Die anfragende Person sieht, dass Sie nicht mehr verfügbar sind.",
+      "withdraw_title": "Ihre Bewerbung zurückziehen?"
+    },
+    "trade_panel": {
+      "description": "Wählen Sie, wer diese Schicht übernehmen soll. Alle Ausgewählten werden gefragt, danach wählen Sie aus den Angeboten.",
+      "mode_open": "Alle, die sie übernehmen können",
+      "mode_open_hint": "Personen, die benachrichtigt werden: {{count}}",
+      "mode_specific": "Nur von mir gewählte Personen",
+      "mode_specific_hint": "Stattdessen gezielt Kollegen fragen",
+      "no_candidates": "Niemand ist verfügbar, um diese Schicht zu übernehmen.",
+      "open_description": "Alle, die an diesem Tag frei sind und die Rollen für Ihren Platz haben, erhalten eine E-Mail und eine Push-Benachrichtigung und können sich bewerben. Danach wählen Sie oder Ihre Aufsicht, wer die Schicht übernimmt.",
+      "open_description_workshift": "Alle, die an diesem Tag frei sind, erhalten eine E-Mail und eine Push-Benachrichtigung und können sich bewerben, um Ihren Platz in der Fahrzeugbesatzung zu übernehmen.",
+      "selected_count": "Ausgewählt: {{count}}",
+      "title": "Tausch anfragen"
+    },
+    "type_emergency": "Notfallschicht",
+    "type_regular": "Regulär",
+    "type_training": "Ausbildung",
+    "type_unknown": "Unbekannt",
+    "unknown": "Unbekannt",
+    "upcoming_shift_days": "Bevorstehende Schichttage",
+    "view_calendar": "Im Kalender anzeigen",
+    "view_calendar_hint": "Zeigt diese Schicht im Kalender",
+    "withdraw": "Abmelden",
+    "withdraw_error": "Abmeldung von der Schicht fehlgeschlagen",
+    "withdraw_panel": {
+      "description": "Sie werden für {{date}} aus dem Dienstplan entfernt.",
+      "title": "Von dieser Schicht abmelden?"
+    },
+    "withdraw_success": "Erfolgreich von der Schicht abgemeldet",
+    "you": "Sie",
+    "you_are_signed_up": "Sie sind für diese Schicht angemeldet"
+  },
+  "sidebar": {
+    "audio": "Stream",
+    "ptt": "Sprache"
+  },
+  "tabs": {
+    "personnel": "Personal",
+    "units": "Einheiten",
+    "weatherAlerts": "Wetterwarnungen"
+  },
+  "units": {
+    "coordinates": "Koordinaten",
+    "emptyDescription": "In Ihrer Abteilung sind keine Einheiten verfügbar",
+    "features": "Ausstattung",
+    "fourWheelDrive": "4WD",
+    "lastUpdate": "Zuletzt aktualisiert",
+    "location": "Standort",
+    "maps_error": "Karten konnten nicht geöffnet werden",
+    "notes": "Notizen",
+    "plateNumber": "Kennzeichen",
+    "specialPermit": "Sondergenehmigung",
+    "tapToOpenMaps": "Tippen, um in Karten zu öffnen",
+    "vehicleInfo": "Fahrzeuginformationen"
+  },
+  "video_feeds": {
+    "add_feed": "Add Video Feed",
+    "delete_confirm": "Are you sure you want to delete this video feed?",
+    "delete_feed": "Delete Video Feed",
+    "edit_feed": "Edit Video Feed",
+    "form_description": "Description",
+    "form_feed_format": "Feed Format",
+    "form_feed_type": "Feed Type",
+    "form_name": "Name",
+    "form_sort_order": "Sort Order",
+    "form_status": "Status",
+    "form_url": "URL",
+    "format_youtube": "YouTube",
+    "no_feeds": "No video feeds for this call",
+    "type_satellite": "Satellite Feed",
+    "type_webcam": "Webcam",
+    "unsupported_format": "This format is not supported for in-app playback. Copy the URL to open in an external player."
+  },
+  "weather_alerts": {
+    "banner": {
+      "moreAlerts": "+{{count}} weitere"
+    },
+    "category": {
+      "CBRNE": "CBRNE",
+      "Env": "Umwelt",
+      "Fire": "Feuer",
+      "Geo": "Geologisch",
+      "Health": "Gesundheit",
+      "Infra": "Infrastruktur",
+      "Met": "Meteorologisch",
+      "Other": "Sonstige",
+      "Transport": "Transport"
+    },
+    "certainty": {
+      "Likely": "Wahrscheinlich",
+      "Observed": "Beobachtet",
+      "Possible": "Möglich",
+      "Unknown": "Unbekannt",
+      "Unlikely": "Unwahrscheinlich",
+      "label": "Sicherheit"
+    },
+    "detail": {
+      "load_error": "Warnung nicht verfügbar",
+      "load_error_description": "Diese Wetterwarnung konnte nicht geladen werden. Möglicherweise ist sie abgelaufen oder die Anfrage ist fehlgeschlagen.",
+      "metadata": "Details",
+      "status": "Status"
+    },
+    "search": "Warnungen suchen...",
+    "severity": {
+      "Extreme": "Extrem",
+      "Minor": "Gering",
+      "Moderate": "Mäßig",
+      "Severe": "Schwer",
+      "Unknown": "Unbekannt"
+    },
+    "status": {
+      "Active": "Aktiv",
+      "Actual": "Aktuell",
+      "Cancelled": "Aufgehoben",
+      "Draft": "Entwurf",
+      "Exercise": "Übung",
+      "Expired": "Abgelaufen",
+      "System": "System",
+      "Test": "Test",
+      "Updated": "Aktualisiert"
+    },
+    "urgency": {
+      "Expected": "Erwartet",
+      "Future": "Zukünftig",
+      "Immediate": "Sofort",
+      "Past": "Vergangen",
+      "Unknown": "Unbekannt",
+      "label": "Dringlichkeit"
+    }
+  },
+  "welcome": "Willkommen bei {{appName}}",
+  "workOrders": {
+    "accept": "Zuweisung annehmen",
+    "activity": "Verlauf",
+    "activityType": {
+      "0": "Erstellt",
+      "1": "Aktualisiert",
+      "2": "Status geändert",
+      "3": "Zugewiesen",
+      "4": "Zuweisung angenommen",
+      "5": "Kommentar",
+      "6": "Stunden erfasst",
+      "7": "Teil hinzugefügt",
+      "8": "Teil storniert",
+      "9": "Datei hinzugefügt",
+      "10": "Datei entfernt",
+      "11": "Sicherheitssperre",
+      "12": "Sicherheitssperre aufgehoben",
+      "13": "Verschoben",
+      "14": "Eskaliert"
+    },
+    "addComment": "Kommentar speichern",
+    "allMine": "Alle, die ich sehe",
+    "assetIs": "Ausrüstung: {{name}}",
+    "assignedToMe": "Mir zugewiesen",
+    "back": "Zurück",
+    "cannotReport": "Ihre Organisation kann derzeit keine neuen Arbeitsaufträge annehmen.",
+    "choosePhoto": "Foto auswählen",
+    "commentHint": "Kommentar hinzufügen",
+    "due": "Fällig {{date}}",
+    "errors": {
+      "AcceptAssignmentFirst": "Nehmen Sie zuerst die Zuweisung an.",
+      "Conflict": "Jemand anderes hat diesen Arbeitsauftrag geändert. Prüfen Sie ihn und versuchen Sie es erneut.",
+      "IndependentVerificationRequired": "Die Person, die die Arbeit erledigt hat, darf ihn nicht selbst schließen.",
+      "InvalidFile": "Nur JPEG, PNG oder PDF bis 10 MB können angehängt werden.",
+      "PartBalanceOutstanding": "Teile müssen noch ausgegeben, zurückgegeben oder bezeugt werden.",
+      "ReadinessProRequired": "Ihre Organisation benötigt dafür Readiness Pro.",
+      "RevisionConflict": "Jemand anderes hat diesen Arbeitsauftrag geändert. Prüfen Sie ihn und versuchen Sie es erneut.",
+      "SafetyRequirements": "Sicherheitsverfahren, Freigabe, Absicherung und qualifiziertes Personal müssen zuerst erfasst werden.",
+      "ScanRequired": "Die Datei wird noch geprüft. Versuchen Sie es gleich erneut.",
+      "SpendingApprovalRequired": "Vor diesem Schritt ist eine Ausgabengenehmigung nötig.",
+      "TasksIncomplete": "Bestätigen Sie, dass alle Schritte erledigt sind.",
+      "denied": "Sie haben keinen Zugriff auf diesen Arbeitsauftrag.",
+      "locked": "Entsperren Sie geschützte Daten, um fortzufahren.",
+      "photo_denied": "Erlauben Sie den Zugriff auf Kamera oder Fotos, um ein Foto anzuhängen.",
+      "readiness_required": "Ihre Organisation benötigt dafür Readiness Pro.",
+      "retry": "Server nicht erreichbar. Versuchen Sie es erneut."
+    },
+    "files": "Fotos und Dateien",
+    "form": {
+      "asset": "Ausrüstung",
+      "description": "Details",
+      "descriptionHint": "Was passiert ist, was Sie gesehen haben, was die Werkstatt wissen sollte",
+      "group": "Wache",
+      "location": "Ort",
+      "locationHint": "Wo genau (Halle, Geräteraum, Raum)",
+      "none": "Keine",
+      "photosAfter": "Fotos können Sie hinzufügen, sobald die Meldung gespeichert ist.",
+      "priority": "Priorität",
+      "safetyCritical": "Sicherheitskritisch",
+      "submit": "Meldung senden",
+      "title": "Titel",
+      "titleHint": "Was ist defekt, in wenigen Worten",
+      "type": "Art der Arbeit",
+      "unit": "Fahrzeug"
+    },
+    "groupIs": "Wache: {{name}}",
+    "hours": "Stunden",
+    "hoursInvalid": "Geben Sie Stunden zwischen 0 und 24 ein.",
+    "hoursLogged": "{{hours}} h erfasst",
+    "hoursNote": "Was wurde gemacht",
+    "locationIs": "Ort: {{location}}",
+    "logHours": "Stunden erfassen",
+    "more": "Mehr laden",
+    "none": "Keine Arbeitsaufträge.",
+    "noneAssigned": "Ihnen ist nichts zugewiesen.",
+    "photoAdded": "Foto hinzugefügt.",
+    "priority": {
+      "0": "Niedrig",
+      "1": "Normal",
+      "2": "Hoch",
+      "3": "Notfall"
+    },
+    "readOnly": "Sie können Arbeitsaufträge ansehen; Melden und Bearbeiten erfordert {{product}}.",
+    "report": "Problem melden",
+    "resolutionIs": "Lösung: {{text}}",
+    "safety": "Sicherheitskritische oder gefährliche Arbeit",
+    "saveHours": "Stunden speichern",
+    "status": {
+      "0": "Gemeldet",
+      "1": "Angenommen",
+      "2": "Zugewiesen",
+      "3": "In Arbeit",
+      "4": "Zurückgestellt",
+      "5": "Erledigt",
+      "6": "Geschlossen",
+      "7": "Abgelehnt",
+      "8": "Duplikat",
+      "9": "Storniert"
+    },
+    "steps": "Schritte",
+    "takePhoto": "Foto aufnehmen",
+    "title": "Arbeitsaufträge",
+    "transition": {
+      "apply": "Status aktualisieren",
+      "cause": "Ursache",
+      "confirmTasks": "Alle Schritte sind erledigt",
+      "duplicateOf": "Nummer des Auftrags, den dieser dupliziert",
+      "missing": {
+        "cause": "Geben Sie die Ursache ein.",
+        "confirmTasks": "Bestätigen Sie, dass die Schritte erledigt sind.",
+        "duplicateOf": "Geben Sie den duplizierten Arbeitsauftrag ein.",
+        "reason": "Geben Sie einen Grund ein.",
+        "resolution": "Beschreiben Sie, was getan wurde.",
+        "verification": "Beschreiben Sie, wie es geprüft wurde."
+      },
+      "pick": "Neuen Status wählen",
+      "reason": "Grund",
+      "resolution": "Was zur Behebung getan wurde",
+      "title": "Status ändern",
+      "verification": "Wie es geprüft wurde"
+    },
+    "type": {
+      "0": "Reparatur",
+      "1": "Vorbeugend",
+      "2": "Prüfung",
+      "3": "Gebäude",
+      "4": "Sonstiges"
+    },
+    "unitIs": "Fahrzeug: {{name}}",
+    "viewPhoto": "Foto {{name}} ansehen"
+  }
+}

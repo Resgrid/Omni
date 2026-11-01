@@ -1,0 +1,244 @@
+{
+  "app": {
+    "initialization_failed": "Unable to load app data. Please check your connection and try again."
+  },
+  "callImages": {
+    "not_signed_in": "You must be signed in to upload images",
+    "upload_error": "Error uploading image"
+  },
+  "calls": {
+    "directions_to_destination": "Directions to destination",
+    "dispatch_on": "Dispatch Time",
+    "dispatch_on_too_soon": "The dispatch time must be at least {{minutes}} minutes in the future",
+    "errors": {
+      "load_failed": "Failed to load calls"
+    },
+    "files": {
+      "sharing_unavailable": "Sharing is not available on this device"
+    },
+    "required_fields_missing": "Your department requires these fields before the call can be saved: {{fields}}",
+    "view_on_map": "View on map"
+  },
+  "chat": {
+    "chatting_as": "Chatting as {{name}}"
+  },
+  "common": {
+    "no_location": "No location data available",
+    "no_unit": "No Unit",
+    "unknown_error": "Unknown error occurred"
+  },
+  "contacts": {
+    "unknown_company": "Unknown Company",
+    "unknown_person": "Unknown Person"
+  },
+  "incident_command": {
+    "error": "Failed to load incident command information",
+    "need_category": {
+      "equipment": "Equipment",
+      "logistics": "Logistics",
+      "medical": "Medical",
+      "other": "Other",
+      "resource": "Resource",
+      "staffing": "Staffing"
+    },
+    "need_status": {
+      "cancelled": "Cancelled",
+      "met": "Met",
+      "open": "Open",
+      "partially_met": "Partially Met"
+    },
+    "no_active_command": "No incident command is active for this call",
+    "objective_status": {
+      "complete": "Complete",
+      "in_progress": "In Progress",
+      "pending": "Pending"
+    },
+    "objective_type": {
+      "benchmark": "Benchmark",
+      "general": "General",
+      "safety": "Safety"
+    },
+    "progress": "{{percent}}% complete",
+    "quantity_fulfilled": "{{fulfilled}} of {{requested}} fulfilled"
+  },
+  "inventory": {
+    "assetStatus": {
+      "0": "In service",
+      "1": "Issued",
+      "2": "Out for repair",
+      "3": "Damaged",
+      "4": "Lost",
+      "5": "Consumed",
+      "6": "Retired"
+    },
+    "awaitingWitness": "A controlled item changed; a second person must witness this count on the web.",
+    "back": "Back",
+    "cancel": "Cancel",
+    "cancelBody": "Nothing counted so far is posted.",
+    "cancelCount": "Cancel count",
+    "cancelTitle": "Cancel this count?",
+    "cannotCount": "Counting needs the Adjust Inventory permission at this unit.",
+    "complete": "Complete",
+    "completeBody": "{{count}} items differ from what was expected. Completing posts the differences.",
+    "completeNoChanges": "Everything matches what was expected.",
+    "completeTitle": "Complete count?",
+    "completed": "Count completed.",
+    "count": "Inventory count",
+    "countName": "{{name}} check {{date}}",
+    "countStatus": {
+      "0": "In progress",
+      "1": "Awaiting witness",
+      "2": "Completed",
+      "3": "Cancelled"
+    },
+    "counts": "Recent counts",
+    "differences": "{{count}} differences",
+    "disabled": "Inventory is turned off for your department.",
+    "empty": "Nothing here.",
+    "errors": {
+      "CountAlreadyExists": "This count already exists.",
+      "CountEmpty": "There is nothing to count here.",
+      "CountScopeTooLarge": "Too many items for one count. Count one compartment at a time.",
+      "CountSnapshotChanged": "Inventory at this unit changed while you counted. Cancel this count and start again.",
+      "CountStateConflict": "This count changed on another device. Reopen it and try again.",
+      "InvalidCount": "Check the counted values and try again.",
+      "InventoryDisabled": "Inventory is turned off for your department.",
+      "LocationUnavailable": "That location is not available.",
+      "MembershipRequired": "You are not an active member of this department.",
+      "MigrationRequired": "Inventory is being set up for your department.",
+      "PermissionRequired": "You do not have permission to do this.",
+      "ProtectedDataRequired": "Unlock protected data to continue.",
+      "ReturnAssetFirst": "An item marked missing is still issued to someone. Return it first on the web.",
+      "locked": "Unlock protected data to continue.",
+      "retry": "Could not reach the server. Try again."
+    },
+    "expected": "Expected {{quantity}} {{unit}}",
+    "keep": "Keep counting",
+    "less": "One less",
+    "matches": "Matches",
+    "missing": "Missing",
+    "more": "One more",
+    "noLocations": "No inventory is assigned to this unit.",
+    "notMigrated": "Inventory is being set up for your department.",
+    "pickLocation": "Where to count",
+    "present": "Present",
+    "progress": "{{counted}} of {{total}} counted",
+    "quantity": "× {{quantity}}",
+    "save": "Save progress",
+    "selectUnit": "Select your unit first.",
+    "serial": "Serial {{serial}}",
+    "start": "Start count",
+    "startCount": "Count the inventory",
+    "startHelp": "Count what is actually on the unit. Differences are posted when you complete the count.",
+    "title": "Inventory",
+    "titleFor": "Inventory · {{name}}",
+    "unnamedItem": "Item",
+    "unnamedLocation": "Compartment",
+    "wholeUnit": "Whole unit: {{name}}"
+  },
+  "login": {
+    "hide_password": "Hide password",
+    "login_button": "Sign In",
+    "login_button_loading": "Signing in...",
+    "show_password": "Show password",
+    "title": "Sign In"
+  },
+  "map": {
+    "legend": {
+      "built_in_unit_statuses": "Built-in unit statuses",
+      "button": "Map legend",
+      "calls": "Calls",
+      "error": "Could not load the map legend.",
+      "hydrant": "Hydrant",
+      "list_separator": ", ",
+      "loading": "Loading map legend…",
+      "name_list": "{{label}}: {{names}}",
+      "no_call_type": "Calls with no type",
+      "no_role_icon": "Members with no role icon",
+      "no_unit_type": "Units with no type",
+      "other": "Stations and points of interest",
+      "other_note": "These icons do not change with status.",
+      "other_with_hydrants": "Stations, hydrants and points of interest",
+      "personnel": "Personnel",
+      "personnel_note": "A member shows the icon of the first role they hold, in role order, that has one. A member On Unit takes the color of their unit's status.",
+      "priorities": "Priorities",
+      "priority_colors": "Priority colors",
+      "priority_unknown": "No meaning",
+      "station": "Station",
+      "status_colors": "Status colors",
+      "statuses": "Statuses: {{name}}",
+      "style": {
+        "available": "Available",
+        "delayed": "On break",
+        "dispatched": "Dispatched",
+        "emergency": "Emergency",
+        "high": "High",
+        "low": "Low",
+        "medium": "Medium",
+        "onscene": "On scene",
+        "responding": "Responding",
+        "returning": "Returning",
+        "staging": "Staging and standby",
+        "transporting": "Transporting",
+        "unavailable": "Unavailable",
+        "unknown": "No meaning or no status"
+      },
+      "title": "Map Icon Legend",
+      "units": "Units"
+    },
+    "lock_map": "Lock map to unit",
+    "unlock_map": "Unlock map"
+  },
+  "notifications": {
+    "confirm_delete_message_count": "Are you sure you want to delete {{count}} notifications? This action cannot be undone.",
+    "delete_selected": "Delete selected notifications",
+    "enter_selection_mode": "Select notifications",
+    "open": "Open notifications",
+    "remove_failed_count": "Failed to remove notifications",
+    "remove_failed_one": "Failed to remove notification",
+    "removed_count": "{{count}} notifications removed",
+    "removed_one": "Notification removed",
+    "unable_to_load": "Unable to load notifications"
+  },
+  "push_notifications": {
+    "unknown_type_warning": "This notification type is not recognized. Please contact support if you continue to see this message."
+  },
+  "roles": {
+    "assignedElsewhere": "In another role",
+    "clearAssignment": "Clear the current assignment",
+    "noUsersFound": "No users found",
+    "saved_successfully": "Role assignments saved successfully",
+    "searchUsers": "Search by name or group...",
+    "selectUserDescription": "Choose a person to fill this role",
+    "selectUserForRole": "Assign: {{role}}",
+    "selectUserLabel": "Select {{name}}",
+    "tapToAssign": "Tap to assign user to {{role}}",
+    "title": "Unit Role Assignments"
+  },
+  "routes": {
+    "traffic_heavy": "Heavy traffic",
+    "traffic_light": "Light traffic",
+    "traffic_moderate": "Moderate traffic",
+    "traffic_no_data": "No traffic data",
+    "traffic_severe": "Severe traffic"
+  },
+  "settings": {
+    "audio_device_selection": {
+      "speaker_device": "Speaker Device"
+    },
+    "logout_confirm_message": "Are you sure you want to logout? This will clear all app data, cached values, and settings.",
+    "no_units_available_help": "No units are assigned to you. Ask your department administrator to add you to a unit's station group.",
+    "realtime_geolocation_warning": "This feature sends this unit's location to your department while the app is open, and connects to the real-time location hub to receive other units' positions. It requires an active network connection.",
+    "units_load_failed": "Couldn't load units. Check your connection and try again."
+  },
+  "status": {
+    "current": "Current",
+    "current_status": "Current status",
+    "hold_to_set_hint": "Press and hold for 2 seconds to set the status",
+    "hold_to_set_instructions": "Press and hold a status for 2 seconds to set it",
+    "hold_to_submit": "Hold to submit",
+    "show_all_statuses": "Show all statuses ({{count}} more)",
+    "show_next_statuses": "Show next statuses only",
+    "status_queued": "Status saved on this device. It will be sent automatically."
+  }
+}

@@ -1,0 +1,53 @@
+name: Set up workspace
+description: pnpm (version from package.json packageManager) + Node with the pnpm store cache, then a frozen-lockfile install.
+inputs:
+  install:
+    description: 'full (whole workspace), desktop (apps/desktop and its workspace deps only — no React Native) or none'
+    required: false
+    default: full
+  node-version:
+    description: Node.js version
+    required: false
+    default: '22.18.0'
+runs:
+  using: composite
+  steps:
+    - name: Set up pnpm
+      uses: pnpm/action-setup@v4
+
+    # Full installs use setup-node's pnpm store cache (key: OS + lockfile). Partial (desktop) installs keep their
+    # own key so a partial store never satisfies — and starves — the full-install cache.
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: ${{ inputs.install == 'full' && 'pnpm' || '' }}
+        cache-dependency-path: pnpm-lock.yaml
+
+    - name: Locate pnpm store
+      if: inputs.install == 'desktop'
+      id: store
+      shell: bash
+      run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+    - name: Cache pnpm store (desktop)
+      if: inputs.install == 'desktop'
+      uses: actions/cache@v4
+      with:
+        path: ${{ steps.store.outputs.path }}
+        key: pnpm-store-desktop-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pnpm-lock.yaml') }}
+        restore-keys: pnpm-store-desktop-${{ runner.os }}-${{ runner.arch }}-
+
+    - name: Install dependencies
+      if: inputs.install != 'none'
+      shell: bash
+      env:
+        INSTALL_MODE: ${{ inputs.install }}
+        # lefthook's prepare hook is for developer machines.
+        LEFTHOOK: '0'
+      run: |
+        if [ "$INSTALL_MODE" = desktop ]; then
+          bash scripts/ci/retry.sh 3 20 pnpm install --frozen-lockfile --filter "@resgrid/desktop..."
+        else
+          bash scripts/ci/retry.sh 3 20 pnpm install --frozen-lockfile
+        fi

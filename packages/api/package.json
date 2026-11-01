@@ -2,6 +2,16 @@
   "name": "@resgrid/api",
   "version": "0.0.0",
   "private": true,
+  "description": "Resgrid Core v4 HTTP client, cached endpoints and endpoint functions; auth and storage injected (layer L2)",
   "main": "src/index.ts",
-  "types": "src/index.ts"
+  "types": "src/index.ts",
+  "sideEffects": false,
+  "scripts": {
+    "contract:refresh": "node contract/refresh-swagger.mjs"
+  },
+  "dependencies": {
+    "@resgrid/config": "workspace:*",
+    "@resgrid/models": "workspace:*",
+    "axios": "catalog:"
+  }
 }

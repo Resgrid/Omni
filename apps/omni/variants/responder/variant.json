@@ -34,7 +34,7 @@
   "storage": {
     "mmkvId": "ResgridResponder",
     "keySecret": "RESPONDER_MMKV_KEY",
-    "extraInstances": ["checklists-ciphertext-v1"]
+    "extraInstances": ["checklists-ciphertext-v1", "ResgridOfflineQueue"]
   },
   "versioning": {
     "tagPrefix": "responder-v",

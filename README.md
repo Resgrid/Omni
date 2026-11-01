@@ -62,7 +62,7 @@ Shared by all five apps, implemented once:
 apps/
   omni/                 the one Expo project (iOS, Android, Web)
     variants/
-      responder/        variant.ts (identity + capabilities) · app/ (routes) · assets/ · theme.css
+      responder/        variant.json (identity + capabilities) · variant.ts · app/ (routes) · assets/
       unit/  ic/  dispatch/  bigboard/
   desktop/              Electron shell that packages each app's web build
 packages/               shared code, published as @resgrid/* workspace packages
@@ -72,7 +72,7 @@ tooling/                ESLint, TypeScript and Jest presets
 docs/                   architecture, build and subsystem documentation
 ```
 
-- **One project, five variants.** `APP_VARIANT=responder|unit|ic|dispatch|bigboard` selects which app is built. Each variant's manifest (`variants/<app>/variant.ts`) holds everything that makes the app itself: bundle ids, schemes, icons, which native modules and permissions it needs, its navigation shell and its capabilities.
+- **One project, five variants.** `APP_VARIANT=responder|unit|ic|dispatch|bigboard` selects which app is built. Each variant's manifest (`variants/<app>/variant.json`) holds everything that makes the app itself: bundle ids, schemes, icons, which native modules and permissions it needs, its navigation shell and its capabilities.
 - **Capabilities, not copies.** Screens are shared; a variant switches behaviour on or off with capabilities such as `calls.create`, `incidentCommand: 'command'` or `locationTransmission: 'unit'`, then adapts layout by form factor (phone, tablet, desktop, wall).
 - **Layered packages.** Lower layers never import higher ones (`config` → `core` → `api` → `auth` … → `features` → `app-shell` → apps), enforced in CI.
 
@@ -196,7 +196,7 @@ Details: [plan §6.6 and Appendix B](docs/architecture/omni-plan.md).
 - **Can I deploy these apps to Google Play or the Apple App Store?**
   - You can, but you cannot include "Resgrid" in the name of your application or its store listing.
 - **What do I need to change to publish my own build?**
-  - Edit the variant's identity in `apps/omni/variants/<app>/variant.ts` (bundle id, package, schemes, associated domains, EAS project) and replace the icons, logos and splash images in that variant's `assets/`. Nothing outside the variant folder should need to change.
+  - Edit the variant's identity in `apps/omni/variants/<app>/variant.json` (bundle id, package, schemes, associated domains, EAS project) and replace the icons, logos and splash images in that variant's `assets/`. Nothing outside the variant folder should need to change.
 - **Do the apps work with a self-hosted Resgrid server?**
   - Yes. Each app lets users choose their server, and self-hosted installs can serve their own map tiles, routing and geocoding (see the [Resgrid docs](https://docs.resgrid.com)).
 - **Where did the old repositories go?**

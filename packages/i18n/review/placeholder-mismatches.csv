@@ -1,0 +1,3 @@
+namespace,key,lang,english,translation
+bigboard,login.page_subtitle,ar,Enter the information below to Sign in to the {{appName}} application.,أدخل المعلومات أدناه لتسجيل الدخول إلى تطبيق Resgrid Dispatch.
+bigboard,login.page_subtitle,es,Enter the information below to Sign in to the {{appName}} application.,Introduce la información a continuación para iniciar sesión en la aplicación Resgrid Dispatch.

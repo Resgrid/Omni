@@ -10,7 +10,7 @@ Status: target design from `docs/architecture/omni-plan.md` (v1.1, 2026-10-31) Â
 ## The model
 
 - **One Expo project:** `apps/omni`. `APP_VARIANT` (`responder|unit|ic|dispatch|bigboard`) Ã— `APP_ENV` (`development|internal|staging|production`) select what is built.
-- **Variant manifest:** `apps/omni/variants/<v>/variant.ts` is the only place per-app facts live: identity, storage identity, auth/push identity, capabilities, native modules and permissions, navigation shell, offline scope, versioning. `app.config.ts`, env, `apps/desktop`, Docker and the CI matrix read it. Never hand-copy a per-app value anywhere else.
+- **Variant manifest:** `apps/omni/variants/<v>/variant.json` (schema: `packages/config/src/schema.ts`; runtime loader: `variant.ts`; build-time loader: `@resgrid/config-plugins`) is the only place per-app facts live: identity, storage identity, auth/push identity, capabilities, native modules and permissions, navigation shell, offline scope, versioning. `app.config.ts`, env, `apps/desktop`, Docker and the CI matrix read it. Never hand-copy a per-app value anywhere else.
 - **Route tree per variant:** `apps/omni/variants/<v>/app/` (expo-router `root`). Route files are one-line re-exports of shared screens:
   ```ts
   export { default } from '@resgrid/features/calls/screens/call-detail';

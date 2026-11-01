@@ -1,0 +1,1262 @@
+{
+  "app": {
+    "open_menu": "Open menu",
+    "realtime_offline_description": "Reconnecting. New calls and messages may not appear.",
+    "realtime_offline_title": "Live updates unavailable"
+  },
+  "audio_streams": {
+    "error_loading_stream": "Failed to load audio stream"
+  },
+  "bluetooth": {
+    "audio_active": "Audio Active",
+    "button_control_available": "Button control available",
+    "button_event": {
+      "double_press": "Double {{button}}",
+      "long_press": "Long {{button}}"
+    },
+    "button_event_applied": "Applied",
+    "buttons": {
+      "mute": "Mute",
+      "ptt_start": "PTT Start",
+      "ptt_stop": "PTT Stop",
+      "unknown": "Unknown",
+      "volume_down": "Volume -",
+      "volume_up": "Volume +"
+    },
+    "checking_status": "Checking Bluetooth status...",
+    "connection_error": "Connection Error",
+    "livekit_active": "LiveKit Active",
+    "powered_off_message": "Bluetooth is turned off. Please enable Bluetooth to connect audio devices.",
+    "recent_button_events": "Recent Button Events",
+    "rssi_dbm": "{{rssi}} dBm",
+    "rssi_value": "RSSI: {{rssi}}dBm",
+    "start_scanning": "Start Scanning",
+    "stop_scan": "Stop Scan",
+    "unauthorized_message": "Bluetooth permission denied. Please grant Bluetooth permissions in Settings."
+  },
+  "calendar": {
+    "allDay": "All Day",
+    "attendanceUpdated": {
+      "signedUp": "You have successfully signed up for this event.",
+      "title": "Attendance Updated",
+      "unsignedUp": "You have been removed from this event."
+    },
+    "attendees": {
+      "title": "Attendees"
+    },
+    "attendeesCount": "{{count}} attendee",
+    "attendeesCount_plural": "{{count}} attendees",
+    "confirmSignup": "Confirm",
+    "confirmUnsignup": {
+      "message": "Are you sure you want to cancel your attendance for this event?",
+      "title": "Confirm Cancellation"
+    },
+    "createdBy": "Created by",
+    "daysOfWeek": {
+      "fri": "Fri",
+      "mon": "Mon",
+      "sat": "Sat",
+      "sun": "Sun",
+      "thu": "Thu",
+      "tue": "Tue",
+      "wed": "Wed"
+    },
+    "description": "Description",
+    "error": {
+      "attendanceUpdate": "Failed to update attendance. Please try again.",
+      "title": "Error"
+    },
+    "eventsCount": "{{count}} event",
+    "eventsCount_plural": "{{count}} events",
+    "loading": {
+      "date": "Loading events for selected date...",
+      "today": "Loading today's events...",
+      "upcoming": "Loading upcoming events..."
+    },
+    "noEvents": "No events scheduled",
+    "optional": "Optional",
+    "required": "Required",
+    "selectDate": "Select a date to view events",
+    "selectedDate": {
+      "empty": "No events scheduled for this date.",
+      "title": "Events for {{date}}"
+    },
+    "signedUp": "Signed Up",
+    "signup": {
+      "button": "Sign Up",
+      "notePlaceholder": "Enter your note here...",
+      "notePrompt": "Add a note (optional):",
+      "title": "Event Sign-up"
+    },
+    "signupAvailable": "Sign-up available",
+    "tabs": {
+      "calendar": "Calendar",
+      "today": "Today",
+      "upcoming": "Upcoming"
+    },
+    "tapToSignUp": "Tap to sign up",
+    "title": "Calendar",
+    "today": {
+      "empty": {
+        "description": "You have no scheduled events for today.",
+        "title": "No Events Today"
+      }
+    },
+    "todayButton": "Today",
+    "unsignup": "Cancel Attendance",
+    "upcoming": {
+      "empty": {
+        "description": "You have no scheduled events in the next 7 days.",
+        "title": "No Upcoming Events"
+      }
+    }
+  },
+  "callImages": {
+    "capture_error": "Error capturing photo. Please try again.",
+    "permission_denied_settings": "Permission denied. Please enable access in your device settings.",
+    "select_error": "Error selecting image. Please try again.",
+    "upload_success": "Image uploaded successfully",
+    "url_label": "URL: {{url}}"
+  },
+  "callNotes": {
+    "addNoteError": "Failed to add note. Please try again."
+  },
+  "call_detail": {
+    "route_to_destination": "Route to Destination",
+    "tabs": {
+      "command": "Command"
+    }
+  },
+  "calls": {
+    "assigned_to_me": "Assigned To Me",
+    "destination_load_error": "Failed to load destination POIs",
+    "destination_placeholder": "Select destination",
+    "external_id": "External ID",
+    "only_calls_im_on": "Only Calls I'm On",
+    "personnel": "People",
+    "protocols": "Protocols",
+    "reference_id": "Reference ID",
+    "required_fields_missing": "Your department requires these fields before a call can be saved: {{fields}}",
+    "search_address": "Search address",
+    "search_coordinates": "Search coordinates",
+    "search_plus_code": "Search plus code",
+    "search_what3words": "Search what3words address"
+  },
+  "certifications": {
+    "add": "Add",
+    "addHours": "Add hours",
+    "addHoursWithPhoto": "Add hours with a photo",
+    "areaIs": "Area: {{area}}",
+    "back": "Back",
+    "cancel": "Cancel",
+    "category": "Category (course, drill, conference)",
+    "certificateAttached": "certificate attached",
+    "creditAdded": "Hours added.",
+    "creditDate": "Date (defaults to today)",
+    "creditNote": "What it was",
+    "credits": "{{hours}} of {{required}} continuing-education hours",
+    "creditsTitle": "{{hours}} continuing-education hours",
+    "dateInvalid": "Enter dates as yyyy-mm-dd.",
+    "edit": "Edit",
+    "errors": {
+      "certifications_file_invalid": "The photo could not be read.",
+      "certifications_file_too_large": "The photo is too large.",
+      "denied": "You do not have access to this certification.",
+      "locked": "Unlock protected data to continue.",
+      "retry": "Could not reach the server. Try again.",
+      "validation": "The server rejected the change."
+    },
+    "expired": "Expired {{date}}",
+    "expires": "Expires {{date}} ({{days}} days)",
+    "form": {
+      "area": "Area or level",
+      "choosePhoto": "Choose photo",
+      "expiresOn": "Expires on",
+      "issuedBy": "Issued by",
+      "name": "Name",
+      "number": "Number",
+      "otherType": "Other (enter a name)",
+      "photoAttached": "Photo attached.",
+      "receivedOn": "Issued on",
+      "save": "Save",
+      "takePhoto": "Photo of card",
+      "type": "Certification"
+    },
+    "hasFile": "A card or certificate is on file",
+    "hours": "Hours",
+    "hoursInvalid": "Enter a number of hours greater than 0.",
+    "issuedByIs": "Issued by {{name}}",
+    "nameRequired": "Pick a type or enter a name.",
+    "newExpiry": "New expiry date",
+    "newNumber": "New number (optional)",
+    "noExpiry": "Does not expire",
+    "none": "You have not added any certifications yet.",
+    "notVerified": "Not verified by the department yet",
+    "numberIs": "Number {{number}}",
+    "photoDenied": "Allow camera or photo access to attach a photo.",
+    "receivedOn": "Received {{date}}",
+    "remove": "Remove",
+    "removeBody": "This removes it from your record. Your department can still see the history.",
+    "removeTitle": "Remove certification?",
+    "renew": "Renew",
+    "renewSave": "Save renewal",
+    "renewed": "Renewal saved.",
+    "status": {
+      "0": "Active",
+      "1": "Expired",
+      "2": "Suspended",
+      "3": "Revoked",
+      "4": "Awaiting verification",
+      "5": "Trainee"
+    },
+    "title": "My certifications",
+    "untitled": "Certification",
+    "verifiedOn": "Verified {{date}}"
+  },
+  "chat": {
+    "attach": "Attach",
+    "back_to_chats": "Back to chats",
+    "new_conversation": "New conversation"
+  },
+  "check_in": {
+    "add_note": "Add Note (Optional)",
+    "confirm_check_in": "Confirm Check-In",
+    "duration": "Duration",
+    "gps_coordinates": "GPS: {{latitude}}, {{longitude}}",
+    "history": "Check-In History",
+    "minutes_ago": "{{count}} min ago",
+    "no_timers": "No check-in timers configured",
+    "offline_queued": "Check-in queued for when online",
+    "progress": "{{elapsed}} / {{total}} min",
+    "timer_interval": "Every {{minutes}} min",
+    "type_hazmat": "Hazmat Exposure",
+    "type_ic": "Incident Commander",
+    "unknown_unit": "Unknown Unit"
+  },
+  "checklists": {
+    "labels": {
+      "AssignmentAutomatic": "Automatic routing"
+    }
+  },
+  "common": {
+    "active": "Active",
+    "all": "All",
+    "deleting": "Deleting...",
+    "discard": "Discard",
+    "navigation": "Navigation",
+    "noActiveUnit": "No Active Unit",
+    "noActiveUnitDescription": "Please select an active unit to see available statuses",
+    "no_data_available": "No data available",
+    "success": "Success",
+    "system": "System"
+  },
+  "contacts": {
+    "descriptionLabel": "Description",
+    "errorTitle": "Error",
+    "openAppError": "Unable to open {{action}} app",
+    "openLinkFailed": "Failed to open {{action}} link:"
+  },
+  "home": {
+    "active_call": {
+      "clear_active": "Clear Active Call",
+      "no_active_call": "No active call selected",
+      "select_call": "Select a call to track",
+      "set_active": "Set as Active Call",
+      "title": "Active Call",
+      "view_details": "View Call Details"
+    },
+    "error": {
+      "no_user_id": "User ID not available"
+    },
+    "sidebar": {
+      "audio": "Audio",
+      "ptt": "PTT"
+    },
+    "staffing": {
+      "add_note": "Add Note",
+      "add_note_action": "Add a note",
+      "confirm_staffing": "Confirm Staffing: {{staffing}}",
+      "missing_required_info": "Missing required information",
+      "no_options_available": "No staffing options available",
+      "no_staffing_options": "No staffing options available",
+      "note": "Note",
+      "note_placeholder": "Enter a note (optional)...",
+      "note_required_hint": "Opens a form to add the required note",
+      "quick_set_hint": "Sets your staffing now. Long press to add a note.",
+      "review_and_confirm": "Review and Confirm",
+      "select_staffing_level": "Select Staffing Level",
+      "select_staffing_level_description": "Choose your current staffing status",
+      "selected_staffing": "Selected Staffing",
+      "set_staffing": "Set Personnel Staffing",
+      "staffing_level": "Staffing Level",
+      "update_failed": "Failed to update staffing",
+      "updated_successfully": "Staffing updated successfully"
+    },
+    "stats": {
+      "open_calls": "Open Calls",
+      "personnel_in_service": "Personnel In Service",
+      "units_in_service": "Units In Service"
+    },
+    "status": {
+      "no_options_available": "No status options available",
+      "update_failed": "Failed to update status",
+      "updated_successfully": "Status updated successfully"
+    },
+    "summary": {
+      "active_calls": "Active Calls",
+      "active_severe_weather_alerts": "Weather Alerts",
+      "calls_im_on": "Calls I'm On",
+      "pending_missed_checkins": "Check-Ins"
+    },
+    "tabs": {
+      "call": "Call",
+      "dashboard": "Dashboard",
+      "map": "Map",
+      "staffing": "Staffing",
+      "status": "Status"
+    },
+    "user": {
+      "my_staffing": "My Staffing",
+      "my_status": "My Status",
+      "staffing_unknown": "Unknown Staffing",
+      "status_unknown": "Unknown Status",
+      "updated": "Updated"
+    }
+  },
+  "incident_command": {
+    "assigned_since": "Assigned Since",
+    "empty_state": "No incident command is active for this call",
+    "error_loading": "Failed to load incident command information",
+    "my_assignment": "My Assignment",
+    "need_category_equipment": "Equipment",
+    "need_category_logistics": "Logistics",
+    "need_category_medical": "Medical",
+    "need_category_other": "Other",
+    "need_category_resource": "Resource",
+    "need_category_staffing": "Staffing",
+    "need_status_cancelled": "Cancelled",
+    "need_status_met": "Met",
+    "need_status_open": "Open",
+    "need_status_partially_met": "Partially Met",
+    "objective_status_complete": "Complete",
+    "objective_status_in_progress": "In Progress",
+    "objective_status_pending": "Pending",
+    "objective_type_benchmark": "Benchmark",
+    "objective_type_general": "General",
+    "objective_type_safety": "Safety",
+    "percent_complete": "{{percent}}%",
+    "quantity": "{{fulfilled}}/{{requested}}"
+  },
+  "livekit": {
+    "connection_failed": "Could not join the voice channel",
+    "double_click_action": "Double Click Action",
+    "headset_button_ptt": "Headset Button PTT",
+    "headset_monitoring_active": "Headset monitoring active",
+    "headset_monitoring_inactive": "Headset monitoring inactive",
+    "headset_ptt_description": "Use AirPods or Bluetooth earbuds button to mute/unmute",
+    "headset_ptt_disabled": "Headset PTT Disabled",
+    "headset_ptt_enabled": "Headset PTT Enabled",
+    "long_press_action": "Long Press Action",
+    "no_action": "No Action",
+    "play_pause_action": "Play/Pause Button Action",
+    "ptt_mode": "PTT Mode",
+    "ptt_mode_disabled": "Disabled",
+    "ptt_mode_push": "Push-to-Talk (hold to talk)",
+    "ptt_mode_toggle": "Toggle (tap to switch mute)",
+    "sound_feedback": "Sound Feedback",
+    "tap_to_toggle_mute": "Tap headset button to toggle mute",
+    "toggle_mute": "Toggle Mute"
+  },
+  "location": {
+    "tracking_notification_body": "Sharing your location with your department."
+  },
+  "login": {
+    "change_server_url": "Change Server URL",
+    "select_language": "Language",
+    "sso": {
+      "back": "Back",
+      "change_department": "Change username",
+      "continue_button": "Continue",
+      "department_code_label": "Department Code",
+      "department_code_placeholder": "Enter department code",
+      "department_code_required": "Department code is required",
+      "department_description": "Enter your department code to sign in",
+      "department_id_invalid": "Department ID must be a number",
+      "department_id_label": "Department ID (optional)",
+      "department_id_placeholder": "Enter department ID if known",
+      "department_not_found": "Department not found. Please check the code and try again.",
+      "login_with_sso_button": "Login with SSO",
+      "looking_up": "Looking up account...",
+      "lookup_network_error": "Could not reach the server. Please check your connection and try again.",
+      "or_sign_in_with_password": "— or sign in with password —",
+      "page_title": "Login with SSO",
+      "sign_in_with_sso": "Sign in with SSO",
+      "sso_not_enabled": "SSO is not enabled for this account. Please use your username and password.",
+      "user_description": "Enter your Resgrid username or email to sign in with SSO",
+      "user_not_found": "Account not found. Please check your username and try again.",
+      "username_label": "Username or Email",
+      "username_placeholder": "Enter your username or email",
+      "username_required": "Username is required"
+    }
+  },
+  "map": {
+    "loading_markers": "Loading map markers...",
+    "openSideMenu": "Open side menu",
+    "tabs": {
+      "map": "Map",
+      "pois": "POIs"
+    }
+  },
+  "maps": {
+    "contact_administrator": "Please contact your administrator to configure mapping services.",
+    "failed_to_load": "Failed to load map. Please check your internet connection.",
+    "legend": {
+      "error": "The map legend could not be loaded.",
+      "loading": "Loading map legend...",
+      "no_meaning": "No meaning",
+      "open": "Open map legend",
+      "other": "Other",
+      "statuses": "Statuses",
+      "style": {
+        "unknown": "No meaning or no status"
+      }
+    },
+    "mapbox_not_configured": "Mapbox is not configured. Please contact your administrator."
+  },
+  "messages": {
+    "all_messages": "All Messages",
+    "attending": "Attending",
+    "calendar_rsvp": "Calendar RSVP",
+    "compose": "Compose",
+    "compose_new_message": "New Message",
+    "date_unknown": "Date unknown",
+    "delete_confirmation_message": "Are you sure you want to delete {{count}} message(s)?",
+    "delete_confirmation_title": "Delete Messages",
+    "delete_single_confirmation_message": "Are you sure you want to delete this message?",
+    "enter_expiration_date": "Enter expiration date",
+    "enter_message_body": "Enter your message",
+    "enter_note": "Enter an optional note",
+    "enter_response": "Enter your response",
+    "enter_subject": "Enter message subject",
+    "error": "Error",
+    "expiration_date_format": "Format: YYYY-MM-DD HH:MM",
+    "expiration_date_optional": "Expiration Date (Optional)",
+    "expired": "Expired",
+    "expires_on": "Expires On",
+    "from": "From",
+    "inbox": "Inbox",
+    "message_body": "Message Body",
+    "message_content": "Message Content",
+    "message_type": "Message Type",
+    "no_content": "No content",
+    "no_messages": "No messages found",
+    "no_messages_description": "Send your first message to get started",
+    "no_subject": "No Subject",
+    "not_attending": "Not attending",
+    "note_optional": "Note (Optional)",
+    "people": "People",
+    "recipients": "Recipients",
+    "recipients_count": "{{count}} recipients",
+    "recipients_selected": "{{count}} recipients selected",
+    "respond_failed": "Failed to respond to message",
+    "respond_to_message": "Respond to Message",
+    "responded": "Responded",
+    "responded_on": "Responded on",
+    "responding": "Responding...",
+    "response": "Response",
+    "response_required": "Response is required",
+    "search_placeholder": "Search messages...",
+    "select_all": "Select All",
+    "select_message": "Select message",
+    "select_message_type": "Select message type",
+    "select_recipients": "Select Recipients",
+    "selected_count": "{{count}} selected",
+    "send": "Send",
+    "send_first_message": "Send First Message",
+    "send_response": "Send Response",
+    "sending": "Sending...",
+    "sent": "Sent",
+    "showing_count": "Showing {{count}} messages",
+    "subject": "Subject",
+    "title": "Messages",
+    "types": {
+      "alert": "Alert",
+      "calendar_rsvp": "Calendar RSVP",
+      "message": "Message",
+      "poll": "Poll"
+    },
+    "unsaved_changes": "Unsaved Changes",
+    "unsaved_changes_message": "You have unsaved changes. Are you sure you want to discard them?",
+    "validation": {
+      "body_required": "Message body is required",
+      "recipients_required": "At least one recipient is required",
+      "subject_required": "Subject is required"
+    }
+  },
+  "mfa": {
+    "approve": {
+      "app": "App: {{app}}",
+      "approve": "Approve",
+      "approved": "Approved. You can return to the other screen.",
+      "denied": "Denied. Nothing was approved.",
+      "deny": "Deny",
+      "department": "Department: {{department}}",
+      "done": "Done",
+      "expires": "Expires at {{time}}",
+      "installation": "Device: {{label}}",
+      "none": "Nothing is waiting for your approval.",
+      "not_me": "This wasn't me",
+      "number_body": "Enter the number shown on the other screen, then confirm with your passkey. Only approve if you started this yourself.",
+      "number_mismatch": "That is not the number on the other screen. Attempts left: {{count}}.",
+      "number_placeholder": "Number",
+      "origin": "Near: {{origin}}",
+      "purpose": {
+        "adp": "Someone wants to view protected information",
+        "department_entry": "Someone is switching to a department as you",
+        "login": "Someone is signing in to your account",
+        "step_up": "Someone is confirming an action with your account",
+        "unlock": "Someone is unlocking a shared device as you"
+      },
+      "shared": "On a shared device",
+      "title": "Approve sign-in?",
+      "unknown_app": "Another Resgrid app"
+    }
+  },
+  "not_found": {
+    "go_home": "Go to home screen!",
+    "message": "This screen doesn't exist.",
+    "title": "Oops!"
+  },
+  "notifications": {
+    "additionalInformation": "Additional Information",
+    "bulkDeleteError": "Failed to remove notifications",
+    "bulkDeleteSuccess": "{{count}} notification{{count, plural, one {} other {s}}} removed",
+    "confirmDelete": {
+      "message": "Are you sure you want to delete {{count}} notification{{count, plural, one {} other {s}}}? This action cannot be undone.",
+      "title": "Confirm Delete"
+    },
+    "deleteError": "Failed to remove notification",
+    "deleteSuccess": "Notification removed",
+    "deselectAll": "Deselect All",
+    "loadError": "Unable to load notifications",
+    "notAvailable": "N/A",
+    "selectAll": "Select All",
+    "selectedCount": "{{count}} selected",
+    "viewCall": "View Call",
+    "viewChat": "View Chat",
+    "viewMessage": "View Message",
+    "viewReference": "View {{referenceType}}",
+    "viewWorkOrder": "View Work Order"
+  },
+  "onboarding": {
+    "get_started": "Let's Get Started",
+    "slides": {
+      "calls": {
+        "description": "Seamlessly view call information and interact with your team members for efficient emergency response",
+        "title": "Interact with Calls"
+      },
+      "notifications": {
+        "description": "Receive immediate alerts for emergencies and important updates from your department",
+        "title": "Instant Notifications"
+      },
+      "responder": {
+        "description": "Manage your status, staffing, and interact with your organization in real-time",
+        "title": "{{appName}}"
+      }
+    }
+  },
+  "operations": {
+    "time": {
+      "coveredBy": "This time is already on report #{{number}} for this day.",
+      "crewReport": "Crew time report #{{number}} · {{name}}",
+      "individualReport": "Time report #{{number}} · {{name}}",
+      "report": "Report #{{number}}"
+    }
+  },
+  "personnel": {
+    "contactInformation": "Contact Information",
+    "currentStatus": "Current Status",
+    "emptyDescription": "No personnel match your search criteria or no personnel data is available.",
+    "filter": {
+      "description": "Select filters to refine the personnel list. Changes are automatically applied.",
+      "empty": "No filter options available",
+      "emptyDescription": "Filter options will appear here when available.",
+      "title": "Filter Personnel"
+    },
+    "id": "ID",
+    "status": {
+      "add_note": "Add Note",
+      "calls_tab": "Calls",
+      "current": "Current",
+      "current_status": "Current status",
+      "destination_required": "A destination is required for this status",
+      "general_status": "General status update",
+      "gps_required": "GPS location is required for this status",
+      "hold_to_set_hint": "Press and hold for 2 seconds to set the status",
+      "hold_to_set_instructions": "Press and hold a status for 2 seconds to set it",
+      "hold_to_submit": "Hold to submit",
+      "loading_pois": "Loading POIs...",
+      "loading_stations": "Loading stations...",
+      "missing_required_info": "Missing required information",
+      "no_destination": "No Destination",
+      "no_stations_available": "No stations available",
+      "note": "Note",
+      "note_placeholder": "Enter a note (optional)...",
+      "note_required": "A note is required for this status",
+      "pois_tab": "POI",
+      "responding_to_placeholder": "Enter what you're responding to...",
+      "saved_offline": "Status saved offline and will be submitted when connection is restored",
+      "select_call_to_respond_to": "Select Call to Respond To",
+      "select_destination": "Select Destination",
+      "select_responding_to": "Set Status: {{status}}",
+      "selected_call": "Selected Call",
+      "set_status": "Set Personnel Status",
+      "show_all_statuses": "Show all statuses ({{count}} more)",
+      "show_next_statuses": "Show next statuses only",
+      "stations_tab": "Stations",
+      "status": "Status"
+    }
+  },
+  "pois": {
+    "address_label": "Address",
+    "coordinates_label": "Coordinates",
+    "destination_enabled": "Destination enabled",
+    "empty_description": "No POIs match the current filter.",
+    "empty_title": "No POIs found",
+    "filter_all_types": "All types",
+    "filter_label": "Filter",
+    "filter_sort_title": "Filter & Sort",
+    "invalid_description": "A POI id is required to view POI details.",
+    "invalid_title": "Invalid POI",
+    "list_description": "Browse department POIs, filter by type, and jump back to the map.",
+    "load_error_title": "Unable to load POI",
+    "not_found": "POI not found",
+    "note_label": "Note",
+    "reset_filters": "Reset",
+    "results_count": "{{count}} POI",
+    "results_count_plural": "{{count}} POIs",
+    "search_placeholder": "Search POIs...",
+    "set_status_destination": "Set status destination",
+    "sort_label": "Sort",
+    "sort_name": "Name",
+    "sort_type": "Type",
+    "title": "POI",
+    "type_label": "Type",
+    "view_details": "View Details",
+    "view_on_map": "View on Map",
+    "view_on_map_hint": "Keep the map open to see your location and the selected POI together."
+  },
+  "push_notifications": {
+    "communication_test_confirmed": "Receipt confirmed. Thank you.",
+    "communication_test_failed": "Couldn't confirm receipt. Please try again.",
+    "communication_test_prompt": "This is only a test. Confirm you received it so your department knows it can reach you.",
+    "confirm_receipt": "Confirm Receipt",
+    "confirming_receipt": "Confirming...",
+    "types": {
+      "communication_test": "Communication Test",
+      "weather": "Weather Alert",
+      "work_order": "Work Order"
+    },
+    "view_alert": "View Alert",
+    "view_chat": "View Chat",
+    "view_work_order": "View Work Order"
+  },
+  "settings": {
+    "logout_confirm_cancel": "Cancel",
+    "logout_confirm_yes": "Yes, Logout",
+    "notifications_badge_overflow": "99+",
+    "notifications_button": "Notifications"
+  },
+  "shifts": {
+    "actions": {
+      "accept": "Accept",
+      "add_person": "Add person",
+      "apply": "Apply to take it",
+      "approve": "Approve",
+      "cancel_request_admin": "Cancel request",
+      "cancel_trade": "Cancel trade request",
+      "confirm": "Confirm",
+      "confirm_signup": "Confirm sign-up",
+      "decline": "Decline",
+      "deny": "Deny",
+      "remove": "Remove",
+      "request_trade": "Request trade",
+      "send_request": "Send request",
+      "withdraw_application": "Withdraw application"
+    },
+    "add_panel": {
+      "group": "Group",
+      "no_options": "No one else is available to add.",
+      "person": "Person",
+      "search_placeholder": "Search personnel",
+      "submit": "Add to shift",
+      "title": "Add a person for this day"
+    },
+    "all_shifts": "All Shifts",
+    "already_signed_up": "Already Signed Up",
+    "approval_required": "Approval required",
+    "approvals": {
+      "signups": "Sign-ups",
+      "trades": "Trades"
+    },
+    "assigned": "Assigned",
+    "assignment_type": {
+      "assigned": "Assigned",
+      "signup": "Sign-up",
+      "workshift": "Workshift"
+    },
+    "automatic": "Automatic",
+    "available": "Available",
+    "calendar": "Calendar",
+    "calendar_export": {
+      "add_all": "Add my shifts to calendar ({{count}})",
+      "add_all_hint": "Adds every shift you are working in the next 30 days to your device calendar",
+      "add_hint": "Adds this shift to your device calendar, or updates it if it is already there",
+      "add_one": "Add to calendar",
+      "added_many": "Shifts in your calendar: {{count}}",
+      "added_one": "Added to your calendar",
+      "event_footer": "Added from Resgrid",
+      "event_place": "With: {{place}}",
+      "event_title": "{{name}} shift",
+      "failed": "The shift could not be added to your calendar.",
+      "nothing_to_add": "Only shifts you are working can be added to your calendar.",
+      "permission_denied": "Calendar access is off. Allow it in Settings to add shifts.",
+      "updated_one": "Updated in your calendar"
+    },
+    "calendar_view": {
+      "day_a11y": "{{date}}: shifts {{count}}, open slots {{open}}",
+      "filter_a11y": "Filter the calendar by shift",
+      "legend_filled": "Fully staffed",
+      "legend_mine": "My shifts",
+      "legend_open": "Open slots",
+      "next_month": "Next month",
+      "previous_month": "Previous month",
+      "select_day": "Select a day to see its shifts",
+      "shift_info": "Shift details"
+    },
+    "card_a11y_hint": "Opens the details for this shift day",
+    "current_signups": "Current Sign-ups",
+    "day": {
+      "covering_for": "Covering for {{name}}",
+      "denied_note": "Your sign-up for this day was denied.",
+      "group_filled": "Filled",
+      "group_open": "Open: {{count}}",
+      "no_group": "No group",
+      "no_role_requirements": "No role requirements",
+      "open_needs": "Open needs",
+      "pending_note": "Your sign-up is waiting for supervisor approval. You are not on duty until it is approved.",
+      "require_approval_note": "Sign-ups and trades on this shift need supervisor approval.",
+      "roster": "Roster",
+      "roster_empty": "No one is on this day yet.",
+      "trade_pending_note": "You have asked colleagues to take this shift."
+    },
+    "day_details": "Shift Day Details",
+    "details": "Shift Details",
+    "empty": {
+      "approvals_description": "Sign-ups and trades waiting for your approval appear here.",
+      "approvals_title": "Nothing to approve",
+      "calendar_day": "No shifts on this day",
+      "mine_description": "Shifts you are scheduled for or signed up to in the next 30 days appear here.",
+      "mine_title": "No upcoming shifts",
+      "on_duty_description": "Nobody is on an active shift right now.",
+      "on_duty_title": "No one on duty",
+      "open_trades_description": "When someone asks to trade out of a shift, the request appears here for anyone who can take it.",
+      "open_trades_title": "No open trade requests",
+      "signup_description": "Sign-up shift days with room for you in the next 30 days appear here.",
+      "signup_title": "Nothing to sign up for",
+      "trades_description": "Trade requests you send or receive appear here.",
+      "trades_title": "No shift trades"
+    },
+    "end_time": "End Time",
+    "errors": {
+      "already_on_roster": "That person is already on this day.",
+      "already_signed_up": "You are already signed up for this day.",
+      "day_in_past": "This shift day has already passed.",
+      "invalid_group": "That group is not part of this shift.",
+      "invalid_offer": "That offer is no longer valid.",
+      "invalid_request": "The request was not valid. Please try again.",
+      "network": "You appear to be offline. Please try again.",
+      "no_users": "Pick at least one person.",
+      "not_allowed": "You do not have permission to do that.",
+      "not_eligible": "You do not have the roles this slot needs.",
+      "not_found": "This shift, sign-up or trade no longer exists.",
+      "not_on_shift": "You are not on this shift day.",
+      "not_pending": "This request is no longer pending.",
+      "trade_exists": "There is already an open trade for this day.",
+      "unknown": "Something went wrong. Please try again."
+    },
+    "groups": "Groups",
+    "hours": "Hours",
+    "in_shift": "In Shift",
+    "legend": "Legend",
+    "load_error": "Could not load shifts",
+    "loading": "Loading shifts...",
+    "loading_details": "Loading shift details...",
+    "loading_signup": "Processing...",
+    "manual": "Manual",
+    "mine_sections": {
+      "active": "On duty now",
+      "pending": "Waiting for approval",
+      "upcoming": "Upcoming"
+    },
+    "my_standing_shifts": "Shifts I am on",
+    "my_upcoming_days": "Upcoming days",
+    "needed": "Needed",
+    "needs": "Needs",
+    "next_day": "Next Day",
+    "no_positions_available": "No positions available for signup",
+    "no_shifts": "No shifts available",
+    "no_shifts_description": "Contact your supervisor if you believe you should have shift assignments",
+    "no_shifts_today": "No shifts scheduled for today",
+    "no_shifts_today_description": "Check back later or contact your supervisor for shift assignments",
+    "no_signups_yet": "No sign-ups yet",
+    "note_label": "Note",
+    "note_optional_placeholder": "Add a note (optional)",
+    "on_duty": {
+      "count": "On duty: {{count}}",
+      "until": "Until {{time}}"
+    },
+    "optional": "Optional",
+    "overnight": "(next day)",
+    "personnel_count": "Personnel Count",
+    "position_needs": "Position Needs",
+    "remove_panel": {
+      "description": "They will be taken off this day only. Their other shifts are not affected.",
+      "remove_person": "Remove {{name}} from this day",
+      "title": "Remove {{name}}?"
+    },
+    "required": "Required",
+    "required_count": "Required: {{count}}",
+    "review": {
+      "approve_person": "Approve {{name}}",
+      "approve_signup_title": "Approve this sign-up?",
+      "approve_trade_title": "Approve this trade?",
+      "deny_person": "Deny {{name}}",
+      "deny_signup_title": "Deny this sign-up?",
+      "deny_trade_title": "Deny this trade?",
+      "requested_at": "Requested {{date}}",
+      "trade_summary": "{{from}} hands this shift to {{to}}"
+    },
+    "roles": "Roles",
+    "roster_source": {
+      "scheduled": "Scheduled",
+      "signup": "Signed up",
+      "supervisor": "Added by supervisor",
+      "trade": "Trade"
+    },
+    "schedule_type": {
+      "custom": "Custom",
+      "forty_eight_ninety_six": "48/96",
+      "manual": "Manual",
+      "twenty_four_forty_eight": "24/48",
+      "twenty_four_seventy_two": "24/72"
+    },
+    "scheduled_for": "Scheduled for",
+    "search_placeholder": "Search shifts...",
+    "segments": {
+      "a11y_hint": "Shows this shifts view",
+      "approvals": "Approvals",
+      "calendar": "Calendar",
+      "mine": "My Shifts",
+      "on_duty": "On Duty",
+      "signup": "Sign Up",
+      "today": "Today",
+      "trades": "Trades",
+      "with_count": "{{label}}, {{count}} pending"
+    },
+    "shift_card_a11y_hint": "Opens the details for this shift",
+    "shift_code": "Shift Code",
+    "shift_day": "Shift Day",
+    "shift_name": "Shift Name",
+    "shift_type": {
+      "emergency": "Emergency",
+      "label": "Shift Type",
+      "regular": "Regular",
+      "training": "Training",
+      "unknown": "Unknown"
+    },
+    "signed_up": "Signed Up",
+    "signup": "Sign Up",
+    "signup_error": "Failed to sign up for shift",
+    "signup_panel": {
+      "approval_notice": "A supervisor must approve this sign-up before you are on duty.",
+      "description": "Pick the group (team) you are signing up with for this day.",
+      "hint": "Choose a team and confirm your sign-up",
+      "no_groups": "This shift has no groups to sign up for.",
+      "title": "Choose your team"
+    },
+    "signup_status": "Sign-up Status",
+    "signup_success": "Successfully signed up for shift",
+    "signup_view": {
+      "description": "Shift days you can sign up for in the next 30 days. Tap a day to choose your team.",
+      "filter_all": "All days",
+      "filter_needed": "Needs people"
+    },
+    "signups": "Sign-ups",
+    "start_time": "Start Time",
+    "status": {
+      "active_now": "Active now",
+      "denied": "Denied",
+      "filled": "Fully staffed",
+      "on_roster": "You are on",
+      "open_slots": "Open slots: {{count}}",
+      "pending_approval": "Pending approval",
+      "trade_requested": "Trade requested"
+    },
+    "title": "Shifts",
+    "toast": {
+      "approved": "Approved",
+      "denied": "Denied",
+      "person_added": "Person added to the shift",
+      "person_removed": "Person removed from the shift",
+      "signup_pending": "Signed up. Waiting for supervisor approval.",
+      "trade_accepted": "Your offer was sent",
+      "trade_application_withdrawn": "Your application was withdrawn",
+      "trade_applied": "Application sent",
+      "trade_cancelled": "Trade request cancelled",
+      "trade_declined": "Trade declined",
+      "trade_finished": "Trade completed",
+      "trade_finished_pending": "Trade sent for supervisor approval",
+      "trade_requested": "Trade request sent",
+      "trade_requested_open": "Trade request sent to everyone who can take it"
+    },
+    "today": "Today",
+    "todays_shifts": "Today's Shifts",
+    "trade": {
+      "accept_description": "You can offer one of your upcoming shifts in return, or simply take this one.",
+      "accept_title": "Accept this trade?",
+      "applicant_conflict": "Already working {{name}} at this time",
+      "applicant_count": "Applicants: {{count}}",
+      "applicants": "Applicants",
+      "applied_at": "Applied {{date}}",
+      "apply_description": "{{name}} and the people who decide trades will see your application. You can offer one of your shifts in return.",
+      "apply_title": "Apply to take this shift?",
+      "cancel_description": "Any offers you have received will be discarded.",
+      "cancel_description_open": "Everyone who applied will be told the request was cancelled.",
+      "cancel_title": "Cancel this trade request?",
+      "decline_description": "The requester will see that you declined.",
+      "decline_title": "Decline this trade?",
+      "details_a11y": "Trade for {{shift}} on {{date}}",
+      "details_hint": "Opens the trade with its applicants",
+      "filter_mine": "Mine ({{count}})",
+      "filter_open": "Open requests ({{count}})",
+      "finish_give_description": "{{name}} will take this shift.",
+      "finish_pending_note": "A supervisor must approve this trade before it takes effect.",
+      "finish_swap_description": "{{name}} takes this shift and you take their {{shift}} on {{date}}.",
+      "finish_title": "Pick this offer?",
+      "from": "From {{name}}",
+      "give_to": "Give to {{name}}",
+      "incoming": "Incoming",
+      "ineligible": {
+        "already_on_day": "You are already working this day.",
+        "missing_roles": "You do not have the roles this slot needs.",
+        "not_allowed": "You cannot take this shift."
+      },
+      "my_state": {
+        "accepted": "You are taking this shift",
+        "declined": "You declined",
+        "denied": "Denied by a supervisor",
+        "filled": "Someone else took it",
+        "open": "Waiting for your answer",
+        "pending_approval": "Waiting for supervisor approval",
+        "proposed": "You made an offer"
+      },
+      "nearby_workload": "Within a week of this day: {{count}} shifts, {{hours}} h",
+      "no_applicants": "No one has applied yet",
+      "no_certifications": "No current certifications",
+      "no_offers": "No responses yet",
+      "no_swap": "Do not offer a shift back",
+      "offer_back": "Offer a shift in return",
+      "offers": "Responses",
+      "open_request": "Open to all",
+      "outgoing": "Outgoing",
+      "pick_as_approver_note": "You decide this trade as an approver: your pick takes effect right away.",
+      "pick_note": "Pick who takes this shift.",
+      "requested_at": "Requested {{date}}",
+      "requested_by": "Requested by {{name}}",
+      "reviewed_by": "Reviewed by {{name}}",
+      "section_active": "In progress",
+      "section_applied": "You applied",
+      "section_attention": "Needs your attention",
+      "section_can_apply": "You can take these",
+      "section_other_requests": "Other requests",
+      "section_recent": "Recent",
+      "select_applicant": "Give to {{name}}",
+      "status": {
+        "cancelled": "Cancelled",
+        "completed": "Completed",
+        "denied": "Denied",
+        "open": "Open",
+        "pending_approval": "Pending approval"
+      },
+      "swap_back": "Swap back on {{date}}",
+      "swap_for": "Swap for {{shift}} on {{date}}",
+      "taken_by": "Taken by {{name}}",
+      "user_declined": "Declined",
+      "user_offered": "Offered",
+      "user_waiting": "No reply yet",
+      "user_withdrew": "Withdrew",
+      "withdraw_description": "The requester will see that you are no longer available.",
+      "withdraw_title": "Withdraw your application?"
+    },
+    "trade_panel": {
+      "description": "Choose who you would like to take this shift. Everyone you pick is asked, then you choose from their offers.",
+      "mode_open": "Everyone who can take it",
+      "mode_open_hint": "People who will be notified: {{count}}",
+      "mode_specific": "Only people I choose",
+      "mode_specific_hint": "Ask specific colleagues instead",
+      "no_candidates": "No one is available to take this shift.",
+      "open_description": "Everyone who is free that day and holds the roles your slot needs gets an email and a push notification and can apply. You then choose who takes it, or your supervisor does.",
+      "open_description_workshift": "Everyone who is free that day gets an email and a push notification and can apply to take your place on the unit.",
+      "selected_count": "Selected: {{count}}",
+      "title": "Request a trade"
+    },
+    "type_emergency": "Emergency",
+    "type_regular": "Regular",
+    "type_training": "Training",
+    "type_unknown": "Unknown",
+    "unknown": "Unknown",
+    "upcoming_shift_days": "Upcoming Shift Days",
+    "view_calendar": "View in calendar",
+    "view_calendar_hint": "Shows this shift in the calendar",
+    "withdraw": "Withdraw",
+    "withdraw_error": "Failed to withdraw from shift",
+    "withdraw_panel": {
+      "description": "You will be removed from the roster for {{date}}.",
+      "title": "Withdraw from this shift?"
+    },
+    "withdraw_success": "Successfully withdrew from shift",
+    "you": "You",
+    "you_are_signed_up": "You are signed up for this shift"
+  },
+  "sidebar": {
+    "audio": "Stream",
+    "ptt": "Voice"
+  },
+  "tabs": {
+    "personnel": "People",
+    "units": "Units",
+    "weatherAlerts": "Weather Alerts"
+  },
+  "units": {
+    "coordinates": "Coordinates",
+    "emptyDescription": "No units are available in your department",
+    "features": "Features",
+    "fourWheelDrive": "4WD",
+    "lastUpdate": "Last Updated",
+    "location": "Location",
+    "maps_error": "Unable to open maps",
+    "notes": "Notes",
+    "plateNumber": "Plate Number",
+    "specialPermit": "Special Permit",
+    "tapToOpenMaps": "Tap to open in maps",
+    "vehicleInfo": "Vehicle Information"
+  },
+  "video_feeds": {
+    "add_feed": "Add Video Feed",
+    "delete_confirm": "Are you sure you want to delete this video feed?",
+    "delete_feed": "Delete Video Feed",
+    "edit_feed": "Edit Video Feed",
+    "form_description": "Description",
+    "form_feed_format": "Feed Format",
+    "form_feed_type": "Feed Type",
+    "form_name": "Name",
+    "form_sort_order": "Sort Order",
+    "form_status": "Status",
+    "form_url": "URL",
+    "format_youtube": "YouTube",
+    "no_feeds": "No video feeds for this call",
+    "type_satellite": "Satellite Feed",
+    "type_webcam": "Webcam",
+    "unsupported_format": "This format is not supported for in-app playback. Copy the URL to open in an external player."
+  },
+  "weather_alerts": {
+    "banner": {
+      "moreAlerts": "+{{count}} more"
+    },
+    "category": {
+      "CBRNE": "CBRNE",
+      "Env": "Environmental",
+      "Fire": "Fire",
+      "Geo": "Geological",
+      "Health": "Health",
+      "Infra": "Infrastructure",
+      "Met": "Meteorological",
+      "Other": "Other",
+      "Transport": "Transport"
+    },
+    "certainty": {
+      "Likely": "Likely",
+      "Observed": "Observed",
+      "Possible": "Possible",
+      "Unknown": "Unknown",
+      "Unlikely": "Unlikely",
+      "label": "Certainty"
+    },
+    "detail": {
+      "load_error": "Alert unavailable",
+      "load_error_description": "This weather alert could not be loaded. It may have expired or the request failed.",
+      "metadata": "Details",
+      "status": "Status"
+    },
+    "search": "Search alerts...",
+    "severity": {
+      "Extreme": "Extreme",
+      "Minor": "Minor",
+      "Moderate": "Moderate",
+      "Severe": "Severe",
+      "Unknown": "Unknown"
+    },
+    "status": {
+      "Active": "Active",
+      "Actual": "Actual",
+      "Cancelled": "Cancelled",
+      "Draft": "Draft",
+      "Exercise": "Exercise",
+      "Expired": "Expired",
+      "System": "System",
+      "Test": "Test",
+      "Updated": "Updated"
+    },
+    "urgency": {
+      "Expected": "Expected",
+      "Future": "Future",
+      "Immediate": "Immediate",
+      "Past": "Past",
+      "Unknown": "Unknown",
+      "label": "Urgency"
+    }
+  },
+  "welcome": "Welcome to {{appName}}",
+  "workOrders": {
+    "accept": "Accept assignment",
+    "activity": "Activity",
+    "activityType": {
+      "0": "Created",
+      "1": "Updated",
+      "2": "Status changed",
+      "3": "Assigned",
+      "4": "Assignment accepted",
+      "5": "Comment",
+      "6": "Hours logged",
+      "7": "Part added",
+      "8": "Part voided",
+      "9": "File added",
+      "10": "File removed",
+      "11": "Safety hold",
+      "12": "Safety hold released",
+      "13": "Deferred",
+      "14": "Escalated"
+    },
+    "addComment": "Add comment",
+    "allMine": "All I can see",
+    "assetIs": "Equipment: {{name}}",
+    "assignedToMe": "Assigned to me",
+    "back": "Back",
+    "cannotReport": "Your department cannot take new work orders right now.",
+    "choosePhoto": "Choose photo",
+    "commentHint": "Add a comment",
+    "due": "Due {{date}}",
+    "errors": {
+      "AcceptAssignmentFirst": "Accept the assignment first.",
+      "Conflict": "Someone else changed this work order. Check it and try again.",
+      "IndependentVerificationRequired": "Someone other than the person who did the work must close it.",
+      "InvalidFile": "Only JPEG, PNG or PDF files up to 10 MB can be attached.",
+      "PartBalanceOutstanding": "Parts still need to be issued, returned or witnessed.",
+      "ReadinessProRequired": "Your department needs Readiness Pro for this.",
+      "RevisionConflict": "Someone else changed this work order. Check it and try again.",
+      "SafetyRequirements": "The safety procedure, permit, isolation and qualified personnel must be recorded first.",
+      "ScanRequired": "The file is still being scanned. Try again shortly.",
+      "SpendingApprovalRequired": "Spending approval is needed before this step.",
+      "TasksIncomplete": "Confirm that all steps are complete.",
+      "denied": "You do not have access to this work order.",
+      "locked": "Unlock protected data to continue.",
+      "photo_denied": "Allow camera or photo access to attach a photo.",
+      "readiness_required": "Your department needs Readiness Pro for this.",
+      "retry": "Could not reach the server. Try again."
+    },
+    "files": "Photos and files",
+    "form": {
+      "asset": "Equipment",
+      "description": "Details",
+      "descriptionHint": "What happened, what you saw, anything the mechanic should know",
+      "group": "Station",
+      "location": "Location",
+      "locationHint": "Where exactly (bay, compartment, room)",
+      "none": "None",
+      "photosAfter": "You can add photos once the report is saved.",
+      "priority": "Priority",
+      "safetyCritical": "Safety-critical",
+      "submit": "Submit report",
+      "title": "Title",
+      "titleHint": "What is wrong, in a few words",
+      "type": "Kind of work",
+      "unit": "Apparatus"
+    },
+    "groupIs": "Station: {{name}}",
+    "hours": "Hours",
+    "hoursInvalid": "Enter hours between 0 and 24.",
+    "hoursLogged": "{{hours}} h logged",
+    "hoursNote": "What was done",
+    "locationIs": "Location: {{location}}",
+    "logHours": "Log hours",
+    "more": "Load more",
+    "none": "No work orders.",
+    "noneAssigned": "Nothing is assigned to you.",
+    "photoAdded": "Photo added.",
+    "priority": {
+      "0": "Low",
+      "1": "Normal",
+      "2": "High",
+      "3": "Emergency"
+    },
+    "readOnly": "You can view work orders; reporting and updating them needs {{product}}.",
+    "report": "Report a problem",
+    "resolutionIs": "Resolution: {{text}}",
+    "safety": "Safety-critical or hazardous work",
+    "saveHours": "Save hours",
+    "status": {
+      "0": "Requested",
+      "1": "Accepted",
+      "2": "Assigned",
+      "3": "In progress",
+      "4": "On hold",
+      "5": "Completed",
+      "6": "Closed",
+      "7": "Rejected",
+      "8": "Duplicate",
+      "9": "Cancelled"
+    },
+    "steps": "Steps",
+    "takePhoto": "Take photo",
+    "title": "Work orders",
+    "transition": {
+      "apply": "Update status",
+      "cause": "Cause",
+      "confirmTasks": "All steps are complete",
+      "duplicateOf": "Work order number it duplicates",
+      "missing": {
+        "cause": "Enter the cause.",
+        "confirmTasks": "Confirm the steps are complete.",
+        "duplicateOf": "Enter the work order it duplicates.",
+        "reason": "Enter a reason.",
+        "resolution": "Describe what was done.",
+        "verification": "Describe how it was verified."
+      },
+      "pick": "Choose the new status",
+      "reason": "Reason",
+      "resolution": "What was done to fix it",
+      "title": "Change status",
+      "verification": "How it was verified"
+    },
+    "type": {
+      "0": "Repair",
+      "1": "Preventive",
+      "2": "Inspection",
+      "3": "Facility",
+      "4": "Other"
+    },
+    "unitIs": "Apparatus: {{name}}",
+    "viewPhoto": "View photo {{name}}"
+  }
+}

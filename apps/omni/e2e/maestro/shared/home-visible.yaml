@@ -1,0 +1,14 @@
+# Asserts the app reached its home screen. Today that is HomePlaceholder (@resgrid/app-shell): testID
+# `home-placeholder` showing the variant's identity.name. React Native testIDs are resource-ids on Android
+# and accessibility identifiers on iOS, so `id:` works on both.
+# Variables: APP_ID, APP_NAME, APP_VARIANT.
+appId: ${APP_ID}
+---
+- extendedWaitUntil:
+    visible:
+      id: 'home-placeholder'
+    # A dev client builds the Metro bundle on first open; allow for a cold transform cache.
+    timeout: 300000
+- assertVisible:
+    text: ${APP_NAME}
+- takeScreenshot: home-${APP_VARIANT}
