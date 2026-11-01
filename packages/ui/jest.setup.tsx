@@ -56,7 +56,7 @@ jest.mock('expo-router', () => ({
 
 jest.mock('expo-navigation-bar', () => ({ setVisibilityAsync: jest.fn(() => Promise.resolve()) }));
 
-jest.mock('react-native-edge-to-edge', () => ({ SystemBars: () => null }));
+jest.mock('expo-status-bar', () => ({ StatusBar: () => null }));
 
 // Translations: keys come back verbatim unless a defaultValue is given, which is what the UI falls back to.
 jest.mock('@resgrid/i18n', () => {

@@ -50,7 +50,6 @@
     "countly-sdk-react-native-bridge": "catalog:",
     "expo-image": "catalog:",
     "expo-navigation-bar": "catalog:",
-    "react-native-edge-to-edge": "catalog:",
     "react-native-keyboard-controller": "catalog:",
     "react-native-safe-area-context": "catalog:"
   }

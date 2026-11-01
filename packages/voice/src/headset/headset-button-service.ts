@@ -1,5 +1,5 @@
 import { logger } from '@resgrid/core';
-import { DeviceEventEmitter, type EmitterSubscription, NativeEventEmitter, type NativeModule, NativeModules, Platform } from 'react-native';
+import { DeviceEventEmitter, type EmitterSubscription, NativeEventEmitter, NativeModules, Platform } from 'react-native';
 
 import { useBluetoothAudioStore } from '../bluetooth/bluetooth-audio-store';
 import { getCallKeepService } from '../callkeep/callkeep-service';
@@ -7,7 +7,10 @@ import { getMicrophoneController } from '../ptt/microphone-controller';
 import { PttPressController } from '../ptt/ptt-press-controller';
 import { type HeadsetButtonService, type HeadsetButtonType, type HeadsetMonitorOwner, isPttCapableButton, mapKeyCode, type MediaButtonKeyEvent } from './types';
 
-interface MediaButtonModuleLike extends NativeModule {
+/** The module shape NativeEventEmitter takes (React Native 0.88 no longer exports its `NativeModule` type). */
+type EventEmitterModule = NonNullable<ConstructorParameters<typeof NativeEventEmitter>[0]>;
+
+interface MediaButtonModuleLike extends EventEmitterModule {
   startListening?: () => void;
   stopListening?: () => void;
 }

@@ -114,6 +114,45 @@ describe('@resgrid/i18n', () => {
       expect(changes).toHaveLength(1);
     });
 
+    it('bundles English only and loads the chosen language on demand', async () => {
+      const { i18nModule } = load('unit');
+      const i18n = i18nModule.initI18n({ language: 'de', variantResources: resourcesFor('unit') });
+      expect(i18n.language).toBe('de');
+      expect(i18n.hasResourceBundle('de', 'common')).toBe(false);
+      // Until the strings arrive the English fallback shows, never the key.
+      expect(i18nModule.translate('common.cancel')).toBe('Cancel');
+
+      await expect(i18nModule.loadLanguage('de')).resolves.toBe(true);
+      expect(i18n.hasResourceBundle('de', 'common')).toBe(true);
+      expect(i18n.hasResourceBundle('de', 'unit')).toBe(true);
+      // The translate cache is cleared when the strings are added.
+      expect(i18nModule.translate('common.cancel')).toBe('Abbrechen');
+      expect(i18n.t('login.login_button')).toBe('Anmelden');
+    });
+
+    it('stays on English when a language fails to load and tries again on the next call', async () => {
+      const { i18nModule } = load('unit');
+      // setLanguage tries once, the language change once more; both fail while offline.
+      const de = jest
+        .fn()
+        .mockRejectedValueOnce(new Error('offline'))
+        .mockRejectedValueOnce(new Error('offline'))
+        .mockResolvedValue({ default: { greeting: 'Hallo' } });
+      const loaders = Object.fromEntries(['ar', 'de', 'el', 'es', 'fr', 'it', 'pl', 'sv', 'uk'].map((lang) => [lang, lang === 'de' ? de : jest.fn().mockResolvedValue({ default: {} })]));
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const i18n = i18nModule.initI18n({ language: 'en', variantResources: { en: { greeting: 'Hello' }, loaders } as never });
+
+      await expect(i18nModule.setLanguage('de')).resolves.toBeUndefined();
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(i18n.language).toBe('de');
+      expect(i18n.t('greeting')).toBe('Hello');
+
+      await expect(i18nModule.loadLanguage('de')).resolves.toBe(true);
+      expect(i18n.t('greeting')).toBe('Hallo');
+      expect(de).toHaveBeenCalledTimes(3);
+      warn.mockRestore();
+    });
+
     it('translate() interpolates options and memoizes per options', () => {
       const { i18nModule } = load();
       i18nModule.initI18n({ language: 'en' });

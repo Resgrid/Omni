@@ -23,9 +23,10 @@ let navigationReadyCheck: (() => boolean) | null = null;
  * Publishes the navigation container's real readiness; the root layout registers it
  * (`registerNavigationReadyCheck(() => ref.isReady())`).
  *
- * `router.push` does NOT throw when the root layout has not mounted yet: expo-router logs a warning and drops the
- * navigation. Retrying inside a `catch` therefore waited on an error that never arrived, which is why a push
- * notification tap that cold-started the app silently landed on the home screen (IC's fix).
+ * Before the root layout has mounted, expo-router 57 logged a warning and dropped `router.push` (no error), and
+ * expo-router 58 throws. Retrying only inside a `catch` waited on an error that never arrived on 57, which is why a
+ * push notification tap that cold-started the app silently landed on the home screen (IC's fix); both are covered by
+ * waiting on readiness and retrying a push that throws.
  *
  * Defaults to ready when nothing has registered, so callers outside the app tree (and tests) behave as before.
  */

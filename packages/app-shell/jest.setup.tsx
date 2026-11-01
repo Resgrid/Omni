@@ -38,7 +38,7 @@ jest.mock('nativewind', () => ({
 jest.mock('react-native-webview', () => ({ __esModule: true, default: () => null, WebView: () => null }));
 jest.mock('expo-image', () => ({ Image: () => null }));
 jest.mock('expo-navigation-bar', () => ({ setVisibilityAsync: jest.fn(() => Promise.resolve()) }));
-jest.mock('react-native-edge-to-edge', () => ({ SystemBars: () => null }));
+jest.mock('expo-status-bar', () => ({ StatusBar: () => null }));
 jest.mock('expo-linking', () => ({ getInitialURL: jest.fn(async () => null), addEventListener: jest.fn(() => ({ remove: jest.fn() })) }));
 jest.mock('expo-web-browser', () => ({ maybeCompleteAuthSession: jest.fn(), openAuthSessionAsync: jest.fn(), openBrowserAsync: jest.fn() }));
 jest.mock('@sentry/react-native', () => ({
@@ -73,6 +73,8 @@ jest.mock('@resgrid/i18n', () => {
     useTranslation: () => ({ t: mockT, i18n: { language: 'en', exists: () => false } }),
     translate: mockT,
     initI18n: jest.fn(),
+    loadLanguage: jest.fn(() => Promise.resolve(true)),
+    getCurrentLanguage: () => 'en',
     isSupportedLanguage: (value: unknown) => typeof value === 'string' && ['en', 'ar', 'de', 'el', 'es', 'fr', 'it', 'pl', 'sv', 'uk'].includes(value),
     LEGACY_LANGUAGE_STORAGE_KEY: 'local',
   };

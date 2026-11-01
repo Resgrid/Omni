@@ -69,17 +69,19 @@ describe('useThemeColors', () => {
 
 describe('theme tokens', () => {
   const css = fs.readFileSync(path.resolve(__dirname, '../../../../../apps/omni/theme-tokens.css'), 'utf8');
+  // The web-only .dark/.light class overrides (react-native-css rejects them on native).
+  const webCss = fs.readFileSync(path.resolve(__dirname, '../../../../../apps/omni/theme-tokens.web.css'), 'utf8');
 
-  const block = (start: number): string => {
-    const open = css.indexOf('{', start);
+  const block = (source: string, start: number): string => {
+    const open = source.indexOf('{', start);
     let depth = 1;
     let index = open + 1;
     while (depth > 0) {
-      if (css[index] === '{') depth += 1;
-      if (css[index] === '}') depth -= 1;
+      if (source[index] === '{') depth += 1;
+      if (source[index] === '}') depth -= 1;
       index += 1;
     }
-    return css.slice(open + 1, index - 1);
+    return source.slice(open + 1, index - 1);
   };
 
   const parse = (source: string): Record<string, string> => {
@@ -90,9 +92,10 @@ describe('theme tokens', () => {
     return out;
   };
 
-  const light = parse(block(css.indexOf(':root {')));
-  const dark = parse(block(css.indexOf(':root {', css.indexOf('@media (prefers-color-scheme: dark)'))));
-  const webDark = parse(block(css.indexOf(':root.dark {')));
+  const light = parse(block(css, css.indexOf(':root {')));
+  const dark = parse(block(css, css.indexOf(':root {', css.indexOf('@media (prefers-color-scheme: dark)'))));
+  const webDark = parse(block(webCss, webCss.indexOf(':root.dark {')));
+  const webLight = parse(block(webCss, webCss.indexOf(':root.light {')));
 
   it('mirrors theme-tokens.css exactly (regenerate tokens.ts when the CSS changes)', () => {
     expect(Object.keys(light).sort()).toEqual([...TOKEN_NAMES].sort());
@@ -100,8 +103,13 @@ describe('theme tokens', () => {
     expect(darkTokens).toEqual(dark);
   });
 
-  it('keeps the web .dark class in step with the dark media query', () => {
+  it('keeps the web .dark and .light classes in step with the dark media query and the light defaults', () => {
     expect(webDark).toEqual(dark);
+    expect(webLight).toEqual(light);
+  });
+
+  it('keeps class-qualified :root selectors out of the native token file', () => {
+    expect(css).not.toMatch(/:root\.(dark|light)\s*\{/);
   });
 
   // Dispatch/BigBoard shipped dark mode with primary 600–950 still dark, so text-primary-600, focus borders and

@@ -15,8 +15,9 @@ module.exports = {
   ...preset,
   displayName: 'app-shell',
   rootDir: __dirname,
-  // Reanimated 4 / worklets resolve to their non-native builds under Jest.
-  resolver: 'react-native-worklets/jest/resolver.js',
+  // Reanimated 4.7 / worklets resolve their initialisers to the non-native builds under Jest (Reanimated's resolver wraps
+  // the worklets one).
+  resolver: 'react-native-reanimated/jest/resolver.js',
   transformIgnorePatterns,
   testPathIgnorePatterns: ['/node_modules/', '/__tests__/mocks/', '/__tests__/helpers/'],
   setupFilesAfterEnv: [...preset.setupFilesAfterEnv, '<rootDir>/jest.setup.tsx'],

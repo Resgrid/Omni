@@ -10,6 +10,7 @@ Governing plan: `../int-Coordination/docs/architecture/maplibre-mapping-routing-
 ## Rules
 
 - **MapLibre only.** Import map components from `@resgrid/maps` (`MapView`, `Camera`, `ShapeSource`, `SymbolLayer`, `LineLayer`, `FillLayer`, `CircleLayer`, `RasterSource`, `ImageSource`, `MarkerView`, `Images`, `UserLocation`). Never import `@rnmapbox/maps`, `mapbox-gl` or `maplibre-gl` directly in features.
+- **maplibre-gl loads with the first map** on web/Electron (`packages/maps/src/rg/maplibre-loader.web.ts`, its own chunk). Inside `@resgrid/maps` import its values only through the loader (`loadMapLibre`, `getLoadedMapLibre`) and its types with `import type`; setup that must reach it before the first map (worker URL, `pmtiles://` protocol) goes through `withMapLibre`.
 - **Styles come from config** through `map-provider`: `MapLibreStyleUrlDay/Night` when the server provides them; against older servers derive a MapLibre style from `MapDayStyleUrl` + `AppMapboxAccessToken` client-side. Hide maps when there is no style (not "no token").
 - **No provider calls from the app.** Geocoding (`/Geocoding/*`), routing (`/Routing/*`), static maps (`Mapping/GetStaticMap`) and styles all go through the Resgrid server. No Google/Mapbox/OSRM keys in the client.
 - **Attribution on** in every map (OSM ODbL and Mapbox require it).
