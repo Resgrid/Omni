@@ -2,6 +2,7 @@ import React, { act } from 'react';
 
 import { MapProvider } from '../provider/map-provider';
 import { Images, LineLayer, MapView, MarkerView, ShapeSource } from '../rg';
+import { loadMapLibre } from '../rg/maplibre-loader.web';
 import type { MapPressEvent } from '../rg/types';
 import { type FakeMap, mockCalls, mockMaps, mockMarkers, resetMaplibreGlFakes } from './fakes/maplibre-gl';
 
@@ -32,10 +33,12 @@ const line = {
 let container: HTMLDivElement;
 let root: Root;
 
-beforeAll(() => {
+beforeAll(async () => {
   // jsdom has no layout: report a size so the renderer creates the map.
   Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, get: () => 800 });
   Object.defineProperty(HTMLElement.prototype, 'clientHeight', { configurable: true, get: () => 600 });
+  // maplibre-gl loads with the first map; loaded up front, every map below is created synchronously.
+  await loadMapLibre();
 });
 
 beforeEach(() => {

@@ -1,7 +1,13 @@
 import { isPmtilesProtocolRegistered, registerPmtilesProtocol, resetPmtilesProtocolForTests } from '../pmtiles/register-pmtiles.web';
+import { loadMapLibre } from '../rg/maplibre-loader.web';
 import { configureMapRenderer } from '../rg/renderer-setup.web';
 import { addProtocol, getWorkerUrl } from './fakes/maplibre-gl';
 import { mockProtocols } from './fakes/pmtiles';
+
+// maplibre-gl loaded up front: setup applies immediately (maplibre-loader.web.test.ts covers setup before the load).
+beforeAll(async () => {
+  await loadMapLibre();
+});
 
 describe('registerPmtilesProtocol (web / Electron)', () => {
   beforeEach(() => {

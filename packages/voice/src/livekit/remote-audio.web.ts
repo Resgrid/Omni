@@ -1,5 +1,7 @@
 import { logger } from '@resgrid/core';
-import { type RemoteTrack, type RemoteTrackPublication, type Room, RoomEvent, Track } from 'livekit-client';
+import type { RemoteTrack, RemoteTrackPublication, Room } from 'livekit-client';
+
+import { getLiveKitClient } from './livekit-client';
 
 /**
  * Browsers only play remote LiveKit audio once the track is attached to an <audio> element in the DOM (Dispatch
@@ -7,6 +9,7 @@ import { type RemoteTrack, type RemoteTrackPublication, type Room, RoomEvent, Tr
  * room's listeners are stripped, or the elements would stay in the document forever.
  */
 export function attachRemoteAudio(room: Room): () => void {
+  const { RoomEvent, Track } = getLiveKitClient();
   const elements = new Map<string, HTMLMediaElement>();
 
   const onSubscribed = (track: RemoteTrack, publication: RemoteTrackPublication): void => {

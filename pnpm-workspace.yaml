@@ -28,6 +28,7 @@ catalog:
   '@playwright/test': '1.64.1'
   yaml: '^2.8.1'
   '@babel/core': '^7.29.0'
+  '@babel/plugin-transform-dynamic-import': '^7.27.1'
   '@commitlint/cli': '19.2.2'
   '@commitlint/config-conventional': '19.2.2'
   '@config-plugins/react-native-callkeep': '14.0.1'

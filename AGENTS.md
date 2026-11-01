@@ -38,7 +38,7 @@ Never fork code per app. In order of preference: **capability** (`useCapability(
 - Conditional rendering with ternaries, not `&&`.
 - Files and folders kebab-case; components PascalCase; hooks `use-*.ts` exporting `useX`; stores `use-x-store` style hooks. v4 models mirror Core names (PascalCase fields) exactly.
 - Every user-visible string through `t()`; all 10 language files in key parity (`resgrid-i18n` skill). Department-renameable words via `useTerm()`.
-- UI from `@resgrid/ui` (gluestack primitives) and NativeWind classes; lucide icons used directly. No React Native `Modal` (use `NativeModal`/overlay primitives). No new UI libraries without a plan change.
+- UI from `@resgrid/ui` (gluestack primitives) and NativeWind classes; lucide icons used directly (named imports from `lucide-react-native` only — `apps/omni/babel/lucide-icon-imports.js` turns them into one module per icon). No React Native `Modal` (use `NativeModal`/overlay primitives). No new UI libraries without a plan change.
 - Web/Electron-safe styling: merge style arrays with `StyleSheet.flatten()`, never pass `style` to lucide icons (wrap in a `View`), avoid `gap` in `StyleSheet` styles.
 - Data: zustand stores → `@resgrid/api` endpoint functions → cached endpoints; persisted stores for anything needed offline. No React Query. Writes in an app's offline scope go through the outbox (`omni-offline-first` skill); local SQLite data always has a retention rule.
 - Notifications use the modern sound set only (no classic sounds, no toggle).
