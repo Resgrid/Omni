@@ -4,6 +4,7 @@
 @import 'nativewind/theme';
 
 @import './theme-tokens.css';
+@import './theme-tokens.web.css';
 
 /* Tailwind 4 only generates classes it finds in scanned sources; shared UI lives in workspace packages. */
 @source '../../packages/*/src/**/*.{ts,tsx}';

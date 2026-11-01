@@ -80,10 +80,10 @@ export const routes = defineRoutes([
 ]);
 
 export const nav = defineNav([
-  // Unit's home is the map, the first tab: `/` hands over to it (shell.homeRoute '/map'); freezeOnBlur keeps the native
-  // map alive across tab switches.
+  // Unit's home is the map, the first tab: `/` hands over to it (shell.homeRoute '/map'). Tab screens stay mounted, so
+  // the native map stays alive across tab switches.
   { id: 'root', href: '/', placement: 'hidden', labelKey: 'tabs.home', defaultLabel: 'Home' },
-  ...featureNav(mapNav, 'tab', { order: 0, overrides: { map: { freezeOnBlur: true } } }),
+  ...featureNav(mapNav, 'tab', { order: 0 }),
   ...featureNav(callsNav, { calls: 'tab', 'call-new': 'hidden' }, { order: 10 }),
   ...featureNav(unitRoutesNav, 'tab', { order: 20 }),
   ...featureNav(contactsNav, 'tab', { order: 30 }),
