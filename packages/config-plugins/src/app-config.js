@@ -115,6 +115,9 @@ function createAppConfig({ variant, appEnv, runNumber, projectRoot, env = proces
 
   plugins.push(plugin('custom-gradle.js'));
   plugins.push([plugin('custom-manifest.js'), { allowCleartextTraffic: appEnv === 'development' }]);
+  // MapLibre replaces @rnmapbox/maps everywhere (MapLibre plan D1, omni-plan D10).
+  if (has('maplibre')) plugins.push('@maplibre/maplibre-react-native');
+
   plugins.push(plugin('withRestrictedBootReceivers.js'));
   if (!backgroundLocation) plugins.push(plugin('withoutBackgroundLocation.js'));
   if (has('notifee')) plugins.push(plugin('withNotificationSounds.js'));

@@ -1,2 +1,2 @@
-// @resgrid/features — see docs/architecture/omni-plan.md §5.1. Populated in Phase 1+.
+// @resgrid/features — import features by folder (e.g. '@resgrid/features/calls'); see README.md.
 export {};

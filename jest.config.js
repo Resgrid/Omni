@@ -17,6 +17,7 @@ module.exports = {
     '<rootDir>/packages/voice/jest.node.config.js',
     '<rootDir>/packages/voice/jest.hooks.config.js',
     '<rootDir>/packages/ui',
+    '<rootDir>/packages/features',
     '<rootDir>/apps/omni',
     '<rootDir>/apps/desktop',
   ],
