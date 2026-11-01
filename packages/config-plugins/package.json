@@ -1,0 +1,12 @@
+{
+  "name": "@resgrid/config-plugins",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Expo config plugins and build-time variant tooling for Resgrid Omni",
+  "main": "index.js",
+  "files": [
+    "index.js",
+    "src",
+    "plugins"
+  ]
+}

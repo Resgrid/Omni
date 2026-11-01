@@ -1,0 +1,158 @@
+{
+  "id": "responder",
+  "displayName": "Responder",
+  "identity": {
+    "name": "Resgrid Responder",
+    "slug": "resgrid-responder",
+    "easProjectId": "026d4a74-f01d-41db-ae57-67f8c65a5f79",
+    "clientId": "responder",
+    "ios": {
+      "bundleIdentifier": "com.wavetech.Resgrid",
+      "associatedDomains": ["webcredentials:responder.resgrid.com", "webcredentials:responder-eu-central.resgrid.com"],
+      "appGroup": "group.com.wavetech.resgrid.shared"
+    },
+    "android": {
+      "package": "wtdt.resgrid.andriod"
+    },
+    "schemes": ["ResgridRespond", "resgrid"],
+    "ssoReturnScheme": "resgrid",
+    "electron": {
+      "appId": "com.resgrid.responder",
+      "productName": "Resgrid Responder",
+      "protocol": "resgrid"
+    },
+    "web": {
+      "dockerImage": "resgridllc/responder",
+      "legacyEnvPrefix": "RESPOND_"
+    },
+    "sentryProject": "responder",
+    "notificationColor": "#2a7dd5",
+    "adaptiveIconBackground": "#2484c4",
+    "splashBackground": "#2a7dd5",
+    "owner": "resgrid"
+  },
+  "storage": {
+    "mmkvId": "ResgridResponder",
+    "keySecret": "RESPONDER_MMKV_KEY",
+    "extraInstances": ["checklists-ciphertext-v1"]
+  },
+  "versioning": {
+    "tagPrefix": "responder-v",
+    "major": 11,
+    "buildNumberBase": 5100000
+  },
+  "capabilities": {
+    "calls": {
+      "create": "full",
+      "dispatch": true,
+      "close": true,
+      "queues": false,
+      "runCards": false
+    },
+    "status": {
+      "subject": "personnel",
+      "onBehalf": false,
+      "staffing": true
+    },
+    "incidentCommand": "view",
+    "checkIn": {
+      "self": true,
+      "others": false,
+      "actions": true
+    },
+    "videoFeeds": "view",
+    "weatherAlerts": {
+      "admin": false
+    },
+    "voice": {
+      "ptt": true,
+      "callKeep": true,
+      "bluetoothPtt": true,
+      "headsetButtonPtt": true,
+      "desktopPtt": false
+    },
+    "location": {
+      "background": true,
+      "transmission": "person",
+      "geoHubDefault": false
+    },
+    "push": {
+      "subject": "user",
+      "desktopPush": true,
+      "liveActivity": true,
+      "approveSignIns": true
+    },
+    "auth": {
+      "mfa": true,
+      "passkeys": true,
+      "brokeredSso": true,
+      "sharedDevice": false,
+      "personalLock": false,
+      "neverLogoutOnTransientError": false,
+      "appAccessRight": null
+    },
+    "realtime": {
+      "chatHub": true,
+      "hubWatchdog": false
+    },
+    "maps": {
+      "layers": true,
+      "customIndoor": false,
+      "navigationInApp": false
+    },
+    "platform": {
+      "webEdition": true,
+      "electron": true,
+      "onboarding": true,
+      "maintenanceMode": true
+    }
+  },
+  "modules": ["member-home", "calendar", "shifts", "messages", "staffing", "work-orders", "certifications", "approve-sign-in"],
+  "native": {
+    "modules": [
+      "background-location",
+      "task-manager",
+      "livekit",
+      "callkeep",
+      "ble-manager",
+      "live-activity",
+      "calendar",
+      "permissions",
+      "secure-store",
+      "video",
+      "passkey",
+      "media-button",
+      "in-call-audio",
+      "maplibre",
+      "sqlite",
+      "notifee"
+    ],
+    "iosBackgroundModes": ["remote-notification", "audio", "bluetooth-central", "voip", "location"],
+    "androidPermissions": [
+      "android.permission.WAKE_LOCK",
+      "android.permission.RECORD_AUDIO",
+      "android.permission.CAPTURE_AUDIO_OUTPUT",
+      "android.permission.POST_NOTIFICATIONS",
+      "android.permission.FOREGROUND_SERVICE",
+      "android.permission.FOREGROUND_SERVICE_MICROPHONE",
+      "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+    ],
+    "androidBlockedPermissions": ["android.permission.READ_MEDIA_IMAGES", "android.permission.READ_MEDIA_VIDEO", "android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE"],
+    "iosUseStaticFrameworks": false
+  },
+  "offline": {
+    "cacheTtl": "short",
+    "storageBudgetMb": 150,
+    "mapPacks": "full"
+  },
+  "shell": {
+    "kind": "drawer-slot",
+    "sidebar": {
+      "phone": "drawer",
+      "tablet": "permanent-landscape",
+      "desktop": "permanent-landscape"
+    },
+    "sidebarContent": "menu",
+    "homeRoute": "/home"
+  }
+}

@@ -1,0 +1,145 @@
+{
+  "id": "unit",
+  "displayName": "Unit",
+  "identity": {
+    "name": "Resgrid Unit",
+    "slug": "resgrid-unit",
+    "easProjectId": "6beb03e6-f639-4f35-bef7-5cfb5f173218",
+    "clientId": "unit",
+    "ios": {
+      "bundleIdentifier": "com.resgrid.unit",
+      "associatedDomains": ["webcredentials:unit.resgrid.com", "webcredentials:unit-eu-central.resgrid.com"],
+      "appGroup": null
+    },
+    "android": {
+      "package": "com.resgrid.unit"
+    },
+    "schemes": ["ResgridUnit"],
+    "ssoReturnScheme": "resgridunit",
+    "electron": {
+      "appId": "com.resgrid.unit",
+      "productName": "Resgrid Unit",
+      "protocol": "resgridunit"
+    },
+    "web": {
+      "dockerImage": "resgridllc/unit",
+      "legacyEnvPrefix": "UNIT_"
+    },
+    "sentryProject": "unit",
+    "notificationColor": "#2a7dd5",
+    "adaptiveIconBackground": "#2484c4",
+    "splashBackground": "#2a7dd5",
+    "owner": "resgrid"
+  },
+  "storage": {
+    "mmkvId": "ResgridUnit",
+    "keySecret": "UNIT_MMKV_KEY",
+    "extraInstances": ["checklists-ciphertext-v1"]
+  },
+  "versioning": {
+    "tagPrefix": "unit-v",
+    "major": 8,
+    "buildNumberBase": 100000
+  },
+  "capabilities": {
+    "calls": {
+      "create": "full",
+      "dispatch": true,
+      "close": true,
+      "queues": false,
+      "runCards": false
+    },
+    "status": {
+      "subject": "unit",
+      "onBehalf": false,
+      "staffing": false
+    },
+    "incidentCommand": "view",
+    "checkIn": {
+      "self": true,
+      "others": false,
+      "actions": true
+    },
+    "videoFeeds": "view",
+    "weatherAlerts": {
+      "admin": false
+    },
+    "voice": {
+      "ptt": true,
+      "callKeep": true,
+      "bluetoothPtt": true,
+      "headsetButtonPtt": true,
+      "desktopPtt": false
+    },
+    "location": {
+      "background": true,
+      "transmission": "unit",
+      "geoHubDefault": true
+    },
+    "push": {
+      "subject": "unit",
+      "desktopPush": true,
+      "liveActivity": true,
+      "approveSignIns": false
+    },
+    "auth": {
+      "mfa": true,
+      "passkeys": true,
+      "brokeredSso": true,
+      "sharedDevice": true,
+      "personalLock": false,
+      "neverLogoutOnTransientError": false,
+      "appAccessRight": null
+    },
+    "realtime": {
+      "chatHub": true,
+      "hubWatchdog": false
+    },
+    "maps": {
+      "layers": true,
+      "customIndoor": true,
+      "navigationInApp": true
+    },
+    "platform": {
+      "webEdition": true,
+      "electron": true,
+      "onboarding": true,
+      "maintenanceMode": true
+    }
+  },
+  "modules": ["unit-status", "unit-routes", "inventory"],
+  "native": {
+    "modules": ["background-location", "task-manager", "livekit", "callkeep", "ble-manager", "live-activity", "secure-store", "video", "passkey", "media-button", "in-call-audio", "maplibre", "sqlite", "notifee"],
+    "iosBackgroundModes": ["remote-notification", "audio", "bluetooth-central", "voip", "location"],
+    "androidPermissions": [
+      "android.permission.WAKE_LOCK",
+      "android.permission.RECORD_AUDIO",
+      "android.permission.CAPTURE_AUDIO_OUTPUT",
+      "android.permission.POST_NOTIFICATIONS",
+      "android.permission.FOREGROUND_SERVICE",
+      "android.permission.FOREGROUND_SERVICE_MICROPHONE",
+      "android.permission.FOREGROUND_SERVICE_PHONE_CALL",
+      "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+      "android.permission.READ_PHONE_STATE",
+      "android.permission.READ_PHONE_NUMBERS",
+      "android.permission.MANAGE_OWN_CALLS"
+    ],
+    "androidBlockedPermissions": ["android.permission.READ_MEDIA_IMAGES", "android.permission.READ_MEDIA_VIDEO", "android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE"],
+    "iosUseStaticFrameworks": false
+  },
+  "offline": {
+    "cacheTtl": "long",
+    "storageBudgetMb": 200,
+    "mapPacks": "full"
+  },
+  "shell": {
+    "kind": "tabs",
+    "sidebar": {
+      "phone": "drawer",
+      "tablet": "permanent-landscape",
+      "desktop": "permanent-landscape"
+    },
+    "sidebarContent": "unit-status",
+    "homeRoute": "/"
+  }
+}

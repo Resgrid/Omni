@@ -1,0 +1,14 @@
+# Git hooks (omni-plan §6.1) — installed by `pnpm install` via the `prepare` script.
+pre-commit:
+  parallel: true
+  commands:
+    lint:
+      glob: '*.{ts,tsx,js,mjs,cjs}'
+      run: pnpm exec eslint --max-warnings 0 --no-warn-ignored {staged_files}
+    format:
+      glob: '*.{ts,tsx,js,mjs,cjs,json,yml,yaml,css}'
+      run: pnpm exec prettier --check {staged_files}
+commit-msg:
+  commands:
+    commitlint:
+      run: pnpm exec commitlint --edit {1}

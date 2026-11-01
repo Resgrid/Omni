@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Expo / Metro
+.expo/
+.expo-shared/
+.metro-cache/
+dist/
+web-build/
+
+# Native projects are generated (CNG): never commit them
+/apps/omni/ios/
+/apps/omni/android/
+
+# Electron output
+/apps/desktop/out/
+/apps/desktop/release/
+
+# Secrets and local config (provided by CI / per developer)
+.env
+.env.*
+!.env.example
+google-services.json
+GoogleService-Info.plist
+*.jks
+*.keystore
+*.p8
+*.p12
+*.mobileprovision
+credentials.json
+
+# Test and coverage output
+coverage/
+junit.xml
+*.log
+
+# Agent tooling
+.agents/skills/
+.claude/settings.local.json
+.claude/worktrees/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/

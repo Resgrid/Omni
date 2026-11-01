@@ -1,0 +1,20 @@
+{
+  "name": "@resgrid/desktop",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Electron shell that packages each Resgrid Omni variant's web export (omni-plan §6.5)",
+  "main": "src/main.js",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "build": "node scripts/build.mjs"
+  },
+  "dependencies": {
+    "@eneris/push-receiver": "catalog:",
+    "@resgrid/config-plugins": "workspace:*",
+    "electron-updater": "catalog:"
+  },
+  "devDependencies": {
+    "electron": "catalog:",
+    "electron-builder": "catalog:"
+  }
+}

@@ -1,0 +1,11 @@
+# Keep LF in the repository on every OS (the legacy repos mixed CRLF and LF, which broke diffs).
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.ico binary
+*.icns binary
+*.wav binary
+*.mp3 binary
+*.ttf binary
+*.otf binary
+*.pmtiles binary
