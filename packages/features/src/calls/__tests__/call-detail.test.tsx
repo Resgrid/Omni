@@ -142,9 +142,9 @@ describe('CallDetailScreen', () => {
     useCallVideoFeedsStore.setState({ feedsByCall: {}, fetchFeeds: jest.fn(async () => undefined) });
   });
 
-  it('renders the call, its nature through HtmlRenderer (sanitized) and the registered tabs', () => {
+  it('renders the call, its nature through HtmlRenderer (sanitized) and the registered tabs', async () => {
     activateVariant('responder');
-    render(<CallDetailScreen />);
+    await render(<CallDetailScreen />);
     expect(screen.getByTestId('call-detail-title').props.children).toBe('House fire (#C-10)');
     const html = String(screen.getAllByTestId('webview-html')[0].props.children);
     expect(html).toContain('Flames visible');
@@ -154,50 +154,50 @@ describe('CallDetailScreen', () => {
     expect(screen.queryByText('check_in.tab_title')).toBeNull();
   });
 
-  it('renders a tab a module registered', () => {
+  it('renders a tab a module registered', async () => {
     activateVariant('responder');
     const remove = registerCallDetailTab({ id: 'records', order: 85, title: 'records.title', render: () => <Text>Records panel</Text> });
-    const { unmount } = render(<CallDetailScreen />);
+    const { unmount } = await render(<CallDetailScreen />);
     expect(screen.getByText('records.title')).toBeTruthy();
-    unmount();
+    await unmount();
     remove();
   });
 
-  it('opens the menu with edit and close for users who may, and routes edit to the canonical path', () => {
+  it('opens the menu with edit and close for users who may, and routes edit to the canonical path', async () => {
     activateVariant('responder');
-    render(<CallDetailScreen />);
-    fireEvent.press(screen.getByTestId('call-detail-menu-button'));
+    await render(<CallDetailScreen />);
+    await fireEvent.press(screen.getByTestId('call-detail-menu-button'));
     expect(screen.getByTestId('call-menu-close', hidden)).toBeTruthy();
-    fireEvent.press(screen.getByTestId('call-menu-edit', hidden));
+    await fireEvent.press(screen.getByTestId('call-menu-edit', hidden));
     expect(router.push).toHaveBeenCalledWith('/call/10/edit');
   });
 
-  it('offers neither edit nor close without the CanCreateCalls right', () => {
+  it('offers neither edit nor close without the CanCreateCalls right', async () => {
     activateVariant('responder');
     setRights({ CanCreateCalls: false });
-    render(<CallDetailScreen />);
-    fireEvent.press(screen.getByTestId('call-detail-menu-button'));
+    await render(<CallDetailScreen />);
+    await fireEvent.press(screen.getByTestId('call-detail-menu-button'));
     expect(screen.queryByTestId('call-menu-edit', hidden)).toBeNull();
     expect(screen.queryByTestId('call-menu-close', hidden)).toBeNull();
     expect(screen.getByTestId('call-menu-notes', hidden)).toBeTruthy();
   });
 
-  it('shows a queued call as "not dispatched yet" and offers correction when it was rejected', () => {
+  it('shows a queued call as "not dispatched yet" and offers correction when it was rejected', async () => {
     activateVariant('unit');
     const request = { name: 'Offline call', nature: 'Smoke', priority: 1 };
     jest.mocked(useLocalSearchParams).mockReturnValue({ id: 'local-5' });
     useCallsStore.setState({ queuedCalls: { 'local-5': { localId: 'local-5', request, input: buildNewCallInput(request), createdAt: 1, state: 'rejected' } } });
-    render(<CallDetailScreen />);
+    await render(<CallDetailScreen />);
     expect(screen.getByTestId('queued-call-detail')).toBeTruthy();
     expect(screen.getByText('calls.queued.rejected_badge')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('queued-call-correct'));
+    await fireEvent.press(screen.getByTestId('queued-call-correct'));
     expect(router.push).toHaveBeenCalledWith('/call/new?correct=local-5');
   });
 
-  it('refuses an unsafe route id', () => {
+  it('refuses an unsafe route id', async () => {
     activateVariant('responder');
     jest.mocked(useLocalSearchParams).mockReturnValue({ id: '../x' });
-    render(<CallDetailScreen />);
+    await render(<CallDetailScreen />);
     expect(screen.getByTestId('call-detail-invalid')).toBeTruthy();
   });
 });

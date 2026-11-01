@@ -94,7 +94,7 @@ describe('awaiting-resources helpers and nav', () => {
 
 describe('AwaitingResourcesScreen', () => {
   it('lists waiting calls with what went instead and dispatches a matching unit in one step', async () => {
-    render(<AwaitingResourcesScreen now={() => NOW} />);
+    await render(<AwaitingResourcesScreen now={() => NOW} />);
     expect(mockFetchAwaiting).toHaveBeenCalledWith({ bypassCache: true });
     expect(screen.getByText('26-1 · Structure fire')).toBeTruthy();
     expect(screen.getByText('awaiting_resources.sent_instead:PIT P-21')).toBeTruthy();
@@ -107,58 +107,58 @@ describe('AwaitingResourcesScreen', () => {
   });
 
   it('dismisses a requirement with a note after confirming', async () => {
-    render(<AwaitingResourcesScreen now={() => NOW} />);
-    fireEvent.press(screen.getByTestId('awaiting-requirement-51-dismiss'));
-    fireEvent.changeText(screen.getByTestId('dismiss-requirement-note', hidden), '  covered by mutual aid ');
+    await render(<AwaitingResourcesScreen now={() => NOW} />);
+    await fireEvent.press(screen.getByTestId('awaiting-requirement-51-dismiss'));
+    await fireEvent.changeText(screen.getByTestId('dismiss-requirement-note', hidden), '  covered by mutual aid ');
     await act(async () => fireEvent.press(screen.getByTestId('dismiss-requirement-dialog-confirm', hidden)));
     expect(mockDismiss).toHaveBeenCalledWith(1, 51, 'covered by mutual aid');
   });
 
-  it('hides actions without the create-calls right and opens the call', () => {
+  it('hides actions without the create-calls right and opens the call', async () => {
     setRights({ CanCreateCalls: false });
-    render(<AwaitingResourcesScreen now={() => NOW} />);
+    await render(<AwaitingResourcesScreen now={() => NOW} />);
     expect(screen.queryByTestId('awaiting-requirement-51-dismiss')).toBeNull();
     expect(screen.queryByTestId('awaiting-requirement-51-unit-7-dispatch')).toBeNull();
-    fireEvent.press(screen.getByTestId('awaiting-call-1-open'));
+    await fireEvent.press(screen.getByTestId('awaiting-call-1-open'));
     expect(router.push).toHaveBeenCalledWith('/call/1');
   });
 
-  it('shows the empty state, and "not enabled" once flags resolved off', () => {
-    act(() => {
+  it('shows the empty state, and "not enabled" once flags resolved off', async () => {
+    await act(() => {
       useAwaitingResourcesStore.setState({ calls: [] });
     });
-    const { unmount } = render(<AwaitingResourcesScreen now={() => NOW} />);
+    const { unmount } = await render(<AwaitingResourcesScreen now={() => NOW} />);
     expect(screen.getByText('awaiting_resources.empty_title')).toBeTruthy();
-    unmount();
+    await unmount();
     mockFetchAwaiting.mockClear();
-    act(() => {
+    await act(() => {
       enable(false);
     });
-    render(<AwaitingResourcesScreen now={() => NOW} />);
+    await render(<AwaitingResourcesScreen now={() => NOW} />);
     expect(screen.getByText('awaiting_resources.not_enabled')).toBeTruthy();
     expect(mockFetchAwaiting).not.toHaveBeenCalled();
   });
 });
 
 describe('banner, alerts and sync', () => {
-  it('shows the banner while calls wait, opening the screen', () => {
-    const { rerender } = render(<AwaitingResourcesBanner />);
-    fireEvent.press(screen.getByTestId('awaiting-resources-banner'));
+  it('shows the banner while calls wait, opening the screen', async () => {
+    const { rerender } = await render(<AwaitingResourcesBanner />);
+    await fireEvent.press(screen.getByTestId('awaiting-resources-banner'));
     expect(router.push).toHaveBeenCalledWith('/awaiting-resources');
-    rerender(<AwaitingResourcesBanner hidden />);
+    await rerender(<AwaitingResourcesBanner hidden />);
     expect(screen.queryByTestId('awaiting-resources-banner')).toBeNull();
   });
 
   it('syncs on mount, raises alerts from pushes and announces automatic dispatch', async () => {
     const handle = jest.fn(() => ({ kind: OutstandingRequirementsAlertKind.AutoDispatched, unitId: 7, unitName: 'M-7', unitTypeName: null, message: 'M-7 auto-dispatched', calls: [] }));
     useAwaitingResourcesStore.setState({ handleOutstandingRequirementsUpdated: handle });
-    render(<AwaitingResourcesHost />);
+    await render(<AwaitingResourcesHost />);
     expect(mockFetchAwaiting).toHaveBeenCalled();
-    act(() => emitRealtimeEvent('outstandingRequirementsUpdated', '0', '{}'));
+    await act(() => emitRealtimeEvent('outstandingRequirementsUpdated', '0', '{}'));
     expect(handle).toHaveBeenCalledWith('0', '{}');
     expect(useToastStore.getState().toasts[0]).toMatchObject({ type: 'info', message: 'M-7 auto-dispatched' });
 
-    act(() => {
+    await act(() => {
       useAwaitingResourcesStore.setState({
         unitAlerts: [
           {
@@ -178,11 +178,11 @@ describe('banner, alerts and sync', () => {
     expect(mockDispatchUnit).toHaveBeenCalledWith(1, 7);
   });
 
-  it('clears the store when the department turns conditions off', () => {
+  it('clears the store when the department turns conditions off', async () => {
     const disable = jest.fn();
     useAwaitingResourcesStore.setState({ disable });
     enable(false);
-    render(<AwaitingResourcesHost />);
+    await render(<AwaitingResourcesHost />);
     expect(disable).toHaveBeenCalled();
   });
 });
@@ -194,10 +194,10 @@ describe('call outstanding requirements', () => {
       fetchCallRequirements,
       requirementsByCall: { '9': [{ CallOutstandingRequirementId: 5, CallId: 9, Label: 'Ladder', RequiredCount: 1, ResolvedCount: 0, SentInstead: null, ResponseCode: null, ResponseCodeId: null } as never] },
     });
-    render(<CallOutstandingRequirements callId="9" canDismiss />);
+    await render(<CallOutstandingRequirements callId="9" canDismiss />);
     expect(fetchCallRequirements).toHaveBeenCalledWith('9', { bypassCache: false });
     expect(screen.getByText('awaiting_resources.requirement_progress:Ladder,0,1')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('call-outstanding-requirements-5-dismiss'));
+    await fireEvent.press(screen.getByTestId('call-outstanding-requirements-5-dismiss'));
     await act(async () => fireEvent.press(screen.getByTestId('dismiss-requirement-dialog-confirm', hidden)));
     expect(mockDismiss).toHaveBeenCalledWith(9, 5, undefined);
   });

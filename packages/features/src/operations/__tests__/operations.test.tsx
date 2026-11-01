@@ -159,33 +159,33 @@ describe('operations screens', () => {
     });
   });
 
-  afterEach(() => {
-    act(() => jest.runOnlyPendingTimers());
+  afterEach(async () => {
+    await act(() => jest.runOnlyPendingTimers());
     jest.useRealTimers();
   });
 
   it('lists deployments, switches to all and opens one', async () => {
-    render(<OperationsListScreen />);
+    await render(<OperationsListScreen />);
     await waitFor(() => expect(useOperationsStore.getState().loadDeployments).toHaveBeenCalledWith(false));
-    fireEvent.press(screen.getByTestId('operations-filter-all'));
+    await fireEvent.press(screen.getByTestId('operations-filter-all'));
     await waitFor(() => expect(useOperationsStore.getState().loadDeployments).toHaveBeenLastCalledWith(true));
-    fireEvent.press(screen.getByTestId('operations-deployment-d1'));
+    await fireEvent.press(screen.getByTestId('operations-deployment-d1'));
     expect(router.push).toHaveBeenCalledWith('/operations/d1');
   });
 
-  it('shows the disabled state when the department has deployments off', () => {
+  it('shows the disabled state when the department has deployments off', async () => {
     featureFlagsStore.setState({ flags: { 'Operations.Deployments': { enabled: false } }, isLoaded: true });
-    render(<OperationsListScreen />);
+    await render(<OperationsListScreen />);
     expect(screen.getByTestId('operations-disabled')).toBeTruthy();
   });
 
   it('opens the crew report for the day, edits it and saves through the outbox', async () => {
-    render(<OperationsDeploymentScreen deploymentId="d1" />);
+    await render(<OperationsDeploymentScreen deploymentId="d1" />);
     await waitFor(() => expect(screen.getByTestId('operations-time-report')).toBeTruthy());
     expect(screen.getByTestId('operations-total-hours')).toHaveTextContent('operations.time.total:19');
     expect(screen.getByTestId('operations-save-entries')).toBeDisabled();
-    fireEvent.changeText(screen.getByTestId('operations-entry-break-1'), '60');
-    fireEvent.press(screen.getByTestId('operations-save-entries'));
+    await fireEvent.changeText(screen.getByTestId('operations-entry-break-1'), '60');
+    await fireEvent.press(screen.getByTestId('operations-save-entries'));
     await waitFor(() => expect(useOperationsStore.getState().saveTimeEntries).toHaveBeenCalledWith('d1', expect.objectContaining({ TimeReportId: 'tr1' })));
     const saved = jest.mocked(useOperationsStore.getState().saveTimeEntries).mock.calls[0][1];
     expect(saved.Entries?.[1]).toEqual(expect.objectContaining({ UnpaidBreakMinutes: 60, StartLocal: '2026-10-31T08:00' }));
@@ -194,41 +194,41 @@ describe('operations screens', () => {
   });
 
   it('surfaces a refused legal step as a coded error', async () => {
-    render(<OperationsDeploymentScreen deploymentId="d1" />);
+    await render(<OperationsDeploymentScreen deploymentId="d1" />);
     await waitFor(() => expect(screen.getByTestId('operations-sign-crew-boss')).toBeTruthy());
     useOperationsStore.setState({ actionError: { code: 'forbidden', messageKey: 'errors.data.forbidden' } });
-    fireEvent.press(screen.getByTestId('operations-sign-crew-boss'));
+    await fireEvent.press(screen.getByTestId('operations-sign-crew-boss'));
     await waitFor(() => expect(screen.getByTestId('operations-message')).toHaveTextContent('operations.errors.denied'));
   });
 
   it('gives an approver the submitted queue and approves the opened report', async () => {
     useOperationsStore.setState({ timeReportsByDeployment: { d1: [report({ Status: TimeReportStatus.Submitted, ReportDate: '2026-10-30T00:00:00' })] } });
-    render(<OperationsDeploymentScreen deploymentId="d1" />);
+    await render(<OperationsDeploymentScreen deploymentId="d1" />);
     await waitFor(() => expect(screen.getByTestId('operations-awaiting-tr1')).toBeTruthy());
-    fireEvent.press(screen.getByTestId('operations-awaiting-tr1'));
+    await fireEvent.press(screen.getByTestId('operations-awaiting-tr1'));
     await waitFor(() => expect(screen.getByTestId('operations-approve-report')).toBeTruthy());
-    fireEvent.press(screen.getByTestId('operations-approve-report'));
+    await fireEvent.press(screen.getByTestId('operations-approve-report'));
     await waitFor(() => expect(useOperationsStore.getState().approveTimeReport).toHaveBeenCalledWith('tr1', 'd1'));
   });
 
   it('shows usage, expenses and the F-42 sections only where the app and the server allow them', async () => {
-    render(<OperationsDeploymentScreen deploymentId="d1" />);
+    await render(<OperationsDeploymentScreen deploymentId="d1" />);
     await waitFor(() => expect(screen.getByTestId('operations-section-mars')).toBeTruthy());
     expect(screen.getByTestId('operations-section-usage')).toBeTruthy();
     expect(screen.getByTestId('operations-section-expenses')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('operations-section-mars'));
-    fireEvent.press(screen.getByTestId('operations-mars-draft'));
+    await fireEvent.press(screen.getByTestId('operations-section-mars'));
+    await fireEvent.press(screen.getByTestId('operations-mars-draft'));
     expect(useCalOesMarsStore.getState().draftF42).toHaveBeenCalledWith('d1');
-    fireEvent.press(screen.getByTestId('operations-section-usage'));
-    fireEvent.changeText(screen.getByTestId('operations-usage-engine'), '4.5');
-    fireEvent.press(screen.getByTestId('operations-usage-add'));
+    await fireEvent.press(screen.getByTestId('operations-section-usage'));
+    await fireEvent.changeText(screen.getByTestId('operations-usage-engine'), '4.5');
+    await fireEvent.press(screen.getByTestId('operations-usage-add'));
     await waitFor(() => expect(useOperationsStore.getState().addUsage).toHaveBeenCalledWith(expect.objectContaining({ DeploymentId: 'd1', UnitId: 41, EngineHours: 4.5 })));
   });
 
   it('is read-only in Dispatch: no start, no usage, no F-42', async () => {
     activateVariant('dispatch');
     useOperationsStore.setState({ timeReportsByDeployment: { d1: [] } });
-    render(<OperationsDeploymentScreen deploymentId="d1" />);
+    await render(<OperationsDeploymentScreen deploymentId="d1" />);
     await waitFor(() => expect(screen.getByTestId('operations-no-report')).toBeTruthy());
     expect(screen.queryByTestId('operations-start-report')).toBeNull();
     expect(screen.queryByTestId('operations-section-usage')).toBeNull();
@@ -241,25 +241,27 @@ describe('ExpensesPanel', () => {
 
   it('validates the amount, attaches a receipt and reports a queued save', async () => {
     const onAdd = jest.fn(async () => 'queued' as const);
-    render(<ExpensesPanel dateKey="2026-10-31" currency="USD" expenses={[]} reportId="tr1" userId="u1" canManage={false} canAdd busy={false} onAdd={onAdd} onRemove={jest.fn()} />);
-    fireEvent.changeText(screen.getByTestId('operations-expense-amount'), 'abc');
-    fireEvent.press(screen.getByTestId('operations-expense-save'));
+    await render(<ExpensesPanel dateKey="2026-10-31" currency="USD" expenses={[]} reportId="tr1" userId="u1" canManage={false} canAdd busy={false} onAdd={onAdd} onRemove={jest.fn()} />);
+    await fireEvent.changeText(screen.getByTestId('operations-expense-amount'), 'abc');
+    await fireEvent.press(screen.getByTestId('operations-expense-save'));
     await waitFor(() => expect(screen.getByTestId('operations-expense-message')).toHaveTextContent('operations.expenses.amountInvalid'));
-    fireEvent.press(screen.getByTestId('operations-expense-camera'));
+    await fireEvent.press(screen.getByTestId('operations-expense-camera'));
     await waitFor(() => expect(screen.getByText('operations.expenses.receiptAttached')).toBeTruthy());
-    fireEvent.changeText(screen.getByTestId('operations-expense-amount'), '12,50');
-    fireEvent.press(screen.getByTestId('operations-expense-save'));
+    await fireEvent.changeText(screen.getByTestId('operations-expense-amount'), '12,50');
+    await fireEvent.press(screen.getByTestId('operations-expense-save'));
     await waitFor(() => expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({ Amount: 12.5, ReceiptData: 'AAA', TimeReportId: 'tr1', Currency: 'USD' })));
     expect(screen.getByTestId('operations-expense-message')).toHaveTextContent('operations.expenses.queued');
   });
 
   it('lets a member remove only their own expenses, after confirming', async () => {
     const onRemove = jest.fn(async () => true);
-    render(<ExpensesPanel dateKey="2026-10-31" expenses={[expense('x1', 'u1'), expense('x2', 'u2')]} reportId={null} userId="u1" canManage={false} canAdd={false} busy={false} onAdd={jest.fn()} onRemove={onRemove} />);
+    await render(
+      <ExpensesPanel dateKey="2026-10-31" expenses={[expense('x1', 'u1'), expense('x2', 'u2')]} reportId={null} userId="u1" canManage={false} canAdd={false} busy={false} onAdd={jest.fn()} onRemove={onRemove} />
+    );
     expect(screen.queryByTestId('operations-expense-remove-x2')).toBeNull();
-    fireEvent.press(screen.getByTestId('operations-expense-remove-x1'));
+    await fireEvent.press(screen.getByTestId('operations-expense-remove-x1'));
     expect(onRemove).not.toHaveBeenCalled();
-    fireEvent.press(screen.getByTestId('operations-expense-confirm-remove-x1'));
+    await fireEvent.press(screen.getByTestId('operations-expense-confirm-remove-x1'));
     expect(onRemove).toHaveBeenCalledWith('x1');
   });
 });

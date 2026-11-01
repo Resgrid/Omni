@@ -74,7 +74,7 @@ describe('createOfflineMapOptions', () => {
 });
 
 describe('useOfflineMapOptions', () => {
-  it('follows connectivity and the installed set', () => {
+  it('follows connectivity and the installed set', async () => {
     let set: OfflineInstalledSet | null = installed();
     const listeners = new Set<() => void>();
     const controller = {
@@ -86,28 +86,28 @@ describe('useOfflineMapOptions', () => {
       markUsed: jest.fn(),
     } as unknown as OfflineMapsController;
     const connectivity = createManualConnectivitySource(true);
-    const { result } = renderHook(() => useOfflineMapOptions(controller, { connectivity }));
+    const { result } = await renderHook(() => useOfflineMapOptions(controller, { connectivity }));
     expect(result.current?.mode).toBe('online');
 
-    act(() => connectivity.setOnline(false));
+    await act(() => connectivity.setOnline(false));
     expect(result.current?.mode).toBe('offline');
     const style = result.current?.getStyle('dark');
     expect(style).toBeTruthy();
 
     // A new options object for the same installed revision hands out the same style object (no restyle).
-    act(() => connectivity.setOnline(true));
-    act(() => connectivity.setOnline(false));
+    await act(() => connectivity.setOnline(true));
+    await act(() => connectivity.setOnline(false));
     expect(result.current?.getStyle('dark')).toBe(style);
 
-    act(() => {
+    await act(() => {
       set = null;
       listeners.forEach((listener) => listener());
     });
     expect(result.current).toBeNull();
   });
 
-  it('is null without a controller', () => {
-    const { result } = renderHook(() => useOfflineMapOptions(null));
+  it('is null without a controller', async () => {
+    const { result } = await renderHook(() => useOfflineMapOptions(null));
     expect(result.current).toBeNull();
   });
 });

@@ -31,8 +31,8 @@ describe('keyboardPaddingBottom', () => {
 });
 
 describe('BottomAnchoredKeyboardView', () => {
-  it('renders its children', () => {
-    render(
+  it('renders its children', async () => {
+    await render(
       <BottomAnchoredKeyboardView>
         <Text>composer</Text>
       </BottomAnchoredKeyboardView>

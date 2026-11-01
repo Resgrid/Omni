@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock factories are hoisted above imports, so they require modules lazily. */
 // Package-local Jest mocks for @resgrid/app-shell. jest.mock factories may only reference `mock*` names.
-import '@testing-library/react-native/extend-expect';
+// RNTL registers its Jest matchers when it is imported (v14 has no extend-expect entry).
+import '@testing-library/react-native';
 
 // react-aria (pulled in by gluestack) probes window.screen at import time when NODE_ENV is 'test'.
 const mockGlobalWindow = globalThis as unknown as { window?: { screen?: object } };

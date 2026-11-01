@@ -20,98 +20,98 @@ beforeEach(() => {
 });
 
 describe('ConfigureDashboardScreen', () => {
-  it('opens on the ?widget= type and adds it to the board', () => {
+  it('opens on the ?widget= type and adds it to the board', async () => {
     (useLocalSearchParams as jest.Mock).mockReturnValue({ widget: 'units' });
-    render(<ConfigureDashboardScreen />);
+    await render(<ConfigureDashboardScreen />);
     expect(screen.getByTestId('configure-units-content')).toBeTruthy();
     expect(screen.getByTestId('configure-not-on-board')).toBeTruthy();
 
-    fireEvent.press(screen.getByTestId('configure-add-widget'));
+    await fireEvent.press(screen.getByTestId('configure-add-widget'));
     expect(useDashboardStore.getState().widgets.map((widget) => widget.type)).toEqual(['units']);
     expect(screen.getByTestId('configure-board-section')).toBeTruthy();
   });
 
-  it('switches widget tabs, resizes, reorders and removes', () => {
+  it('switches widget tabs, resizes, reorders and removes', async () => {
     useDashboardStore.setState({
       widgets: [
         { id: 'a', type: 'calls', x: 0, y: 0, w: 2, h: 2 },
         { id: 'b', type: 'time', x: 2, y: 0, w: 1, h: 1 },
       ],
     });
-    render(<ConfigureDashboardScreen />);
+    await render(<ConfigureDashboardScreen />);
     // No param: the first widget on the board.
     expect(screen.getByTestId('configure-calls-content')).toBeTruthy();
 
-    fireEvent.press(screen.getByTestId('configure-tab-time'));
+    await fireEvent.press(screen.getByTestId('configure-tab-time'));
     expect(screen.getByTestId('configure-time-content')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('configure-height-increase'));
+    await fireEvent.press(screen.getByTestId('configure-height-increase'));
     expect(useDashboardStore.getState().widgets[1]).toMatchObject({ id: 'b', h: 2 });
-    fireEvent.press(screen.getByTestId('configure-width-increase'));
+    await fireEvent.press(screen.getByTestId('configure-width-increase'));
     expect(useDashboardStore.getState().widgets[1]).toMatchObject({ id: 'b', w: 2 });
 
-    fireEvent.press(screen.getByTestId('configure-move-earlier'));
+    await fireEvent.press(screen.getByTestId('configure-move-earlier'));
     expect(useDashboardStore.getState().widgets.map((widget) => widget.id)).toEqual(['b', 'a']);
     expect(useDashboardStore.getState().widgets[0]).toMatchObject({ x: 0, y: 0 });
 
-    fireEvent.press(screen.getByTestId('configure-remove-widget'));
+    await fireEvent.press(screen.getByTestId('configure-remove-widget'));
     expect(useDashboardStore.getState().widgets.map((widget) => widget.id)).toEqual(['a']);
     expect(screen.getByTestId('configure-add-widget')).toBeTruthy();
   });
 
-  it('edits widget settings in place (switches, steppers, column order, choices)', () => {
+  it('edits widget settings in place (switches, steppers, column order, choices)', async () => {
     (useLocalSearchParams as jest.Mock).mockReturnValue({ widget: 'personnel' });
     usePersonnelStore.setState({ groups: [{ GroupId: '7', Name: 'Station 7' } as GroupResultData] });
-    render(<ConfigureDashboardScreen />);
+    await render(<ConfigureDashboardScreen />);
 
-    fireEvent(screen.getByTestId('setting-personnel-showGroup'), 'valueChange', false);
+    await fireEvent(screen.getByTestId('setting-personnel-showGroup'), 'valueChange', false);
     expect(useWidgetSettingsStore.getState().personnel.showGroup).toBe(false);
 
-    fireEvent.press(screen.getByTestId('setting-personnel-fontSize-increase'));
+    await fireEvent.press(screen.getByTestId('setting-personnel-fontSize-increase'));
     expect(useWidgetSettingsStore.getState().personnel.fontSize).toBe(15);
 
-    fireEvent.press(screen.getByTestId('setting-personnel-columns-group-up'));
+    await fireEvent.press(screen.getByTestId('setting-personnel-columns-group-up'));
     expect(useWidgetSettingsStore.getState().personnel.columnOrder.slice(0, 2)).toEqual(['group', 'name']);
 
-    fireEvent.press(screen.getByTestId('setting-personnel-hideGroups-option-7'));
+    await fireEvent.press(screen.getByTestId('setting-personnel-hideGroups-option-7'));
     expect(useWidgetSettingsStore.getState().personnel.hideGroups).toEqual(['7']);
 
-    fireEvent.press(screen.getByTestId('configure-tab-calls'));
+    await fireEvent.press(screen.getByTestId('configure-tab-calls'));
     expect(screen.queryByTestId('setting-calls-showId')).toBeNull();
-    fireEvent.press(screen.getByTestId('setting-calls-display-table'));
+    await fireEvent.press(screen.getByTestId('setting-calls-display-table'));
     expect(useWidgetSettingsStore.getState().calls.display).toBe('table');
     expect(screen.getByTestId('setting-calls-showId')).toBeTruthy();
 
-    fireEvent.press(screen.getByTestId('configure-reset-settings'));
+    await fireEvent.press(screen.getByTestId('configure-reset-settings'));
     expect(useWidgetSettingsStore.getState().calls.display).toBe('cards');
   });
 
-  it('commits coordinates on blur and ignores out-of-range values', () => {
+  it('commits coordinates on blur and ignores out-of-range values', async () => {
     (useLocalSearchParams as jest.Mock).mockReturnValue({ widget: 'weather' });
-    render(<ConfigureDashboardScreen />);
+    await render(<ConfigureDashboardScreen />);
     const latitude = screen.getByTestId('setting-weather-latitude');
-    fireEvent.changeText(latitude, '39.74');
-    fireEvent(latitude, 'blur');
+    await fireEvent.changeText(latitude, '39.74');
+    await fireEvent(latitude, 'blur');
     expect(useWidgetSettingsStore.getState().weather.latitude).toBe(39.74);
-    fireEvent.changeText(latitude, '123');
-    fireEvent(latitude, 'blur');
+    await fireEvent.changeText(latitude, '123');
+    await fireEvent(latitude, 'blur');
     expect(useWidgetSettingsStore.getState().weather.latitude).toBe(39.74);
-    fireEvent.press(screen.getByTestId('setting-weather-units-metric'));
+    await fireEvent.press(screen.getByTestId('setting-weather-units-metric'));
     expect(useWidgetSettingsStore.getState().weather.units).toBe('metric');
   });
 
-  it('loads picker data for the scheduled-calls filters and explains the unit alerts tab', () => {
+  it('loads picker data for the scheduled-calls filters and explains the unit alerts tab', async () => {
     (useLocalSearchParams as jest.Mock).mockReturnValue({ widget: 'scheduled_calls' });
-    const { unmount } = render(<ConfigureDashboardScreen />);
+    const { unmount } = await render(<ConfigureDashboardScreen />);
     expect(mocks.fetchUnitInfos).toHaveBeenCalled();
     expect(mocks.fetchPersonnel).toHaveBeenCalled();
     expect(mocks.fetchRecipients).toHaveBeenCalled();
     expect(mocks.fetchGroups).toHaveBeenCalled();
-    unmount();
+    await unmount();
 
-    render(<ConfigureDashboardScreen initialWidget="unit_alerts" />);
+    await render(<ConfigureDashboardScreen initialWidget="unit_alerts" />);
     expect(screen.getByTestId('configure-unit-alerts-hint')).toBeTruthy();
     expect(screen.queryByTestId('configure-reset-settings')).toBeNull();
-    fireEvent.press(screen.getByTestId('configure-done-button'));
+    await fireEvent.press(screen.getByTestId('configure-done-button'));
     expect(router.back).toHaveBeenCalled();
   });
 });

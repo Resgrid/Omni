@@ -61,87 +61,87 @@ beforeEach(() => {
 });
 
 describe('UnitsListScreen', () => {
-  it('filters by availability meaning and search, and opens the unit detail', () => {
-    render(<UnitsListScreen />);
+  it('filters by availability meaning and search, and opens the unit detail', async () => {
+    await render(<UnitsListScreen />);
     expect(screen.getByTestId('unit-card-u1')).toBeTruthy();
 
-    fireEvent.press(screen.getByTestId('units-availability-committed'));
+    await fireEvent.press(screen.getByTestId('units-availability-committed'));
     expect(screen.queryByTestId('unit-card-u1')).toBeNull();
     expect(screen.getByTestId('unit-card-u2')).toBeTruthy();
 
-    fireEvent.press(screen.getByTestId('units-availability-all'));
-    fireEvent.changeText(screen.getByTestId('units-search'), 'engine 1');
+    await fireEvent.press(screen.getByTestId('units-availability-all'));
+    await fireEvent.changeText(screen.getByTestId('units-search'), 'engine 1');
     expect(screen.queryByTestId('unit-card-u2')).toBeNull();
-    fireEvent.press(screen.getByTestId('unit-card-u1'));
+    await fireEvent.press(screen.getByTestId('unit-card-u1'));
     expect(router.push).toHaveBeenCalledWith('/units/u1');
   });
 
-  it('applies a server filter option through activeFilter', () => {
-    render(<UnitsListScreen />);
-    fireEvent.press(screen.getByTestId('units-filter-button'));
-    fireEvent.press(screen.getByTestId('units-filter-sheet-option-G:1', { includeHiddenElements: true }));
+  it('applies a server filter option through activeFilter', async () => {
+    await render(<UnitsListScreen />);
+    await fireEvent.press(screen.getByTestId('units-filter-button'));
+    await fireEvent.press(screen.getByTestId('units-filter-sheet-option-G:1', { includeHiddenElements: true }));
     expect(useUnitsStore.getState().fetchUnitInfos).toHaveBeenLastCalledWith({ activeFilter: 'G:1', bypassCache: false });
   });
 
-  it('marks a unit with a status queued on the device', () => {
+  it('marks a unit with a status queued on the device', async () => {
     useUnitStatusStore.setState({ queuedStatuses: { e1: { localId: 'e1', unitId: 'u1', statusType: '3', respondingTo: '', respondingToType: null, note: '', createdAt: 1, state: 'queued' } } });
-    render(<UnitsListScreen />);
+    await render(<UnitsListScreen />);
     expect(screen.getByTestId('unit-card-u1-status-pending')).toBeTruthy();
   });
 });
 
 describe('UnitDetailScreen', () => {
-  it('shows status, destination and the on-behalf status button', () => {
-    render(<UnitDetailScreen unitId="u2" />);
+  it('shows status, destination and the on-behalf status button', async () => {
+    await render(<UnitDetailScreen unitId="u2" />);
     expect(screen.getByTestId('unit-detail-status-availability')).toHaveTextContent('status.availability.committed');
     expect(screen.getByText('General Hospital')).toBeTruthy();
     expect(screen.getByTestId('unit-detail-set-status')).toBeTruthy();
   });
 
-  it('shows not found for an unknown unit', () => {
+  it('shows not found for an unknown unit', async () => {
     useUnitsStore.setState({ unitInfos: [] });
-    render(<UnitDetailScreen unitId="missing" />);
+    await render(<UnitDetailScreen unitId="missing" />);
     expect(screen.getByTestId('unit-detail-missing')).toBeTruthy();
   });
 });
 
 describe('Personnel', () => {
-  it('hides email and phone without CanViewPII and never matches them in search', () => {
+  it('hides email and phone without CanViewPII and never matches them in search', async () => {
     setRights(false);
-    render(<PersonnelListScreen />);
+    await render(<PersonnelListScreen />);
     expect(screen.queryByTestId('personnel-card-p1-email')).toBeNull();
     expect(screen.queryByTestId('personnel-card-p1-phone')).toBeNull();
     expect(filterPersonnel(usePersonnelStore.getState().personnel, { query: 'alex@example', availability: 'all' }, false)).toHaveLength(0);
   });
 
-  it('shows contact details with CanViewPII', () => {
+  it('shows contact details with CanViewPII', async () => {
     setRights(true);
-    render(<PersonnelListScreen />);
+    await render(<PersonnelListScreen />);
     expect(screen.getByTestId('personnel-card-p1-email')).toHaveTextContent('alex@example.org');
     expect(filterPersonnel(usePersonnelStore.getState().personnel, { query: 'alex@example', availability: 'all' }, true)).toHaveLength(1);
   });
 
-  it('filters by status meaning and opens the member', () => {
+  it('filters by status meaning and opens the member', async () => {
     setRights(true);
-    render(<PersonnelListScreen />);
-    fireEvent.press(screen.getByTestId('personnel-availability-committed'));
+    await render(<PersonnelListScreen />);
+    await fireEvent.press(screen.getByTestId('personnel-availability-committed'));
     expect(screen.queryByTestId('personnel-card-p2')).toBeNull();
-    fireEvent.press(screen.getByTestId('personnel-card-p1'));
+    await fireEvent.press(screen.getByTestId('personnel-card-p1'));
     expect(router.push).toHaveBeenCalledWith('/personnel/p1');
   });
 
-  it('detail hides the contact block without CanViewPII and offers on-behalf status and staffing', () => {
+  it('detail hides the contact block without CanViewPII and offers on-behalf status and staffing', async () => {
     setRights(false);
-    render(<PersonnelDetailScreen userId="p1" />);
+    await render(<PersonnelDetailScreen userId="p1" />);
     expect(screen.queryByTestId('personnel-detail-contact')).toBeNull();
     expect(screen.queryByText('ID-7')).toBeNull();
     expect(screen.getByTestId('personnel-detail-set-status')).toBeTruthy();
     expect(screen.getByTestId('personnel-detail-set-staffing')).toBeTruthy();
   });
 
-  it('detail shows contact details with CanViewPII', () => {
+  it('detail shows contact details with CanViewPII', async () => {
     setRights(true);
-    render(<PersonnelDetailScreen userId="p1" />);
+    await render(<PersonnelDetailScreen userId="p1" />);
     expect(screen.getByTestId('personnel-detail-contact')).toBeTruthy();
     expect(screen.getByText('ID-7')).toBeTruthy();
   });

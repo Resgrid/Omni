@@ -52,22 +52,22 @@ describe('POI routes', () => {
 });
 
 describe('PoisListScreen', () => {
-  it('filters by type, destination and capability and opens the canonical detail route', () => {
+  it('filters by type, destination and capability and opens the canonical detail route', async () => {
     const renderMap = jest.fn(() => <Text>map</Text>);
-    render(<PoisListScreen renderMap={renderMap} />);
+    await render(<PoisListScreen renderMap={renderMap} />);
 
     expect(renderMap).toHaveBeenCalled();
-    fireEvent.press(screen.getByTestId('poi-type-2'));
+    await fireEvent.press(screen.getByTestId('poi-type-2'));
     expect(screen.getByTestId('poi-card-2')).toBeTruthy();
     expect(screen.queryByTestId('poi-card-1')).toBeNull();
 
-    fireEvent.press(screen.getByTestId('poi-type-all'));
-    fireEvent.press(screen.getByTestId('poi-destination-only'));
+    await fireEvent.press(screen.getByTestId('poi-type-all'));
+    await fireEvent.press(screen.getByTestId('poi-destination-only'));
     expect(screen.queryByTestId('poi-card-2')).toBeNull();
-    fireEvent.press(screen.getByTestId('poi-capability-trauma-1'));
+    await fireEvent.press(screen.getByTestId('poi-capability-trauma-1'));
     expect(screen.queryByTestId('poi-card-3')).toBeNull();
 
-    fireEvent.press(screen.getByTestId('poi-card-1'));
+    await fireEvent.press(screen.getByTestId('poi-card-1'));
     expect(router.push).toHaveBeenCalledWith('/poi/1');
   });
 });
@@ -76,20 +76,20 @@ describe('PoiDetailScreen', () => {
   it('renders the map slot and hands directions to the navigation app', async () => {
     const navigateTo = jest.fn(async () => true);
     (useLocalSearchParams as jest.Mock).mockReturnValueOnce({ id: '1' });
-    render(
+    await render(
       <NavigationHandoffProvider value={{ navigateTo }}>
         <PoiDetailScreen renderMap={() => <Text testID="poi-map">map</Text>} />
       </NavigationHandoffProvider>
     );
 
     await waitFor(() => expect(screen.getByTestId('poi-map')).toBeTruthy());
-    fireEvent.press(screen.getByTestId('poi-detail-directions'));
+    await fireEvent.press(screen.getByTestId('poi-detail-directions'));
     expect(navigateTo).toHaveBeenCalledWith({ latitude: 39.7, longitude: -104.9, label: 'General Hospital' });
   });
 
-  it('shows not found for an invalid id without fetching', () => {
+  it('shows not found for an invalid id without fetching', async () => {
     (useLocalSearchParams as jest.Mock).mockReturnValueOnce({ id: 'abc' });
-    render(<PoiDetailScreen />);
+    await render(<PoiDetailScreen />);
     expect(screen.getByTestId('poi-detail-missing')).toBeTruthy();
     expect(usePoisStore.getState().fetchPoi).not.toHaveBeenCalled();
   });

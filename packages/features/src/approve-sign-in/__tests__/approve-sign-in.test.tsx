@@ -58,15 +58,15 @@ afterEach(() => {
 describe('usePendingApprovalCheck', () => {
   it('opens the approve screen when a request is waiting', async () => {
     mockFetch.mockResolvedValueOnce(pending);
-    renderHook(() => usePendingApprovalCheck(true));
+    await renderHook(() => usePendingApprovalCheck(true));
     await waitFor(() => expect(router.push).toHaveBeenCalledWith('/approve-sign-in'));
     expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 
   it('does nothing while disabled, or when nothing is waiting', async () => {
-    const { rerender } = renderHook(({ enabled }) => usePendingApprovalCheck(enabled), { initialProps: { enabled: false } });
+    const { rerender } = await renderHook(({ enabled }: { enabled: boolean }) => usePendingApprovalCheck(enabled), { initialProps: { enabled: false } });
     expect(mockFetch).not.toHaveBeenCalled();
-    rerender({ enabled: true });
+    await rerender({ enabled: true });
     await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
     expect(router.push).not.toHaveBeenCalled();
   });
@@ -74,7 +74,7 @@ describe('usePendingApprovalCheck', () => {
   it('stays put when the approve screen is already showing', async () => {
     mockPathname.mockReturnValue('/approve-sign-in');
     mockFetch.mockResolvedValueOnce(pending);
-    renderHook(() => usePendingApprovalCheck(true));
+    await renderHook(() => usePendingApprovalCheck(true));
     await waitFor(() => expect(mockFetch).toHaveBeenCalled());
     await act(async () => undefined);
     expect(router.push).not.toHaveBeenCalled();
@@ -83,7 +83,7 @@ describe('usePendingApprovalCheck', () => {
   it('checks again on foreground at most every 15 seconds', async () => {
     let now = 1_000_000;
     jest.spyOn(Date, 'now').mockImplementation(() => now);
-    renderHook(() => usePendingApprovalCheck(true));
+    await renderHook(() => usePendingApprovalCheck(true));
     await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
 
     await act(async () => appStateListener?.('active'));
@@ -99,8 +99,8 @@ describe('usePendingApprovalCheck', () => {
   it('opens nothing when the lookup finishes after it was disabled', async () => {
     let resolve: (value: PendingApprovalData) => void = () => undefined;
     mockFetch.mockImplementationOnce(() => new Promise((done) => (resolve = done)));
-    const { unmount } = renderHook(() => usePendingApprovalCheck(true));
-    unmount();
+    const { unmount } = await renderHook(() => usePendingApprovalCheck(true));
+    await unmount();
     expect(remove).toHaveBeenCalled();
     await act(async () => resolve(pending));
     expect(router.push).not.toHaveBeenCalled();
@@ -111,20 +111,20 @@ describe('PendingApprovalWatcher', () => {
   it('checks only for a signed-in member in a variant that approves sign-ins', async () => {
     activateTestVariant('responder');
     useAuthStore.setState({ status: 'signedOut' });
-    const { rerender } = render(<PendingApprovalWatcher />);
+    const { rerender } = await render(<PendingApprovalWatcher />);
     expect(mockFetch).not.toHaveBeenCalled();
 
-    act(() => {
+    await act(() => {
       useAuthStore.setState({ status: 'signedIn' });
     });
-    rerender(<PendingApprovalWatcher />);
+    await rerender(<PendingApprovalWatcher />);
     await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
   });
 
-  it('is inert where approving sign-ins is not a capability', () => {
+  it('is inert where approving sign-ins is not a capability', async () => {
     activateTestVariant('responder', { push: { approveSignIns: false } });
     useAuthStore.setState({ status: 'signedIn' });
-    render(<PendingApprovalWatcher />);
+    await render(<PendingApprovalWatcher />);
     expect(mockFetch).not.toHaveBeenCalled();
   });
 });

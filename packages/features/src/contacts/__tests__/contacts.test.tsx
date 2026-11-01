@@ -66,69 +66,69 @@ describe('contact format', () => {
 
 describe('ContactField', () => {
   it('dials a phone number on tap', async () => {
-    render(<ContactField label="Cell" value="555-0100" action="phone" testID="cell" />);
-    fireEvent.press(screen.getByTestId('cell'));
+    await render(<ContactField label="Cell" value="555-0100" action="phone" testID="cell" />);
+    await fireEvent.press(screen.getByTestId('cell'));
     await waitFor(() => expect(openURL).toHaveBeenCalledWith('tel:5550100'));
   });
 
-  it('shows a withheld value as protected and never dials it', () => {
-    render(<ContactField label="Cell" value="REDACTED" action="phone" fieldId={ProtectedFieldIds.contactCellPhone} redactedFields={[ProtectedFieldIds.contactCellPhone]} testID="cell" />);
+  it('shows a withheld value as protected and never dials it', async () => {
+    await render(<ContactField label="Cell" value="REDACTED" action="phone" fieldId={ProtectedFieldIds.contactCellPhone} redactedFields={[ProtectedFieldIds.contactCellPhone]} testID="cell" />);
     expect(screen.queryByText('REDACTED')).toBeNull();
     expect(screen.getByTestId('cell-protected')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('cell'));
+    await fireEvent.press(screen.getByTestId('cell'));
     expect(openURL).not.toHaveBeenCalled();
   });
 
   it('hands coordinates to the navigation hand-off', async () => {
     const navigateTo = jest.fn(async () => true);
-    render(
+    await render(
       <NavigationHandoffProvider value={{ navigateTo }}>
         <ContactField label="Entrance" value="39.1,-104.2" action="coordinates" testID="entrance" />
       </NavigationHandoffProvider>
     );
-    fireEvent.press(screen.getByTestId('entrance'));
+    await fireEvent.press(screen.getByTestId('entrance'));
     await waitFor(() => expect(navigateTo).toHaveBeenCalledWith({ latitude: 39.1, longitude: -104.2, label: 'Entrance' }));
   });
 });
 
 describe('ContactsListScreen', () => {
-  it('searches, filters by category and opens the detail route', () => {
+  it('searches, filters by category and opens the detail route', async () => {
     useContactsStore.setState({
       contacts: [contact('a', { FirstName: 'Alex', ContactCategoryId: 'c1' }), contact('b', { FirstName: 'Blair', ContactCategoryId: 'c2', IsImportant: true }), contact('c', { FirstName: 'Gone', IsDeleted: true })],
       categories: [{ ContactCategoryId: 'c1', Name: 'Vendors' } as never, { ContactCategoryId: 'c2', Name: 'Hospitals' } as never],
     });
-    render(<ContactsListScreen />);
+    await render(<ContactsListScreen />);
 
     expect(screen.queryByTestId('contact-card-c')).toBeNull();
-    fireEvent.press(screen.getByTestId('contacts-category-c1'));
+    await fireEvent.press(screen.getByTestId('contacts-category-c1'));
     expect(screen.queryByTestId('contact-card-b')).toBeNull();
-    fireEvent.press(screen.getByTestId('contacts-category-all'));
-    fireEvent.changeText(screen.getByTestId('contacts-search'), 'blair');
+    await fireEvent.press(screen.getByTestId('contacts-category-all'));
+    await fireEvent.changeText(screen.getByTestId('contacts-search'), 'blair');
     expect(screen.queryByTestId('contact-card-a')).toBeNull();
-    fireEvent.press(screen.getByTestId('contact-card-b'));
+    await fireEvent.press(screen.getByTestId('contact-card-b'));
     expect(router.push).toHaveBeenCalledWith('/contacts/b');
   });
 });
 
 describe('ContactDetailScreen', () => {
-  it('rejects an unsafe route id', () => {
+  it('rejects an unsafe route id', async () => {
     (useLocalSearchParams as jest.Mock).mockReturnValueOnce({ id: '../settings' });
-    render(<ContactDetailScreen />);
+    await render(<ContactDetailScreen />);
     expect(screen.getByTestId('contact-detail-missing')).toBeTruthy();
     expect(useContactsStore.getState().fetchContactDetails).not.toHaveBeenCalled();
   });
 
-  it('shows protected values as labels and switches to the pre-plan tab', () => {
+  it('shows protected values as labels and switches to the pre-plan tab', async () => {
     useContactsStore.setState({
       detailsById: { a: contact('a', { Email: 'REDACTED', CellPhoneNumber: '555-0100', RedactedFields: [ProtectedFieldIds.contactEmail] }) },
       preplansByContact: { a: null },
     });
-    render(<ContactDetailScreen contactId="a" />);
+    await render(<ContactDetailScreen contactId="a" />);
 
     expect(screen.queryByText('REDACTED')).toBeNull();
     expect(screen.getByTestId('contact-field-email-protected')).toBeTruthy();
     expect(screen.getByText('555-0100')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('contact-tab-preplan'));
+    await fireEvent.press(screen.getByTestId('contact-tab-preplan'));
     expect(screen.getByText('contacts.preplan.none')).toBeTruthy();
   });
 });

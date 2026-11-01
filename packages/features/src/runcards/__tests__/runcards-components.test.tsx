@@ -48,22 +48,22 @@ beforeEach(() => {
 describe('RecommendationPanel', () => {
   const base = { isLoading: false, hasError: false, hasFetched: true, isApplied: false, onApply: jest.fn(), onRefresh: jest.fn() };
 
-  it('shows loading, the soft error with retry, and nothing before a fetch or without content', () => {
-    const { rerender } = render(<RecommendationPanel {...base} recommendation={null} isLoading />);
+  it('shows loading, the soft error with retry, and nothing before a fetch or without content', async () => {
+    const { rerender } = await render(<RecommendationPanel {...base} recommendation={null} isLoading />);
     expect(screen.getByTestId('run-card-recommendation-panel-loading')).toBeTruthy();
     const onRefresh = jest.fn();
-    rerender(<RecommendationPanel {...base} recommendation={null} hasError onRefresh={onRefresh} />);
-    fireEvent.press(screen.getByTestId('run-card-recommendation-panel-retry'));
+    await rerender(<RecommendationPanel {...base} recommendation={null} hasError onRefresh={onRefresh} />);
+    await fireEvent.press(screen.getByTestId('run-card-recommendation-panel-retry'));
     expect(onRefresh).toHaveBeenCalled();
-    rerender(<RecommendationPanel {...base} recommendation={recommendation()} hasFetched={false} />);
+    await rerender(<RecommendationPanel {...base} recommendation={recommendation()} hasFetched={false} />);
     expect(screen.toJSON()).toBeNull();
-    rerender(<RecommendationPanel {...base} recommendation={recommendation({ Units: [], Personnel: [], Shortfalls: [], MoveUps: [] })} />);
+    await rerender(<RecommendationPanel {...base} recommendation={recommendation({ Units: [], Personnel: [], Shortfalls: [], MoveUps: [] })} />);
     expect(screen.toJSON()).toBeNull();
   });
 
-  it('renders units, people, shortfalls, move-ups and notes, and applies', () => {
+  it('renders units, people, shortfalls, move-ups and notes, and applies', async () => {
     const onApply = jest.fn();
-    render(<RecommendationPanel {...base} recommendation={recommendation()} onApply={onApply} />);
+    await render(<RecommendationPanel {...base} recommendation={recommendation()} onApply={onApply} />);
     expect(screen.getByText('Structure fire')).toBeTruthy();
     expect(screen.getByText('run_cards.summary:1,1')).toBeTruthy();
     expect(screen.getByTestId('run-card-recommendation-panel-auto')).toBeTruthy();
@@ -75,21 +75,21 @@ describe('RecommendationPanel', () => {
     // Conditional extras only with conditions enabled.
     expect(screen.queryByTestId('run-card-recommendation-panel-unit-1-row')).toBeNull();
     expect(screen.queryByTestId('run-card-recommendation-panel-shortfall-4-awaiting')).toBeNull();
-    fireEvent.press(screen.getByTestId('run-card-recommendation-panel-apply'));
+    await fireEvent.press(screen.getByTestId('run-card-recommendation-panel-apply'));
     expect(onApply).toHaveBeenCalled();
   });
 
-  it('hides the auto-dispatch badge for a call already out and shows the covered message', () => {
-    const { rerender } = render(<RecommendationPanel {...base} recommendation={recommendation()} isExistingCall />);
+  it('hides the auto-dispatch badge for a call already out and shows the covered message', async () => {
+    const { rerender } = await render(<RecommendationPanel {...base} recommendation={recommendation()} isExistingCall />);
     expect(screen.queryByTestId('run-card-recommendation-panel-auto')).toBeNull();
-    rerender(<RecommendationPanel {...base} recommendation={recommendation({ Units: [], Personnel: [], Shortfalls: [], MoveUps: [] })} coveredMessage="Covered" />);
+    await rerender(<RecommendationPanel {...base} recommendation={recommendation({ Units: [], Personnel: [], Shortfalls: [], MoveUps: [] })} coveredMessage="Covered" />);
     expect(screen.getByTestId('run-card-recommendation-panel-covered')).toBeTruthy();
     expect(screen.getByText('Covered')).toBeTruthy();
   });
 
-  it('lets the dispatcher change a unit’s response code when conditions are on', () => {
+  it('lets the dispatcher change a unit’s response code when conditions are on', async () => {
     const onChange = jest.fn();
-    render(
+    await render(
       <RecommendationPanel
         {...base}
         recommendation={recommendation()}
@@ -106,19 +106,19 @@ describe('RecommendationPanel', () => {
     );
     expect(screen.getByTestId('run-card-recommendation-panel-unit-1-row')).toBeTruthy();
     expect(screen.getByTestId('run-card-recommendation-panel-shortfall-4-awaiting')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('run-card-recommendation-panel-unit-1-code-button'));
-    fireEvent.press(screen.getByTestId('run-card-recommendation-panel-unit-1-code-option-11-button'));
+    await fireEvent.press(screen.getByTestId('run-card-recommendation-panel-unit-1-code-button'));
+    await fireEvent.press(screen.getByTestId('run-card-recommendation-panel-unit-1-code-option-11-button'));
     expect(onChange).toHaveBeenCalledWith(1, 11);
-    fireEvent.press(screen.getByTestId('run-card-recommendation-panel-unit-1-code-button'));
-    fireEvent.press(screen.getByTestId('run-card-recommendation-panel-unit-1-code-option-none'));
+    await fireEvent.press(screen.getByTestId('run-card-recommendation-panel-unit-1-code-button'));
+    await fireEvent.press(screen.getByTestId('run-card-recommendation-panel-unit-1-code-option-none'));
     expect(onChange).toHaveBeenLastCalledWith(1, null);
   });
 });
 
 describe('RunCardDecisionSection', () => {
-  it('explains the outcome, advice, path, fallbacks, first-arriving rows and the pinned decision', () => {
+  it('explains the outcome, advice, path, fallbacks, first-arriving rows and the pinned decision', async () => {
     const onReevaluate = jest.fn();
-    render(
+    await render(
       <RunCardDecisionSection
         testID="rc"
         onReevaluate={onReevaluate}
@@ -167,21 +167,21 @@ describe('RunCardDecisionSection', () => {
     expect(screen.getByText('run_cards.conditions.arrives_before_detail:Ladder (L1),4:00,run_cards.conditions.none_available,run_cards.conditions.no_time')).toBeTruthy();
     expect(screen.getByTestId('rc-decision-fallback-0-outstanding')).toBeTruthy();
     expect(screen.getByTestId('rc-decision-first-arriving')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('rc-decision-reevaluate'));
+    await fireEvent.press(screen.getByTestId('rc-decision-reevaluate'));
     expect(onReevaluate).toHaveBeenCalled();
   });
 });
 
 describe('alarm level and escalation', () => {
-  it('badges only escalated calls with run cards on', () => {
-    const { rerender } = render(<AlarmLevelBadge alarmLevel={1} />);
+  it('badges only escalated calls with run cards on', async () => {
+    const { rerender } = await render(<AlarmLevelBadge alarmLevel={1} />);
     expect(screen.queryByTestId('alarm-level-badge')).toBeNull();
-    rerender(<AlarmLevelBadge alarmLevel={3} />);
+    await rerender(<AlarmLevelBadge alarmLevel={3} />);
     expect(screen.getByText('run_cards.alarm_level:3')).toBeTruthy();
-    act(() => {
+    await act(() => {
       featureFlagsStore.setState({ flags: {} as never });
     });
-    rerender(<AlarmLevelBadge alarmLevel={3} />);
+    await rerender(<AlarmLevelBadge alarmLevel={3} />);
     expect(screen.queryByTestId('alarm-level-badge')).toBeNull();
   });
 
@@ -189,8 +189,8 @@ describe('alarm level and escalation', () => {
     const escalate = jest.fn(async () => ({ Success: true, NewAlarmLevel: 2, AddedUnits: 2, AddedPersonnel: 1 }));
     useRunCardsStore.setState({ escalate, isEscalating: false });
     const onEscalated = jest.fn();
-    render(<EscalateAlarmButton callId="42" alarmLevel={1} activeRunCardId={3} canEscalate onEscalated={onEscalated} />);
-    fireEvent.press(screen.getByTestId('escalate-alarm-button-trigger'));
+    await render(<EscalateAlarmButton callId="42" alarmLevel={1} activeRunCardId={3} canEscalate onEscalated={onEscalated} />);
+    await fireEvent.press(screen.getByTestId('escalate-alarm-button-trigger'));
     expect(escalate).not.toHaveBeenCalled();
     expect(screen.getByText('run_cards.escalate_confirm:2')).toBeTruthy();
     await act(async () => fireEvent.press(screen.getByTestId('escalate-alarm-button-confirm')));
@@ -201,16 +201,16 @@ describe('alarm level and escalation', () => {
 
   it('says plainly when the next level adds nothing, and hides without a run card', async () => {
     useRunCardsStore.setState({ escalate: jest.fn(async () => ({ Success: false })), isEscalating: false });
-    const { rerender } = render(<EscalateAlarmButton callId="42" alarmLevel={2} activeRunCardId={3} canEscalate />);
-    fireEvent.press(screen.getByTestId('escalate-alarm-button-trigger'));
+    const { rerender } = await render(<EscalateAlarmButton callId="42" alarmLevel={2} activeRunCardId={3} canEscalate />);
+    await fireEvent.press(screen.getByTestId('escalate-alarm-button-trigger'));
     await act(async () => fireEvent.press(screen.getByTestId('escalate-alarm-button-confirm')));
     expect(useToastStore.getState().toasts[0]).toMatchObject({ type: 'info', message: 'run_cards.escalate_nothing_to_add' });
-    rerender(<EscalateAlarmButton callId="42" alarmLevel={2} activeRunCardId={null} canEscalate />);
+    await rerender(<EscalateAlarmButton callId="42" alarmLevel={2} activeRunCardId={null} canEscalate />);
     expect(screen.queryByTestId('escalate-alarm-button')).toBeNull();
   });
 
-  it('shows the call section with its level', () => {
-    render(<RunCardCallSection call={{ CallId: '42', State: 0, AlarmLevel: 2, ActiveRunCardId: 3 }} canEdit />);
+  it('shows the call section with its level', async () => {
+    await render(<RunCardCallSection call={{ CallId: '42', State: 0, AlarmLevel: 2, ActiveRunCardId: 3 }} canEdit />);
     expect(screen.getByTestId('run-card-call-section-level')).toHaveTextContent('2');
     expect(screen.getByTestId('escalate-alarm-button')).toBeTruthy();
   });
@@ -228,27 +228,27 @@ describe('RunCardRecommendation (call form hook point)', () => {
     useRunCardsStore.setState({ recommendation: null, isLoading: false, error: null, hasFetched: false, appliedRunCardId: null, unitResponseCodes: {} });
   });
 
-  it('requests a debounced preview and applies with the decision the dispatcher reviewed', () => {
+  it('requests a debounced preview and applies with the decision the dispatcher reviewed', async () => {
     const fetchRecommendationDebounced = jest.fn();
     useRunCardsStore.setState({ fetchRecommendationDebounced });
     const onApply = jest.fn();
-    render(<RunCardRecommendation {...props({ onApply })} />);
+    await render(<RunCardRecommendation {...props({ onApply })} />);
     expect(fetchRecommendationDebounced).toHaveBeenCalledWith({ priority: 1, type: 'Fire', latitude: 40, longitude: -105, alarmLevel: 1 });
 
-    act(() => {
+    await act(() => {
       enableFlags(true);
       useAwaitingResourcesStore.setState({ responseCodes: [{ Id: 10, Code: 'C3', Name: null, Color: null, SortOrder: 0, Retired: false, Description: null }] });
       useRunCardsStore.setState({ recommendation: recommendation({ Decision: { OutcomeNodeKey: 'node-1' } }), hasFetched: true });
     });
-    fireEvent.press(screen.getByTestId('run-card-recommendation-panel-apply'));
+    await fireEvent.press(screen.getByTestId('run-card-recommendation-panel-apply'));
     expect(onApply).toHaveBeenCalledWith({ everyone: false, users: ['u1'], groups: [], roles: [], units: ['9', '1'] }, { outcomeNodeKey: 'node-1', unitResponseCodes: '1:10' });
     expect(useRunCardsStore.getState().appliedRunCardId).toBe(3);
   });
 
-  it('clears the preview when priority or type is missing', () => {
+  it('clears the preview when priority or type is missing', async () => {
     const clear = jest.fn();
     useRunCardsStore.setState({ clear, fetchRecommendationDebounced: jest.fn() });
-    render(<RunCardRecommendation {...props({ call: { type: '', priority: null, address: '' } })} />);
+    await render(<RunCardRecommendation {...props({ call: { type: '', priority: null, address: '' } })} />);
     expect(clear).toHaveBeenCalled();
   });
 });

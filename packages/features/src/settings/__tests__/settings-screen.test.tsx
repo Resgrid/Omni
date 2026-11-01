@@ -46,79 +46,79 @@ describe('SettingsScreen', () => {
     ['ic', ['account', 'preferences', 'notifications', 'voice', 'advanced', 'about', 'logout']],
     ['dispatch', ['account', 'preferences', 'notifications', 'voice', 'advanced', 'about', 'logout']],
     ['bigboard', ['account', 'preferences', 'notifications', 'advanced', 'about', 'logout']],
-  ] as const)('shows the sections the %s capabilities allow', (variant, expected) => {
+  ] as const)('shows the sections the %s capabilities allow', async (variant, expected) => {
     activateTestVariant(variant);
-    render(<SettingsScreen />);
+    await render(<SettingsScreen />);
     expect(sectionIds()).toEqual(expected);
   });
 
-  it('hides the account, unit and sign-out sections when signed out', () => {
+  it('hides the account, unit and sign-out sections when signed out', async () => {
     activateTestVariant('unit');
     fakeAuthStore.setState({ status: 'signedOut', accessToken: null });
-    render(<SettingsScreen />);
+    await render(<SettingsScreen />);
     expect(sectionIds()).toEqual(['preferences', 'notifications', 'location', 'voice', 'advanced', 'about']);
   });
 
-  it('places a registered section by order and lets a variant replace a built-in one', () => {
+  it('places a registered section by order and lets a variant replace a built-in one', async () => {
     activateTestVariant('dispatch');
     registerSettingsSection({ id: 'weather-sources', order: 35, title: 'weather_alerts.settings_title', render: () => <Text>Weather sources</Text>, visible: (context) => context.capabilities.weatherAlerts.admin });
     registerSettingsSection({ id: 'about', order: 90, title: 'settings.about', render: () => <Text>Custom about</Text> });
     registerSettingsSection({ id: 'hidden', order: 5, title: 'x', render: () => null, visible: () => false });
-    render(<SettingsScreen />);
+    await render(<SettingsScreen />);
     expect(sectionIds()).toEqual(['account', 'preferences', 'weather-sources', 'notifications', 'voice', 'advanced', 'about', 'logout']);
     expect(screen.getByText('Custom about')).toBeTruthy();
   });
 
-  it('re-renders when a section registers after the screen mounted', () => {
+  it('re-renders when a section registers after the screen mounted', async () => {
     activateTestVariant('bigboard');
-    render(<SettingsScreen />);
-    act(() => {
+    await render(<SettingsScreen />);
+    await act(() => {
       registerSettingsSection({ id: 'widgets', order: 45, title: 'bigboard.widgets', render: () => <Text>Widgets</Text> });
     });
     expect(screen.getByText('Widgets')).toBeTruthy();
   });
 
-  it('offers account rows by capability', () => {
+  it('offers account rows by capability', async () => {
     activateTestVariant('responder');
-    const { unmount } = render(<SettingsScreen />);
+    const { unmount } = await render(<SettingsScreen />);
     expect(screen.getByTestId('settings-account-security')).toBeTruthy();
     expect(screen.getByTestId('settings-approve-sign-in')).toBeTruthy();
     expect(screen.queryByTestId('settings-shared-device')).toBeNull();
-    unmount();
+    await unmount();
 
     activateTestVariant('unit');
-    render(<SettingsScreen />);
+    await render(<SettingsScreen />);
     expect(screen.getByTestId('settings-shared-device')).toBeTruthy();
     expect(screen.queryByTestId('settings-approve-sign-in')).toBeNull();
-    fireEvent.press(screen.getByTestId('settings-account-security'));
+    await fireEvent.press(screen.getByTestId('settings-account-security'));
     expect(router.push).toHaveBeenCalledWith('/settings/account-security');
   });
 
-  it('saves the navigation app choice for this device', () => {
+  it('saves the navigation app choice for this device', async () => {
     activateTestVariant('unit');
-    render(<SettingsScreen />);
+    await render(<SettingsScreen />);
     expect(screen.getByTestId('settings-navigation-app')).toHaveTextContent(/settings\.navigation_app\.default/);
-    fireEvent.press(screen.getByTestId('settings-navigation-app'));
-    fireEvent.press(screen.getByTestId('navigation-app-sheet-option-waze'));
+    await fireEvent.press(screen.getByTestId('settings-navigation-app'));
+    await fireEvent.press(screen.getByTestId('navigation-app-sheet-option-waze'));
     expect(kv.getString('NAVIGATION_APP')).toBe('waze');
     expect(screen.getByTestId('settings-navigation-app')).toHaveTextContent(/settings\.navigation_app\.waze/);
   });
 
-  it('saves the theme under the legacy key', () => {
+  it('saves the theme under the legacy key', async () => {
     activateTestVariant('responder');
-    render(<SettingsScreen />);
-    fireEvent.press(screen.getByTestId('settings-theme'));
-    fireEvent.press(screen.getByTestId('theme-sheet-option-dark'));
+    await render(<SettingsScreen />);
+    await fireEvent.press(screen.getByTestId('settings-theme'));
+    await fireEvent.press(screen.getByTestId('theme-sheet-option-dark'));
     expect(kv.getString('SELECTED_THEME')).toBe('dark');
     expect(getThemeMode()).toBe('dark');
   });
 
   it('turns realtime geolocation off and leaves the geolocation hub', async () => {
     activateTestVariant('unit');
-    render(<SettingsScreen />);
+    await render(<SettingsScreen />);
     const toggle = screen.getByTestId('settings-realtime-geolocation');
     expect(toggle.props.value).toBe(true);
-    fireEvent(toggle, 'onValueChange', false);
+    await fireEvent(toggle, 'onValueChange', false);
     await waitFor(() => expect(mockRealtimeStore.getState().disconnectGeolocationHub).toHaveBeenCalled());
     expect(getLocationPreferences().realtimeGeolocation).toBe(false);
   });
@@ -126,20 +126,20 @@ describe('SettingsScreen', () => {
   it('keeps background geolocation off when "always" is not granted', async () => {
     activateTestVariant('responder');
     mockTransmitter.requestBackgroundTracking.mockResolvedValueOnce({ outcome: 'foreground-only', foreground: 'granted', background: 'denied' });
-    render(<SettingsScreen />);
-    fireEvent(screen.getByTestId('settings-background-geolocation'), 'onValueChange', true);
+    await render(<SettingsScreen />);
+    await fireEvent(screen.getByTestId('settings-background-geolocation'), 'onValueChange', true);
     expect(await screen.findByTestId('settings-location-message')).toHaveTextContent('settings.background_geolocation_denied');
     expect(getLocationPreferences().backgroundGeolocation).toBe(false);
 
     mockTransmitter.requestBackgroundTracking.mockResolvedValueOnce({ outcome: 'granted', foreground: 'granted', background: 'granted' });
-    fireEvent(screen.getByTestId('settings-background-geolocation'), 'onValueChange', true);
+    await fireEvent(screen.getByTestId('settings-background-geolocation'), 'onValueChange', true);
     await waitFor(() => expect(getLocationPreferences().backgroundGeolocation).toBe(true));
   });
 
-  it('plays the modern alert sounds', () => {
+  it('plays the modern alert sounds', async () => {
     activateTestVariant('unit');
-    render(<SettingsScreen />);
-    fireEvent.press(screen.getByRole('button', { name: 'settings.sounds.play [name=settings.sounds.call_emergency]' }));
+    await render(<SettingsScreen />);
+    await fireEvent.press(screen.getByRole('button', { name: 'settings.sounds.play [name=settings.sounds.call_emergency]' }));
     expect(mockSoundService.play).toHaveBeenCalledWith('moderncallemergency');
   });
 
@@ -148,25 +148,25 @@ describe('SettingsScreen', () => {
     const setActiveUnit = jest.fn(async () => undefined);
     configureSettings({ activeUnit: { useActiveUnitId: () => null, setActiveUnit } });
     useUnitsStore.setState({ units: [{ UnitId: '5', Name: 'Engine 5', Type: 'Engine' } as never], fetchedAt: { units: Date.now() } });
-    render(<SettingsScreen />);
+    await render(<SettingsScreen />);
     expect(screen.getByTestId('settings-active-unit')).toHaveTextContent(/settings\.none_selected/);
-    fireEvent.press(screen.getByTestId('settings-active-unit'));
-    fireEvent.press(screen.getByTestId('unit-item-5'));
+    await fireEvent.press(screen.getByTestId('settings-active-unit'));
+    await fireEvent.press(screen.getByTestId('unit-item-5'));
     await waitFor(() => expect(setActiveUnit).toHaveBeenCalledWith('5'));
   });
 
   it('confirms before signing out', async () => {
     activateTestVariant('ic');
-    render(<SettingsScreen />);
-    fireEvent.press(screen.getByTestId('settings-logout'));
+    await render(<SettingsScreen />);
+    await fireEvent.press(screen.getByTestId('settings-logout'));
     const dialog = screen.getByTestId('logout-dialog');
     expect(within(dialog).getByText('settings.logout_confirm_message')).toBeTruthy();
     expect(fakeAuthStore.getState().logout).not.toHaveBeenCalled();
-    fireEvent.press(screen.getByTestId('logout-dialog-confirm'));
+    await fireEvent.press(screen.getByTestId('logout-dialog-confirm'));
     await waitFor(() => expect(fakeAuthStore.getState().logout).toHaveBeenCalledTimes(1));
   });
 
-  it('shows the pending count on the Storage & sync entry and opens it', () => {
+  it('shows the pending count on the Storage & sync entry and opens it', async () => {
     activateTestVariant('dispatch');
     const snapshot = {
       counts: { unsent: 3, pending: 3, processing: 0, failed: 0, dead: 0, stuck: 0, awaitingConfirmation: 0, held: 0, total: 3 },
@@ -178,9 +178,9 @@ describe('SettingsScreen', () => {
       updatedAt: 1,
     };
     configureSettings({ storageSync: { storage: {} as never, outbox: { getSnapshot: () => snapshot, subscribe: () => () => undefined } as never } });
-    render(<SettingsScreen />);
+    await render(<SettingsScreen />);
     expect(screen.getByTestId('settings-storage-sync')).toHaveTextContent(/storage_sync\.pending_count \[count=3\]/);
-    fireEvent.press(screen.getByTestId('settings-storage-sync'));
+    await fireEvent.press(screen.getByTestId('settings-storage-sync'));
     expect(router.push).toHaveBeenCalledWith('/settings/storage-sync');
   });
 });

@@ -97,7 +97,7 @@ describe('home statuses', () => {
 
 describe('MemberHomeScreen', () => {
   it('loads the working set and shows the member status, staffing and status buttons', async () => {
-    render(<MemberHomeScreen />);
+    await render(<MemberHomeScreen />);
     await waitFor(() => expect(fetchers.fetchPersonnel).toHaveBeenCalledWith({ bypassCache: false }));
     expect(fetchers.fetchCurrentStatus).toHaveBeenCalled();
     expect(fetchers.fetchCurrentStaffing).toHaveBeenCalled();
@@ -118,20 +118,20 @@ describe('MemberHomeScreen', () => {
     expect(screen.queryByTestId('home-due-checks')).toBeNull();
   });
 
-  it('opens the status sheet on the pressed status', () => {
-    render(<MemberHomeScreen />);
-    fireEvent.press(screen.getByTestId('status-button-2'));
+  it('opens the status sheet on the pressed status', async () => {
+    await render(<MemberHomeScreen />);
+    await fireEvent.press(screen.getByTestId('status-button-2'));
     expect(screen.getByTestId('status-option-2', q)).toHaveProp('accessibilityState', expect.objectContaining({ selected: true }));
   });
 
-  it('opens the sheet on the staffing tab from the staffing card', () => {
-    render(<MemberHomeScreen />);
-    fireEvent.press(screen.getByTestId('user-staffing-card-press'));
+  it('opens the sheet on the staffing tab from the staffing card', async () => {
+    await render(<MemberHomeScreen />);
+    await fireEvent.press(screen.getByTestId('user-staffing-card-press'));
     expect(screen.getByTestId('personnel-status-sheet-tab-staffing', q)).toHaveProp('accessibilityState', expect.objectContaining({ selected: true }));
   });
 
-  it('uses hold buttons when the department holds to set status', () => {
-    render(
+  it('uses hold buttons when the department holds to set status', async () => {
+    await render(
       <StatusProvider holdToConfirm>
         <MemberHomeScreen />
       </StatusProvider>
@@ -140,28 +140,28 @@ describe('MemberHomeScreen', () => {
     expect(screen.queryByTestId('status-button-2')).toBeNull();
   });
 
-  it('hides staffing without the staffing capability', () => {
+  it('hides staffing without the staffing capability', async () => {
     activateTestVariant('responder', { status: { staffing: false } });
-    render(<MemberHomeScreen />);
+    await render(<MemberHomeScreen />);
     expect(screen.queryByTestId('shared-tab-staffing')).toBeNull();
     expect(screen.queryByTestId('user-staffing-card')).toBeNull();
   });
 
-  it('adds the Call tab for the active call with an overdue badge and opens the call', () => {
+  it('adds the Call tab for the active call with an overdue badge and opens the call', async () => {
     useCallsStore.setState({ calls: [call('100', { CheckInTimersEnabled: true })] });
     useCheckInTimersStore.setState({ statusesByCall: { '100': [{ Status: 'Overdue', TargetType: 0, TargetEntityId: 'me' } as unknown as CheckInTimerStatusResultData] } });
     const onClear = jest.fn();
-    render(
+    await render(
       <StatusProvider activeCallId="100">
         <MemberHomeScreen onClearActiveCall={onClear} />
       </StatusProvider>
     );
     expect(screen.getByTestId('shared-tab-call-badge')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('shared-tab-call'));
+    await fireEvent.press(screen.getByTestId('shared-tab-call'));
     expect(screen.getByText('Call 100 (#100)')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('active-call-tab-view-details'));
+    await fireEvent.press(screen.getByTestId('active-call-tab-view-details'));
     expect(router.push).toHaveBeenCalledWith('/call/100');
-    fireEvent.press(screen.getByTestId('active-call-tab-clear'));
+    await fireEvent.press(screen.getByTestId('active-call-tab-clear'));
     expect(onClear).toHaveBeenCalled();
   });
 
@@ -171,7 +171,7 @@ describe('MemberHomeScreen', () => {
       callDispatches: { '100': [{ Id: 'me', Type: 'Personnel', Name: 'Pat Lee' }] } as never,
     });
     useWeatherAlertsStore.setState({ alerts: [{ WeatherAlertId: 'w1', Severity: 0, Status: 0, Event: 'Tornado Warning' } as unknown as WeatherAlertResultData] });
-    render(<MemberHomeScreen />);
+    await render(<MemberHomeScreen />);
 
     expect(screen.getByTestId('summary-active-calls-value')).toHaveTextContent('2');
     expect(screen.getByTestId('summary-calls-im-on-value')).toHaveTextContent('1');
@@ -180,52 +180,52 @@ describe('MemberHomeScreen', () => {
     await waitFor(() => expect(fetchers.fetchGlobalOverdueCount).toHaveBeenCalled());
     expect(fetchers.fetchCallDispatches).toHaveBeenCalledWith(['100', '101']);
 
-    fireEvent.press(screen.getByTestId('summary-active-calls-press'));
+    await fireEvent.press(screen.getByTestId('summary-active-calls-press'));
     expect(router.push).toHaveBeenLastCalledWith('/home/calls');
-    fireEvent.press(screen.getByTestId('summary-calls-im-on-press'));
+    await fireEvent.press(screen.getByTestId('summary-calls-im-on-press'));
     expect(router.push).toHaveBeenLastCalledWith('/home/calls?filter=mine');
-    fireEvent.press(screen.getByTestId('summary-weather-alerts-press'));
+    await fireEvent.press(screen.getByTestId('summary-weather-alerts-press'));
     expect(router.push).toHaveBeenLastCalledWith('/weather-alerts');
   });
 
-  it('shows the registered due-checks card, and a prop replaces it', () => {
+  it('shows the registered due-checks card, and a prop replaces it', async () => {
     const unregister = registerMemberHomeHookPoints({ DueChecksCard: () => <Text>due checks card</Text> });
-    const { unmount } = render(<MemberHomeScreen />);
+    const { unmount } = await render(<MemberHomeScreen />);
     expect(screen.getByText('due checks card')).toBeTruthy();
-    unmount();
+    await unmount();
 
-    const second = render(<MemberHomeScreen dueChecks={<Text>prop card</Text>} />);
+    const second = await render(<MemberHomeScreen dueChecks={<Text>prop card</Text>} />);
     expect(screen.getByText('prop card')).toBeTruthy();
     expect(screen.queryByText('due checks card')).toBeNull();
-    second.unmount();
+    await second.unmount();
     unregister();
   });
 
   it('fetches the status options when they are missing', async () => {
     usePersonnelStore.setState({ statusOptions: [] });
-    render(<MemberHomeScreen />);
+    await render(<MemberHomeScreen />);
     await waitFor(() => expect(fetchers.fetchStatusOptions).toHaveBeenCalledWith({ bypassCache: false }));
     expect(screen.getByTestId('home-status-buttons-empty')).toBeTruthy();
   });
 });
 
 describe('HomeStatusButtons', () => {
-  it("offers the current status's next statuses with a way to show all", () => {
+  it("offers the current status's next statuses with a way to show all", async () => {
     usePersonnelStore.setState({ statusOptions: [option(1, 'Not Responding', { NextIds: [2] } as Partial<StatusesResultData>), option(2, 'Responding'), option(3, 'On Scene')] });
     const onSelect = jest.fn();
-    render(<HomeStatusButtons onSelectStatus={onSelect} />);
+    await render(<HomeStatusButtons onSelectStatus={onSelect} />);
     expect(screen.queryByTestId('status-button-3')).toBeNull();
-    fireEvent.press(screen.getByTestId('home-status-buttons-show-all'));
+    await fireEvent.press(screen.getByTestId('home-status-buttons-show-all'));
     expect(screen.getByTestId('status-button-3')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('home-status-buttons-show-next'));
+    await fireEvent.press(screen.getByTestId('home-status-buttons-show-next'));
     expect(screen.queryByTestId('status-button-3')).toBeNull();
-    fireEvent.press(screen.getByTestId('status-button-2'));
+    await fireEvent.press(screen.getByTestId('status-button-2'));
     expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ Id: 2 }), false);
   });
 });
 
 describe('MemberHomeTabsLayout', () => {
-  it('declares the four nested tabs with department terms', () => {
+  it('declares the four nested tabs with department terms', async () => {
     const expoRouter = jest.requireMock('expo-router') as Record<string, unknown>;
     const { View: RNView, Text: RNText } = require('react-native');
     const MockTabs = ({ children }: { children: React.ReactNode }) => <RNView testID="tabs">{children}</RNView>;
@@ -234,7 +234,7 @@ describe('MemberHomeTabsLayout', () => {
     };
     expoRouter.Tabs = MockTabs;
 
-    render(<MemberHomeTabsLayout />);
+    await render(<MemberHomeTabsLayout />);
     expect(screen.getByTestId('home-status-tab')).toHaveTextContent('index:tabs.home');
     expect(screen.getByTestId('home-people-tab')).toHaveTextContent('personnel:tabs.personnel');
     expect(screen.getByTestId('home-units-tab')).toHaveTextContent('units:units.title');

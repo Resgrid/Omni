@@ -116,24 +116,24 @@ describe('chat routes and nav', () => {
     expect(entry?.requiresCapability?.({ realtime: { chatHub: true } } as Capabilities)).toBe(true);
   });
 
-  it('the conversation list opens the assistant channel on its own screen', () => {
+  it('the conversation list opens the assistant channel on its own screen', async () => {
     useChatStore.setState({ channels: [{ ChatChannelId: BOT, Name: 'Assistant', ChannelType: ChatChannelType.Chatbot, IsArchived: false, CreatedOn: '2026-10-30T10:00:00Z' } as ChatChannelResultData] });
-    render(<ChatChannelsScreen />);
-    fireEvent.press(screen.getByTestId(`chat-channel-${BOT}`));
+    await render(<ChatChannelsScreen />);
+    await fireEvent.press(screen.getByTestId(`chat-channel-${BOT}`));
     expect(router.push).toHaveBeenCalledWith('/chatbot');
   });
 });
 
 describe('ChatbotScreen', () => {
-  it('redirects home when the department has Chat.System off', () => {
+  it('redirects home when the department has Chat.System off', async () => {
     enableChat(false);
-    render(<ChatbotScreen />);
+    await render(<ChatbotScreen />);
     expect(screen.getByTestId('redirect')).toHaveTextContent('/home');
     expect(initChatbot).not.toHaveBeenCalled();
   });
 
   it('loads the channel on focus, marks it active for the user (never the unit) and joins its hub group', async () => {
-    render(<ChatbotScreen />);
+    await render(<ChatbotScreen />);
     expect(screen.getByTestId('chatbot-screen')).toBeOnTheScreen();
     expect(screen.getByText('Answer r1')).toBeOnTheScreen();
     expect(initChatbot).toHaveBeenCalledTimes(1);
@@ -142,33 +142,33 @@ describe('ChatbotScreen', () => {
     await waitFor(() => expect(markChannelRead).toHaveBeenCalledWith(BOT));
   });
 
-  it('waits for the channel, then says when the department has no assistant', () => {
+  it('waits for the channel, then says when the department has no assistant', async () => {
     useChatStore.setState({ chatbotChannelId: null, messagesByChannel: {} });
-    const { rerender } = render(<ChatbotScreen />);
+    const { rerender } = await render(<ChatbotScreen />);
     expect(screen.getByTestId('chatbot-loading')).toBeOnTheScreen();
 
-    act(() => {
+    await act(() => {
       useChatStore.setState({ errors: { chatbot: { code: 'not_found', status: 404, messageKey: 'errors.data.not_found' } } });
     });
-    rerender(<ChatbotScreen />);
+    await rerender(<ChatbotScreen />);
     expect(screen.getByTestId('chatbot-unavailable')).toBeOnTheScreen();
     expect(screen.queryByTestId('chatbot-retry')).toBeNull();
     expect(invoke).not.toHaveBeenCalled();
   });
 
-  it('offers a retry when the assistant could not be reached', () => {
+  it('offers a retry when the assistant could not be reached', async () => {
     useChatStore.setState({ chatbotChannelId: null, messagesByChannel: {}, errors: { chatbot: { code: 'network', messageKey: 'errors.data.network' } } });
-    render(<ChatbotScreen />);
+    await render(<ChatbotScreen />);
     expect(screen.getByTestId('chatbot-load-failed')).toBeOnTheScreen();
-    fireEvent.press(screen.getByTestId('chatbot-retry'));
+    await fireEvent.press(screen.getByTestId('chatbot-retry'));
     expect(initChatbot).toHaveBeenCalledTimes(2);
   });
 
   it('asks a question through the shared composer (no urgent toggle)', async () => {
-    render(<ChatbotScreen />);
+    await render(<ChatbotScreen />);
     expect(screen.queryByTestId('chat-composer-urgent')).toBeNull();
-    fireEvent.changeText(screen.getByTestId('chat-composer-input'), '  Who is on shift?  ');
-    fireEvent.press(screen.getByTestId('chat-composer-send'));
+    await fireEvent.changeText(screen.getByTestId('chat-composer-input'), '  Who is on shift?  ');
+    await fireEvent.press(screen.getByTestId('chat-composer-send'));
     await waitFor(() => expect(sendChatbotMessage).toHaveBeenCalledWith('Who is on shift?'));
     expect(screen.getByTestId('chat-composer-input').props.value).toBe('');
     expect(useToastStore.getState().toasts).toHaveLength(0);
@@ -176,65 +176,65 @@ describe('ChatbotScreen', () => {
 
   it('a refused question shows an error toast', async () => {
     sendChatbotMessage.mockResolvedValueOnce({ ok: false, error: { code: 'forbidden', status: 403, messageKey: 'errors.data.forbidden' } } as never);
-    render(<ChatbotScreen />);
-    fireEvent.changeText(screen.getByTestId('chat-composer-input'), 'PAR');
-    fireEvent.press(screen.getByTestId('chat-composer-send'));
+    await render(<ChatbotScreen />);
+    await fireEvent.changeText(screen.getByTestId('chat-composer-input'), 'PAR');
+    await fireEvent.press(screen.getByTestId('chat-composer-send'));
     await waitFor(() => expect(useToastStore.getState().toasts).toHaveLength(1));
     expect(useToastStore.getState().toasts[0]).toMatchObject({ type: 'error' });
   });
 
-  it('shows the thinking row on chatbotTyping and replaces it with the reply from chatMessageReceived', () => {
-    render(<ChatbotScreen />);
+  it('shows the thinking row on chatbotTyping and replaces it with the reply from chatMessageReceived', async () => {
+    await render(<ChatbotScreen />);
     expect(screen.queryByTestId('chatbot-typing')).toBeNull();
 
-    act(() => emitRealtimeEvent('chatbotTyping', JSON.stringify({ ChatChannelId: BOT, IsTyping: true })));
+    await act(() => emitRealtimeEvent('chatbotTyping', JSON.stringify({ ChatChannelId: BOT, IsTyping: true })));
     expect(screen.getByTestId('chatbot-typing')).toBeOnTheScreen();
 
     // A message for another conversation changes nothing here.
-    act(() => emitRealtimeEvent('chatMessageReceived', JSON.stringify(reply('x', { ChatChannelId: 'other', MessageSeq: 9 }))));
+    await act(() => emitRealtimeEvent('chatMessageReceived', JSON.stringify(reply('x', { ChatChannelId: 'other', MessageSeq: 9 }))));
     expect(screen.getByTestId('chatbot-typing')).toBeOnTheScreen();
 
-    act(() => emitRealtimeEvent('chatMessageReceived', JSON.stringify(reply('r2', { MessageSeq: 3, Body: 'Engine 1: Lee, Patel' }))));
+    await act(() => emitRealtimeEvent('chatMessageReceived', JSON.stringify(reply('r2', { MessageSeq: 3, Body: 'Engine 1: Lee, Patel' }))));
     expect(screen.getByText('Engine 1: Lee, Patel')).toBeOnTheScreen();
     expect(screen.queryByTestId('chatbot-typing')).toBeNull();
   });
 
-  it('accepts chatbotMessageReceived too', () => {
-    render(<ChatbotScreen />);
-    act(() => emitRealtimeEvent('chatbotMessageReceived', reply('r3', { MessageSeq: 4, Body: 'Hydrant 12 is out of service' })));
+  it('accepts chatbotMessageReceived too', async () => {
+    await render(<ChatbotScreen />);
+    await act(() => emitRealtimeEvent('chatbotMessageReceived', reply('r3', { MessageSeq: 4, Body: 'Hydrant 12 is out of service' })));
     expect(screen.getByText('Hydrant 12 is out of service')).toBeOnTheScreen();
   });
 
-  it('rejoins the channel and backfills after the chat hub reconnects', () => {
-    render(<ChatbotScreen />);
+  it('rejoins the channel and backfills after the chat hub reconnects', async () => {
+    await render(<ChatbotScreen />);
     invoke.mockClear();
-    act(() => emitRealtimeEvent('chatHubJoined', { hub: 'chat', rejoin: true, at: 1 }));
+    await act(() => emitRealtimeEvent('chatHubJoined', { hub: 'chat', rejoin: true, at: 1 }));
     expect(invoke).toHaveBeenCalledWith(expect.any(String), 'JoinChannel', BOT, null);
     expect(loadNewerMessages).toHaveBeenCalledWith(BOT);
   });
 
-  it('a failed question is tap-to-retry under its client id', () => {
+  it('a failed question is tap-to-retry under its client id', async () => {
     useChatStore.setState({ messagesByChannel: { [BOT]: [message('client-1', { ClientMessageId: 'client-1', MessageSeq: 9_000_000_000_001, _localStatus: 'failed' })] } });
-    render(<ChatbotScreen />);
-    fireEvent.press(screen.getByTestId('chat-message-client-1-retry'));
+    await render(<ChatbotScreen />);
+    await fireEvent.press(screen.getByTestId('chat-message-client-1-retry'));
     expect(retryChatbotMessage).toHaveBeenCalledWith('client-1');
   });
 
   it('starts a new session and reports a failure', async () => {
     newChatbotSession.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
-    render(<ChatbotScreen />);
-    fireEvent.press(screen.getByTestId('chatbot-new-session'));
+    await render(<ChatbotScreen />);
+    await fireEvent.press(screen.getByTestId('chatbot-new-session'));
     await waitFor(() => expect(newChatbotSession).toHaveBeenCalledTimes(1));
     expect(useToastStore.getState().toasts).toHaveLength(0);
 
-    fireEvent.press(screen.getByTestId('chatbot-new-session'));
+    await fireEvent.press(screen.getByTestId('chatbot-new-session'));
     await waitFor(() => expect(useToastStore.getState().toasts).toHaveLength(1));
     expect(useToastStore.getState().toasts[0]).toMatchObject({ type: 'error' });
   });
 
   it('assistant replies offer copy and report only; a moderator can also pin', async () => {
-    render(<ChatbotScreen />, { wrapper });
-    fireEvent(screen.getByTestId('chat-message-r1'), 'longPress');
+    await render(<ChatbotScreen />, { wrapper });
+    await fireEvent(screen.getByTestId('chat-message-r1'), 'longPress');
     expect(screen.getByTestId('message-action-copy', q)).toBeOnTheScreen();
     expect(screen.getByTestId('message-action-flag', q)).toBeOnTheScreen();
     expect(screen.queryByTestId('message-react-👍', q)).toBeNull();
@@ -242,14 +242,14 @@ describe('ChatbotScreen', () => {
     expect(screen.queryByTestId('message-action-delete', q)).toBeNull();
     expect(screen.queryByTestId('message-action-pin', q)).toBeNull();
 
-    fireEvent.press(screen.getByTestId('message-action-copy', q));
+    await fireEvent.press(screen.getByTestId('message-action-copy', q));
     await waitFor(() => expect(mockSetString).toHaveBeenCalledWith('Answer r1'));
 
-    act(() => {
+    await act(() => {
       securityStore.setState({ rights: { IsAdmin: true } as DepartmentRightsResultData });
     });
-    fireEvent(screen.getByTestId('chat-message-r1'), 'longPress');
-    fireEvent.press(screen.getByTestId('message-action-pin', q));
+    await fireEvent(screen.getByTestId('chat-message-r1'), 'longPress');
+    await fireEvent.press(screen.getByTestId('message-action-pin', q));
     await waitFor(() => expect(mockPin).toHaveBeenCalledWith('r1', true));
   });
 });

@@ -17,17 +17,15 @@ function Probe() {
   return <Text testID="probe">{`${style.status}|${style.kind}|${typeof style.mapStyle === 'string' ? style.mapStyle : style.mapStyle ? 'json' : 'null'}`}</Text>;
 }
 
-const okFetch = (body: unknown) => jest.fn<ReturnType<MapFetch>, Parameters<MapFetch>>(async () => ({ ok: true, status: 200, json: async () => body }));
-
 describe('MapProvider', () => {
   beforeEach(() => {
     clearMapStyleCache();
     mockLastState = null;
   });
 
-  it('switches between the day and night MapLibre styles with the theme', () => {
+  it('switches between the day and night MapLibre styles with the theme', async () => {
     const config: MapConfigInput = { MapLibreStyleUrlDay: 'https://maps.example.org/day.json', MapLibreStyleUrlNight: 'https://maps.example.org/night.json', MapAttribution: '© OSM' };
-    const { rerender } = render(
+    const { rerender } = await render(
       <MapProvider config={config} colorScheme="light" capabilities={{ layers: true, customIndoor: false, navigationInApp: false }}>
         <Probe />
       </MapProvider>
@@ -35,7 +33,7 @@ describe('MapProvider', () => {
     expect(screen.getByTestId('probe').props.children).toBe('ready|maplibre|https://maps.example.org/day.json');
     expect(mockLastState?.attribution).toBe('© OSM');
     expect(mockLastState?.isDark).toBe(false);
-    rerender(
+    await rerender(
       <MapProvider config={config} colorScheme="dark" capabilities={{ layers: true, customIndoor: false, navigationInApp: false }}>
         <Probe />
       </MapProvider>
@@ -46,19 +44,29 @@ describe('MapProvider', () => {
   });
 
   it('fetches a Mapbox style client-side and hands MapLibre the rewritten JSON', async () => {
-    const fetchImpl = okFetch({
+    const body = {
       version: 8,
       sources: { composite: { type: 'vector', url: 'mapbox://mapbox.mapbox-streets-v8' } },
       sprite: 'mapbox://sprites/mapbox/streets-v12',
       glyphs: 'mapbox://fonts/mapbox/{fontstack}/{range}.pbf',
       layers: [],
+    };
+    // Held until the loading state is checked: RNTL 14's awaited render flushes an immediately resolved fetch.
+    let release!: () => void;
+    const released = new Promise<void>((resolve) => {
+      release = resolve;
     });
-    render(
+    const fetchImpl = jest.fn<ReturnType<MapFetch>, Parameters<MapFetch>>(async () => {
+      await released;
+      return { ok: true, status: 200, json: async () => body };
+    });
+    await render(
       <MapProvider config={{ MapDayStyleUrl: 'mapbox://styles/mapbox/streets-v12', AppMapboxAccessToken: TOKEN }} colorScheme="light" fetchImpl={fetchImpl}>
         <Probe />
       </MapProvider>
     );
     expect(screen.getByTestId('probe').props.children).toBe('loading|mapbox|null');
+    await act(async () => release());
     await waitFor(() => expect(screen.getByTestId('probe').props.children).toBe('ready|mapbox|json'));
     expect(fetchImpl).toHaveBeenCalledWith(`https://api.mapbox.com/styles/v1/mapbox/streets-v12?access_token=${encodeURIComponent(TOKEN)}`, expect.anything());
     const style = mockLastState?.mapStyle as { sources: Record<string, { url: string }>; sprite: string; glyphs: string };
@@ -69,7 +77,7 @@ describe('MapProvider', () => {
 
   it('falls back to the raster tiles when the Mapbox style cannot be fetched', async () => {
     const fetchImpl: MapFetch = jest.fn(async () => ({ ok: false, status: 401, json: async () => ({}) }));
-    render(
+    await render(
       <MapProvider config={{ MapDayStyleUrl: 'mapbox://styles/acme/x', AppMapboxAccessToken: TOKEN, MapUrl: 'https://tiles.example.org/{z}/{x}/{y}.png' }} colorScheme="light" fetchImpl={fetchImpl}>
         <Probe />
       </MapProvider>
@@ -85,7 +93,7 @@ describe('MapProvider', () => {
       mockRetry = useMapProviderContext().retry;
       return null;
     }
-    render(
+    await render(
       <MapProvider config={{ MapDayStyleUrl: 'mapbox://styles/acme/x', AppMapboxAccessToken: TOKEN }} colorScheme="light" fetchImpl={fetchImpl}>
         <Probe />
         <RetryProbe />
@@ -94,12 +102,12 @@ describe('MapProvider', () => {
     await waitFor(() => expect(screen.getByTestId('probe').props.children).toBe('error|mapbox|null'));
     expect(mockLastState?.isAvailable).toBe(false);
     fail = false;
-    act(() => mockRetry());
+    await act(() => mockRetry());
     await waitFor(() => expect(screen.getByTestId('probe').props.children).toBe('ready|mapbox|json'));
   });
 
-  it('hides maps when there is no style', () => {
-    render(
+  it('hides maps when there is no style', async () => {
+    await render(
       <MapProvider config={{}} colorScheme="light">
         <Probe />
       </MapProvider>
@@ -108,9 +116,9 @@ describe('MapProvider', () => {
     expect(mockLastState?.isAvailable).toBe(false);
   });
 
-  it('switches to the composed offline style through the offline seam', () => {
+  it('switches to the composed offline style through the offline seam', async () => {
     const offlineStyle = { version: 8 as const, sources: {}, layers: [] };
-    render(
+    await render(
       <MapProvider config={{ MapLibreStyleUrlDay: 'https://maps.example.org/day.json' }} colorScheme="light" offline={{ mode: 'offline', getStyle: () => offlineStyle, updatedAt: 123 }}>
         <Probe />
       </MapProvider>
@@ -120,8 +128,8 @@ describe('MapProvider', () => {
     expect(mockLastState?.attribution).toBe('Protomaps © OpenStreetMap');
   });
 
-  it('stays online when the offline seam has no style', () => {
-    render(
+  it('stays online when the offline seam has no style', async () => {
+    await render(
       <MapProvider config={{ MapLibreStyleUrlDay: 'https://maps.example.org/day.json' }} colorScheme="light" offline={{ mode: 'offline', getStyle: () => null }}>
         <Probe />
       </MapProvider>
@@ -129,13 +137,13 @@ describe('MapProvider', () => {
     expect(screen.getByTestId('probe').props.children).toBe('ready|maplibre|https://maps.example.org/day.json');
   });
 
-  it('exposes the department centre, theme and a safe static map template', () => {
+  it('exposes the department centre, theme and a safe static map template', async () => {
     let mockContext: ReturnType<typeof useMapProviderContext> | null = null;
     function ContextProbe() {
       mockContext = useMapProviderContext();
       return null;
     }
-    render(
+    await render(
       <MapProvider
         config={{ MapCenterLatitude: 50.9, MapCenterLongitude: 3.7, MapCenterZoomLevel: 11, StaticMapUrlTemplate: 'https://api.example.org/static?lat={lat}' }}
         colorScheme="dark"

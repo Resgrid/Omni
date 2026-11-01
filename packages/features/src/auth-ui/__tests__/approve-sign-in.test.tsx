@@ -39,14 +39,14 @@ describe('ApproveSignInScreen', () => {
   it('shows the request and approves with the number from the other screen', async () => {
     mockFetch.mockResolvedValue(pending());
     mockApprove.mockResolvedValueOnce({ ok: true, state: 'approved' });
-    render(<ApproveSignInScreen />);
+    await render(<ApproveSignInScreen />);
     expect(await screen.findByText('mfa.approve.purpose.login')).toBeTruthy();
     expect(screen.getByText('mfa.approve.app [app=Resgrid Unit]')).toBeTruthy();
     expect(screen.getByText('mfa.approve.installation [label=Engine 12]')).toBeTruthy();
 
     expect(screen.getByTestId('approve-confirm')).toBeDisabled();
-    fireEvent.changeText(screen.getByLabelText('mfa.approve.number_placeholder'), '42');
-    fireEvent.press(screen.getByRole('button', { name: 'mfa.approve.approve' }));
+    await fireEvent.changeText(screen.getByLabelText('mfa.approve.number_placeholder'), '42');
+    await fireEvent.press(screen.getByRole('button', { name: 'mfa.approve.approve' }));
     expect(await screen.findByTestId('approve-approved')).toBeTruthy();
     expect(mockApprove).toHaveBeenCalledWith('req-1', '42');
   });
@@ -54,17 +54,17 @@ describe('ApproveSignInScreen', () => {
   it('reports a wrong number with the attempts left', async () => {
     mockFetch.mockResolvedValueOnce(pending()).mockResolvedValueOnce(pending({ AttemptsRemaining: 2 }));
     mockApprove.mockResolvedValueOnce({ ok: false, code: 'approval_number_mismatch' });
-    render(<ApproveSignInScreen />);
-    fireEvent.changeText(await screen.findByTestId('approve-number'), '17');
-    fireEvent.press(screen.getByTestId('approve-confirm'));
+    await render(<ApproveSignInScreen />);
+    await fireEvent.changeText(await screen.findByTestId('approve-number'), '17');
+    await fireEvent.press(screen.getByTestId('approve-confirm'));
     expect(await screen.findByText('mfa.approve.number_mismatch [count=2]')).toBeTruthy();
   });
 
   it('denies, and reports "This wasn\'t me"', async () => {
     mockFetch.mockResolvedValue(pending());
     mockDeny.mockResolvedValue({ ok: true, state: 'denied' });
-    render(<ApproveSignInScreen />);
-    fireEvent.press(await screen.findByTestId('approve-not-me'));
+    await render(<ApproveSignInScreen />);
+    await fireEvent.press(await screen.findByTestId('approve-not-me'));
     expect(await screen.findByTestId('approve-denied')).toBeTruthy();
     expect(mockDeny).toHaveBeenCalledWith('req-1', 'not_me');
   });
@@ -72,15 +72,15 @@ describe('ApproveSignInScreen', () => {
   it('says when nothing is waiting, and finishes with Done', async () => {
     mockFetch.mockResolvedValue(null);
     const onDone = jest.fn();
-    render(<ApproveSignInScreen onDone={onDone} />);
+    await render(<ApproveSignInScreen onDone={onDone} />);
     expect(await screen.findByTestId('approve-none')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('approve-done'));
+    await fireEvent.press(screen.getByTestId('approve-done'));
     expect(onDone).toHaveBeenCalled();
   });
 
   it('never asks the server in a variant that does not approve sign-ins', async () => {
     activateTestVariant('unit');
-    render(<ApproveSignInScreen />);
+    await render(<ApproveSignInScreen />);
     await waitFor(() => expect(screen.getByTestId('approve-none')).toBeTruthy());
     expect(mockFetch).not.toHaveBeenCalled();
   });

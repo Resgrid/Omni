@@ -42,50 +42,50 @@ beforeEach(() => {
   targets = { window: makeTarget(), document: makeTarget() };
 });
 
-it('transmits while the hotkey is held and releases on key up', () => {
-  const { result } = renderHook(() => useDesktopPtt({ targets }));
+it('transmits while the hotkey is held and releases on key up', async () => {
+  const { result } = await renderHook(() => useDesktopPtt({ targets }));
   expect(result.current.isActive).toBe(true);
 
-  act(() => targets.window.dispatch('keydown', key('Space')));
+  await act(() => targets.window.dispatch('keydown', key('Space')));
   expect(startTransmitting).toHaveBeenCalledWith('desktop');
   expect(result.current.isHotkeyDown).toBe(true);
 
-  act(() => targets.window.dispatch('keyup', key('Space')));
+  await act(() => targets.window.dispatch('keyup', key('Space')));
   expect(stopTransmitting).toHaveBeenCalledWith('desktop');
   expect(result.current.isHotkeyDown).toBe(false);
 });
 
-it('releases when the window loses focus mid-transmission', () => {
-  renderHook(() => useDesktopPtt({ targets }));
-  act(() => targets.window.dispatch('keydown', key('Space')));
-  act(() => targets.window.dispatch('blur'));
+it('releases when the window loses focus mid-transmission', async () => {
+  await renderHook(() => useDesktopPtt({ targets }));
+  await act(() => targets.window.dispatch('keydown', key('Space')));
+  await act(() => targets.window.dispatch('blur'));
   expect(stopTransmitting).toHaveBeenCalledTimes(1);
 });
 
-it('uses a configured hotkey', () => {
-  renderHook(() => useDesktopPtt({ targets, hotkey: { code: 'F13' } }));
-  act(() => targets.window.dispatch('keydown', key('Space')));
+it('uses a configured hotkey', async () => {
+  await renderHook(() => useDesktopPtt({ targets, hotkey: { code: 'F13' } }));
+  await act(() => targets.window.dispatch('keydown', key('Space')));
   expect(startTransmitting).not.toHaveBeenCalled();
-  act(() => targets.window.dispatch('keydown', key('F13')));
+  await act(() => targets.window.dispatch('keydown', key('F13')));
   expect(startTransmitting).toHaveBeenCalled();
 });
 
-it('does nothing when no channel is joined', () => {
+it('does nothing when no channel is joined', async () => {
   useLiveKitStore.setState({ isConnected: false });
-  renderHook(() => useDesktopPtt({ targets }));
-  act(() => targets.window.dispatch('keydown', key('Space')));
+  await renderHook(() => useDesktopPtt({ targets }));
+  await act(() => targets.window.dispatch('keydown', key('Space')));
   expect(startTransmitting).not.toHaveBeenCalled();
 });
 
-it('stays inert for variants without desktop PTT and detaches on unmount', () => {
+it('stays inert for variants without desktop PTT and detaches on unmount', async () => {
   mockCapabilities.desktopPtt = false;
-  const { result } = renderHook(() => useDesktopPtt({ targets }));
+  const { result } = await renderHook(() => useDesktopPtt({ targets }));
   expect(result.current.isActive).toBe(false);
   expect(targets.window.count('keydown')).toBe(0);
 
   mockCapabilities.desktopPtt = true;
-  const mounted = renderHook(() => useDesktopPtt({ targets }));
+  const mounted = await renderHook(() => useDesktopPtt({ targets }));
   expect(targets.window.count('keydown')).toBe(1);
-  mounted.unmount();
+  await mounted.unmount();
   expect(targets.window.count('keydown')).toBe(0);
 });

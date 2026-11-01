@@ -105,7 +105,7 @@ describe('CalendarScreen', () => {
     useCalendarStore.setState({
       todayItems: [item('1', { Location: 'Station 1', Description: '<p>Bring <b>gear</b></p><script>alert(1)</script>' }), item('2', { Start: '2001-01-01T09:00:00', End: '2001-01-01T10:00:00' })],
     });
-    render(<CalendarScreen />);
+    await render(<CalendarScreen />);
     await waitFor(() => expect(fetchers.fetchTodaysItems).toHaveBeenCalledWith(todayKey(), todayKey(), { bypassCache: false }));
     expect(fetchers.fetchUpcomingItems).toHaveBeenCalled();
 
@@ -118,45 +118,45 @@ describe('CalendarScreen', () => {
 
   it('shows the empty and error states', async () => {
     useCalendarStore.setState({ errors: { upcoming: { code: 'network', messageKey: 'errors.data.network' } } });
-    render(<CalendarScreen />);
+    await render(<CalendarScreen />);
     expect(screen.getByTestId('calendar-today-list-empty')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('calendar-tab-upcoming'));
+    await fireEvent.press(screen.getByTestId('calendar-tab-upcoming'));
     expect(screen.getByTestId('calendar-upcoming-list-error')).toBeTruthy();
     expect(screen.getByText('errors.data.network')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('calendar-upcoming-list-retry'));
+    await fireEvent.press(screen.getByTestId('calendar-upcoming-list-retry'));
     await waitFor(() => expect(fetchers.fetchUpcomingItems).toHaveBeenLastCalledWith(expect.any(String), expect.any(String), { bypassCache: true }));
     await waitFor(() => expect(screen.getByTestId('calendar-upcoming-list-error')).toBeTruthy());
   });
 
   it('loads the visible month and lists the selected day', async () => {
     useCalendarStore.setState({ rangeItems: [item('7', { Title: 'Drill' })] });
-    render(<CalendarScreen />);
-    fireEvent.press(screen.getByTestId('calendar-tab-calendar'));
+    await render(<CalendarScreen />);
+    await fireEvent.press(screen.getByTestId('calendar-tab-calendar'));
     const now = new Date();
     const range = monthRange(now.getFullYear(), now.getMonth() + 1);
     await waitFor(() => expect(fetchers.fetchItemsForDateRange).toHaveBeenCalledWith(range.start, range.end, { bypassCache: false }));
     expect(screen.getByTestId('calendar-select-date')).toBeTruthy();
     expect(screen.getByTestId('mock-calendar-marked')).toHaveTextContent(todayKey());
 
-    fireEvent.press(screen.getByTestId('mock-calendar-today'));
+    await fireEvent.press(screen.getByTestId('mock-calendar-today'));
     expect(screen.getByTestId('calendar-card-7')).toBeTruthy();
     expect(screen.getByTestId('month-calendar-selected')).toHaveTextContent(/calendar\.eventsCount:1/);
 
-    fireEvent.press(screen.getByTestId('mock-calendar-month'));
+    await fireEvent.press(screen.getByTestId('mock-calendar-month'));
     await waitFor(() => expect(fetchers.fetchItemsForDateRange).toHaveBeenCalledWith('2030-02-01', '2030-02-28', { bypassCache: false }));
   });
 
   it('opens an item, signs up with a note and refreshes the lists', async () => {
     useCalendarStore.setState({ todayItems: [item('3', { SignupType: 2, CreatorUserId: 'creator' })] });
-    render(<CalendarScreen />);
-    fireEvent.press(screen.getByTestId('calendar-card-3'));
+    await render(<CalendarScreen />);
+    await fireEvent.press(screen.getByTestId('calendar-card-3'));
     await waitFor(() => expect(fetchers.fetchCalendarItem).toHaveBeenCalledWith('3'));
     expect(screen.getByTestId('calendar-item-details-creator', q)).toHaveTextContent('calendar.createdBy: Robin Ray');
 
-    fireEvent.press(screen.getByTestId('calendar-item-details-signup-button', q));
+    await fireEvent.press(screen.getByTestId('calendar-item-details-signup-button', q));
     expect(fetchers.setAttendance).not.toHaveBeenCalled();
-    fireEvent.changeText(screen.getByTestId('calendar-item-details-note', q), ' Bringing the trailer ');
-    fireEvent.press(screen.getByTestId('calendar-item-details-confirm-signup', q));
+    await fireEvent.changeText(screen.getByTestId('calendar-item-details-note', q), ' Bringing the trailer ');
+    await fireEvent.press(screen.getByTestId('calendar-item-details-confirm-signup', q));
     await waitFor(() => expect(fetchers.setAttendance).toHaveBeenCalledWith('3', true, 'Bringing the trailer'));
     await waitFor(() => expect(useToastStore.getState().toasts[0]).toEqual(expect.objectContaining({ type: 'success', message: 'calendar.attendanceUpdated.signedUp' })));
     expect(fetchers.fetchTodaysItems).toHaveBeenLastCalledWith(expect.any(String), expect.any(String), { bypassCache: true });
@@ -169,31 +169,31 @@ describe('CalendarItemDetailsSheet', () => {
       useCalendarStore.setState({ attendanceError: { code: 'network', messageKey: 'errors.data.network' } });
       return false;
     });
-    render(<CalendarItemDetailsSheet item={item('4', { SignupType: 1, Attending: true })} isOpen onClose={jest.fn()} />);
+    await render(<CalendarItemDetailsSheet item={item('4', { SignupType: 1, Attending: true })} isOpen onClose={jest.fn()} />);
     expect(screen.getByTestId('calendar-item-details-attending', q)).toBeTruthy();
-    fireEvent.press(screen.getByTestId('calendar-item-details-unsignup', q));
+    await fireEvent.press(screen.getByTestId('calendar-item-details-unsignup', q));
     expect(fetchers.setAttendance).not.toHaveBeenCalled();
-    fireEvent.press(screen.getByTestId('calendar-unsignup-confirm-confirm', q));
+    await fireEvent.press(screen.getByTestId('calendar-unsignup-confirm-confirm', q));
     await waitFor(() => expect(fetchers.setAttendance).toHaveBeenCalledWith('4', false, ''));
     await waitFor(() => expect(useToastStore.getState().toasts[0]).toEqual(expect.objectContaining({ type: 'error', message: 'errors.data.network' })));
   });
 
-  it('renders the description through the sanitizer and never shows a withheld value', () => {
-    const { unmount } = render(<CalendarItemDetailsSheet item={item('5', { Description: '<p>Hello</p><script>steal()</script>' })} isOpen onClose={jest.fn()} />);
+  it('renders the description through the sanitizer and never shows a withheld value', async () => {
+    const { unmount } = await render(<CalendarItemDetailsSheet item={item('5', { Description: '<p>Hello</p><script>steal()</script>' })} isOpen onClose={jest.fn()} />);
     const html = screen.getByTestId('webview-html', q);
     expect(html).toHaveTextContent(/Hello/);
     expect(html).not.toHaveTextContent(/steal/);
-    unmount();
+    await unmount();
 
-    render(<CalendarItemDetailsSheet item={item('6', { Title: 'REDACTED', Location: 'REDACTED', Description: 'REDACTED' })} isOpen onClose={jest.fn()} />);
+    await render(<CalendarItemDetailsSheet item={item('6', { Title: 'REDACTED', Location: 'REDACTED', Description: 'REDACTED' })} isOpen onClose={jest.fn()} />);
     expect(screen.queryByText('REDACTED', q)).toBeNull();
     expect(screen.queryByTestId('webview-html', q)).toBeNull();
     expect(screen.getAllByText('data_protection.protected_value', q).length).toBe(3);
   });
 
-  it('prefers the fetched detail (attendees) over the list row', () => {
+  it('prefers the fetched detail (attendees) over the list row', async () => {
     useCalendarStore.setState({ itemDetailsById: { '8': item('8', { Attendees: [{ CalendarItemId: '8', UserId: 'u2', Name: 'Sam Lee', GroupName: 'Station 2', AttendeeType: 1, Timestamp: '', Note: '' }] }) } });
-    render(<CalendarItemDetailsSheet item={item('8')} isOpen onClose={jest.fn()} />);
+    await render(<CalendarItemDetailsSheet item={item('8')} isOpen onClose={jest.fn()} />);
     expect(screen.getByTestId('calendar-item-details-attendees', q)).toBeTruthy();
     expect(screen.getByText('Sam Lee', q)).toBeTruthy();
   });

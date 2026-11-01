@@ -46,9 +46,9 @@ const mocks = {
   onActiveCallChange: jest.fn(),
 };
 
-const setWindow = (width: number, height: number) => {
+const setWindow = async (width: number, height: number) => {
   const metrics = { width, height, scale: 2, fontScale: 1 };
-  act(() => Dimensions.set({ window: metrics, screen: metrics }));
+  await act(() => Dimensions.set({ window: metrics, screen: metrics }));
 };
 
 interface RenderOptions {
@@ -59,7 +59,7 @@ interface RenderOptions {
   realtime?: boolean;
 }
 
-const renderMap = ({ variant = 'dispatch', links = ALL_LINKS, activeCallId = null, activeUnitId = null, realtime = false }: RenderOptions = {}) => {
+const renderMap = async ({ variant = 'dispatch', links = ALL_LINKS, activeCallId = null, activeUnitId = null, realtime = false }: RenderOptions = {}) => {
   activateVariant(variant);
   return render(
     <NavigationHandoffProvider value={{ navigateTo: mocks.navigateTo }}>
@@ -72,9 +72,9 @@ const renderMap = ({ variant = 'dispatch', links = ALL_LINKS, activeCallId = nul
 
 const markedPin = () => String(screen.getByTestId('mock-map-pins').props.accessibilityLabel);
 
-beforeEach(() => {
+beforeEach(async () => {
   jest.clearAllMocks();
-  setWindow(390, 844);
+  await setWindow(390, 844);
   setRights({ CanViewPII: true });
   mockCurrentLocation.value = null;
   (useLocalSearchParams as jest.Mock).mockReturnValue({});
@@ -97,133 +97,133 @@ beforeEach(() => {
 afterEach(() => useToastStore.getState().clearToasts());
 
 describe('MapScreen pins and live refresh', () => {
-  it('draws the department pins, loads the map data and layers, and refetches on SignalR pings', () => {
-    renderMap({ realtime: true });
+  it('draws the department pins, loads the map data and layers, and refetches on SignalR pings', async () => {
+    await renderMap({ realtime: true });
     expect(screen.getByTestId('pin-c12')).toBeTruthy();
     expect(screen.getByTestId('pin-pAB12')).toBeTruthy();
     expect(mocks.fetchMarkers).toHaveBeenCalledTimes(1);
     expect(mocks.fetchActiveLayers).toHaveBeenCalled();
-    act(() => emitRealtimeEvent('callAdded', '14'));
+    await act(() => emitRealtimeEvent('callAdded', '14'));
     expect(mocks.fetchMarkers).toHaveBeenLastCalledWith({ bypassCache: true });
   });
 
-  it('hides member pins without CanViewPII', () => {
+  it('hides member pins without CanViewPII', async () => {
     setRights({ CanViewPII: false });
-    renderMap();
+    await renderMap();
     expect(screen.queryByTestId('pin-pAB12')).toBeNull();
     expect(markedPin()).toContain('pii:false');
   });
 
-  it('opens on the department centre from the map data on a console', () => {
-    renderMap();
+  it('opens on the department centre from the map data on a console', async () => {
+    await renderMap();
     expect(screen.getByTestId('mock-camera')).toHaveTextContent('-105,40@12');
     expect(screen.queryByTestId('map-recenter-button')).toBeNull();
   });
 
-  it('draws department layers that are on and fetches GeoJSON for them, never custom-map region layers', () => {
-    renderMap();
+  it('draws department layers that are on and fetches GeoJSON for them, never custom-map region layers', async () => {
+    await renderMap();
     expect(screen.getByTestId('mock-map-layer-L1')).toBeTruthy();
     expect(screen.queryByTestId('mock-map-layer-L2')).toBeNull();
-    fireEvent.press(screen.getByTestId('map-screen-layers-button'));
+    await fireEvent.press(screen.getByTestId('map-screen-layers-button'));
     expect(screen.queryByTestId('layer-toggle-layer:R1')).toBeNull();
-    fireEvent.press(screen.getByTestId('layer-toggle-layer:L2'));
+    await fireEvent.press(screen.getByTestId('layer-toggle-layer:L2'));
     expect(mocks.fetchLayerGeoJSON).toHaveBeenCalledWith('L2');
-    fireEvent.press(screen.getByTestId('layer-toggle-layer:L1'));
+    await fireEvent.press(screen.getByTestId('layer-toggle-layer:L1'));
     expect(screen.queryByTestId('mock-map-layer-L1')).toBeNull();
   });
 });
 
 describe('MapScreen layers sheet and legend', () => {
-  it('lists pin kinds (department terms), POI types and layers, and hides what is switched off', () => {
-    renderMap();
-    fireEvent.press(screen.getByTestId('map-screen-layers-button'));
+  it('lists pin kinds (department terms), POI types and layers, and hides what is switched off', async () => {
+    await renderMap();
+    await fireEvent.press(screen.getByTestId('map-screen-layers-button'));
     const sheet = screen.getByTestId('mock-layers-sheet');
     expect(within(sheet).getByText('maps.legend.calls:on')).toBeTruthy();
     expect(within(sheet).getByText('maps.legend.personnel:on')).toBeTruthy();
     expect(within(sheet).getByText('Airports:on')).toBeTruthy();
     expect(within(sheet).getByText('Fire districts:on')).toBeTruthy();
     expect(within(sheet).getByText('Flood zones:off')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('layer-toggle-kind:unit'));
+    await fireEvent.press(screen.getByTestId('layer-toggle-kind:unit'));
     expect(screen.queryByTestId('pin-u7')).toBeNull();
-    fireEvent.press(screen.getByTestId('layer-toggle-poi:3'));
+    await fireEvent.press(screen.getByTestId('layer-toggle-poi:3'));
     expect(screen.queryByTestId('pin-poi5')).toBeNull();
     expect(within(screen.getByTestId('mock-layers-sheet')).getByText('maps.legend.units:off')).toBeTruthy();
   });
 
-  it('offers the custom maps browser where the variant has custom/indoor maps and the route', () => {
-    renderMap({ variant: 'unit', links: UNIT_LINKS });
-    fireEvent.press(screen.getByTestId('map-screen-layers-button'));
-    fireEvent.press(screen.getByTestId('layers-browse-maps'));
+  it('offers the custom maps browser where the variant has custom/indoor maps and the route', async () => {
+    await renderMap({ variant: 'unit', links: UNIT_LINKS });
+    await fireEvent.press(screen.getByTestId('map-screen-layers-button'));
+    await fireEvent.press(screen.getByTestId('layers-browse-maps'));
     expect(router.push).toHaveBeenCalledWith('/maps');
   });
 
-  it('opens the legend with the personal-data right and department terms', () => {
-    renderMap();
+  it('opens the legend with the personal-data right and department terms', async () => {
+    await renderMap();
     expect(screen.queryByTestId('mock-legend-sheet')).toBeNull();
-    fireEvent.press(screen.getByTestId('map-screen-legend-button'));
+    await fireEvent.press(screen.getByTestId('map-screen-legend-button'));
     expect(screen.getByTestId('mock-legend-sheet')).toHaveTextContent('pii:true|maps.legend.calls');
   });
 });
 
 describe('MapScreen pin details', () => {
   it('shows a call in a sheet on phones with set-as-current, view and directions on a field device', async () => {
-    renderMap({ variant: 'responder' });
-    fireEvent.press(screen.getByTestId('pin-c12'));
+    await renderMap({ variant: 'responder' });
+    await fireEvent.press(screen.getByTestId('pin-c12'));
     expect(screen.getByTestId('map-pin-sheet', hidden)).toBeTruthy();
     expect(screen.getByTestId('map-pin-title', hidden)).toHaveTextContent('Structure fire');
     expect(screen.getByTestId('map-pin-kind', hidden)).toHaveTextContent('map.kind_call');
     expect(screen.getByTestId('map-pin-address', hidden)).toHaveTextContent('map.pin_address12 Main St');
     expect(markedPin()).toContain('selected:c12');
 
-    fireEvent.press(screen.getByTestId('map-pin-action-set-current-call', hidden));
+    await fireEvent.press(screen.getByTestId('map-pin-action-set-current-call', hidden));
     expect(mocks.onActiveCallChange).toHaveBeenCalledWith('12');
     expect(useToastStore.getState().toasts[0]).toMatchObject({ type: 'success', message: 'map.call_set_as_current' });
 
-    fireEvent.press(screen.getByTestId('pin-c12'));
-    fireEvent.press(screen.getByTestId('map-pin-action-view-call', hidden));
+    await fireEvent.press(screen.getByTestId('pin-c12'));
+    await fireEvent.press(screen.getByTestId('map-pin-action-view-call', hidden));
     expect(router.push).toHaveBeenCalledWith('/call/12');
 
-    fireEvent.press(screen.getByTestId('pin-c12'));
+    await fireEvent.press(screen.getByTestId('pin-c12'));
     await act(async () => fireEvent.press(screen.getByTestId('map-pin-action-directions', hidden)));
     expect(mocks.navigateTo).toHaveBeenCalledWith({ latitude: 39.5, longitude: -119.8, label: 'Structure fire' });
   });
 
   it('tells the member when no navigation app opened', async () => {
     mocks.navigateTo.mockResolvedValueOnce(false);
-    renderMap();
-    fireEvent.press(screen.getByTestId('pin-u7'));
+    await renderMap();
+    await fireEvent.press(screen.getByTestId('pin-u7'));
     await act(async () => fireEvent.press(screen.getByTestId('map-pin-action-directions', hidden)));
     expect(useToastStore.getState().toasts[0]).toMatchObject({ type: 'error', message: 'map.failed_to_open_maps' });
   });
 
-  it('docks the details beside the map on a landscape tablet and opens units, members and POIs (console: no current call)', () => {
-    setWindow(1366, 1024);
-    renderMap();
-    fireEvent.press(screen.getByTestId('pin-c12'));
+  it('docks the details beside the map on a landscape tablet and opens units, members and POIs (console: no current call)', async () => {
+    await setWindow(1366, 1024);
+    await renderMap();
+    await fireEvent.press(screen.getByTestId('pin-c12'));
     expect(screen.getByTestId('map-pin-docked')).toBeTruthy();
     expect(screen.queryByTestId('map-pin-sheet', hidden)).toBeNull();
     expect(screen.queryByTestId('map-pin-action-set-current-call')).toBeNull();
     // The controls move left while the card covers the right edge.
     expect(screen.getByTestId('map-screen-legend-button').props.accessibilityHint).toBe('left:140');
 
-    fireEvent.press(screen.getByTestId('pin-u7'));
-    fireEvent.press(screen.getByTestId('map-pin-action-view-unit'));
+    await fireEvent.press(screen.getByTestId('pin-u7'));
+    await fireEvent.press(screen.getByTestId('map-pin-action-view-unit'));
     expect(router.push).toHaveBeenLastCalledWith('/units/7');
-    fireEvent.press(screen.getByTestId('pin-pAB12'));
-    fireEvent.press(screen.getByTestId('map-pin-action-view-personnel'));
+    await fireEvent.press(screen.getByTestId('pin-pAB12'));
+    await fireEvent.press(screen.getByTestId('map-pin-action-view-personnel'));
     expect(router.push).toHaveBeenLastCalledWith('/personnel/AB12');
-    fireEvent.press(screen.getByTestId('pin-poi5'));
-    fireEvent.press(screen.getByTestId('map-pin-action-view-poi'));
+    await fireEvent.press(screen.getByTestId('pin-poi5'));
+    await fireEvent.press(screen.getByTestId('map-pin-action-view-poi'));
     expect(router.push).toHaveBeenLastCalledWith('/poi/5');
     expect(screen.queryByTestId('map-pin-docked')).toBeNull();
   });
 
-  it('hides actions for screens the variant does not have', () => {
-    renderMap({ variant: 'unit', links: UNIT_LINKS });
-    fireEvent.press(screen.getByTestId('pin-u7'));
+  it('hides actions for screens the variant does not have', async () => {
+    await renderMap({ variant: 'unit', links: UNIT_LINKS });
+    await fireEvent.press(screen.getByTestId('pin-u7'));
     expect(screen.queryByTestId('map-pin-action-view-unit', hidden)).toBeNull();
     expect(screen.getByTestId('map-pin-action-directions', hidden)).toBeTruthy();
-    fireEvent.press(screen.getByTestId('map-pin-close', hidden));
+    await fireEvent.press(screen.getByTestId('map-pin-close', hidden));
     expect(screen.queryByTestId('map-pin-sheet', hidden)).toBeNull();
   });
 });
@@ -231,9 +231,9 @@ describe('MapScreen pin details', () => {
 describe('MapScreen by capability', () => {
   const fix = { latitude: 38.9, longitude: -119.9, heading: 90, accuracy: 8, speed: 12, altitude: null, timestamp: 1, source: 'watcher' } as never;
 
-  it('Unit haloes its unit and the crew’s call, badges them and follows the vehicle until the crew pans', () => {
+  it('Unit haloes its unit and the crew’s call, badges them and follows the vehicle until the crew pans', async () => {
     mockCurrentLocation.value = fix;
-    renderMap({ variant: 'unit', links: UNIT_LINKS, activeCallId: '12', activeUnitId: '7' });
+    await renderMap({ variant: 'unit', links: UNIT_LINKS, activeCallId: '12', activeUnitId: '7' });
     expect(screen.getByTestId('mock-source-map-screen-highlights-source').props.accessibilityLabel).toBe('2');
     expect(screen.getByTestId('mock-own-location')).toHaveTextContent('38.9,-119.9');
     expect(markedPin()).toContain('selected:c12');
@@ -241,66 +241,66 @@ describe('MapScreen by capability', () => {
     expect(screen.getByTestId('mock-focus-detail')).toHaveTextContent('map.current_call');
     expect(useFollowCamera).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ latitude: 38.9, speed: 12 }), true);
 
-    fireEvent.press(screen.getByTestId('pin-u7'));
+    await fireEvent.press(screen.getByTestId('pin-u7'));
     expect(screen.getByTestId('map-pin-badge', hidden)).toHaveTextContent('map.your_unit');
-    fireEvent.press(screen.getByTestId('map-pin-close', hidden));
+    await fireEvent.press(screen.getByTestId('map-pin-close', hidden));
 
-    fireEvent(screen.getByTestId('map-screen-map'), 'cameraChanged', { isUserInteraction: true });
+    await fireEvent(screen.getByTestId('map-screen-map'), 'cameraChanged', { isUserInteraction: true });
     expect(useFollowCamera).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), false);
-    fireEvent.press(screen.getByTestId('map-screen-recenter-button'));
+    await fireEvent.press(screen.getByTestId('map-screen-recenter-button'));
     expect(useFollowCamera).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), true);
     expect(screen.queryByTestId('map-screen-recenter-button')).toBeNull();
   });
 
-  it('Responder centres on its own position and only haloes the active call', () => {
+  it('Responder centres on its own position and only haloes the active call', async () => {
     mockCurrentLocation.value = fix;
-    renderMap({ variant: 'responder', activeCallId: '12', activeUnitId: '7' });
+    await renderMap({ variant: 'responder', activeCallId: '12', activeUnitId: '7' });
     expect(screen.getByTestId('mock-source-map-screen-highlights-source').props.accessibilityLabel).toBe('1');
     expect(useFollowCamera).toHaveBeenLastCalledWith(expect.anything(), null, false);
     expect(mockCamera.setCamera).toHaveBeenCalledWith({ centerCoordinate: [-119.9, 38.9], zoomLevel: 14, animationDuration: 800 });
-    fireEvent.press(screen.getByTestId('pin-c12'));
+    await fireEvent.press(screen.getByTestId('pin-c12'));
     expect(screen.getByTestId('map-pin-badge', hidden)).toHaveTextContent('map.current_call');
     expect(screen.queryByTestId('map-pin-action-set-current-call', hidden)).toBeNull();
   });
 
-  it('a console does not follow the device and shows no current-call banner', () => {
+  it('a console does not follow the device and shows no current-call banner', async () => {
     mockCurrentLocation.value = fix;
-    renderMap({ variant: 'dispatch', activeCallId: '12' });
+    await renderMap({ variant: 'dispatch', activeCallId: '12' });
     expect(screen.queryByTestId('mock-focus-banner')).toBeNull();
     expect(screen.getByTestId('mock-camera')).toHaveTextContent('-105,40@12');
-    fireEvent(screen.getByTestId('map-screen-map'), 'cameraChanged', { isUserInteraction: false });
+    await fireEvent(screen.getByTestId('map-screen-map'), 'cameraChanged', { isUserInteraction: false });
     expect(screen.queryByTestId('map-screen-recenter-button')).toBeNull();
-    fireEvent(screen.getByTestId('map-screen-map'), 'cameraChanged', { isUserInteraction: true });
-    fireEvent.press(screen.getByTestId('map-screen-recenter-button'));
+    await fireEvent(screen.getByTestId('map-screen-map'), 'cameraChanged', { isUserInteraction: true });
+    await fireEvent.press(screen.getByTestId('map-screen-recenter-button'));
     expect(mockCamera.setCamera).toHaveBeenLastCalledWith({ centerCoordinate: [-105, 40], zoomLevel: 12, animationDuration: 800 });
   });
 });
 
 describe('MapScreen focus links', () => {
-  it('frames the pin a /map?callId= link asks for and names it in the banner', () => {
+  it('frames the pin a /map?callId= link asks for and names it in the banner', async () => {
     (useLocalSearchParams as jest.Mock).mockReturnValue({ callId: '13' });
-    renderMap({ variant: 'responder' });
+    await renderMap({ variant: 'responder' });
     expect(screen.getByTestId('mock-camera')).toHaveTextContent('-119.8,39.6@15');
     expect(mockCamera.setCamera).toHaveBeenCalledWith({ centerCoordinate: [-119.8, 39.6], zoomLevel: 15, animationDuration: 600 });
     expect(markedPin()).toContain('selected:c13');
     expect(screen.getByTestId('mock-focus-title')).toHaveTextContent('Medical aid');
     expect(screen.getByTestId('mock-focus-detail')).toHaveTextContent('map.kind_call');
-    fireEvent(screen.getByTestId('map-screen-map'), 'cameraChanged', { isUserInteraction: true });
-    fireEvent.press(screen.getByTestId('mock-focus-recenter'));
+    await fireEvent(screen.getByTestId('map-screen-map'), 'cameraChanged', { isUserInteraction: true });
+    await fireEvent.press(screen.getByTestId('mock-focus-recenter'));
     expect(mockCamera.setCamera).toHaveBeenLastCalledWith({ centerCoordinate: [-119.8, 39.6], zoomLevel: 15, animationDuration: 800 });
   });
 
-  it('says so when the focused entity is not on the map', () => {
+  it('says so when the focused entity is not on the map', async () => {
     (useLocalSearchParams as jest.Mock).mockReturnValue({ unitId: '99' });
-    renderMap();
+    await renderMap();
     expect(screen.getByTestId('mock-focus-title')).toHaveTextContent('map.focus_not_found');
     expect(screen.queryByTestId('mock-focus-recenter')).toBeNull();
   });
 
-  it('never names a member from a link without CanViewPII', () => {
+  it('never names a member from a link without CanViewPII', async () => {
     setRights({ CanViewPII: false });
     (useLocalSearchParams as jest.Mock).mockReturnValue({ userId: 'ab12' });
-    renderMap();
+    await renderMap();
     expect(screen.getByTestId('mock-focus-title')).toHaveTextContent('map.focus_not_found');
     expect(screen.queryByText('Pat Doe')).toBeNull();
   });

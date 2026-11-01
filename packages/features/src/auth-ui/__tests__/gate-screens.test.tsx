@@ -24,9 +24,9 @@ jest.mock('@resgrid/core', () => ({
 const mockUnlock = unlockPersonalSession as jest.Mock;
 
 describe('MaintenanceScreen', () => {
-  it('explains the downtime and names the build', () => {
+  it('explains the downtime and names the build', async () => {
     activateTestVariant('bigboard');
-    render(<MaintenanceScreen />);
+    await render(<MaintenanceScreen />);
     expect(screen.getByRole('header', { name: 'maintenance.title' })).toBeTruthy();
     expect(screen.getByTestId('maintenance-why')).toBeTruthy();
     expect(screen.getByTestId('maintenance-downtime')).toBeTruthy();
@@ -43,26 +43,26 @@ describe('OnboardingScreen', () => {
   });
   afterEach(() => setDevicePreferencesKv(undefined));
 
-  it('shows the variant slides and finishes on the last one', () => {
+  it('shows the variant slides and finishes on the last one', async () => {
     activateTestVariant('unit');
     const onComplete = jest.fn();
-    render(<OnboardingScreen onComplete={onComplete} />);
+    await render(<OnboardingScreen onComplete={onComplete} />);
     expect(screen.getByTestId('onboarding-title')).toHaveTextContent('onboarding.pages.unit.location.title');
-    fireEvent.press(screen.getByTestId('onboarding-next'));
+    await fireEvent.press(screen.getByTestId('onboarding-next'));
     expect(screen.getByTestId('onboarding-title')).toHaveTextContent('onboarding.pages.unit.notifications.title');
-    fireEvent.press(screen.getByTestId('onboarding-next'));
+    await fireEvent.press(screen.getByTestId('onboarding-next'));
     expect(screen.queryByTestId('onboarding-skip')).toBeNull();
-    fireEvent.press(screen.getByTestId('onboarding-finish'));
+    await fireEvent.press(screen.getByTestId('onboarding-finish'));
     expect(onComplete).toHaveBeenCalled();
     expect(isOnboardingComplete()).toBe(true);
     expect(kv.getBoolean('IS_FIRST_TIME')).toBe(false);
   });
 
-  it('skips straight to sign-in', () => {
+  it('skips straight to sign-in', async () => {
     activateTestVariant('dispatch');
-    render(<OnboardingScreen />);
+    await render(<OnboardingScreen />);
     expect(screen.getByTestId('onboarding-title')).toHaveTextContent('onboarding.pages.dispatch.calls.title');
-    fireEvent.press(screen.getByTestId('onboarding-skip'));
+    await fireEvent.press(screen.getByTestId('onboarding-skip'));
     expect(router.replace).toHaveBeenCalledWith('/login');
     expect(isOnboardingComplete()).toBe(true);
   });
@@ -77,33 +77,33 @@ describe('PersonalLockScreen', () => {
   it('unlocks with the right password', async () => {
     mockUnlock.mockResolvedValueOnce('unlocked');
     const onUnlocked = jest.fn();
-    render(<PersonalLockScreen onUnlocked={onUnlocked} />);
-    fireEvent.changeText(screen.getByLabelText('lockscreen.password'), 'secret');
-    fireEvent.press(screen.getByRole('button', { name: 'lockscreen.unlock_button' }));
+    await render(<PersonalLockScreen onUnlocked={onUnlocked} />);
+    await fireEvent.changeText(screen.getByLabelText('lockscreen.password'), 'secret');
+    await fireEvent.press(screen.getByRole('button', { name: 'lockscreen.unlock_button' }));
     await waitFor(() => expect(onUnlocked).toHaveBeenCalled());
     expect(mockUnlock).toHaveBeenCalledWith('secret');
   });
 
   it('refuses a wrong password and clears it', async () => {
     mockUnlock.mockResolvedValueOnce('wrong_password');
-    render(<PersonalLockScreen />);
-    fireEvent.changeText(screen.getByTestId('lock-password'), 'nope');
-    fireEvent.press(screen.getByTestId('lock-unlock'));
+    await render(<PersonalLockScreen />);
+    await fireEvent.changeText(screen.getByTestId('lock-password'), 'nope');
+    await fireEvent.press(screen.getByTestId('lock-unlock'));
     expect(await screen.findByText('lockscreen.unlock_failed')).toBeTruthy();
     expect(screen.getByTestId('lock-password').props.value).toBe('');
   });
 
   it('asks to sign in again when the session has no verifier', async () => {
     mockUnlock.mockResolvedValueOnce('no_verifier');
-    render(<PersonalLockScreen />);
-    fireEvent.changeText(screen.getByTestId('lock-password'), 'secret');
-    fireEvent.press(screen.getByTestId('lock-unlock'));
+    await render(<PersonalLockScreen />);
+    await fireEvent.changeText(screen.getByTestId('lock-password'), 'secret');
+    await fireEvent.press(screen.getByTestId('lock-unlock'));
     expect(await screen.findByText('lockscreen.relogin_required')).toBeTruthy();
   });
 
-  it('signs out from "Not you?"', () => {
-    render(<PersonalLockScreen />);
-    fireEvent.press(screen.getByTestId('lock-not-you'));
+  it('signs out from "Not you?"', async () => {
+    await render(<PersonalLockScreen />);
+    await fireEvent.press(screen.getByTestId('lock-not-you'));
     expect(fakeAuthStore.getState().logout).toHaveBeenCalled();
   });
 });
@@ -111,21 +111,21 @@ describe('PersonalLockScreen', () => {
 describe('AccessDeniedScreen', () => {
   beforeEach(() => resetFakeAuth());
 
-  it('names the app and signs a still-signed-in member out', () => {
+  it('names the app and signs a still-signed-in member out', async () => {
     activateTestVariant('ic');
     fakeAuthStore.setState({ status: 'signedIn', accessToken: 'token' });
-    render(<AccessDeniedScreen />);
+    await render(<AccessDeniedScreen />);
     expect(screen.getByTestId('access-denied-message')).toHaveTextContent('access_denied.message [appName=Resgrid IC]');
-    fireEvent.press(screen.getByTestId('access-denied-back'));
+    await fireEvent.press(screen.getByTestId('access-denied-back'));
     expect(fakeAuthStore.getState().logout).toHaveBeenCalledWith('app_access_denied', 'access-denied');
   });
 
-  it('still signs out before handing back to the caller', () => {
+  it('still signs out before handing back to the caller', async () => {
     activateTestVariant('ic');
     fakeAuthStore.setState({ status: 'signedIn', accessToken: 'token' });
     const onDismiss = jest.fn();
-    render(<AccessDeniedScreen onDismiss={onDismiss} />);
-    fireEvent.press(screen.getByTestId('access-denied-back'));
+    await render(<AccessDeniedScreen onDismiss={onDismiss} />);
+    await fireEvent.press(screen.getByTestId('access-denied-back'));
     expect(fakeAuthStore.getState().logout).toHaveBeenCalledWith('app_access_denied', 'access-denied');
     expect(onDismiss).toHaveBeenCalledTimes(1);
   });

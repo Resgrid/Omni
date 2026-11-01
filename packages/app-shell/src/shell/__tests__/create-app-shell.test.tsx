@@ -45,7 +45,7 @@ const nav = defineNav([
 async function renderShell(variantId: VariantId) {
   const variant = activateVariant(variantId);
   const Shell = createAppShell(variant, { nav });
-  render(<Shell />);
+  await render(<Shell />);
   await act(async () => undefined);
   return variant;
 }
@@ -104,7 +104,7 @@ describe('createAppShell', () => {
   it('phone: the sidebar is a drawer opened from the header menu button', async () => {
     await renderShell('responder');
     expect(screen.queryByTestId('shell-sidebar-permanent')).toBeNull();
-    fireEvent.press(screen.getByTestId('shell-menu-button'));
+    await fireEvent.press(screen.getByTestId('shell-menu-button'));
     // Let the drawer arm its backdrop (SideDrawer's opening-tap guard) inside act.
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 320));
@@ -138,10 +138,10 @@ describe('createAppShell', () => {
     await renderShell('dispatch');
     expect(screen.queryByTestId('shell-sidebar-panel')).toBeNull();
 
-    fireEvent.press(screen.getByTestId('shell-menu-button'));
+    await fireEvent.press(screen.getByTestId('shell-menu-button'));
     expect(screen.getByTestId('shell-sidebar-panel')).toHaveStyle({ width: 280 });
 
-    fireEvent.press(screen.getByTestId('shell-menu-button'));
+    await fireEvent.press(screen.getByTestId('shell-menu-button'));
     expect(screen.queryByTestId('shell-sidebar-panel')).toBeNull();
   });
 
@@ -152,7 +152,7 @@ describe('createAppShell', () => {
     expect(screen.getByTestId('nav-chat')).toBeTruthy();
     expect(screen.queryByTestId('nav-account-security')).toBeNull();
 
-    fireEvent.press(screen.getByTestId('nav-settings'));
+    await fireEvent.press(screen.getByTestId('nav-settings'));
     expect(router.navigate).toHaveBeenCalledWith('/settings');
   });
 
@@ -171,7 +171,7 @@ describe('createAppShell', () => {
     setShellState({ unsentChanges: 3 });
     await renderShell('dispatch');
     expect(screen.getByTestId('shell-pending-changes')).toHaveTextContent('Changes waiting: 3');
-    fireEvent.press(screen.getByTestId('shell-pending-changes'));
+    await fireEvent.press(screen.getByTestId('shell-pending-changes'));
     expect(router.push).not.toHaveBeenCalled();
   });
 
@@ -193,7 +193,7 @@ describe('createAppShell', () => {
     mockNavigationState.pathname = '/settings/account-security';
     mockNavigationState.canGoBack = true;
     await renderShell('dispatch');
-    fireEvent.press(screen.getByTestId('shell-back-button'));
+    await fireEvent.press(screen.getByTestId('shell-back-button'));
     expect(router.back).toHaveBeenCalled();
   });
 });
@@ -281,7 +281,7 @@ describe('registered providers', () => {
       mounted();
       return <>{children}</>;
     });
-    act(() => {
+    await act(() => {
       useAuthStore.setState({ status: 'signedOut', accessToken: null, userId: null });
     });
 

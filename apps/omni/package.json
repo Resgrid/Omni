@@ -156,7 +156,8 @@
     "jest-environment-jsdom": "catalog:",
     "jest-expo": "catalog:",
     "react-native-svg-transformer": "catalog:",
-    "tailwindcss": "catalog:"
+    "tailwindcss": "catalog:",
+    "test-renderer": "catalog:"
   },
   "expo": {
     "doctor": {

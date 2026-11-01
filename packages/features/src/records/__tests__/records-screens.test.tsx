@@ -137,16 +137,16 @@ beforeEach(() => {
   });
 });
 
-afterEach(() => {
-  act(() => jest.runOnlyPendingTimers());
+afterEach(async () => {
+  await act(() => jest.runOnlyPendingTimers());
   jest.useRealTimers();
   resetRecordsRuntimeForTests();
 });
 
 describe('RecordsHomeScreen', () => {
-  it('waits for flags, and shows nothing to start when the department has Field Records off', () => {
+  it('waits for flags, and shows nothing to start when the department has Field Records off', async () => {
     featureFlagsStore.setState({ flags: { 'Records.System': { enabled: false } }, isLoaded: true });
-    render(<RecordsHomeScreen />);
+    await render(<RecordsHomeScreen />);
     expect(screen.getByTestId('records-home-disabled')).toBeTruthy();
   });
 
@@ -160,7 +160,7 @@ describe('RecordsHomeScreen', () => {
       recent: [{ RecordId: 'x1', State: RmsRecordState.Finalized, DefinitionVersion: 1, CreatedOn: '', ModifiedOn: '', RowVersion: 1, RecordNumber: 'X-1' }],
       pendingDrafts: { local1: { clientRecordId: 'local1', recordId: null, definitionKey: 'system.run', definitionVersion: 1, name: 'Run', values: [], updatedOn: '2026-10-31T10:00:00Z' } },
     });
-    render(<RecordsHomeScreen context={{ CallId: 7 }} />);
+    await render(<RecordsHomeScreen context={{ CallId: 7 }} />);
     await waitFor(() => expect(useRecordsStore.getState().sync).toHaveBeenCalled());
     expect(useRecordsStore.getState().context).toEqual(expect.objectContaining({ CallId: 7 }));
     // A draft never handed to the outbox is sent on open (legacy pushAllDrafts).
@@ -172,22 +172,22 @@ describe('RecordsHomeScreen', () => {
     expect(screen.getByTestId('records-pending-local1')).toBeTruthy();
     expect(screen.getByTestId('records-deployments-count')).toHaveTextContent('1');
     expect(screen.queryByTestId('records-connectors')).toBeNull();
-    fireEvent.press(screen.getByTestId('records-new-fab'));
+    await fireEvent.press(screen.getByTestId('records-new-fab'));
     expect(router.push).toHaveBeenCalledWith('/records/new');
-    fireEvent.press(screen.getByTestId('records-returned-d2'));
+    await fireEvent.press(screen.getByTestId('records-returned-d2'));
     expect(router.push).toHaveBeenCalledWith('/records/d2');
   });
 
   it('shows the catalog refusal reasons and hides New', async () => {
     useRecordsStore.setState({ catalog: { ...catalog([]), Ok: false, Reasons: ['module_disabled'] } });
-    render(<RecordsHomeScreen />);
+    await render(<RecordsHomeScreen />);
     expect(screen.getByTestId('records-unavailable')).toBeTruthy();
     expect(screen.queryByTestId('records-new-fab')).toBeNull();
   });
 
   it('gives department administrators the connectors entry with the reconciliation count', async () => {
     securityStore.setState({ rights: { IsAdmin: true } as never, isLoaded: true });
-    render(<RecordsHomeScreen />);
+    await render(<RecordsHomeScreen />);
     await waitFor(() => expect(screen.getByTestId('records-connectors-count')).toHaveTextContent('1'));
   });
 });
@@ -200,30 +200,30 @@ describe('RecordNewScreen', () => {
         return { outcome: 'sent' as const, id: 'e1' };
       }),
     });
-    render(<RecordNewScreen />);
-    fireEvent.press(screen.getByTestId('records-choose-system.run'));
+    await render(<RecordNewScreen />);
+    await fireEvent.press(screen.getByTestId('records-choose-system.run'));
     await waitFor(() => expect(screen.getByTestId('record-form')).toBeTruthy());
-    fireEvent.press(screen.getByTestId('records-save-send'));
+    await fireEvent.press(screen.getByTestId('records-save-send'));
     expect(screen.getByTestId('record-new-message')).toHaveTextContent('records.fix_fields');
-    fireEvent.changeText(screen.getByTestId('records-field-main-summary-input'), 'Smoke showing');
-    fireEvent.press(screen.getByTestId('records-save-send'));
+    await fireEvent.changeText(screen.getByTestId('records-field-main-summary-input'), 'Smoke showing');
+    await fireEvent.press(screen.getByTestId('records-save-send'));
     await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/records/r77'));
     expect(useRecordsStore.getState().pendingDrafts).toEqual({});
   });
 
   it('keeps an offline-capable draft on the device; a sealed definition cannot be kept', async () => {
     useRecordsStore.setState({ catalog: catalog([entry('system.run'), entry('sealed', { RequiresProtectedGrant: true })]) });
-    const first = render(<RecordNewScreen />);
-    fireEvent.press(screen.getByTestId('records-choose-system.run'));
+    const first = await render(<RecordNewScreen />);
+    await fireEvent.press(screen.getByTestId('records-choose-system.run'));
     await waitFor(() => expect(screen.getByTestId('record-form')).toBeTruthy());
-    fireEvent.changeText(screen.getByTestId('records-field-main-summary-input'), 'Smoke');
-    fireEvent.press(screen.getByTestId('records-save-local'));
+    await fireEvent.changeText(screen.getByTestId('records-field-main-summary-input'), 'Smoke');
+    await fireEvent.press(screen.getByTestId('records-save-local'));
     expect(Object.values(useRecordsStore.getState().pendingDrafts)).toHaveLength(1);
     expect(useRecordsStore.getState().pushDraft).not.toHaveBeenCalled();
-    first.unmount();
+    await first.unmount();
 
-    render(<RecordNewScreen />);
-    fireEvent.press(screen.getByTestId('records-choose-sealed'));
+    await render(<RecordNewScreen />);
+    await fireEvent.press(screen.getByTestId('records-choose-sealed'));
     await waitFor(() => expect(screen.getByTestId('record-form')).toBeTruthy());
     expect(screen.getByTestId('records-save-local')).toBeDisabled();
   });
@@ -231,8 +231,8 @@ describe('RecordNewScreen', () => {
   it('resumes a staged draft and offers to discard one whose definition was retired', async () => {
     useRecordsStore.setState({ pendingDrafts: { old: { clientRecordId: 'old', recordId: null, definitionKey: 'gone', definitionVersion: 1, name: 'Gone', values: [], updatedOn: '' } } });
     (useLocalSearchParams as jest.Mock).mockReturnValue({ draft: 'old' });
-    render(<RecordNewScreen />);
-    fireEvent.press(screen.getByTestId('record-new-discard'));
+    await render(<RecordNewScreen />);
+    await fireEvent.press(screen.getByTestId('record-new-discard'));
     expect(useRecordsStore.getState().pendingDrafts.old).toBeUndefined();
   });
 });
@@ -245,11 +245,11 @@ describe('RecordDetailScreen', () => {
     });
     const stageDraft = jest.spyOn(useRecordsStore.getState(), 'stageDraft');
     (useLocalSearchParams as jest.Mock).mockReturnValue({ id: 'r1' });
-    render(<RecordDetailScreen />);
+    await render(<RecordDetailScreen />);
     await waitFor(() => expect(screen.getByTestId('records-field-main-secret-protected')).toBeTruthy());
     expect(screen.queryByText('REDACTED')).toBeNull();
-    fireEvent.changeText(screen.getByTestId('records-field-main-summary-input'), 'Smoke and fire');
-    fireEvent.press(screen.getByTestId('record-save'));
+    await fireEvent.changeText(screen.getByTestId('records-field-main-summary-input'), 'Smoke and fire');
+    await fireEvent.press(screen.getByTestId('record-save'));
     await waitFor(() => expect(useRecordsStore.getState().pushDraft).toHaveBeenCalledWith('edit-r1-3'));
     const staged = stageDraft.mock.calls[0]?.[0] ?? useRecordsStore.getState().pendingDrafts['edit-r1-3'];
     expect(staged?.values.map((value) => value.FieldKey)).toEqual(['summary']);
@@ -258,11 +258,11 @@ describe('RecordDetailScreen', () => {
 
   it('finalizes only after attestation, and a legal command waits for confirmation without an outbox', async () => {
     mockFetchRecord.mockResolvedValue(record());
-    render(<RecordDetailScreen recordId="r1" />);
+    await render(<RecordDetailScreen recordId="r1" />);
     await waitFor(() => expect(screen.getByTestId('record-finalize')).toBeTruthy());
     expect(screen.getByTestId('record-finalize')).toBeDisabled();
-    fireEvent.press(screen.getByTestId('record-attest'));
-    fireEvent.press(screen.getByTestId('record-finalize'));
+    await fireEvent.press(screen.getByTestId('record-attest'));
+    await fireEvent.press(screen.getByTestId('record-finalize'));
     await waitFor(() => expect(useRecordsStore.getState().finalize).toHaveBeenCalledWith('r1', 3, true));
     expect(screen.getByTestId('record-detail-message')).toHaveTextContent('records.command_waiting');
   });
@@ -271,16 +271,16 @@ describe('RecordDetailScreen', () => {
     mockFetchRecord.mockResolvedValue(record());
     const confirmOnlineAuth = jest.fn(async () => true);
     configureRecords({ outbox: { confirmOnlineAuth, drain: async () => ({ sent: ['cmd1'], dead: [] }) } });
-    render(<RecordDetailScreen recordId="r1" />);
+    await render(<RecordDetailScreen recordId="r1" />);
     await waitFor(() => expect(screen.getByTestId('record-submit')).toBeTruthy());
-    fireEvent.press(screen.getByTestId('record-submit'));
+    await fireEvent.press(screen.getByTestId('record-submit'));
     await waitFor(() => expect(screen.getByTestId('record-detail-message')).toHaveTextContent('records.submitted'));
     expect(confirmOnlineAuth).toHaveBeenCalledWith('cmd1');
   });
 
   it('is read-only once finalized and lists attachments without capture', async () => {
     mockFetchRecord.mockResolvedValue(record({ State: RmsRecordState.Finalized, StateName: 'Finalized' }));
-    render(<RecordDetailScreen recordId="r1" />);
+    await render(<RecordDetailScreen recordId="r1" />);
     await waitFor(() => expect(screen.getByTestId('record-detail-state')).toHaveTextContent('Finalized'));
     expect(screen.queryByTestId('record-save')).toBeNull();
     await waitFor(() => expect(screen.getByText('photo.jpg')).toBeTruthy());
@@ -289,31 +289,31 @@ describe('RecordDetailScreen', () => {
 
   it('says so when the record is not available', async () => {
     mockFetchRecord.mockResolvedValue(null);
-    render(<RecordDetailScreen recordId="r404" />);
+    await render(<RecordDetailScreen recordId="r404" />);
     await waitFor(() => expect(screen.getByTestId('record-detail-missing')).toBeTruthy());
   });
 });
 
 describe('deployments and connectors', () => {
-  it('lists deployments newest first and toggles closed-out orders', () => {
-    render(<RecordDeploymentsScreen />);
+  it('lists deployments newest first and toggles closed-out orders', async () => {
+    await render(<RecordDeploymentsScreen />);
     expect(screen.getByTestId('deployment-o1')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('deployments-toggle-closed'));
+    await fireEvent.press(screen.getByTestId('deployments-toggle-closed'));
     expect(useRecordDeploymentsStore.getState().fetchDeployments).toHaveBeenLastCalledWith({ includeClosed: true });
-    fireEvent.press(screen.getByTestId('deployment-o1'));
+    await fireEvent.press(screen.getByTestId('deployment-o1'));
     expect(router.push).toHaveBeenCalledWith('/records/deployments/o1');
   });
 
   it('shows one order with its fills and, for an administrator, its reconciliation', async () => {
     securityStore.setState({ rights: { IsAdmin: true } as never, isLoaded: true });
-    render(<RecordDeploymentDetailScreen orderId="o1" />);
+    await render(<RecordDeploymentDetailScreen orderId="o1" />);
     expect(screen.getByTestId('deployment-fill-f1')).toBeTruthy();
     expect(screen.getByTestId('deployment-connector-owned')).toBeTruthy();
     await waitFor(() => expect(screen.getByTestId('deployment-reconciliation-0')).toBeTruthy());
   });
 
-  it('keeps connectors to department administrators', () => {
-    render(<RecordConnectorsScreen />);
+  it('keeps connectors to department administrators', async () => {
+    await render(<RecordConnectorsScreen />);
     expect(screen.getByTestId('connectors-forbidden')).toBeTruthy();
   });
 
@@ -359,9 +359,9 @@ describe('deployments and connectors', () => {
         return true;
       }),
     });
-    render(<RecordConnectorDetailScreen connectorId="c1" />);
+    await render(<RecordConnectorDetailScreen connectorId="c1" />);
     expect(screen.getByTestId('connector-state')).toHaveTextContent('records.connector_ready');
-    fireEvent.press(screen.getByTestId('connector-read-now'));
+    await fireEvent.press(screen.getByTestId('connector-read-now'));
     await waitFor(() => expect(screen.getByTestId('connector-message')).toBeTruthy());
     expect(screen.getByTestId('connector-run-run1')).toBeTruthy();
   });
@@ -382,18 +382,18 @@ describe('call Records tab and quick create', () => {
         { RecordId: 'x2', CallId: 11, State: RmsRecordState.Finalized, DefinitionVersion: 1, CreatedOn: '', ModifiedOn: '', RowVersion: 1, RecordNumber: 'X-2' },
       ],
     });
-    render(<CallRecordsTab callId="10" />);
+    await render(<CallRecordsTab callId="10" />);
     expect(screen.getByTestId('call-records-x1')).toBeTruthy();
     expect(screen.queryByTestId('call-records-x2')).toBeNull();
     await waitFor(() => expect(screen.getByTestId('call-records-new')).toBeTruthy());
     expect(useRecordsStore.getState().context).toEqual(expect.objectContaining({ CallId: 10 }));
-    fireEvent.press(screen.getByTestId('call-records-new'));
+    await fireEvent.press(screen.getByTestId('call-records-new'));
     expect(router.push).toHaveBeenCalledWith('/records/new');
   });
 
   it('hides quick create when nothing can be started here', async () => {
     useRecordsStore.setState({ catalog: catalog([]) });
-    render(<RecordsQuickCreate context={{ UnitId: 4 }} />);
+    await render(<RecordsQuickCreate context={{ UnitId: 4 }} />);
     await waitFor(() => expect(useRecordsStore.getState().fetchCatalog).toHaveBeenCalled());
     expect(screen.queryByTestId('records-quick-create')).toBeNull();
   });

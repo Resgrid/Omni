@@ -18,16 +18,16 @@ const webView = () => screen.getByTestId('html-renderer');
 const MALICIOUS = '<p onclick="steal()">Hello</p><script>alert(1)</script><a href="javascript:alert(2)">bad</a><img src="x" onerror="alert(3)"><a href="https://resgrid.com">good</a>';
 
 describe('HtmlRenderer (native WebView)', () => {
-  it('renders the provided HTML inside a full document', () => {
-    render(<HtmlRenderer html="<p>Hello World</p>" />);
+  it('renders the provided HTML inside a full document', async () => {
+    await render(<HtmlRenderer html="<p>Hello World</p>" />);
 
     expect(documentHtml()).toContain('<p>Hello World</p>');
     expect(documentHtml()).toContain('<!DOCTYPE html>');
     expect(documentHtml()).toContain('<meta name="viewport"');
   });
 
-  it('always sanitizes: script tags, javascript: URLs and on* handlers are stripped', () => {
-    render(<HtmlRenderer html={MALICIOUS} />);
+  it('always sanitizes: script tags, javascript: URLs and on* handlers are stripped', async () => {
+    await render(<HtmlRenderer html={MALICIOUS} />);
     const html = documentHtml();
 
     expect(html).not.toMatch(/<script>alert|onclick|onerror|javascript:/i);
@@ -35,8 +35,8 @@ describe('HtmlRenderer (native WebView)', () => {
     expect(html).toContain('href="https://resgrid.com"');
   });
 
-  it('never whitelists every origin and keeps JavaScript, DOM storage and file access off', () => {
-    render(<HtmlRenderer html="<p>x</p>" />);
+  it('never whitelists every origin and keeps JavaScript, DOM storage and file access off', async () => {
+    await render(<HtmlRenderer html="<p>x</p>" />);
     const props = webView().props;
 
     expect(props.originWhitelist).toEqual(HTML_RENDERER_ORIGIN_WHITELIST);
@@ -47,9 +47,9 @@ describe('HtmlRenderer (native WebView)', () => {
     expect(props.setSupportMultipleWindows).toBe(false);
   });
 
-  it('loads only its own document and opens http/https/mailto links externally', () => {
+  it('loads only its own document and opens http/https/mailto links externally', async () => {
     const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
-    render(<HtmlRenderer html="<p>x</p>" />);
+    await render(<HtmlRenderer html="<p>x</p>" />);
     const shouldStart = webView().props.onShouldStartLoadWithRequest as (request: { url: string }) => boolean;
 
     expect(shouldStart({ url: 'about:blank' })).toBe(true);
@@ -65,9 +65,9 @@ describe('HtmlRenderer (native WebView)', () => {
     openURL.mockRestore();
   });
 
-  it('routes links to onLinkPress when given', () => {
+  it('routes links to onLinkPress when given', async () => {
     const onLinkPress = jest.fn();
-    render(<HtmlRenderer html="<p>x</p>" onLinkPress={onLinkPress} />);
+    await render(<HtmlRenderer html="<p>x</p>" onLinkPress={onLinkPress} />);
     const shouldStart = webView().props.onShouldStartLoadWithRequest as (request: { url: string }) => boolean;
 
     shouldStart({ url: 'https://resgrid.com/a' });
@@ -77,35 +77,35 @@ describe('HtmlRenderer (native WebView)', () => {
     expect(onLinkPress).toHaveBeenCalledWith('https://resgrid.com/a');
   });
 
-  it('applies colour overrides', () => {
-    render(<HtmlRenderer html="<p>x</p>" textColor="#FF0000" backgroundColor="#333333" />);
+  it('applies colour overrides', async () => {
+    await render(<HtmlRenderer html="<p>x</p>" textColor="#FF0000" backgroundColor="#333333" />);
 
     expect(documentHtml()).toContain('color: #FF0000');
     expect(documentHtml()).toContain('background-color: #333333');
   });
 
-  it('refuses colour values that could break out of the CSS rule', () => {
-    render(<HtmlRenderer html="<p>x</p>" textColor="red;}</style><script>alert(1)</script>" />);
+  it('refuses colour values that could break out of the CSS rule', async () => {
+    await render(<HtmlRenderer html="<p>x</p>" textColor="red;}</style><script>alert(1)</script>" />);
 
     expect(documentHtml()).not.toContain('<script>alert(1)');
   });
 
-  it('strips markup from custom CSS', () => {
-    render(<HtmlRenderer html="<p>x</p>" customCSS="p { margin: 0 } </style><script>alert(1)</script>" />);
+  it('strips markup from custom CSS', async () => {
+    await render(<HtmlRenderer html="<p>x</p>" customCSS="p { margin: 0 } </style><script>alert(1)</script>" />);
 
     expect(documentHtml()).toContain('p { margin: 0 }');
     expect(documentHtml()).not.toContain('<script>');
   });
 
-  it('follows the theme tokens in light and dark mode', () => {
-    const { rerender } = render(
+  it('follows the theme tokens in light and dark mode', async () => {
+    const { rerender } = await render(
       <ColorSchemeProvider mode="light">
         <HtmlRenderer html="<p>x</p>" />
       </ColorSchemeProvider>
     );
     expect(documentHtml()).toContain(`color: ${lightTokens['typography-800']}`);
 
-    rerender(
+    await rerender(
       <ColorSchemeProvider mode="dark">
         <HtmlRenderer html="<p>x</p>" />
       </ColorSchemeProvider>
@@ -147,15 +147,15 @@ describe('HtmlRenderer (web iframe)', () => {
     return null;
   };
 
-  const renderIframe = (element: React.ReactElement) => {
-    const { toJSON } = render(element);
+  const renderIframe = async (element: React.ReactElement) => {
+    const { toJSON } = await render(element);
     const iframe = findIframe(toJSON() as unknown as HostJson);
     if (!iframe) throw new Error('iframe not rendered');
     return iframe.props;
   };
 
-  it('sandboxes the iframe without allow-same-origin (server HTML must not reach app storage)', () => {
-    const props = renderIframe(<WebHtmlRenderer html="<p>x</p>" />);
+  it('sandboxes the iframe without allow-same-origin (server HTML must not reach app storage)', async () => {
+    const props = await renderIframe(<WebHtmlRenderer html="<p>x</p>" />);
 
     expect(props.sandbox).toBe(HTML_RENDERER_IFRAME_SANDBOX);
     expect(String(props.sandbox)).not.toContain('allow-same-origin');
@@ -164,8 +164,8 @@ describe('HtmlRenderer (web iframe)', () => {
     expect(props.referrerPolicy).toBe('no-referrer');
   });
 
-  it('sanitizes the srcDoc', () => {
-    const srcDoc = String(renderIframe(<WebHtmlRenderer html={MALICIOUS} />).srcDoc);
+  it('sanitizes the srcDoc', async () => {
+    const srcDoc = String((await renderIframe(<WebHtmlRenderer html={MALICIOUS} />)).srcDoc);
 
     expect(srcDoc).not.toMatch(/<script>alert|onclick|onerror|javascript:/i);
     expect(srcDoc).toContain('Hello');
@@ -173,19 +173,23 @@ describe('HtmlRenderer (web iframe)', () => {
     expect(srcDoc.match(/<script>/g)).toHaveLength(1);
   });
 
-  it('has an accessible title', () => {
-    expect(renderIframe(<WebHtmlRenderer html="<p>x</p>" />).title).toBe('Content');
+  it('has an accessible title', async () => {
+    expect((await renderIframe(<WebHtmlRenderer html="<p>x</p>" />)).title).toBe('Content');
   });
 
   describe('link messages from the iframe', () => {
-    const renderWithFrame = (onLinkPress?: (url: string) => void) =>
-      render(<WebHtmlRenderer html='<a href="https://resgrid.com">x</a>' onLinkPress={onLinkPress} />, {
-        createNodeMock: (element: { type: unknown }) => (element.type === 'iframe' ? { contentWindow: fakeFrameWindow } : null),
-      });
+    const renderWithFrame = async (onLinkPress?: (url: string) => void) => {
+      const view = await render(<WebHtmlRenderer html='<a href="https://resgrid.com">x</a>' onLinkPress={onLinkPress} />);
+      // RNTL 14 has no createNodeMock. A host ref is the same TestInstance the container query returns, so the iframe's
+      // ref gets its fake contentWindow here (the renderer reads it when a message arrives).
+      const [iframe] = view.container.queryAll((node) => node.type === 'iframe');
+      Object.assign(iframe, { contentWindow: fakeFrameWindow });
+      return view;
+    };
 
-    it('opens http/https/mailto links posted by its own iframe', () => {
+    it('opens http/https/mailto links posted by its own iframe', async () => {
       const onLinkPress = jest.fn();
-      renderWithFrame(onLinkPress);
+      await renderWithFrame(onLinkPress);
 
       post({ type: 'html-renderer-link', url: 'https://resgrid.com' }, fakeFrameWindow);
       post({ type: 'html-renderer-link', url: 'mailto:ops@example.com' }, fakeFrameWindow);
@@ -193,9 +197,9 @@ describe('HtmlRenderer (web iframe)', () => {
       expect(onLinkPress.mock.calls).toEqual([['https://resgrid.com'], ['mailto:ops@example.com']]);
     });
 
-    it('ignores unsafe schemes', () => {
+    it('ignores unsafe schemes', async () => {
       const onLinkPress = jest.fn();
-      renderWithFrame(onLinkPress);
+      await renderWithFrame(onLinkPress);
 
       post({ type: 'html-renderer-link', url: 'javascript:alert(1)' }, fakeFrameWindow);
       post({ type: 'html-renderer-link', url: 'data:text/html,x' }, fakeFrameWindow);
@@ -203,9 +207,9 @@ describe('HtmlRenderer (web iframe)', () => {
       expect(onLinkPress).not.toHaveBeenCalled();
     });
 
-    it('ignores messages from any other window', () => {
+    it('ignores messages from any other window', async () => {
       const onLinkPress = jest.fn();
-      renderWithFrame(onLinkPress);
+      await renderWithFrame(onLinkPress);
 
       post({ type: 'html-renderer-link', url: 'https://evil.test' }, {});
       post({ type: 'html-renderer-link', url: 'https://evil.test' }, undefined);
@@ -213,9 +217,9 @@ describe('HtmlRenderer (web iframe)', () => {
       expect(onLinkPress).not.toHaveBeenCalled();
     });
 
-    it('falls back to opening the link externally', () => {
+    it('falls back to opening the link externally', async () => {
       const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
-      renderWithFrame();
+      await renderWithFrame();
 
       post({ type: 'html-renderer-link', url: 'https://resgrid.com' }, fakeFrameWindow);
 
