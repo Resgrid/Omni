@@ -2,7 +2,8 @@
 // Shared Jest setup for the calls-cluster feature tests (calls, check-in, video-feeds, protocols, notes). Import it as
 // the FIRST import of a test file: the mocks register before @resgrid/ui (gluestack, NativeWind) loads. Mirrors
 // packages/ui/jest.setup.tsx; the features jest config carries no package-local setup of its own.
-import '@testing-library/react-native/extend-expect';
+// RNTL registers its Jest matchers when it is imported (v14 has no extend-expect entry).
+import '@testing-library/react-native';
 
 // react-aria (pulled in by gluestack) probes window.screen at import time; the RN test window has none.
 const mockGlobalWindow = globalThis as unknown as { window?: { screen?: object } };

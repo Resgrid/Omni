@@ -3,7 +3,8 @@
 // test file so the mocks register before @resgrid/ui (gluestack, NativeWind) loads. Mirrors the status feature's setup,
 // plus stand-ins for voice (LiveKit) and location, whose native modules have no Jest implementation. Helpers live in
 // ./test-helpers (keep this file side-effect only so it can stay the first import).
-import '@testing-library/react-native/extend-expect';
+// RNTL registers its Jest matchers when it is imported (v14 has no extend-expect entry).
+import '@testing-library/react-native';
 
 // react-aria (pulled in by gluestack) probes window.screen at import time; the RN test window has none.
 const mockGlobalWindow = globalThis as unknown as { window?: { screen?: object } };
