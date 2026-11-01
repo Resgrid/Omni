@@ -188,9 +188,8 @@ export function initI18n(options: InitI18nOptions = {}): typeof i18n {
     ns: [COMMON_NAMESPACE, ...(variantId ? [variantId] : [])],
     defaultNS,
     fallbackNS: COMMON_NAMESPACE,
-    // Legacy files use v3 plural keys (`_plural`); keep their behaviour until the keys are migrated.
-    compatibilityJSON: 'v3',
-    initImmediate: false,
+    // Plurals use i18next v4 keys: `x_one`, `x_few`… with the base `x` as the fallback for categories a language omits.
+    initAsync: false,
     interpolation: {
       // React escapes rendered text already.
       escapeValue: false,

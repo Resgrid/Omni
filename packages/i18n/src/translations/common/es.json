@@ -3272,8 +3272,8 @@
     "attendees": {
       "title": "Asistentes"
     },
-    "attendeesCount": "{{count}} asistente",
-    "attendeesCount_plural": "{{count}} asistentes",
+    "attendeesCount_one": "{{count}} asistente",
+    "attendeesCount": "{{count}} asistentes",
     "confirmSignup": "Confirmar",
     "confirmUnsignup": {
       "message": "¿Estás seguro que quieres cancelar tu asistencia a este evento?",
@@ -3285,8 +3285,8 @@
       "attendanceUpdate": "Error al actualizar asistencia. Inténtalo de nuevo.",
       "title": "Error"
     },
-    "eventsCount": "{{count}} evento",
-    "eventsCount_plural": "{{count}} eventos",
+    "eventsCount_one": "{{count}} evento",
+    "eventsCount": "{{count}} eventos",
     "loading": {
       "date": "Cargando eventos para la fecha seleccionada...",
       "today": "Cargando eventos de hoy...",

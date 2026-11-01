@@ -3272,8 +3272,8 @@
     "attendees": {
       "title": "Συμμετέχοντες"
     },
-    "attendeesCount": "{{count}} συμμετέχων",
-    "attendeesCount_plural": "{{count}} συμμετέχοντες",
+    "attendeesCount_one": "{{count}} συμμετέχων",
+    "attendeesCount": "{{count}} συμμετέχοντες",
     "confirmSignup": "Επιβεβαίωση",
     "confirmUnsignup": {
       "message": "Είστε βέβαιοι ότι θέλετε να ακυρώσετε τη συμμετοχή σας σε αυτό το συμβάν;",
@@ -3285,8 +3285,8 @@
       "attendanceUpdate": "Αποτυχία ενημέρωσης της συμμετοχής. Δοκιμάστε ξανά.",
       "title": "Σφάλμα"
     },
-    "eventsCount": "{{count}} συμβάν",
-    "eventsCount_plural": "{{count}} συμβάντα",
+    "eventsCount_one": "{{count}} συμβάν",
+    "eventsCount": "{{count}} συμβάντα",
     "loading": {
       "date": "Φόρτωση συμβάντων για την επιλεγμένη ημερομηνία...",
       "today": "Φόρτωση σημερινών συμβάντων...",

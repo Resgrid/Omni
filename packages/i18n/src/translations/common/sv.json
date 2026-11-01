@@ -3272,8 +3272,8 @@
     "attendees": {
       "title": "Deltagare"
     },
+    "attendeesCount_one": "{{count}} deltagare",
     "attendeesCount": "{{count}} deltagare",
-    "attendeesCount_plural": "{{count}} deltagare",
     "confirmSignup": "Bekräfta",
     "confirmUnsignup": {
       "message": "Är du säker på att du vill avboka din närvaro för det här evenemanget?",
@@ -3285,8 +3285,8 @@
       "attendanceUpdate": "Det gick inte att uppdatera närvaron. Försök igen.",
       "title": "Fel"
     },
-    "eventsCount": "{{count}} händelse",
-    "eventsCount_plural": "{{count}} händelser",
+    "eventsCount_one": "{{count}} händelse",
+    "eventsCount": "{{count}} händelser",
     "loading": {
       "date": "Läser in händelser för valt datum...",
       "today": "Läser in dagens händelser...",

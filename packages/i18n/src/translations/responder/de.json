@@ -44,8 +44,8 @@
     "attendees": {
       "title": "Teilnehmer"
     },
+    "attendeesCount_one": "{{count}} Teilnehmer",
     "attendeesCount": "{{count}} Teilnehmer",
-    "attendeesCount_plural": "{{count}} Teilnehmer",
     "confirmSignup": "Bestätigen",
     "confirmUnsignup": {
       "message": "Sind Sie sicher, dass Sie Ihre Teilnahme an dieser Veranstaltung absagen möchten?",
@@ -66,8 +66,8 @@
       "attendanceUpdate": "Teilnahme konnte nicht aktualisiert werden. Bitte versuchen Sie es erneut.",
       "title": "Fehler"
     },
-    "eventsCount": "{{count}} Ereignis",
-    "eventsCount_plural": "{{count}} Ereignisse",
+    "eventsCount_one": "{{count}} Ereignis",
+    "eventsCount": "{{count}} Ereignisse",
     "loading": {
       "date": "Ereignisse für das ausgewählte Datum werden geladen...",
       "today": "Heutige Ereignisse werden geladen...",
@@ -633,8 +633,8 @@
     "not_found": "POI nicht gefunden",
     "note_label": "Hinweis",
     "reset_filters": "Zurücksetzen",
-    "results_count": "{{count}} POI",
-    "results_count_plural": "{{count}} POIs",
+    "results_count_one": "{{count}} POI",
+    "results_count": "{{count}} POIs",
     "search_placeholder": "POIs durchsuchen...",
     "set_status_destination": "Als Statusziel verwenden",
     "sort_label": "Sortieren",

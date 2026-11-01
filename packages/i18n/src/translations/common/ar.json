@@ -3272,8 +3272,8 @@
     "attendees": {
       "title": "الحاضرون"
     },
-    "attendeesCount": "{{count}} حاضر",
-    "attendeesCount_plural": "{{count}} حاضرين",
+    "attendeesCount_one": "{{count}} حاضر",
+    "attendeesCount": "{{count}} حاضرين",
     "confirmSignup": "تأكيد",
     "confirmUnsignup": {
       "message": "هل أنت متأكد من أنك تريد إلغاء حضورك لهذا الحدث؟",
@@ -3285,8 +3285,8 @@
       "attendanceUpdate": "فشل في تحديث الحضور. حاول مرة أخرى.",
       "title": "خطأ"
     },
-    "eventsCount": "{{count}} حدث",
-    "eventsCount_plural": "{{count}} أحداث",
+    "eventsCount_one": "{{count}} حدث",
+    "eventsCount": "{{count}} أحداث",
     "loading": {
       "date": "جاري تحميل أحداث التاريخ المحدد...",
       "today": "جاري تحميل أحداث اليوم...",

@@ -44,8 +44,8 @@
     "attendees": {
       "title": "Attendees"
     },
-    "attendeesCount": "{{count}} attendee",
-    "attendeesCount_plural": "{{count}} attendees",
+    "attendeesCount_one": "{{count}} attendee",
+    "attendeesCount": "{{count}} attendees",
     "confirmSignup": "Confirm",
     "confirmUnsignup": {
       "message": "Are you sure you want to cancel your attendance for this event?",
@@ -66,8 +66,8 @@
       "attendanceUpdate": "Failed to update attendance. Please try again.",
       "title": "Error"
     },
-    "eventsCount": "{{count}} event",
-    "eventsCount_plural": "{{count}} events",
+    "eventsCount_one": "{{count}} event",
+    "eventsCount": "{{count}} events",
     "loading": {
       "date": "Loading events for selected date...",
       "today": "Loading today's events...",
@@ -633,8 +633,8 @@
     "not_found": "POI not found",
     "note_label": "Note",
     "reset_filters": "Reset",
-    "results_count": "{{count}} POI",
-    "results_count_plural": "{{count}} POIs",
+    "results_count_one": "{{count}} POI",
+    "results_count": "{{count}} POIs",
     "search_placeholder": "Search POIs...",
     "set_status_destination": "Set status destination",
     "sort_label": "Sort",

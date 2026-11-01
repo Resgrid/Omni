@@ -3272,8 +3272,8 @@
     "attendees": {
       "title": "Participants"
     },
-    "attendeesCount": "{{count}} participant",
-    "attendeesCount_plural": "{{count}} participants",
+    "attendeesCount_one": "{{count}} participant",
+    "attendeesCount": "{{count}} participants",
     "confirmSignup": "Confirmer",
     "confirmUnsignup": {
       "message": "Êtes-vous sûr(e) de vouloir annuler votre participation à cet événement ?",
@@ -3285,8 +3285,8 @@
       "attendanceUpdate": "Échec de la mise à jour de la participation. Veuillez réessayer.",
       "title": "Erreur"
     },
-    "eventsCount": "{{count}} événement",
-    "eventsCount_plural": "{{count}} événements",
+    "eventsCount_one": "{{count}} événement",
+    "eventsCount": "{{count}} événements",
     "loading": {
       "date": "Chargement des événements pour la date sélectionnée...",
       "today": "Chargement des événements d'aujourd'hui...",
