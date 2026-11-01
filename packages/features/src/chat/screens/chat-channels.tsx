@@ -41,7 +41,7 @@ function ChatChannelsContent() {
 
   const open = useCallback((channel: ChatChannelResultData) => {
     // The assistant has its own screen; every other channel opens the conversation.
-    router.push((channel.ChannelType === ChatChannelType.Chatbot ? '/chatbot' : chatRoutes.conversation(channel.ChatChannelId)) as Href);
+    router.push((channel.ChannelType === ChatChannelType.Chatbot ? chatRoutes.chatbot() : chatRoutes.conversation(channel.ChatChannelId)) as Href);
   }, []);
 
   const sections = useMemo(() => groupChannels(channels, query), [channels, query]);

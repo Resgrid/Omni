@@ -1,4 +1,4 @@
-import type { ComponentType } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 
 import type { GateStep } from '../gate/gate-state';
 import { createRegistryStore } from './registry-store';
@@ -98,9 +98,66 @@ export function registerShellOverlay(id: string, component: ComponentType): () =
 
 export const useShellOverlays = (): readonly { id: string; component: ComponentType }[] => overlays.useValue();
 
+// ---------------------------------------------------------------------------------------------------------------
+// Banners under the app bar (below the realtime banner), on every signed-in screen: Dispatch's awaiting-resources strip.
+// Each banner decides itself when to render (and renders nothing otherwise).
+
+const banners = createRegistryStore<readonly { id: string; component: ComponentType }[]>([]);
+
+export function registerShellBanner(id: string, component: ComponentType): () => void {
+  banners.update((current) => [...current.filter((entry) => entry.id !== id), { id, component }]);
+  return () => {
+    banners.update((current) => current.filter((entry) => !(entry.id === id && entry.component === component)));
+  };
+}
+
+export const useShellBanners = (): readonly { id: string; component: ComponentType }[] => banners.useValue();
+
+// ---------------------------------------------------------------------------------------------------------------
+// Signed-in context providers from the app layer (map style/services, status session facts, chat identity, the
+// navigation-app hand-off…). The shell never imports features, so apps/omni/shell-registrations.tsx registers them and
+// the shell nests them around the signed-in frame (header, sidebar, routes and overlays), inside the gate: startup has
+// finished and a session exists whenever they render.
+
+export type ShellProviderComponent = ComponentType<{ children?: ReactNode }>;
+
+export interface ShellProviderOptions {
+  /** Nesting order: lower is outer (default 0). Providers with the same order nest in registration order. */
+  order?: number;
+}
+
+export interface ShellProviderEntry {
+  readonly id: string;
+  readonly component: ShellProviderComponent;
+  readonly order: number;
+  /** Registration sequence (ties on `order` nest in registration order). */
+  readonly sequence: number;
+}
+
+const providers = createRegistryStore<readonly ShellProviderEntry[]>([]);
+let providerSequence = 0;
+
+/**
+ * Registers a provider around the signed-in shell; returns a function that removes exactly this registration. The same
+ * id replaces the earlier provider (a variant module can supersede a default). Register at module load, before the shell
+ * mounts: adding or removing one later remounts everything inside it.
+ */
+export function registerShellProvider(id: string, component: ShellProviderComponent, options: ShellProviderOptions = {}): () => void {
+  const entry: ShellProviderEntry = { id, component, order: options.order ?? 0, sequence: providerSequence++ };
+  providers.update((current) => [...current.filter((existing) => existing.id !== id), entry].sort((a, b) => a.order - b.order || a.sequence - b.sequence));
+  return () => {
+    providers.update((current) => current.filter((existing) => existing !== entry));
+  };
+}
+
+export const getShellProviders = (): readonly ShellProviderEntry[] => providers.get();
+export const useShellProviders = (): readonly ShellProviderEntry[] => providers.useValue();
+
 /** Test helper. Not for app code. */
 export function resetShellSlotsForTests(): void {
   screens.set({});
   sidebarContent.set({});
   overlays.set([]);
+  banners.set([]);
+  providers.set([]);
 }

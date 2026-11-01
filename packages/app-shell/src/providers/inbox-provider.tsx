@@ -1,11 +1,19 @@
 import { securityStore, useAuthStore } from '@resgrid/auth';
 import { NotificationsInboxProvider, useNovuInboxConfig } from '@resgrid/notifications';
-import React, { type ReactNode, useMemo } from 'react';
+import React, { createContext, type ReactNode, useContext, useMemo } from 'react';
 import { Platform } from 'react-native';
 
 import { getActiveUnitId, getNotificationsSession } from '../runtime/session';
 import { getAppShellOptions } from '../runtime/shell-config';
 import { useShellStore } from '../runtime/shell-state';
+
+const InboxReadyContext = createContext(false);
+
+/**
+ * Whether the inbox can render: the Novu provider is mounted on this platform and has real credentials. The
+ * notifications screen shows its pending state until then (rendering against the placeholder client fetches for nobody).
+ */
+export const useShellInboxReady = (): boolean => useContext(InboxReadyContext);
 
 /**
  * The always-mounted Novu provider (Responder's fix): placeholder credentials until the department config, rights (and
@@ -25,10 +33,11 @@ export function ShellInboxProvider({ children }: { children?: ReactNode }) {
   // Recomputed when the session inputs change; the getter reads the stores at call time.
   const session = useMemo(() => (status === 'signedIn' && userId && rights ? getNotificationsSession() : null), [status, userId, rights]);
   const config = useNovuInboxConfig({ session, config: departmentConfig, unitId: getActiveUnitId(), isWeb });
+  const ready = enabled ? config.ready : false;
 
   return (
     <NotificationsInboxProvider config={config} enabled={enabled}>
-      {children}
+      <InboxReadyContext.Provider value={ready}>{children}</InboxReadyContext.Provider>
     </NotificationsInboxProvider>
   );
 }

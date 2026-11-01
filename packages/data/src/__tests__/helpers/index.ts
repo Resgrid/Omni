@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import { type ApiContext, ApiError } from '@resgrid/api';
 import { parseVariantManifest, type VariantId, type VariantManifest } from '@resgrid/config';
-import { createOutbox, type DbRow, DurableKv, type OfflineScope, type Outbox, OUTBOX_TABLE, type OutboxHandler } from '@resgrid/offline';
+import { createOutbox, type DbRow, DurableKv, type OfflineScope, type Outbox, OUTBOX_TABLE, type OutboxHandler, type PayloadCipher } from '@resgrid/offline';
 import { createManualConnectivitySource, createMemoryDb, createMemoryKvBackend, createOutboxHandlerRegistry } from '@resgrid/offline/testing';
 
 import { setDataStorage } from '../../core/persist';
@@ -53,7 +53,7 @@ let idCounter = 0;
  * A real @resgrid/offline outbox on the in-memory DB, with the variant's data handlers registered, an
  * in-memory KV for persisted stores and a manual connectivity switch. API functions are jest-mocked per test.
  */
-export async function createDataTestRuntime(options: { variant?: VariantId; handlers?: OutboxHandler[]; online?: boolean; scope?: DataSessionScope | null } = {}): Promise<DataTestRuntime> {
+export async function createDataTestRuntime(options: { variant?: VariantId; handlers?: OutboxHandler[]; online?: boolean; scope?: DataSessionScope | null; cipher?: PayloadCipher } = {}): Promise<DataTestRuntime> {
   resetDataRuntimeForTests();
   const clock = createClock();
   setDataClock(clock.now);
@@ -76,6 +76,7 @@ export async function createDataTestRuntime(options: { variant?: VariantId; hand
     getScope: (): OfflineScope | null => scope,
     now: clock.now,
     generateId: () => `evt-${++idCounter}`,
+    cipher: options.cipher ?? null,
   });
   await outbox.init();
   setDataOutbox(outbox);

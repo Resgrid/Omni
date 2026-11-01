@@ -6,6 +6,7 @@ import { useRealtimeLifecycle } from '@resgrid/realtime';
 import { useEffect, useRef, useSyncExternalStore } from 'react';
 
 import { sessionInit, startupInit } from '../init/app-init';
+import { useActiveUnitId } from '../runtime/active-session';
 import { getActiveUnitId } from '../runtime/session';
 import { setShellState, useShellStore } from '../runtime/shell-state';
 
@@ -63,6 +64,8 @@ export function SessionServices(): null {
   const departmentCode = securityStore((state) => state.rights?.DepartmentCode ?? null);
 
   useRealtimeLifecycle({ isSignedIn: signedIn, isReady: sessionReady && !!eventingUrl });
+  // Re-render on a unit change so push registration follows the active unit (Unit's subscriber).
+  useActiveUnitId();
 
   usePushNotifications({
     signedIn: signedIn && pushArmed,

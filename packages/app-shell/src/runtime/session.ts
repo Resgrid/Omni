@@ -3,6 +3,7 @@ import type { DataSessionScope } from '@resgrid/data';
 import type { NotificationsSession } from '@resgrid/notifications';
 import { CONTRACT_KEYS, readLegacyString } from '@resgrid/offline';
 
+import { useActiveSessionStore } from './active-session';
 import { getShellRuntime } from './runtime-holder';
 
 /**
@@ -30,6 +31,10 @@ export function getActiveUnitId(): string | null {
   try {
     if (activeUnitProvider) {
       return activeUnitProvider();
+    }
+    const selected = useActiveSessionStore.getState().activeUnitId;
+    if (selected) {
+      return selected;
     }
     const main = getShellRuntime().offline?.storage.main;
     const value = main ? readLegacyString(main, CONTRACT_KEYS.activeUnitId) : null;

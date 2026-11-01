@@ -148,4 +148,9 @@ describe('html entities', () => {
     expect(htmlToPlainText('&lt;p&gt;Medical&lt;/p&gt;')).toBe('Medical');
     expect(htmlToPlainText('')).toBe('');
   });
+
+  it('returns text, not escaped markup: ampersands and quotes come back as typed', () => {
+    expect(htmlToPlainText('<p>Fire &amp; EMS at "Main" St</p>')).toBe('Fire & EMS at "Main" St');
+    expect(htmlToPlainText('Smith & Sons <i>Hardware</i>')).toBe('Smith & Sons Hardware');
+  });
 });

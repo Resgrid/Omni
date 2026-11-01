@@ -17,6 +17,17 @@ const catalog = new Set(
     .filter(Boolean)
 );
 
+const workspace = new Set(
+  ['packages', 'tooling'].flatMap((dir) =>
+    fs.existsSync(path.join(root, dir))
+      ? fs
+          .readdirSync(path.join(root, dir), { withFileTypes: true })
+          .filter((e) => e.isDirectory() && fs.existsSync(path.join(root, dir, e.name, 'package.json')))
+          .map((e) => JSON.parse(fs.readFileSync(path.join(root, dir, e.name, 'package.json'), 'utf8')).name)
+      : []
+  )
+);
+
 const builtins = new Set(['fs', 'path', 'os', 'crypto', 'url', 'util', 'events', 'stream', 'child_process', 'module', 'http', 'https', 'zlib', 'assert', 'buffer', 'net', 'tls', 'worker_threads', 'perf_hooks', 'timers']);
 const packages = ['core', 'i18n', 'models', 'api', 'offline', 'auth', 'data', 'realtime', 'notifications', 'location', 'voice', 'ui', 'maps', 'app-shell', 'features'];
 
@@ -51,7 +62,8 @@ for (const name of packages) {
     }
   }
   for (const d of runtime) dev.delete(d);
-  const spec = (d) => (d.startsWith('@resgrid/') ? 'workspace:*' : catalog.has(d) ? 'catalog:' : null);
+  // Only real workspace packages: test fixtures name made-up @resgrid packages.
+  const spec = (d) => (d.startsWith('@resgrid/') ? (workspace.has(d) ? 'workspace:*' : null) : catalog.has(d) ? 'catalog:' : null);
   const missing = [...runtime, ...dev].filter((d) => !spec(d));
   const toObj = (set) =>
     Object.fromEntries(

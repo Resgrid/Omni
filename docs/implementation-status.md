@@ -47,8 +47,9 @@ Living tracker for executing [`architecture/omni-plan.md`](architecture/omni-pla
 
 | Item | Status | Notes |
 |---|---|---|
-| Playwright web boot tests per variant | ✅ | `pnpm e2e:web`; BigBoard and Dispatch 3/3 each locally |
-| Playwright web sign-in acceptance | ✅ | `e2e/web/sign-in.spec.ts`: the real auth-ui sign-in form renders (not the shell fallback) and an empty form validates without any auth/API request; BigBoard and Dispatch 2/2 each |
+| Playwright web boot tests per variant | ✅ | `pnpm e2e:web`; all five web exports |
+| Playwright web sign-in acceptance | ✅ | `e2e/web/sign-in.spec.ts`: the real auth-ui sign-in form renders (not the shell fallback) and an empty form validates without any auth/API request |
+| Playwright routes and maps | ✅ | `e2e/web/routes-and-maps.spec.ts`: signed-out deep links land on sign-in, public `/login`, and the maplibre-gl worker loads under both the nginx and Electron CSPs. 60/60 across all five variants |
 | Playwright Electron smoke | ✅ | 1/1 against the BigBoard Windows build |
 | Maestro native flows per variant | 🟡 | written, dry-run only; run nightly on Android emulator |
 
@@ -57,38 +58,63 @@ Living tracker for executing [`architecture/omni-plan.md`](architecture/omni-pla
 1. **Unsent changes on logout** — `@resgrid/offline` keeps them encrypted and owner-scoped (never sent for another user, dropped after 7 days); plan §8.9 says logout leaves no records. Keep or discard on logout?
 2. **Legacy `http://` server URLs** — R/I/B builds may have stored an http URL; Omni ignores it (default server, user signs in again). Accept, or add a migration prompt?
 3. **Status destination helpers** — strict by default, `{ lenient: true }` reproduces Unit. Which default?
-4. **Core work needed** — register the five OAuth client ids as OpenIddict applications; honour idempotency keys on SaveCall/notes/messages; emit weather alert and checkInUpdated events.
+4. **Core work needed** — register the five OAuth client ids as OpenIddict applications; honour idempotency keys on SaveCall/notes/messages; emit weather alert and checkInUpdated events; merge the `archived-calls` branch (`GetCallYears`, `GetArchivedCalls`, and add `SaveArchivedCall`) into `develop` for Dispatch's archived calls; the offline map manifest (`Mapping/GetOfflineManifest`, MapLibre plan §19 — the client contract Omni expects is in `packages/maps/src/offline`).
 5. **Legacy MMKV encryption keys in production** — the upgrade path must open the legacy encrypted MMKV stores, but the app shell refuses to read the keys from public `extra` in production builds (`packages/app-shell/src/runtime/legacy-keys.ts`), so production has no key source yet. Recommendation: the legacy keys are already public in the legacy repos' source, so embed them for a one-time migration and then rekey to a SecureStore key. Alternative: a config plugin plus a small native module.
 
 ## Phase 2 — app shell
 
 | Item | Status | Notes |
 |---|---|---|
-| `@resgrid/app-shell` | ✅ | 117 tests. Startup orchestration, ShellGate (onboarding, sign-in, maintenance, personal/shared lock, app access), providers, deep links, nav model per form factor, settings route registry; screens and overlays come from features through `registerShellScreens`/`registerShellOverlay` (`apps/omni/shell-registrations.tsx`) |
-| Per-variant root layouts and `(app)` route groups + `nav.ts` | ✅ | All five variants call `configureAppShell`; home routes are placeholders until Phase 4 |
+| `@resgrid/app-shell` | ✅ | Startup orchestration, ShellGate (onboarding, sign-in, maintenance, personal/shared lock, app access), providers, deep links, nav model per form factor, settings route registry, active unit/call store (legacy `activeUnitId`/`activeCallId` keys). Features plug in through slots registered in `apps/omni/shell-registrations.tsx`: gate screens, overlays, providers (`registerShellProvider`), sidebar content, header actions, banner |
+| Per-variant routes and nav | ✅ | Every feature route is a one-line re-export under `apps/omni/variants/<v>/app/`; nav built with `featureNav()` from each feature's `nav.ts`, gated by capability, module and feature flag |
+| Route-contract tests | ✅ | `packages/app-shell/src/testing/__tests__/variant-routes.test.ts` (data-driven from each variant's route tree, manifest, nav and the shipped features' route builders): every nav href and builder resolves, every route file re-exports something real, no route without its capability/module |
+| Background location bootstrap | ✅ | `apps/omni/background-location-entry.ts`, imported before expo-router where `extra.location.background` is set |
 
 ## Phase 3 — shared feature modules
 
 | Module | Status | Notes |
 |---|---|---|
-| `@resgrid/maps` | 🟡 | 64 tests. MapLibre wrapper (native + `maplibre-gl` web), style resolution with Mapbox fallback, attribution, markers/layers. Not yet mounted (`MapProvider`) or wired into feature map slots; offline packs (P8b) not started |
+| `@resgrid/maps` | ✅ | MapLibre wrapper (native + `maplibre-gl` web), style resolution with Mapbox fallback, attribution, markers/layers; `MapProvider` mounted by the shell; maplibre-gl worker copied into the web export (`apps/omni/metro/maplibre-worker.js`) |
+| Offline map packs (MapLibre P8b) | 🟡 | `@resgrid/maps` offline pack manager (manifest, Range-resumed downloads, SHA-256 check, atomic install, Wi-Fi-only, size guards, retention, wipe on logout/switch) + `features/offline-maps` screen at Settings → Offline maps (iOS/Android). Needs Core's offline manifest (plan §19). Not done: background transfers, glyph zips, backup exclusion, native hashing |
 | auth-ui | ✅ | 59 tests. Sign-in (MFA, SSO, server picker, shared device), onboarding, maintenance, locks, access denied, recovery codes |
 | settings | ✅ | 37 tests. Incl. Advanced → Storage & sync (pending/stuck items, clear local data) |
 | calls, check-in, video-feeds, protocols, notes | ✅ | 72 / 8 / 6 / 4 / 3 tests |
 | units, personnel, status, roles, contacts, POIs | ✅ | personnel 10, status 31, roles 4, contacts 9, POIs 4 |
 | weather alerts, chat, notifications inbox, data protection | ✅ | 7 / 12 / 9 / 9 tests |
-| records, operations/deployments, checklists | ⬜ | |
-| Feature translation keys | ✅ | 456 keys merged into all 10 languages (`add-keys.ts --features`); English placeholders listed in `packages/i18n/review/missing-translations.csv` |
+| records, operations/deployments, checklists | ✅ | 61 tests. Records (field records, deployments, connectors, call Records tab; protected-grant drafts kept in memory only), operations (time report, expenses, usage, F-42), checklists (run sheet, due-checks card; run saves through the encrypted outbox, online-only on web) |
+| Chat assistant (`/chatbot`) | ✅ | Responder, Unit, IC, Dispatch. Core replies arrive as `chatMessageReceived` to channel groups only, so the assistant and every conversation now join their channel (`JoinChannel`) and rejoin after a reconnect |
+| Shared main map (`/map`) | ✅ | Calls, units, personnel, POIs, own location, department layers, legend, pin details; first tab and home for Unit and IC, menu entry for Responder, Dispatch and BigBoard. Not ported: Unit active-route overlay, map weather banner, map-lock setting; custom-map region layers wait for a GeoJSON fetch in data |
+| Feature translation keys | ✅ | 1,550 keys merged into all 10 languages (`add-keys.ts --features`); ~570 per language backfilled from the legacy apps' own translations; the rest are English placeholders listed in `packages/i18n/review/missing-translations.csv` |
 
 Known integration follow-ups:
 
-- Mount `MapProvider`, `StatusProvider`, `NavigationHandoffProvider`, `ChatIdentityProvider` and call `configureSettings` in the app shell; register the background-location bootstrap in `apps/omni/index.ts`.
-- Per-variant route files for the feature screens (only the gate and home routes exist) and route-contract tests.
-- `@resgrid/api` idempotency header option; shared Jest setup for features (folders import their own `test-setup` today); one nav-entry type (calls uses `route/titleKey`, the rest match the shell's `NavEntry`); a lower-layer home for `useHref`/shell context so features need not reach upward.
-- Electron CSP `worker-src` and tile hosts; copy the maplibre-gl worker and set `webWorkerUrl`.
+- `@resgrid/api` idempotency header option; shared Jest setup for features (folders import their own `test-setup` today); one nav-entry type across features (the shell's `featureNav()` adapts three shapes today); a lower-layer home for `useHref`/shell context so features need not reach upward.
 - Data stores for field policy, templates and dispatch picker lists.
-- Web bundle is 12 MB minified for every variant — look at code splitting (lucide, livekit, maplibre-gl) before the web/Electron release.
+- `ConfirmDialog` exists in three features — move it to `@resgrid/ui`.
+- Web bundle is 15–16 MB minified per variant — code splitting (lucide, livekit, maplibre-gl, per-route lazy screens) before the web/Electron release.
 
-## Phases 4–6
+## Phase 4 — variant modules (code complete; device parity and store releases pending)
+
+| Variant | Module | Status | Notes |
+|---|---|---|---|
+| BigBoard | dashboard | ✅ | 97 tests. Custom grid (gesture-handler + reanimated), all 14 widget types, configure screen, legacy layout/settings migration (v1/v2 layouts, v0 widget settings), unit status timer alerts (new data store), OpenWeather client in `dashboard/integrations`. Dragging/resizing not yet exercised on a device |
+| IC | incident-command | ✅ | 86 tests. Command board (lanes, accountability/PAR, needs, objectives, timers), incidents, command log, command map, resource map, call tab; tiers view (R/U) / assist (D) / command (I); AI assistant behind `Ai.Assistant`. Dispatch's assist writes now go through the outbox. Not ported: map drawing, attachments, need entities/history, reopen, command info edits, action plan, message-commander, voice log, drag-and-drop (tap-to-move) |
+| Dispatch | dispatch-console, runcards, call-queues, awaiting-resources | ✅ | 98 tests. Console (panels, multi-select, ticker, PTT, map, 1/2/3 columns) as home; pending/scheduled/archived queues; awaiting resources (host, banner, call tab); run-card recommendation in call create + call tab. Open-Meteo widget dropped (no third-party calls). `GetCallYears`/`GetArchivedCalls` exist only on Core's `archived-calls` branch, so archived calls fail against `develop` until it merges; no `SaveArchivedCall` |
+| Unit | unit-status, unit-routes, inventory | ✅ | 104 tests. Status sidebar + Electron MDT console (`/console`), shared-session card; 9 route screens (server directions instead of the legacy direct Mapbox call); inventory counts offline through the outbox |
+| Responder | member-home, staffing, calendar, certifications, approve-sign-in | ✅ | 59 tests. `/home` nested tabs, staffing via outbox, calendar (Today/Upcoming/Month), certifications, pending sign-in approval watcher |
+| Responder | shifts, messages, work-orders | ✅ | 83 tests. Shifts incl. trades and supervisor approvals; messages (compose via outbox, Core response types); work orders (report offline via outbox, gated by `Maintenance.WorkOrders`) |
+| Unit | in-app turn-by-turn navigation (`@resgrid/navigation`) | ⬜ | MapLibre P4, waits for the server routing phase |
+
+Per-variant exit criteria still open (plan §11.1 P4): parity checklist on devices, offline acceptance, upgrade test from the legacy store build (spike S4), internal beta.
+
+Gaps found while porting (none block a build):
+
+- Calendar: no department time-zone source, so items show the server's local times as sent; the calendar store never requests checklist items.
+- Call list ignores `?filter=mine` (Responder home "calls I'm on" tile opens the full list).
+- Home status buttons keep the legacy rule hiding built-in statuses 4–7 by id; check against the BaseType rule.
+- Photos are not resized/HEIC-converted (expo-image-manipulator not a dependency); adding shifts to the device calendar needs expo-calendar in features.
+- Status sheet cannot preselect a destination POI.
+
+## Phases 5–6
 
 ⬜ Not started — see plan §11.1.

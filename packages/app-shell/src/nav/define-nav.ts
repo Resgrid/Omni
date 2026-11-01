@@ -1,5 +1,5 @@
 import type { Capabilities, FeatureModuleId } from '@resgrid/config';
-import type { LucideIcon } from 'lucide-react-native';
+import type { ComponentType } from 'react';
 
 /**
  * Where an entry shows: `tab` (tab bar in a tabs shell; the menu in a drawer-slot shell), `sidebar` (menu only; a
@@ -7,14 +7,20 @@ import type { LucideIcon } from 'lucide-react-native';
  */
 export type NavPlacement = 'tab' | 'sidebar' | 'hidden';
 
+/** A nav icon: any component taking `size` and `color` (lucide icons, or a feature's own). Rendered inside a View, never given `style`. */
+export type NavIcon = ComponentType<{ size?: number; color?: string }>;
+
 export interface NavEntry {
   /** Stable id (analytics, tests, `testID` default). */
   id: string;
-  /** Static route path inside the `(app)` group, e.g. `/`, `/calls`, `/settings`. Must resolve in the route contract. */
+  /**
+   * Route path inside the `(app)` group, e.g. `/`, `/calls`, `/settings` — or a pattern for a hidden detail screen
+   * (`/call/[id]`), which registers the route without a link. Must resolve in the route contract.
+   */
   href: string;
   placement: NavPlacement;
   /** lucide icon component (rendered inside a View: icons never receive `style`). */
-  icon?: LucideIcon;
+  icon?: NavIcon;
   /** Translation key for the label, e.g. `tabs.calls`. */
   labelKey: string;
   /** English fallback while the key is missing. Defaults to the id. */
@@ -34,6 +40,11 @@ export interface NavEntry {
   testID?: string;
   /** Tabs: keep the screen mounted (frozen) when another tab is focused (Unit's map). */
   freezeOnBlur?: boolean;
+  /**
+   * The entry's route is a nested tab layout (Responder's `/home` with Personnel, Units, Calls): the routes below its href
+   * are top-level screens too, so the header shows the menu button there rather than back.
+   */
+  nestedTabs?: boolean;
 }
 
 export interface NavRegistry {

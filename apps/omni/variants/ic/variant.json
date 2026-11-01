@@ -150,6 +150,6 @@
       "desktop": "drawer"
     },
     "sidebarContent": "menu",
-    "homeRoute": "/"
+    "homeRoute": "/map"
   }
 }

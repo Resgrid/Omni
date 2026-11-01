@@ -22,7 +22,8 @@ export function resolveNotificationRoute(target: NotificationTarget, href: HrefB
     case 'workOrder':
       return href.workOrderDetail(target.id);
     case 'signInApproval':
-      return href.build('approveSignIn', {}, { requestId: target.id });
+      // ApproveSignInScreen reads the request from the `id` parameter (auth-ui authRoutes.approveSignIn).
+      return href.build('approveSignIn', {}, { id: target.id });
     case 'notification':
     case 'communicationTest':
       return null;

@@ -6,5 +6,9 @@
   "chat.search_conversations": "Search conversations",
   "chat.send_failed": "Not sent",
   "chat.start_conversation": "Start conversation",
-  "chat.unread_count": "{{count}} unread"
+  "chat.unread_count": "{{count}} unread",
+  "chatbot.load_failed": "Could not reach the assistant. Check your connection and try again.",
+  "chatbot.new_session_failed": "Could not start a new session",
+  "chatbot.thinking": "The assistant is thinking",
+  "chatbot.unavailable": "The assistant is not available for your department."
 }

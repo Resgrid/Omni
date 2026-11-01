@@ -3,7 +3,9 @@
 // (unit-tested).
 //
 // Production: scripts only from the app origin; network to https/wss only (AGENTS.md: server URLs are https, http only to
-// localhost in development); blob: workers for MapLibre; no plugins, no foreign <base> or form targets.
+// localhost in development); MapLibre's module worker from the app origin (the web export ships maplibre-gl-worker.js)
+// with blob: for its cross-origin fallback, map styles, tiles, glyphs and sprites over https; no plugins, no foreign <base>
+// or form targets.
 // Development: additionally the Expo dev server (HMR over ws:, 'unsafe-eval' for Metro's dev runtime) and plain http to
 // loopback servers.
 

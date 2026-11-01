@@ -135,6 +135,6 @@
       "desktop": "toggle-panel"
     },
     "sidebarContent": "menu",
-    "homeRoute": "/home"
+    "homeRoute": "/"
   }
 }

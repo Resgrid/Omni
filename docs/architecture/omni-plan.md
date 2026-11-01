@@ -265,7 +265,7 @@ Bundle IDs and Android packages (including `wtdt.resgrid.andriod`), URL schemes,
 export { default } from '@resgrid/features/calls/screens/call-detail';
 ```
 
-Canonical paths for every variant: `/call/[id]`, `/call/[id]/edit`, `/call/new`, `/weather-alerts/[id]` (replaces `/weather-alert/[id]` and `/weather-alert-detail`), `/poi/[id]`, `/chat/[channelId]`, `/records/*`, `/settings/account-security`, `/maps/*`, `[...missing]` (U/I/D/B misspell it `[...messing]`). Features build links through `useHref()` builders; the variant declares which routes exist; links to absent routes are hidden; a per-variant test asserts every emitted href resolves.
+Canonical paths for every variant: `/call/[id]`, `/call/[id]/edit`, `/call/new`, `/weather-alerts/[id]` (replaces `/weather-alert/[id]` and `/weather-alert-detail`), `/poi/[id]`, `/chat/[channelId]`, `/records/*`, `/settings/account-security`, `/map` (the department map, `features/map`; `?callId=`/`unitId`/`userId`/`poiId` focus a pin), `/maps/*` (custom/indoor maps), `[...missing]` (U/I/D/B misspell it `[...messing]`). Features build links through `useHref()` builders; the variant declares which routes exist; links to absent routes are hidden; a per-variant test asserts every emitted href resolves.
 
 ### 5.4 App shell and form factors
 

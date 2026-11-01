@@ -43,6 +43,8 @@ export function MessageActionsSheet({ message, isOpen, onClose, isOwn, isModerat
   if (!message) return null;
   const isDeleted = !!message.DeletedOn;
   const isText = message.MessageType === ChatMessageType.Text;
+  // Assistant replies are Bot messages: copying an answer is the action people want most (legacy offered Text only).
+  const isCopyable = isText || message.MessageType === ChatMessageType.Bot;
   const isPinned = !!message.PinnedOn;
   const flagReasons = [
     { reason: ChatFlagReason.Inappropriate, key: 'chat.flag_inappropriate' },
@@ -80,7 +82,7 @@ export function MessageActionsSheet({ message, isOpen, onClose, isOwn, isModerat
                 ))}
               </HStack>
             ) : null}
-            {isText && !isDeleted && onCopy ? (
+            {isCopyable && !isDeleted && onCopy ? (
               <ActionsheetItem onPress={act(() => onCopy(message))} testID="message-action-copy">
                 <Copy size={18} color="#6b7280" />
                 <ActionsheetItemText>{t('chat.copy')}</ActionsheetItemText>

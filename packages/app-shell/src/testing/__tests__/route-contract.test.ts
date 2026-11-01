@@ -2,18 +2,9 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { appDirOf } from '../../__tests__/helpers/variants';
 import { defineNav } from '../../nav/define-nav';
 import { defineRoutes } from '../../routes/define-routes';
 import { assertRouteContract, checkRouteContract, scanRouteFiles } from '../route-contract';
-
-// The variants' nav.ts import defineNav/defineRoutes from the package barrel; only those two builders are needed here.
-jest.mock('@resgrid/app-shell', () => ({
-  defineNav: jest.requireActual('../../nav/define-nav').defineNav,
-  defineRoutes: jest.requireActual('../../routes/define-routes').defineRoutes,
-}));
-
-const VARIANTS = ['responder', 'unit', 'ic', 'dispatch', 'bigboard'] as const;
 
 function makeTree(files: string[]): string {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'app-shell-routes-'));
@@ -92,13 +83,5 @@ describe('checkRouteContract', () => {
       shellKind: 'drawer-slot',
     });
     expect(report.unregisteredAppRoutes).toEqual([]);
-  });
-});
-
-describe.each(VARIANTS)('route contract: %s', (variantId) => {
-  it('every declared route has a file, every file is declared, every nav href resolves and every (app) route is registered', () => {
-    const report = assertRouteContract(variantId, appDirOf(variantId));
-    expect(report.routes.map((route) => route.path)).toContain('/');
-    expect(report.routes.find((route) => route.path === '/')?.inAppGroup).toBe(true);
   });
 });

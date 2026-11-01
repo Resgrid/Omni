@@ -10,10 +10,12 @@ export interface MessageBubbleProps {
   isOwn: boolean;
   showSender: boolean;
   onLongPress?: (message: ChatMessageResultData) => void;
+  /** Makes a failed send tappable ("tap to retry") — the assistant, whose sends are online only. */
+  onRetry?: (message: ChatMessageResultData) => void;
 }
 
 /** One message (Responder bubble): sender in group channels, body, urgency, edited/deleted/pinned markers and send state. */
-export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({ message, isOwn, showSender, onLongPress }) => {
+export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({ message, isOwn, showSender, onLongPress, onRetry }) => {
   const { t } = useTranslation();
   const isDeleted = !!message.DeletedOn;
   const isUrgent = message.Priority === ChatMessagePriority.Urgent;
@@ -49,9 +51,21 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({ message
         </HStack>
       </VStack>
       {status === 'failed' ? (
-        <View className="mt-0.5 self-end" testID={`chat-message-${message.ClientMessageId || message.ChatMessageId}-failed`}>
-          <Text className="text-xs text-error-600">{t('chat.send_failed')}</Text>
-        </View>
+        onRetry ? (
+          <Pressable
+            className="mt-0.5 self-end"
+            onPress={() => onRetry(message)}
+            accessibilityRole="button"
+            accessibilityLabel={t('chat.failed_tap_retry')}
+            testID={`chat-message-${message.ClientMessageId || message.ChatMessageId}-retry`}
+          >
+            <Text className="text-xs text-error-600">{t('chat.failed_tap_retry')}</Text>
+          </Pressable>
+        ) : (
+          <View className="mt-0.5 self-end" testID={`chat-message-${message.ClientMessageId || message.ChatMessageId}-failed`}>
+            <Text className="text-xs text-error-600">{t('chat.send_failed')}</Text>
+          </View>
+        )
       ) : null}
     </Pressable>
   );

@@ -12,7 +12,8 @@ import { buildTabScreens, findUnregisteredRoutes } from '../nav/filter';
 import { useNavFilterContext, useNavLabel } from '../nav/use-nav-items';
 import { getShellNav } from '../runtime/shell-config';
 import { ShellHeader } from './header';
-import { RegisteredOverlays, SessionInitOverlay, ShellOfflineToast, ShellRealtimeBanner } from './overlays';
+import { RegisteredBanners, RegisteredOverlays, SessionInitOverlay, ShellOfflineToast, ShellRealtimeBanner } from './overlays';
+import { RegisteredProviders } from './registered-providers';
 import { ShellProvider } from './shell-context';
 import { DrawerSidebar, InlineSidebar } from './sidebar';
 
@@ -99,6 +100,7 @@ function ShellFrame({ variant, nav }: { variant: VariantManifest; nav: NavRegist
     <View style={StyleSheet.flatten([styles.fill, { backgroundColor: colors.background }])} onStartShouldSetResponderCapture={onTouchCapture} testID={`app-shell-${variant.shell.kind}`}>
       <ShellHeader nav={nav} />
       <ShellRealtimeBanner />
+      <RegisteredBanners />
       <View style={styles.body}>
         <InlineSidebar nav={nav} />
         <View style={styles.content}>{variant.shell.kind === 'tabs' ? <RegistryTabs nav={nav} /> : <Slot />}</View>
@@ -133,7 +135,9 @@ export function createAppShell(variant: VariantManifest, options: CreateAppShell
     return (
       <ShellGate>
         <ShellProvider variant={variant}>
-          <ShellFrame variant={variant} nav={nav} />
+          <RegisteredProviders>
+            <ShellFrame variant={variant} nav={nav} />
+          </RegisteredProviders>
         </ShellProvider>
       </ShellGate>
     );

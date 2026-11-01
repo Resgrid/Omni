@@ -7,3 +7,7 @@ apps/omni/android
 .claude/skills
 .agents
 packages/api/contract/swagger-v4.json
+apps/omni/public/maplibre-gl-worker.js
+apps/omni/e2e/test-results
+apps/omni/e2e/playwright-report
+apps/omni/e2e/results

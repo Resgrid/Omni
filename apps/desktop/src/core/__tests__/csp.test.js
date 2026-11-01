@@ -22,6 +22,15 @@ describe('buildContentSecurityPolicy', () => {
     expect(csp).not.toMatch(/\*(?!:)/);
   });
 
+  it('lets MapLibre run: its module worker from the bundle (blob: fallback), styles/tiles/glyphs over https, raster/sprite images', () => {
+    for (const origin of ['app://bundle', 'http://127.0.0.1:29317']) {
+      const csp = buildContentSecurityPolicy({ appOrigins: [origin] });
+      expect(directive(csp, 'worker-src')).toEqual(["'self'", origin, 'blob:']);
+      expect(directive(csp, 'connect-src')).toEqual(expect.arrayContaining(['https:', 'blob:', 'data:']));
+      expect(directive(csp, 'img-src')).toEqual(expect.arrayContaining(['https:', 'blob:', 'data:']));
+    }
+  });
+
   it('adds the dev server, HMR and loopback http only in development', () => {
     const csp = buildContentSecurityPolicy({ appOrigins: ['http://localhost:8081'], devServerOrigin: 'http://localhost:8081' });
     expect(directive(csp, 'script-src')).toContain("'unsafe-eval'");

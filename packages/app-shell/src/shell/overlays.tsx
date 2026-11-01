@@ -9,7 +9,7 @@ import { useShellTranslation } from '../i18n';
 import { useAppInit } from '../init/app-init';
 import { useHref } from '../routes/href';
 import { useShellStore } from '../runtime/shell-state';
-import { useShellOverlays } from '../runtime/slots';
+import { useShellBanners, useShellOverlays } from '../runtime/slots';
 
 /** RealtimeStatusBanner fed from the realtime store's outages (hubs that were live and dropped). */
 export function ShellRealtimeBanner() {
@@ -82,3 +82,15 @@ export function RegisteredOverlays() {
 const styles = StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center' },
 });
+
+/** Banners registered with `registerShellBanner`, stacked under the app bar in registration order. */
+export function RegisteredBanners() {
+  const entries = useShellBanners();
+  return (
+    <>
+      {entries.map(({ id, component: Banner }) => (
+        <Banner key={id} />
+      ))}
+    </>
+  );
+}

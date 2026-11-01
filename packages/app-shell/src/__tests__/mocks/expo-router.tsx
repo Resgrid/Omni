@@ -32,6 +32,10 @@ export function Stack(): ReactElement {
   return <View testID="mock-stack" />;
 }
 
+export function Redirect({ href }: { href: string }): ReactElement {
+  return <Text testID="mock-redirect">{href}</Text>;
+}
+
 export function Slot(): ReactElement {
   return <View testID="mock-slot" />;
 }

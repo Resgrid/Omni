@@ -1,7 +1,8 @@
 import { initI18n } from '@resgrid/i18n';
 import { registerBackgroundLocationBootstrap } from '@resgrid/location';
 
-import { configureAppShell } from '../configure';
+import { configureAppShell, runBackgroundStartup } from '../configure';
+import { startupInit } from '../init/app-init';
 import { defineNav } from '../nav/define-nav';
 import { defineRoutes } from '../routes/define-routes';
 import { getHrefBuilders } from '../routes/href';
@@ -35,16 +36,23 @@ describe('configureAppShell', () => {
     expect(getShellScreens().Login).toBe(Login);
   });
 
-  it('lets a background location relaunch run startup only where the variant has background location', () => {
-    const unit = activateVariant('unit');
-    configureAppShell({ variant: unit, options: { registerDefaultSteps: false } });
-    expect(registerBackgroundLocationBootstrap).toHaveBeenCalledTimes(unit.capabilities.location.background ? 1 : 0);
+  it('leaves the background-location bootstrap to the app entry (it must exist before anything mounts)', () => {
+    configureAppShell({ variant: activateVariant('unit'), options: { registerDefaultSteps: false } });
+    expect(registerBackgroundLocationBootstrap).not.toHaveBeenCalled();
+  });
 
-    resetAppShellConfigForTests();
-    jest.clearAllMocks();
-    const bigboard = activateVariant('bigboard');
-    configureAppShell({ variant: bigboard, options: { registerDefaultSteps: false } });
-    expect(registerBackgroundLocationBootstrap).toHaveBeenCalledTimes(bigboard.capabilities.location.background ? 1 : 0);
+  it('runBackgroundStartup refuses to run before the root layout configured the shell', async () => {
+    await expect(runBackgroundStartup()).rejects.toThrow(/not configured/);
+  });
+
+  it('runBackgroundStartup runs (or joins) the startup phase and reports a failure', async () => {
+    configureAppShell({ variant: activateVariant('unit'), options: { registerDefaultSteps: false } });
+    const run = jest.spyOn(startupInit, 'run');
+    run.mockResolvedValueOnce({ ...startupInit.getStatus(), state: 'ready' });
+    await expect(runBackgroundStartup()).resolves.toBeUndefined();
+    run.mockResolvedValueOnce({ ...startupInit.getStatus(), state: 'failed', failedStep: 'startup.offline', error: null });
+    await expect(runBackgroundStartup()).rejects.toThrow(/startup\.offline/);
+    run.mockRestore();
   });
 
   it('refuses to switch variants at runtime', () => {

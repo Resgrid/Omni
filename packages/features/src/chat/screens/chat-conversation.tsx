@@ -15,6 +15,7 @@ import { MessageActionsSheet } from '../components/message-actions-sheet';
 import { MessageBubble } from '../components/message-bubble';
 import { MessageComposer } from '../components/message-composer';
 import { useActiveChatChannel } from '../hooks/use-active-chat-channel';
+import { useJoinedChatChannel } from '../hooks/use-joined-chat-channel';
 import { flagMessage, moderatorDeleteMessage, setMessagePinned } from '../lib/chat-actions';
 import { isOwnMessage, orderMessages } from '../lib/chat-format';
 
@@ -52,6 +53,8 @@ function ChatConversationContent({ channelId, keyboardOffset = 0 }: { channelId:
   const isResolved = !!channel || resolveAttempted;
 
   useActiveChatChannel(channelId, asUnitId, isResolved && !isChatbot);
+  // Core sends chatMessageReceived only to connections in the channel's group.
+  useJoinedChatChannel(channelId, asUnitId, isResolved && !isChatbot);
 
   useEffect(() => {
     if (!isResolved || isChatbot) return;

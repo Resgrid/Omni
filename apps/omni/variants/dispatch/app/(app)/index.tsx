@@ -1,1 +1,1 @@
-export { HomePlaceholder as default } from '@resgrid/app-shell';
+export { default } from '../../../../screens/dispatch-console';

@@ -97,6 +97,14 @@ describe('records (identical across apps; origin from manifest; Unit race guards
     expect(finalizeRecord).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ RecordId: 'r-1', RowVersion: 1, Attested: true, IdempotencyKey: result.id }));
   });
 
+  it('keeps a draft authored under a protected grant in memory only', async () => {
+    useRecordsStore.getState().stageDraft({ clientRecordId: 'cr-p', recordId: null, definitionKey: 'adp', definitionVersion: 1, name: 'Protected', values: [], updatedOn: '', requiresProtectedGrant: true });
+    useRecordsStore.getState().stageDraft({ clientRecordId: 'cr-o', recordId: null, definitionKey: 'fire', definitionVersion: 1, name: 'Fire', values: [], updatedOn: '' });
+    await flush();
+    expect(Object.keys(useRecordsStore.getState().pendingDrafts).sort()).toEqual(['cr-o', 'cr-p']);
+    expect(Object.keys((persisted(runtime.kv, 'records-field-storage')?.state as { pendingDrafts: Record<string, unknown> }).pendingDrafts)).toEqual(['cr-o']);
+  });
+
   it('resets on sign-out (Responder) including staged drafts', async () => {
     useRecordsStore.getState().stageDraft({ clientRecordId: 'cr-2', recordId: null, definitionKey: 'k', definitionVersion: 1, name: 'n', values: [], updatedOn: '' });
     await defaultResetRegistry.getStoreResets().get('data.records')?.('logout');

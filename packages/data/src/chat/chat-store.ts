@@ -3,26 +3,30 @@ import {
   addChatReaction,
   deleteChatMessage,
   editChatMessage,
+  getChatbotChannel,
   getChatChannels,
   getChatMembers,
   getChatMessages,
   getChatMessagesAfter,
   getMyPendingChatAcks,
   markChatRead,
+  newChatbotSession as postNewChatbotSession,
   parseUtcMs,
   removeChatReaction,
+  sendChatbotMessage as postChatbotMessage,
   sendChatMessage,
 } from '@resgrid/api';
 import type { ChatAckResultData, ChatChannelResultData, ChatMemberResultData, ChatMentionInput, ChatMessageResultData, ChatOutboxItem, SendChatMessageInput } from '@resgrid/models';
+import { ChatMessagePriority, ChatMessageType, ChatParticipantType } from '@resgrid/models';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-import { assertV4Success, unwrapList } from '../core/envelope';
+import { assertV4Success, unwrapItem, unwrapList } from '../core/envelope';
 import { type DataError, toDataError } from '../core/errors';
 import { defineDataHandler, submitWrite, type WriteResult } from '../core/outbox';
 import { dataPersistOptions, registerPersistedStore } from '../core/persist';
 import { registerDataStoreReset } from '../core/reset';
-import { getDataApiContext, getDataLogger, getDataOutbox, getDataSessionScope, hasDataOutbox } from '../core/runtime';
+import { dataNow, generateDataId, getDataApiContext, getDataLogger, getDataOutbox, getDataSessionScope, hasDataOutbox } from '../core/runtime';
 import { createSliceRunner, emptySliceMeta, type FetchOptions, type SliceMeta, type SliceRunner } from '../core/slices';
 
 export const CHAT_MESSAGE_SEND_EVENT = 'chat.message.send';
@@ -31,7 +35,18 @@ export const CHAT_MESSAGE_SEND_EVENT = 'chat.message.send';
 export const PENDING_SEQ_BASE = 9_000_000_000_000;
 export const CHAT_PAGE_SIZE = 50;
 
+/** Core never sends `chatbotTyping` false: the "thinking" row clears on the assistant's reply or after this long. */
+export const CHATBOT_TYPING_TIMEOUT_MS = 30_000;
+/** While a reply is awaited, pull newer messages this often in case the hub missed it (channel not joined, hub down). */
+export const CHATBOT_REPLY_POLL_MS = 8_000;
+
 export type IncidentChannelsStatus = 'loading' | 'loaded' | 'failed';
+
+/** Outcome of an assistant send: `error` explains a failure (the message stays in the list as failed, ready to retry). */
+export interface ChatbotSendResult {
+  ok: boolean;
+  error?: DataError;
+}
 
 export interface ChatSendArgs {
   channelId: string;
@@ -52,7 +67,7 @@ export interface ChatSendPayload {
   senderDisplayName?: string;
 }
 
-type ChatSlice = 'channels' | 'incidentChannels' | 'messages' | 'members' | 'acks';
+type ChatSlice = 'channels' | 'incidentChannels' | 'messages' | 'members' | 'acks' | 'chatbot';
 
 interface ChatData extends SliceMeta<ChatSlice> {
   channels: ChatChannelResultData[];
@@ -66,6 +81,10 @@ interface ChatData extends SliceMeta<ChatSlice> {
   /** Legacy `chat-outbox-storage` items not yet moved into the durable outbox (normally empty). */
   outbox: ChatOutboxItem[];
   actionError: DataError | null;
+  /** The caller's assistant channel (`Chatbot/GetChatChannel`); null until the assistant screen loads it. */
+  chatbotChannelId: string | null;
+  /** The assistant is working on a reply: a question in flight or `chatbotTyping` from the hub. */
+  chatbotTyping: boolean;
 }
 
 export interface ChatState extends ChatData {
@@ -90,6 +109,23 @@ export interface ChatState extends ChatData {
   handleMessageEdited: (message: ChatMessageResultData) => void;
   handleMessageDeleted: (channelId: string, messageId: string) => void;
   handleChannelUpdated: () => Promise<void>;
+  // Assistant (chatbot). Online only: a question is useless once stale, so a failed send stays visible for a retry
+  // (same ClientMessageId, so Core never stores it twice) instead of waiting in the outbox.
+  /** Gets (creating if needed) the assistant channel, then loads its latest messages. Resolves to the channel id. */
+  initChatbot: () => Promise<string | null>;
+  /** Optimistic question now, `Chatbot/SendChatMessage` with a client id; the reply arrives over the chat hub. */
+  sendChatbotMessage: (text: string) => Promise<ChatbotSendResult>;
+  /** Resends a failed question under its original ClientMessageId. */
+  retryChatbotMessage: (clientMessageId: string) => Promise<ChatbotSendResult>;
+  /** Clears the assistant's conversational context (history stays); Core posts a confirmation into the channel. */
+  newChatbotSession: () => Promise<boolean>;
+  /**
+   * A `chatbotMessageReceived` or `chatMessageReceived` hub payload (object or JSON string). Applied only when it
+   * belongs to the assistant channel (returns true); the assistant's own reply clears `chatbotTyping`.
+   */
+  handleChatbotMessageReceived: (payload: unknown) => boolean;
+  /** A `chatbotTyping` hub payload (`{ ChatChannelId, IsTyping }`, object or JSON string). */
+  handleChatbotTyping: (payload: unknown) => void;
   /** Moves legacy `chat-outbox-storage` items into the durable outbox, keeping their ClientMessageId as idempotency key. */
   importLegacyOutbox: () => Promise<number>;
   // Used by the outbox handler.
@@ -108,6 +144,8 @@ const initialData = (): ChatData => ({
   pendingAcks: [],
   outbox: [],
   actionError: null,
+  chatbotChannelId: null,
+  chatbotTyping: false,
 });
 
 const compareMessages = (a: ChatMessageResultData, b: ChatMessageResultData): number => (a.MessageSeq !== b.MessageSeq ? a.MessageSeq - b.MessageSeq : (parseUtcMs(a.SentOn) ?? 0) - (parseUtcMs(b.SentOn) ?? 0));
@@ -155,6 +193,70 @@ const optimisticMessage = (clientMessageId: string, payload: ChatSendPayload, cr
   };
 };
 
+/** A chat hub payload as an object: Core sends most chat events as a JSON string, some as already-parsed objects. */
+export const parseChatEventPayload = (payload: unknown): Record<string, unknown> | null => {
+  let value = payload;
+  if (typeof value === 'string') {
+    try {
+      value = JSON.parse(value) as unknown;
+    } catch {
+      return null;
+    }
+  }
+  return value !== null && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
+};
+
+/** Written by the assistant (Core `SendBotMessageAsync`: bot participant, bot message type). */
+export const isChatbotReply = (message: Pick<ChatMessageResultData, 'SenderParticipantType' | 'MessageType'>): boolean =>
+  message.SenderParticipantType === ChatParticipantType.Bot || message.MessageType === ChatMessageType.Bot;
+
+const highestConfirmedSeq = (list: readonly ChatMessageResultData[] | undefined): number => (list ?? []).reduce((max, m) => (m.MessageSeq < PENDING_SEQ_BASE && m.MessageSeq > max ? m.MessageSeq : max), 0);
+
+const optimisticChatbotMessage = (clientMessageId: string, channelId: string, body: string, createdAt: number): ChatMessageResultData => {
+  const session = getDataSessionScope();
+  return {
+    ChatMessageId: clientMessageId,
+    ChatChannelId: channelId,
+    MessageSeq: PENDING_SEQ_BASE + createdAt,
+    SenderParticipantType: ChatParticipantType.User,
+    SenderUserId: session?.userId ?? null,
+    SenderUnitId: null,
+    SenderDisplayName: session?.displayName ?? null,
+    Body: body,
+    MessageType: ChatMessageType.Text,
+    Priority: ChatMessagePriority.Normal,
+    ThreadRootMessageId: null,
+    ThreadReplyCount: 0,
+    AlsoSendToChannel: false,
+    MetadataJson: null,
+    ClientMessageId: clientMessageId,
+    SentOn: new Date(createdAt).toISOString(),
+    Reactions: [],
+    Attachments: [],
+    _localStatus: 'pending',
+  };
+};
+
+// Awaiting the assistant's reply: module scope like the legacy store, cleared on reset (timers must not outlive a session).
+let chatbotTypingTimer: ReturnType<typeof setTimeout> | null = null;
+let chatbotPollTimer: ReturnType<typeof setInterval> | null = null;
+let chatbotAwaiting = false;
+/** Highest confirmed sequence before the newest question; an assistant message above it is the reply. */
+let chatbotReplyBaseline = 0;
+
+const clearChatbotTimers = (): void => {
+  if (chatbotTypingTimer) clearTimeout(chatbotTypingTimer);
+  if (chatbotPollTimer) clearInterval(chatbotPollTimer);
+  chatbotTypingTimer = null;
+  chatbotPollTimer = null;
+};
+
+const resetChatbotRuntime = (): void => {
+  clearChatbotTimers();
+  chatbotAwaiting = false;
+  chatbotReplyBaseline = 0;
+};
+
 let runner: SliceRunner<ChatSlice, ChatState>;
 
 export const useChatStore = create<ChatState>()(
@@ -169,6 +271,50 @@ export const useChatStore = create<ChatState>()(
         } catch (error) {
           set({ actionError: toDataError(error) });
           return false;
+        }
+      };
+
+      const hasChatbotReply = (channelId: string): boolean => (get().messagesByChannel[channelId] ?? []).some((m) => m.MessageSeq > chatbotReplyBaseline && m.MessageSeq < PENDING_SEQ_BASE && isChatbotReply(m));
+
+      const stopAwaitingReply = (): void => {
+        resetChatbotRuntime();
+        if (get().chatbotTyping) set({ chatbotTyping: false });
+      };
+
+      /** Pulls messages newer than the newest confirmed one (the realtime fallback) and settles the wait on a reply. */
+      const refreshChatbot = async (channelId: string): Promise<void> => {
+        await get().loadNewerMessages(channelId);
+        if (chatbotAwaiting && hasChatbotReply(channelId)) stopAwaitingReply();
+      };
+
+      const startAwaitingReply = (channelId: string): void => {
+        if (!chatbotAwaiting) chatbotReplyBaseline = highestConfirmedSeq(get().messagesByChannel[channelId]);
+        chatbotAwaiting = true;
+        clearChatbotTimers();
+        if (!get().chatbotTyping) set({ chatbotTyping: true });
+        chatbotPollTimer = setInterval(() => void refreshChatbot(channelId), CHATBOT_REPLY_POLL_MS);
+        chatbotTypingTimer = setTimeout(() => {
+          stopAwaitingReply();
+          void get().loadNewerMessages(channelId);
+        }, CHATBOT_TYPING_TIMEOUT_MS);
+      };
+
+      const deliverChatbotMessage = async (channelId: string, clientMessageId: string, body: string): Promise<ChatbotSendResult> => {
+        startAwaitingReply(channelId);
+        try {
+          const result = assertV4Success(await postChatbotMessage(getDataApiContext(), { Text: body, ClientMessageId: clientMessageId }));
+          const sent = result.Data;
+          const current = (get().messagesByChannel[channelId] ?? []).find((m) => m.ClientMessageId === clientMessageId);
+          if (sent && sent.MessageSeq > chatbotReplyBaseline && sent.MessageSeq < PENDING_SEQ_BASE) chatbotReplyBaseline = sent.MessageSeq;
+          if (current) get().upsertMessage({ ...current, ...(sent ? { ChatMessageId: sent.ChatMessageId, MessageSeq: sent.MessageSeq, SentOn: sent.SentOn } : {}), _localStatus: 'sent' });
+          return { ok: true };
+        } catch (error) {
+          const dataError = toDataError(error);
+          stopAwaitingReply();
+          get().setLocalStatus(channelId, clientMessageId, 'failed');
+          // Never the question text: it can carry anything the user typed.
+          getDataLogger().warn({ message: 'Assistant message not sent', context: { code: dataError.code, status: dataError.status } });
+          return { ok: false, error: dataError };
         }
       };
 
@@ -327,6 +473,71 @@ export const useChatStore = create<ChatState>()(
           set((state) => ({ messagesByChannel: { ...state.messagesByChannel, [channelId]: (state.messagesByChannel[channelId] ?? []).filter((m) => m.ChatMessageId !== messageId) } })),
         handleChannelUpdated: () => get().fetchChannels(undefined, { bypassCache: true }),
 
+        initChatbot: async () => {
+          const result = await runner.run(
+            'chatbot',
+            async () => unwrapItem(await getChatbotChannel(getDataApiContext())),
+            (channel) => ({ chatbotChannelId: channel?.ChatChannelId ?? null })
+          );
+          const channelId = result.ok ? (result.value?.ChatChannelId ?? null) : get().chatbotChannelId;
+          if (channelId) await get().loadInitialMessages(channelId);
+          return channelId;
+        },
+
+        sendChatbotMessage: async (text) => {
+          const channelId = get().chatbotChannelId;
+          const body = text.trim();
+          if (!channelId || !body) return { ok: false };
+          const clientMessageId = generateDataId();
+          get().upsertMessage(optimisticChatbotMessage(clientMessageId, channelId, body, dataNow()));
+          return deliverChatbotMessage(channelId, clientMessageId, body);
+        },
+
+        retryChatbotMessage: async (clientMessageId) => {
+          const channelId = get().chatbotChannelId;
+          const failed = channelId ? (get().messagesByChannel[channelId] ?? []).find((m) => m.ClientMessageId === clientMessageId && m._localStatus === 'failed') : undefined;
+          if (!channelId || !failed?.Body) return { ok: false };
+          get().setLocalStatus(channelId, clientMessageId, 'pending');
+          return deliverChatbotMessage(channelId, clientMessageId, failed.Body);
+        },
+
+        newChatbotSession: async () => {
+          const ok = await act(async () => {
+            const result = assertV4Success(await postNewChatbotSession(getDataApiContext()));
+            if (result?.Success === false) throw new Error('Assistant session was not reset');
+          });
+          const channelId = get().chatbotChannelId;
+          // Core posts its confirmation into the channel before answering; pull it in case the hub misses it.
+          if (ok && channelId) void get().loadNewerMessages(channelId);
+          return ok;
+        },
+
+        handleChatbotMessageReceived: (payload) => {
+          const channelId = get().chatbotChannelId;
+          const record = parseChatEventPayload(payload);
+          if (!channelId || !record || record.ChatChannelId !== channelId) return false;
+          if (typeof record.ChatMessageId !== 'string' || typeof record.MessageSeq !== 'number' || record.BodyTruncated === true) {
+            // Not a whole message (the hub trims bodies over 64 KB): fetch the stored copy instead.
+            void refreshChatbot(channelId);
+            return true;
+          }
+          const message = record as unknown as ChatMessageResultData;
+          get().upsertMessage({ ...message, _localStatus: 'sent' });
+          if (isChatbotReply(message) && message.MessageSeq > chatbotReplyBaseline) stopAwaitingReply();
+          return true;
+        },
+
+        handleChatbotTyping: (payload) => {
+          const channelId = get().chatbotChannelId;
+          const record = parseChatEventPayload(payload);
+          if (!channelId || !record) return;
+          const eventChannelId = record.ChatChannelId ?? record.chatChannelId;
+          if (typeof eventChannelId === 'string' && eventChannelId !== channelId) return;
+          const isTyping = record.IsTyping ?? record.isTyping;
+          if (isTyping === true) startAwaitingReply(channelId);
+          else if (isTyping === false) stopAwaitingReply();
+        },
+
         importLegacyOutbox: async () => {
           const items = get().outbox;
           // Signed out: leave the items for whoever signs in (they are scoped to the session that queued them).
@@ -392,7 +603,10 @@ export const useChatStore = create<ChatState>()(
 );
 
 registerPersistedStore('chat-outbox-storage', useChatStore);
-registerDataStoreReset<ChatState>('chat', useChatStore, initialData, () => runner.invalidate());
+registerDataStoreReset<ChatState>('chat', useChatStore, initialData, () => {
+  runner.invalidate();
+  resetChatbotRuntime();
+});
 
 /** Chat compose (offline scope of every chat variant): ClientMessageId = outbox id, so a resend is idempotent server-side. */
 export const chatMessageSendHandler = defineDataHandler<ChatSendPayload, ChatMessageResultData | null>({

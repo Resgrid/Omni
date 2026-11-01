@@ -2,7 +2,8 @@ import { act, render, screen } from '@testing-library/react-native';
 import React from 'react';
 import { Text } from 'react-native';
 
-import { CANONICAL_ROUTES, ROUTE_KEYS } from '../canonical';
+import { loadManifest } from '../../__tests__/helpers/variants';
+import { CANONICAL_ROUTES, isRouteAvailableFor, ROUTE_KEYS } from '../canonical';
 import { defineRoutes, matchRoutePattern } from '../define-routes';
 import { buildRoutePath, createHrefBuilders, getHrefBuilders, setRouteContract, useHref } from '../href';
 import { resolveNotificationRoute } from '../notification-routes';
@@ -103,7 +104,7 @@ describe('resolveNotificationRoute (deep links)', () => {
     expect(resolveNotificationRoute({ kind: 'weatherAlert', id: 'w9' }, href)).toBe('/weather-alerts/w9');
     expect(resolveNotificationRoute({ kind: 'message', id: '7' }, href)).toBe('/messages/7');
     expect(resolveNotificationRoute({ kind: 'workOrder', id: '3' }, href)).toBe('/work-orders/3');
-    expect(resolveNotificationRoute({ kind: 'signInApproval', id: 'req' }, href)).toBe('/approve-sign-in?requestId=req');
+    expect(resolveNotificationRoute({ kind: 'signInApproval', id: 'req' }, href)).toBe('/approve-sign-in?id=req');
   });
 
   it('returns null (push modal fallback) when the variant has no screen for the target', () => {
@@ -111,5 +112,35 @@ describe('resolveNotificationRoute (deep links)', () => {
     expect(resolveNotificationRoute({ kind: 'call', id: '42' })).toBeNull();
     expect(resolveNotificationRoute({ kind: 'notification', id: '1' }, getHrefBuilders())).toBeNull();
     expect(resolveNotificationRoute({ kind: 'communicationTest', id: 't' }, getHrefBuilders())).toBeNull();
+  });
+});
+
+describe('canonical route gates', () => {
+  const manifest = (id: Parameters<typeof loadManifest>[0]) => loadManifest(id);
+
+  it('gates module, capability and field-records routes per variant (never by the variant id itself)', () => {
+    expect(isRouteAvailableFor('memberHomeCalls', manifest('responder'))).toBe(true);
+    expect(isRouteAvailableFor('memberHomeCalls', manifest('unit'))).toBe(false);
+    expect(isRouteAvailableFor('commandBoard', manifest('ic'))).toBe(true);
+    expect(isRouteAvailableFor('commandBoard', manifest('dispatch'))).toBe(false);
+    expect(isRouteAvailableFor('callCommand', manifest('dispatch'))).toBe(true);
+    expect(isRouteAvailableFor('callCommand', manifest('ic'))).toBe(false);
+    expect(isRouteAvailableFor('records', manifest('dispatch'))).toBe(true);
+    expect(isRouteAvailableFor('records', manifest('bigboard'))).toBe(false);
+    expect(isRouteAvailableFor('checklists', manifest('unit'))).toBe(true);
+    expect(isRouteAvailableFor('checklists', manifest('dispatch'))).toBe(false);
+    expect(isRouteAvailableFor('settingsOfflineMaps', manifest('ic'))).toBe(true);
+    expect(isRouteAvailableFor('settingsOfflineMaps', manifest('bigboard'))).toBe(false);
+    expect(isRouteAvailableFor('callNew', manifest('bigboard'))).toBe(false);
+    expect(isRouteAvailableFor('home', manifest('bigboard'))).toBe(true);
+  });
+
+  it('resolves static segments before ids in the new trees', () => {
+    const contract = defineRoutes(['records', 'recordDetail', 'recordDeployments', 'recordDeployment', 'certifications', 'certificationDetail', 'certificationEdit', 'callDetail', 'callCommand', 'callEdit']);
+    expect(contract.resolve('/records/deployments')).toBe('recordDeployments');
+    expect(contract.resolve('/records/deployments/9')).toBe('recordDeployment');
+    expect(contract.resolve('/records/9')).toBe('recordDetail');
+    expect(contract.resolve('/certifications/edit')).toBe('certificationEdit');
+    expect(contract.resolve('/call/5/command')).toBe('callCommand');
   });
 });

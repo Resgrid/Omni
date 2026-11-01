@@ -5,6 +5,8 @@ const { FileStore } = require('metro-cache');
 const { getSentryExpoConfig } = require('@sentry/react-native/metro');
 const { withNativewind } = require('nativewind/metro');
 
+const { syncMapLibreWorker } = require('./metro/maplibre-worker');
+
 const projectRoot = __dirname;
 const variant = process.env.APP_VARIANT || 'unit';
 
@@ -52,5 +54,9 @@ config.resolver.assetExts = [...config.resolver.assetExts, 'wasm'];
 
 // The Electron shell is a separate package and must never be bundled into the app.
 config.resolver.blockList = [/apps[\\/]desktop[\\/].*/];
+
+// maplibre-gl's web worker is a separate module Metro does not bundle: copy it into public/ before expo start serves, or
+// expo export copies, that folder (map-worker.web.ts points maplibre-gl at it).
+syncMapLibreWorker(projectRoot);
 
 module.exports = withNativewind(config, { inlineRem: 16 });

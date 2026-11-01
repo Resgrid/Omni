@@ -31,6 +31,8 @@
     "zustand": "catalog:"
   },
   "devDependencies": {
-    "@testing-library/react-native": "catalog:"
+    "@resgrid/features": "workspace:*",
+    "@testing-library/react-native": "catalog:",
+    "typescript": "catalog:"
   }
 }

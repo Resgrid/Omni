@@ -1,0 +1,11 @@
+{
+  "records.assignment_state_acknowledged": "Acknowledged",
+  "records.assignment_state_cancelled": "Cancelled",
+  "records.assignment_state_completed": "Completed",
+  "records.assignment_state_open": "Open",
+  "records.command_waiting": "Queued. Confirm it in Pending sync once you are back online; it is never sent without you.",
+  "records.discard_draft": "Discard draft",
+  "records.no_call_records": "No Records for this call yet.",
+  "records.remove_attachment": "Remove attachment",
+  "records.remove_row": "Remove row"
+}

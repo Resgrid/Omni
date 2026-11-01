@@ -41,6 +41,7 @@ export type DataOutboxType =
   | 'records.draft.save'
   | 'records.command'
   | 'workOrders.report'
+  | 'checklists.run.save'
   | 'ic';
 
 interface ScopeDefinition {
@@ -66,6 +67,7 @@ const SCOPES: Record<VariantId, ScopeDefinition> = {
       'records.draft.save',
       'records.command',
       'workOrders.report',
+      'checklists.run.save',
     ],
   },
   unit: {
@@ -84,6 +86,7 @@ const SCOPES: Record<VariantId, ScopeDefinition> = {
       'operations.expense.save',
       'records.draft.save',
       'records.command',
+      'checklists.run.save',
     ],
   },
   ic: {
@@ -94,7 +97,8 @@ const SCOPES: Record<VariantId, ScopeDefinition> = {
   dispatch: {
     hydration: ['data.calls', 'data.call-queues', 'data.units', 'data.personnel', 'data.pois', 'data.contacts', 'data.protocols', 'data.weather-alerts'],
     required: ['data.calls', 'data.units', 'data.personnel'],
-    handlers: ['calls.create', 'calls.note.add', 'checkIn.perform', 'units.status.set', 'personnel.status.set', 'chat.message.send', 'records.draft.save', 'records.command'],
+    // `ic`: Dispatch's assist tier writes to the command board through the same handlers (gated by the server's capability mask).
+    handlers: ['calls.create', 'calls.note.add', 'checkIn.perform', 'units.status.set', 'personnel.status.set', 'chat.message.send', 'records.draft.save', 'records.command', 'ic'],
   },
   bigboard: {
     // Read-only durable dashboard; widget acknowledgements belong to the dashboard module.
@@ -156,7 +160,7 @@ const handlerAllowed = (manifest: VariantManifest, type: DataOutboxType): boolea
     case 'workOrders.report':
       return modules.includes('work-orders');
     case 'ic':
-      return caps.incidentCommand === 'command';
+      return caps.incidentCommand === 'command' || caps.incidentCommand === 'assist';
     default:
       return true;
   }

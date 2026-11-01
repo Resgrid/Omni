@@ -32,6 +32,8 @@ export class UnitInfoResultData {
    */
   public CurrentStatusBaseType?: number | null;
   public CurrentStatusTimestampUtc: string = '';
+  /** Id of the current status record (unit state); a status timer acknowledgement covers exactly this record. Absent from older servers. */
+  public CurrentUnitStateId?: number | null;
   public Latitude: string = '';
   public Longitude: string = '';
   public Note: string = '';

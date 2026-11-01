@@ -75,6 +75,8 @@ export interface PendingRecordDraft {
   conflict?: FieldRecordConflictKind | null;
   /** Queued in the outbox and not yet acknowledged. */
   queued?: boolean;
+  /** The definition needs a live protected (ADP) grant: the draft stays in memory only and is never persisted. */
+  requiresProtectedGrant?: boolean;
 }
 
 export type RecordCommandKind = 'submitForReview' | 'finalize';
@@ -153,6 +155,9 @@ export const mergeRecentRecords = (existing: RecordSummaryData[], page: RecordSu
   }
   return [...merged.values()].sort((a, b) => (b.ModifiedOn ?? '').localeCompare(a.ModifiedOn ?? '')).slice(0, SYNC_TAKE);
 };
+
+/** Drafts that may be written to device storage: never one authored under a protected (ADP) grant. */
+const persistableDrafts = (drafts: Record<string, PendingRecordDraft>): Record<string, PendingRecordDraft> => Object.fromEntries(Object.entries(drafts).filter(([, draft]) => draft.requiresProtectedGrant !== true));
 
 let runner: SliceRunner<RecordsSlice, RecordsState>;
 
@@ -304,7 +309,7 @@ export const useRecordsStore = create<RecordsState>()(
     dataPersistOptions<RecordsState, Pick<RecordsData, 'pendingDrafts' | 'scopeStamp' | 'lastSyncTimestampMs'>>({
       // Frozen legacy name and shape: only the device's unsent work and the sync cursor are kept (Unit).
       name: 'records-field-storage',
-      partialize: (state) => ({ pendingDrafts: state.pendingDrafts, scopeStamp: state.scopeStamp, lastSyncTimestampMs: state.lastSyncTimestampMs }),
+      partialize: (state) => ({ pendingDrafts: persistableDrafts(state.pendingDrafts), scopeStamp: state.scopeStamp, lastSyncTimestampMs: state.lastSyncTimestampMs }),
     })
   )
 );

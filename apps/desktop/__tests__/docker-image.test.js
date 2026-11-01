@@ -187,4 +187,13 @@ describe('Dockerfile and nginx', () => {
     expect(csp).toContain("connect-src 'self' https: wss:");
     expect(csp).not.toMatch(/connect-src[^;]* http:/);
   });
+
+  it('lets MapLibre run: its module worker from the export, styles, tiles and glyphs over https, raster/sprite images', () => {
+    const directive = (name) => (new RegExp(`${name} ([^;"]+)`).exec(csp) || [null, ''])[1].split(' ');
+    expect(directive('worker-src')).toEqual(expect.arrayContaining(["'self'", 'blob:']));
+    expect(directive('connect-src')).toEqual(expect.arrayContaining(['https:', 'blob:', 'data:']));
+    expect(directive('img-src')).toEqual(expect.arrayContaining(['https:', 'blob:', 'data:']));
+    // The worker keeps a fixed name (copied by apps/omni/metro/maplibre-worker.js), so browsers revalidate it.
+    expect(nginx).toMatch(/location ~ \^\/\([^)]*maplibre-gl-worker\\\.js[^)]*\)\$ \{[^}]*no-cache/);
+  });
 });

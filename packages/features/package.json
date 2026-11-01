@@ -15,6 +15,7 @@
     "@resgrid/data": "workspace:*",
     "@resgrid/i18n": "workspace:*",
     "@resgrid/location": "workspace:*",
+    "@resgrid/maps": "workspace:*",
     "@resgrid/models": "workspace:*",
     "@resgrid/notifications": "workspace:*",
     "@resgrid/offline": "workspace:*",
@@ -29,11 +30,15 @@
     "expo-video": "catalog:",
     "expo-web-browser": "catalog:",
     "lucide-react-native": "catalog:",
+    "nativewind": "catalog:",
     "react": "catalog:",
     "react-hook-form": "catalog:",
     "react-native": "catalog:",
+    "react-native-calendars": "catalog:",
+    "react-native-gesture-handler": "catalog:",
     "react-native-reanimated": "catalog:",
     "react-native-webview": "catalog:",
+    "react-native-worklets": "catalog:",
     "zod": "catalog:",
     "zustand": "catalog:"
   },
@@ -45,10 +50,8 @@
     "countly-sdk-react-native-bridge": "catalog:",
     "expo-image": "catalog:",
     "expo-navigation-bar": "catalog:",
-    "nativewind": "catalog:",
     "react-native-edge-to-edge": "catalog:",
     "react-native-keyboard-controller": "catalog:",
-    "react-native-safe-area-context": "catalog:",
-    "react-native-worklets": "catalog:"
+    "react-native-safe-area-context": "catalog:"
   }
 }

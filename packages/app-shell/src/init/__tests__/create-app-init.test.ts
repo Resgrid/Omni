@@ -34,6 +34,25 @@ describe('createAppInit', () => {
     expect(status.completedSteps).toEqual(['first', 'a', 'b', 'c', 'last']);
   });
 
+  it('holds a step anchored to one that is not registered yet and places it when the anchor arrives', async () => {
+    const log: string[] = [];
+    const init = createAppInit({ name: 'test' });
+    // Variant registrations load before the defaults (shell-registrations is imported before configureAppShell runs).
+    init.register(step('settings', log), { after: 'offline' });
+    init.register(step('before-auth', log), { before: 'auth' });
+    expect(init.getSteps()).toEqual([]);
+
+    init.register(step('offline', log));
+    init.register(step('auth', log));
+    init.register(step('packages', log));
+    const removeLate = init.register(step('late', log), { after: 'never' });
+    removeLate();
+    init.register(step('never', log));
+
+    await init.run();
+    expect(log).toEqual(['offline', 'settings', 'before-auth', 'auth', 'packages', 'never']);
+  });
+
   it('is idempotent: completed steps never run twice and concurrent runs share one run', async () => {
     const log: string[] = [];
     const init = createAppInit({ name: 'test', steps: [step('a', log), step('b', log)] });

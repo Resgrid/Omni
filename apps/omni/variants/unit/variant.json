@@ -140,6 +140,6 @@
       "desktop": "permanent-landscape"
     },
     "sidebarContent": "unit-status",
-    "homeRoute": "/"
+    "homeRoute": "/map"
   }
 }

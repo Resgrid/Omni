@@ -9,7 +9,7 @@
 
 import sanitizeHtmlLib from 'sanitize-html';
 
-import { decodeHtmlEntitiesIfEncoded } from './html-entities';
+import { decodeHtmlEntities, decodeHtmlEntitiesIfEncoded } from './html-entities';
 
 /**
  * Checks if a URL scheme is safe (not javascript:, vbscript: or data:)
@@ -216,9 +216,12 @@ export function sanitizeDescription(input: string): string {
   return sanitizeHtmlContent(input).trim();
 }
 
-/** Plain text from HTML (all tags stripped) — for previews, list rows and accessibility labels. */
+/**
+ * Plain text from HTML (all tags stripped) — for previews, list rows and accessibility labels. sanitize-html escapes its
+ * text output (`&` → `&amp;`); the result is decoded once more because it is rendered as text, never as HTML.
+ */
 export function htmlToPlainText(html: string): string {
   if (!html) return '';
 
-  return sanitizeHtmlLib(decodeHtmlEntitiesIfEncoded(html), { allowedTags: [], allowedAttributes: {} }).trim();
+  return decodeHtmlEntities(sanitizeHtmlLib(decodeHtmlEntitiesIfEncoded(html), { allowedTags: [], allowedAttributes: {} })).trim();
 }

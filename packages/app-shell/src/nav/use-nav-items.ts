@@ -1,17 +1,16 @@
 import { featureFlagsStore, terminologyStore } from '@resgrid/auth';
 import { type FeatureModuleId, useActiveVariant } from '@resgrid/config';
-import type { LucideIcon } from 'lucide-react-native';
 import { useCallback, useMemo } from 'react';
 
 import { useShellTranslation } from '../i18n';
-import type { NavEntry, NavPlacement, NavRegistry } from './define-nav';
+import type { NavEntry, NavIcon, NavPlacement, NavRegistry } from './define-nav';
 import { filterNav, type NavFilterContext, resolveNavLabel } from './filter';
 
 export interface NavItem {
   id: string;
   href: string;
   label: string;
-  icon?: LucideIcon;
+  icon?: NavIcon;
   testID: string;
   entry: NavEntry;
 }

@@ -1,0 +1,6 @@
+{
+  "workOrders.reportNotSent": "Not sent",
+  "workOrders.reportQueued": "Saved. The report will be sent when you are back online.",
+  "workOrders.reportSent": "Report sent",
+  "workOrders.reportWaiting": "Waiting to send"
+}

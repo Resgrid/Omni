@@ -16,6 +16,7 @@ import {
   getTodaysShifts,
   getTradeCandidates,
   getWorkshiftDay,
+  getWorkshiftDays,
   removeFromShiftDay,
   requestShiftTrade,
   requestWorkshiftTrade,
@@ -25,7 +26,18 @@ import {
   signupForShiftDay,
   withdrawFromShiftDay,
 } from '@resgrid/api';
-import type { OnDutyPersonResultData, PendingApprovalsResultData, ShiftActionResult, ShiftDayResultData, ShiftErrorCode, ShiftPersonOptionResultData, ShiftResultData, ShiftTradeResultData } from '@resgrid/models';
+import {
+  type OnDutyPersonResultData,
+  type PendingApprovalsResultData,
+  type ShiftActionResult,
+  ShiftAssignmentType,
+  ShiftDayMyStatus,
+  type ShiftDayResultData,
+  type ShiftErrorCode,
+  type ShiftPersonOptionResultData,
+  type ShiftResultData,
+  type ShiftTradeResultData,
+} from '@resgrid/models';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
@@ -33,7 +45,7 @@ import { unwrapItem, unwrapList } from '../core/envelope';
 import { toDataError } from '../core/errors';
 import { dataPersistOptions, registerPersistedStore } from '../core/persist';
 import { registerDataStoreReset } from '../core/reset';
-import { getDataApiContext } from '../core/runtime';
+import { dataNow, getDataApiContext } from '../core/runtime';
 import { createSliceRunner, emptySliceMeta, type FetchOptions, type SliceMeta, type SliceRunner } from '../core/slices';
 
 /** What a shift mutation did. `errorCode` is the server `ErrorCode` (or `network` / `unknown`) when it failed (Responder). */
@@ -47,7 +59,23 @@ export interface ShiftActionOutcome {
 /** Lists a mutation can change; each is refetched after it succeeds. */
 export type ShiftRefreshScope = 'today' | 'mine' | 'calendar' | 'trades' | 'approvals' | 'onduty';
 
-type ShiftsSlice = 'shifts' | 'today' | 'mine' | 'calendar' | 'trades' | 'openTrades' | 'approvals' | 'onDuty' | 'shift' | 'shiftDay' | 'trade' | 'candidates' | 'personnelOptions';
+/** How far ahead the Sign up view looks (Responder). */
+export const SHIFT_SIGNUP_WINDOW_DAYS = 30;
+
+/** Which list a batch of static shift (workshift) days belongs to; each is fetched and kept on its own. */
+export type WorkshiftDaysSlot = 'today' | 'mine' | 'calendar';
+
+type WorkshiftSlice = 'workshiftsToday' | 'workshiftsMine' | 'workshiftsCalendar';
+
+type ShiftsSlice = 'shifts' | 'today' | 'mine' | 'calendar' | 'signup' | WorkshiftSlice | 'trades' | 'openTrades' | 'approvals' | 'onDuty' | 'shift' | 'shiftDay' | 'trade' | 'candidates' | 'personnelOptions';
+
+const WORKSHIFT_SLICES: Record<WorkshiftDaysSlot, WorkshiftSlice> = { today: 'workshiftsToday', mine: 'workshiftsMine', calendar: 'workshiftsCalendar' };
+
+/** `YYYY-MM-DD` of a device-local date, the format the date-range endpoints take. */
+const toDateParam = (date: Date): string => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+/** A day the caller can sign up for: sign-up type (static shift days are crewed, not signed up for), room for them, not already on it. */
+export const isShiftSignupCandidate = (day: ShiftDayResultData): boolean => day.CanSignup && day.MyStatus === ShiftDayMyStatus.None && day.ShiftType !== ShiftAssignmentType.Workshift;
 
 interface ShiftsData extends SliceMeta<ShiftsSlice> {
   shifts: ShiftResultData[];
@@ -55,6 +83,10 @@ interface ShiftsData extends SliceMeta<ShiftsSlice> {
   myShiftDays: ShiftDayResultData[];
   calendarDays: ShiftDayResultData[];
   calendarRange: { start: string; end: string; shiftId: string | null } | null;
+  /** Upcoming days the caller can sign up for (next `SHIFT_SIGNUP_WINDOW_DAYS`). */
+  signupDays: ShiftDayResultData[];
+  /** Static shift (workshift) days per list; screens merge them with the shift days of the same list. */
+  workshiftDays: Record<WorkshiftDaysSlot, ShiftDayResultData[]>;
   trades: ShiftTradeResultData[];
   openTrades: ShiftTradeResultData[];
   pendingApprovals: PendingApprovalsResultData | null;
@@ -72,6 +104,13 @@ export interface ShiftsState extends ShiftsData {
   fetchTodaysShifts: (options?: FetchOptions) => Promise<void>;
   fetchMyShifts: (range?: { start?: string; end?: string }, options?: FetchOptions) => Promise<void>;
   fetchShiftDaysForDateRange: (start: string, end: string, shiftId?: string | null, options?: FetchOptions) => Promise<void>;
+  /** The Sign up view: sign-up days in the next `SHIFT_SIGNUP_WINDOW_DAYS` with room for the caller. */
+  fetchSignupDays: (options?: FetchOptions) => Promise<void>;
+  /**
+   * Static shift (workshift) days for one list (`mine` keeps only days the caller crews). Older servers and departments
+   * without static shifts answer empty or fail; either way the list is empty and the shift days still show (Responder).
+   */
+  fetchWorkshiftDays: (slot: WorkshiftDaysSlot, params?: { start?: string; end?: string; mine?: boolean }, options?: FetchOptions) => Promise<void>;
   fetchShiftTrades: (options?: FetchOptions) => Promise<void>;
   fetchOpenTrades: (options?: FetchOptions) => Promise<void>;
   fetchPendingApprovals: (options?: FetchOptions) => Promise<void>;
@@ -103,6 +142,8 @@ const initialData = (): ShiftsData => ({
   myShiftDays: [],
   calendarDays: [],
   calendarRange: null,
+  signupDays: [],
+  workshiftDays: { today: [], mine: [], calendar: [] },
   trades: [],
   openTrades: [],
   pendingApprovals: null,
@@ -181,6 +222,30 @@ export const useShiftsStore = create<ShiftsState>()(
             async () => unwrapList(await getShiftDaysForDateRange(ctx(), { start, end, ...(shiftId ? { shiftId } : {}) })),
             (calendarDays) => ({ calendarDays, calendarRange: { start, end, shiftId: shiftId ?? null } }),
             { flightKey: `calendar:${start}|${end}|${shiftId ?? ''}` }
+          );
+        },
+        fetchSignupDays: async () => {
+          const from = new Date(dataNow());
+          const to = new Date(from.getFullYear(), from.getMonth(), from.getDate() + SHIFT_SIGNUP_WINDOW_DAYS);
+          await runner.run(
+            'signup',
+            async () => unwrapList(await getShiftDaysForDateRange(ctx(), { start: toDateParam(from), end: toDateParam(to) })).filter(isShiftSignupCandidate),
+            (signupDays) => ({ signupDays })
+          );
+        },
+        fetchWorkshiftDays: async (slot, params) => {
+          const query = { ...(params?.start ? { start: params.start } : {}), ...(params?.end ? { end: params.end } : {}), ...(params?.mine ? { mine: true } : {}) };
+          await runner.run(
+            WORKSHIFT_SLICES[slot],
+            async () => {
+              try {
+                return unwrapList(await getWorkshiftDays(ctx(), query)).filter((day) => day.ShiftType === ShiftAssignmentType.Workshift);
+              } catch {
+                return [];
+              }
+            },
+            (days, state) => ({ workshiftDays: { ...state.workshiftDays, [slot]: days } }),
+            { flightKey: `workshifts:${slot}:${query.start ?? ''}|${query.end ?? ''}|${query.mine ? 1 : 0}` }
           );
         },
         fetchShiftTrades: async () => {
@@ -285,10 +350,17 @@ export const useShiftsStore = create<ShiftsState>()(
         removeFromShiftDay: (shiftDayId, userId, note) => mutate(() => removeFromShiftDay(ctx(), { ShiftDayId: num(shiftDayId), UserId: userId, Note: note }), ['calendar', 'today', 'onduty']),
       };
     },
-    dataPersistOptions<ShiftsState, Pick<ShiftsData, 'shifts' | 'todaysShiftDays' | 'myShiftDays' | 'onDutyPersonnel' | 'fetchedAt'>>({
+    dataPersistOptions<ShiftsState, Pick<ShiftsData, 'shifts' | 'todaysShiftDays' | 'myShiftDays' | 'workshiftDays' | 'onDutyPersonnel' | 'fetchedAt'>>({
       name: 'omni-shifts-storage',
       // Own shifts and today's roster for offline reading (plan §8.5 Responder).
-      partialize: (state) => ({ shifts: state.shifts, todaysShiftDays: state.todaysShiftDays, myShiftDays: state.myShiftDays, onDutyPersonnel: state.onDutyPersonnel, fetchedAt: state.fetchedAt }),
+      partialize: (state) => ({
+        shifts: state.shifts,
+        todaysShiftDays: state.todaysShiftDays,
+        myShiftDays: state.myShiftDays,
+        workshiftDays: state.workshiftDays,
+        onDutyPersonnel: state.onDutyPersonnel,
+        fetchedAt: state.fetchedAt,
+      }),
     })
   )
 );

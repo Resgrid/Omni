@@ -4,6 +4,7 @@ import { isSafeRouteId } from '@resgrid/core/utils/route-ids';
 export const CHAT_ROUTE_PATTERNS = {
   list: '/chat',
   conversation: '/chat/[channelId]',
+  chatbot: '/chatbot',
 } as const;
 
 const encodeId = (id: string): string => {
@@ -14,4 +15,6 @@ const encodeId = (id: string): string => {
 export const chatRoutes = {
   list: (): string => '/chat',
   conversation: (channelId: string): string => `/chat/${encodeId(channelId)}`,
+  /** The assistant (chatbot channel); also where a chat push for the assistant channel lands. */
+  chatbot: (): string => '/chatbot',
 } as const;

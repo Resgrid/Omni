@@ -1,0 +1,20 @@
+{
+  "home.active_call.clear_active": "Clear Active Call",
+  "home.active_call.no_active_call": "No active call selected",
+  "home.active_call.view_details": "View Call Details",
+  "home.status.no_options_available": "No status options available",
+  "home.summary.active_calls": "Active Calls",
+  "home.summary.active_severe_weather_alerts": "Weather Alerts",
+  "home.summary.calls_im_on": "Calls I'm On",
+  "home.summary.pending_missed_checkins": "Check-Ins",
+  "home.tabs.call": "Call",
+  "home.tabs.staffing": "Staffing",
+  "home.tabs.status": "Status",
+  "home.user.my_status": "My Status",
+  "home.user.status_unknown": "Unknown Status",
+  "member_home.destination": "Destination",
+  "tabs.calls": "Calls",
+  "tabs.home": "Home",
+  "tabs.personnel": "People",
+  "units.title": "Units"
+}

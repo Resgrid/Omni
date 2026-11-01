@@ -83,7 +83,10 @@ export interface StepPosition {
 
 export interface AppInit {
   readonly name: string;
-  /** Adds a step (end of the list by default). Replaces a step with the same id. Returns a remover. */
+  /**
+   * Adds a step (end of the list by default). Replaces a step with the same id. A step anchored to an id that is not
+   * registered yet waits and is placed when that step is registered. Returns a remover.
+   */
   register(step: InitStep, position?: StepPosition): () => void;
   getSteps(): readonly InitStep[];
   /** Runs the remaining steps of the current generation. Resolves with the status when the run ends. */
@@ -142,6 +145,29 @@ export function createAppInit(options: AppInitOptions): AppInit {
   const now = options.now ?? Date.now;
 
   let steps: InitStep[] = [...(options.steps ?? [])];
+  // Steps anchored (before/after) to a step that is not registered yet: variant registrations load before
+  // configureAppShell registers the defaults. They are placed when the anchor arrives and never run before that.
+  let waiting: { step: InitStep; position: StepPosition }[] = [];
+
+  const place = (step: InitStep, position?: StepPosition): void => {
+    const anchorId = position?.before ?? position?.after;
+    const anchor = anchorId ? steps.findIndex((existing) => existing.id === anchorId) : -1;
+    if (anchorId && anchor === -1) {
+      waiting.push({ step, position: position ?? {} });
+      return;
+    }
+    if (anchor === -1) {
+      steps.push(step);
+    } else {
+      steps.splice(position?.before ? anchor : anchor + 1, 0, step);
+    }
+    const ready = waiting.filter((entry) => (entry.position.before ?? entry.position.after) === step.id);
+    if (ready.length > 0) {
+      waiting = waiting.filter((entry) => !ready.includes(entry));
+      ready.forEach((entry) => place(entry.step, entry.position));
+    }
+  };
+
   let generation = 0;
   let completed = new Set<string>();
   let inFlight: Promise<InitStatus> | null = null;
@@ -282,15 +308,11 @@ export function createAppInit(options: AppInitOptions): AppInit {
     name,
     register(step, position) {
       steps = steps.filter((existing) => existing.id !== step.id);
-      const anchorId = position?.before ?? position?.after;
-      const anchor = anchorId ? steps.findIndex((existing) => existing.id === anchorId) : -1;
-      if (anchor === -1) {
-        steps.push(step);
-      } else {
-        steps.splice(position?.before ? anchor : anchor + 1, 0, step);
-      }
+      waiting = waiting.filter((entry) => entry.step.id !== step.id);
+      place(step, position);
       return () => {
         steps = steps.filter((existing) => existing !== step);
+        waiting = waiting.filter((entry) => entry.step !== step);
       };
     },
     getSteps: () => steps,

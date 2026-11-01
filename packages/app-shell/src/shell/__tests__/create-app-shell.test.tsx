@@ -13,9 +13,9 @@ import { defineNav } from '../../nav/define-nav';
 import { defineRoutes } from '../../routes/define-routes';
 import { setRouteContract } from '../../routes/href';
 import { resetShellStateForTests, setShellState } from '../../runtime/shell-state';
-import { registerSidebarContent, resetShellSlotsForTests, type SidebarContentProps } from '../../runtime/slots';
+import { registerShellOverlay, registerShellProvider, registerSidebarContent, resetShellSlotsForTests, type SidebarContentProps } from '../../runtime/slots';
 import { createAppShell } from '../create-app-shell';
-import { resolveHeaderLeading } from '../header';
+import { findNavEntryForPath, isTopLevelScreen, resolveHeaderLeading } from '../header';
 import { resolveSidebarMode } from '../sidebar-mode';
 
 jest.mock('@resgrid/ui', () => ({ ...jest.requireActual('@resgrid/ui'), useFormFactor: jest.fn() }));
@@ -211,6 +211,81 @@ describe('resolveSidebarMode', () => {
   ])('%s on %s → %s', (variantId, formFactor, expected) => {
     const variant = activateVariant(variantId);
     expect(resolveSidebarMode(variant.shell, computeFormFactor(FORM_FACTORS[formFactor]))).toBe(expected);
+  });
+});
+
+describe('findNavEntryForPath', () => {
+  const detailNav = defineNav([
+    { id: 'calls', href: '/calls', placement: 'sidebar', labelKey: 'calls.title' },
+    { id: 'call-detail', href: '/call/[id]', placement: 'hidden', labelKey: 'call_detail.title' },
+    { id: 'settings', href: '/settings', placement: 'sidebar', labelKey: 'settings.title' },
+  ]);
+
+  it('matches hidden detail entries by pattern, static hrefs exactly, and falls back to the closest ancestor', () => {
+    expect(findNavEntryForPath(detailNav, '/call/42')).toEqual({ entry: detailNav.get('call-detail'), exact: true });
+    expect(findNavEntryForPath(detailNav, '/calls')?.entry.id).toBe('calls');
+    expect(findNavEntryForPath(detailNav, '/settings/storage-sync')).toEqual({ entry: detailNav.get('settings'), exact: false });
+    expect(findNavEntryForPath(detailNav, '/elsewhere')).toBeNull();
+  });
+});
+
+describe('isTopLevelScreen', () => {
+  const homeNav = defineNav([
+    { id: 'home', href: '/home', placement: 'sidebar', labelKey: 'tabs.home', nestedTabs: true },
+    { id: 'records', href: '/records', placement: 'sidebar', labelKey: 'records.title' },
+    { id: 'call-detail', href: '/call/[id]', placement: 'hidden', labelKey: 'call_detail.title' },
+  ]);
+  const topLevel = (path: string) => isTopLevelScreen(findNavEntryForPath(homeNav, path), path);
+
+  it('menu entries, the tabs of a nested tab layout and the root are top level; details and hidden entries are not', () => {
+    expect(topLevel('/')).toBe(true);
+    expect(topLevel('/home')).toBe(true);
+    expect(topLevel('/home/calls')).toBe(true);
+    expect(topLevel('/records')).toBe(true);
+    expect(topLevel('/records/12')).toBe(false);
+    expect(topLevel('/call/12')).toBe(false);
+    expect(topLevel('/elsewhere')).toBe(false);
+  });
+});
+
+describe('registered providers', () => {
+  beforeEach(async () => {
+    resetMockNavigation();
+    resetShellStateForTests();
+    resetShellSlotsForTests();
+    setShellState({ onboardingRequired: false });
+    useAuthStore.setState({ status: 'signedIn', accessToken: 'access', userId: 'user-1', authMethod: 'sso' });
+    startupInit.reset();
+    await startupInit.run();
+    sessionInit.reset();
+    await sessionInit.run();
+    setFormFactor('phone');
+  });
+
+  it('wrap the signed-in frame (header and routes), inside the gate', async () => {
+    const Marker = React.createContext('none');
+    function MarkerProbe() {
+      return <Text testID="provider-marker">{React.useContext(Marker)}</Text>;
+    }
+    registerShellProvider('marker', ({ children }) => <Marker.Provider value="mounted">{children}</Marker.Provider>);
+    registerShellOverlay('marker-probe', MarkerProbe);
+
+    await renderShell('dispatch');
+    expect(screen.getByTestId('app-shell-drawer-slot')).toBeTruthy();
+    expect(screen.getByTestId('provider-marker')).toHaveTextContent('mounted');
+  });
+
+  it('do not mount while the gate shows a sign-in screen', async () => {
+    const mounted = jest.fn();
+    registerShellProvider('marker', ({ children }) => {
+      mounted();
+      return <>{children}</>;
+    });
+    act(() => useAuthStore.setState({ status: 'signedOut', accessToken: null, userId: null }));
+
+    await renderShell('dispatch');
+    expect(screen.getByTestId('shell-gate')).toBeTruthy();
+    expect(mounted).not.toHaveBeenCalled();
   });
 });
 

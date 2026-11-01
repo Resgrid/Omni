@@ -7,6 +7,7 @@ import { callFileUploadHandler, callNoteAddHandler } from '../calls/call-write-h
 import { useCallsStore } from '../calls/calls-store';
 import { checkInPerformHandler } from '../calls/check-in-timers-store';
 import { chatMessageSendHandler, useChatStore } from '../chat/chat-store';
+import { checklistRunSaveHandler } from '../checklists/checklists-store';
 import { useContactsStore } from '../contacts/contacts-store';
 import { dataNow, getDataSessionScope } from '../core/runtime';
 import { type SliceMeta } from '../core/slices';
@@ -49,6 +50,7 @@ const HANDLERS: Record<DataOutboxType, OutboxHandler[]> = {
   'records.draft.save': [recordDraftSaveHandler as unknown as OutboxHandler],
   'records.command': [recordCommandHandler as unknown as OutboxHandler],
   'workOrders.report': [workOrderReportHandler as unknown as OutboxHandler],
+  'checklists.run.save': [checklistRunSaveHandler as unknown as OutboxHandler],
   ic: incidentCommandHandlers as unknown as OutboxHandler[],
 };
 

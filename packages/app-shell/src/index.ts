@@ -2,12 +2,17 @@
 // (omni-plan §5.4). Variant route files import only from here; features never do (layering: features are L6).
 
 // Composition
-export { configureAppShell } from './configure';
+export { configureAppShell, runBackgroundStartup } from './configure';
 export { HomePlaceholder } from './home-placeholder';
+export { HomeRoute, resolveHomeRedirect } from './home-route';
+export { useShellInboxReady } from './providers/inbox-provider';
 export { PushNotificationModalHost } from './providers/push-modal-host';
 export { RootProviders } from './providers/root-providers';
 export { RootLayout } from './root-layout';
 export { ErrorBoundary } from './root-layout';
+export { type ActiveSessionState, setActiveCallId, setActiveUnitId, useActiveCallId, useActiveSessionStore, useActiveUnitId } from './runtime/active-session';
+export { getShellApiContext, getShellOfflineRuntime } from './runtime/runtime-holder';
+export { getActiveUnitId, getSessionScope } from './runtime/session';
 export { type AppShellConfig, type AppShellOptions, getAppShellConfig } from './runtime/shell-config';
 export { SessionServices } from './session/session-services';
 
@@ -39,11 +44,16 @@ export { GATE_ORDER, type GateCheck, type GateInputs, type GateStep, resolveGate
 export { ShellGate, type ShellGateProps } from './gate/shell-gate';
 export { useGateInputs, useShellGateStep } from './gate/use-gate-step';
 export {
+  registerShellBanner,
   registerShellOverlay,
+  registerShellProvider,
   registerShellScreens,
   registerSidebarContent,
   type ShellGateScreen,
   type ShellGateScreenProps,
+  type ShellProviderComponent,
+  type ShellProviderEntry,
+  type ShellProviderOptions,
   type ShellScreenName,
   type ShellScreens,
   type SidebarContentKind,
@@ -52,8 +62,10 @@ export {
 
 // Shell
 export { createAppShell, type CreateAppShellOptions, RegistryTabs } from './shell/create-app-shell';
-export { findNavEntryForPath, type HeaderLeading, resolveHeaderLeading, ShellHeader } from './shell/header';
+export { findNavEntryForPath, type HeaderLeading, isTopLevelScreen, resolveHeaderLeading, ShellHeader } from './shell/header';
+export { RegisteredProviders } from './shell/registered-providers';
 export { type ShellContextValue, ShellProvider, useHeaderActions, useOptionalShell, useShell } from './shell/shell-context';
+export { ShellStack } from './shell/shell-stack';
 export { NavMenu } from './shell/sidebar';
 export { PANEL_SIDEBAR_WIDTH, PERMANENT_SIDEBAR_WIDTH, resolveSidebarMode, type SidebarMode } from './shell/sidebar-mode';
 

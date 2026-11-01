@@ -1,5 +1,6 @@
 import * as api from '@resgrid/api';
 import { defaultResetRegistry } from '@resgrid/offline';
+import { createTestPayloadCipher } from '@resgrid/offline/testing';
 
 import { useCalendarStore } from '../calendar/calendar-store';
 import { useCertificationsStore } from '../certifications/certifications-store';
@@ -43,6 +44,8 @@ jest.mock('@resgrid/api', () => {
     'getCustomMaps',
     'getRecordDeployments',
     'getChecklistAccess',
+    'saveChecklistRunProgress',
+    'completeChecklistRun',
     'signupForShiftDay',
     'getMyShifts',
   ]) {
@@ -317,6 +320,39 @@ describe('offline writes of the member/field modules', () => {
     expect((await usePoisStore.getState().fetchPoi(4))?.Name).toBe('Hospital');
     jest.mocked(api.getPoi).mockRejectedValue(httpError(503));
     expect((await usePoisStore.getState().fetchPoi(4, { bypassCache: true }))?.Name).toBe('Hospital');
+  });
+
+  it('checklists: run saves queue encrypted offline, drafts coalesce, and the submit replays after them', async () => {
+    const cipher = createTestPayloadCipher();
+    runtime = await createDataTestRuntime({ variant: 'unit', handlers: ALL_DATA_OUTBOX_HANDLERS, cipher });
+    runtime.connectivity.setOnline(false);
+    const run = { Id: 'run-1', Revision: 3 } as never;
+    const answers = (value: string) => ({ Revision: 3, Answers: [{ ItemId: 'i1', Value: value }] }) as never;
+    expect((await useChecklistsStore.getState().saveRun(run, answers('a'), false)).outcome).toBe('queued');
+    runtime.clock.advance(1000);
+    await useChecklistsStore.getState().saveRun(run, answers('b'), false);
+    await useChecklistsStore.getState().saveRun(run, answers('b'), true);
+    const rows = await runtime.rows();
+    expect(rows.map((row) => row.type)).toEqual(['checklists.run.save', 'checklists.run.save']);
+    expect(rows.every((row) => String(row.payloadEncoding).startsWith('cipher:'))).toBe(true);
+    expect(JSON.stringify(rows)).not.toContain('"Value":"b"');
+
+    jest.mocked(api.saveChecklistRunProgress).mockResolvedValue(ok({ Id: 'run-1', Revision: 4 }) as never);
+    jest.mocked(api.completeChecklistRun).mockResolvedValue(ok({ Id: 'run-1', Revision: 5 }) as never);
+    runtime.connectivity.setOnline(true);
+    await runtime.outbox.drain();
+    await flush();
+    expect(jest.mocked(api.saveChecklistRunProgress)).toHaveBeenCalledTimes(1);
+    expect(jest.mocked(api.saveChecklistRunProgress).mock.calls[0][1]).toEqual({ Id: 'run-1', Input: answers('b') });
+    expect(jest.mocked(api.saveChecklistRunProgress).mock.invocationCallOrder[0]).toBeLessThan(jest.mocked(api.completeChecklistRun).mock.invocationCallOrder[0]);
+    expect(useChecklistsStore.getState().runsById['run-1']).toEqual({ Id: 'run-1', Revision: 5 });
+  });
+
+  it('checklists: without a payload cipher (web) a run save goes online only and never touches the outbox', async () => {
+    jest.mocked(api.completeChecklistRun).mockResolvedValue(ok({ Id: 'run-2', Revision: 2 }) as never);
+    const result = await useChecklistsStore.getState().saveRun({ Id: 'run-2', Revision: 1 } as never, { Revision: 1, Answers: [] } as never, true);
+    expect(result).toEqual({ outcome: 'sent', run: { Id: 'run-2', Revision: 2 } });
+    expect(await runtime.rows()).toEqual([]);
   });
 
   it('checklists: access is persisted, run contents are not', async () => {

@@ -26,6 +26,7 @@ import * as WebBrowser from 'expo-web-browser';
 
 import { registerNavigationWithSentry } from '../deep-links/navigation';
 import { resolveNotificationRoute } from '../routes/notification-routes';
+import { loadActiveSession, resetActiveSession } from '../runtime/active-session';
 import { createApiCacheBridge } from '../runtime/api-cache-bridge';
 import { createLegacyKeyProvider } from '../runtime/legacy-keys';
 import { getOrCreateDeviceUuid, isThemeMode, readStoredBoolean } from '../runtime/preferences';
@@ -113,6 +114,7 @@ function registerTeardowns(): void {
     registerSignOutHook(({ accessToken }) => pushNotificationService.unregisterAtSignOut(accessToken)),
     defaultResetRegistry.registerTeardown('notifications', () => pushNotificationService.clearLocalState()),
     defaultResetRegistry.registerStoreReset('app-shell.session', () => resetShellSessionState()),
+    defaultResetRegistry.registerStoreReset('app-shell.active-session', () => resetActiveSession()),
   ];
   registerSharedSessionRealtimeControls({ stop: () => useRealtimeStore.getState().disconnectAll(), resume: () => useRealtimeStore.getState().connectAll() });
 }
@@ -164,6 +166,7 @@ export function createStartupSteps(config: AppShellConfig): InitStep[] {
         }
         const theme = readLegacyString(main, CONTRACT_KEYS.selectedTheme);
         setShellState({ themeMode: isThemeMode(theme) ? theme : 'system', onboardingRequired: readStoredBoolean(main, CONTRACT_KEYS.isFirstTime) !== false });
+        loadActiveSession();
       },
     },
     {

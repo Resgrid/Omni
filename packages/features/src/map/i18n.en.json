@@ -1,0 +1,16 @@
+{
+  "map.view_unit_details": "View Unit Details",
+  "map.view_personnel_details": "View Member Details",
+  "map.current_call": "Current call",
+  "map.your_unit": "Your unit",
+  "map.focus_not_found": "Not on the map",
+  "map.loading_markers": "Loading map…",
+  "map.kind_call": "Call",
+  "map.kind_unit": "Unit",
+  "map.kind_personnel": "Member",
+  "map.kind_poi": "Point of interest",
+  "map.kind_other": "Map pin",
+  "map.layer_stations": "Stations",
+  "map.layer_pois": "Points of interest",
+  "map.layer_hydrants": "Hydrants"
+}

@@ -3,7 +3,8 @@ import { MapIcon, MessageCircleIcon, SettingsIcon } from 'lucide-react-native';
 
 import { loadManifest } from '../../__tests__/helpers/variants';
 import { defineNav, navRouteName } from '../define-nav';
-import { buildTabScreens, filterNav, findUnregisteredRoutes, type NavFilterContext, resolveNavLabel } from '../filter';
+import { featureNav } from '../feature-nav';
+import { buildTabScreens, filterNav, findUnregisteredRoutes, isNavEntryAvailable, type NavFilterContext, resolveNavLabel } from '../filter';
 
 const unit = loadManifest('unit');
 
@@ -136,5 +137,64 @@ describe('buildTabScreens', () => {
 describe('findUnregisteredRoutes', () => {
   it('reports (app) routes without a registry entry, ignoring special routes', () => {
     expect(findUnregisteredRoutes(['index', 'settings', 'orphan', '+not-found', '_sitemap'], nav.entries)).toEqual(['orphan']);
+  });
+});
+
+describe('featureNav', () => {
+  const Icon = () => null;
+  // The three feature shapes: calls (route/titleKey/isAvailable), units-style (NavEntry minus placement), settings-style
+  // (placement decided per manifest).
+  const callsShape = [
+    { id: 'calls', route: 'calls', titleKey: 'calls.title', termKey: 'module.calls', icon: Icon },
+    { id: 'call-new', route: 'call/new', titleKey: 'calls.new_call', icon: Icon, isAvailable: (caps: Capabilities) => caps.calls.create !== 'none' },
+  ];
+  const unitsShape = [{ id: 'units', href: '/units', labelKey: 'units.title', defaultLabel: 'Units', termKey: 'module.units', icon: Icon, requiresFlag: 'Units.Flag' }];
+  const settingsShape = [
+    { id: 'settings', href: '/settings', titleKey: 'settings.title', icon: Icon, order: 900, placement: (m: typeof unit) => (m.shell.kind === 'tabs' ? ('tab' as const) : ('sidebar' as const)) },
+    { id: 'approve', href: '/approve-sign-in', titleKey: 'mfa.approve.title', icon: Icon, order: 920, placement: (m: typeof unit) => (m.capabilities.push.approveSignIns ? ('hidden' as const) : null) },
+  ];
+
+  it('maps route/titleKey/isAvailable onto href/labelKey/requiresCapability with the given placement and order', () => {
+    const entries = featureNav(callsShape, { calls: 'tab', 'call-new': 'hidden' }, { order: 10 });
+    expect(entries.map((entry) => [entry.id, entry.href, entry.placement, entry.labelKey, entry.order])).toEqual([
+      ['calls', '/calls', 'tab', 'calls.title', 10],
+      ['call-new', '/call/new', 'hidden', 'calls.new_call', 10],
+    ]);
+    expect(entries[0].termKey).toBe('module.calls');
+    expect(entries[1].requiresCapability?.(unit.capabilities)).toBe(true);
+  });
+
+  it('keeps requiresModule, so the menu hides an entry for a module the variant does not ship', () => {
+    const [shifts] = featureNav([{ id: 'shifts', href: '/shifts', labelKey: 'shifts.title', requiresModule: 'shifts' as const }], 'sidebar');
+    expect(shifts.requiresModule).toBe('shifts');
+    expect(isNavEntryAvailable(shifts, contextFor({}))).toBe(false);
+    expect(isNavEntryAvailable(shifts, contextFor({}, { hasModule: () => true }))).toBe(true);
+  });
+
+  it('applies one placement to every entry and keeps the NavEntry fields', () => {
+    const [units] = featureNav(unitsShape, 'sidebar', { overrides: { units: { testID: 'units-menu' } } });
+    expect(units).toEqual(expect.objectContaining({ id: 'units', href: '/units', placement: 'sidebar', labelKey: 'units.title', defaultLabel: 'Units', requiresFlag: 'Units.Flag', testID: 'units-menu' }));
+  });
+
+  it('leaves out entries a per-id placement does not list (or lists as null)', () => {
+    expect(featureNav(callsShape, { calls: 'sidebar' }).map((entry) => entry.id)).toEqual(['calls']);
+    expect(featureNav(callsShape, { calls: null, 'call-new': 'hidden' }).map((entry) => entry.id)).toEqual(['call-new']);
+  });
+
+  it("lets entries that decide their own placement read the manifest (null drops them); an entry's order wins", () => {
+    const forUnit = featureNav(settingsShape, unit, { order: 5 });
+    expect(forUnit.map((entry) => [entry.id, entry.placement, entry.order])).toEqual([['settings', 'tab', 900]]);
+    const responder = loadManifest('responder');
+    expect(featureNav(settingsShape, responder).map((entry) => [entry.id, entry.placement])).toEqual([
+      ['settings', 'sidebar'],
+      ['approve', 'hidden'],
+    ]);
+  });
+
+  it('feeds defineNav (the registry still validates the result)', () => {
+    const registry = defineNav([...featureNav(callsShape, 'sidebar'), ...featureNav(unitsShape, 'sidebar')]);
+    expect(registry.findByHref('/call/new')?.id).toBe('call-new');
+    expect(() => featureNav([{ id: 'broken', titleKey: 'x' }], 'sidebar')).toThrow(/neither href nor route/);
+    expect(() => featureNav([{ id: 'broken', href: '/x' }], 'sidebar')).toThrow(/neither labelKey nor titleKey/);
   });
 });

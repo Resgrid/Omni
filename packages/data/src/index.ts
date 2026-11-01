@@ -134,6 +134,7 @@ export {
   usePersonnelStatusStore,
 } from './personnel/personnel-status-store';
 export { isStationGroup, personnelFullName, type PersonnelState, usePersonnelStore } from './personnel/personnel-store';
+export { type UnitAlertAcknowledgementOutcome, type UnitStatusAlertsState, useUnitStatusAlertsStore } from './unit-status-alerts/unit-status-alerts-store';
 export { type UnitRolesState, useUnitRolesStore } from './units/unit-roles-store';
 export {
   isNoCallSentinel,
@@ -154,7 +155,7 @@ export { selectUnitById, selectUnitCurrentStatus, type UnitsState, useUnitsStore
 // Reference and department data
 export { CalendarAttendingType, type CalendarState, useCalendarStore } from './calendar/calendar-store';
 export { type CertificationsState, useCertificationsStore } from './certifications/certifications-store';
-export { type ChecklistsState, useChecklistsStore } from './checklists/checklists-store';
+export { CHECKLIST_RUN_SAVE_EVENT, checklistRunSaveHandler, type ChecklistRunSaveOutcome, type ChecklistRunSavePayload, type ChecklistsState, useChecklistsStore } from './checklists/checklists-store';
 export { type ContactsState, useContactsStore } from './contacts/contacts-store';
 export { type CustomMapsState, useCustomMapsStore } from './mapping/custom-maps-store';
 export { type NotesState, searchNotes, useNotesStore } from './notes/notes-store';
@@ -176,11 +177,16 @@ export {
 export {
   CHAT_MESSAGE_SEND_EVENT,
   CHAT_PAGE_SIZE,
+  CHATBOT_REPLY_POLL_MS,
+  CHATBOT_TYPING_TIMEOUT_MS,
+  type ChatbotSendResult,
   chatMessageSendHandler,
   type ChatSendArgs,
   type ChatSendPayload,
   type ChatState,
   type IncidentChannelsStatus,
+  isChatbotReply,
+  parseChatEventPayload,
   PENDING_SEQ_BASE,
   selectChatUnreadTotal,
   upsertChatMessage,
@@ -193,6 +199,7 @@ export { type ShiftActionOutcome, type ShiftRefreshScope, type ShiftsState, toSh
 export { useWorkOrdersStore, WORK_ORDER_REPORT_EVENT, workOrderReportHandler, type WorkOrdersState } from './work-orders/work-orders-store';
 
 // Field modules
+export { type CalOesMarsState, selectMarsItemsForDeployment, useCalOesMarsStore } from './cal-oes-mars/cal-oes-mars-store';
 export { INVENTORY_COUNT_SAVE_EVENT, inventoryCountCoalesceKey, inventoryCountSaveHandler, type InventoryCountSavePayload, type InventoryState, useInventoryStore } from './inventory/inventory-store';
 export {
   EXPENSE_SAVE_EVENT,
@@ -257,4 +264,11 @@ export {
   useCommandStore,
   withPendingLocalRows,
 } from './incident-command/command-store';
+export { type CommandSupportState, useCommandSupportStore } from './incident-command/command-support-store';
 export { type AssistantMessage, type IncidentAssistantState, type ResourceViewState, useIncidentAssistantStore, useResourceViewStore } from './incident-command/resource-view-store';
+
+// Dispatch modules (run cards, awaiting resources, call queues, console map)
+export * from './awaiting-resources';
+export * from './call-queues';
+export * from './map-markers';
+export * from './run-cards';

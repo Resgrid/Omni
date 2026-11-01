@@ -47,6 +47,14 @@ describe('per-variant offline scope (plan §8.5)', () => {
     expect(scope.handlers).toEqual(expect.arrayContaining(['calls.create', 'calls.note.add', 'units.status.set', 'personnel.status.set', 'checkIn.perform']));
   });
 
+  it('Dispatch: the assist tier queues command board writes; checklist runs stay with Responder and Unit', () => {
+    expect(resolveDataOfflineScope(manifest('dispatch')).handlers).toContain('ic');
+    expect(resolveDataOfflineScope(manifest('dispatch')).handlers).not.toContain('checklists.run.save');
+    expect(resolveDataOfflineScope(manifest('responder')).handlers).toContain('checklists.run.save');
+    expect(resolveDataOfflineScope(manifest('unit')).handlers).toContain('checklists.run.save');
+    expect(resolveDataOfflineScope(manifest('bigboard')).handlers).not.toContain('ic');
+  });
+
   it('BigBoard: read-only working set, no write handlers', () => {
     const scope = resolveDataOfflineScope(manifest('bigboard'));
     expect(scope.handlers).toEqual([]);

@@ -47,7 +47,7 @@ export const getWorkOrderFile = (ctx: ApiContext, params: { id: string }, option
 /** `GET /WorkOrders/GetWorkOrders` — legacy: R. */
 export const getWorkOrders = (
   ctx: ApiContext,
-  params: { ChecklistCompletionId: string; Page?: number | string; Status?: string; Priority?: string; AssignedToMe?: boolean; UnitId?: number | string; GroupId?: number | string; AssetId?: string; Number?: string },
+  params: { ChecklistCompletionId?: string; Page?: number | string; Status?: string; Priority?: string; AssignedToMe?: boolean; UnitId?: number | string; GroupId?: number | string; AssetId?: string; Number?: string },
   options?: RequestOptions
 ): Promise<WorkOrderApiResult<WorkOrderPage>> => request<WorkOrderApiResult<WorkOrderPage>>(ctx, E.getWorkOrders, { params }, options);
 

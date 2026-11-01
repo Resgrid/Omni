@@ -12,6 +12,7 @@ import {
   getRoutePlans,
   getRoutePlansForUnit,
   getRouteProgress,
+  getStopContact,
   getStopsForInstance,
   getUnacknowledgedDeviations,
   pauseRoute,
@@ -28,6 +29,7 @@ import type {
   RoutePlanDetailResultData,
   RoutePlanResultData,
   RouteProgressResultData,
+  RouteStopContactResultData,
   RouteStopWithDetailsResultData,
   SaveRoutePlanResult,
 } from '@resgrid/models';
@@ -74,7 +76,13 @@ export interface RouteStopWritePayload {
   at: number;
 }
 
-type RoutesSlice = 'plans' | 'plan' | 'active' | 'progress' | 'stops' | 'directions' | 'deviations' | 'history';
+/** A past (or another unit's) route instance, read for the history screens without touching the live route. */
+export interface RouteInstanceDetail {
+  progress: RouteProgressResultData | null;
+  stops: RouteStopWithDetailsResultData[];
+}
+
+type RoutesSlice = 'plans' | 'plan' | 'active' | 'progress' | 'stops' | 'directions' | 'deviations' | 'history' | 'stopContact' | 'instanceDetail';
 
 interface RoutesData extends SliceMeta<RoutesSlice> {
   routePlans: RoutePlanResultData[];
@@ -88,6 +96,10 @@ interface RoutesData extends SliceMeta<RoutesSlice> {
   directions: RouteDirectionsResultData | null;
   deviations: RouteDeviationResultData[];
   routeHistory: RouteInstanceResultData[];
+  /** Stop contacts by plan stop id (Unit offline scope: contacts of the route's stops). */
+  stopContactsById: Record<string, RouteStopContactResultData>;
+  /** History instance details by instance id (online reads; never persisted). */
+  instanceDetailsById: Record<string, RouteInstanceDetail>;
   isTracking: boolean;
   actionError: DataError | null;
 }
@@ -118,6 +130,10 @@ export interface RoutesState extends RoutesData {
   fetchDeviations: () => Promise<void>;
   ackDeviation: (deviationId: string) => Promise<boolean>;
   fetchRouteHistory: (routePlanId: string) => Promise<void>;
+  /** A stop's contact (`GetStopContact/{routeStopId}` — the plan stop id, not the instance stop id). Cached copy offline. */
+  fetchStopContact: (routeStopId: string, options?: FetchOptions) => Promise<RouteStopContactResultData | null>;
+  /** A history instance (progress + stops) without replacing the live route's state. */
+  fetchInstanceDetail: (instanceId: string, options?: FetchOptions) => Promise<RouteInstanceDetail | null>;
   clearActiveRoute: () => void;
   applyStopStatus: (routeInstanceStopId: string, status: number, at: number | null, patch?: Partial<RouteInstanceStopResultData>) => void;
 }
@@ -133,6 +149,8 @@ const initialData = (): RoutesData => ({
   directions: null,
   deviations: [],
   routeHistory: [],
+  stopContactsById: {},
+  instanceDetailsById: {},
   isTracking: false,
   actionError: null,
 });
@@ -165,6 +183,25 @@ const positionOrFix = (location?: DataLocationFix | null): { latitude: number; l
 
 const stopStatusOf = (state: RoutesData, routeInstanceStopId: string): number =>
   state.instanceStops.find((stop) => stop.RouteInstanceStopId === routeInstanceStopId)?.Status ?? state.stopDetails.find((stop) => stop.RouteInstanceStopId === routeInstanceStopId)?.Status ?? RouteStopStatus.Pending;
+
+/** Retention for cached stop contacts (plan §8.2a): the newest this many, oldest dropped first. */
+export const STOP_CONTACTS_MAX = 200;
+/** History instance details kept in memory (not persisted). */
+export const INSTANCE_DETAILS_MAX = 20;
+
+const withoutKey = <T>(record: Record<string, T>, key: string): Record<string, T> => {
+  if (!(key in record)) return record;
+  const copy = { ...record };
+  delete copy[key];
+  return copy;
+};
+
+/** Keeps the last `max` entries in insertion order (newest last). */
+const keepNewest = <T>(record: Record<string, T>, max: number): Record<string, T> => {
+  const keys = Object.keys(record);
+  if (keys.length <= max) return record;
+  return Object.fromEntries(keys.slice(keys.length - max).map((key) => [key, record[key]]));
+};
 
 class MissingPositionError extends Error {
   constructor() {
@@ -334,6 +371,29 @@ export const useRoutesStore = create<RoutesState>()(
             { flightKey: `history:${routePlanId}` }
           );
         },
+        fetchStopContact: async (routeStopId, options) => {
+          const cached = get().stopContactsById[routeStopId];
+          if (cached && !options?.bypassCache) return cached;
+          const result = await runner.run(
+            'stopContact',
+            async () => unwrapItem(await getStopContact(ctx(), { routeStopId })),
+            (contact, state) => (contact ? { stopContactsById: keepNewest({ ...withoutKey(state.stopContactsById, routeStopId), [routeStopId]: contact }, STOP_CONTACTS_MAX) } : {}),
+            { flightKey: `stopContact:${routeStopId}` }
+          );
+          return result.ok ? (result.value ?? cached ?? null) : (cached ?? null);
+        },
+        fetchInstanceDetail: async (instanceId) => {
+          const result = await runner.run(
+            'instanceDetail',
+            async (): Promise<RouteInstanceDetail> => {
+              const [progressResult, stopsResult] = await Promise.all([getRouteProgress(ctx(), { instanceId }), getStopsForInstance(ctx(), { instanceId })]);
+              return { progress: unwrapItem(progressResult), stops: unwrapList(stopsResult) };
+            },
+            (detail, state) => ({ instanceDetailsById: keepNewest({ ...withoutKey(state.instanceDetailsById, instanceId), [instanceId]: detail }, INSTANCE_DETAILS_MAX) }),
+            { flightKey: `instanceDetail:${instanceId}` }
+          );
+          return result.ok ? result.value : (get().instanceDetailsById[instanceId] ?? null);
+        },
 
         clearActiveRoute: () => set(clearedRoute()),
 
@@ -353,8 +413,8 @@ export const useRoutesStore = create<RoutesState>()(
           }),
       };
     },
-    dataPersistOptions<RoutesState, Pick<RoutesData, 'routePlans' | 'activePlan' | 'activeInstance' | 'progress' | 'instanceStops' | 'stopDetails' | 'isTracking' | 'fetchedAt'>>({
-      // Unit offline scope: routes + the active instance (plan §8.5).
+    dataPersistOptions<RoutesState, Pick<RoutesData, 'routePlans' | 'activePlan' | 'activeInstance' | 'progress' | 'instanceStops' | 'stopDetails' | 'stopContactsById' | 'isTracking' | 'fetchedAt'>>({
+      // Unit offline scope: routes + the active instance + its stop contacts (plan §8.5).
       name: 'omni-routes-storage',
       partialize: (state) => ({
         routePlans: state.routePlans,
@@ -363,6 +423,7 @@ export const useRoutesStore = create<RoutesState>()(
         progress: state.progress,
         instanceStops: state.instanceStops,
         stopDetails: state.stopDetails,
+        stopContactsById: state.stopContactsById,
         isTracking: state.isTracking,
         fetchedAt: state.fetchedAt,
       }),

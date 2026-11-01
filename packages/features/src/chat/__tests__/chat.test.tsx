@@ -3,7 +3,7 @@ import '../../status/__tests__/test-setup';
 import { featureFlagsStore, securityStore, useAuthStore } from '@resgrid/auth';
 import { useChatStore, usePersonnelStore } from '@resgrid/data';
 import { type ChatChannelResultData, ChatChannelType, type ChatMessageResultData, type DepartmentRightsResultData, type PersonnelInfoResultData } from '@resgrid/models';
-import { useRealtimeStore } from '@resgrid/realtime';
+import { emitRealtimeEvent, signalRService, useRealtimeStore } from '@resgrid/realtime';
 import { GluestackUIProvider, useToastStore } from '@resgrid/ui';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { router, useFocusEffect } from 'expo-router';
@@ -160,6 +160,23 @@ describe('ChatConversationScreen', () => {
     useRealtimeStore.setState({ activeChatChannel: { channelId: 'c1', asUnitId: null } });
     unmount();
     expect(setActiveChatChannel).toHaveBeenLastCalledWith(null);
+  });
+
+  it('joins the channel group (as the unit when acting as one) and rejoins after a chat hub reconnect', () => {
+    const invoke = jest.spyOn(signalRService, 'invoke').mockResolvedValue(undefined);
+    try {
+      render(
+        <ChatIdentityProvider asUnitId={7}>
+          <ChatConversationScreen channelId="c1" />
+        </ChatIdentityProvider>
+      );
+      expect(invoke).toHaveBeenCalledWith(expect.any(String), 'JoinChannel', 'c1', 7);
+      invoke.mockClear();
+      act(() => emitRealtimeEvent('chatHubJoined', { hub: 'chat', rejoin: true, at: 1 }));
+      expect(invoke).toHaveBeenCalledWith(expect.any(String), 'JoinChannel', 'c1', 7);
+    } finally {
+      invoke.mockRestore();
+    }
   });
 
   it('passes the unit identity to SetActiveChannel and sends (Unit)', async () => {

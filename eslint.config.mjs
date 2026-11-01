@@ -22,6 +22,8 @@ export default [
       'apps/omni/android/**',
       'apps/omni/expo-env.d.ts',
       'apps/omni/*-env.d.ts',
+      // Copied from maplibre-gl by metro.config.js on every Metro start (git-ignored).
+      'apps/omni/public/maplibre-gl-worker.js',
       'apps/desktop/out/**',
       'apps/desktop/release/**',
       '.claude/**',

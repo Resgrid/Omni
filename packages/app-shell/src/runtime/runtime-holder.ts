@@ -16,6 +16,12 @@ export function setShellRuntime(patch: Partial<ShellRuntime>): void {
   runtime = { ...runtime, ...patch };
 }
 
+/** The API context once startup restored auth, else null (app-layer providers read it inside the gate). */
+export const getShellApiContext = (): ApiContext | null => runtime.auth?.context ?? null;
+
+/** The offline runtime once startup opened storage, else null (Settings → Storage & sync, app-layer composition). */
+export const getShellOfflineRuntime = (): OfflineRuntime | null => runtime.offline;
+
 /** The authenticated API context; throws before the auth step ran (a step order bug, not a user error). */
 export function requireApiContext(): ApiContext {
   const context = runtime.auth?.context;

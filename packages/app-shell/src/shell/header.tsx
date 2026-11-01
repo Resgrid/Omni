@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useShellTranslation } from '../i18n';
 import { type NavEntry, type NavRegistry, normalizeHref } from '../nav/define-nav';
 import { useNavLabel } from '../nav/use-nav-items';
+import { matchRoutePattern } from '../routes/define-routes';
 import { useHref } from '../routes/href';
 import { useShellStore } from '../runtime/shell-state';
 import { useHeaderActionsNode, useShell } from './shell-context';
@@ -26,10 +27,15 @@ export function resolveHeaderLeading(input: { isTopLevel: boolean; canGoBack: bo
   return input.sidebarMode === 'permanent' ? 'none' : 'menu';
 }
 
-/** The nav entry for a path: its own entry, else the closest ancestor entry (`/calls/12` → Calls). */
+const isPatternHref = (href: string): boolean => href.includes('[');
+
+/**
+ * The nav entry for a path: its own entry (a static href, or a hidden detail entry whose pattern matches: `/call/12` →
+ * `/call/[id]`), else the closest ancestor entry (`/calls/12` → Calls).
+ */
 export function findNavEntryForPath(nav: NavRegistry, pathname: string): { entry: NavEntry; exact: boolean } | null {
   const path = normalizeHref(pathname);
-  const exact = nav.findByHref(path);
+  const exact = nav.findByHref(path) ?? nav.entries.find((entry) => isPatternHref(entry.href) && matchRoutePattern(entry.href, path));
   if (exact) {
     return { entry: exact, exact: true };
   }
@@ -41,6 +47,18 @@ export function findNavEntryForPath(nav: NavRegistry, pathname: string): { entry
     }
   }
   return best ? { entry: best, exact: false } : null;
+}
+
+/**
+ * Whether a path is a top-level screen (menu button) rather than one reached from another screen (back button): a menu
+ * or tab entry's own path, a tab of a nested tab layout (`nestedTabs`), or the root. Hidden entries (details, account
+ * security) are always reached from somewhere else.
+ */
+export function isTopLevelScreen(match: { entry: NavEntry; exact: boolean } | null, pathname: string): boolean {
+  if (normalizeHref(pathname) === '/') {
+    return true;
+  }
+  return match !== null && match.entry.placement !== 'hidden' && (match.exact || match.entry.nestedTabs === true);
 }
 
 function PendingChangesIndicator() {
@@ -93,7 +111,7 @@ export function ShellHeader({ nav }: ShellHeaderProps) {
   const actions = useHeaderActionsNode();
 
   const match = findNavEntryForPath(nav, pathname);
-  const isTopLevel = match?.exact === true || normalizeHref(pathname) === '/';
+  const isTopLevel = isTopLevelScreen(match, pathname);
   const leading = resolveHeaderLeading({ isTopLevel, canGoBack: router.canGoBack(), sidebarMode: shell.sidebarMode });
   const title = match ? label(match.entry) : tk('app.title', shell.variant.identity.name, { appName: shell.variant.identity.name });
 
