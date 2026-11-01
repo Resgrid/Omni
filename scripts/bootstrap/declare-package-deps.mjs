@@ -18,7 +18,7 @@ const catalog = new Set(
 );
 
 const builtins = new Set(['fs', 'path', 'os', 'crypto', 'url', 'util', 'events', 'stream', 'child_process', 'module', 'http', 'https', 'zlib', 'assert', 'buffer', 'net', 'tls', 'worker_threads', 'perf_hooks', 'timers']);
-const packages = ['core', 'i18n', 'models', 'api', 'offline', 'auth', 'data', 'realtime', 'notifications', 'location', 'voice', 'ui'];
+const packages = ['core', 'i18n', 'models', 'api', 'offline', 'auth', 'data', 'realtime', 'notifications', 'location', 'voice', 'ui', 'maps', 'app-shell', 'features'];
 
 const walk = (dir, out = []) => {
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {

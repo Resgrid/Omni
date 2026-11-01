@@ -1,0 +1,10 @@
+{
+  "chat.conversation_not_found": "Conversation not found",
+  "chat.message_actions_hint": "Long press for message actions",
+  "chat.no_messages": "No messages yet",
+  "chat.read_only": "This conversation is read-only",
+  "chat.search_conversations": "Search conversations",
+  "chat.send_failed": "Not sent",
+  "chat.start_conversation": "Start conversation",
+  "chat.unread_count": "{{count}} unread"
+}

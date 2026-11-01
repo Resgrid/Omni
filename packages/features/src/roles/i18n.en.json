@@ -1,0 +1,9 @@
+{
+  "roles.assigned_elsewhere": "In another seat",
+  "roles.no_people": "No people found",
+  "roles.no_roles": "This unit has no crew seats",
+  "roles.not_qualified": "Not qualified",
+  "roles.saved_successfully": "Role assignments saved",
+  "roles.search_people": "Search people",
+  "roles.tap_to_assign": "Tap to assign someone to {{role}}"
+}

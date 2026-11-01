@@ -113,7 +113,8 @@
     "take_photo": "Take Photo",
     "title": "Call Images",
     "upload": "Upload",
-    "upload_error": "Failed to upload image. Please try again."
+    "upload_error": "Failed to upload image. Please try again.",
+    "queued": "Image saved on this device. It uploads when the connection returns."
   },
   "callNotes": {
     "addNote": "Add Note",
@@ -123,7 +124,12 @@
     "noNotesFound": "No notes found",
     "noSearchResults": "No notes match your search",
     "searchPlaceholder": "Search notes...",
-    "title": "Call Notes"
+    "title": "Call Notes",
+    "queued": "Note saved on this device. It is sent when the connection returns.",
+    "queued_marker": "Queued",
+    "rejected": "The server did not accept this note. Review it in Pending sync.",
+    "rejected_marker": "Not accepted",
+    "save_error": "Could not save the note"
   },
   "call_detail": {
     "activity_link": {
@@ -179,7 +185,8 @@
       "title": "Call Files",
       "upload": "Upload",
       "upload_error": "Error uploading file",
-      "uploading": "Uploading..."
+      "uploading": "Uploading...",
+      "queued": "File saved on this device. It uploads when the connection returns."
     },
     "group": "Group",
     "images": "Images",
@@ -212,14 +219,19 @@
       "protocols": "Protocols",
       "site": "Site Info",
       "timeline": "Activity",
-      "video": "Video"
+      "video": "Video",
+      "notes": "Notes & files"
     },
     "timestamp": "Timestamp",
     "title": "Call Details",
     "type": "Type",
     "unit": "Unit",
     "update_call_error": "Failed to update call",
-    "update_call_success": "Call updated successfully"
+    "update_call_success": "Call updated successfully",
+    "info": {
+      "dispatched_on": "Dispatched",
+      "logged_on": "Logged"
+    }
   },
   "calls": {
     "address": "Address",
@@ -240,7 +252,8 @@
     "contact_phone": "Contact Phone",
     "contact_phone_placeholder": "Enter the phone of the contact",
     "contact_picker": {
-      "linked": "Linked contact: {{name}}"
+      "linked": "Linked contact: {{name}}",
+      "select": "Select Contact"
     },
     "coordinates": "GPS Coordinates",
     "coordinates_found": "Coordinates found and address updated",
@@ -343,7 +356,99 @@
     "what3words_invalid_format": "Invalid what3words format. Please use format: word.word.word",
     "what3words_not_found": "what3words address not found, please try a different address",
     "what3words_placeholder": "Enter what3words address (e.g., filled.count.soap)",
-    "what3words_required": "Please enter a what3words address to search"
+    "what3words_required": "Please enter a what3words address to search",
+    "card": {
+      "assigned_to_me": "Assigned to me",
+      "open_hint": "Opens the call details",
+      "timers_attention": "Check-ins: {{overdue}} overdue, {{warning}} due soon"
+    },
+    "close": {
+      "blocked_by_command": "This call has an active incident command. Close the incident command first, then close the call.",
+      "blocked_title": "Incident command is still active"
+    },
+    "create_not_allowed": "You can't create calls",
+    "create_not_allowed_description": "Creating calls is not available in this app or for your account.",
+    "custom_fields": "Custom Fields",
+    "dispatch": {
+      "none_pages_everyone": "No one selected — everyone available will be paged"
+    },
+    "edit": {
+      "offline": "Editing a call needs a connection. Your changes have not been saved."
+    },
+    "filters": {
+      "priority": "Filter by priority"
+    },
+    "linked": {
+      "clear": "Remove linked call"
+    },
+    "menu": {
+      "open": "Call actions"
+    },
+    "offline": {
+      "form_banner": "You're offline. This call will be saved on this device and sent when the connection returns. Nobody is paged until then.",
+      "list_banner": "You're offline. Showing the calls saved on this device.",
+      "list_banner_queued": "You're offline. {{count}} call(s) are queued on this device and have not been dispatched yet.",
+      "no_geocoding": "Address search is unavailable offline. Enter coordinates, pick a POI or contact, or type the address."
+    },
+    "priorities": {
+      "emergency": "Emergency",
+      "high": "High",
+      "low": "Low",
+      "medium": "Medium"
+    },
+    "protocols": {
+      "select": "Select Protocols",
+      "selected_count": "{{count}} selected"
+    },
+    "queued": {
+      "badge": "Queued — not dispatched yet",
+      "correct": "Correct and resend",
+      "correct_title": "Correct Queued Call",
+      "correction_failed": "Could not resend the call. Try again from Pending sync.",
+      "created_offline": "Saved on this device. Queued — not dispatched yet. It is sent when the connection returns.",
+      "possible_duplicate": "Possible duplicate: {{count}} other call(s) at the same location within the last hour.",
+      "queued_explainer": "This call is saved on this device only. Nobody has been paged; it is sent when the connection returns.",
+      "rejected_badge": "Rejected — needs correction",
+      "rejected_explainer": "The server did not accept this call, so nobody has been paged. Correct it and send it again, or discard it in Pending sync.",
+      "rejected_on_create": "The server did not accept this call. Correct it and send it again.",
+      "resubmit": "Resend Call",
+      "resubmitted": "Call corrected and sent again",
+      "synced": "Your queued call was received",
+      "synced_with_number": "Your queued call was received as call #{{number}}",
+      "view_duplicate": "View other call"
+    },
+    "references": "References",
+    "related": "Protocols & Linked Call",
+    "scheduling": {
+      "pending": "Save as pending",
+      "pending_hint": "Saved without dispatching; nobody is paged until it is dispatched from the pending queue.",
+      "title": "Scheduling"
+    },
+    "tabs": {
+      "active": "Active",
+      "pending": "Pending",
+      "scheduled": "Scheduled"
+    },
+    "templates": {
+      "applied": "Template applied",
+      "empty": "No call templates",
+      "select": "Select Template",
+      "title": "Call Templates"
+    },
+    "time": {
+      "days_ago": "{{count}} d ago",
+      "hours_ago": "{{count}} h ago",
+      "just_now": "Just now",
+      "minutes_ago": "{{count}} min ago"
+    },
+    "validation": {
+      "dispatch_on_invalid": "Enter a valid dispatch time",
+      "fix_errors": "Please fix the highlighted fields",
+      "name_required": "Enter a name for the call",
+      "nature_required": "Enter the nature of the call",
+      "required": "Required by your department",
+      "udf_required": "Fill in the required custom fields"
+    }
   },
   "chat": {
     "ack_pending_count": "You have {{count}} urgent messages to acknowledge",
@@ -417,7 +522,15 @@
     "unit": "Unit",
     "unpin": "Unpin",
     "urgent": "Urgent",
-    "urgent_will_send": "This message will be sent as urgent"
+    "urgent_will_send": "This message will be sent as urgent",
+    "conversation_not_found": "Conversation not found",
+    "message_actions_hint": "Long press for message actions",
+    "no_messages": "No messages yet",
+    "read_only": "This conversation is read-only",
+    "search_conversations": "Search conversations",
+    "send_failed": "Not sent",
+    "start_conversation": "Start conversation",
+    "unread_count": "{{count}} unread"
   },
   "chatbot": {
     "ask_placeholder": "Ask the assistant...",
@@ -457,7 +570,18 @@
     "type_personnel": "Personnel",
     "type_rehab": "Rehab",
     "type_sector_rotation": "Sector Rotation",
-    "type_unit": "Unit"
+    "type_unit": "Unit",
+    "enable_timers": "Enable check-in timers",
+    "par": {
+      "check_in_person": "Check in {{name}}",
+      "minutes_remaining": "{{count}} min remaining",
+      "needs": "Needs check-in",
+      "ok": "Checked in",
+      "overdue": "Overdue",
+      "title": "Personnel accountability (PAR)"
+    },
+    "toggle_error": "Could not change the check-in timers. Check your connection and try again.",
+    "unnamed_target": "Unassigned"
   },
   "checklists": {
     "errors": {
@@ -853,7 +977,16 @@
     "visibility": "Visibility",
     "website": "Website",
     "withheld": "{{count}} protected details are hidden.",
-    "zip": "Zip Code"
+    "zip": "Zip Code",
+    "action_hint": {
+      "address": "Opens directions in your navigation app",
+      "coordinates": "Opens directions in your navigation app",
+      "email": "Writes an email",
+      "phone": "Calls this number",
+      "website": "Opens the website"
+    },
+    "all_categories": "All",
+    "not_found": "Contact not found"
   },
   "data_protection": {
     "conceal": "Hide again",
@@ -1096,7 +1229,39 @@
     "title": "Login",
     "username": "Username",
     "username_not_found": "Username not found",
-    "username_placeholder": "Enter your username"
+    "username_placeholder": "Enter your username",
+    "branding_subtitle": "Powerful dispatch software for first responders, search & rescue, and public safety organizations.",
+    "branding_title": "Emergency Response Management",
+    "change_server_url": "Change Server URL",
+    "feature_dispatch_desc": "Instantly dispatch units and manage calls with live updates across all devices.",
+    "feature_dispatch_title": "Real-time Dispatch",
+    "feature_mapping_desc": "Track units in real-time with detailed maps, routing, and location management.",
+    "feature_mapping_title": "Advanced Mapping",
+    "feature_personnel_desc": "Manage your team with role-based access, status tracking, and communication tools.",
+    "feature_personnel_title": "Personnel Management",
+    "hide_password": "Hide password",
+    "language_hint": "Opens the list of languages",
+    "otp_body": "Your account has two-factor authentication enabled. Enter the current code from your authenticator app to finish signing in.",
+    "password_required": "Password is required",
+    "show_password": "Show password",
+    "sso": {
+      "change_department": "Change username",
+      "continue_button": "Continue",
+      "department_id_invalid": "Department ID must be a number",
+      "department_id_label": "Department ID (optional)",
+      "department_id_placeholder": "Enter department ID if known",
+      "looking_up": "Looking up account...",
+      "lookup_network_error": "Could not reach the server. Please check your connection and try again.",
+      "or_sign_in_with_password": "— or sign in with password —",
+      "sign_in_with_sso": "Sign in with SSO",
+      "sso_not_enabled": "SSO is not enabled for this account. Please use your username and password.",
+      "user_not_found": "Account not found. Please check your username and try again.",
+      "username_label": "Username or Email",
+      "username_placeholder": "Enter your username or email",
+      "username_required": "Username is required"
+    },
+    "username_required": "Username is required",
+    "username_too_short": "Username must be at least 3 characters"
   },
   "maintenance": {
     "downtime_message": "We are working hard to complete the maintenance as quickly as possible. Please check back soon.",
@@ -1106,7 +1271,8 @@
     "support_title": "Do you need Support?",
     "title": "Site is Under Maintenance",
     "why_down_message": "We are performing scheduled maintenance to improve your experience. We apologize for any inconvenience.",
-    "why_down_title": "Why is the Site Down?"
+    "why_down_title": "Why is the Site Down?",
+    "footer_copyright": "© {{year}} Resgrid, LLC. Created with ❤️ in Nevada"
   },
   "map": {
     "call_set_as_current": "Call set as current call",
@@ -1170,10 +1336,13 @@
         "returning": "Returning",
         "staging": "Staging and standby",
         "transporting": "Transporting",
-        "unavailable": "Unavailable"
+        "unavailable": "Unavailable",
+        "unknown": "No meaning or no status"
       },
       "title": "Map legend",
-      "units": "Units"
+      "units": "Units",
+      "loading": "Loading map legend…",
+      "no_meaning": "No meaning"
     },
     "loading": "Loading maps...",
     "no_maps": "No Maps",
@@ -1186,7 +1355,27 @@
     "search_placeholder": "Search for locations, zones, regions...",
     "title": "Maps",
     "zone": "Zone",
-    "zone_details": "Zone Details"
+    "zone_details": "Zone Details",
+    "unavailable": "Map unavailable",
+    "map_layers": "Map layers",
+    "no_layers": "No map layers",
+    "picker": {
+      "tap_to_select": "Tap the map to choose a location",
+      "looking_up_address": "Looking up address…"
+    },
+    "poi": {
+      "filter_title": "Filter points of interest",
+      "type": "Type",
+      "all_types": "All types",
+      "sort_by": "Sort by",
+      "sort_name": "Name",
+      "sort_type": "Type",
+      "reset": "Reset",
+      "view_on_map": "View on map",
+      "search_placeholder": "Search points of interest…",
+      "results": "{{count}} points of interest",
+      "results_one": "{{count}} point of interest"
+    }
   },
   "mfa": {
     "account": {
@@ -1324,6 +1513,33 @@
       "key_label": "Setup key",
       "open_app": "Open in authenticator app",
       "title": "Set up an authenticator app"
+    },
+    "approve": {
+      "app": "App: {{app}}",
+      "approve": "Approve",
+      "approved": "Approved. You can return to the other screen.",
+      "denied": "Denied. Nothing was approved.",
+      "deny": "Deny",
+      "department": "Department: {{department}}",
+      "done": "Done",
+      "expires": "Expires at {{time}}",
+      "installation": "Device: {{label}}",
+      "none": "Nothing is waiting for your approval.",
+      "not_me": "This wasn't me",
+      "number_body": "Enter the number shown on the other screen, then confirm with your passkey. Only approve if you started this yourself.",
+      "number_mismatch": "That is not the number on the other screen. Attempts left: {{count}}.",
+      "number_placeholder": "Number",
+      "origin": "Near: {{origin}}",
+      "purpose": {
+        "adp": "Someone wants to view protected information",
+        "department_entry": "Someone is switching to a department as you",
+        "login": "Someone is signing in to your account",
+        "step_up": "Someone is confirming an action with your account",
+        "unlock": "Someone is unlocking a shared device as you"
+      },
+      "shared": "On a shared device",
+      "title": "Approve sign-in?",
+      "unknown_app": "Another Resgrid app"
     }
   },
   "notes": {
@@ -1338,12 +1554,15 @@
       "edit": "Edit",
       "tags": "Tags",
       "title": "Note Details",
-      "updated": "Updated"
+      "updated": "Updated",
+      "expires": "Expires"
     },
     "empty": "No notes found",
     "emptyDescription": "No notes have been created for your department yet.",
     "search": "Search notes...",
-    "title": "Notes"
+    "title": "Notes",
+    "all_categories": "All",
+    "open_hint": "Opens the note"
   },
   "notifications": {
     "additional_info": "Additional Information",
@@ -1361,12 +1580,86 @@
     "title": "Notifications",
     "view_call": "View Call",
     "view_chat": "View Chat",
-    "view_reference": "View {{type}}"
+    "view_reference": "View {{type}}",
+    "mark_all_read": "Mark all as read",
+    "unread": "Unread"
   },
   "onboarding": {
     "getStarted": "Let's Get Started",
     "next": "Next",
-    "skip": "Skip"
+    "skip": "Skip",
+    "pages": {
+      "bigboard": {
+        "dashboard": {
+          "description": "Display real-time status of your department's units and calls on a centralized dashboard for enhanced situational awareness",
+          "title": "{{appName}}"
+        },
+        "glance": {
+          "description": "Display critical information about your department's resources and personnel quickly and easily",
+          "title": "Data at a Glance"
+        },
+        "pane": {
+          "description": "Monitor all your department activities from one convenient location",
+          "title": "Single Pane of Glass"
+        }
+      },
+      "dispatch": {
+        "awareness": {
+          "description": "Track all units, personnel, and resources on an interactive map with live status updates and AVL",
+          "title": "Real-Time Situational Awareness"
+        },
+        "calls": {
+          "description": "Create, dispatch, and manage emergency calls with a powerful mobile command center at your fingertips",
+          "title": "{{appName}}"
+        },
+        "coordinate": {
+          "description": "Communicate instantly with field units, update call statuses, and coordinate response efforts from anywhere",
+          "title": "Seamless Coordination"
+        }
+      },
+      "ic": {
+        "awareness": {
+          "description": "Track units and personnel with real-time status and location updates on the incident map",
+          "title": "Live Situational Awareness"
+        },
+        "board": {
+          "description": "Your digital incident command board — manage incidents, ICS roles, and resources from a tablet or desktop",
+          "title": "{{appName}}"
+        },
+        "coordinate": {
+          "description": "Assign personnel to roles and groups, maintain accountability, and keep your command staff in sync as the incident evolves",
+          "title": "Command and Coordinate"
+        }
+      },
+      "responder": {
+        "calls": {
+          "description": "Seamlessly view call information and interact with your team members for efficient emergency response",
+          "title": "Interact with Calls"
+        },
+        "notifications": {
+          "description": "Receive immediate alerts for emergencies and important updates from your department",
+          "title": "Instant Notifications"
+        },
+        "status": {
+          "description": "Manage your status, staffing, and interact with your organization in real-time",
+          "title": "{{appName}}"
+        }
+      },
+      "unit": {
+        "calls": {
+          "description": "Seamlessly view call information and interact with your team members for efficient emergency response",
+          "title": "Interact with Calls"
+        },
+        "location": {
+          "description": "Track your unit's location and status in real-time with our advanced mapping and AVL system",
+          "title": "{{appName}}"
+        },
+        "notifications": {
+          "description": "Receive immediate alerts for emergencies and important updates from your department",
+          "title": "Instant Notifications"
+        }
+      }
+    }
   },
   "operations": {
     "all": "All",
@@ -1550,14 +1843,28 @@
     "group": "Group",
     "roles": "Roles",
     "search": "Search personnel...",
-    "staffing": "Staffing"
+    "staffing": "Staffing",
+    "contact_information": "Contact Information",
+    "details": "Member Details",
+    "identification_number": "ID Number",
+    "not_found": "Member not found",
+    "set_staffing": "Set Staffing",
+    "status": "Status",
+    "status_updated": "Status updated",
+    "title": "Personnel"
   },
   "pois": {
     "empty_description": "There are no points of interest available for your department yet.",
     "loading": "Loading POIs...",
     "loading_detail": "Loading POI details...",
     "route_error": "Failed to open maps application",
-    "title": "POIs"
+    "title": "POIs",
+    "all_types": "All",
+    "destination": "Destination",
+    "destinations_only": "Destinations",
+    "empty": "No points of interest",
+    "not_found": "Point of interest not found",
+    "search": "Search points of interest..."
   },
   "protocols": {
     "details": {
@@ -1570,7 +1877,8 @@
     "empty": "No protocols found",
     "emptyDescription": "No protocols have been created for your department yet.",
     "search": "Search protocols...",
-    "title": "Protocols"
+    "title": "Protocols",
+    "open_hint": "Opens the protocol details"
   },
   "push_notifications": {
     "close": "Close",
@@ -1582,7 +1890,11 @@
       "chat": "Chat",
       "group_chat": "Group Chat",
       "message": "Message",
-      "notification": "Notification"
+      "notification": "Notification",
+      "communication_test": "Communication Test",
+      "sign_in_approval": "Sign-in Approval",
+      "weather": "Weather Alert",
+      "work_order": "Work Order"
     },
     "unknown_type_warning": "This notification type is not recognized.",
     "view_call": "View Call",
@@ -1618,7 +1930,16 @@
       "generic_call": "Generic Call",
       "general_notification": "Notifications",
       "general_message": "Messages"
-    }
+    },
+    "communication_test_confirmed": "Receipt confirmed",
+    "communication_test_failed": "Could not confirm receipt. Please try again.",
+    "communication_test_prompt": "This is a communication test. Confirm that you received it.",
+    "confirm_receipt": "Confirm receipt",
+    "confirming_receipt": "Confirming...",
+    "view_alert": "View Alert",
+    "view_chat": "View Chat",
+    "view_sign_in": "Review",
+    "view_work_order": "View Work Order"
   },
   "records": {
     "add_row": "Add row",
@@ -1794,7 +2115,14 @@
     "selectUser": "Select user",
     "status": "{{active}} of {{total}} Roles",
     "tap_to_manage": "Tap to manage roles",
-    "unassigned": "Unassigned"
+    "unassigned": "Unassigned",
+    "assigned_elsewhere": "In another seat",
+    "no_people": "No people found",
+    "no_roles": "This unit has no crew seats",
+    "not_qualified": "Not qualified",
+    "saved_successfully": "Role assignments saved",
+    "search_people": "Search people",
+    "tap_to_assign": "Tap to assign someone to {{role}}"
   },
   "routes": {
     "acknowledge": "Acknowledge",
@@ -2054,7 +2382,35 @@
     "username": "Username",
     "version": "Version",
     "website": "Website",
-    "view_sync_queue": "View pending changes"
+    "view_sync_queue": "View pending changes",
+    "loading_servers": "Loading servers...",
+    "server_url_insecure": "Use an https:// address. Plain http:// sends your password unencrypted and is only allowed for localhost in development builds.",
+    "server_url_invalid": "Enter a valid server address, for example https://api.resgrid.com",
+    "server_url_required": "Enter the server address",
+    "server_url_save_failed": "The server could not be changed. Try again.",
+    "server_url_signs_out": "Changing the server signs you out of this one first.",
+    "server_url_stored_insecure": "The saved server address is not secure (http://), so the default server is being used. Choose a server or enter an https:// address.",
+    "version_value": "Version {{version}} ({{build}})",
+    "advanced": "Advanced",
+    "audio": "Audio",
+    "background_geolocation_denied": "Background location needs the \"Allow all the time\" permission. Allow it in your device settings, then turn this on again.",
+    "location": "Location",
+    "login_info_description": "Sign in again, for example after changing your password or to switch to another account.",
+    "no_units_available_help": "No units are assigned to you. Ask your department administrator to add you to a unit's station group.",
+    "notifications_open_system": "Open system notification settings",
+    "session": "Session",
+    "sounds": {
+      "call_emergency": "Emergency call",
+      "call_high": "High priority call",
+      "call_low": "Low priority call",
+      "call_medium": "Medium priority call",
+      "message": "Message",
+      "modern_only": "Alerts use the modern Resgrid sound set. Each type of alert has its own tone.",
+      "notification": "Notification",
+      "play": "Play the {{name}} sound",
+      "test_title": "Test alert sounds"
+    },
+    "units_load_failed": "Couldn't load units. Check your connection and try again."
   },
   "shared_session": {
     "bar": "Shared device",
@@ -2132,7 +2488,28 @@
     "station_destination_enabled": "Can respond to stations",
     "stations_and_pois_destinations_enabled": "Can respond to stations or POIs",
     "stations_tab": "Stations",
-    "status_saved_successfully": "Status saved successfully!"
+    "status_saved_successfully": "Status saved successfully!",
+    "availability": {
+      "all": "All",
+      "available": "Available",
+      "committed": "Committed",
+      "delayed": "Delayed",
+      "unavailable": "Unavailable",
+      "unknown": "Unknown"
+    },
+    "current": "Current",
+    "hold_to_set_hint": "Press and hold a status to set it",
+    "no_calls_available": "No calls available",
+    "no_staffing_available": "No staffing levels available",
+    "on_behalf_of": "For {{name}}",
+    "pending_sync": "Pending sync",
+    "select_staffing": "Select Staffing",
+    "select_unit_status": "Select Unit Status",
+    "show_all_statuses": "Show all statuses ({{count}} more)",
+    "show_next_statuses": "Show next statuses only",
+    "staffing_tab": "Staffing",
+    "status_queued": "Saved on this device. It will be sent when the connection is back.",
+    "status_tab": "Status"
   },
   "tabs": {
     "assistant": "Assistant",
@@ -2157,7 +2534,22 @@
     "group": "Group",
     "search": "Search units...",
     "title": "Units",
-    "vin": "VIN"
+    "vin": "VIN",
+    "clear_filters": "Clear filters",
+    "crew": "Crew",
+    "destination": "Destination",
+    "details": "Unit Details",
+    "filter": "Filter",
+    "four_wheel_drive": "Four-wheel drive",
+    "no_crew": "No crew assigned",
+    "no_filters_available": "No filters available",
+    "not_found": "Unit not found",
+    "note": "Note",
+    "plate_number": "Plate number",
+    "special_permit": "Special permit",
+    "status_info": "Status",
+    "status_updated": "Status updated",
+    "yes": "Yes"
   },
   "video_feeds": {
     "add_feed": "Add Feed",
@@ -2207,7 +2599,10 @@
     "url_copied": "URL copied to clipboard",
     "video_error": "Failed to load video",
     "watch": "Watch",
-    "webrtc_not_supported": "WebRTC playback coming soon"
+    "webrtc_not_supported": "WebRTC playback coming soon",
+    "loading": "Loading video feeds...",
+    "name_required": "Enter a name for the feed",
+    "url_invalid": "Enter a valid http, https or rtsp address"
   },
   "weather_alerts": {
     "activeAlerts": "Active Alerts",
@@ -2282,7 +2677,48 @@
       "immediate": "Immediate",
       "past": "Past",
       "unknown": "Unknown"
-    }
+    },
+    "not_found": "Weather alert not found",
+    "settings": {
+      "active": "Active",
+      "add_source": "Add source",
+      "add_zone": "Add zone",
+      "api_key": "API key",
+      "api_key_keep": "API key (leave blank to keep the saved key)",
+      "area_filter": "Area filter",
+      "auto_message_severity": "Send a message for alerts at or above",
+      "call_integration": "Show alerts on calls in the affected area",
+      "custom_endpoint": "Custom endpoint",
+      "edit_source": "Edit source",
+      "edit_zone": "Edit zone",
+      "enabled": "Weather alerts enabled",
+      "excluded_events": "Excluded events",
+      "excluded_events_placeholder": "Comma-separated event names to ignore",
+      "general": "General",
+      "inactive": "Inactive",
+      "load_error": "Weather alert settings could not be loaded.",
+      "minimum_severity": "Show alerts at or above",
+      "name_required": "A name is required",
+      "no_sources": "No sources configured",
+      "no_zones": "No zones configured",
+      "not_available": "Weather alert settings are not available in this app",
+      "poll_interval": "Poll interval (minutes)",
+      "primary": "Primary",
+      "save_error": "The change could not be saved",
+      "saved": "Saved",
+      "source_name": "Name",
+      "source_type": "Provider",
+      "source_type_environment_canada": "Environment Canada",
+      "source_type_meteoalarm": "MeteoAlarm",
+      "source_type_nws": "National Weather Service",
+      "sources": "Sources",
+      "zone_center": "Center (latitude,longitude)",
+      "zone_code": "Zone code",
+      "zone_name": "Name",
+      "zone_radius": "Radius (miles)",
+      "zones": "Zones"
+    },
+    "settings_title": "Weather Alert Settings"
   },
   "errors": {
     "data": {
@@ -2299,5 +2735,139 @@
       "not_configured": "The app is still starting. Please try again in a moment.",
       "unknown": "Something went wrong. Please try again."
     }
+  },
+  "shell": {
+    "loading": "Loading…",
+    "starting": "Starting {{appName}}…",
+    "init_failed_title": "Couldn't finish starting up",
+    "init_failed_message": "Some information could not be loaded. Check your connection and try again.",
+    "retry": "Try again",
+    "sign_out": "Sign out",
+    "open_menu": "Open menu",
+    "close_menu": "Close menu",
+    "back": "Back",
+    "menu_title": "Menu",
+    "navigation": "Main navigation",
+    "changes_waiting": "Changes waiting: {{count}}",
+    "changes_waiting_hint": "Opens storage and sync",
+    "gate": {
+      "login_title": "Sign in",
+      "username": "Username",
+      "password": "Password",
+      "sign_in": "Sign in",
+      "login_failed": "Sign-in failed. Check your username and password and try again.",
+      "mfa_unsupported": "This account needs a second sign-in step that this screen does not support yet.",
+      "onboarding_title": "Welcome to {{appName}}",
+      "onboarding_message": "Stay connected with your department wherever you are.",
+      "onboarding_continue": "Get started",
+      "personal_lock_title": "{{appName}} is locked",
+      "personal_lock_message": "The app locked after a period of inactivity. Enter your password to continue.",
+      "unlock": "Unlock",
+      "unlock_failed": "That password is not correct.",
+      "unlock_unavailable": "This session cannot be unlocked here. Sign in again to continue.",
+      "shared_lock_title": "Session locked",
+      "shared_lock_message": "This shared device is locked. Unlock it to continue, or sign out.",
+      "access_denied_title": "No access to {{appName}}",
+      "access_denied_message": "Your account does not have permission to use this app. Ask your department administrator for access.",
+      "back_to_sign_in": "Back to sign in"
+    },
+    "push": {
+      "default_title": "New notification",
+      "view": "View",
+      "close": "Close"
+    }
+  },
+  "access_denied": {
+    "back_to_sign_in": "Back to sign in",
+    "message": "Your account is not allowed to use {{appName}}. Contact your department administrator if you need access.",
+    "title": "Access not allowed"
+  },
+  "lockscreen": {
+    "message": "Enter your password to unlock the screen",
+    "not_you": "Not you? Return to login",
+    "password": "Password",
+    "password_placeholder": "Enter your password",
+    "relogin_required": "Password verification is unavailable for this session. Please log in again.",
+    "title": "Lock Screen",
+    "unlock_button": "Unlock",
+    "unlock_failed": "Failed to unlock. Please try again.",
+    "unlocking": "Unlocking..."
+  },
+  "storage_sync": {
+    "action_failed": "That did not work. Try again.",
+    "age": {
+      "days": "{{count}} d ago",
+      "hours": "{{count}} h ago",
+      "just_now": "Just now",
+      "minutes": "{{count}} min ago"
+    },
+    "attempts": "Attempts: {{count}}",
+    "budget": "Using {{used}} of {{budget}}",
+    "cache_cleared": "Cached data cleared",
+    "clear_all": "Clear all local data",
+    "clear_all_description": "Removes everything this app stored on this device, including map packs and changes not sent yet, and signs you out. Device preferences such as language and theme are kept.",
+    "clear_all_message": "Everything this app stored on this device is removed and you are signed out.",
+    "clear_all_message_unsent": "{{count}} changes have not been sent yet and will be lost. Everything this app stored on this device is removed and you are signed out.",
+    "clear_all_title": "Clear all local data?",
+    "clear_cached": "Clear cached data",
+    "clear_cached_description": "Removes downloaded data and map packs; they download again when needed. You stay signed in and unsent changes are kept.",
+    "clear_cached_message": "Downloaded data and map packs are removed and download again when needed. You stay signed in and unsent changes are kept.",
+    "clear_cached_title": "Clear cached data?",
+    "clear_title": "Clear data",
+    "copied": "Copied",
+    "copy_diagnostics": "Copy",
+    "diagnostics_description": "A summary for Resgrid support: counts and sizes only, never your department's records.",
+    "diagnostics_title": "Diagnostics",
+    "discard": "Discard",
+    "discard_item": "Discard {{type}}",
+    "discard_message": "This change will never reach the server. This cannot be undone.",
+    "discard_title": "Discard this change?",
+    "discarded": "Change discarded",
+    "failed_count": "{{count}} changes failed",
+    "held": "{{count}} changes from another account or server are kept on this device.",
+    "last_error": "Last error: {{error}}",
+    "last_hydration": "Last offline download",
+    "last_maintenance": "Last cleanup",
+    "last_sync": "Last sync",
+    "never": "Never",
+    "no_pending": "No changes waiting to be sent.",
+    "over_budget": "Using {{used}} of {{budget}}. The oldest cached data is removed first; unsent changes are never removed.",
+    "pending_count": "{{count}} changes waiting",
+    "pending_summary": "{{unsent}} waiting · {{failed}} failed · {{stuck}} stuck",
+    "pending_title": "Pending changes",
+    "report_failed": "Storage information could not be read. Pull down to try again.",
+    "retry_all": "Retry all",
+    "retry_all_started": "Retrying {{count}} changes",
+    "retry_item": "Retry {{type}}",
+    "send": "Send",
+    "send_item": "Send {{type}} now",
+    "show_diagnostics": "Show diagnostics",
+    "size": {
+      "attachments": "Attachments",
+      "cached": "Cached data",
+      "database": "Database",
+      "free_space": "Free device space",
+      "map_packs": "Map packs",
+      "queued": "Unsent changes",
+      "settings": "Settings and session"
+    },
+    "sizes_title": "Storage",
+    "state": {
+      "awaiting_confirmation": "Needs your confirmation",
+      "dead": "Failed",
+      "failed": "Retrying",
+      "pending": "Waiting",
+      "processing": "Sending",
+      "stuck": "Stuck"
+    },
+    "sync_failed": "Sync failed. Check your connection and try again.",
+    "sync_now": "Sync now",
+    "sync_partial": "Some data could not be synced. It will be tried again automatically.",
+    "sync_synced": "Everything is up to date.",
+    "sync_title": "Sync",
+    "title": "Storage & sync",
+    "unavailable": "Storage information is not available yet. Try again in a moment.",
+    "unknown_size": "—",
+    "up_to_date": "Up to date"
   }
 }

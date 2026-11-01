@@ -47,7 +47,8 @@ Living tracker for executing [`architecture/omni-plan.md`](architecture/omni-pla
 
 | Item | Status | Notes |
 |---|---|---|
-| Playwright web boot tests per variant | ✅ | `pnpm e2e:web`; BigBoard 3/3 locally |
+| Playwright web boot tests per variant | ✅ | `pnpm e2e:web`; BigBoard and Dispatch 3/3 each locally |
+| Playwright web sign-in acceptance | ✅ | `e2e/web/sign-in.spec.ts`: the real auth-ui sign-in form renders (not the shell fallback) and an empty form validates without any auth/API request; BigBoard and Dispatch 2/2 each |
 | Playwright Electron smoke | ✅ | 1/1 against the BigBoard Windows build |
 | Maestro native flows per variant | 🟡 | written, dry-run only; run nightly on Android emulator |
 
@@ -57,7 +58,37 @@ Living tracker for executing [`architecture/omni-plan.md`](architecture/omni-pla
 2. **Legacy `http://` server URLs** — R/I/B builds may have stored an http URL; Omni ignores it (default server, user signs in again). Accept, or add a migration prompt?
 3. **Status destination helpers** — strict by default, `{ lenient: true }` reproduces Unit. Which default?
 4. **Core work needed** — register the five OAuth client ids as OpenIddict applications; honour idempotency keys on SaveCall/notes/messages; emit weather alert and checkInUpdated events.
+5. **Legacy MMKV encryption keys in production** — the upgrade path must open the legacy encrypted MMKV stores, but the app shell refuses to read the keys from public `extra` in production builds (`packages/app-shell/src/runtime/legacy-keys.ts`), so production has no key source yet. Recommendation: the legacy keys are already public in the legacy repos' source, so embed them for a one-time migration and then rekey to a SecureStore key. Alternative: a config plugin plus a small native module.
 
-## Phases 2–6
+## Phase 2 — app shell
+
+| Item | Status | Notes |
+|---|---|---|
+| `@resgrid/app-shell` | ✅ | 117 tests. Startup orchestration, ShellGate (onboarding, sign-in, maintenance, personal/shared lock, app access), providers, deep links, nav model per form factor, settings route registry; screens and overlays come from features through `registerShellScreens`/`registerShellOverlay` (`apps/omni/shell-registrations.tsx`) |
+| Per-variant root layouts and `(app)` route groups + `nav.ts` | ✅ | All five variants call `configureAppShell`; home routes are placeholders until Phase 4 |
+
+## Phase 3 — shared feature modules
+
+| Module | Status | Notes |
+|---|---|---|
+| `@resgrid/maps` | 🟡 | 64 tests. MapLibre wrapper (native + `maplibre-gl` web), style resolution with Mapbox fallback, attribution, markers/layers. Not yet mounted (`MapProvider`) or wired into feature map slots; offline packs (P8b) not started |
+| auth-ui | ✅ | 59 tests. Sign-in (MFA, SSO, server picker, shared device), onboarding, maintenance, locks, access denied, recovery codes |
+| settings | ✅ | 37 tests. Incl. Advanced → Storage & sync (pending/stuck items, clear local data) |
+| calls, check-in, video-feeds, protocols, notes | ✅ | 72 / 8 / 6 / 4 / 3 tests |
+| units, personnel, status, roles, contacts, POIs | ✅ | personnel 10, status 31, roles 4, contacts 9, POIs 4 |
+| weather alerts, chat, notifications inbox, data protection | ✅ | 7 / 12 / 9 / 9 tests |
+| records, operations/deployments, checklists | ⬜ | |
+| Feature translation keys | ✅ | 456 keys merged into all 10 languages (`add-keys.ts --features`); English placeholders listed in `packages/i18n/review/missing-translations.csv` |
+
+Known integration follow-ups:
+
+- Mount `MapProvider`, `StatusProvider`, `NavigationHandoffProvider`, `ChatIdentityProvider` and call `configureSettings` in the app shell; register the background-location bootstrap in `apps/omni/index.ts`.
+- Per-variant route files for the feature screens (only the gate and home routes exist) and route-contract tests.
+- `@resgrid/api` idempotency header option; shared Jest setup for features (folders import their own `test-setup` today); one nav-entry type (calls uses `route/titleKey`, the rest match the shell's `NavEntry`); a lower-layer home for `useHref`/shell context so features need not reach upward.
+- Electron CSP `worker-src` and tile hosts; copy the maplibre-gl worker and set `webWorkerUrl`.
+- Data stores for field policy, templates and dispatch picker lists.
+- Web bundle is 12 MB minified for every variant — look at code splitting (lucide, livekit, maplibre-gl) before the web/Electron release.
+
+## Phases 4–6
 
 ⬜ Not started — see plan §11.1.

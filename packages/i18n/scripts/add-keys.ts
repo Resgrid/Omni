@@ -101,7 +101,7 @@ function setIfMissing(obj: Json, dottedKey: string, value: string): boolean {
 
 function featureKeys(): Record<string, string> {
   const out: Record<string, string> = {};
-  const sources = [path.join(packagesDir, 'app-shell', 'src', 'i18n.en.json')];
+  const sources = [path.join(packagesDir, 'app-shell', 'src', 'i18n.en.json'), path.join(packagesDir, 'maps', 'src', 'i18n.en.json')];
   const featuresDir = path.join(packagesDir, 'features', 'src');
   if (fs.existsSync(featuresDir)) {
     for (const d of fs.readdirSync(featuresDir, { withFileTypes: true })) if (d.isDirectory()) sources.push(path.join(featuresDir, d.name, 'i18n.en.json'));

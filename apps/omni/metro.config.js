@@ -47,7 +47,10 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
   return defaultResolveRequest ? defaultResolveRequest(context, moduleName, platform) : context.resolveRequest(context, moduleName, platform);
 };
 
+// expo-sqlite's web build loads a WebAssembly module (durable storage on web, omni-plan §8.2).
+config.resolver.assetExts = [...config.resolver.assetExts, 'wasm'];
+
 // The Electron shell is a separate package and must never be bundled into the app.
-config.resolver.blockList = [/apps[\/]desktop[\/].*/];
+config.resolver.blockList = [/apps[\\/]desktop[\\/].*/];
 
 module.exports = withNativewind(config, { inlineRem: 16 });

@@ -37,6 +37,28 @@ export class GetConfigResultData {
   public AppMapboxAccessToken: string = '';
   /** True when the department's own Mapbox account (token and custom style) is in effect; its style then waits for that token. */
   public IsDepartmentMapOverride: boolean = false;
+  // MapLibre plan §5.4 (additive; absent on servers before MapLibre P1 — clients then derive a style from MapDayStyleUrl).
+  /** "maplibre" on servers that serve MapLibre-ready styles. */
+  public MapRenderer?: string;
+  /** Signed GetStyle URL for the light theme. */
+  public MapLibreStyleUrlDay?: string;
+  /** Signed GetStyle URL for the dark theme. */
+  public MapLibreStyleUrlNight?: string;
+  /** Raster XYZ tile URL for fallback/static rendering. */
+  public MapRasterTileUrl?: string;
+  /** Signed static map URL template. */
+  public StaticMapUrlTemplate?: string;
+  /** Live traffic overlay availability and tile URL. */
+  public TrafficAvailable?: boolean;
+  public TrafficTileUrl?: string;
+  public TrafficRefreshSeconds?: number;
+  /** In-app navigation availability (Navigation.InApp flag + provider support). */
+  public NavigationAvailable?: boolean;
+  // MapLibre plan §19 offline maps (additive).
+  public OfflineMapsAvailable?: boolean;
+  /** Signed URL of Mapping/GetOfflineManifest. */
+  public OfflineManifestUrl?: string;
+  public AmbientCacheMaxBytes?: number;
   /**
    * Time-in-status thresholds keyed by the status's canonical base type. Empty means the department
    * has configured none and nothing on the board is flagged.

@@ -1,0 +1,9 @@
+{
+  "contacts.action_hint.address": "Opens directions in your navigation app",
+  "contacts.action_hint.coordinates": "Opens directions in your navigation app",
+  "contacts.action_hint.email": "Writes an email",
+  "contacts.action_hint.phone": "Calls this number",
+  "contacts.action_hint.website": "Opens the website",
+  "contacts.all_categories": "All",
+  "contacts.not_found": "Contact not found"
+}

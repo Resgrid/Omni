@@ -1,0 +1,17 @@
+{
+  "notifications.mark_all_read": "Mark all as read",
+  "notifications.unread": "Unread",
+  "push_notifications.communication_test_confirmed": "Receipt confirmed",
+  "push_notifications.communication_test_failed": "Could not confirm receipt. Please try again.",
+  "push_notifications.communication_test_prompt": "This is a communication test. Confirm that you received it.",
+  "push_notifications.confirm_receipt": "Confirm receipt",
+  "push_notifications.confirming_receipt": "Confirming...",
+  "push_notifications.types.communication_test": "Communication Test",
+  "push_notifications.types.sign_in_approval": "Sign-in Approval",
+  "push_notifications.types.weather": "Weather Alert",
+  "push_notifications.types.work_order": "Work Order",
+  "push_notifications.view_alert": "View Alert",
+  "push_notifications.view_chat": "View Chat",
+  "push_notifications.view_sign_in": "Review",
+  "push_notifications.view_work_order": "View Work Order"
+}
