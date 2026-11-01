@@ -11,7 +11,7 @@ Resgrid Omni is **one Expo (prebuild/CNG) React Native codebase that builds the 
 
 ## Stack
 
-Expo SDK 57 · React Native 0.86 (New Architecture, Hermes) · React 19.2 · TypeScript (strict) · expo-router 57 · zustand + react-native-mmkv · axios · gluestack-ui v5 + NativeWind 5 + Tailwind 4 (CSS config) · lucide-react-native · react-hook-form + zod · i18next (10 languages) · @microsoft/signalr · Novu + expo-notifications + notifee · LiveKit · MapLibre (`@maplibre/maplibre-react-native`, `maplibre-gl`) · Sentry · Countly · Jest 29 + jest-expo + @testing-library/react-native · Electron 40 · pnpm workspaces.
+Expo SDK 58 · React Native 0.88 (New Architecture, Hermes) · React 19.3 · TypeScript (strict) · expo-router 58 · zustand + react-native-mmkv · axios · gluestack-ui v5 + NativeWind 5 RC + Tailwind 4 (CSS config) · lucide-react-native · react-hook-form + zod · i18next (10 languages) · @microsoft/signalr · Novu + expo-notifications + notifee · LiveKit · MapLibre (`@maplibre/maplibre-react-native`, `maplibre-gl`) · Sentry · Countly · Jest 29 + jest-expo + @testing-library/react-native · Electron 40 · pnpm workspaces.
 
 ## Layout (target — see plan §5.1)
 
@@ -38,7 +38,7 @@ Never fork code per app. In order of preference: **capability** (`useCapability(
 - Conditional rendering with ternaries, not `&&`.
 - Files and folders kebab-case; components PascalCase; hooks `use-*.ts` exporting `useX`; stores `use-x-store` style hooks. v4 models mirror Core names (PascalCase fields) exactly.
 - Every user-visible string through `t()`; all 10 language files in key parity (`resgrid-i18n` skill). Department-renameable words via `useTerm()`.
-- UI from `@resgrid/ui` (gluestack primitives) and NativeWind classes; lucide icons used directly. No React Native `Modal` (use `NativeModal`/overlay primitives). No new UI libraries without a plan change.
+- UI from `@resgrid/ui` (gluestack primitives) and NativeWind classes; lucide icons used directly (named imports from `lucide-react-native` only — `apps/omni/babel/lucide-icon-imports.js` turns them into one module per icon). No React Native `Modal` (use `NativeModal`/overlay primitives). No new UI libraries without a plan change.
 - Web/Electron-safe styling: merge style arrays with `StyleSheet.flatten()`, never pass `style` to lucide icons (wrap in a `View`), avoid `gap` in `StyleSheet` styles.
 - Data: zustand stores → `@resgrid/api` endpoint functions → cached endpoints; persisted stores for anything needed offline. No React Query. Writes in an app's offline scope go through the outbox (`omni-offline-first` skill); local SQLite data always has a retention rule.
 - Notifications use the modern sound set only (no classic sounds, no toggle).
@@ -46,6 +46,7 @@ Never fork code per app. In order of preference: **capability** (`useCapability(
 - Status logic by **BaseType**, never by status id or text.
 - Never call map/routing/geocoding providers from the app; go through the Resgrid server (`resgrid-maps` skill).
 - Prettier: single quotes, es5 trailing commas, printWidth 220. ESLint must pass with zero warnings in touched files.
+- No experimental or beta platform features (owner decision, SDK 58 upgrade): no `experiments.*` in the app config, no `EXPO_UNSTABLE_*` flags, no `unstable_*`/`experimental_*` APIs or options. Sole exception: EAS `extra.eas.build.experimental.ios.appExtensions`, the only way EAS gives the Live Activity widget its credentials. NativeWind stays on the 5.0 RC until 5.0 ships.
 
 ## Security and privacy
 

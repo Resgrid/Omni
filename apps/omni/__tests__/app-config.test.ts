@@ -35,8 +35,19 @@ describe('app.config per variant', () => {
     expect(build('unit', 'internal').ios.bundleIdentifier).toBe('com.resgrid.unit');
   });
 
-  it('points expo-router at the variant route tree', () => {
-    expect(build('ic').plugins[0]).toEqual(['expo-router', { root: './variants/ic/app' }]);
+  it('points expo-router at the variant route tree, with web async routes off', () => {
+    expect(build('ic').plugins[0]).toEqual(['expo-router', { root: './variants/ic/app', asyncRoutes: { web: false } }]);
+  });
+
+  it('turns on no experimental or beta Expo features', () => {
+    for (const variant of ['responder', 'unit', 'ic', 'dispatch', 'bigboard']) {
+      const config = build(variant);
+      expect(config.experiments).toBeUndefined();
+      const buildProperties = config.plugins.find((p: unknown) => Array.isArray(p) && p[0] === 'expo-build-properties')[1];
+      expect(buildProperties.ios).not.toHaveProperty('enableSceneSupport');
+      // SDK 58 defaults R8 on; release builds keep it off until they have run on devices.
+      expect(buildProperties.android.enableMinifyInReleaseBuilds).toBe(false);
+    }
   });
 
   it('links native modules only where the variant needs them', () => {

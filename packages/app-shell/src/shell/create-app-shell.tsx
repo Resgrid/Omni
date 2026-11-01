@@ -74,7 +74,6 @@ export function RegistryTabs({ nav }: { nav: NavRegistry }) {
             options={{
               title: screen.title,
               tabBarButtonTestID: screen.entry.testID ?? `${screen.entry.id}-tab`,
-              ...(screen.entry.freezeOnBlur ? { freezeOnBlur: true } : {}),
               ...(Icon
                 ? {
                     tabBarIcon: ({ color, size }: { color: ColorValue; size: number }) => (

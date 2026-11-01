@@ -18,7 +18,9 @@ type IMotionViewProps = React.ComponentProps<typeof View> & MotionComponentProps
 
 const MotionView = Motion.View as React.ComponentType<IMotionViewProps>;
 
-const StyledMotionView = styled(MotionView, { className: 'style' });
+// Same minimal prop surface as below: the full Motion.View props exceed TS's union limit in `styled`'s mapping
+// types (TS2590) since NativeWind 5 RC.
+const StyledMotionView = styled(MotionView as unknown as React.ComponentType<Record<'style', unknown>>, { className: 'style' });
 // Cast to a minimal prop surface: `styled`'s mapping constraint computes
 // dot-notation paths over every prop, which exceeds TS's union limit for
 // ScrollView's full props (TS2590). The returned component is untyped by

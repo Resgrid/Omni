@@ -1,7 +1,7 @@
 import { canConnectToVoiceSession, getDepartmentVoiceSettings } from '@resgrid/api';
 import { logger } from '@resgrid/core';
 import type { DepartmentVoiceChannelResultData } from '@resgrid/models';
-import { ConnectionState, type Participant, Room, RoomEvent } from 'livekit-client';
+import type { Participant, Room } from 'livekit-client';
 import { Platform } from 'react-native';
 import { create } from 'zustand';
 
@@ -16,6 +16,7 @@ import { getHeadsetButtonService } from '../headset/headset-button-service';
 import { type PttInputSource, registerMicrophoneController } from '../ptt/microphone-controller';
 import { getVoiceRuntime } from '../runtime';
 import { delay, errorMessage, errorName, VoiceTimeoutError, withTimeout } from '../util/async';
+import { getLiveKitClient, loadLiveKitClient } from './livekit-client';
 import { ensureMicrophonePermission, type MicrophonePermissionResult } from './microphone-permission';
 import { attachRemoteAudio } from './remote-audio';
 import { type VoiceError, voiceFail, voiceOk, type VoiceResult } from './types';
@@ -191,6 +192,7 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => {
   };
 
   const bindRoomEvents = (room: Room, roomInfo: VoiceChannel): void => {
+    const { RoomEvent } = getLiveKitClient();
     room.on(RoomEvent.ActiveSpeakersChanged, (speakers: Participant[]) => {
       if (!currentRoomIs(room)) return;
       set({ isTalking: speakers.some((speaker) => speaker.sid === room.localParticipant.sid), activeSpeakerIdentities: speakers.map((speaker) => speaker.identity) });
@@ -305,7 +307,13 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => {
         }
       }
 
-      room = new Room();
+      // livekit-client loads with the first connection (a separate chunk on web).
+      const livekit = await loadLiveKitClient();
+      if (stale()) {
+        await discardRoom();
+        return cancelled();
+      }
+      room = new livekit.Room();
       bindRoomEvents(room, roomInfo);
       detachAudio = attachRemoteAudio(room);
 
@@ -456,7 +464,7 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => {
         logger.debug({ message: 'Microphone change ignored: no voice channel', context: { enabled, source } });
         return;
       }
-      if (room.state !== ConnectionState.Connected) {
+      if (room.state !== getLiveKitClient().ConnectionState.Connected) {
         logger.debug({ message: 'Microphone change ignored: room not connected', context: { enabled, state: room.state } });
         return;
       }

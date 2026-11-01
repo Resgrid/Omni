@@ -88,7 +88,7 @@ jest.mock('expo-router', () => ({
   useRouter: jest.fn(() => require('expo-router').router),
 }));
 jest.mock('expo-navigation-bar', () => ({ setVisibilityAsync: jest.fn(() => Promise.resolve()) }));
-jest.mock('react-native-edge-to-edge', () => ({ SystemBars: () => null }));
+jest.mock('expo-status-bar', () => ({ StatusBar: () => null }));
 jest.mock('countly-sdk-react-native-bridge', () => ({ __esModule: true, default: { initWithConfig: jest.fn(), events: { recordEvent: jest.fn() }, userData: { setProperties: jest.fn() } } }));
 jest.mock('countly-sdk-react-native-bridge/CountlyConfig', () => ({ __esModule: true, default: jest.fn() }));
 jest.mock('@sentry/react-native', () => ({

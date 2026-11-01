@@ -1,15 +1,20 @@
-// One module per namespace, so each app bundles only `common` plus its own strings (see initI18n).
+// One module per namespace, so each app bundles only `common` plus its own strings (see initI18n). English is bundled
+// (the default and fallback); every other language is loaded when it is chosen, a separate chunk in the web export.
 // The JSON comes from scripts/merge-legacy-translations.mjs.
-import ar from '../translations/bigboard/ar.json';
-import de from '../translations/bigboard/de.json';
-import el from '../translations/bigboard/el.json';
 import en from '../translations/bigboard/en.json';
-import es from '../translations/bigboard/es.json';
-import fr from '../translations/bigboard/fr.json';
-import it from '../translations/bigboard/it.json';
-import pl from '../translations/bigboard/pl.json';
-import sv from '../translations/bigboard/sv.json';
-import uk from '../translations/bigboard/uk.json';
 import type { NamespaceResources } from './types';
 
-export const bigboardResources: NamespaceResources = { en, ar, de, el, es, fr, it, pl, sv, uk };
+export const bigboardResources: NamespaceResources = {
+  en,
+  loaders: {
+    ar: () => import('../translations/bigboard/ar.json'),
+    de: () => import('../translations/bigboard/de.json'),
+    el: () => import('../translations/bigboard/el.json'),
+    es: () => import('../translations/bigboard/es.json'),
+    fr: () => import('../translations/bigboard/fr.json'),
+    it: () => import('../translations/bigboard/it.json'),
+    pl: () => import('../translations/bigboard/pl.json'),
+    sv: () => import('../translations/bigboard/sv.json'),
+    uk: () => import('../translations/bigboard/uk.json'),
+  },
+};

@@ -2,19 +2,16 @@ import './maplibre-css.web';
 
 import { logger } from '@resgrid/core';
 import { Asset } from 'expo-asset';
-import {
-  AttributionControl,
-  type FilterSpecification,
-  type GeoJSONSource as GLGeoJSONSource,
-  GeolocateControl,
-  type ImageSource as GLImageSource,
-  type LayerSpecification,
+import type {
+  FilterSpecification,
+  GeoJSONSource as GLGeoJSONSource,
+  ImageSource as GLImageSource,
+  LayerSpecification,
   Map as GLMap,
-  type MapMouseEvent,
-  type MapStyleImageMissingEvent,
+  MapMouseEvent,
+  MapStyleImageMissingEvent,
   Marker,
-  NavigationControl,
-  type SourceSpecification,
+  SourceSpecification,
 } from 'maplibre-gl';
 import React, { createContext, forwardRef, type ReactNode, type ReactPortal, useContext, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -22,6 +19,7 @@ import { StyleSheet, View } from 'react-native';
 import { isValidLngLat, type LngLat } from '../types';
 import { isJumpMode, paddingFromArgument, toCameraTarget, toEdgePadding, toInitialView, toNamedAnchor, validBounds } from './camera-utils';
 import { MapPlaceholder } from './map-placeholder';
+import { getLoadedMapLibre, loadMapLibre, type MapLibreModule } from './maplibre-loader.web';
 import { MapRenderContext, useStyleRevision } from './render-context';
 import { styleSignature, toPaintAndLayout } from './style-props';
 import type {
@@ -70,6 +68,13 @@ const redactTokens = (message: string): string => message.replace(/access_token=
 
 const warn = (message: string, error: unknown): void => {
   logger.warn({ message, context: { reason: redactTokens(error instanceof Error ? error.message : String(error)) } });
+};
+
+/** maplibre-gl for code that runs only inside a created map (MapView loaded the module before creating it). */
+const maplibre = (): MapLibreModule => {
+  const module = getLoadedMapLibre();
+  if (!module) throw new Error('maplibre-gl is not loaded');
+  return module;
 };
 
 const safeRemoveLayer = (map: GLMap, id: string): void => {
@@ -132,6 +137,8 @@ export const MapView = forwardRef<MapViewRef, MapViewProps>(function MapView(pro
   const [internalRevision, setInternalRevision] = useState(0);
   const latest = useRef(props);
   latest.current = props;
+  const latestView = useRef(view);
+  latestView.current = view;
   const ready = view.status === 'ready' && !!view.mapStyle;
 
   useImperativeHandle(
@@ -169,16 +176,16 @@ export const MapView = forwardRef<MapViewRef, MapViewProps>(function MapView(pro
     return () => observer.disconnect();
   }, [ready]);
 
-  // Create the map once (per container) when there is a style and a size.
-  useEffect(() => {
-    const element = containerRef.current;
-    if (!hasSize || !element || mapRef.current || !view.mapStyle) return undefined;
+  // Builds the map with the current style and wires its events (maplibre-gl is loaded by then).
+  const createMap = (gl: MapLibreModule, element: HTMLDivElement): GLMap | null => {
     const initial = latest.current;
+    const { mapStyle, styleKey } = latestView.current;
+    if (!mapStyle) return null;
     let instance: GLMap;
     try {
-      instance = new GLMap({
+      instance = new gl.Map({
         container: element,
-        style: view.mapStyle,
+        style: mapStyle,
         center: isValidLngLat(initial.initialCenter) ? initial.initialCenter : undefined,
         zoom: typeof initial.initialZoom === 'number' && Number.isFinite(initial.initialZoom) ? initial.initialZoom : undefined,
         attributionControl: false,
@@ -188,10 +195,10 @@ export const MapView = forwardRef<MapViewRef, MapViewProps>(function MapView(pro
     } catch (error) {
       warn('Failed to initialize maplibre-gl', error);
       latest.current.onDidFailLoadingMap?.();
-      return undefined;
+      return null;
     }
     mapRef.current = instance;
-    appliedStyleKey.current = view.styleKey;
+    appliedStyleKey.current = styleKey;
     instance.on('load', () => {
       loadedRef.current = true;
       setMap(instance);
@@ -219,13 +226,40 @@ export const MapView = forwardRef<MapViewRef, MapViewProps>(function MapView(pro
       });
     });
     instance.on('error', (event: { error?: unknown }) => warn('maplibre-gl error', event.error));
+    return instance;
+  };
+
+  // Create the map once (per container) when there is a style and a size — after maplibre-gl has loaded (immediately
+  // when an earlier map loaded it). The style is read when the map is created, so a switch during the load is kept.
+  useEffect(() => {
+    const element = containerRef.current;
+    if (!hasSize || !element || mapRef.current || !view.mapStyle) return undefined;
+    let cancelled = false;
+    let instance: GLMap | null = null;
+    const create = (gl: MapLibreModule): void => {
+      if (cancelled || mapRef.current) return;
+      instance = createMap(gl, element);
+    };
+    const loadedModule = getLoadedMapLibre();
+    if (loadedModule) {
+      create(loadedModule);
+    } else {
+      void loadMapLibre().then(create, (error: unknown) => {
+        if (cancelled) return;
+        warn('Failed to load maplibre-gl', error);
+        latest.current.onDidFailLoadingMap?.();
+      });
+    }
     return () => {
-      removedMaps.add(instance);
+      cancelled = true;
+      const created = instance;
+      if (!created) return;
+      removedMaps.add(created);
       loadedRef.current = false;
       mapRef.current = null;
       setMap(null);
       try {
-        instance.remove();
+        created.remove();
       } catch {
         // Already torn down.
       }
@@ -287,6 +321,7 @@ export const MapView = forwardRef<MapViewRef, MapViewProps>(function MapView(pro
   // Attribution is always on (OSM ODbL, Mapbox terms); the custom text follows the provider.
   useEffect(() => {
     if (!map) return undefined;
+    const { AttributionControl } = maplibre();
     const control = new AttributionControl({ compact: true, customAttribution: view.attribution || undefined });
     map.addControl(control, attributionCorner(attributionPosition));
     return () => {
@@ -300,6 +335,7 @@ export const MapView = forwardRef<MapViewRef, MapViewProps>(function MapView(pro
 
   useEffect(() => {
     if (!map || !compassEnabled) return undefined;
+    const { NavigationControl } = maplibre();
     const control = new NavigationControl({ showCompass: true, showZoom: false });
     map.addControl(control, 'top-right');
     return () => {
@@ -432,6 +468,7 @@ export const Camera = forwardRef<CameraRef, CameraProps>(function Camera(props, 
   const { followUserLocation } = props;
   useEffect(() => {
     if (!map || !followUserLocation) return undefined;
+    const { GeolocateControl } = maplibre();
     const control = new GeolocateControl({ positionOptions: { enableHighAccuracy: true }, trackUserLocation: true, showAccuracyCircle: true });
     map.addControl(control);
     control.on('trackuserlocationstart', () => latest.current.onUserTrackingModeChange?.(true));
@@ -677,6 +714,7 @@ export function MarkerView({ id, coordinate, anchor, offset, onPress, testID, ch
       onPressRef.current?.();
     };
     container.addEventListener('click', handleClick);
+    const { Marker } = maplibre();
     const marker = new Marker({ element: container, anchor: namedAnchor, offset }).setLngLat(latestPosition.current).addTo(map);
     markerRef.current = marker;
     setElement(container);
@@ -771,6 +809,7 @@ export function UserLocation({ visible = true, showsAccuracy = true }: UserLocat
   const map = useContext(WebMapContext);
   useEffect(() => {
     if (!map || !visible) return undefined;
+    const { GeolocateControl } = maplibre();
     const control = new GeolocateControl({ positionOptions: { enableHighAccuracy: true }, trackUserLocation: true, showAccuracyCircle: showsAccuracy, showUserLocation: true });
     map.addControl(control);
     const timer = setTimeout(() => {

@@ -5,6 +5,7 @@ import { resetCallKeepServiceForTests } from '../callkeep/callkeep-service';
 import { getVoiceCapabilities } from '../capabilities';
 import { initializeVoice, registerVoiceResets } from '../initialize';
 import { createNotifeeForegroundService } from '../livekit/foreground-service';
+import { loadLiveKitClient } from '../livekit/livekit-client';
 import { useLiveKitStore } from '../livekit/livekit-store';
 import { ensureMicrophonePermission } from '../livekit/microphone-permission';
 import { attachRemoteAudio } from '../livekit/remote-audio.web';
@@ -75,7 +76,9 @@ describe('microphone permission', () => {
 });
 
 describe('web remote audio', () => {
-  it('attaches subscribed audio tracks to the document and removes them on detach', () => {
+  it('attaches subscribed audio tracks to the document and removes them on detach', async () => {
+    // livekit-client loads with the first connection; a room (and its audio) only exists after that.
+    await loadLiveKitClient();
     const appended: { id: string; remove: jest.Mock; pause: jest.Mock }[] = [];
     Object.defineProperty(globalThis, 'document', { value: { body: { appendChild: (el: (typeof appended)[number]) => appended.push(el) } }, configurable: true, writable: true });
     const room = new Room();

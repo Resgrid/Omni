@@ -7,7 +7,7 @@ import { resolveInitialLanguage } from './detect';
 import { FALLBACK_LANGUAGE, isRTLLanguage, isSupportedLanguage, type Language, SUPPORTED_LANGUAGES } from './languages';
 import { COMMON_NAMESPACE, type Namespace } from './namespaces';
 import { commonResources } from './resources/common';
-import type { NamespaceResources, TranslationTree } from './resources/types';
+import type { LoadableLanguage, NamespaceResources, TranslationTree } from './resources/types';
 
 /**
  * The app's i18next instance. Created (not the global default) so it carries exactly the namespaces of one app;
@@ -43,6 +43,12 @@ const listeners = new Set<LanguageListener>();
 const translateCache = new Map<string, string>();
 let lastLanguage: Language | null = null;
 let listenerAttached = false;
+
+/** The running app's namespaces and their resources, for loading further languages on demand. */
+let activeNamespaces: { ns: Namespace; resources: NamespaceResources | undefined }[] = [{ ns: COMMON_NAMESPACE, resources: commonResources }];
+/** `${namespace}/${language}` bundles added to the instance (English is added at init), and loads in flight. */
+const loadedBundles = new Set<string>();
+const pendingBundles = new Map<string, Promise<void>>();
 
 const isDev = (): boolean => typeof __DEV__ !== 'undefined' && __DEV__;
 
@@ -80,6 +86,8 @@ const handleLanguageChanged = (lng: string): void => {
   // (LTR→LTR switches do not reload the app). Responder's fix.
   translateCache.clear();
   const language = isSupportedLanguage(lng) ? lng : FALLBACK_LANGUAGE;
+  // A direct `i18n.changeLanguage()` (not setLanguage) shows the English fallback until the strings arrive.
+  void loadLanguage(language);
   const previous = lastLanguage;
   lastLanguage = language;
   const change: LanguageChange = { language, previous, isRTL: isRTLLanguage(language), requiresReload: applyDirection(language) };
@@ -92,18 +100,49 @@ const handleLanguageChanged = (lng: string): void => {
   }
 };
 
+/** The bundled English strings of the app's namespaces; other languages are added by `loadLanguage`. */
 const buildResources = (variantId: VariantId | undefined, variantResources: NamespaceResources | undefined): Record<string, Record<string, TranslationTree>> => {
-  const resources: Record<string, Record<string, TranslationTree>> = {};
-  for (const lang of SUPPORTED_LANGUAGES) {
-    resources[lang] = { [COMMON_NAMESPACE]: commonResources[lang] };
-    if (variantId) resources[lang][variantId] = variantResources?.[lang] ?? {};
-  }
-  return resources;
+  const en: Record<string, TranslationTree> = { [COMMON_NAMESPACE]: commonResources.en };
+  if (variantId) en[variantId] = variantResources?.en ?? {};
+  return { [FALLBACK_LANGUAGE]: en };
+};
+
+const loadBundle = (ns: Namespace, resources: NamespaceResources | undefined, language: LoadableLanguage): Promise<void> => {
+  const key = `${ns}/${language}`;
+  if (loadedBundles.has(key)) return Promise.resolve();
+  const pending = pendingBundles.get(key);
+  if (pending) return pending;
+  const load = (resources ? resources.loaders[language]().then((module) => module.default) : Promise.resolve<TranslationTree>({}))
+    .then((tree) => {
+      i18n.addResourceBundle(language, ns, tree, true, true);
+      loadedBundles.add(key);
+      translateCache.clear();
+    })
+    .finally(() => pendingBundles.delete(key));
+  pendingBundles.set(key, load);
+  return load;
 };
 
 /**
- * Initialises translations synchronously (all resources are bundled). Call once at startup, after
- * `setActiveVariant()`. Calling it again updates the language, product name and variant resources in place.
+ * Loads a language's strings for the app's namespaces (English is bundled) and resolves once they are added; mounted
+ * components re-render then. Resolves `false` when they could not be loaded (an offline web client missing the chunk):
+ * the UI stays on the English fallback and the next call tries again.
+ */
+export async function loadLanguage(language: Language): Promise<boolean> {
+  if (language === 'en') return true;
+  try {
+    await Promise.all(activeNamespaces.map(({ ns, resources }) => loadBundle(ns, resources, language)));
+    return true;
+  } catch (error) {
+    if (isDev()) console.warn(`[i18n] could not load the "${language}" strings; showing English.`, error);
+    return false;
+  }
+}
+
+/**
+ * Initialises translations synchronously with the bundled English strings and starts loading the chosen language
+ * (`loadLanguage`; the shell's startup waits for it). Call once at startup, after `setActiveVariant()`. Calling it again
+ * updates the language, product name and variant resources in place.
  *
  * - Default namespace = the variant id, `fallbackNS: 'common'`, so flat legacy keys (`t('calls.title')`) resolve
  *   from the variant's namespace first, then from `common`.
@@ -117,6 +156,7 @@ export function initI18n(options: InitI18nOptions = {}): typeof i18n {
   const language = resolveInitialLanguage(options.language);
   const defaultNS: Namespace = variantId ?? COMMON_NAMESPACE;
   const resources = buildResources(variantId, options.variantResources);
+  activeNamespaces = [{ ns: COMMON_NAMESPACE, resources: commonResources }, ...(variantId ? [{ ns: variantId, resources: options.variantResources }] : [])];
 
   if (variantId && !options.variantResources && isDev()) {
     console.warn(`[i18n] initI18n: no resources passed for the "${variantId}" namespace; only common strings are available.`);
@@ -136,6 +176,7 @@ export function initI18n(options: InitI18nOptions = {}): typeof i18n {
     i18n.options.interpolation = { ...i18n.options.interpolation, defaultVariables: { ...i18n.options.interpolation?.defaultVariables, appName } };
     translateCache.clear();
     if (i18n.language !== language) void i18n.changeLanguage(language);
+    void loadLanguage(language);
     return i18n;
   }
 
@@ -155,8 +196,10 @@ export function initI18n(options: InitI18nOptions = {}): typeof i18n {
       escapeValue: false,
       defaultVariables: { appName },
     },
-    react: { useSuspense: false },
+    // Re-render when a language's strings arrive after the first render (loadLanguage).
+    react: { useSuspense: false, bindI18nStore: 'added' },
   });
+  void loadLanguage(language);
   return i18n;
 }
 
@@ -164,6 +207,7 @@ export function initI18n(options: InitI18nOptions = {}): typeof i18n {
 export async function setLanguage(language: Language): Promise<void> {
   if (!isSupportedLanguage(language)) throw new Error(`Unsupported language: ${String(language)}`);
   if (i18n.language === language) return;
+  await loadLanguage(language);
   await i18n.changeLanguage(language);
 }
 
