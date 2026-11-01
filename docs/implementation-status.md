@@ -84,7 +84,7 @@ Living tracker for executing [`architecture/omni-plan.md`](architecture/omni-pla
 | records, operations/deployments, checklists | ✅ | 61 tests. Records (field records, deployments, connectors, call Records tab; protected-grant drafts kept in memory only), operations (time report, expenses, usage, F-42), checklists (run sheet, due-checks card; run saves through the encrypted outbox, online-only on web) |
 | Chat assistant (`/chatbot`) | ✅ | Responder, Unit, IC, Dispatch. Core replies arrive as `chatMessageReceived` to channel groups only, so the assistant and every conversation now join their channel (`JoinChannel`) and rejoin after a reconnect |
 | Shared main map (`/map`) | ✅ | Calls, units, personnel, POIs, own location, department layers, legend, pin details; first tab and home for Unit and IC, menu entry for Responder, Dispatch and BigBoard. Not ported: Unit active-route overlay, map weather banner, map-lock setting; custom-map region layers wait for a GeoJSON fetch in data |
-| Feature translation keys | ✅ | 1,550 keys merged into all 10 languages (`add-keys.ts --features`); ~570 per language backfilled from the legacy apps' own translations; the rest are English placeholders listed in `packages/i18n/review/missing-translations.csv` |
+| Feature translation keys | ✅ | 1,568 keys merged into all 10 languages (`add-keys.ts --features`); ~570 per language backfilled from the legacy apps' own translations; the rest are English placeholders listed in `packages/i18n/review/missing-translations.csv` |
 
 Known integration follow-ups:
 
