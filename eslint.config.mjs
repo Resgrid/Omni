@@ -41,6 +41,16 @@ export default [
       'simple-import-sort/exports': 'error',
       'unused-imports/no-unused-imports': 'error',
       'import/no-cycle': 'error',
+      // eslint-plugin-react-hooks 7 (eslint-config-expo 58) adds React Compiler rules. The apps do not run the compiler
+      // (`experiments.reactCompiler` is an experiment), so these stay off until it is adopted; rules-of-hooks and
+      // exhaustive-deps still apply.
+      'react-hooks/set-state-in-effect': 'off',
+      'react-hooks/refs': 'off',
+      'react-hooks/immutability': 'off',
+      'react-hooks/purity': 'off',
+      'react-hooks/globals': 'off',
+      'react-hooks/static-components': 'off',
+      'react-hooks/use-memo': 'off',
       'no-restricted-imports': [
         'error',
         {

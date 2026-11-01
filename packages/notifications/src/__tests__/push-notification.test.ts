@@ -8,8 +8,8 @@ import { HANDLED_RESPONSE_LIMIT, pushNotificationService } from '../push-notific
 import { configureForTest, flushAll, selectVariant, type TestContext } from './helpers';
 import { routerPushWithRetry } from './mocks/core';
 import * as audio from './mocks/expo-audio';
-import { mockDeliverNotification, mockDeliverResponse, mockNotificationState, mockRequest, mockResetNotifications, mockResponse } from './mocks/expo-notifications';
 import * as notifications from './mocks/expo-notifications';
+import { mockDeliverNotification, mockDeliverResponse, mockNotificationState, mockRequest, mockResetNotifications, mockResponse } from './mocks/expo-notifications';
 import { EventType, mockNotifeeState, mockResetNotifee } from './mocks/notifee';
 
 const rn = jest.requireMock('react-native') as { Platform: { OS: string } };
