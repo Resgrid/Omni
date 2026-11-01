@@ -12,5 +12,12 @@
   },
   "scripts": {
     "merge-legacy": "node scripts/merge-legacy-translations.mjs"
+  },
+  "dependencies": {
+    "@resgrid/config": "workspace:*",
+    "expo-localization": "catalog:",
+    "i18next": "catalog:",
+    "react-i18next": "catalog:",
+    "react-native": "catalog:"
   }
 }

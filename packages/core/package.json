@@ -9,5 +9,20 @@
     ".": "./src/index.ts",
     "./*": "./src/*.ts",
     "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "@resgrid/config": "workspace:*",
+    "@sentry/react-native": "catalog:",
+    "countly-sdk-react-native-bridge": "catalog:",
+    "date-fns": "catalog:",
+    "expo-constants": "catalog:",
+    "expo-keep-awake": "catalog:",
+    "expo-router": "catalog:",
+    "react": "catalog:",
+    "react-native": "catalog:",
+    "react-native-logs": "catalog:"
+  },
+  "devDependencies": {
+    "react-test-renderer": "catalog:"
   }
 }

@@ -4,5 +4,33 @@
   "private": true,
   "description": "Design system for Resgrid Omni (layer L5): gluestack-ui v5 + NativeWind primitives, overlays, toast, HtmlRenderer, layout and theme helpers",
   "main": "src/index.ts",
-  "types": "src/index.ts"
+  "types": "src/index.ts",
+  "dependencies": {
+    "@expo/html-elements": "catalog:",
+    "@gluestack-ui/core": "catalog:",
+    "@gluestack-ui/utils": "catalog:",
+    "@legendapp/motion": "catalog:",
+    "@resgrid/i18n": "workspace:*",
+    "@shopify/flash-list": "catalog:",
+    "axios": "catalog:",
+    "expo-image": "catalog:",
+    "expo-navigation-bar": "catalog:",
+    "expo-router": "catalog:",
+    "lucide-react-native": "catalog:",
+    "nativewind": "catalog:",
+    "react": "catalog:",
+    "react-native": "catalog:",
+    "react-native-edge-to-edge": "catalog:",
+    "react-native-keyboard-controller": "catalog:",
+    "react-native-reanimated": "catalog:",
+    "react-native-safe-area-context": "catalog:",
+    "react-native-svg": "catalog:",
+    "react-native-webview": "catalog:",
+    "sanitize-html": "catalog:",
+    "tailwind-merge": "catalog:",
+    "zustand": "catalog:"
+  },
+  "devDependencies": {
+    "@testing-library/react-native": "catalog:"
+  }
 }

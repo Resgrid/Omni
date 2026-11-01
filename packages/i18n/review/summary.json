@@ -1,7 +1,7 @@
 {
   "rules": "see header of packages/i18n/scripts/merge-legacy-translations.mjs",
   "namespaces": {
-    "common": 1998,
+    "common": 2055,
     "responder": 1008,
     "unit": 186,
     "ic": 715,

@@ -10,7 +10,6 @@
     "contract:refresh": "node contract/refresh-swagger.mjs"
   },
   "dependencies": {
-    "@resgrid/config": "workspace:*",
     "@resgrid/models": "workspace:*",
     "axios": "catalog:"
   }

@@ -2,6 +2,14 @@
   "name": "@resgrid/data",
   "version": "0.0.0",
   "private": true,
+  "description": "Domain zustand stores shared by the five Resgrid apps, persisted for offline, with outbox handlers for writes in each variant's offline scope (layer L4)",
   "main": "src/index.ts",
-  "types": "src/index.ts"
+  "types": "src/index.ts",
+  "dependencies": {
+    "@resgrid/api": "workspace:*",
+    "@resgrid/config": "workspace:*",
+    "@resgrid/models": "workspace:*",
+    "@resgrid/offline": "workspace:*",
+    "zustand": "catalog:"
+  }
 }

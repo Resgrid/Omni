@@ -183,6 +183,7 @@ function createAppConfig({ variant, appEnv, runNumber, projectRoot, env = proces
       version: versionInfo,
       env: buildClientEnv(m, appEnv, env),
       router: { root: `./variants/${variant}/app` },
+      location: { background: backgroundLocation, transmission: caps.location.transmission },
       eas: {
         projectId: identity.easProjectId,
         ...(appExtensions.length ? { build: { experimental: { ios: { appExtensions } } } } : {}),

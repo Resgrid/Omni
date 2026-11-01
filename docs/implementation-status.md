@@ -35,11 +35,13 @@ Living tracker for executing [`architecture/omni-plan.md`](architecture/omni-pla
 | `@resgrid/i18n` | ✅ | 46 tests. Keys in ≥2 apps → common (1998); app wording overrides kept per variant; review CSVs in `packages/i18n/review/` |
 | `@resgrid/offline` | ✅ | 249 tests (memory + real SQLite engines). Open: unsent changes on logout (owner decision); legacy queue import; BlobStore; web durability waits for S7 |
 | `@resgrid/ui` | ✅ | 172 tests. HtmlRenderer hardened (native origin whitelist, web sandbox); gluestack/webview patches via pnpm |
-| `@resgrid/auth` | ⬜ | |
-| `@resgrid/realtime` | ⬜ | |
-| `@resgrid/notifications` | ⬜ | |
-| `@resgrid/location` | ⬜ | |
-| `@resgrid/voice` | ⬜ | |
+| `@resgrid/auth` | ✅ | 246 tests. Legacy session blobs restore for every variant; logout only on token-endpoint invalid_grant; client_id retry fallback until Core registers the apps |
+| `@resgrid/realtime` | ✅ | 90 tests. Fresh token per reconnect, exhausted-hub recovery, re-join after reconnect, capability-driven event sets, watchdog |
+| `@resgrid/notifications` | ✅ | 290 tests. Every server channel id created with a modern sound; all iOS categories; event-code parser; Novu per-variant subscribers |
+| `@resgrid/location` | ✅ | 163 tests. Task defined at entry for background variants; coalesced offline fixes |
+| `@resgrid/voice` | ✅ | 191 tests. LiveKit with room-switch race fix, CallKeep/BT/headset/desktop PTT gated by capability |
+
+| `@resgrid/data` | ✅ | 149 tests. Domain stores with per-variant hydration; offline writes incl. offline call creation and all 26 IC event types; routes RD10–RD13 fixed |
 
 ## UI acceptance tests
 
@@ -48,6 +50,13 @@ Living tracker for executing [`architecture/omni-plan.md`](architecture/omni-pla
 | Playwright web boot tests per variant | ✅ | `pnpm e2e:web`; BigBoard 3/3 locally |
 | Playwright Electron smoke | ✅ | 1/1 against the BigBoard Windows build |
 | Maestro native flows per variant | 🟡 | written, dry-run only; run nightly on Android emulator |
+
+## Open questions raised during implementation
+
+1. **Unsent changes on logout** — `@resgrid/offline` keeps them encrypted and owner-scoped (never sent for another user, dropped after 7 days); plan §8.9 says logout leaves no records. Keep or discard on logout?
+2. **Legacy `http://` server URLs** — R/I/B builds may have stored an http URL; Omni ignores it (default server, user signs in again). Accept, or add a migration prompt?
+3. **Status destination helpers** — strict by default, `{ lenient: true }` reproduces Unit. Which default?
+4. **Core work needed** — register the five OAuth client ids as OpenIddict applications; honour idempotency keys on SaveCall/notes/messages; emit weather alert and checkInUpdated events.
 
 ## Phases 2–6
 

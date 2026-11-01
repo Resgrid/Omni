@@ -423,6 +423,9 @@ catalogs:
     react-native-worklets:
       specifier: 0.10.1
       version: 0.10.1
+    react-test-renderer:
+      specifier: 19.2.3
+      version: 19.2.3
     sanitize-html:
       specifier: 2.17.0
       version: 2.17.0
@@ -1034,9 +1037,6 @@ importers:
 
   packages/api:
     dependencies:
-      '@resgrid/config':
-        specifier: workspace:*
-        version: link:../config
       '@resgrid/models':
         specifier: workspace:*
         version: link:../models
@@ -1046,41 +1046,427 @@ importers:
 
   packages/app-shell: {}
 
-  packages/auth: {}
+  packages/auth:
+    dependencies:
+      '@resgrid/api':
+        specifier: workspace:*
+        version: link:../api
+      '@resgrid/config':
+        specifier: workspace:*
+        version: link:../config
+      '@resgrid/core':
+        specifier: workspace:*
+        version: link:../core
+      '@resgrid/models':
+        specifier: workspace:*
+        version: link:../models
+      '@resgrid/offline':
+        specifier: workspace:*
+        version: link:../offline
+      expo-application:
+        specifier: 'catalog:'
+        version: 57.0.3(expo@57.0.31)
+      expo-auth-session:
+        specifier: 'catalog:'
+        version: 57.0.16(expo@57.0.31)(react-native@0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
+      expo-crypto:
+        specifier: 'catalog:'
+        version: 57.0.4(expo@57.0.31)
+      expo-device:
+        specifier: 'catalog:'
+        version: 57.0.2(expo@57.0.31)
+      expo-web-browser:
+        specifier: 'catalog:'
+        version: 57.0.3(expo@57.0.31)(react-native@0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))
+      jwt-decode:
+        specifier: 'catalog:'
+        version: 4.0.0
+      react:
+        specifier: 'catalog:'
+        version: 19.2.3
+      react-native:
+        specifier: 'catalog:'
+        version: 0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3)
+      react-native-passkey:
+        specifier: 'catalog:'
+        version: 3.6.2(react-native@0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
+      zustand:
+        specifier: 'catalog:'
+        version: 4.5.7(@types/react@19.2.18)(react@19.2.3)
+    devDependencies:
+      axios:
+        specifier: 'catalog:'
+        version: 1.12.2
+      react-test-renderer:
+        specifier: 'catalog:'
+        version: 19.2.3(react@19.2.3)
 
   packages/config: {}
 
   packages/config-plugins: {}
 
-  packages/core: {}
+  packages/core:
+    dependencies:
+      '@resgrid/config':
+        specifier: workspace:*
+        version: link:../config
+      '@sentry/react-native':
+        specifier: 'catalog:'
+        version: 8.20.0(@expo/env@2.5.3)(dotenv@16.6.1)(expo@57.0.31)(react-native@0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
+      countly-sdk-react-native-bridge:
+        specifier: 'catalog:'
+        version: 26.1.0
+      date-fns:
+        specifier: 'catalog:'
+        version: 4.1.0
+      expo-constants:
+        specifier: 'catalog:'
+        version: 57.0.22(expo@57.0.31)(react-native@0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))
+      expo-keep-awake:
+        specifier: 'catalog:'
+        version: 57.0.2(expo@57.0.31)(react@19.2.3)
+      expo-router:
+        specifier: 'catalog:'
+        version: 57.0.29(238297e34d7909d5bdc1647022715db6)
+      react:
+        specifier: 'catalog:'
+        version: 19.2.3
+      react-native:
+        specifier: 'catalog:'
+        version: 0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3)
+      react-native-logs:
+        specifier: 'catalog:'
+        version: 5.3.0
+    devDependencies:
+      react-test-renderer:
+        specifier: 'catalog:'
+        version: 19.2.3(react@19.2.3)
 
-  packages/data: {}
+  packages/data:
+    dependencies:
+      '@resgrid/api':
+        specifier: workspace:*
+        version: link:../api
+      '@resgrid/config':
+        specifier: workspace:*
+        version: link:../config
+      '@resgrid/models':
+        specifier: workspace:*
+        version: link:../models
+      '@resgrid/offline':
+        specifier: workspace:*
+        version: link:../offline
+      zustand:
+        specifier: 'catalog:'
+        version: 4.5.7(@types/react@19.2.18)(react@19.2.3)
 
   packages/features: {}
 
-  packages/i18n: {}
+  packages/i18n:
+    dependencies:
+      '@resgrid/config':
+        specifier: workspace:*
+        version: link:../config
+      expo-localization:
+        specifier: 'catalog:'
+        version: 57.0.2(expo@57.0.31)(react@19.2.3)
+      i18next:
+        specifier: 'catalog:'
+        version: 23.14.0
+      react-i18next:
+        specifier: 'catalog:'
+        version: 15.0.3(i18next@23.14.0)(react-dom@19.2.3(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
+      react-native:
+        specifier: 'catalog:'
+        version: 0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3)
 
-  packages/location: {}
+  packages/location:
+    dependencies:
+      '@resgrid/api':
+        specifier: workspace:*
+        version: link:../api
+      '@resgrid/config':
+        specifier: workspace:*
+        version: link:../config
+      '@resgrid/core':
+        specifier: workspace:*
+        version: link:../core
+      '@resgrid/i18n':
+        specifier: workspace:*
+        version: link:../i18n
+      '@resgrid/models':
+        specifier: workspace:*
+        version: link:../models
+      '@resgrid/offline':
+        specifier: workspace:*
+        version: link:../offline
+      expo-constants:
+        specifier: 'catalog:'
+        version: 57.0.22(expo@57.0.31)(react-native@0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))
+      expo-location:
+        specifier: 'catalog:'
+        version: 57.0.22(expo@57.0.31)(typescript@6.0.3)
+      expo-task-manager:
+        specifier: 'catalog:'
+        version: 57.0.21(expo@57.0.31)(react-native@0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))
+      react:
+        specifier: 'catalog:'
+        version: 19.2.3
+      react-native:
+        specifier: 'catalog:'
+        version: 0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3)
+    devDependencies:
+      react-test-renderer:
+        specifier: 'catalog:'
+        version: 19.2.3(react@19.2.3)
 
   packages/maps: {}
 
   packages/models:
-    devDependencies:
-      '@types/geojson':
+    dependencies:
+      geojson:
         specifier: 'catalog:'
-        version: 7946.0.16
+        version: 0.5.0
 
   packages/navigation: {}
 
-  packages/notifications: {}
+  packages/notifications:
+    dependencies:
+      '@notifee/react-native':
+        specifier: 'catalog:'
+        version: 9.1.8(react-native@0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))
+      '@novu/react-native':
+        specifier: 'catalog:'
+        version: 3.11.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      '@resgrid/api':
+        specifier: workspace:*
+        version: link:../api
+      '@resgrid/config':
+        specifier: workspace:*
+        version: link:../config
+      '@resgrid/core':
+        specifier: workspace:*
+        version: link:../core
+      '@resgrid/i18n':
+        specifier: workspace:*
+        version: link:../i18n
+      '@resgrid/models':
+        specifier: workspace:*
+        version: link:../models
+      expo-asset:
+        specifier: 'catalog:'
+        version: 57.0.20(expo@57.0.31)(react-native@0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)(typescript@6.0.3)
+      expo-audio:
+        specifier: 'catalog:'
+        version: 57.0.5(expo-asset@57.0.20(expo@57.0.31)(react-native@0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)(typescript@6.0.3))(expo@57.0.31)(react-native@0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
+      expo-device:
+        specifier: 'catalog:'
+        version: 57.0.2(expo@57.0.31)
+      expo-notifications:
+        specifier: 'catalog:'
+        version: 57.0.24(expo@57.0.31)(react-native@0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)(typescript@6.0.3)
+      expo-router:
+        specifier: 'catalog:'
+        version: 57.0.29(238297e34d7909d5bdc1647022715db6)
+      firebase:
+        specifier: 'catalog:'
+        version: 12.19.0
+      react:
+        specifier: 'catalog:'
+        version: 19.2.3
+      react-native:
+        specifier: 'catalog:'
+        version: 0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3)
+      zustand:
+        specifier: 'catalog:'
+        version: 4.5.7(@types/react@19.2.18)(react@19.2.3)
+    devDependencies:
+      react-test-renderer:
+        specifier: 'catalog:'
+        version: 19.2.3(react@19.2.3)
 
-  packages/offline: {}
+  packages/offline:
+    dependencies:
+      '@react-native-community/netinfo':
+        specifier: 'catalog:'
+        version: 12.0.1(react-native@0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
+      '@resgrid/config':
+        specifier: workspace:*
+        version: link:../config
+      expo-crypto:
+        specifier: 'catalog:'
+        version: 57.0.4(expo@57.0.31)
+      expo-secure-store:
+        specifier: 'catalog:'
+        version: 57.0.4(expo@57.0.31)
+      expo-sqlite:
+        specifier: 'catalog:'
+        version: 57.0.4(expo@57.0.31)(react-native@0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
+      react-native-mmkv:
+        specifier: 'catalog:'
+        version: 3.3.3(react-native@0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
+      zustand:
+        specifier: 'catalog:'
+        version: 4.5.7(@types/react@19.2.18)(react@19.2.3)
 
-  packages/realtime: {}
+  packages/realtime:
+    dependencies:
+      '@microsoft/signalr':
+        specifier: 'catalog:'
+        version: 8.0.17(encoding@0.1.14)
+      '@resgrid/config':
+        specifier: workspace:*
+        version: link:../config
+      '@resgrid/core':
+        specifier: workspace:*
+        version: link:../core
+      '@resgrid/models':
+        specifier: workspace:*
+        version: link:../models
+      '@resgrid/offline':
+        specifier: workspace:*
+        version: link:../offline
+      react:
+        specifier: 'catalog:'
+        version: 19.2.3
+      zustand:
+        specifier: 'catalog:'
+        version: 4.5.7(@types/react@19.2.18)(react@19.2.3)
+    devDependencies:
+      react-test-renderer:
+        specifier: 'catalog:'
+        version: 19.2.3(react@19.2.3)
 
-  packages/ui: {}
+  packages/ui:
+    dependencies:
+      '@expo/html-elements':
+        specifier: 'catalog:'
+        version: 0.10.1
+      '@gluestack-ui/core':
+        specifier: 'catalog:'
+        version: 5.0.15(patch_hash=92f810e63a19e43d9fd14c78f0c6ec20d93fbd55d1efe673d55383e4bc19844d)(7cc76f4c224edf6678d29a7b950aa341)
+      '@gluestack-ui/utils':
+        specifier: 'catalog:'
+        version: 5.0.6(@react-spectrum/provider@3.11.1(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-dom@19.2.3(react@19.2.3))(react-native-web@0.21.2(encoding@0.1.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)(tailwindcss@4.3.3)
+      '@legendapp/motion':
+        specifier: 'catalog:'
+        version: 2.4.0(nativewind@5.0.0-preview.4(react-native-css@3.0.7(@expo/metro-config@57.0.13(expo@57.0.31)(typescript@6.0.3))(lightningcss@1.30.1)(react-native@0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3))(tailwindcss@4.3.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
+      '@resgrid/i18n':
+        specifier: workspace:*
+        version: link:../i18n
+      '@shopify/flash-list':
+        specifier: 'catalog:'
+        version: 2.0.2(@babel/runtime@7.29.10)(react-native@0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
+      axios:
+        specifier: 'catalog:'
+        version: 1.12.2
+      expo-image:
+        specifier: 'catalog:'
+        version: 57.0.5(expo@57.0.31)(react-native-web@0.21.2(encoding@0.1.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
+      expo-navigation-bar:
+        specifier: 'catalog:'
+        version: 57.0.3(expo@57.0.31)(react-native@0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
+      expo-router:
+        specifier: 'catalog:'
+        version: 57.0.29(238297e34d7909d5bdc1647022715db6)
+      lucide-react-native:
+        specifier: 'catalog:'
+        version: 0.475.0(react-native-svg@15.15.4(react-native@0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
+      nativewind:
+        specifier: 'catalog:'
+        version: 5.0.0-preview.4(react-native-css@3.0.7(@expo/metro-config@57.0.13(expo@57.0.31)(typescript@6.0.3))(lightningcss@1.30.1)(react-native@0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3))(tailwindcss@4.3.3)
+      react:
+        specifier: 'catalog:'
+        version: 19.2.3
+      react-native:
+        specifier: 'catalog:'
+        version: 0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3)
+      react-native-edge-to-edge:
+        specifier: 'catalog:'
+        version: 1.6.0(react-native@0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
+      react-native-keyboard-controller:
+        specifier: 'catalog:'
+        version: 1.21.9(react-native-reanimated@4.5.1(react-native-worklets@0.10.1(@babel/core@7.29.7)(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
+      react-native-reanimated:
+        specifier: 'catalog:'
+        version: 4.5.1(react-native-worklets@0.10.1(@babel/core@7.29.7)(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
+      react-native-safe-area-context:
+        specifier: 'catalog:'
+        version: 5.7.0(react-native@0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
+      react-native-svg:
+        specifier: 'catalog:'
+        version: 15.15.4(react-native@0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
+      react-native-webview:
+        specifier: 'catalog:'
+        version: 13.16.1(patch_hash=9aa7bd08e7e8fc5aa824e31a24d9a9ad265ab93aeae5ac444060d9b20e2d976f)(react-native@0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
+      sanitize-html:
+        specifier: 'catalog:'
+        version: 2.17.0
+      tailwind-merge:
+        specifier: 'catalog:'
+        version: 3.7.0
+      zustand:
+        specifier: 'catalog:'
+        version: 4.5.7(@types/react@19.2.18)(react@19.2.3)
+    devDependencies:
+      '@testing-library/react-native':
+        specifier: 'catalog:'
+        version: 12.9.0(jest@29.7.0(@types/node@22.20.5))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react-test-renderer@19.2.3(react@19.2.3))(react@19.2.3)
 
-  packages/voice: {}
+  packages/voice:
+    dependencies:
+      '@livekit/react-native':
+        specifier: 'catalog:'
+        version: 2.12.0(@livekit/react-native-webrtc@144.1.2(react-native@0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3)))(livekit-client@2.23.0(@types/dom-mediacapture-record@1.0.22))(react-dom@19.2.3(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)(tslib@2.9.1)
+      '@livekit/react-native-webrtc':
+        specifier: 'catalog:'
+        version: 144.1.2(react-native@0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))
+      '@notifee/react-native':
+        specifier: 'catalog:'
+        version: 9.1.8(react-native@0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))
+      '@resgrid/api':
+        specifier: workspace:*
+        version: link:../api
+      '@resgrid/config':
+        specifier: workspace:*
+        version: link:../config
+      '@resgrid/core':
+        specifier: workspace:*
+        version: link:../core
+      '@resgrid/models':
+        specifier: workspace:*
+        version: link:../models
+      '@resgrid/offline':
+        specifier: workspace:*
+        version: link:../offline
+      expo-audio:
+        specifier: 'catalog:'
+        version: 57.0.5(expo-asset@57.0.20(expo@57.0.31)(react-native@0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)(typescript@6.0.3))(expo@57.0.31)(react-native@0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
+      expo-device:
+        specifier: 'catalog:'
+        version: 57.0.2(expo@57.0.31)
+      livekit-client:
+        specifier: 'catalog:'
+        version: 2.23.0(@types/dom-mediacapture-record@1.0.22)
+      react:
+        specifier: 'catalog:'
+        version: 19.2.3
+      react-native:
+        specifier: 'catalog:'
+        version: 0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3)
+      react-native-ble-manager:
+        specifier: 'catalog:'
+        version: 12.2.1(react-native@0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
+      react-native-callkeep:
+        specifier: 'catalog:'
+        version: https://codeload.github.com/Irfanwani/react-native-callkeep/tar.gz/957193d0716f1c2dfdc18e627cbff0f8a0800971(react-native@0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))
+      zustand:
+        specifier: 'catalog:'
+        version: 4.5.7(@types/react@19.2.18)(react@19.2.3)
+    devDependencies:
+      '@testing-library/react-native':
+        specifier: 'catalog:'
+        version: 12.9.0(jest@29.7.0(@types/node@22.20.5))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/jest-preset@0.86.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react-test-renderer@19.2.3(react@19.2.3))(react@19.2.3)
 
   tooling/jest-preset: {}
 

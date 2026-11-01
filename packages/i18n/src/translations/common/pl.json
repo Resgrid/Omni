@@ -8,7 +8,9 @@
     }
   },
   "app": {
-    "title": "{{appName}}"
+    "title": "{{appName}}",
+    "realtime_offline_title": "Live updates paused",
+    "realtime_offline_description": "Reconnecting to live updates. Information may be out of date."
   },
   "audio_streams": {
     "buffering": "Buforowanie",
@@ -710,7 +712,11 @@
     "unknown_department": "Nieznany oddział",
     "unknown_user": "Nieznany użytkownik",
     "upload": "Prześlij",
-    "uploading": "Przesyłanie..."
+    "uploading": "Przesyłanie...",
+    "something_went_wrong": "Something went wrong",
+    "close_menu": "Close menu",
+    "no_data_found": "No data found",
+    "html_content": "Content"
   },
   "contacts": {
     "add": "Dodaj kontakt",
@@ -942,7 +948,15 @@
     "fix_services_disabled": "Usługi lokalizacji są wyłączone. Włącz je w ustawieniach urządzenia i spróbuj ponownie.",
     "fix_unavailable": "Nie udało się ustalić lokalizacji. Przejdź w miejsce z lepszą widocznością nieba i spróbuj ponownie.",
     "tracking_notification_body": "Udostępnianie lokalizacji tej jednostki jednostce organizacyjnej.",
-    "tracking_notification_title": "Śledzenie lokalizacji"
+    "tracking_notification_title": "Śledzenie lokalizacji",
+    "permission_foreground_title": "Allow location access",
+    "permission_foreground_message": "{{appName}} uses your location while the app is open to show where you are on the map and to share your position with your department.",
+    "permission_background_title": "Allow location all the time",
+    "permission_background_message": "To keep your department updated while {{appName}} is in the background or the screen is off, allow location access \"All the time\" (Android: \"Allow all the time\"; iOS: \"Always\") in the next prompt or in Settings.",
+    "permission_blocked_message": "Location access is turned off for {{appName}}. Open Settings to allow it.",
+    "permission_open_settings": "Open Settings",
+    "permission_continue": "Continue",
+    "permission_not_now": "Not now"
   },
   "location_history": {
     "address_matching_off": "W tym departamencie włączona jest zaawansowana ochrona danych, dlatego adresy zgłoszeń są zaszyfrowane i wyświetlane są tylko zgłoszenia powiązane przez kontakt.",
@@ -1572,7 +1586,39 @@
     },
     "unknown_type_warning": "Ten typ powiadomienia nie jest rozpoznawany.",
     "view_call": "Wyświetl zgłoszenie",
-    "view_message": "Zobacz wiadomości"
+    "view_message": "Zobacz wiadomości",
+    "channels": {
+      "call_emergency_classic": "Emergency Call (classic)",
+      "call_high_classic": "High Call (classic)",
+      "call_medium_classic": "Medium Call (classic)",
+      "call_low_classic": "Low Call (classic)",
+      "notification_classic": "Notification (classic)",
+      "message_classic": "Message (classic)",
+      "beep_classic": "Beep (classic)",
+      "call_emergency": "Emergency Call",
+      "call_high": "High Call",
+      "call_medium": "Medium Call",
+      "call_low": "Low Call",
+      "notification": "Notification",
+      "message": "Message",
+      "chat": "Chat",
+      "call_updated": "Call Updated",
+      "call_closed": "Call Closed",
+      "trouble_alert": "Trouble Alert",
+      "personnel_status": "Personnel Status",
+      "unit_status": "Unit Status",
+      "staffing": "Staffing",
+      "shift": "Shift",
+      "training": "Training",
+      "calendar": "Calendar",
+      "availability_alert": "Availability Alert",
+      "weather_alert": "Weather Alert",
+      "unit_notice": "Unit Notice",
+      "resource_order": "Resource Order",
+      "generic_call": "Generic Call",
+      "general_notification": "Notifications",
+      "general_message": "Messages"
+    }
   },
   "records": {
     "add_row": "Dodaj wiersz",
@@ -2007,7 +2053,8 @@
     "unit_selection_failed": "Nie udało się wybrać jednostki. Spróbuj ponownie.",
     "username": "Nazwa użytkownika",
     "version": "Wersja",
-    "website": "Strona internetowa"
+    "website": "Strona internetowa",
+    "view_sync_queue": "View pending changes"
   },
   "shared_session": {
     "bar": "Urządzenie współdzielone",
@@ -2235,6 +2282,22 @@
       "immediate": "Natychmiastowy",
       "past": "Przeszły",
       "unknown": "Nieznany"
+    }
+  },
+  "errors": {
+    "data": {
+      "network": "No network connection. Your change is saved and will be sent when you are back online.",
+      "timeout": "The server took too long to respond. Please try again.",
+      "canceled": "The request was cancelled.",
+      "no_session": "You are signed out. Sign in and try again.",
+      "unauthorized": "Your session has expired. Sign in again.",
+      "forbidden": "You do not have permission to do that.",
+      "not_found": "That item could not be found. It may have been removed.",
+      "conflict": "This item was changed by someone else. Refresh and try again.",
+      "rejected": "The server rejected this change. Review it and try again.",
+      "server": "The server had a problem. Please try again shortly.",
+      "not_configured": "The app is still starting. Please try again in a moment.",
+      "unknown": "Something went wrong. Please try again."
     }
   }
 }

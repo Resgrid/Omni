@@ -2,6 +2,29 @@
   "name": "@resgrid/auth",
   "version": "0.0.0",
   "private": true,
+  "description": "Sign-in, session, token refresh, MFA, SSO, passkeys, shared-device sessions, personal lock, rights, feature flags, terminology and data-protection grants for Resgrid Omni (layer L3)",
   "main": "src/index.ts",
-  "types": "src/index.ts"
+  "types": "src/index.ts",
+  "sideEffects": true,
+  "dependencies": {
+    "@resgrid/api": "workspace:*",
+    "@resgrid/config": "workspace:*",
+    "@resgrid/core": "workspace:*",
+    "@resgrid/models": "workspace:*",
+    "@resgrid/offline": "workspace:*",
+    "expo-application": "catalog:",
+    "expo-auth-session": "catalog:",
+    "expo-crypto": "catalog:",
+    "expo-device": "catalog:",
+    "expo-web-browser": "catalog:",
+    "jwt-decode": "catalog:",
+    "react": "catalog:",
+    "react-native": "catalog:",
+    "react-native-passkey": "catalog:",
+    "zustand": "catalog:"
+  },
+  "devDependencies": {
+    "axios": "catalog:",
+    "react-test-renderer": "catalog:"
+  }
 }
