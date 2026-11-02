@@ -10,7 +10,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const LANGUAGES = ['en', 'ar', 'de', 'el', 'es', 'fr', 'it', 'pl', 'sv', 'uk'] as const;
-// `--features` merges every packages/features/src/<domain>/i18n.en.json (and app-shell's) into the namespace.
+// `--features` merges every packages/features/src/<domain>/i18n.en.json (and app-shell's, maps' and navigation's) into the namespace.
 const withFeatures = process.argv.includes('--features');
 const namespace = process.argv.slice(2).find((a) => !a.startsWith('--')) ?? 'common';
 const packagesDir = path.resolve(__dirname, '..', '..');
@@ -101,7 +101,7 @@ function setIfMissing(obj: Json, dottedKey: string, value: string): boolean {
 
 function featureKeys(): Record<string, string> {
   const out: Record<string, string> = {};
-  const sources = [path.join(packagesDir, 'app-shell', 'src', 'i18n.en.json'), path.join(packagesDir, 'maps', 'src', 'i18n.en.json')];
+  const sources = [path.join(packagesDir, 'app-shell', 'src', 'i18n.en.json'), path.join(packagesDir, 'maps', 'src', 'i18n.en.json'), path.join(packagesDir, 'navigation', 'src', 'i18n.en.json')];
   const featuresDir = path.join(packagesDir, 'features', 'src');
   if (fs.existsSync(featuresDir)) {
     for (const d of fs.readdirSync(featuresDir, { withFileTypes: true })) if (d.isDirectory()) sources.push(path.join(featuresDir, d.name, 'i18n.en.json'));

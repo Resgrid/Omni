@@ -5,7 +5,7 @@ description: Maps in Resgrid Omni — MapLibre only (@maplibre/maplibre-react-na
 
 # Maps
 
-Governing plan: `../int-Coordination/docs/architecture/maplibre-mapping-routing-navigation-plan.md` (v1.1: §8 apps, §9 navigation, §19 offline maps, §20 Omni). Status: planned 2026-10-31.
+Governing plan: `../int-Coordination/docs/architecture/maplibre-mapping-routing-navigation-plan.md` (§8 apps, §9 navigation, §10.7 route stops, §11 traffic, §19 offline maps, §20 Omni, §23 Core status). Status 2026-11-01: Core side built on `develop`; Omni side built (`docs/implementation-status.md`).
 
 ## Rules
 
@@ -16,7 +16,8 @@ Governing plan: `../int-Coordination/docs/architecture/maplibre-mapping-routing-
 - **Attribution on** in every map (OSM ODbL and Mapbox require it).
 - **Pins:** symbol layers with the department sprite for many markers; `MarkerView` only for a selected/interactive marker (performance on Dispatch/BigBoard with hundreds of pins).
 - **Restyle safety:** re-add live layers on style change (`styleRevision`).
-- Server-hosted rasters and images (custom maps, indoor floors, style JSON) use **signed URLs** — native sources cannot send auth headers.
+- Server-hosted rasters and images (custom maps, indoor floors, style JSON) use **signed URLs** — native sources cannot send auth headers. Sign through `useSignedMapUrl(s)` (batched `Mapping/SignMapResourceUrls`, cached, re-signed before expiry); draw nothing until a URL is signed. Georeferenced custom maps use the layer's signed `MercatorTileUrl`; the legacy `GetCustomMapTile` pixel pyramid is never a map source (D21).
+- **Routing and traffic capabilities** come from config through `useMapRouting()` / `useMapTraffic()`; older servers send none, so traffic, voice and in-app navigation stay hidden. The traffic overlay is `TrafficLayer` + `MapTrafficButton`; routes draw with `RouteLine`. Tile errors from app-added overlays (traffic, custom maps, routes) must never count toward the offline switch.
 
 ## Department map data
 
@@ -33,7 +34,7 @@ Custom maps (server raster tiles from `CustomMapTiles`, `Mapping/GetCustomMapTil
 
 ## Navigation (Unit)
 
-Turn-by-turn lives in `@resgrid/navigation` (capability `navigation.inApp`, flag `Navigation.InApp`): server route in OSRM/Mapbox Directions JSON, snapping and off-route detection in TS, `expo-speech` voice, reroute throttling. Offline: keep following the last route; queue rerouting. The external "Open in…" hand-off (10 navigation apps) stays available.
+Turn-by-turn lives in `@resgrid/navigation` (engine, session store, components) and the `/navigate` screen in `features/navigation`; gate it with `useInAppNavigationAvailable()` (capability `maps.navigationInApp` ∧ config `NavigationAvailable` — Valhalla/Mapbox only, D26 — ∧ flag `Navigation.InApp`). Routes only from the server: `Routing/GetCallRoute` (call), `Routing/GetRoute` (point), live `Routes/GetInstanceDirections` with `navigation=true` (a route's remaining stops, one leg per stop); the route object is OSRM v5 / Mapbox Directions JSON with polyline6 geometry. Snapping, off-route, voice and arrival are pure TS (tested with synthetic routes); `expo-speech` voice; reroute ≥ 10 s apart, ≤ 30 per session. A failed reroute keeps guiding on the last route. Live ETA reports go through the outbox (`navigation.progress`, newest per unit, dropped once stale); Dispatch/BigBoard show them through `features/navigation-eta`. Directions buttons go through the shell's `NavigationHandoff`: in-app when the crew's navigation app is "Resgrid (in-app)" (the default where offered), else their external app; `openExternal` always opens the external app. A call target carries `callId` only when its location is not withheld (ADP).
 
 ## Tests
 
