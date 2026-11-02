@@ -16,6 +16,7 @@
     "@resgrid/offline": "workspace:*",
     "expo-asset": "catalog:",
     "expo-file-system": "catalog:",
+    "fflate": "catalog:",
     "lucide-react-native": "catalog:",
     "maplibre-gl": "catalog:",
     "pmtiles": "catalog:",

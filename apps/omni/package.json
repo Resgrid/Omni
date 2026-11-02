@@ -86,6 +86,7 @@
     "expo-screen-orientation": "catalog:",
     "expo-secure-store": "catalog:",
     "expo-sharing": "catalog:",
+    "expo-speech": "catalog:",
     "expo-splash-screen": "catalog:",
     "expo-sqlite": "catalog:",
     "expo-status-bar": "catalog:",

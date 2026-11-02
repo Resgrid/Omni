@@ -2,6 +2,29 @@
   "name": "@resgrid/navigation",
   "version": "0.0.0",
   "private": true,
+  "description": "In-app turn-by-turn navigation for Resgrid Omni (layer L6): route model, snapping, progress, off-route and reroute policy, voice prompts, session store and the navigation screen over @resgrid/maps (MapLibre plan §9)",
   "main": "src/index.ts",
-  "types": "src/index.ts"
+  "types": "src/index.ts",
+  "dependencies": {
+    "@resgrid/api": "workspace:*",
+    "@resgrid/config": "workspace:*",
+    "@resgrid/core": "workspace:*",
+    "@resgrid/data": "workspace:*",
+    "@resgrid/i18n": "workspace:*",
+    "@resgrid/location": "workspace:*",
+    "@resgrid/maps": "workspace:*",
+    "@resgrid/models": "workspace:*",
+    "@resgrid/offline": "workspace:*",
+    "@resgrid/ui": "workspace:*",
+    "expo-keep-awake": "catalog:",
+    "expo-speech": "catalog:",
+    "lucide-react-native": "catalog:",
+    "react": "catalog:",
+    "react-native": "catalog:",
+    "zustand": "catalog:"
+  },
+  "devDependencies": {
+    "@testing-library/react-native": "catalog:",
+    "test-renderer": "catalog:"
+  }
 }
