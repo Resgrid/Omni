@@ -22,13 +22,13 @@ import {
 } from './manifest';
 import { fetchOfflineManifest, type OfflineMapsAvailability, type OfflineMapsConfigInput, resolveOfflineMapsAvailability } from './manifest-client';
 import type { OfflineNetworkProbe } from './network';
-import { EMPTY_PACK_FOCUS, isExtraPackWanted, type OfflinePackFocus, type OfflinePackSelection } from './pack-selection';
+import { EMPTY_PACK_FOCUS, type ExtraPackFacts, isExtraPackWanted, type OfflinePackFocus, type OfflinePackSelection } from './pack-selection';
 import { isOfflineMapPacksSupported } from './platform';
 import { createDbOfflinePackRegistry, type DbOfflinePackRegistry, offlinePackScopeKey } from './registry';
 import { sha256Hex } from './sha256';
 import { evaluateManifestSizes, LOW_STORAGE_FREE_RATIO, type ManifestSizeEvaluation, wouldExhaustStorage } from './size-guard';
 import { defaultOfflineFetch, type OfflineFetch } from './transport';
-import { OFFLINE_MAP_ATTRIBUTION, type OfflineAssetKind, type OfflineDepartmentData, type OfflineIndoorFloor, type OfflineMapPackRecord, type OfflinePackScope, type PackBounds } from './types';
+import { OFFLINE_MAP_ATTRIBUTION, type OfflineAssetKind, type OfflineDepartmentData, type OfflineIndoorFloor, type OfflineMapPackRecord, type OfflinePackScope } from './types';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const GB = 1024 * 1024 * 1024;
@@ -216,6 +216,11 @@ export interface OfflinePackManagerOptions {
    * Omitted: every listed pack is downloaded.
    */
   packSelection?: OfflinePackSelection | null;
+  /**
+   * Fetches the department config again (and hands it to `updateConfig`) when the signed manifest URL from it has
+   * expired; the manifest is then requested once more.
+   */
+  renewConfig?: (() => Promise<void>) | null;
   /** Timer seam for the pending-pack recheck (tests). */
   setTimer?: (callback: () => void, ms: number) => unknown;
   clearTimer?: (handle: unknown) => void;
@@ -262,6 +267,14 @@ const freshState = (wifiOnly: boolean): OfflineMapsState => ({
   responseAreaBytes: 0,
   responseAreaLimitBytes: DEFAULT_OFFLINE_POLICY.responseAreaMaxBytes,
 });
+
+/**
+ * A failed download that a newer manifest may fix (tried once per run): an expired URL; department data whose size or
+ * hash no longer matches (Core serves the current bundle at a fixed URL, so an edit since the manifest changes it); a
+ * pack that is gone (404: rebuilt or cleaned up since).
+ */
+const needsFreshManifest = (asset: Pick<OfflineManifestAsset, 'kind'>, code: OfflineMapsErrorCode, httpStatus: number | undefined): boolean =>
+  code === 'download-url-expired' || (asset.kind === 'department-data' && (code === 'integrity-failed' || code === 'size-mismatch')) || (code === 'download-http-error' && httpStatus === 404);
 
 const isCurrent = (row: OfflineMapPackRecord | undefined, asset: Pick<OfflineSnapshotAsset, 'version' | 'sha256'>): boolean =>
   row !== undefined && row.version === asset.version && (asset.sha256 === null || row.sha256 === asset.sha256);
@@ -462,7 +475,7 @@ export class OfflinePackManager implements OfflineMapsController {
    * Incident and corridor packs this device keeps (plan §19.7); every other item is always wanted. Without a selection
    * option everything listed is wanted.
    */
-  private wantedFilter(): (item: { kind: OfflineAssetKind | null; bounds?: PackBounds | null }) => boolean {
+  private wantedFilter(): (item: { kind: OfflineAssetKind | null } & ExtraPackFacts) => boolean {
     const selection = this.options.packSelection;
     if (!selection) return () => true;
     let focus: OfflinePackFocus = EMPTY_PACK_FOCUS;
@@ -471,7 +484,7 @@ export class OfflinePackManager implements OfflineMapsController {
     } catch (error) {
       this.log('Offline pack focus could not be read', { error: errorName(error) });
     }
-    return (item) => (item.kind === null ? true : isExtraPackWanted(item.kind, item.bounds, selection.policy, focus));
+    return (item) => (item.kind === null ? true : isExtraPackWanted(item.kind, item, selection.policy, focus));
   }
 
   /** The manifest (or snapshot) narrowed to what this device wants. */
@@ -689,7 +702,18 @@ export class OfflinePackManager implements OfflineMapsController {
     if (!current) return actionFailed('no-session');
     const busy = this.state.status === 'downloading';
     if (!busy) this.setState({ status: 'checking', error: null, errorHttpStatus: null });
-    const result = await fetchOfflineManifest({ config: this.config, apiBaseUrl: this.options.getApiBaseUrl(), fetchImpl: this.fetchImpl, allowLocalHttp: this.options.allowLocalHttp ?? isDev() });
+    const fetchManifest = () => fetchOfflineManifest({ config: this.config, apiBaseUrl: this.options.getApiBaseUrl(), fetchImpl: this.fetchImpl, allowLocalHttp: this.options.allowLocalHttp ?? isDev() });
+    let result = await fetchManifest();
+    if (!result.ok && result.code === 'manifest-url-expired' && this.options.renewConfig) {
+      // The config's signed manifest URL outlived its signature: a fresh config (through `updateConfig`) carries a new one.
+      this.log('Offline manifest URL expired; renewing the config');
+      try {
+        await this.options.renewConfig();
+        result = await fetchManifest();
+      } catch (error) {
+        this.log('Config renewal failed', { error: errorName(error) });
+      }
+    }
     if (this.currentScope()?.key !== current.key) {
       // The session changed while fetching: the result belongs to someone else.
       if (!busy) this.setState({ status: 'idle' });
@@ -895,7 +919,7 @@ export class OfflinePackManager implements OfflineMapsController {
     const totalBytes = plan.pendingBytes;
     let completedBytes = 0;
     let firstFailure: OfflineMapsActionResult | null = plan.evaluation.responseAreaExceeded ? actionFailed('response-area-too-large') : null;
-    let refreshedForExpiry = false;
+    let refreshedManifest = false;
     const items = [...plan.toDownload];
     this.setState({
       status: 'downloading',
@@ -932,8 +956,8 @@ export class OfflinePackManager implements OfflineMapsController {
         return this.finishWith(result.code === 'cancelled' ? actionFailed('cancelled') : actionFailed(result.code), status);
       }
       if (result.status === 'failed') {
-        if (result.code === 'download-url-expired' && !refreshedForExpiry) {
-          refreshedForExpiry = true;
+        if (needsFreshManifest(asset, result.code, result.httpStatus) && !refreshedManifest) {
+          refreshedManifest = true;
           const refreshed = await this.refreshManifest({ force: true });
           const replacement = refreshed.ok ? this.manifest?.assets.find((candidate) => candidate.assetId === asset.assetId) : undefined;
           if (replacement) {
@@ -941,6 +965,12 @@ export class OfflinePackManager implements OfflineMapsController {
             plan = this.computePlan(manifest);
             items[index] = { asset: replacement, previousPath };
             index -= 1;
+            continue;
+          }
+          if (refreshed.ok) {
+            // No longer downloadable (being rebuilt, or not listed): the manifest's pending state covers it.
+            this.log('Offline pack no longer offered; skipped', { kind: asset.kind });
+            completedBytes += asset.sizeBytes ?? 0;
             continue;
           }
         }

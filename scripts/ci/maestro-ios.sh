@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Maestro e2e on an iOS simulator (nightly.yml, opt-in). Installs the dev-sim simulator build and runs the variant's
-# flows against Metro on :8081 (the workflow starts it).
+# Maestro e2e on an iOS simulator, run on a Mac (CI builds no iOS dev builds). Installs the dev-sim simulator build
+# and runs the variant's flows against Metro on :8081 (start it first: scripts/ci/start-metro.sh ios <log>).
 #
 # Env: APP_VARIANT, APP_TARBALL (the .tar.gz from `eas build --profile <v>-dev-sim --platform ios`), [MAESTRO_OUTPUT]
 set -euo pipefail

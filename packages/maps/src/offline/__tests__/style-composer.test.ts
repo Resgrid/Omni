@@ -70,6 +70,24 @@ describe('composeOfflineStyle', () => {
     expect(first.sources['protomaps-1'].url).toBe('pmtiles://file:///data/offline/pack:b.pmtiles');
   });
 
+  it('draws Core’s z0–9 overview only below the z10+ cells, so it is not stretched under them', () => {
+    const overview = pack('pack:overview', { minZoom: 0, maxZoom: 9 });
+    const cell = pack('pack:cell', { minZoom: 10, maxZoom: 15 });
+    const style = composeOfflineStyle(input({ template: template(), glyphsPath: 'file:///glyphs', basemapPacks: [overview, cell] })) as unknown as Json;
+    const overviewIndex = Object.entries(style.sources as Json)
+      .find(([, source]) => (source as Json).url === 'pmtiles://file:///data/offline/pack:overview.pmtiles')?.[0]
+      .split('-')
+      .pop();
+    const cellIndex = overviewIndex === '0' ? '1' : '0';
+    const layer = (id: string): Json => style.layers.find((candidate: Json) => candidate.id === id);
+    expect(layer(`water::${overviewIndex}`).maxzoom).toBe(10);
+    expect(layer(`labels::${overviewIndex}`).maxzoom).toBe(10);
+    expect(layer(`water::${cellIndex}`).maxzoom).toBeUndefined();
+    // Packs that overlap in zoom (cells of one area) draw at every zoom.
+    const cells = composeOfflineStyle(input({ template: template(), basemapPacks: [cell, pack('pack:cell2', { minZoom: 10, maxZoom: 15 })] })) as unknown as Json;
+    expect(cells.layers.filter((candidate: Json) => candidate.maxzoom !== undefined)).toEqual([]);
+  });
+
   it('uses local glyphs and sprite when present, dropping text layers when glyphs are missing', () => {
     const withGlyphs = composeOfflineStyle(input({ template: template(), glyphsPath: 'file:///data/glyphs/', spritePath: 'file:///data/sprite/sprite' })) as unknown as Json;
     expect(withGlyphs.glyphs).toBe('file:///data/glyphs/{fontstack}/{range}.pbf');

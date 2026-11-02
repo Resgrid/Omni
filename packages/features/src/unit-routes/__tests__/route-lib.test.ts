@@ -124,6 +124,9 @@ describe('route status rules', () => {
     expect(stopActions({ Status: RouteStopStatus.Pending })).toEqual(['checkIn', 'skip']);
     expect(stopActions({ Status: RouteStopStatus.CheckedIn })).toEqual(['checkOut', 'skip']);
     expect(stopActions({ Status: RouteStopStatus.CheckedOut })).toEqual([]);
+    // Core refuses a check-in on a paused route; skip and check-out still work.
+    expect(stopActions({ Status: RouteStopStatus.Pending }, false)).toEqual(['skip']);
+    expect(stopActions({ Status: RouteStopStatus.CheckedIn }, false)).toEqual(['checkOut', 'skip']);
   });
 
   it('lets a unit start unassigned plans and its own, comparing ids as strings', () => {
@@ -157,6 +160,9 @@ describe('route status rules', () => {
     expect(STOP_PRIORITY_LOOK[1].labelKey).toBe('routes.priority_high');
     expect(STOP_PRIORITY_LOOK[3].labelKey).toBe('unit_routes.priority_optional');
     expect(deviationTypeKey(1)).toBe('routes.deviation_type_missed_stop');
+    expect(deviationTypeKey(2)).toBe('routes.deviation_type_out_of_order');
+    expect(deviationTypeKey(3)).toBe('routes.deviation_type_late_arrival');
+    expect(deviationTypeKey(4)).toBe('routes.deviation_type_long_dwell');
     expect(deviationTypeKey(9)).toBe('routes.deviation_type_other');
   });
 });

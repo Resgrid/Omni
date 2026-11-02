@@ -211,6 +211,9 @@ describe('static map template, centre and URL safety', () => {
       })
     ).toBe('https://api.example.org/static?lat=50.900000&lon=3.700000&z=15&w=320&h=200&s=2&style=night&x={unknown}');
     expect(fillStaticMapTemplate('http://insecure.example.org/{lat}', { latitude: 1, longitude: 1, zoom: 1, width: 1, height: 1, scale: 1, scheme: 'light' })).toBeNull();
+    // Core draws Web Mercator only (±85°).
+    expect(fillStaticMapTemplate('https://api.example.org/static?lat={lat}', { latitude: 85, longitude: 1, zoom: 1, width: 1, height: 1, scale: 1, scheme: 'light' })).not.toBeNull();
+    expect(fillStaticMapTemplate('https://api.example.org/static?lat={lat}', { latitude: -86, longitude: 1, zoom: 1, width: 1, height: 1, scale: 1, scheme: 'light' })).toBeNull();
   });
 
   it('resolves the department centre with the legacy guards', () => {

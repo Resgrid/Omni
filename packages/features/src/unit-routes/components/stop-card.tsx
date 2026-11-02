@@ -22,6 +22,8 @@ export interface StopCardProps {
   isCurrent?: boolean;
   onAction?: (kind: StopActionKind, stop: RouteStopWithDetailsResultData) => void;
   onPress?: (stop: RouteStopWithDetailsResultData) => void;
+  /** The route is running (Core refuses a check-in on a paused route). */
+  routeInProgress?: boolean;
   /** A write for this stop is in flight. */
   isBusy?: boolean;
   /** Touch-target height of the actions (MDT: 64). */
@@ -34,13 +36,13 @@ export interface StopCardProps {
  * the progress rows, which carry neither): order, status, address, contact, planned arrival and, on the current stop,
  * check in / check out / skip.
  */
-export const StopCard: React.FC<StopCardProps> = React.memo(({ stop, isCurrent = false, onAction, onPress, isBusy = false, actionMinHeight = 48, testID }) => {
+export const StopCard: React.FC<StopCardProps> = React.memo(({ stop, isCurrent = false, onAction, onPress, routeInProgress = true, isBusy = false, actionMinHeight = 48, testID }) => {
   const { t } = useTranslation();
   const id = stop.RouteInstanceStopId ?? stop.RouteStopId;
   const cardTestId = testID ?? `stop-card-${id}`;
   const look = stopStatusLook(stop.Status);
   const Icon = STATUS_ICONS[stop.Status] ?? Circle;
-  const actions = isCurrent && onAction ? stopActions(stop) : [];
+  const actions = isCurrent && onAction ? stopActions(stop, routeInProgress) : [];
   const planned = formatRouteTime(stop.EstimatedArrivalOn ?? stop.PlannedArrivalTime);
 
   return (

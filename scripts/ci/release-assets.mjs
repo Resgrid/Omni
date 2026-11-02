@@ -118,7 +118,6 @@ async function main() {
   setOutputs({
     has_assets: String(assets.length > 0 || shippedOta),
     apk: has('-android.apk') ? path.join(outDir, has('-android.apk')) : '',
-    adhoc_ipa: has('-ios-adhoc.ipa') ? path.join(outDir, has('-ios-adhoc.ipa')) : '',
     native_built: String(Boolean(binaries.android || binaries.ios)),
   });
   console.log(JSON.stringify({ assets, fingerprints }, null, 2));

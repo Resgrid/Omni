@@ -1,3 +1,4 @@
+import { ApiError } from '@resgrid/api';
 import { UnitNavigationState } from '@resgrid/models';
 
 import { startProgress } from '../engine/progress';
@@ -88,6 +89,11 @@ describe('starting a session', () => {
     toCall.mockRejectedValueOnce(new Error('network'));
     await store().start({ kind: 'call', callId: 12, name: null });
     expect(store().error).toBe('failed');
+
+    // Core's bare 404: the call is gone, hidden from this user or has no usable location.
+    toCall.mockRejectedValueOnce(new ApiError({ kind: 'http', status: 404 }));
+    await store().start({ kind: 'call', callId: 12, name: null });
+    expect(store().error).toBe('no-destination');
     expect(reports).toEqual([]);
   });
 
@@ -230,7 +236,6 @@ describe('helpers', () => {
       routeInstanceId: null,
       routeInstanceStopId: null,
       state: UnitNavigationState.Progress,
-      etaUtc: '',
       remainingSeconds: 1,
       remainingMeters: 1,
       isTrafficAware: false,

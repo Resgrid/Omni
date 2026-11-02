@@ -24,29 +24,9 @@
         "APP_VARIANT": "responder"
       }
     },
-    "responder-production-aab": {
-      "distribution": "store",
-      "channel": "production",
-      "credentialsSource": "local",
-      "ios": {
-        "image": "latest"
-      },
-      "android": {
-        "image": "latest"
-      },
-      "node": "22.18.0",
-      "pnpm": "10.5.2",
-      "env": {
-        "EXPO_NO_DOTENV": "1",
-        "APP_ENV": "production",
-        "FLIPPER_DISABLE": "1",
-        "APP_VARIANT": "responder"
-      }
-    },
     "responder-production-apk": {
       "distribution": "store",
       "channel": "production",
-      "credentialsSource": "local",
       "ios": {
         "image": "latest"
       },
@@ -99,14 +79,14 @@
         "APP_VARIANT": "responder"
       }
     },
-    "responder-staging-aab": {
+    "responder-staging-apk": {
       "distribution": "store",
       "channel": "staging",
-      "credentialsSource": "local",
       "ios": {
         "image": "latest"
       },
       "android": {
+        "buildType": "apk",
         "image": "latest"
       },
       "node": "22.18.0",
@@ -155,14 +135,14 @@
         "APP_VARIANT": "responder"
       }
     },
-    "responder-internal-aab": {
+    "responder-internal-apk": {
       "distribution": "store",
       "channel": "internal",
-      "credentialsSource": "local",
       "ios": {
         "image": "latest"
       },
       "android": {
+        "buildType": "apk",
         "image": "latest"
       },
       "node": "22.18.0",
@@ -248,29 +228,9 @@
         "APP_VARIANT": "unit"
       }
     },
-    "unit-production-aab": {
-      "distribution": "store",
-      "channel": "production",
-      "credentialsSource": "local",
-      "ios": {
-        "image": "latest"
-      },
-      "android": {
-        "image": "latest"
-      },
-      "node": "22.18.0",
-      "pnpm": "10.5.2",
-      "env": {
-        "EXPO_NO_DOTENV": "1",
-        "APP_ENV": "production",
-        "FLIPPER_DISABLE": "1",
-        "APP_VARIANT": "unit"
-      }
-    },
     "unit-production-apk": {
       "distribution": "store",
       "channel": "production",
-      "credentialsSource": "local",
       "ios": {
         "image": "latest"
       },
@@ -323,14 +283,14 @@
         "APP_VARIANT": "unit"
       }
     },
-    "unit-staging-aab": {
+    "unit-staging-apk": {
       "distribution": "store",
       "channel": "staging",
-      "credentialsSource": "local",
       "ios": {
         "image": "latest"
       },
       "android": {
+        "buildType": "apk",
         "image": "latest"
       },
       "node": "22.18.0",
@@ -379,14 +339,14 @@
         "APP_VARIANT": "unit"
       }
     },
-    "unit-internal-aab": {
+    "unit-internal-apk": {
       "distribution": "store",
       "channel": "internal",
-      "credentialsSource": "local",
       "ios": {
         "image": "latest"
       },
       "android": {
+        "buildType": "apk",
         "image": "latest"
       },
       "node": "22.18.0",
@@ -472,29 +432,9 @@
         "APP_VARIANT": "ic"
       }
     },
-    "ic-production-aab": {
-      "distribution": "store",
-      "channel": "production",
-      "credentialsSource": "local",
-      "ios": {
-        "image": "latest"
-      },
-      "android": {
-        "image": "latest"
-      },
-      "node": "22.18.0",
-      "pnpm": "10.5.2",
-      "env": {
-        "EXPO_NO_DOTENV": "1",
-        "APP_ENV": "production",
-        "FLIPPER_DISABLE": "1",
-        "APP_VARIANT": "ic"
-      }
-    },
     "ic-production-apk": {
       "distribution": "store",
       "channel": "production",
-      "credentialsSource": "local",
       "ios": {
         "image": "latest"
       },
@@ -547,14 +487,14 @@
         "APP_VARIANT": "ic"
       }
     },
-    "ic-staging-aab": {
+    "ic-staging-apk": {
       "distribution": "store",
       "channel": "staging",
-      "credentialsSource": "local",
       "ios": {
         "image": "latest"
       },
       "android": {
+        "buildType": "apk",
         "image": "latest"
       },
       "node": "22.18.0",
@@ -603,14 +543,14 @@
         "APP_VARIANT": "ic"
       }
     },
-    "ic-internal-aab": {
+    "ic-internal-apk": {
       "distribution": "store",
       "channel": "internal",
-      "credentialsSource": "local",
       "ios": {
         "image": "latest"
       },
       "android": {
+        "buildType": "apk",
         "image": "latest"
       },
       "node": "22.18.0",
@@ -696,29 +636,9 @@
         "APP_VARIANT": "dispatch"
       }
     },
-    "dispatch-production-aab": {
-      "distribution": "store",
-      "channel": "production",
-      "credentialsSource": "local",
-      "ios": {
-        "image": "latest"
-      },
-      "android": {
-        "image": "latest"
-      },
-      "node": "22.18.0",
-      "pnpm": "10.5.2",
-      "env": {
-        "EXPO_NO_DOTENV": "1",
-        "APP_ENV": "production",
-        "FLIPPER_DISABLE": "1",
-        "APP_VARIANT": "dispatch"
-      }
-    },
     "dispatch-production-apk": {
       "distribution": "store",
       "channel": "production",
-      "credentialsSource": "local",
       "ios": {
         "image": "latest"
       },
@@ -771,14 +691,14 @@
         "APP_VARIANT": "dispatch"
       }
     },
-    "dispatch-staging-aab": {
+    "dispatch-staging-apk": {
       "distribution": "store",
       "channel": "staging",
-      "credentialsSource": "local",
       "ios": {
         "image": "latest"
       },
       "android": {
+        "buildType": "apk",
         "image": "latest"
       },
       "node": "22.18.0",
@@ -827,14 +747,14 @@
         "APP_VARIANT": "dispatch"
       }
     },
-    "dispatch-internal-aab": {
+    "dispatch-internal-apk": {
       "distribution": "store",
       "channel": "internal",
-      "credentialsSource": "local",
       "ios": {
         "image": "latest"
       },
       "android": {
+        "buildType": "apk",
         "image": "latest"
       },
       "node": "22.18.0",
@@ -920,29 +840,9 @@
         "APP_VARIANT": "bigboard"
       }
     },
-    "bigboard-production-aab": {
-      "distribution": "store",
-      "channel": "production",
-      "credentialsSource": "local",
-      "ios": {
-        "image": "latest"
-      },
-      "android": {
-        "image": "latest"
-      },
-      "node": "22.18.0",
-      "pnpm": "10.5.2",
-      "env": {
-        "EXPO_NO_DOTENV": "1",
-        "APP_ENV": "production",
-        "FLIPPER_DISABLE": "1",
-        "APP_VARIANT": "bigboard"
-      }
-    },
     "bigboard-production-apk": {
       "distribution": "store",
       "channel": "production",
-      "credentialsSource": "local",
       "ios": {
         "image": "latest"
       },
@@ -995,14 +895,14 @@
         "APP_VARIANT": "bigboard"
       }
     },
-    "bigboard-staging-aab": {
+    "bigboard-staging-apk": {
       "distribution": "store",
       "channel": "staging",
-      "credentialsSource": "local",
       "ios": {
         "image": "latest"
       },
       "android": {
+        "buildType": "apk",
         "image": "latest"
       },
       "node": "22.18.0",
@@ -1051,14 +951,14 @@
         "APP_VARIANT": "bigboard"
       }
     },
-    "bigboard-internal-aab": {
+    "bigboard-internal-apk": {
       "distribution": "store",
       "channel": "internal",
-      "credentialsSource": "local",
       "ios": {
         "image": "latest"
       },
       "android": {
+        "buildType": "apk",
         "image": "latest"
       },
       "node": "22.18.0",

@@ -58,19 +58,21 @@ describe('isExtraPackWanted', () => {
     expect(distanceToBoundsKm([-121.4, 38.4], CELL)).toBeLessThan(10.5);
   });
 
-  it('keeps an incident cell near a focus call and drops the others', () => {
-    expect(isExtraPackWanted('incident', CELL, both, { incidentPoints: [[-121.1, 38.4]], corridorLines: [] })).toBe(true);
-    expect(isExtraPackWanted('incident', CELL, both, { incidentPoints: [[-121.35, 38.4]], corridorLines: [] })).toBe(true);
-    expect(isExtraPackWanted('incident', CELL, both, { incidentPoints: [[-122.5, 38.4]], corridorLines: [] })).toBe(false);
-    expect(isExtraPackWanted('incident', CELL, both, EMPTY_PACK_FOCUS)).toBe(false);
-    expect(isExtraPackWanted('incident', null, both, { incidentPoints: [[-121.1, 38.4]], corridorLines: [] })).toBe(false);
-    expect(isExtraPackWanted('incident', CELL, NO_EXTRA_PACKS, { incidentPoints: [[-121.1, 38.4]], corridorLines: [] })).toBe(false);
+  const near = { ...EMPTY_PACK_FOCUS, incidentPoints: [[-121.1, 38.4]] as [number, number][] };
+
+  it('keeps an incident cell near a focus call and drops the others when the server lists no ids', () => {
+    expect(isExtraPackWanted('incident', { bounds: CELL }, both, near)).toBe(true);
+    expect(isExtraPackWanted('incident', { bounds: CELL }, both, { ...EMPTY_PACK_FOCUS, incidentPoints: [[-121.35, 38.4]] })).toBe(true);
+    expect(isExtraPackWanted('incident', { bounds: CELL }, both, { ...EMPTY_PACK_FOCUS, incidentPoints: [[-122.5, 38.4]] })).toBe(false);
+    expect(isExtraPackWanted('incident', { bounds: CELL }, both, EMPTY_PACK_FOCUS)).toBe(false);
+    expect(isExtraPackWanted('incident', { bounds: null }, both, near)).toBe(false);
+    expect(isExtraPackWanted('incident', { bounds: CELL }, NO_EXTRA_PACKS, near)).toBe(false);
   });
 
   it('keeps a corridor cell the route passes through, even between distant vertices', () => {
     // A straight line whose vertices are both outside the cell but crosses it.
     const crossing = {
-      incidentPoints: [],
+      ...EMPTY_PACK_FOCUS,
       corridorLines: [
         [
           [-121.6, 38.4],
@@ -78,10 +80,10 @@ describe('isExtraPackWanted', () => {
         ] as [number, number][],
       ],
     };
-    expect(isExtraPackWanted('corridor', CELL, both, crossing)).toBe(true);
-    expect(isExtraPackWanted('corridor', CELL, { incidents: true, corridors: false }, crossing)).toBe(false);
+    expect(isExtraPackWanted('corridor', { bounds: CELL }, both, crossing)).toBe(true);
+    expect(isExtraPackWanted('corridor', { bounds: CELL }, { incidents: true, corridors: false }, crossing)).toBe(false);
     const away = {
-      incidentPoints: [],
+      ...EMPTY_PACK_FOCUS,
       corridorLines: [
         [
           [-121.6, 39.4],
@@ -89,12 +91,26 @@ describe('isExtraPackWanted', () => {
         ] as [number, number][],
       ],
     };
-    expect(isExtraPackWanted('corridor', CELL, both, away)).toBe(false);
+    expect(isExtraPackWanted('corridor', { bounds: CELL }, both, away)).toBe(false);
+  });
+
+  it('matches the calls and route plans Core lists on a cell, whatever its kind or position', () => {
+    const focus = { ...near, callIds: ['15'], routePlanIds: ['plan-north'] };
+    // Listed ids decide, even where the focus position is inside the cell.
+    expect(isExtraPackWanted('incident', { bounds: CELL, callIds: ['14'], routePlanIds: [] }, both, focus)).toBe(false);
+    expect(isExtraPackWanted('incident', { bounds: null, callIds: ['14', '15'], routePlanIds: [] }, both, focus)).toBe(true);
+    // A shared cell: an incident cell on the route, a corridor cell at the call.
+    expect(isExtraPackWanted('incident', { callIds: ['14'], routePlanIds: ['plan-north'] }, both, focus)).toBe(true);
+    expect(isExtraPackWanted('corridor', { callIds: ['15'], routePlanIds: ['plan-south'] }, both, focus)).toBe(true);
+    // Each id kind only where the policy takes that kind of pack.
+    expect(isExtraPackWanted('corridor', { callIds: [], routePlanIds: ['plan-north'] }, { incidents: true, corridors: false }, focus)).toBe(false);
+    expect(isExtraPackWanted('incident', { callIds: ['15'], routePlanIds: null }, { incidents: false, corridors: true }, focus)).toBe(false);
+    expect(isExtraPackWanted('incident', { bounds: CELL, callIds: [], routePlanIds: [] }, both, focus)).toBe(false);
   });
 
   it('always keeps every other kind', () => {
     for (const kind of ['basemap', 'custom-map', 'department-data', 'sprite', 'style', 'glyphs', 'indoor-floor'] as const) {
-      expect(isExtraPackWanted(kind, null, NO_EXTRA_PACKS, EMPTY_PACK_FOCUS)).toBe(true);
+      expect(isExtraPackWanted(kind, {}, NO_EXTRA_PACKS, EMPTY_PACK_FOCUS)).toBe(true);
     }
   });
 });

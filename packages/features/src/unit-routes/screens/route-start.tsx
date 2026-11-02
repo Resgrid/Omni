@@ -44,19 +44,32 @@ export default function RouteStartScreen({ planId: planIdProp, renderMap }: Rout
     if (planId) void useRoutesStore.getState().fetchRoutePlan(planId);
   }, [planId]);
 
+  // Core refuses a start while the unit runs or has paused any route: know that before offering Start.
+  useEffect(() => {
+    if (activeUnitId) void useRoutesStore.getState().fetchActiveRoute(activeUnitId, { bypassCache: true });
+  }, [activeUnitId]);
+
   const color = routeColor(plan?.RouteColor);
   const stops = useMemo(() => sortStops(plan?.Stops ?? []), [plan?.Stops]);
   const line = useMemo(() => parseRouteGeometry(plan?.MapboxRouteGeometry), [plan?.MapboxRouteGeometry]);
   const mapStops = useMemo(() => planMapStops(stops, color), [color, stops]);
   const unitName = plan?.UnitId ? (units.find((unit) => String(unit.UnitId) === String(plan.UnitId))?.Name ?? '') : '';
   const assignedElsewhere = !!plan?.UnitId && !!activeUnitId && String(plan.UnitId) !== String(activeUnitId);
-  const otherRouteRunning = !!activeInstance && !!plan && activeInstance.RoutePlanId !== plan.RoutePlanId;
-  const canStart = !!plan && canStartPlan(plan.UnitId, activeUnitId) && !otherRouteRunning;
+  const runningHere = !!activeInstance && !!plan && activeInstance.RoutePlanId === plan.RoutePlanId;
+  const otherRouteRunning = !!activeInstance && !!plan && !runningHere;
+  const canStart = !!plan && canStartPlan(plan.UnitId, activeUnitId) && !activeInstance;
   const back = () => (router.canGoBack() ? router.back() : router.replace(unitRoutesRoutes.list()));
+  const openRunning = () => (plan && activeInstance ? router.replace(unitRoutesRoutes.active(plan.RoutePlanId, activeInstance.RouteInstanceId)) : undefined);
 
   const start = async () => {
     if (!plan || !activeUnitId || isStarting) return;
     setIsStarting(true);
+    // The unit may have started or paused a route elsewhere since this screen opened.
+    await useRoutesStore.getState().fetchActiveRoute(activeUnitId, { bypassCache: true });
+    if (useRoutesStore.getState().activeInstance) {
+      setIsStarting(false);
+      return;
+    }
     const ok = await useRoutesStore.getState().startRouteInstance(plan.RoutePlanId, Number(activeUnitId));
     setIsStarting(false);
     if (ok) {
@@ -200,6 +213,15 @@ export default function RouteStartScreen({ planId: planIdProp, renderMap }: Rout
                 <ButtonText>{t('routes.start_route')}</ButtonText>
               </>
             )}
+          </Button>
+        </View>
+      ) : runningHere ? (
+        <View className="border-t border-outline-200 bg-background-0 px-4 py-4">
+          <Button size="xl" onPress={openRunning} testID="route-start-open-active" style={{ minHeight: isElectron || isDesktop ? 64 : 52 }}>
+            <View style={styles.buttonIcon}>
+              <Route size={18} color="#ffffff" />
+            </View>
+            <ButtonText>{t('routes.active_route')}</ButtonText>
           </Button>
         </View>
       ) : null}

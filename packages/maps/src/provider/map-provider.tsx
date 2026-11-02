@@ -3,6 +3,7 @@ import { getActiveVariant, getCapability } from '@resgrid/config';
 import { logger } from '@resgrid/core';
 import React, { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 
+import { withRemoteFallback } from '../offline/style-composer';
 import { type MapOfflineOptions, OFFLINE_MAP_ATTRIBUTION } from '../offline/types';
 import { configureMapRenderer } from '../rg/renderer-setup';
 import type { MapColorScheme, StyleSpecification } from '../types';
@@ -12,7 +13,7 @@ import type { MapOverlaySlots } from './overlay-types';
 import { resolveMapRouting, resolveMapTraffic } from './routing-traffic';
 import { createMapServices, type MapServices } from './services';
 import { defaultMapFetch, loadMapboxStyle, type MapFetch } from './style-loader';
-import { buildRasterStyle, type MapConfigInput, type MapStyleSource, resolveMapStyleSource, styleSourceKey } from './style-resolution';
+import { buildRasterStyle, type MapConfigInput, type MapStyleSource, type RasterStyleSource, resolveMapStyleSource, resolveRasterSource, styleSourceKey } from './style-resolution';
 import { type MapThemeColors, resolveMapTheme } from './theme';
 import { cleanString, isSafeMapUrl } from './url-safety';
 
@@ -93,23 +94,34 @@ const pickMapConfig = (config: MapConfigInput | null | undefined): MapConfigInpu
 const joinAttribution = (...parts: string[]): string => parts.filter((part) => part.length > 0).join(' · ');
 
 /**
- * Computes the style state for a resolved source and the loaded Mapbox style (if any). Exported for tests.
+ * Computes the style state for a resolved source and the loaded Mapbox style (if any). `remoteFallback` (the server's
+ * raster tiles) fills in around the downloaded area in local-preferred mode. Exported for tests.
  */
-export const deriveMapStyleState = (source: MapStyleSource, scheme: MapColorScheme, loaded: LoadedStyle | null, offline: MapOfflineOptions | null | undefined): MapStyleState => {
+export const deriveMapStyleState = (
+  source: MapStyleSource,
+  scheme: MapColorScheme,
+  loaded: LoadedStyle | null,
+  offline: MapOfflineOptions | null | undefined,
+  remoteFallback: RasterStyleSource | null = null
+): MapStyleState => {
   const base = { scheme, isDark: scheme === 'dark', isOffline: false };
 
   if (offline && offline.mode !== 'online') {
     const offlineStyle = offline.getStyle(scheme);
     if (offlineStyle) {
+      const fallback = offline.mode === 'local-preferred' ? remoteFallback : null;
+      const mapStyle = fallback ? withRemoteFallback(offlineStyle, fallback) : offlineStyle;
+      // Null when nothing was added (no known coverage).
+      const remote = mapStyle !== offlineStyle ? fallback : null;
       return {
         ...base,
         status: 'ready',
-        mapStyle: offlineStyle,
+        mapStyle,
         kind: 'offline',
-        attribution: joinAttribution(offline.attribution ?? OFFLINE_MAP_ATTRIBUTION),
+        attribution: joinAttribution(offline.attribution ?? OFFLINE_MAP_ATTRIBUTION, remote ? remote.attribution : ''),
         isAvailable: true,
         isOffline: true,
-        styleKey: `offline:${scheme}`,
+        styleKey: remote ? `offline:${scheme}:${styleSourceKey(remote)}` : `offline:${scheme}`,
       };
     }
   }
@@ -190,7 +202,10 @@ export function MapProvider({ config, colorScheme, apiContext, capabilities, ico
     setAttempt((value) => value + 1);
   }, []);
 
-  const style = useMemo(() => deriveMapStyleState(source, colorScheme, loaded, offline), [source, colorScheme, loaded, offline]);
+  // configKey covers the raster fields.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const remoteFallback = useMemo(() => resolveRasterSource(mapConfig), [configKey]);
+  const style = useMemo(() => deriveMapStyleState(source, colorScheme, loaded, offline, remoteFallback), [source, colorScheme, loaded, offline, remoteFallback]);
   const themeKey = JSON.stringify(theme ?? {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const resolvedTheme = useMemo(() => resolveMapTheme(colorScheme, theme), [colorScheme, themeKey]);

@@ -153,8 +153,18 @@ describe('RouteStartScreen', () => {
   it('cannot start while another route runs on the unit', async () => {
     useRoutesStore.setState({ activePlan: planDetail('p1'), activeInstance: instance('ri-1', { RoutePlanId: 'p7', RoutePlanName: 'Other' }) });
     await wrap(<RouteStartScreen planId="p1" />);
+    expect(store.fetchActiveRoute).toHaveBeenCalledWith('10', { bypassCache: true });
     expect(screen.getByTestId('route-start-other-active')).toBeTruthy();
     expect(screen.queryByTestId('route-start-button')).toBeNull();
+    expect(screen.queryByTestId('route-start-open-active')).toBeNull();
+  });
+
+  it('opens the running route instead of starting it again', async () => {
+    useRoutesStore.setState({ activePlan: planDetail('p1'), activeInstance: instance('ri-1', { RoutePlanId: 'p1' }) });
+    await wrap(<RouteStartScreen planId="p1" />);
+    expect(screen.queryByTestId('route-start-button')).toBeNull();
+    await fireEvent.press(screen.getByTestId('route-start-open-active'));
+    expect(router.replace).toHaveBeenCalledWith('/routes/active?planId=p1&instanceId=ri-1');
   });
 
   it('reads the plan id from the route params and shows the server error when the plan cannot load', async () => {

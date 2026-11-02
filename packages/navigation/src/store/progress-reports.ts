@@ -9,6 +9,10 @@ import type { NavigationProgressReport } from './services';
  * Live ETA reports (MapLibre plan §9.4) go through the outbox so a report made in a dead zone still goes out when the
  * signal returns — but only while it is current: a queued report older than its useful life is dropped, never replayed
  * (the server forgets a navigation two minutes after its last report anyway). Newest wins per unit.
+ *
+ * No `EtaUtc` is sent: Core trusts one that looks plausible, so a Unit whose clock is a few minutes off would move the
+ * ETA Dispatch and Big Board show. Core sets it from `RemainingSeconds` on its own clock instead, less the time the
+ * report waited in the queue (a difference of device times, which clock skew does not change).
  */
 export const NAVIGATION_PROGRESS_EVENT = 'navigation.progress';
 
@@ -28,7 +32,9 @@ export const navigationProgressHandler: OutboxHandler<NavigationProgressReport, 
   maxAttempts: 3,
   send: async (event) => {
     const report = event.payload;
-    if (isReportStale(report, dataNow())) return null;
+    const now = dataNow();
+    if (isReportStale(report, now)) return null;
+    const waitedSeconds = Math.max(0, (now - report.at) / 1000);
     try {
       return await reportNavigationProgress(getDataApiContext(), {
         UnitId: report.unitId,
@@ -36,8 +42,7 @@ export const navigationProgressHandler: OutboxHandler<NavigationProgressReport, 
         RouteInstanceId: report.routeInstanceId,
         RouteInstanceStopId: report.routeInstanceStopId,
         State: report.state,
-        EtaUtc: report.etaUtc,
-        RemainingSeconds: report.remainingSeconds,
+        RemainingSeconds: Math.max(0, Math.round(report.remainingSeconds - waitedSeconds)),
         RemainingMeters: report.remainingMeters,
         IsTrafficAware: report.isTrafficAware,
         Provider: report.provider,

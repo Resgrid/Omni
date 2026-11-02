@@ -35,6 +35,7 @@ export {
 } from './store/services';
 
 // Components
+export { IncidentChips, type IncidentChipsProps } from './components/incident-chips';
 export { ManeuverBanner, type ManeuverBannerProps } from './components/maneuver-banner';
 export { ManeuverIcon, type ManeuverIconProps } from './components/maneuver-icon';
 export { cameraBearing, followZoomForSpeed, type NavigationCameraMode, NavigationMap, type NavigationMapProps } from './components/navigation-map';

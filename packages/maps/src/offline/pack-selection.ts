@@ -5,11 +5,12 @@ import type { OfflineAssetKind, PackBounds } from './types';
 
 /**
  * Incident (kind 1) and route-corridor (kind 2) packs per app (MapLibre plan §19.7). Core lists, outside the response
- * area, the base-map cells around every active call of the department and along every active route plan, with no call
- * or plan id — so each device keeps only the cells near what it works on:
+ * area, the base-map cells around every active call of the department and along every active route plan, each with the
+ * calls (`CallIds`) and route plans (`RoutePlanIds`) it serves — so each device keeps only the cells of what it works on:
  * - Unit: the crew's active call + the corridor of its route; IC: the incidents it commands; Responder: the call it
  *   responds to; Dispatch and BigBoard: none (Dispatch keeps the full area and custom maps; BigBoard its display range).
- * Decided from capabilities and the map-pack profile, never the app id.
+ * Decided from capabilities and the map-pack profile, never the app id. Older servers list no ids; their cells are kept
+ * by distance to the focus calls and route instead.
  */
 
 export interface OfflineExtraPackPolicy {
@@ -23,13 +24,26 @@ export const NO_EXTRA_PACKS: OfflineExtraPackPolicy = { incidents: false, corrid
 
 /** What this device works on right now (read when the manager plans downloads; `[lng, lat]`). */
 export interface OfflinePackFocus {
-  /** Calls the device responds to, is assigned to or commands. */
+  /** Ids of the calls the device responds to, is assigned to or commands. */
+  callIds: string[];
+  /** Where those calls are (older servers list cells without ids). */
   incidentPoints: LngLat[];
+  /** Ids of the route plans the device drives. */
+  routePlanIds: string[];
   /** Routes the device drives (route geometry, or the stops in order). */
   corridorLines: LngLat[][];
 }
 
-export const EMPTY_PACK_FOCUS: OfflinePackFocus = { incidentPoints: [], corridorLines: [] };
+export const EMPTY_PACK_FOCUS: OfflinePackFocus = { callIds: [], incidentPoints: [], routePlanIds: [], corridorLines: [] };
+
+/** What selection reads from a listed pack. */
+export interface ExtraPackFacts {
+  bounds?: PackBounds | null;
+  /** The calls the server lists the cell for (Core `CallIds`); absent from older servers. */
+  callIds?: string[] | null;
+  /** The route plans the server lists the cell for (Core `RoutePlanIds`); absent from older servers. */
+  routePlanIds?: string[] | null;
+}
 
 /** How the manager chooses incident/corridor packs. */
 export interface OfflinePackSelection {
@@ -37,10 +51,10 @@ export interface OfflinePackSelection {
   getFocus: () => OfflinePackFocus;
 }
 
-/** A listed incident cell is kept within this distance of a focus call (Core's incident radius defaults to 3 km). */
-export const INCIDENT_FOCUS_KM = 10;
-/** A listed corridor cell is kept within this distance of the route (Core's corridor buffer defaults to 500 m). */
-export const CORRIDOR_FOCUS_KM = 2;
+/** Without ids, a listed incident cell is kept within this distance of a focus call (Core's incident radius: 3 km by default, at most 25 km). */
+export const INCIDENT_FOCUS_KM = 25;
+/** Without ids, a listed corridor cell is kept within this distance of the route (Core's corridor buffer: 500 m by default, at most 5 km). */
+export const CORRIDOR_FOCUS_KM = 5;
 /** Routes are sampled this often when measured against a cell. */
 const CORRIDOR_SAMPLE_KM = 1;
 
@@ -95,9 +109,19 @@ const sampleLine = (line: LngLat[]): LngLat[] => {
   return samples;
 };
 
-/** Whether this device keeps an incident or corridor pack (other kinds are always kept). */
-export function isExtraPackWanted(kind: OfflineAssetKind, bounds: PackBounds | null | undefined, policy: OfflineExtraPackPolicy, focus: OfflinePackFocus): boolean {
+const listsAny = (listed: string[] | null | undefined, wanted: string[]): boolean => (listed ?? []).some((id) => wanted.includes(id));
+
+/**
+ * Whether this device keeps an incident or corridor pack (other kinds are always kept). A cell is shared, so either kind
+ * can list calls and route plans: it is kept for a listed call the device works on (when it takes incident packs) or a
+ * listed route plan it drives (when it takes corridors).
+ */
+export function isExtraPackWanted(kind: OfflineAssetKind, pack: ExtraPackFacts, policy: OfflineExtraPackPolicy, focus: OfflinePackFocus): boolean {
   if (kind !== 'incident' && kind !== 'corridor') return true;
+  if (pack.callIds || pack.routePlanIds) {
+    return (policy.incidents && listsAny(pack.callIds, focus.callIds)) || (policy.corridors && listsAny(pack.routePlanIds, focus.routePlanIds));
+  }
+  const bounds = pack.bounds;
   if (!bounds) return false;
   if (kind === 'incident') {
     return policy.incidents ? focus.incidentPoints.some((point) => validPoint(point) && distanceToBoundsKm(point, bounds) <= INCIDENT_FOCUS_KM) : false;

@@ -1,7 +1,8 @@
 {
   "x-pending": {
-    "source": "Core develop working tree (MapLibre plan v1.7 §23, not yet deployed to QA)",
+    "source": "Core develop f3b2fd24 + 34949e2d (RG-T152, MapLibre plan v1.7 §23); not on the QA API as of 2026-11-02",
     "addedAt": "2026-11-01",
+    "checkedAt": "2026-11-02",
     "note": "Core v4 routes and parameters Omni calls before they reach the QA Swagger snapshot. The contract test overlays these on swagger-v4.json and fails once the snapshot has an entry, so remove each entry after refreshing the snapshot. Hand-written from Web/Resgrid.Web.Services/Controllers/v4/{RoutingController,RoutesController,MappingController}.cs."
   },
   "paths": {

@@ -293,11 +293,11 @@ Stores call API functions; the API client applies auth, timeouts, the cached-end
 
 ### 6.2 Expo and EAS
 
-- `eas.json` from Unit's (production, production-aab, production-apk, staging, internal, development, dev-sim, simulator), expanded to `<variant>-<profile>` with `APP_VARIANT` in `env`; `EXPO_NO_DOTENV=1`; local CLI use runs `APP_VARIANT=<v> npx eas-cli build --profile <v>-production` so the CLI resolves the right project.
+- `eas.json` from Unit's profile set (production, production-apk, staging, internal, development, dev-sim, simulator, plus `<channel>-store` / `<channel>-apk` for the internal and staging channels), without Unit's `credentialsSource: local`: every build signs with the credentials stored on the variant's EAS project (§15 #19). Expanded to `<variant>-<profile>` with `APP_VARIANT` in `env`; `EXPO_NO_DOTENV=1`; local CLI use runs `APP_VARIANT=<v> npx eas-cli build --profile <v>-production` so the CLI resolves the right project.
 - Per-variant Metro cache directory (route root and `EXPO_PUBLIC_*` are inlined at transform time).
 - `.easignore` templates today exclude `/apps` — rewrite for the monorepo.
 - **OTA (decided, D18):** `expo-updates` in every variant from the first Omni release, `runtimeVersion: { policy: 'fingerprint' }`, channels `production`, `staging`, `internal` in each of the five EAS projects. Web redeploys and Electron auto-updates cover the other targets.
-- Store upload: binaries are always attached to the GitHub Release for manual download/upload; an optional approval-gated `eas submit` job uploads to TestFlight / Play internal (§6.6).
+- Store upload: binaries are always attached to the GitHub Release; uploads to TestFlight and Google Play are done by hand through the Software Factory (`int-RASF`). GitHub Actions holds no store credentials and never submits (§15 #20).
 
 ### 6.3 Native modules and permissions per variant
 
@@ -352,13 +352,13 @@ Omni keeps GitHub Actions for every build output ("emit"). Goal: every variant's
 
 Wall clock ≈ 100 min per app, bounded by Android. Six native builds per app per master push, of which two (dev clients) are developer tools. Every master push of every repo pays this, so five apps ≈ 30 native builds per round of identical changes.
 
-What to keep from Unit/IC: the job split (mobile/web/docker/electron/release), signing material decoded to `$RUNNER_TEMP` and removed in an `always()` step, `credentials.json` pruned to the platform, Gradle worker cap, disk cleanup on Android runners, node_modules cache keyed on lockfile + patches, Firebase App Distribution for testers, Changerawr notes, GitHub Release with assets.
+Signing follows Responder, IC, Dispatch and BigBoard, not Unit: `eas build --local` downloads the credentials stored on EAS, so no keystore, certificate or provisioning profile lives in GitHub (§15 #19). What to keep from Unit/IC: the job split (mobile/web/docker/electron/release), build secrets decoded to `$RUNNER_TEMP` and removed in an `always()` step, Gradle worker cap, disk cleanup on Android runners, node_modules cache keyed on lockfile + patches, Firebase App Distribution for testers, Changerawr notes, GitHub Release with assets.
 
 #### 6.6.2 Principles
 
-1. **Build once, package many times.** One web export per variant feeds Docker and all three Electron OS jobs. One Android release build (AAB) yields the sideload APK through `bundletool build-apks --mode=universal` (seconds, same keystore). One iOS release build yields the App Store IPA; the ad-hoc IPA is the same app re-signed with the ad-hoc profile (`fastlane resign`, seconds; same distribution certificate and entitlements).
+1. **Build once, package many times.** One web export per variant feeds Docker and all three Electron OS jobs. Native signing is the exception: the credentials stay on EAS and eas-cli cannot export them without prompting, so the Android job runs two release builds (the AAB for Google Play, then the sideload APK users download from the release) and the iOS job runs one (the App Store IPA for TestFlight and the App Store). Ad-hoc IPAs are built on a Mac on demand (`pnpm ios:adhoc <variant>`), not in CI.
 2. **Native only when native changed.** `@expo/fingerprint` per variant × platform is compared with the fingerprint recorded on that variant's last release. Unchanged → no native build: publish an OTA update to the channel (`eas update`) and point the release at the previous binaries. Changed → native build.
-3. **Developer builds off the release path.** Dev-client APK/IPA and simulator builds run nightly and on demand, not on every release.
+3. **Developer builds off the release path.** Android dev-client builds run nightly and on demand, not on every release. CI builds no iOS dev, simulator or ad-hoc builds: those are made on a Mac.
 4. **Version once.** A plan job computes every variant's version, versionCode/buildNumber, Electron semver and Docker tags (D13) and passes them as outputs; build jobs never compute versions.
 5. **Test once.** PRs run the full suite; branch protection requires up-to-date branches (or the merge queue), so the master commit is the tested commit. Release runs only fast sanity checks (`expo config` per variant, type-check).
 6. **Fan out wide, fail independently.** Matrix over variant × target with `fail-fast: false`, per-job `timeout-minutes`, retry wrapper on network-bound steps (pod install, Gradle and npm downloads), concurrency group per variant that queues releases (never cancels them) and cancels superseded PR runs.
@@ -370,9 +370,9 @@ What to keep from Unit/IC: the job split (mobile/web/docker/electron/release), s
 | Workflow | Trigger | Content | Target time |
 |---|---|---|---|
 | `ci.yml` | PR, merge queue | install → in parallel: lint, type-check, translation parity, dependency-cruiser, Jest (4 shards), API contract tests → per variant: `expo config` snapshot, route contract, web export smoke | < 12 min |
-| `release.yml` | push to `master` (channel `internal`), tag `<variant>-v*` (channel `production`), manual dispatch (variants, targets, channel, force-native) | Stages below | ≈ 30 min native / ≈ 10 min JS-only, all five variants |
+| `release.yml` | push to `master` (channel `internal`), tag `<variant>-v*` (channel `production`), manual dispatch (variants, targets, channel, force-native) | Stages below | ≈ 60 min native (two Android builds) / ≈ 10 min JS-only, all five variants |
 | `ota.yml` | manual dispatch | JS-only update for chosen variants/channel; refuses if the fingerprint differs from the installed runtime | ≈ 5 min |
-| `nightly.yml` | schedule + dispatch | Dev-client and simulator builds for all variants, Maestro e2e on Android emulator / iOS simulator, cache warming | — |
+| `nightly.yml` | schedule + dispatch | Android dev-client builds for all variants, Maestro e2e on an Android emulator, cache warming (iOS dev builds and iOS e2e run on a Mac) | — |
 
 #### 6.6.4 `release.yml` stages
 
@@ -381,29 +381,31 @@ Stage 0  plan (ubuntu, ~1 min)
          versions for all variants · variant × target matrix · fingerprints vs last release → native or OTA per variant/platform
 Stage 1  per variant, in parallel
          web      (ubuntu, ~3 min)        expo export -p web → artifact web-<v>
-         android  (ubuntu, ~20–30 min)    if native: prebuild → Gradle bundleRelease → AAB → bundletool universal APK (signed)
-         ios      (macos-26, ~20–25 min)  if native: prebuild → pods (cached) → release build → App Store IPA → re-sign → ad-hoc IPA
+         android  (ubuntu, ~40–60 min)    if native: eas build (AAB) → eas build (sideload APK); keystore from EAS
+         ios      (macos-26, ~20–25 min)  if native: prebuild → pods (cached) → release build → App Store IPA; certificate and profiles from EAS
          ota      (ubuntu, ~3 min)        if not native: eas update --channel <channel> per platform
 Stage 2  needs web-<v>
          docker   (ubuntu, ~2 min)        COPY dist into the nginx runtime image (no app build inside Docker) → amd64 + arm64 → Docker Hub + GHCR
          electron (windows / macos / ubuntu, ~5–10 min each)  apps/desktop only (no RN install) + web-<v> → signed NSIS + portable, notarized dmg + zip (x64/arm64), AppImage + deb + rpm
 Stage 3  release per variant (ubuntu, ~3 min)
          GitHub Release <variant>-v<version> (prerelease for internal) with all assets + SHA256SUMS + fingerprints
-         Firebase App Distribution (APK + ad-hoc IPA → testers) · Changerawr notes
+         Firebase App Distribution (APK → Android testers; iOS testers use TestFlight) · Changerawr notes
          Electron update feed: latest*.yml per variant/channel to object storage (generic provider)
-Stage 4  store-submit (optional, environment store-<variant> with required reviewer)
-         eas submit: App Store IPA → TestFlight/App Store Connect; AAB → Play internal track
 ```
 
-Release assets per variant (example Unit 8.12): `ResgridUnit-8.12-android.aab`, `-android.apk`, `-ios-appstore.ipa`, `-ios-adhoc.ipa`, `-windows-setup.exe`, `-windows-portable.exe`, `-macos-arm64.dmg`, `-macos-x64.dmg`, `-macos.zip`, `-linux.AppImage`, `-linux.deb`, `-linux.rpm`, `-web.zip`, `SHA256SUMS`, `fingerprints.json`. Docker images `resgridllc/unit:8.12` and `:latest` (production channel only).
+No stage writes to an app store (§15 #20): the AAB and App Store IPA are uploaded by hand through the Software Factory.
+
+Release assets per variant (example Unit 8.12): `ResgridUnit-8.12-android.aab`, `-android.apk`, `-ios-appstore.ipa`, `-windows-setup.exe`, `-windows-portable.exe`, `-macos-arm64.dmg`, `-macos-x64.dmg`, `-macos.zip`, `-linux.AppImage`, `-linux.deb`, `-linux.rpm`, `-web.zip`, `SHA256SUMS`, `fingerprints.json`. Docker images `resgridllc/unit:8.12` and `:latest` (production channel only).
+
+Each store package also gets a CycloneDX SBOM named after it (`ResgridUnit-8.12-android.aab.cdx.json`, `-ios-appstore.ipa.cdx.json`; `scripts/ci/package-sbom.mjs`). It lists the app's production npm packages from `pnpm-lock.yaml` (the dependency graph of `apps/omni` and the workspace packages it links, including the build tooling `expo` and `react-native` declare), plus the Gradle `releaseRuntimeClasspath` of `:app` or the build's `Podfile.lock` pods. It records the package's own SHA-256. The android and ios jobs keep the EAS build directory for it and then remove it. The step is advisory: a failure leaves the release without that SBOM and never stops the build. The Software Factory reads these files from the release and shows them on the package's store uploads.
 
 #### 6.6.5 Notes
 
 - **Electron updates use a generic feed per variant** (object storage path `updates/<variant>/<channel>/`), not electron-updater's GitHub provider: five apps share one repo's releases, so "latest release" would point at another app.
-- **Native build tool:** keep `eas build --local` (existing credentials flow) for the one release build per platform; bundletool and `fastlane resign` produce the second artifact. Direct Gradle/xcodebuild with ccache is the S3 alternative if EAS local cannot use the caches.
+- **Native build tool:** keep `eas build --local` with the credentials stored on each EAS project (the legacy Responder/IC/Dispatch/BigBoard flow): one build per artifact (AAB, APK, App Store IPA). Direct Gradle/xcodebuild with ccache is the S3 alternative if EAS local cannot use the caches.
 - **Runner concurrency:** five variants put up to ten jobs on macOS runners (iOS + Electron mac) at once. GitHub plans cap concurrent macOS jobs (5 on Team), so macOS work queues; iOS jobs get priority, Electron mac jobs follow. Larger runners or a self-hosted Mac are options if queueing dominates.
-- **Expected effect:** 2 native builds per variant per release instead of 6; no native builds for JS-only releases; web built once instead of five times per variant; wall clock ≈ 30 min for all five apps versus ≈ 100 min per app today.
-- **Secrets:** one GitHub Environment per variant (`responder`, `unit`, `ic`, `dispatch`, `bigboard`) with the same secret names in each (D14), plus `store-<variant>` environments for the approval-gated submit job.
+- **Expected effect:** 3 native builds per variant per release instead of 6; no native builds for JS-only releases; web built once instead of five times per variant; wall clock ≈ 60 min for all five apps (the Android job builds twice) versus ≈ 100 min per app today.
+- **Secrets:** one GitHub Environment per variant (`responder`, `unit`, `ic`, `dispatch`, `bigboard`) with the same secret names in each (D14). No store credentials and no store environments (§15 #20).
 
 ## 7. The baseline: which implementation wins, per module
 
@@ -727,7 +729,7 @@ Unit/IC desktop drop every SignalR hub when the window is hidden (no forced "act
 | **P3 Shared features** | §7.10 features, each with offline handlers and persistence (§8.8), maps on MapLibre (§9). | Feature tests green; per-variant route contract passes for implemented routes. |
 | **P4 Variants** | §7.11 modules and per-variant scopes, one variant at a time (§11.2): parity checklist, offline acceptance, upgrade test, internal beta (TestFlight / Play internal / Firebase App Distribution), store release with the same bundle ID. | Variant replaces its legacy store build; legacy repo archived (D15). |
 | **P5 MapLibre follow-ons** | MapLibre P4 (Unit navigation), P5c (route navigation), P8b (offline maps) as their server phases land. | MapLibre §1.2 criteria. |
-| **P6 Hardening** | Approval-gated `eas submit`, Electron auto-update rollout to all channels, Turborepo or larger runners if CI time demands, generated API models once Core annotations allow. | — |
+| **P6 Hardening** | Electron auto-update rollout to all channels, Turborepo or larger runners if CI time demands, generated API models once Core annotations allow. | — |
 
 ### 11.2 Variant order
 
@@ -759,7 +761,7 @@ Omni builds against Core `develop` only (D16). Features whose server side exists
 - **Variant config:** snapshot of `expo config` per variant × env (bundle ids, permissions, plugins) — a diff means an identity change and needs review.
 - **Upgrade tests:** legacy build → Omni build on iOS and Android (session, settings, queued actions).
 - **Offline acceptance:** §8.9 scripted with network toggling; outbox idempotency asserted server-side.
-- **E2E:** Maestro flows per variant (login, home, call detail, status change, offline queue) on Android emulator and iOS simulator; Playwright smoke for web and Electron. Fix stale Maestro `APP_ID` (`com.obytes.development`).
+- **E2E:** Maestro flows per variant (login, home, call detail, status change, offline queue) on an Android emulator in CI and an iOS simulator on a Mac (`scripts/ci/maestro-ios.sh`); Playwright smoke for web and Electron. Fix stale Maestro `APP_ID` (`com.obytes.development`).
 - **Visual:** docs screenshot harness per variant (existing Expo-web screenshot approach) for regression review.
 
 ## 13. Agent tooling
@@ -810,6 +812,8 @@ Omni builds against Core `develop` only (D16). Features whose server side exists
 | 16 | Sentry | **Each app reports to its own Sentry project**, in Omni too (manifest `sentryProject`) |
 | 17 | Offline base maps | **Protomaps** (MapLibre plan D13) |
 | 18 | Offline map area | Departments define a **maximum response area**, enforced by the download size a mobile user would accept; fallback **40 km radius** around the map centre, else the department address, else a station address (MapLibre plan §19.3) |
+| 19 | Native signing and iOS CI builds (2026-11-02) | **Credentials stay on EAS** for every app (no keystore, certificate or profile in GitHub). CI builds the AAB and the sideload APK for Android and only the App Store IPA for iOS (TestFlight, then the App Store); no iOS dev or ad-hoc builds in CI. Ad-hoc IPAs: `pnpm ios:adhoc <variant>` on a Mac |
+| 20 | Store publishing (2026-11-02) | **Never from GitHub Actions**: no store credentials, no App Store Connect API key for the mobile builds, no `eas submit`, no store-publish workflow in Omni (expired iOS certificates or profiles are renewed on a Mac with `eas credentials`). TestFlight and Google Play uploads are done by hand through the Software Factory (`int-RASF`), which reads each GitHub release. CI may still send the sideload APK to Firebase App Distribution testers |
 
 Still open (technical, answered by spikes or device tests, not by the owner): S1–S7 results; push channel/category behaviour on devices; BigBoard and Dispatch store listings' current marketing versions (both apps had pre-React-Native versions — confirm in App Store Connect / Play Console before the first Omni upload, Appendix B).
 

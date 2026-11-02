@@ -50,7 +50,18 @@ export {
 } from './provider/style-resolution';
 export { DARK_MAP_THEME, LIGHT_MAP_THEME, type MapThemeColors, resolveMapTheme } from './provider/theme';
 export { isSafeMapUrl } from './provider/url-safety';
-export { createMapUrlSigner, isSignedMapUrl, type MapUrlSigner, type MapUrlSignerOptions, signatureExpiry, type SignedMapUrl, type SignMapResourceBatch, stripSignature } from './provider/url-signer';
+export {
+  CONFIG_SIGNATURE_REFRESH_MARGIN_MS,
+  createMapUrlSigner,
+  isSignedMapUrl,
+  mapConfigRefreshAt,
+  type MapUrlSigner,
+  type MapUrlSignerOptions,
+  signatureExpiry,
+  type SignedMapUrl,
+  type SignMapResourceBatch,
+  stripSignature,
+} from './provider/url-signer';
 
 // Components
 export { CustomMapRasterLayer, type CustomMapRasterLayerProps, GeoJsonMapLayer, type GeoJsonMapLayerProps, IndoorMapFloorLayer, type IndoorMapFloorLayerProps } from './components/department-map-layers';

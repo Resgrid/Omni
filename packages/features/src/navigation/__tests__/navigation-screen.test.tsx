@@ -156,6 +156,21 @@ describe('NavigationScreen', () => {
     expect(router.back).toHaveBeenCalled();
   });
 
+  it('shows the incidents ahead on the route and drops each once passed', async () => {
+    const crash = { Type: 'accident', Description: 'Two vehicles', Impact: 'major', Latitude: EAST[2][1], Longitude: EAST[2][0], Closed: false };
+    const closure = { Type: 'road_closure', Description: null, Impact: 'critical', Latitude: EAST[4][1], Longitude: EAST[4][0], Closed: true };
+    toCall.mockResolvedValue(result({ incidents: [closure, crash] }));
+    jest.mocked(useLocalSearchParams).mockReturnValue({ callId: '12' });
+    await wrap();
+    await waitFor(() => expect(screen.getByTestId('navigation-session')).toBeTruthy());
+    await act(async () => useNavigationStore.getState().handleFix(position(EAST[0])));
+    expect(screen.getByTestId('navigation-session-incidents-0')).toHaveTextContent(/navigation.incident.accident/);
+    expect(screen.getByTestId('navigation-session-incidents-1')).toHaveTextContent(/navigation.incident.road_closure/);
+    await act(async () => useNavigationStore.getState().handleFix(position(EAST[3])));
+    expect(screen.getByTestId('navigation-session-incidents-0')).toHaveTextContent(/navigation.incident.road_closure/);
+    expect(screen.queryByTestId('navigation-session-incidents-1')).toBeNull();
+  });
+
   it('explains a route the server will not navigate and offers the crew’s app', async () => {
     toCall.mockResolvedValue(result({ navigationAvailable: false, provider: 'osrm' }));
     jest.mocked(useLocalSearchParams).mockReturnValue({ callId: '12' });
@@ -246,6 +261,27 @@ describe('NavigationScreen', () => {
       });
       expect(geofence).not.toHaveBeenCalled();
       expect(screen.getByTestId('navigation-arrival-check-in')).toBeTruthy();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('treats the live route’s last leg to the route end (no stop) as the end: no check-in, only ending the guidance', async () => {
+    jest.useFakeTimers();
+    try {
+      const geofence = jest.fn(async () => true);
+      useRoutesStore.setState({ performGeofenceCheckIn: geofence, instanceStops: [] as never });
+      toRouteStops.mockResolvedValue(result({ legs: [{ RouteStopId: null, RouteInstanceStopId: null, Name: 'Station 1', DistanceMeters: 500, DurationSeconds: 60, OffsetSeconds: 60, EtaUtc: null }] }));
+      jest.mocked(useLocalSearchParams).mockReturnValue({ instanceId: 'ri-1' });
+      await wrap();
+      await waitFor(() => expect(screen.getByTestId('navigation-session')).toBeTruthy());
+      await act(async () => useNavigationStore.getState().handleFix(position(END, 0)));
+      expect(screen.getByTestId('navigation-arrival-route-end')).toHaveTextContent(/navigation.arrival.at/);
+      expect(screen.queryByTestId('navigation-arrival-check-in')).toBeNull();
+      await act(async () => {
+        jest.advanceTimersByTime(15_000);
+      });
+      expect(geofence).not.toHaveBeenCalled();
     } finally {
       jest.useRealTimers();
     }

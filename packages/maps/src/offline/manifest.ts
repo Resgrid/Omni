@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { isSafeMapUrl } from '../provider/url-safety';
+import { signatureExpiry } from '../provider/url-signer';
 import type { OfflineMapsErrorCode } from './errors';
 import { isSha256Hex } from './sha256';
 import { resolveMaxPackBytes, resolveResponseAreaMaxBytes } from './size-guard';
@@ -29,6 +30,22 @@ const flag = z
   .boolean()
   .nullish()
   .transform((value) => (typeof value === 'boolean' ? value : null));
+/** Ids listed on a pack (`CallIds` are numbers, `RoutePlanIds` strings) as distinct strings; null when not sent (older servers). */
+const idList = z
+  .array(z.unknown())
+  .nullish()
+  .transform((values) =>
+    values
+      ? [
+          ...new Set(
+            values
+              .filter((value): value is string | number => typeof value === 'string' || (typeof value === 'number' && Number.isFinite(value)))
+              .map((value) => String(value).trim())
+              .filter((value) => value.length > 0)
+          ),
+        ]
+      : null
+  );
 
 /** A downloadable file in the manifest (styles, department data, sprite files). */
 export const offlineManifestFileSchema = z.object({
@@ -52,9 +69,9 @@ export const offlineManifestPolicySchema = z.object({
   StaleDays: finite,
   PreferLocalInAo: flag,
   AmbientCacheMaxBytes: finite,
-  /** Per-pack limit (`OfflinePackMaxBytes`); assumption — Core adds it to `Policy`. */
+  /** Per-pack limit (Core `OfflinePackMaxBytes`; clamped to the client ceiling). */
   MaxPackBytes: finite,
-  /** Response-area limit (`ResponseAreaMaxBytes`); assumption — Core adds it to `Policy`. */
+  /** Response-area limit (setting 123 `ResponseAreaMaxBytes`; clamped to the client ceiling). */
   ResponseAreaMaxBytes: finite,
   /** Download policy "manual" (setting 123): packs download only when the member asks (Core `OfflineManifestPolicy.ManualOnly`). */
   ManualOnly: flag,
@@ -75,6 +92,10 @@ export const offlineManifestPackSchema = z.object({
   DownloadUrl: text,
   ExpiresUtc: text,
   CustomMapLayerId: versionText,
+  /** Incident and corridor packs (kinds 1 and 2): the active calls whose radius touches the cell. */
+  CallIds: idList,
+  /** Incident and corridor packs (kinds 1 and 2): the active route plans whose corridor touches the cell. */
+  RoutePlanIds: idList,
 });
 
 export const offlineManifestFloorSchema = z.object({
@@ -145,6 +166,10 @@ export interface OfflineManifestAsset {
   corners: FloorCorners | null;
   /** Part of the required set (never LRU-evicted). */
   pinned: boolean;
+  /** Incident and corridor packs: the calls the server lists the cell for (absent from older servers and snapshots). */
+  callIds?: string[] | null;
+  /** Incident and corridor packs: the route plans the server lists the cell for (absent from older servers and snapshots). */
+  routePlanIds?: string[] | null;
 }
 
 /** A pack listed without a file yet (queued/building) or that failed to build. */
@@ -156,6 +181,8 @@ export interface OfflineManifestPendingPack {
   state: 'building' | 'failed';
   /** Incident/corridor selection reads it (optional in snapshots from older builds). */
   bounds?: PackBounds | null;
+  callIds?: string[] | null;
+  routePlanIds?: string[] | null;
 }
 
 export interface OfflineManifestRejection {
@@ -312,7 +339,8 @@ export function parseOfflineManifest(raw: unknown, options: ParseOptions = {}): 
           sha256: file.Sha256 ? file.Sha256.toLowerCase() : null,
           sizeBytes: sizeOf(file.SizeBytes),
           url: file.Url,
-          expiresAt: null,
+          // Core sets `ExpiresUtc` on packs only; every other URL carries the same signature expiry (`e`).
+          expiresAt: signatureExpiry(file.Url),
           fileExtension: extension,
           bounds: null,
           minZoom: 0,
@@ -365,11 +393,11 @@ export function parseOfflineManifest(raw: unknown, options: ParseOptions = {}): 
     }
     const status = pack.Status ?? (pack.DownloadUrl ? OfflineMapPackStatus.Ready : OfflineMapPackStatus.Queued);
     if (status === OfflineMapPackStatus.Failed) {
-      pending.push({ assetId, kind: assetKind, name, sizeBytes: sizeOf(pack.SizeBytes), state: 'failed', bounds: toBounds(pack.Bounds) });
+      pending.push({ assetId, kind: assetKind, name, sizeBytes: sizeOf(pack.SizeBytes), state: 'failed', bounds: toBounds(pack.Bounds), callIds: pack.CallIds, routePlanIds: pack.RoutePlanIds });
       continue;
     }
     if (status !== OfflineMapPackStatus.Ready || !pack.DownloadUrl) {
-      pending.push({ assetId, kind: assetKind, name, sizeBytes: sizeOf(pack.SizeBytes), state: 'building', bounds: toBounds(pack.Bounds) });
+      pending.push({ assetId, kind: assetKind, name, sizeBytes: sizeOf(pack.SizeBytes), state: 'building', bounds: toBounds(pack.Bounds), callIds: pack.CallIds, routePlanIds: pack.RoutePlanIds });
       continue;
     }
     if (!isSha256Hex(pack.Sha256)) {
@@ -387,7 +415,7 @@ export function parseOfflineManifest(raw: unknown, options: ParseOptions = {}): 
       sha256,
       sizeBytes: sizeOf(pack.SizeBytes),
       url: pack.DownloadUrl,
-      expiresAt: parseUtcMs(pack.ExpiresUtc),
+      expiresAt: parseUtcMs(pack.ExpiresUtc) ?? signatureExpiry(pack.DownloadUrl),
       fileExtension: 'pmtiles',
       bounds: toBounds(pack.Bounds),
       minZoom: clampZoom(pack.MinZoom, 0),
@@ -396,6 +424,8 @@ export function parseOfflineManifest(raw: unknown, options: ParseOptions = {}): 
       floorId: null,
       corners: null,
       pinned: assetKind === 'basemap',
+      callIds: pack.CallIds,
+      routePlanIds: pack.RoutePlanIds,
     });
   }
 
@@ -460,6 +490,8 @@ const withoutUrl = (asset: OfflineManifestAsset): OfflineSnapshotAsset => ({
   floorId: asset.floorId,
   corners: asset.corners,
   pinned: asset.pinned,
+  callIds: asset.callIds,
+  routePlanIds: asset.routePlanIds,
 });
 
 export const toManifestSnapshot = (manifest: OfflineManifest, checkedAt: number): OfflineManifestSnapshot => ({

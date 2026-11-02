@@ -15,6 +15,7 @@ import {
   getStopContact,
   getStopsForInstance,
   getUnacknowledgedDeviations,
+  isApiError,
   pauseRoute,
   resumeRoute,
   skipStop,
@@ -279,6 +280,12 @@ export const useRoutesStore = create<RoutesState>()(
           }),
         endRouteInstance: (instanceId) =>
           act(async () => {
+            // Core ends only a running route: a paused one is resumed first.
+            const current = get().activeInstance;
+            if (current?.RouteInstanceId === instanceId && current.Status === RouteInstanceStatus.Paused) {
+              assertV4Success(await resumeRoute(ctx(), { RouteInstanceId: instanceId }));
+              setInstanceStatus(instanceId, RouteInstanceStatus.InProgress);
+            }
             assertV4Success(await endRoute(ctx(), { RouteInstanceId: instanceId }));
             set(clearedRoute());
           }),
@@ -302,7 +309,15 @@ export const useRoutesStore = create<RoutesState>()(
           await runner.run(
             'active',
             // RD8: Omni also sees a paused route (the legacy app's read stays InProgress-only on the server).
-            async () => unwrapItem(await getActiveRouteForUnit(ctx(), { unitId, includePaused: true })),
+            async () => {
+              try {
+                return unwrapItem(await getActiveRouteForUnit(ctx(), { unitId, includePaused: true }));
+              } catch (error) {
+                // Core answers a bare HTTP 404 (not a not_found envelope) when the unit has no running or paused route.
+                if (isApiError(error) && error.kind === 'http' && error.status === 404) return null;
+                throw error;
+              }
+            },
             (data) => applyRouteProgress(data),
             { trailing: options?.bypassCache === true }
           );

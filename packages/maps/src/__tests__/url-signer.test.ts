@@ -1,6 +1,6 @@
 import type { SignedMapResourceUrl } from '@resgrid/models';
 
-import { createMapUrlSigner, isSignedMapUrl, refreshTimeFor, signatureExpiry, stripSignature } from '../provider/url-signer';
+import { CONFIG_SIGNATURE_REFRESH_MARGIN_MS, createMapUrlSigner, isSignedMapUrl, mapConfigRefreshAt, refreshTimeFor, signatureExpiry, stripSignature } from '../provider/url-signer';
 
 const API = 'https://api.example.org/api/v4';
 const TILE = `${API}/Mapping/GetCustomMapMercatorTile/L1/{z}/{x}/{y}`;
@@ -24,6 +24,24 @@ describe('signed URL helpers', () => {
     expect(isSignedMapUrl(`${TILE}?sig=only`)).toBe(false);
     expect(stripSignature(signed)).toBe(`${TILE}?style=day`);
     expect(stripSignature(signedAt(TILE, 1_900_000_000_000))).toBe(TILE);
+  });
+
+  it('times the department config refresh before its first signed map URL expires', () => {
+    const now = 1_000_000_000_000;
+    const config = {
+      MapLibreStyleUrlDay: signedAt(`${API}/Mapping/GetStyle?night=false`, now + 24 * HOUR),
+      MapLibreStyleUrlNight: signedAt(`${API}/Mapping/GetStyle?night=true`, now + 23 * HOUR),
+      StaticMapUrlTemplate: signedAt(`${API}/Mapping/GetStaticMap?lat={lat}&lon={lon}`, now + 24 * HOUR),
+      OfflineManifestUrl: null,
+      MapUrl: 'https://tiles.example.org/{z}/{x}/{y}.png',
+      TrafficRefreshSeconds: 300,
+    };
+    expect(mapConfigRefreshAt(config)).toBe(now + 23 * HOUR - CONFIG_SIGNATURE_REFRESH_MARGIN_MS);
+    // Already expired: due (in the past).
+    expect(mapConfigRefreshAt({ OfflineManifestUrl: signedAt(`${API}/Mapping/GetOfflineManifest`, now - 60_000) })).toBe(now - 60_000 - CONFIG_SIGNATURE_REFRESH_MARGIN_MS);
+    // Nothing signed (older servers), or no config.
+    expect(mapConfigRefreshAt({ MapUrl: config.MapUrl })).toBeNull();
+    expect(mapConfigRefreshAt(null)).toBeNull();
   });
 
   it('renews after 80% of the remaining lifetime, at least a minute before expiry', () => {

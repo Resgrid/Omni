@@ -32,7 +32,7 @@ export interface ActiveRouteInstanceResultData {
   CurrentStopName: string | null;
 }
 
-/** `GetRouteProgress/{instanceId}` and `GetActiveRouteForUnit/{unitId}` (Data is null when the unit has no active route). */
+/** `GetRouteProgress/{instanceId}` and `GetActiveRouteForUnit/{unitId}` (the latter answers HTTP 404 when the unit has no running or paused route). */
 export interface RouteProgressResultData {
   Instance: RouteInstanceResultData;
   TotalStops: number;

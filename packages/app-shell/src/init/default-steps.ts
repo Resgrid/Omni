@@ -60,10 +60,13 @@ const cachePolicyFor = (manifest: VariantManifest): ApiCachePolicy => {
   return { ttlMs: (_path, defaultTtl) => (manifest.offline.cacheTtl === 'long' ? Math.max(defaultTtl, variantTtl) : defaultTtl) };
 };
 
-/** Loads `Config/GetConfig` for the signed-in department (EventingUrl, Novu, web push, location thresholds). */
-export async function loadDepartmentConfig(): Promise<void> {
+/**
+ * Loads `Config/GetConfig` for the signed-in department (EventingUrl, Novu, web push, location thresholds, signed map
+ * URLs). `forceRefresh` fetches it again even while the cached copy is fresh (its signed map URLs are about to expire).
+ */
+export async function loadDepartmentConfig(options: { forceRefresh?: boolean } = {}): Promise<void> {
   try {
-    const result = await getConfig(requireApiContext(), { key: getEnv().APP_KEY || undefined });
+    const result = await getConfig(requireApiContext(), { key: getEnv().APP_KEY || undefined }, options.forceRefresh ? { forceRefresh: true } : undefined);
     if (result?.Data) {
       setShellState({ departmentConfig: result.Data });
     }

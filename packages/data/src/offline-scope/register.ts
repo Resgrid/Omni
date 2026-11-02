@@ -150,7 +150,8 @@ const STEPS: Record<DataHydrationStepId, StepDefinition> = {
       const id = unitId();
       if (id === null) return;
       const store = useRoutesStore.getState();
-      await Promise.all([store.fetchRoutePlans(id, bypass), store.fetchActiveRoute(id, bypass)]);
+      // The department's plans, as the routes list loads them (Core's per-unit list leaves out distance and duration).
+      await Promise.all([store.fetchAllRoutePlans(bypass), store.fetchActiveRoute(id, bypass)]);
       const instanceId = useRoutesStore.getState().activeInstance?.RouteInstanceId;
       if (instanceId) await useRoutesStore.getState().fetchStopsForInstance(instanceId);
     },
