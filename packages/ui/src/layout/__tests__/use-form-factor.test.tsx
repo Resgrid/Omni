@@ -55,28 +55,28 @@ describe('useFormFactor', () => {
     setWindow(390, 844);
   });
 
-  it('recomputes on resize/rotation', () => {
+  it('recomputes on resize/rotation', async () => {
     setWindow(390, 844);
-    const { result, rerender } = renderHook(() => useFormFactor());
+    const { result, rerender } = await renderHook(() => useFormFactor());
     expect(result.current.formFactor).toBe('phone');
 
     setWindow(1194, 834);
-    rerender({});
+    await rerender({});
     expect(result.current).toMatchObject({ formFactor: 'tablet', isLandscapeBoard: true });
   });
 
-  it('takes kiosk mode from a FormFactorProvider', () => {
+  it('takes kiosk mode from a FormFactorProvider', async () => {
     setWindow(1280, 720);
     const wrapper = ({ children }: { children: React.ReactNode }) => <FormFactorProvider kiosk>{children}</FormFactorProvider>;
 
-    const { result } = renderHook(() => useFormFactor(), { wrapper });
+    const { result } = await renderHook(() => useFormFactor(), { wrapper });
 
     expect(result.current.formFactor).toBe('wall');
   });
 
-  it('is never Electron on native', () => {
+  it('is never Electron on native', async () => {
     expect(Platform.OS).not.toBe('web');
-    const { result } = renderHook(() => useFormFactor());
+    const { result } = await renderHook(() => useFormFactor());
 
     expect(result.current.isElectron).toBe(false);
   });
@@ -89,9 +89,9 @@ describe('Responsive', () => {
     expect(pickResponsive('tablet', { phone: 1, desktop: 3 })).toBe(1);
   });
 
-  it('renders the branch for the current form factor', () => {
+  it('renders the branch for the current form factor', async () => {
     setWindow(820, 1180);
-    render(<Responsive phone={<Text>list</Text>} tablet={<Text>split</Text>} />);
+    await render(<Responsive phone={<Text>list</Text>} tablet={<Text>split</Text>} />);
 
     expect(screen.getByText('split')).toBeTruthy();
     expect(screen.queryByText('list')).toBeNull();

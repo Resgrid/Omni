@@ -110,11 +110,11 @@ describe('useToast', () => {
     jest.useRealTimers();
   });
 
-  it('exposes typed helpers that return the toast id', () => {
-    const { result } = renderHook(() => useToast());
+  it('exposes typed helpers that return the toast id', async () => {
+    const { result } = await renderHook(() => useToast());
     let id = '';
 
-    act(() => {
+    await act(() => {
       id = result.current.error('Failed', 'Error', { duration: 4000 });
       result.current.success('Saved');
       result.current.warning('Careful');
@@ -123,15 +123,15 @@ describe('useToast', () => {
 
     expect(useToastStore.getState().toasts.map((toast) => toast.type)).toEqual(['error', 'success', 'warning', 'info']);
 
-    act(() => result.current.dismiss(id));
+    await act(() => result.current.dismiss(id));
     expect(useToastStore.getState().toasts.map((toast) => toast.type)).toEqual(['success', 'warning', 'info']);
   });
 
-  it('is referentially stable across renders', () => {
-    const { result, rerender } = renderHook(() => useToast());
+  it('is referentially stable across renders', async () => {
+    const { result, rerender } = await renderHook(() => useToast());
     const first = result.current;
 
-    rerender({});
+    await rerender({});
 
     expect(result.current).toBe(first);
   });

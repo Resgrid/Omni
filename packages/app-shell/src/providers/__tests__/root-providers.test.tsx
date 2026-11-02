@@ -14,8 +14,8 @@ const query = { includeHiddenElements: true } as const;
 
 type ModalState = ReturnType<typeof usePushNotificationModalStore.getState>;
 
-const openModal = (notification: Partial<NonNullable<ModalState['notification']>>): void => {
-  act(() => {
+const openModal = async (notification: Partial<NonNullable<ModalState['notification']>>): Promise<void> => {
+  await act(() => {
     usePushNotificationModalStore.setState({ isOpen: true, notification: { eventCode: 'C42', target: null, ...notification } as ModalState['notification'] });
   });
 };
@@ -29,54 +29,54 @@ describe('RootProviders', () => {
     setRouteContract(defineRoutes(['home']));
   });
 
-  it('renders the app inside the provider tree with the toast host', () => {
-    render(
+  it('renders the app inside the provider tree with the toast host', async () => {
+    await render(
       <RootProviders>
         <Text testID="child">app</Text>
       </RootProviders>
     );
     expect(screen.getByTestId('child')).toBeTruthy();
-    act(() => {
+    await act(() => {
       useToastStore.getState().showToast('info', 'Saved');
     });
     expect(screen.getByText('Saved')).toBeTruthy();
   });
 
-  it('follows the stored theme choice without remounting the app', () => {
+  it('follows the stored theme choice without remounting the app', async () => {
     const mounts = jest.fn();
     function Child() {
       React.useEffect(() => mounts(), []);
       return <Text testID="child">app</Text>;
     }
-    render(
+    await render(
       <RootProviders>
         <Child />
       </RootProviders>
     );
-    act(() => setShellState({ themeMode: 'dark' }));
+    await act(() => setShellState({ themeMode: 'dark' }));
     expect(screen.getByTestId('child')).toBeTruthy();
     expect(mounts).toHaveBeenCalledTimes(1);
   });
 
-  it('shows the push modal; "View" appears only when the variant has a screen for the target', () => {
-    render(<RootProviders />);
-    openModal({ title: 'Structure fire', body: '12 Main St', target: { kind: 'call', id: '42' } });
+  it('shows the push modal; "View" appears only when the variant has a screen for the target', async () => {
+    await render(<RootProviders />);
+    await openModal({ title: 'Structure fire', body: '12 Main St', target: { kind: 'call', id: '42' } });
     expect(screen.getByText('Structure fire', query)).toBeTruthy();
     expect(screen.getByText('12 Main St', query)).toBeTruthy();
     expect(screen.queryByTestId('push-notification-view', query)).toBeNull();
 
-    fireEvent.press(screen.getByTestId('push-notification-close', query));
+    await fireEvent.press(screen.getByTestId('push-notification-close', query));
     expect(usePushNotificationModalStore.getState().isOpen).toBe(false);
   });
 
   it('"View" deep-links through the route contract', async () => {
     setRouteContract(defineRoutes(['home', 'callDetail']));
-    render(<RootProviders />);
-    openModal({ target: { kind: 'call', id: '42' } });
+    await render(<RootProviders />);
+    await openModal({ target: { kind: 'call', id: '42' } });
     expect(screen.getByText('New notification', query)).toBeTruthy();
 
     await act(async () => {
-      fireEvent.press(screen.getByTestId('push-notification-view', query));
+      await fireEvent.press(screen.getByTestId('push-notification-view', query));
     });
 
     expect(navigateToNotificationTarget).toHaveBeenCalledWith({ kind: 'call', id: '42' });

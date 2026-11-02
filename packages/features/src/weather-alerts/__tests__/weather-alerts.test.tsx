@@ -62,31 +62,31 @@ beforeEach(() => {
 });
 
 describe('WeatherAlertsListScreen', () => {
-  it('filters by severity tab and opens the canonical detail route', () => {
-    render(<WeatherAlertsListScreen />);
+  it('filters by severity tab and opens the canonical detail route', async () => {
+    await render(<WeatherAlertsListScreen />);
     expect(screen.getByText('weather_alerts.filter.all (3)')).toBeTruthy();
 
-    fireEvent.press(screen.getByTestId('weather-severity-tab-0'));
+    await fireEvent.press(screen.getByTestId('weather-severity-tab-0'));
     expect(screen.getByTestId('weather-alert-card-a1')).toBeTruthy();
     expect(screen.queryByTestId('weather-alert-card-a2')).toBeNull();
 
-    fireEvent.press(screen.getByTestId('weather-alert-card-a1'));
+    await fireEvent.press(screen.getByTestId('weather-alert-card-a1'));
     expect(router.push).toHaveBeenCalledWith('/weather-alerts/a1');
   });
 
-  it('hides the settings entry without the admin capability and shows it with it', () => {
-    const { unmount } = render(<WeatherAlertsListScreen />);
+  it('hides the settings entry without the admin capability and shows it with it', async () => {
+    const { unmount } = await render(<WeatherAlertsListScreen />);
     expect(screen.queryByTestId('weather-alerts-settings-button')).toBeNull();
-    unmount();
+    await unmount();
 
     mockCapabilities.weatherAlerts.admin = true;
-    render(<WeatherAlertsListScreen />);
-    fireEvent.press(screen.getByTestId('weather-alerts-settings-button'));
+    await render(<WeatherAlertsListScreen />);
+    await fireEvent.press(screen.getByTestId('weather-alerts-settings-button'));
     expect(router.push).toHaveBeenCalledWith(weatherAlertsRoutes.settings());
   });
 
-  it('applies realtime weather pings to the store', () => {
-    render(<WeatherAlertsListScreen />);
+  it('applies realtime weather pings to the store', async () => {
+    await render(<WeatherAlertsListScreen />);
     emitRealtimeEvent('weatherAlertReceived', 'a9');
     emitRealtimeEvent('weatherAlertExpired', 'a2');
     expect(admin.handleAlertReceived).toHaveBeenCalledWith('a9');
@@ -97,7 +97,7 @@ describe('WeatherAlertsListScreen', () => {
 describe('WeatherAlertDetailScreen', () => {
   it('shows severity and passes the centre to the map slot', async () => {
     const renderMap = jest.fn((_alert: WeatherAlertResultData, center: { latitude: number; longitude: number } | null) => <Text testID="weather-map">{center ? `${center.latitude}` : 'none'}</Text>);
-    render(<WeatherAlertDetailScreen alertId="a1" renderMap={renderMap} />);
+    await render(<WeatherAlertDetailScreen alertId="a1" renderMap={renderMap} />);
     await waitFor(() => expect(screen.getByTestId('weather-map')).toHaveTextContent('39.7'));
     expect(screen.getByTestId('weather-alert-detail-severity')).toHaveTextContent('weather_alerts.severity.extreme');
   });
@@ -109,26 +109,26 @@ describe('WeatherAlertDetailScreen', () => {
 });
 
 describe('WeatherAlertSettingsScreen', () => {
-  it('is unavailable and never calls the admin endpoints without the capability', () => {
-    render(<WeatherAlertSettingsScreen />);
+  it('is unavailable and never calls the admin endpoints without the capability', async () => {
+    await render(<WeatherAlertSettingsScreen />);
     expect(screen.getByTestId('weather-alert-settings-unavailable')).toBeTruthy();
     expect(admin.fetchSettings).not.toHaveBeenCalled();
   });
 
   it('loads the admin slices and saves a new source with the capability', async () => {
     mockCapabilities.weatherAlerts.admin = true;
-    render(<WeatherAlertSettingsScreen />);
+    await render(<WeatherAlertSettingsScreen />);
     expect(admin.fetchSettings).toHaveBeenCalled();
     expect(admin.fetchSources).toHaveBeenCalled();
     expect(admin.fetchZones).toHaveBeenCalled();
 
-    fireEvent.press(screen.getByTestId('weather-settings-add-source'));
+    await fireEvent.press(screen.getByTestId('weather-settings-add-source'));
     const q = { includeHiddenElements: true } as const;
-    fireEvent.press(screen.getByTestId('weather-source-save', q));
+    await fireEvent.press(screen.getByTestId('weather-source-save', q));
     expect(screen.getByTestId('weather-source-error', q)).toHaveTextContent('weather_alerts.settings.name_required');
 
-    fireEvent.changeText(screen.getByTestId('weather-source-name', q), 'NWS Denver');
-    fireEvent.press(screen.getByTestId('weather-source-save', q));
+    await fireEvent.changeText(screen.getByTestId('weather-source-name', q), 'NWS Denver');
+    await fireEvent.press(screen.getByTestId('weather-source-save', q));
     await waitFor(() => expect(admin.saveSource).toHaveBeenCalledWith(expect.objectContaining({ Name: 'NWS Denver', SourceType: 0, PollIntervalMinutes: 15, Active: true })));
   });
 });

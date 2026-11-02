@@ -8,21 +8,21 @@ import { ShellStack } from '../shell/shell-stack';
 import { activateVariant } from './helpers/variants';
 
 describe('HomeRoute (the (app) index)', () => {
-  afterEach(() => {
-    act(() => setRouteContract(defineRoutes(['home'])));
+  afterEach(async () => {
+    await act(() => setRouteContract(defineRoutes(['home'])));
   });
 
-  it("hands / over to shell.homeRoute when the variant declares that route (Responder's member home)", () => {
+  it("hands / over to shell.homeRoute when the variant declares that route (Responder's member home)", async () => {
     activateVariant('responder');
-    act(() => setRouteContract(defineRoutes(['home', 'homeTab'])));
-    render(<HomeRoute />);
+    await act(() => setRouteContract(defineRoutes(['home', 'homeTab'])));
+    await render(<HomeRoute />);
     expect(screen.getByTestId('mock-redirect')).toHaveTextContent('/home');
   });
 
-  it('keeps the placeholder while the homeRoute has no route yet (Dispatch console, BigBoard dashboard) or is / itself', () => {
+  it('keeps the placeholder while the homeRoute has no route yet (Dispatch console, BigBoard dashboard) or is / itself', async () => {
     activateVariant('dispatch');
-    act(() => setRouteContract(defineRoutes(['home'])));
-    render(<HomeRoute />);
+    await act(() => setRouteContract(defineRoutes(['home'])));
+    await render(<HomeRoute />);
     expect(screen.getByTestId('home-placeholder')).toBeTruthy();
     expect(resolveHomeRedirect('/')).toBeNull();
     expect(resolveHomeRedirect('/home')).toBeNull();
@@ -30,8 +30,8 @@ describe('HomeRoute (the (app) index)', () => {
 });
 
 describe('ShellStack', () => {
-  it('is a stack navigator (the shell header titles its screens)', () => {
-    render(<ShellStack />);
+  it('is a stack navigator (the shell header titles its screens)', async () => {
+    await render(<ShellStack />);
     expect(screen.getByTestId('mock-stack')).toBeTruthy();
   });
 });

@@ -44,8 +44,8 @@
     "attendees": {
       "title": "Participants"
     },
-    "attendeesCount": "{{count}} participant",
-    "attendeesCount_plural": "{{count}} participants",
+    "attendeesCount_one": "{{count}} participant",
+    "attendeesCount": "{{count}} participants",
     "confirmSignup": "Confirmer",
     "confirmUnsignup": {
       "message": "Êtes-vous sûr(e) de vouloir annuler votre participation à cet événement ?",
@@ -66,8 +66,8 @@
       "attendanceUpdate": "Échec de la mise à jour de la participation. Veuillez réessayer.",
       "title": "Erreur"
     },
-    "eventsCount": "{{count}} événement",
-    "eventsCount_plural": "{{count}} événements",
+    "eventsCount_one": "{{count}} événement",
+    "eventsCount": "{{count}} événements",
     "loading": {
       "date": "Chargement des événements pour la date sélectionnée...",
       "today": "Chargement des événements d'aujourd'hui...",
@@ -633,8 +633,8 @@
     "not_found": "POI introuvable",
     "note_label": "Remarque",
     "reset_filters": "Réinitialiser",
-    "results_count": "{{count}} POI",
-    "results_count_plural": "{{count}} POIs",
+    "results_count_one": "{{count}} POI",
+    "results_count": "{{count}} POIs",
     "search_placeholder": "Rechercher des POI...",
     "set_status_destination": "Utiliser comme destination du statut",
     "sort_label": "Trier",

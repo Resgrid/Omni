@@ -22,12 +22,12 @@ function TrailProbe() {
 describe('registerShellProvider', () => {
   beforeEach(() => resetShellSlotsForTests());
 
-  it('nests providers outermost first by order, then registration order', () => {
+  it('nests providers outermost first by order, then registration order', async () => {
     registerShellProvider('status', providerNamed('status'));
     registerShellProvider('maps', providerNamed('maps'), { order: -10 });
     registerShellProvider('chat', providerNamed('chat'));
 
-    render(
+    await render(
       <RegisteredProviders>
         <TrailProbe />
       </RegisteredProviders>
@@ -35,12 +35,12 @@ describe('registerShellProvider', () => {
     expect(screen.getByTestId('trail')).toHaveTextContent('maps>status>chat');
   });
 
-  it('replaces a provider registered under the same id, keeping one entry', () => {
+  it('replaces a provider registered under the same id, keeping one entry', async () => {
     registerShellProvider('status', providerNamed('default-status'));
     registerShellProvider('status', providerNamed('unit-status'));
 
     expect(getShellProviders().map((entry) => entry.id)).toEqual(['status']);
-    render(
+    await render(
       <RegisteredProviders>
         <TrailProbe />
       </RegisteredProviders>
@@ -59,8 +59,8 @@ describe('registerShellProvider', () => {
     expect(getShellProviders().map((entry) => entry.id)).toEqual(['status']);
   });
 
-  it('renders its children unchanged when nothing is registered', () => {
-    render(
+  it('renders its children unchanged when nothing is registered', async () => {
+    await render(
       <RegisteredProviders>
         <TrailProbe />
       </RegisteredProviders>
@@ -72,7 +72,7 @@ describe('registerShellProvider', () => {
 describe('registerShellBanner', () => {
   beforeEach(() => resetShellSlotsForTests());
 
-  it('stacks registered banners under the app bar, replacing by id; the disposer removes exactly its own', () => {
+  it('stacks registered banners under the app bar, replacing by id; the disposer removes exactly its own', async () => {
     const First = () => <Text testID="banner">first</Text>;
     const Second = () => <Text testID="banner">second</Text>;
     const Replacement = () => <Text testID="banner">replacement</Text>;
@@ -80,11 +80,11 @@ describe('registerShellBanner', () => {
     const removeB = registerShellBanner('b', Second);
     registerShellBanner('a', Replacement);
 
-    const view = render(<RegisteredBanners />);
+    const view = await render(<RegisteredBanners />);
     expect(screen.getAllByTestId('banner').map((node) => node.props.children)).toEqual(['second', 'replacement']);
 
-    act(() => removeB());
-    view.rerender(<RegisteredBanners />);
+    await act(() => removeB());
+    await view.rerender(<RegisteredBanners />);
     expect(screen.getAllByTestId('banner').map((node) => node.props.children)).toEqual(['replacement']);
   });
 });

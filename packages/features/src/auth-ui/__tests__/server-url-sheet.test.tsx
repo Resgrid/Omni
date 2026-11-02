@@ -17,7 +17,7 @@ const mockSwitchServer = switchServer as jest.Mock;
 const renderSheet = async (props: Partial<React.ComponentProps<typeof ServerUrlSheet>> = {}) => {
   const onClose = jest.fn();
   const onChanged = jest.fn();
-  render(<ServerUrlSheet isOpen onClose={onClose} onChanged={onChanged} allowLocalHttp={false} {...props} />);
+  await render(<ServerUrlSheet isOpen onClose={onClose} onChanged={onChanged} allowLocalHttp={false} {...props} />);
   await screen.findByTestId('server-option-US-West');
   return { onClose, onChanged };
 };
@@ -38,8 +38,8 @@ describe('ServerUrlSheet', () => {
 
   it('switches to a hosted site through switchServer and reports the change', async () => {
     const { onClose, onChanged } = await renderSheet();
-    fireEvent.press(screen.getByTestId('server-option-EU-Central'));
-    fireEvent.press(screen.getByTestId('server-url-save'));
+    await fireEvent.press(screen.getByTestId('server-option-EU-Central'));
+    await fireEvent.press(screen.getByTestId('server-url-save'));
     await waitFor(() => expect(mockSwitchServer).toHaveBeenCalledWith('https://api-eu-central.resgrid.com', false));
     expect(onChanged).toHaveBeenCalledWith(expect.objectContaining({ ok: true, changed: true }));
     expect(onClose).toHaveBeenCalled();
@@ -47,47 +47,47 @@ describe('ServerUrlSheet', () => {
 
   it('rejects plain http to a remote host in a production build', async () => {
     await renderSheet();
-    fireEvent.press(screen.getByTestId('server-option-__custom__'));
-    fireEvent.changeText(screen.getByTestId('server-url-input'), 'http://resgrid.example.org');
-    fireEvent.press(screen.getByTestId('server-url-save'));
+    await fireEvent.press(screen.getByTestId('server-option-__custom__'));
+    await fireEvent.changeText(screen.getByTestId('server-url-input'), 'http://resgrid.example.org');
+    await fireEvent.press(screen.getByTestId('server-url-save'));
     expect(await screen.findByText('settings.server_url_insecure')).toBeTruthy();
     expect(mockSwitchServer).not.toHaveBeenCalled();
   });
 
   it('rejects http even to localhost outside a development build', async () => {
     await renderSheet();
-    fireEvent.press(screen.getByTestId('server-option-__custom__'));
-    fireEvent.changeText(screen.getByTestId('server-url-input'), 'http://localhost:5000');
-    fireEvent.press(screen.getByTestId('server-url-save'));
+    await fireEvent.press(screen.getByTestId('server-option-__custom__'));
+    await fireEvent.changeText(screen.getByTestId('server-url-input'), 'http://localhost:5000');
+    await fireEvent.press(screen.getByTestId('server-url-save'));
     expect(await screen.findByText('settings.server_url_insecure')).toBeTruthy();
     expect(mockSwitchServer).not.toHaveBeenCalled();
   });
 
   it('allows http to localhost in a development build', async () => {
     await renderSheet({ allowLocalHttp: true });
-    fireEvent.press(screen.getByTestId('server-option-__custom__'));
-    fireEvent.changeText(screen.getByTestId('server-url-input'), 'http://localhost:5000/api/v4');
-    fireEvent.press(screen.getByTestId('server-url-save'));
+    await fireEvent.press(screen.getByTestId('server-option-__custom__'));
+    await fireEvent.changeText(screen.getByTestId('server-url-input'), 'http://localhost:5000/api/v4');
+    await fireEvent.press(screen.getByTestId('server-url-save'));
     await waitFor(() => expect(mockSwitchServer).toHaveBeenCalledWith('http://localhost:5000', true));
   });
 
   it('rejects an empty or malformed address', async () => {
     await renderSheet();
-    fireEvent.press(screen.getByTestId('server-option-__custom__'));
-    fireEvent.changeText(screen.getByTestId('server-url-input'), '');
-    fireEvent.press(screen.getByTestId('server-url-save'));
+    await fireEvent.press(screen.getByTestId('server-option-__custom__'));
+    await fireEvent.changeText(screen.getByTestId('server-url-input'), '');
+    await fireEvent.press(screen.getByTestId('server-url-save'));
     expect(await screen.findByText('settings.server_url_required')).toBeTruthy();
-    fireEvent.changeText(screen.getByTestId('server-url-input'), 'not a url');
-    fireEvent.press(screen.getByTestId('server-url-save'));
+    await fireEvent.changeText(screen.getByTestId('server-url-input'), 'not a url');
+    await fireEvent.press(screen.getByTestId('server-url-save'));
     expect(await screen.findByText('settings.server_url_invalid')).toBeTruthy();
     expect(mockSwitchServer).not.toHaveBeenCalled();
   });
 
   it('saves a custom https server with the /api suffix removed', async () => {
     await renderSheet();
-    fireEvent.press(screen.getByTestId('server-option-__custom__'));
-    fireEvent.changeText(screen.getByTestId('server-url-input'), 'https://resgrid.example.org/api/v4/');
-    fireEvent.press(screen.getByTestId('server-url-save'));
+    await fireEvent.press(screen.getByTestId('server-option-__custom__'));
+    await fireEvent.changeText(screen.getByTestId('server-url-input'), 'https://resgrid.example.org/api/v4/');
+    await fireEvent.press(screen.getByTestId('server-url-save'));
     await waitFor(() => expect(mockSwitchServer).toHaveBeenCalledWith('https://resgrid.example.org', false));
   });
 

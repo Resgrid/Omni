@@ -25,8 +25,8 @@ const line = {
 describe('rg wrapper — native renderer', () => {
   beforeEach(() => resetMaplibreFakes());
 
-  it('renders the provider style with attribution on and the logo off', () => {
-    render(
+  it('renders the provider style with attribution on and the logo off', async () => {
+    await render(
       <MapProvider config={config} colorScheme="light">
         <MapView testID="map" compassEnabled={true} scrollEnabled={false} />
       </MapProvider>
@@ -40,8 +40,8 @@ describe('rg wrapper — native renderer', () => {
     expect(map.props.touchZoom).toBe(true);
   });
 
-  it('uses an explicit mapStyle / styleURL over the provider and turns every gesture off when not interactive', () => {
-    render(
+  it('uses an explicit mapStyle / styleURL over the provider and turns every gesture off when not interactive', async () => {
+    await render(
       <MapProvider config={config} colorScheme="light">
         <MapView testID="map" styleURL="https://other.example.org/style.json" interactive={false} />
       </MapProvider>
@@ -51,8 +51,8 @@ describe('rg wrapper — native renderer', () => {
     expect([map.props.dragPan, map.props.touchZoom, map.props.touchRotate, map.props.touchPitch]).toEqual([false, false, false, false]);
   });
 
-  it('hides the map when there is no style', () => {
-    render(
+  it('hides the map when there is no style', async () => {
+    await render(
       <MapProvider config={{}} colorScheme="light">
         <MapView testID="map" />
       </MapProvider>
@@ -61,10 +61,10 @@ describe('rg wrapper — native renderer', () => {
     expect(screen.queryByTestId('map')).toBeNull();
   });
 
-  it('normalizes press and camera events', () => {
+  it('normalizes press and camera events', async () => {
     const onPress = jest.fn();
     const onCameraChanged = jest.fn();
-    render(
+    await render(
       <MapProvider config={config} colorScheme="light">
         <MapView testID="map" onPress={onPress} onCameraChanged={onCameraChanged} />
       </MapProvider>
@@ -76,8 +76,8 @@ describe('rg wrapper — native renderer', () => {
     expect(onCameraChanged).toHaveBeenCalledWith(expect.objectContaining({ center: [1, 2], zoom: 12, heading: 90, isUserInteraction: true, properties: { isUserInteraction: true } }));
   });
 
-  it('converts camelCase layer styles to paint/layout and passes the parent source to layers', () => {
-    render(
+  it('converts camelCase layer styles to paint/layout and passes the parent source to layers', async () => {
+    await render(
       <MapProvider config={config} colorScheme="light">
         <MapView testID="map">
           <ShapeSource id="route" shape={line}>
@@ -95,7 +95,7 @@ describe('rg wrapper — native renderer', () => {
     expect(screen.getByTestId('mlrn-layer-standalone').props).toMatchObject({ source: 'composite', 'source-layer': 'poi', beforeId: 'labels' });
   });
 
-  it('re-adds sources, layers and images after a style swap (styleRevision)', () => {
+  it('re-adds sources, layers and images after a style swap (styleRevision)', async () => {
     const tree = (scheme: 'light' | 'dark') => (
       <MapProvider config={config} colorScheme={scheme}>
         <MapView testID="map">
@@ -106,23 +106,23 @@ describe('rg wrapper — native renderer', () => {
         </MapView>
       </MapProvider>
     );
-    const { rerender } = render(tree('light'));
-    act(() => screen.getByTestId('map').props.onDidFinishLoadingStyle());
+    const { rerender } = await render(tree('light'));
+    await act(() => screen.getByTestId('map').props.onDidFinishLoadingStyle());
     expect(mockMountCounts['source:route']).toBe(1);
     expect(mockMountCounts['layer:route-line']).toBe(1);
 
-    rerender(tree('dark'));
+    await rerender(tree('dark'));
     expect(screen.getByTestId('map').props.mapStyle).toBe(NIGHT);
     // Nothing remounts until the new style has loaded…
     expect(mockMountCounts['source:route']).toBe(1);
-    act(() => screen.getByTestId('map').props.onDidFinishLoadingStyle());
+    await act(() => screen.getByTestId('map').props.onDidFinishLoadingStyle());
     // …then everything is re-added to the new style document.
     expect(mockMountCounts['source:route']).toBe(2);
     expect(mockMountCounts['layer:route-line']).toBe(2);
     expect(mockMountCounts.images).toBe(2);
   });
 
-  it('re-adds everything when the caller bumps styleRevision', () => {
+  it('re-adds everything when the caller bumps styleRevision', async () => {
     const tree = (revision: number) => (
       <MapProvider config={config} colorScheme="light">
         <MapView testID="map" styleRevision={revision}>
@@ -132,14 +132,14 @@ describe('rg wrapper — native renderer', () => {
         </MapView>
       </MapProvider>
     );
-    const { rerender } = render(tree(0));
-    rerender(tree(1));
+    const { rerender } = await render(tree(0));
+    await rerender(tree(1));
     expect(mockMountCounts['source:units']).toBe(2);
   });
 
-  it('maps rnmapbox camera props and ref calls onto MapLibre', () => {
+  it('maps rnmapbox camera props and ref calls onto MapLibre', async () => {
     const ref = createRef<CameraRef>();
-    render(
+    await render(
       <MapProvider config={config} colorScheme="light">
         <MapView testID="map">
           <Camera ref={ref} centerCoordinate={[3.7, 50.9]} zoomLevel={14} heading={45} animationMode="flyTo" animationDuration={500} defaultSettings={{ centerCoordinate: [1, 1], zoomLevel: 5 }} />
@@ -157,8 +157,8 @@ describe('rg wrapper — native renderer', () => {
     ]);
   });
 
-  it('follows the user with trackUserLocation and drops the center', () => {
-    render(
+  it('follows the user with trackUserLocation and drops the center', async () => {
+    await render(
       <MapProvider config={config} colorScheme="light">
         <MapView testID="map">
           <Camera followUserLocation={true} followUserMode="course" followZoomLevel={16} centerCoordinate={[1, 1]} />
@@ -171,9 +171,9 @@ describe('rg wrapper — native renderer', () => {
     expect(camera.props.center).toBeUndefined();
   });
 
-  it('renders a MarkerView with a named anchor and skips invalid coordinates', () => {
+  it('renders a MarkerView with a named anchor and skips invalid coordinates', async () => {
     const onPress = jest.fn();
-    render(
+    await render(
       <MapProvider config={config} colorScheme="light">
         <MapView testID="map">
           <MarkerView id="pin" coordinate={[3.7, 50.9]} anchor={{ x: 0.5, y: 1 }} onPress={onPress}>

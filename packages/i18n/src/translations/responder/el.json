@@ -44,8 +44,8 @@
     "attendees": {
       "title": "Συμμετέχοντες"
     },
-    "attendeesCount": "{{count}} συμμετέχων",
-    "attendeesCount_plural": "{{count}} συμμετέχοντες",
+    "attendeesCount_one": "{{count}} συμμετέχων",
+    "attendeesCount": "{{count}} συμμετέχοντες",
     "confirmSignup": "Επιβεβαίωση",
     "confirmUnsignup": {
       "message": "Είστε βέβαιοι ότι θέλετε να ακυρώσετε τη συμμετοχή σας σε αυτό το συμβάν;",
@@ -66,8 +66,8 @@
       "attendanceUpdate": "Αποτυχία ενημέρωσης της συμμετοχής. Δοκιμάστε ξανά.",
       "title": "Σφάλμα"
     },
-    "eventsCount": "{{count}} συμβάν",
-    "eventsCount_plural": "{{count}} συμβάντα",
+    "eventsCount_one": "{{count}} συμβάν",
+    "eventsCount": "{{count}} συμβάντα",
     "loading": {
       "date": "Φόρτωση συμβάντων για την επιλεγμένη ημερομηνία...",
       "today": "Φόρτωση σημερινών συμβάντων...",
@@ -633,8 +633,8 @@
     "not_found": "Το σημείο ενδιαφέροντος δεν βρέθηκε",
     "note_label": "Σημείωση",
     "reset_filters": "Επαναφορά",
-    "results_count": "{{count}} σημείο ενδιαφέροντος",
-    "results_count_plural": "{{count}} σημεία ενδιαφέροντος",
+    "results_count_one": "{{count}} σημείο ενδιαφέροντος",
+    "results_count": "{{count}} σημεία ενδιαφέροντος",
     "search_placeholder": "Αναζήτηση σημείων ενδιαφέροντος...",
     "set_status_destination": "Ορισμός προορισμού κατάστασης",
     "sort_label": "Ταξινόμηση",

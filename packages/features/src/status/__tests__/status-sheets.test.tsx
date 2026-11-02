@@ -82,15 +82,15 @@ beforeEach(() => {
 
 describe('UnitStatusSheet', () => {
   it("offers the unit type's custom set and saves through the outbox with the crew and the active call", async () => {
-    render(
+    await render(
       <StatusProvider activeUnitId="u1" activeCallId="100">
         <UnitStatusSheet isOpen onClose={jest.fn()} />
       </StatusProvider>
     );
 
     expect(screen.queryByTestId('status-option-0', q)).toBeNull();
-    fireEvent.press(screen.getByTestId('status-option-30', q));
-    fireEvent.press(screen.getByTestId('unit-status-sheet-submit', q));
+    await fireEvent.press(screen.getByTestId('status-option-30', q));
+    await fireEvent.press(screen.getByTestId('unit-status-sheet-submit', q));
 
     await waitFor(() => expect(saveUnitStatus).toHaveBeenCalledWith({ unitId: 'u1', statusType: '30', note: '', respondingTo: '100', respondingToType: 2, roles: [{ roleId: 'r1', userId: 'user-9', name: 'Driver' }] }));
     expect(mockAcquireLocationFix).not.toHaveBeenCalled();
@@ -98,14 +98,14 @@ describe('UnitStatusSheet', () => {
 
   it('takes a live fix for a GPS-required status and refuses it without one', async () => {
     mockAcquireLocationFix.mockResolvedValueOnce({ outcome: 'permission-denied', location: null });
-    render(
+    await render(
       <StatusProvider activeUnitId="u1">
         <UnitStatusSheet isOpen onClose={jest.fn()} />
       </StatusProvider>
     );
 
-    fireEvent.press(screen.getByTestId('status-option-31', q));
-    fireEvent.press(screen.getByTestId('unit-status-sheet-submit', q));
+    await fireEvent.press(screen.getByTestId('status-option-31', q));
+    await fireEvent.press(screen.getByTestId('unit-status-sheet-submit', q));
 
     await waitFor(() => expect(screen.getByTestId('unit-status-sheet-error', q)).toHaveTextContent('location.permission-denied'));
     expect(saveUnitStatus).not.toHaveBeenCalled();
@@ -113,15 +113,15 @@ describe('UnitStatusSheet', () => {
 
   it('never sends the dispatcher position or changes the active call on behalf of a unit', async () => {
     const onActiveCallChange = jest.fn();
-    render(
+    await render(
       <StatusProvider onActiveCallChange={onActiveCallChange}>
         <UnitStatusSheet isOpen onClose={jest.fn()} unitId="u1" isOnBehalf />
       </StatusProvider>
     );
 
     expect(screen.getByTestId('unit-status-sheet-on-behalf', q)).toHaveTextContent('status.on_behalf_of:Engine 1');
-    fireEvent.press(screen.getByTestId('status-option-31', q));
-    fireEvent.press(screen.getByTestId('unit-status-sheet-submit', q));
+    await fireEvent.press(screen.getByTestId('status-option-31', q));
+    await fireEvent.press(screen.getByTestId('unit-status-sheet-submit', q));
 
     await waitFor(() => expect(saveUnitStatus).toHaveBeenCalledWith(expect.objectContaining({ unitId: 'u1', statusType: '31', location: null, respondingTo: '' })));
     expect(mockAcquireLocationFix).not.toHaveBeenCalled();
@@ -131,35 +131,35 @@ describe('UnitStatusSheet', () => {
 
 describe('PersonnelStatusSheet', () => {
   it("sets the signed-in member's own status without a user id", async () => {
-    render(<PersonnelStatusSheet isOpen onClose={jest.fn()} />);
+    await render(<PersonnelStatusSheet isOpen onClose={jest.fn()} />);
 
-    fireEvent.press(screen.getByTestId('status-option-1', q));
-    fireEvent.press(screen.getByTestId('personnel-status-sheet-submit', q));
+    await fireEvent.press(screen.getByTestId('status-option-1', q));
+    await fireEvent.press(screen.getByTestId('personnel-status-sheet-submit', q));
 
     await waitFor(() => expect(setStatus).toHaveBeenCalledWith({ statusType: '1', note: '', respondingTo: '', respondingToType: null }));
   });
 
   it("sets another member's status and staffing on their behalf (Dispatch)", async () => {
-    render(<PersonnelStatusSheet isOpen onClose={jest.fn()} userId="other" />);
+    await render(<PersonnelStatusSheet isOpen onClose={jest.fn()} userId="other" />);
 
     expect(screen.getByTestId('status-option-1', q).props.accessibilityLabel).toBe('Not Responding, status.current');
-    fireEvent.press(screen.getByTestId('personnel-status-sheet-tab-staffing', q));
-    fireEvent.press(screen.getByTestId('staffing-option-5', q));
-    fireEvent.press(screen.getByTestId('personnel-status-sheet-submit', q));
+    await fireEvent.press(screen.getByTestId('personnel-status-sheet-tab-staffing', q));
+    await fireEvent.press(screen.getByTestId('staffing-option-5', q));
+    await fireEvent.press(screen.getByTestId('personnel-status-sheet-submit', q));
 
     await waitFor(() => expect(setStaffing).toHaveBeenCalledWith({ userId: 'other', staffingType: '5', note: '' }));
   });
 });
 
 describe('CurrentStatusBadge', () => {
-  it('reads availability from the BaseType, not the status id or text', () => {
+  it('reads availability from the BaseType, not the status id or text', async () => {
     // Id 2 is the built-in "Responding" id and the text says "Available" — the meaning says committed.
-    render(<CurrentStatusBadge text="Available" color="#00ff00" baseType={ActionBaseTypes.OnScene} showAvailability />);
+    await render(<CurrentStatusBadge text="Available" color="#00ff00" baseType={ActionBaseTypes.OnScene} showAvailability />);
     expect(screen.getByTestId('current-status-badge-availability')).toHaveTextContent('status.availability.committed');
   });
 
-  it('shows a pending marker while a newer status waits to sync', () => {
-    render(<CurrentStatusBadge text="Available" pendingText="Responding" />);
+  it('shows a pending marker while a newer status waits to sync', async () => {
+    await render(<CurrentStatusBadge text="Available" pendingText="Responding" />);
     expect(screen.getByText('Responding')).toBeTruthy();
     expect(screen.getByTestId('current-status-badge-pending')).toBeTruthy();
   });

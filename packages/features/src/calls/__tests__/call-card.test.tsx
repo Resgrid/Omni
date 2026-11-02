@@ -15,8 +15,8 @@ const dispatches = [
 ] as DispatchedEventResultData[];
 
 describe('CallCard', () => {
-  it('comfortable: number, name, address, plain-text nature, dispatch ticker and time ago', () => {
-    render(<CallCard call={makeCall('1', { Nature: '<p>Smoke <b>showing</b></p><script>x()</script>' })} priorityColor="#DC2626" dispatches={dispatches} now={NOW} />);
+  it('comfortable: number, name, address, plain-text nature, dispatch ticker and time ago', async () => {
+    await render(<CallCard call={makeCall('1', { Nature: '<p>Smoke <b>showing</b></p><script>x()</script>' })} priorityColor="#DC2626" dispatches={dispatches} now={NOW} />);
     expect(screen.getByText('#C-1')).toBeTruthy();
     expect(screen.getByText('Call 1')).toBeTruthy();
     expect(screen.getByText('1 Main St')).toBeTruthy();
@@ -28,55 +28,55 @@ describe('CallCard', () => {
     expect(screen.queryByTestId('native-webview')).toBeNull();
   });
 
-  it('compact: one dense row without nature or ticker', () => {
-    render(<CallCard call={makeCall('2')} density="compact" dispatches={dispatches} now={NOW} />);
+  it('compact: one dense row without nature or ticker', async () => {
+    await render(<CallCard call={makeCall('2')} density="compact" dispatches={dispatches} now={NOW} />);
     expect(screen.getByText('Call 2')).toBeTruthy();
     expect(screen.queryByText(/Smoke/)).toBeNull();
     expect(screen.queryByTestId('call-card-2-ticker')).toBeNull();
   });
 
-  it('wall: large board row with the ticker and no nature', () => {
-    render(<CallCard call={makeCall('3')} density="wall" dispatches={dispatches} now={NOW} />);
+  it('wall: large board row with the ticker and no nature', async () => {
+    await render(<CallCard call={makeCall('3')} density="wall" dispatches={dispatches} now={NOW} />);
     expect(screen.getByText('#C-3')).toBeTruthy();
     expect(screen.getByTestId('call-card-3-ticker')).toBeTruthy();
     expect(screen.queryByText(/Smoke/)).toBeNull();
   });
 
-  it('shows a queued call with its badge and no call number', () => {
+  it('shows a queued call with its badge and no call number', async () => {
     const call: CallListItem = { ...makeCall('local-1', { Number: '' }), queued: { localId: 'local-1', state: 'queued' } };
-    render(<CallCard call={call} now={NOW} />);
+    await render(<CallCard call={call} now={NOW} />);
     expect(screen.getByText('calls.queued.badge')).toBeTruthy();
     expect(screen.queryByText(/^#/)).toBeNull();
   });
 
-  it('marks a rejected queued call', () => {
-    render(<CallCard call={{ ...makeCall('local-2'), queued: { localId: 'local-2', state: 'rejected' } }} now={NOW} />);
+  it('marks a rejected queued call', async () => {
+    await render(<CallCard call={{ ...makeCall('local-2'), queued: { localId: 'local-2', state: 'rejected' } }} now={NOW} />);
     expect(screen.getByText('calls.queued.rejected_badge')).toBeTruthy();
   });
 
-  it('outlines a call the user is assigned to', () => {
-    render(<CallCard call={makeCall('4')} dispatches={dispatches} assignmentContext={{ userId: 'u1', groupId: null, roleIds: [], roleNames: [], unitIds: [] }} now={NOW} />);
+  it('outlines a call the user is assigned to', async () => {
+    await render(<CallCard call={makeCall('4')} dispatches={dispatches} assignmentContext={{ userId: 'u1', groupId: null, roleIds: [], roleNames: [], unitIds: [] }} now={NOW} />);
     expect(screen.getByTestId('call-card-4-assigned')).toBeTruthy();
   });
 
-  it('shows the protected label instead of a withheld name', () => {
-    render(<CallCard call={makeCall('5', { Name: 'REDACTED', RedactedFields: ['calls.name'] })} now={NOW} />);
+  it('shows the protected label instead of a withheld name', async () => {
+    await render(<CallCard call={makeCall('5', { Name: 'REDACTED', RedactedFields: ['calls.name'] })} now={NOW} />);
     expect(screen.getByText('data_protection.protected_value')).toBeTruthy();
     expect(screen.queryByText('REDACTED')).toBeNull();
   });
 
-  it('shows check-in timer attention (Unit/IC timer props)', () => {
-    render(<CallCard call={makeCall('6', { CheckInTimersEnabled: true })} timerState={{ overdue: 2, warning: 1 }} now={NOW} />);
+  it('shows check-in timer attention (Unit/IC timer props)', async () => {
+    await render(<CallCard call={makeCall('6', { CheckInTimersEnabled: true })} timerState={{ overdue: 2, warning: 1 }} now={NOW} />);
     expect(screen.getByTestId('call-card-6-timer-icon')).toBeTruthy();
     expect(screen.getByText('calls.card.timers_attention:2,1')).toBeTruthy();
   });
 
-  it('is one accessible button with a descriptive label', () => {
+  it('is one accessible button with a descriptive label', async () => {
     const onPress = jest.fn();
-    render(<CallCard call={makeCall('7')} priorityLabel="High" onPress={onPress} now={NOW} />);
+    await render(<CallCard call={makeCall('7')} priorityLabel="High" onPress={onPress} now={NOW} />);
     const button = screen.getByRole('button');
     expect(button.props.accessibilityLabel).toBe('#C-7, Call 7, 7 Main St, High, calls.time.hours_ago:1');
-    fireEvent.press(button);
+    await fireEvent.press(button);
     expect(onPress).toHaveBeenCalledWith(expect.objectContaining({ CallId: '7' }));
   });
 });

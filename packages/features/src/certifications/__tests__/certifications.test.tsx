@@ -97,7 +97,7 @@ describe('certification format', () => {
 describe('CertificationsListScreen', () => {
   it('loads the member records and types, lists them soonest expiry first and opens one', async () => {
     useCertificationsStore.setState({ certifications: [cert(1), cert(2, { ExpiresOn: '2026-12-01', DaysUntilExpiry: 30, Number: 'EMT-9', CreditHours: 4, CreditHoursRequired: 24 })] });
-    render(<CertificationsListScreen />);
+    await render(<CertificationsListScreen />);
     await waitFor(() => expect(store.fetchCertifications).toHaveBeenCalledWith(undefined, { bypassCache: false }));
     expect(store.fetchTypes).toHaveBeenCalledWith({ appliesTo: 0, bypassCache: false });
 
@@ -107,18 +107,18 @@ describe('CertificationsListScreen', () => {
     expect(screen.getByTestId('certification-1-expiry')).toHaveTextContent('certifications.noExpiry');
     expect(screen.getByText('certifications.credits:4,24')).toBeTruthy();
 
-    fireEvent.press(screen.getByTestId('certification-2'));
+    await fireEvent.press(screen.getByTestId('certification-2'));
     expect(router.push).toHaveBeenCalledWith('/certifications/2');
-    fireEvent.press(screen.getByTestId('certifications-add'));
+    await fireEvent.press(screen.getByTestId('certifications-add'));
     expect(router.push).toHaveBeenLastCalledWith('/certifications/edit');
   });
 
-  it('shows the empty and error states', () => {
-    const { unmount } = render(<CertificationsListScreen />);
+  it('shows the empty and error states', async () => {
+    const { unmount } = await render(<CertificationsListScreen />);
     expect(screen.getByTestId('certifications-empty')).toBeTruthy();
-    unmount();
+    await unmount();
     useCertificationsStore.setState({ errors: { mine: { code: 'server', status: 500, messageKey: 'errors.data.server' } } });
-    render(<CertificationsListScreen />);
+    await render(<CertificationsListScreen />);
     expect(screen.getByText('errors.data.server')).toBeTruthy();
   });
 });
@@ -135,35 +135,35 @@ describe('CertificationDetailScreen', () => {
   });
 
   it('loads the record and its hours and shows the details', async () => {
-    render(<CertificationDetailScreen />);
+    await render(<CertificationDetailScreen />);
     await waitFor(() => expect(store.fetchCertification).toHaveBeenCalledWith(5, { bypassCache: true }));
     expect(store.fetchCredits).toHaveBeenCalledWith(5);
     expect(screen.getByTestId('certification-status')).toHaveTextContent('certifications.status.0');
     expect(screen.getByText('certifications.issuedByIs:State EMS')).toBeTruthy();
     expect(screen.getByText('certifications.verifiedOn:2026-01-02')).toBeTruthy();
     expect(screen.getByTestId('certification-credit-9')).toHaveTextContent('2026-10-01 · 2 h · Drill · certifications.certificateAttached');
-    fireEvent.press(screen.getByTestId('certification-edit'));
+    await fireEvent.press(screen.getByTestId('certification-edit'));
     expect(router.push).toHaveBeenCalledWith('/certifications/edit?id=5');
   });
 
   it('renews with a new number', async () => {
-    render(<CertificationDetailScreen />);
-    fireEvent.changeText(screen.getByTestId('certification-renew-number'), ' E-2 ');
-    fireEvent.press(screen.getByTestId('certification-renew-save'));
+    await render(<CertificationDetailScreen />);
+    await fireEvent.changeText(screen.getByTestId('certification-renew-number'), ' E-2 ');
+    await fireEvent.press(screen.getByTestId('certification-renew-save'));
     await waitFor(() => expect(store.renew).toHaveBeenCalledWith({ Id: 5, ExpiresOn: null, Number: 'E-2' }));
     expect(await screen.findByTestId('certification-message')).toHaveTextContent('certifications.renewed');
   });
 
   it('logs continuing-education hours, with a photo, and refreshes the hour total', async () => {
-    render(<CertificationDetailScreen />);
-    fireEvent.changeText(screen.getByTestId('certification-credit-hours'), 'abc');
-    fireEvent.press(screen.getByTestId('certification-credit-save'));
+    await render(<CertificationDetailScreen />);
+    await fireEvent.changeText(screen.getByTestId('certification-credit-hours'), 'abc');
+    await fireEvent.press(screen.getByTestId('certification-credit-save'));
     expect(screen.getByTestId('certification-message')).toHaveTextContent('certifications.hoursInvalid');
     expect(store.addCredit).not.toHaveBeenCalled();
 
-    fireEvent.changeText(screen.getByTestId('certification-credit-hours'), '2,5');
-    fireEvent.changeText(screen.getByTestId('certification-credit-category'), 'Course');
-    fireEvent.press(screen.getByTestId('certification-credit-camera'));
+    await fireEvent.changeText(screen.getByTestId('certification-credit-hours'), '2,5');
+    await fireEvent.changeText(screen.getByTestId('certification-credit-category'), 'Course');
+    await fireEvent.press(screen.getByTestId('certification-credit-camera'));
     await waitFor(() =>
       expect(store.addCredit).toHaveBeenCalledWith({ CertificationId: 5, CreditDate: null, Hours: 2.5, Category: 'Course', Description: null, FileData: 'QUJD', FileName: 'ce-certificate.jpg', FileType: 'image/jpeg' })
     );
@@ -176,21 +176,21 @@ describe('CertificationDetailScreen', () => {
       useCertificationsStore.setState({ actionError: { code: 'forbidden', status: 403, messageKey: 'errors.data.forbidden' } });
       return false;
     });
-    render(<CertificationDetailScreen />);
-    fireEvent.press(screen.getByTestId('certification-remove'));
-    fireEvent.press(screen.getByTestId('certification-remove-confirm-confirm', q));
+    await render(<CertificationDetailScreen />);
+    await fireEvent.press(screen.getByTestId('certification-remove'));
+    await fireEvent.press(screen.getByTestId('certification-remove-confirm-confirm', q));
     await waitFor(() => expect(screen.getByTestId('certification-error')).toHaveTextContent('errors.data.forbidden'));
     expect(router.back).not.toHaveBeenCalled();
 
-    fireEvent.press(screen.getByTestId('certification-remove'));
-    fireEvent.press(screen.getByTestId('certification-remove-confirm-confirm', q));
+    await fireEvent.press(screen.getByTestId('certification-remove'));
+    await fireEvent.press(screen.getByTestId('certification-remove-confirm-confirm', q));
     await waitFor(() => expect(router.back).toHaveBeenCalled());
     expect(store.remove).toHaveBeenLastCalledWith(5);
   });
 
-  it('says so for an id that is not a certification', () => {
+  it('says so for an id that is not a certification', async () => {
     (useLocalSearchParams as jest.Mock).mockReturnValue({ id: 'x' });
-    render(<CertificationDetailScreen />);
+    await render(<CertificationDetailScreen />);
     expect(screen.getByTestId('certification-invalid')).toBeTruthy();
   });
 });
@@ -198,15 +198,15 @@ describe('CertificationDetailScreen', () => {
 describe('CertificationEditScreen', () => {
   it('adds a named certification and opens it', async () => {
     useCertificationsStore.setState({ types: [type(3, 'Paramedic')] });
-    render(<CertificationEditScreen />);
+    await render(<CertificationEditScreen />);
     expect(store.fetchTypes).not.toHaveBeenCalled();
-    fireEvent.press(screen.getByTestId('certification-save'));
+    await fireEvent.press(screen.getByTestId('certification-save'));
     expect(screen.getByTestId('certification-form-message')).toHaveTextContent('certifications.nameRequired');
     expect(store.save).not.toHaveBeenCalled();
 
-    fireEvent.changeText(screen.getByTestId('certification-name'), 'Swift water rescue');
-    fireEvent.changeText(screen.getByTestId('certification-number'), ' SW-7 ');
-    fireEvent.press(screen.getByTestId('certification-save'));
+    await fireEvent.changeText(screen.getByTestId('certification-name'), 'Swift water rescue');
+    await fireEvent.changeText(screen.getByTestId('certification-number'), ' SW-7 ');
+    await fireEvent.press(screen.getByTestId('certification-save'));
     await waitFor(() =>
       expect(store.save).toHaveBeenCalledWith({
         Id: null,
@@ -227,30 +227,30 @@ describe('CertificationEditScreen', () => {
 
   it('picks a catalog type, which hides the name field', async () => {
     useCertificationsStore.setState({ types: [type(3, 'Paramedic'), type(4, 'Retired', { IsActive: false })] });
-    render(<CertificationEditScreen />);
-    fireEvent.press(screen.getByTestId('certification-type'));
+    await render(<CertificationEditScreen />);
+    await fireEvent.press(screen.getByTestId('certification-type'));
     expect(screen.queryByTestId('certification-type-sheet-option-4', q)).toBeNull();
-    fireEvent.press(screen.getByTestId('certification-type-sheet-option-3', q));
+    await fireEvent.press(screen.getByTestId('certification-type-sheet-option-3', q));
     expect(screen.queryByTestId('certification-name')).toBeNull();
     // The sheet tears its modal down when its close animation ends.
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 300));
     });
-    fireEvent.press(screen.getByTestId('certification-save'));
+    await fireEvent.press(screen.getByTestId('certification-save'));
     await waitFor(() => expect(store.save).toHaveBeenCalledWith(expect.objectContaining({ TypeId: 3, Name: null })));
   });
 
   it('seeds the form from an existing record, and reads one the list does not hold', async () => {
     (useLocalSearchParams as jest.Mock).mockReturnValue({ id: '7' });
     useCertificationsStore.setState({ certifications: [cert(7, { Name: 'Hazmat', Number: 'H-1', ExpiresOn: '2027-05-01T00:00:00' })] });
-    const { unmount } = render(<CertificationEditScreen />);
+    const { unmount } = await render(<CertificationEditScreen />);
     expect(screen.getByTestId('certification-name')).toHaveProp('value', 'Hazmat');
     expect(screen.getByTestId('certification-number')).toHaveProp('value', 'H-1');
     expect(store.fetchCertification).not.toHaveBeenCalled();
-    unmount();
+    await unmount();
 
     (useLocalSearchParams as jest.Mock).mockReturnValue({ id: '8' });
-    render(<CertificationEditScreen />);
+    await render(<CertificationEditScreen />);
     await waitFor(() => expect(store.fetchCertification).toHaveBeenCalledWith(8));
     expect(screen.queryByTestId('certification-save')).toBeNull();
   });

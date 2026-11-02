@@ -105,9 +105,9 @@ const mocks = {
   fetchCallDetail: jest.fn(async () => undefined),
 };
 
-const setWindow = (width: number, height: number) => {
+const setWindow = async (width: number, height: number) => {
   const metrics = { width, height, scale: 2, fontScale: 1 };
-  act(() => Dimensions.set({ window: metrics, screen: metrics }));
+  await act(() => Dimensions.set({ window: metrics, screen: metrics }));
 };
 
 beforeEach(() => {
@@ -166,63 +166,63 @@ afterEach(() => {
   useToastStore.getState().clearToasts();
 });
 
-const renderConsole = () => render(<DispatchConsoleScreen realtime={false} showClock={false} now={() => NOW} />);
+const renderConsole = async () => render(<DispatchConsoleScreen realtime={false} showClock={false} now={() => NOW} />);
 
 describe('DispatchConsoleScreen layout', () => {
-  it('uses three columns on a landscape tablet, two in portrait and one on a phone', () => {
-    setWindow(1366, 1024);
-    const { unmount } = renderConsole();
+  it('uses three columns on a landscape tablet, two in portrait and one on a phone', async () => {
+    await setWindow(1366, 1024);
+    const { unmount } = await renderConsole();
     expect(screen.getByTestId('console-layout-three-column')).toBeTruthy();
-    unmount();
-    setWindow(1024, 1366);
-    const second = renderConsole();
+    await unmount();
+    await setWindow(1024, 1366);
+    const second = await renderConsole();
     expect(screen.getByTestId('console-layout-two-column')).toBeTruthy();
-    second.unmount();
-    setWindow(390, 844);
-    renderConsole();
+    await second.unmount();
+    await setWindow(390, 844);
+    await renderConsole();
     expect(screen.getByTestId('console-layout-single-column')).toBeTruthy();
   });
 
-  it('shows the stats by BaseType and opens the queues from their tiles', () => {
-    setWindow(1366, 1024);
-    renderConsole();
+  it('shows the stats by BaseType and opens the queues from their tiles', async () => {
+    await setWindow(1366, 1024);
+    await renderConsole();
     expect(screen.getByTestId('stat-active-calls-value')).toHaveTextContent('1');
     expect(screen.getByTestId('stat-scheduled-calls-value')).toHaveTextContent('1');
     expect(screen.getByTestId('stat-pending-calls-value')).toHaveTextContent('2');
     expect(screen.getByTestId('stat-units-available-value')).toHaveTextContent('2');
     expect(screen.getByTestId('stat-weather-alerts-value')).toHaveTextContent('1');
-    fireEvent.press(screen.getByTestId('stat-pending-calls'));
+    await fireEvent.press(screen.getByTestId('stat-pending-calls'));
     expect(router.push).toHaveBeenCalledWith('/pending-calls');
-    fireEvent.press(screen.getByTestId('stat-scheduled-calls'));
+    await fireEvent.press(screen.getByTestId('stat-scheduled-calls'));
     expect(router.push).toHaveBeenCalledWith('/scheduled-calls');
   });
 
-  it('merges units and personnel into one panel with "Single list" and hides unavailable ones with "Available only"', () => {
-    setWindow(1366, 1024);
-    renderConsole();
-    fireEvent.press(screen.getByTestId('toggle-single-list'));
+  it('merges units and personnel into one panel with "Single list" and hides unavailable ones with "Available only"', async () => {
+    await setWindow(1366, 1024);
+    await renderConsole();
+    await fireEvent.press(screen.getByTestId('toggle-single-list'));
     expect(screen.getByTestId('resources-panel')).toBeTruthy();
     expect(screen.queryByTestId('units-panel')).toBeNull();
-    fireEvent.press(screen.getByTestId('toggle-available-only'));
+    await fireEvent.press(screen.getByTestId('toggle-available-only'));
     expect(screen.queryByTestId('console-unit-2')).toBeNull();
     expect(screen.getByTestId('console-unit-1')).toBeTruthy();
   });
 
-  it('collapses a card and remembers it', () => {
-    setWindow(1366, 1024);
-    renderConsole();
-    fireEvent.press(screen.getByTestId('notes-panel-header'));
+  it('collapses a card and remembers it', async () => {
+    await setWindow(1366, 1024);
+    await renderConsole();
+    await fireEvent.press(screen.getByTestId('notes-panel-header'));
     expect(screen.queryByTestId('notes-list')).toBeNull();
     expect(useDashboardViewStore.getState().collapsedCards.notes).toBe(true);
   });
 });
 
 describe('DispatchConsoleScreen call filter and actions', () => {
-  it('filters every panel to a pressed call and surfaces its actions', () => {
-    setWindow(1366, 1024);
-    renderConsole();
+  it('filters every panel to a pressed call and surfaces its actions', async () => {
+    await setWindow(1366, 1024);
+    await renderConsole();
     expect(screen.queryByTestId('console-call-10')).toBeNull();
-    fireEvent.press(screen.getByTestId('console-call-9'));
+    await fireEvent.press(screen.getByTestId('console-call-9'));
     expect(screen.getByTestId('active-call-filter-banner')).toBeTruthy();
     expect(mocks.fetchCallDetail).toHaveBeenCalledWith('9', { bypassCache: true });
     expect(screen.getByText('dispatch.units_on_call')).toBeTruthy();
@@ -230,98 +230,98 @@ describe('DispatchConsoleScreen call filter and actions', () => {
     expect(screen.queryByTestId('console-unit-1')).toBeNull();
     expect(screen.getByTestId('console-person-b')).toBeTruthy();
     expect(screen.getByTestId('console-actions')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('console-action-view-call'));
+    await fireEvent.press(screen.getByTestId('console-action-view-call'));
     expect(router.push).toHaveBeenCalledWith('/call/9');
-    fireEvent.press(screen.getByTestId('activity-tab-activity'));
+    await fireEvent.press(screen.getByTestId('activity-tab-activity'));
     expect(within(screen.getByTestId('console-activity-log')).getByText('dispatch.call_filter_active')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('active-call-filter-clear'));
+    await fireEvent.press(screen.getByTestId('active-call-filter-clear'));
     expect(screen.queryByTestId('active-call-filter-banner')).toBeNull();
   });
 
-  it('opens the close call sheet and the add-resources sheet for the filtered call', () => {
-    setWindow(1366, 1024);
-    renderConsole();
-    fireEvent.press(screen.getByTestId('console-call-9'));
-    fireEvent.press(screen.getByTestId('console-action-close-call'));
+  it('opens the close call sheet and the add-resources sheet for the filtered call', async () => {
+    await setWindow(1366, 1024);
+    await renderConsole();
+    await fireEvent.press(screen.getByTestId('console-call-9'));
+    await fireEvent.press(screen.getByTestId('console-action-close-call'));
     expect(screen.getByTestId('close-call-sheet', hidden)).toBeTruthy();
-    fireEvent.press(screen.getByTestId('console-call-9-add-resources'));
+    await fireEvent.press(screen.getByTestId('console-call-9-add-resources'));
     expect(screen.getByTestId('add-resources-sheet', hidden)).toBeTruthy();
     expect(screen.getByTestId('add-resources-dispatch', hidden)).toBeDisabled();
   });
 
-  it('sets a unit’s status on behalf with the filtered call as the default destination', () => {
-    setWindow(1366, 1024);
-    renderConsole();
-    fireEvent.press(screen.getByTestId('console-call-9'));
-    fireEvent.press(screen.getByTestId('console-unit-2-status-for-call'));
+  it('sets a unit’s status on behalf with the filtered call as the default destination', async () => {
+    await setWindow(1366, 1024);
+    await renderConsole();
+    await fireEvent.press(screen.getByTestId('console-call-9'));
+    await fireEvent.press(screen.getByTestId('console-unit-2-status-for-call'));
     expect(screen.getByTestId('console-unit-status-sheet', hidden)).toBeTruthy();
   });
 
-  it('selects a unit, shows its actions and logs it', () => {
-    setWindow(1366, 1024);
-    renderConsole();
-    fireEvent.press(screen.getByTestId('console-unit-1'));
+  it('selects a unit, shows its actions and logs it', async () => {
+    await setWindow(1366, 1024);
+    await renderConsole();
+    await fireEvent.press(screen.getByTestId('console-unit-1'));
     expect(screen.getByTestId('console-unit-actions')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('console-unit-set-status'));
+    await fireEvent.press(screen.getByTestId('console-unit-set-status'));
     expect(screen.getByTestId('unit-status-sheet', hidden)).toBeTruthy();
     expect(useConsoleStore.getState().activityLog[0]).toMatchObject({ type: 'unit', action: 'dispatch.unit_selected', description: 'E1' });
   });
 
-  it('builds a multi-unit selection for one status change', () => {
-    setWindow(1366, 1024);
-    renderConsole();
-    fireEvent.press(screen.getByTestId('unit-multi-select-toggle'));
-    fireEvent.press(screen.getByTestId('console-unit-1'));
-    fireEvent.press(screen.getByTestId('console-unit-3'));
+  it('builds a multi-unit selection for one status change', async () => {
+    await setWindow(1366, 1024);
+    await renderConsole();
+    await fireEvent.press(screen.getByTestId('unit-multi-select-toggle'));
+    await fireEvent.press(screen.getByTestId('console-unit-1'));
+    await fireEvent.press(screen.getByTestId('console-unit-3'));
     expect(screen.getAllByText('dispatch.bulk_unit_actions.selected_count:2').length).toBeGreaterThan(0);
     expect(screen.getByTestId('console-bulk-actions')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('console-bulk-set-status'));
+    await fireEvent.press(screen.getByTestId('console-bulk-set-status'));
     expect(screen.getByTestId('console-unit-status-sheet', hidden)).toBeTruthy();
-    fireEvent.press(screen.getByTestId('unit-select-done'));
+    await fireEvent.press(screen.getByTestId('unit-select-done'));
     expect(useConsoleStore.getState().isSelectionMode).toBe(false);
   });
 });
 
 describe('DispatchConsoleScreen realtime, PTT and map', () => {
-  it('refetches and logs on SignalR pings', () => {
-    setWindow(1366, 1024);
-    render(<DispatchConsoleScreen showClock={false} now={() => NOW} />);
-    act(() => emitRealtimeEvent('unitStatusUpdated', '1'));
+  it('refetches and logs on SignalR pings', async () => {
+    await setWindow(1366, 1024);
+    await render(<DispatchConsoleScreen showClock={false} now={() => NOW} />);
+    await act(() => emitRealtimeEvent('unitStatusUpdated', '1'));
     expect(mocks.fetchUnitInfos).toHaveBeenCalledWith({ bypassCache: true });
     expect(useConsoleStore.getState().activityLog[0]).toMatchObject({ type: 'unit', description: 'dispatch.unit_status_updated' });
-    act(() => emitRealtimeEvent('callAdded', '11'));
+    await act(() => emitRealtimeEvent('callAdded', '11'));
     expect(mocks.fetchCalls).toHaveBeenCalledWith({ bypassCache: true });
     expect(mocks.refreshQueuedCallLists).toHaveBeenCalled();
   });
 
   it('connects to the default channel, then toggles transmitting and logs it', async () => {
-    setWindow(1366, 1024);
-    const { rerender } = renderConsole();
+    await setWindow(1366, 1024);
+    const { rerender } = await renderConsole();
     expect(screen.getByText('Main Dispatch')).toBeTruthy();
     await act(async () => fireEvent.press(screen.getByTestId('ptt-talk')));
     expect(mockPtt.connect).toHaveBeenCalledWith(expect.objectContaining({ Id: 'c1' }));
     Object.assign(mockPtt, { isConnected: true, currentChannel: { Id: 'c1', Name: 'Main Dispatch' } });
-    rerender(<DispatchConsoleScreen realtime={false} showClock={false} now={() => NOW} />);
+    await rerender(<DispatchConsoleScreen realtime={false} showClock={false} now={() => NOW} />);
     await act(async () => fireEvent.press(screen.getByTestId('ptt-talk')));
     expect(mockPtt.toggleTransmitting).toHaveBeenCalled();
     expect(useConsoleStore.getState().activityLog[0]).toMatchObject({ action: 'dispatch.ptt_start' });
   });
 
-  it('records radio transmissions from active speakers', () => {
-    setWindow(1366, 1024);
-    render(<DispatchConsoleScreen showClock={false} now={() => NOW} />);
+  it('records radio transmissions from active speakers', async () => {
+    await setWindow(1366, 1024);
+    await render(<DispatchConsoleScreen showClock={false} now={() => NOW} />);
     const { useLiveKitStore } = jest.requireMock('@resgrid/voice') as { useLiveKitStore: { setState: (state: object) => void } };
-    act(() => useLiveKitStore.setState({ activeSpeakerIdentities: ['a'] }));
-    act(() => useLiveKitStore.setState({ activeSpeakerIdentities: [] }));
-    fireEvent.press(screen.getByTestId('activity-tab-radio'));
+    await act(() => useLiveKitStore.setState({ activeSpeakerIdentities: ['a'] }));
+    await act(() => useLiveKitStore.setState({ activeSpeakerIdentities: [] }));
+    await fireEvent.press(screen.getByTestId('activity-tab-radio'));
     expect(within(screen.getByTestId('console-radio-log')).getByText('Pat a')).toBeTruthy();
   });
 
-  it('shows the department pins and expands to the full map', () => {
-    setWindow(1366, 1024);
-    renderConsole();
+  it('shows the department pins and expands to the full map', async () => {
+    await setWindow(1366, 1024);
+    await renderConsole();
     expect(screen.getByTestId('map-pins-1')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('map-expand'));
+    await fireEvent.press(screen.getByTestId('map-expand'));
     expect(router.push).toHaveBeenCalledWith('/map');
   });
 });

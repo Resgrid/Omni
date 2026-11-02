@@ -157,31 +157,31 @@ describe('checklists screen', () => {
     });
   });
 
-  afterEach(() => {
-    act(() => jest.runOnlyPendingTimers());
+  afterEach(async () => {
+    await act(() => jest.runOnlyPendingTimers());
     jest.useRealTimers();
   });
 
   it('lists due checks for the member and refetches on a realtime ping', async () => {
-    render(<ChecklistsScreen />);
+    await render(<ChecklistsScreen />);
     await waitFor(() => expect(screen.getByTestId('checklist-due-occ1')).toBeTruthy());
     expect(mockFetchDue).toHaveBeenCalledWith(0, null);
-    act(() => emitRealtimeEvent('checklistUpdated', { id: 'occ1' } as never));
+    await act(() => emitRealtimeEvent('checklistUpdated', { id: 'occ1' } as never));
     await waitFor(() => expect(mockFetchDue).toHaveBeenCalledTimes(2));
   });
 
   it('checks the active unit in Unit, and the member everywhere else', async () => {
     activateVariant('unit');
-    const unit = render(
+    const unit = await render(
       <StatusProvider activeUnitId="41">
         <ChecklistsScreen />
       </StatusProvider>
     );
     await waitFor(() => expect(mockFetchDue).toHaveBeenCalledWith(0, '41'));
-    unit.unmount();
+    await unit.unmount();
     mockFetchDue.mockClear();
     activateVariant('responder');
-    render(
+    await render(
       <StatusProvider activeUnitId="41">
         <ChecklistsScreen />
       </StatusProvider>
@@ -190,59 +190,59 @@ describe('checklists screen', () => {
   });
 
   it('opens a due check, answers item by item and keeps Save disabled until a writer is registered', async () => {
-    render(<ChecklistsScreen />);
+    await render(<ChecklistsScreen />);
     await waitFor(() => expect(screen.getByTestId('checklist-open-occ1')).toBeTruthy());
-    fireEvent.press(screen.getByTestId('checklist-open-occ1'));
+    await fireEvent.press(screen.getByTestId('checklist-open-occ1'));
     await waitFor(() => expect(screen.getByTestId('checklist-item-lights', hidden)).toBeTruthy());
     expect(mockPreview).toHaveBeenCalledWith('occ1');
     expect(screen.getByTestId('checklist-save-unavailable', hidden)).toBeTruthy();
     expect(screen.getByTestId('checklist-submit', hidden)).toBeDisabled();
-    fireEvent.press(screen.getByTestId('checklist-choice-fail', hidden));
-    fireEvent.press(screen.getByTestId('checklist-next', hidden));
+    await fireEvent.press(screen.getByTestId('checklist-choice-fail', hidden));
+    await fireEvent.press(screen.getByTestId('checklist-next', hidden));
     expect(screen.getByTestId('checklist-item-detail', hidden)).toBeTruthy();
   });
 
   it('submits through the registered writer after validating required answers', async () => {
     const save = jest.fn(async () => ({ outcome: 'sent' as const, run: run({ State: 2, CanEdit: false, Score: 100 }) }));
     registerChecklistRunWriter({ save });
-    render(<ChecklistsScreen />);
+    await render(<ChecklistsScreen />);
     await waitFor(() => expect(screen.getByTestId('checklist-open-occ1')).toBeTruthy());
-    fireEvent.press(screen.getByTestId('checklist-open-occ1'));
+    await fireEvent.press(screen.getByTestId('checklist-open-occ1'));
     await waitFor(() => expect(screen.getByTestId('checklist-submit', hidden)).toBeTruthy());
-    fireEvent.press(screen.getByTestId('checklist-submit', hidden));
+    await fireEvent.press(screen.getByTestId('checklist-submit', hidden));
     await waitFor(() => expect(screen.getByTestId('checklist-run-error', hidden)).toHaveTextContent('checklists.errors.validation'));
     expect(save).not.toHaveBeenCalled();
-    fireEvent.press(screen.getByTestId('checklist-choice-pass', hidden));
-    fireEvent.press(screen.getByTestId('checklist-submit', hidden));
+    await fireEvent.press(screen.getByTestId('checklist-choice-pass', hidden));
+    await fireEvent.press(screen.getByTestId('checklist-submit', hidden));
     await waitFor(() => expect(save).toHaveBeenCalledWith(expect.objectContaining({ submit: true, input: expect.objectContaining({ Answers: [{ ItemId: 'lights', Status: 1, Value: 'pass' }] }) })));
     await waitFor(() => expect(screen.getByTestId('checklist-run-state', hidden)).toHaveTextContent(/checklists.labels.Submitted/));
   });
 
   it('starts an on-demand form locally and lets a different member witness a run from history', async () => {
-    render(<ChecklistsScreen />);
+    await render(<ChecklistsScreen />);
     await waitFor(() => expect(screen.getByTestId('checklist-start-def2-41')).toBeTruthy());
-    fireEvent.press(screen.getByTestId('checklist-start-def2-41'));
+    await fireEvent.press(screen.getByTestId('checklist-start-def2-41'));
     await waitFor(() => expect(screen.getByTestId('checklist-item-lights', hidden)).toBeTruthy());
-    fireEvent.press(screen.getByTestId('checklist-run-close', hidden));
+    await fireEvent.press(screen.getByTestId('checklist-run-close', hidden));
 
-    fireEvent.press(screen.getByTestId('checklists-history-toggle'));
+    await fireEvent.press(screen.getByTestId('checklists-history-toggle'));
     await waitFor(() => expect(screen.getByTestId('checklist-history-h1')).toBeTruthy());
-    fireEvent.press(screen.getByTestId('checklist-history-h1'));
+    await fireEvent.press(screen.getByTestId('checklist-history-h1'));
     await waitFor(() => expect(screen.getByTestId('checklist-witness', hidden)).toBeTruthy());
-    fireEvent.changeText(screen.getByTestId('checklist-attestation', hidden), 'Verified on scene');
-    fireEvent.press(screen.getByTestId('checklist-attest', hidden));
+    await fireEvent.changeText(screen.getByTestId('checklist-attestation', hidden), 'Verified on scene');
+    await fireEvent.press(screen.getByTestId('checklist-attest', hidden));
     await waitFor(() => expect(useChecklistsStore.getState().attestRun).toHaveBeenCalledWith({ Id: 'h1', SubmissionHash: 'hash', Attestation: 'Verified on scene' }));
   });
 
   it('opens the occurrence named in the route', async () => {
     (useLocalSearchParams as jest.Mock).mockReturnValue({ occurrenceId: 'occ7' });
-    render(<ChecklistsScreen />);
+    await render(<ChecklistsScreen />);
     await waitFor(() => expect(mockPreview).toHaveBeenCalledWith('occ7'));
   });
 
-  it('shows the unavailable state when the department has checklists off', () => {
+  it('shows the unavailable state when the department has checklists off', async () => {
     featureFlagsStore.setState({ flags: { 'Checklists.System': { enabled: false } }, isLoaded: true });
-    render(<ChecklistsScreen />);
+    await render(<ChecklistsScreen />);
     expect(screen.getByTestId('checklists-disabled')).toBeTruthy();
   });
 });
@@ -257,15 +257,15 @@ describe('DueChecksCard', () => {
 
   it('shows the due count (capped at a page) and opens the checklists screen', async () => {
     mockFetchDue.mockResolvedValue(duePage(50));
-    render(<DueChecksCard />);
+    await render(<DueChecksCard />);
     await waitFor(() => expect(screen.getByTestId('home-due-checks')).toHaveTextContent('checklists.labels.DueChecks (50+)'));
-    fireEvent.press(screen.getByTestId('home-due-checks'));
+    await fireEvent.press(screen.getByTestId('home-due-checks'));
     expect(router.push).toHaveBeenCalledWith('/checklists');
   });
 
-  it('renders nothing when checklists are off', () => {
+  it('renders nothing when checklists are off', async () => {
     featureFlagsStore.setState({ flags: {}, isLoaded: true });
-    render(<DueChecksCard />);
+    await render(<DueChecksCard />);
     expect(screen.queryByTestId('home-due-checks')).toBeNull();
     expect(mockFetchDue).not.toHaveBeenCalled();
   });

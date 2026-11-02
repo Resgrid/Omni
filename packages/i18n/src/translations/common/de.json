@@ -3272,8 +3272,8 @@
     "attendees": {
       "title": "Teilnehmer"
     },
+    "attendeesCount_one": "{{count}} Teilnehmer",
     "attendeesCount": "{{count}} Teilnehmer",
-    "attendeesCount_plural": "{{count}} Teilnehmer",
     "confirmSignup": "Bestätigen",
     "confirmUnsignup": {
       "message": "Sind Sie sicher, dass Sie Ihre Teilnahme an dieser Veranstaltung absagen möchten?",
@@ -3285,8 +3285,8 @@
       "attendanceUpdate": "Teilnahme konnte nicht aktualisiert werden. Bitte versuchen Sie es erneut.",
       "title": "Fehler"
     },
-    "eventsCount": "{{count}} Ereignis",
-    "eventsCount_plural": "{{count}} Ereignisse",
+    "eventsCount_one": "{{count}} Ereignis",
+    "eventsCount": "{{count}} Ereignisse",
     "loading": {
       "date": "Ereignisse für das ausgewählte Datum werden geladen...",
       "today": "Heutige Ereignisse werden geladen...",

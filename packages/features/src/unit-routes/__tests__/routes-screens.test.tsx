@@ -30,7 +30,7 @@ const renderMap = (props: RouteMapSlotProps) => {
   return <Text testID={`map-${props.kind}`}>{`${props.stops.length} stops`}</Text>;
 };
 
-const wrap = (node: React.ReactElement, activeUnitId: string | null = '10') =>
+const wrap = async (node: React.ReactElement, activeUnitId: string | null = '10') =>
   render(
     <NavigationHandoffProvider value={{ navigateTo }}>
       <UnitRoutesMapProvider renderMap={renderMap}>
@@ -89,30 +89,30 @@ beforeEach(() => {
 });
 
 describe('RoutesHomeScreen', () => {
-  it('lists active plans with the unit’s own marked and opens a plan to start it', () => {
+  it('lists active plans with the unit’s own marked and opens a plan to start it', async () => {
     useRoutesStore.setState({ routePlans: [plan('p1', { UnitId: 10 }), plan('p2', { UnitId: 11 }), plan('p3', { RouteStatus: 3, Name: 'Archived' })] });
-    wrap(<RoutesHomeScreen />);
+    await wrap(<RoutesHomeScreen />);
     expect(store.fetchAllRoutePlans).toHaveBeenCalled();
     expect(store.fetchActiveRoute).toHaveBeenCalledWith('10');
     expect(screen.getByTestId('route-card-p1-mine')).toBeTruthy();
     expect(within(screen.getByTestId('route-card-p2')).getByText('Truck 11')).toBeTruthy();
     expect(screen.queryByText('Archived')).toBeNull();
-    fireEvent.press(screen.getByTestId('route-card-p2'));
+    await fireEvent.press(screen.getByTestId('route-card-p2'));
     expect(router.push).toHaveBeenCalledWith('/routes/start?planId=p2');
   });
 
-  it('searches by name and unit, and sends the running plan to the active route', () => {
+  it('searches by name and unit, and sends the running plan to the active route', async () => {
     useRoutesStore.setState({ routePlans: [plan('p1', { Name: 'North loop' }), plan('p2', { Name: 'South loop', UnitId: 11 })], activeInstance: instance('ri-1', { RoutePlanId: 'p1' }) });
-    wrap(<RoutesHomeScreen />);
-    fireEvent.changeText(screen.getByTestId('route-plans-list-search'), 'truck');
+    await wrap(<RoutesHomeScreen />);
+    await fireEvent.changeText(screen.getByTestId('route-plans-list-search'), 'truck');
     expect(screen.queryByTestId('route-card-p1')).toBeNull();
     expect(screen.getByTestId('route-card-p2')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('route-plans-list-active-banner'));
+    await fireEvent.press(screen.getByTestId('route-plans-list-active-banner'));
     expect(router.push).toHaveBeenCalledWith('/routes/active?planId=p1&instanceId=ri-1');
   });
 
-  it('shows the empty state when there are no plans', () => {
-    wrap(<RoutesHomeScreen />);
+  it('shows the empty state when there are no plans', async () => {
+    await wrap(<RoutesHomeScreen />);
     expect(screen.getByText('routes.no_routes')).toBeTruthy();
   });
 });
@@ -124,39 +124,39 @@ describe('RouteStartScreen', () => {
       useRoutesStore.setState({ activeInstance: instance('ri-9') });
       return true;
     });
-    wrap(<RouteStartScreen planId="p1" />);
+    await wrap(<RouteStartScreen planId="p1" />);
     expect(store.fetchRoutePlan).toHaveBeenCalledWith('p1');
     const stops = screen.getAllByTestId(/^route-start-stop-/).map((row) => row.props.testID);
     expect(stops).toEqual(['route-start-stop-s1', 'route-start-stop-s2']);
     expect(screen.getByTestId('map-plan')).toHaveTextContent('2 stops');
     expect(mapCalls[0].line?.type).toBe('LineString');
 
-    fireEvent.press(screen.getByTestId('route-start-contact-s1'));
+    await fireEvent.press(screen.getByTestId('route-start-contact-s1'));
     expect(router.push).toHaveBeenCalledWith('/routes/stop/contact?stopId=s1');
 
-    fireEvent.press(screen.getByTestId('route-start-button'));
+    await fireEvent.press(screen.getByTestId('route-start-button'));
     await waitFor(() => expect(store.startRouteInstance).toHaveBeenCalledWith('p1', 10));
     await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/routes/active?planId=p1&instanceId=ri-9'));
   });
 
-  it('cannot start a plan assigned to another unit', () => {
+  it('cannot start a plan assigned to another unit', async () => {
     useRoutesStore.setState({ activePlan: planDetail('p1', { UnitId: 11 }) });
-    wrap(<RouteStartScreen planId="p1" />);
+    await wrap(<RouteStartScreen planId="p1" />);
     expect(screen.getByTestId('route-start-assigned-elsewhere')).toBeTruthy();
     expect(screen.queryByTestId('route-start-button')).toBeNull();
   });
 
-  it('cannot start while another route runs on the unit', () => {
+  it('cannot start while another route runs on the unit', async () => {
     useRoutesStore.setState({ activePlan: planDetail('p1'), activeInstance: instance('ri-1', { RoutePlanId: 'p7', RoutePlanName: 'Other' }) });
-    wrap(<RouteStartScreen planId="p1" />);
+    await wrap(<RouteStartScreen planId="p1" />);
     expect(screen.getByTestId('route-start-other-active')).toBeTruthy();
     expect(screen.queryByTestId('route-start-button')).toBeNull();
   });
 
-  it('reads the plan id from the route params and shows the server error when the plan cannot load', () => {
+  it('reads the plan id from the route params and shows the server error when the plan cannot load', async () => {
     jest.mocked(useLocalSearchParams).mockReturnValue({ planId: 'p5' });
     useRoutesStore.setState({ errors: { plan: { code: 'network', messageKey: 'errors.data.network' } } });
-    wrap(<RouteStartScreen />);
+    await wrap(<RouteStartScreen />);
     expect(store.fetchRoutePlan).toHaveBeenCalledWith('p5');
     expect(screen.getByText('errors.data.network')).toBeTruthy();
   });
@@ -198,16 +198,16 @@ describe('RouteActiveScreen', () => {
       ],
     });
 
-  it('offers the routes list when the unit runs no route', () => {
-    wrap(<RouteActiveScreen pollMs={0} />);
+  it('offers the routes list when the unit runs no route', async () => {
+    await wrap(<RouteActiveScreen pollMs={0} />);
     expect(screen.getByTestId('route-active-none')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('route-active-to-list'));
+    await fireEvent.press(screen.getByTestId('route-active-to-list'));
     expect(router.replace).toHaveBeenCalledWith('/routes');
   });
 
-  it('shows progress, this route’s deviation and the current stop, and refreshes the instance', () => {
+  it('shows progress, this route’s deviation and the current stop, and refreshes the instance', async () => {
     activeState();
-    wrap(<RouteActiveScreen pollMs={0} />);
+    await wrap(<RouteActiveScreen pollMs={0} />);
     expect(store.fetchRouteProgress).toHaveBeenCalledWith('ri-1', { bypassCache: false });
     expect(store.fetchStopsForInstance).toHaveBeenCalledWith('ri-1');
     expect(store.fetchDirections).toHaveBeenCalledWith('ri-1');
@@ -221,46 +221,46 @@ describe('RouteActiveScreen', () => {
 
   it('checks in at the current stop through the outbox and tells the crew when a write is queued', async () => {
     activeState();
-    wrap(<RouteActiveScreen pollMs={0} />);
-    fireEvent.press(screen.getByTestId('route-active-current-checkIn'));
+    await wrap(<RouteActiveScreen pollMs={0} />);
+    await fireEvent.press(screen.getByTestId('route-active-current-checkIn'));
     await waitFor(() => expect(store.checkIn).toHaveBeenCalledWith('b'));
   });
 
   it('asks for a skip reason and skips with it', async () => {
     activeState();
-    wrap(<RouteActiveScreen pollMs={0} />);
-    fireEvent.press(screen.getByTestId('route-active-current-skip'));
-    fireEvent.changeText(screen.getByTestId('skip-stop-dialog-reason', hidden), 'Gate locked');
-    fireEvent.press(screen.getByTestId('skip-stop-dialog-confirm', hidden));
+    await wrap(<RouteActiveScreen pollMs={0} />);
+    await fireEvent.press(screen.getByTestId('route-active-current-skip'));
+    await fireEvent.changeText(screen.getByTestId('skip-stop-dialog-reason', hidden), 'Gate locked');
+    await fireEvent.press(screen.getByTestId('skip-stop-dialog-confirm', hidden));
     await waitFor(() => expect(store.skip).toHaveBeenCalledWith('b', 'Gate locked'));
   });
 
   it('acknowledges a deviation', async () => {
     activeState();
-    wrap(<RouteActiveScreen pollMs={0} />);
-    fireEvent.press(screen.getByTestId('route-deviation-banner-ack'));
+    await wrap(<RouteActiveScreen pollMs={0} />);
+    await fireEvent.press(screen.getByTestId('route-deviation-banner-ack'));
     await waitFor(() => expect(store.ackDeviation).toHaveBeenCalledWith('d1'));
   });
 
   it('ends the route after confirming and returns to the list', async () => {
     activeState();
-    wrap(<RouteActiveScreen pollMs={0} />);
-    fireEvent.press(screen.getByTestId('route-active-end'));
-    fireEvent.press(screen.getByTestId('route-active-confirm-confirm', hidden));
+    await wrap(<RouteActiveScreen pollMs={0} />);
+    await fireEvent.press(screen.getByTestId('route-active-end'));
+    await fireEvent.press(screen.getByTestId('route-active-confirm-confirm', hidden));
     await waitFor(() => expect(store.endRouteInstance).toHaveBeenCalledWith('ri-1'));
     await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/routes'));
   });
 
   it('pauses, and offers resume on a paused route', async () => {
     activeState();
-    const { unmount } = wrap(<RouteActiveScreen pollMs={0} />);
-    fireEvent.press(screen.getByTestId('route-active-pause'));
+    const { unmount } = await wrap(<RouteActiveScreen pollMs={0} />);
+    await fireEvent.press(screen.getByTestId('route-active-pause'));
     await waitFor(() => expect(store.pauseRouteInstance).toHaveBeenCalledWith('ri-1'));
-    unmount();
+    await unmount();
     useRoutesStore.setState({ activeInstance: instance('ri-1', { Status: RouteInstanceStatus.Paused }) });
-    wrap(<RouteActiveScreen pollMs={0} />);
+    await wrap(<RouteActiveScreen pollMs={0} />);
     expect(screen.getByTestId('route-active-paused')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('route-active-resume'));
+    await fireEvent.press(screen.getByTestId('route-active-resume'));
     await waitFor(() => expect(store.resumeRouteInstance).toHaveBeenCalledWith('ri-1'));
   });
 });
@@ -268,19 +268,19 @@ describe('RouteActiveScreen', () => {
 describe('RouteDirectionsScreen', () => {
   it('shows the server route summary and waypoints, and hands the next stop to the navigation app', async () => {
     useRoutesStore.setState({ activeInstance: instance('ri-1'), directions: directions() });
-    wrap(<RouteDirectionsScreen />);
+    await wrap(<RouteDirectionsScreen />);
     expect(store.fetchDirections).toHaveBeenCalledWith('ri-1');
     expect(screen.getByTestId('route-stats-distance')).toHaveTextContent(/4\.2 km/);
     expect(screen.getByTestId('route-directions-waypoint-a')).toBeTruthy();
     expect(screen.queryByTestId('route-directions-navigate-a')).toBeNull();
-    fireEvent.press(screen.getByTestId('route-directions-open-next'));
+    await fireEvent.press(screen.getByTestId('route-directions-open-next'));
     await waitFor(() => expect(navigateTo).toHaveBeenCalledWith({ latitude: 39.5, longitude: -119.78, label: 'Stop 2' }));
     expect(mapCalls[mapCalls.length - 1].line?.type).toBe('LineString');
   });
 
-  it('says so when there are no directions', () => {
+  it('says so when there are no directions', async () => {
     useRoutesStore.setState({ activeInstance: instance('ri-1') });
-    wrap(<RouteDirectionsScreen />);
+    await wrap(<RouteDirectionsScreen />);
     expect(screen.getByTestId('route-directions-none')).toBeTruthy();
   });
 });
@@ -289,21 +289,21 @@ describe('RouteStopScreen', () => {
   it('labels the stop with Core’s priority and type, links the contact by plan stop id and saves notes', async () => {
     useRoutesStore.setState({ activeInstance: instance('ri-1'), stopDetails: [detailStop('b', 2, RouteStopStatus.CheckedIn, { ContactId: 'c1', ContactName: 'Pat Lee', InstanceNotes: 'old' })] });
     jest.mocked(useLocalSearchParams).mockReturnValue({ id: 'b' });
-    wrap(<RouteStopScreen />);
+    await wrap(<RouteStopScreen />);
     expect(screen.getByTestId('route-stop-priority')).toHaveTextContent('routes.priority_high');
     expect(screen.getByTestId('route-stop-type')).toHaveTextContent('unit_routes.stop_type.station');
     expect(screen.getByTestId('route-stop-status')).toHaveTextContent('routes.in_progress');
-    fireEvent.press(screen.getByTestId('route-stop-contact'));
+    await fireEvent.press(screen.getByTestId('route-stop-contact'));
     expect(router.push).toHaveBeenCalledWith('/routes/stop/contact?stopId=rs-b');
-    fireEvent.changeText(screen.getByTestId('route-stop-notes'), 'Hydrant painted');
-    fireEvent.press(screen.getByTestId('route-stop-save-notes'));
+    await fireEvent.changeText(screen.getByTestId('route-stop-notes'), 'Hydrant painted');
+    await fireEvent.press(screen.getByTestId('route-stop-save-notes'));
     await waitFor(() => expect(store.updateNotes).toHaveBeenCalledWith('b', 'Hydrant painted'));
-    fireEvent.press(screen.getByTestId('route-stop-actions-checkOut'));
+    await fireEvent.press(screen.getByTestId('route-stop-actions-checkOut'));
     await waitFor(() => expect(store.checkOut).toHaveBeenCalledWith('b'));
   });
 
-  it('explains when the stop is not on the active route', () => {
-    wrap(<RouteStopScreen stopId="zzz" />);
+  it('explains when the stop is not on the active route', async () => {
+    await wrap(<RouteStopScreen stopId="zzz" />);
     expect(screen.getByTestId('route-stop-missing')).toBeTruthy();
   });
 });
@@ -335,7 +335,7 @@ describe('RouteStopContactScreen', () => {
       return contact as never;
     });
     jest.mocked(useLocalSearchParams).mockReturnValue({ stopId: 'rs-b' });
-    wrap(<RouteStopContactScreen />);
+    await wrap(<RouteStopContactScreen />);
     await waitFor(() => expect(screen.getByTestId('route-stop-contact-name')).toHaveTextContent('Pat Lee'));
     expect(store.fetchStopContact).toHaveBeenCalledWith('rs-b', { bypassCache: true });
     expect(screen.getByText('555-0100')).toBeTruthy();
@@ -343,19 +343,19 @@ describe('RouteStopContactScreen', () => {
   });
 
   it('says when the stop has no contact', async () => {
-    wrap(<RouteStopContactScreen stopId="rs-x" />);
+    await wrap(<RouteStopContactScreen stopId="rs-x" />);
     await waitFor(() => expect(screen.getByTestId('route-stop-contact-missing')).toBeTruthy());
   });
 });
 
 describe('route history', () => {
-  it('lists past runs of the plan and opens one', () => {
+  it('lists past runs of the plan and opens one', async () => {
     useRoutesStore.setState({ routeHistory: [instance('ri-1', { Status: RouteInstanceStatus.Completed, StopsCompleted: 3, StopsTotal: 3, TotalDistanceMeters: 5000 })], routePlans: [plan('p1', { Name: 'North loop' })] });
-    wrap(<RouteHistoryScreen planId="p1" />);
+    await wrap(<RouteHistoryScreen planId="p1" />);
     expect(store.fetchRouteHistory).toHaveBeenCalledWith('p1');
     expect(screen.getByText('routes.history · North loop')).toBeTruthy();
     expect(within(screen.getByTestId('route-history-ri-1')).getByText('routes.completed')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('route-history-ri-1'));
+    await fireEvent.press(screen.getByTestId('route-history-ri-1'));
     expect(router.push).toHaveBeenCalledWith('/routes/history/instance/ri-1');
   });
 
@@ -371,7 +371,7 @@ describe('route history', () => {
       });
       return null;
     });
-    wrap(<RouteInstanceScreen instanceId="ri-7" />);
+    await wrap(<RouteInstanceScreen instanceId="ri-7" />);
     await waitFor(() => expect(screen.getByTestId('route-instance-status')).toHaveTextContent('unit_routes.instance_status.cancelled'));
     expect(screen.getByText('routes.skip_reason: Road closed')).toBeTruthy();
     expect(screen.getByTestId('route-stats-stops')).toHaveTextContent(/^1\/2/);
@@ -399,20 +399,20 @@ describe('RoutePoiScreen', () => {
     usePoisStore.setState({ pois: [poi], fetchPoi: jest.fn(async () => poi) });
     useUnitStatusStore.setState({ destinationsByUnit: {}, fetchDestinationData: jest.fn(async () => undefined), fetchCurrentStatus: jest.fn(async () => undefined) });
     jest.mocked(useLocalSearchParams).mockReturnValue({ id: '5' });
-    wrap(<RoutePoiScreen />);
+    await wrap(<RoutePoiScreen />);
     expect(screen.getAllByText('General').length).toBeGreaterThan(0);
     expect(screen.getByText('routes.poi_address: 9 Care Way')).toBeTruthy();
     expect(screen.getByTestId('map-poi')).toHaveTextContent('1 stops');
-    fireEvent.press(screen.getByTestId('route-poi-directions'));
+    await fireEvent.press(screen.getByTestId('route-poi-directions'));
     await waitFor(() => expect(navigateTo).toHaveBeenCalledWith({ latitude: 39.6, longitude: -119.7, label: 'General' }));
-    fireEvent.press(screen.getByTestId('route-poi-set-destination'));
+    await fireEvent.press(screen.getByTestId('route-poi-set-destination'));
     await waitFor(() => expect(screen.getByTestId('unit-status-sheet', hidden)).toBeTruthy());
   });
 
   it('hides "Set destination" for a POI that is not a destination', async () => {
     const fetchPoi = jest.fn(async () => ({ ...poi, IsDestination: false }));
     usePoisStore.setState({ pois: [{ ...poi, IsDestination: false }], fetchPoi });
-    wrap(<RoutePoiScreen poiId={5} />);
+    await wrap(<RoutePoiScreen poiId={5} />);
     await act(async () => {
       await fetchPoi.mock.results[0]?.value;
     });

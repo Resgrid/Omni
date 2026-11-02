@@ -3,7 +3,8 @@
 // @resgrid/ui (gluestack, NativeWind) loads. Self-contained (mirrors status/__tests__/test-setup) because the dashboard
 // also needs Gesture Handler, a Reanimated stand-in with `.get()`/`.set()`, worklets' `scheduleOnRN` with arguments, and
 // @resgrid/maps (MapLibre has no Jest renderer).
-import '@testing-library/react-native/extend-expect';
+// RNTL registers its Jest matchers when it is imported (v14 has no extend-expect entry).
+import '@testing-library/react-native';
 
 const mockGlobalWindow = globalThis as unknown as { window?: { screen?: object } };
 if (mockGlobalWindow.window && !mockGlobalWindow.window.screen) {

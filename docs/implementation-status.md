@@ -7,7 +7,7 @@ Living tracker for executing [`architecture/omni-plan.md`](architecture/omni-pla
 | Item | Status | Notes |
 |---|---|---|
 | pnpm workspace, catalog (one version per dependency), hoisted linker | ✅ | `pnpm-workspace.yaml`, `.npmrc`; catalog bootstrapped from legacy Unit pins minus React Query, rnmapbox, mapbox-gl, gorhom, flash-message (`scripts/bootstrap/`) |
-| Root tooling: TypeScript 6 paths, ESLint 9 flat config, Prettier, lefthook, commitlint (`RO-Txxx`), dependency-cruiser layer rules | ✅ | `pnpm check-all` |
+| Root tooling: TypeScript 6 paths, ESLint 10 flat config (eslint-config-expo with import-x and @eslint/compat), Prettier, lefthook, commitlint (`RO-Txxx`), dependency-cruiser layer rules | ✅ | `pnpm check-all` |
 | Jest presets (node / react-native) and root multi-project config | ✅ | `tooling/jest-preset` |
 | `@resgrid/config`: manifest schema (zod), capabilities, runtime accessors, versioning | ✅ | tests: manifests, runtime |
 | Variant manifests for all five apps | ✅ | `apps/omni/variants/<id>/variant.json` — identities, storage ids, Omni majors/bases |

@@ -3272,8 +3272,8 @@
     "attendees": {
       "title": "Attendees"
     },
-    "attendeesCount": "{{count}} attendee",
-    "attendeesCount_plural": "{{count}} attendees",
+    "attendeesCount_one": "{{count}} attendee",
+    "attendeesCount": "{{count}} attendees",
     "confirmSignup": "Confirm",
     "confirmUnsignup": {
       "message": "Are you sure you want to cancel your attendance for this event?",
@@ -3285,8 +3285,8 @@
       "attendanceUpdate": "Failed to update attendance. Please try again.",
       "title": "Error"
     },
-    "eventsCount": "{{count}} event",
-    "eventsCount_plural": "{{count}} events",
+    "eventsCount_one": "{{count}} event",
+    "eventsCount": "{{count}} events",
     "loading": {
       "date": "Loading events for selected date...",
       "today": "Loading today's events...",

@@ -3,8 +3,8 @@
 import { configureNotificationSounds } from '../notification-sound';
 import { parseNotificationData, usePushNotificationModalStore } from '../push-modal-store';
 import { configureForTest, selectVariant } from './helpers';
-import { mockAudioState, mockResetAudio } from './mocks/expo-audio';
 import * as audio from './mocks/expo-audio';
+import { mockAudioState, mockResetAudio } from './mocks/expo-audio';
 
 const state = () => usePushNotificationModalStore.getState();
 

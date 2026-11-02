@@ -52,27 +52,27 @@ beforeEach(() => {
 });
 
 describe('WidgetRenderer', () => {
-  it('has a component for all 14 widget types', () => {
+  it('has a component for all 14 widget types', async () => {
     expect(Object.keys(WIDGET_COMPONENTS).sort()).toEqual([...WIDGET_TYPES].sort());
-    render(<WidgetRenderer type="time" {...props} />);
+    await render(<WidgetRenderer type="time" {...props} />);
     expect(screen.getByTestId('time-widget')).toBeTruthy();
   });
 });
 
 describe('TimeWidget', () => {
-  it('shows the clock and date', () => {
+  it('shows the clock and date', async () => {
     useWidgetSettingsStore.getState().updateSettings('time', { format24Hour: true, showSeconds: false });
-    render(<TimeWidget {...props} />);
+    await render(<TimeWidget {...props} />);
     expect(screen.getByTestId('time-widget-clock').props.children).toMatch(/^\d{2}:\d{2}$/);
     expect(screen.getByTestId('time-widget-date')).toBeTruthy();
   });
 });
 
 describe('PersonnelWidget', () => {
-  it('renders the roster table and filters by status meaning', () => {
+  it('renders the roster table and filters by status meaning', async () => {
     usePersonnelStore.setState({ personnel: [person('Ann'), person('Bob', { StatusBaseType: 1, Status: 'Unavailable for call' }), person('Cy', { StatusBaseType: 2, Status: 'En Route' })] });
     useWidgetSettingsStore.getState().updateSettings('personnel', { hideNotResponding: true, showRoles: false });
-    render(<PersonnelWidget {...props} />);
+    await render(<PersonnelWidget {...props} />);
     expect(screen.getByText('Ann Smith')).toBeTruthy();
     expect(screen.queryByText('Bob Smith')).toBeNull();
     // Responding people first.
@@ -80,15 +80,15 @@ describe('PersonnelWidget', () => {
     expect(screen.queryByText('personnel.column.roles')).toBeNull();
   });
 
-  it('shows the last data as stale when offline, and an error with nothing to show', () => {
+  it('shows the last data as stale when offline, and an error with nothing to show', async () => {
     usePersonnelStore.setState({ personnel: [person('Ann')] });
     (useNetInfo as jest.Mock).mockReturnValue({ isConnected: false, isInternetReachable: false });
-    const { unmount } = render(<PersonnelWidget {...props} />);
+    const { unmount } = await render(<PersonnelWidget {...props} />);
     expect(screen.getByTestId('personnel-widget-stale')).toBeTruthy();
-    unmount();
+    await unmount();
 
     usePersonnelStore.setState({ personnel: [], errors: { personnel: { code: 'network', messageKey: 'errors.data.network' } } });
-    render(<PersonnelWidget {...props} />);
+    await render(<PersonnelWidget {...props} />);
     expect(screen.getByTestId('personnel-widget-error')).toBeTruthy();
   });
 });
@@ -98,15 +98,15 @@ describe('CallsWidget', () => {
     useCallsStore.setState({ calls: [call('1'), call('2', { State: 8 })], callPriorities: [priority(1, 'Urgent')], callDispatches: { '1': [{ Id: 'u1', Type: 'Unit', Name: 'Engine 1' } as never] } });
   });
 
-  it('shows active calls as wall-density cards (pending calls never count)', () => {
-    render(<CallsWidget {...props} />);
+  it('shows active calls as wall-density cards (pending calls never count)', async () => {
+    await render(<CallsWidget {...props} />);
     expect(screen.getByTestId('call-card-1')).toBeTruthy();
     expect(screen.queryByTestId('call-card-2')).toBeNull();
   });
 
-  it('shows the configured table', () => {
+  it('shows the configured table', async () => {
     useWidgetSettingsStore.getState().updateSettings('calls', { display: 'table', showAddress: false });
-    render(<CallsWidget {...props} />);
+    await render(<CallsWidget {...props} />);
     expect(screen.getByTestId('calls-table')).toBeTruthy();
     expect(screen.getByText('Urgent')).toBeTruthy();
     expect(screen.queryByText('1 Main St')).toBeNull();
@@ -120,7 +120,7 @@ describe('ScheduledCallsWidget', () => {
       scheduledCalls: [call('late', { Name: 'Later', DispatchedOnUtc: new Date(Date.now() + 3 * 3600000).toISOString() }), call('over', { Name: 'Overdue', DispatchedOnUtc: utcAgo(600) })],
       callPriorities: [priority(1, 'Urgent')],
     });
-    render(<ScheduledCallsWidget {...props} />);
+    await render(<ScheduledCallsWidget {...props} />);
     expect(screen.getAllByText(/^(Later|Overdue)$/).map((node) => node.props.children)).toEqual(['Overdue', 'Later']);
     expect(screen.getByText(/scheduledCalls\.overdue/)).toBeTruthy();
     await waitFor(() => expect(mocks.fetchCallExtraData).toHaveBeenCalledWith('late'));
@@ -128,30 +128,30 @@ describe('ScheduledCallsWidget', () => {
 });
 
 describe('summary widgets', () => {
-  it('counts personnel per status and staffing option', () => {
+  it('counts personnel per status and staffing option', async () => {
     usePersonnelStore.setState({
       personnel: [person('a', { StatusId: '1', StaffingId: '5' }), person('b', { StatusId: '1', StaffingId: '6' }), person('c', { StatusId: '2', StaffingId: '5' })],
       statusOptions: [{ Id: 1, Text: 'Available', BColor: '#00ff00' } as StatusesResultData, { Id: 2, Text: 'Responding', BColor: '#ffaa00' } as StatusesResultData],
       staffingOptions: [{ Id: 5, Text: 'On Shift' } as StatusesResultData, { Id: 6, Text: 'Off' } as StatusesResultData],
     });
-    const { unmount } = render(<PersonnelStatusSummaryWidget {...props} />);
+    const { unmount } = await render(<PersonnelStatusSummaryWidget {...props} />);
     expect(screen.getByTestId('personnel-status-summary-widget-row-1').props.accessibilityLabel).toBe('Available: 2');
-    unmount();
-    render(<PersonnelStaffingSummaryWidget {...props} />);
+    await unmount();
+    await render(<PersonnelStaffingSummaryWidget {...props} />);
     expect(screen.getByTestId('personnel-staffing-summary-widget-row-5').props.accessibilityLabel).toBe('On Shift: 2');
   });
 
-  it('counts units by meaning and calls by priority', () => {
+  it('counts units by meaning and calls by priority', async () => {
     useUnitsStore.setState({ unitInfos: [{ UnitId: '1', CurrentStatusBaseType: 0 } as UnitInfoResultData, { UnitId: '2', CurrentStatusBaseType: 2 } as UnitInfoResultData] });
     useWidgetSettingsStore.getState().updateSettings('unitsSummary', { showOnScene: false });
-    const { unmount } = render(<UnitsSummaryWidget {...props} />);
+    const { unmount } = await render(<UnitsSummaryWidget {...props} />);
     expect(screen.getByTestId('units-summary-total').props.accessibilityLabel).toBe('dashboard.summary.total: 2');
     expect(screen.getByTestId('units-summary-responding').props.accessibilityLabel).toBe('dashboard.summary.responding: 1');
     expect(screen.queryByTestId('units-summary-on-scene')).toBeNull();
-    unmount();
+    await unmount();
 
     useCallsStore.setState({ calls: [call('1'), call('2', { Priority: 3 }), call('3', { State: 8 })], callPriorities: [priority(1, 'Urgent'), priority(3, 'Emergency')] });
-    render(<CallsSummaryWidget {...props} />);
+    await render(<CallsSummaryWidget {...props} />);
     expect(screen.getByTestId('calls-summary-total').props.accessibilityLabel).toBe('dashboard.summary.active_calls: 2');
     expect(screen.getByTestId('calls-summary-priority-3').props.accessibilityLabel).toBe('Emergency: 1');
     expect(screen.getByTestId('calls-summary-recent')).toBeTruthy();
@@ -159,7 +159,7 @@ describe('summary widgets', () => {
 });
 
 describe('NotesWidget', () => {
-  it('shows notes as plain text, filtered by category', () => {
+  it('shows notes as plain text, filtered by category', async () => {
     useNotesStore.setState({
       notes: [
         { NoteId: 'n1', Title: 'Hydrant out', Body: '<p>Main <b>and</b> 5th</p>', Category: 'Ops', ExpiresOn: '', AddedOn: '2026-10-01T10:00:00' } as NoteResultData,
@@ -167,7 +167,7 @@ describe('NotesWidget', () => {
       ],
     });
     useWidgetSettingsStore.getState().updateSettings('notes', { category: 'Ops' });
-    render(<NotesWidget {...props} />);
+    await render(<NotesWidget {...props} />);
     expect(screen.getByText('Hydrant out')).toBeTruthy();
     expect(screen.getByText('Main and 5th')).toBeTruthy();
     expect(screen.queryByText('Party')).toBeNull();
@@ -175,7 +175,7 @@ describe('NotesWidget', () => {
 });
 
 describe('WeatherAlertsWidget', () => {
-  it('shows the configured severities, capped, and opens the canonical alert page', () => {
+  it('shows the configured severities, capped, and opens the canonical alert page', async () => {
     const alert = (WeatherAlertId: string, Severity: number): WeatherAlertResultData =>
       ({
         WeatherAlertId,
@@ -188,11 +188,11 @@ describe('WeatherAlertsWidget', () => {
       }) as WeatherAlertResultData;
     useWeatherAlertsStore.setState({ alerts: [alert('a', 3), alert('b', 0), alert('c', 1)] });
     useWidgetSettingsStore.getState().updateSettings('weatherAlerts', { showMinor: false, maxAlertsInWidget: 1 });
-    render(<WeatherAlertsWidget {...props} />);
+    await render(<WeatherAlertsWidget {...props} />);
     expect(screen.getByTestId('weather-alerts-widget-alert-b')).toBeTruthy();
     expect(screen.queryByTestId('weather-alerts-widget-alert-c')).toBeNull();
     expect(screen.queryByTestId('weather-alerts-widget-alert-a')).toBeNull();
-    fireEvent.press(screen.getByTestId('weather-alerts-widget-alert-b'));
+    await fireEvent.press(screen.getByTestId('weather-alerts-widget-alert-b'));
     expect(router.push).toHaveBeenCalledWith('/weather-alerts/b');
   });
 });
@@ -206,13 +206,13 @@ describe('WeatherWidget', () => {
 
   it('says weather is not configured without a department key', async () => {
     setConfig({ OpenWeatherApiKey: '', MapCenterLatitude: 39.7, MapCenterLongitude: -104.9 });
-    render(<WeatherWidget {...props} />);
+    await render(<WeatherWidget {...props} />);
     expect(await screen.findByTestId('weather-widget-missing_key')).toBeTruthy();
   });
 
   it('asks for a location when neither the widget nor the department has one', async () => {
     setConfig({ OpenWeatherApiKey: 'k', MapCenterLatitude: 0, MapCenterLongitude: 0 });
-    render(<WeatherWidget {...props} />);
+    await render(<WeatherWidget {...props} />);
     expect(await screen.findByTestId('weather-widget-missing_location')).toBeTruthy();
   });
 
@@ -226,7 +226,7 @@ describe('WeatherWidget', () => {
           : { name: 'Denver', main: { temp: 61.2, humidity: 40 }, wind: { speed: 3 }, weather: [{ main: 'Clear', description: 'clear sky' }] },
     })) as unknown as typeof fetch;
     setConfig({ OpenWeatherApiKey: 'k', MapCenterLatitude: 39.7, MapCenterLongitude: -104.9 });
-    render(<WeatherWidget {...props} />);
+    await render(<WeatherWidget {...props} />);
     expect(await screen.findByTestId('weather-widget-temperature')).toHaveTextContent('61°F');
     expect(screen.getByText('widgets.weather · Denver')).toBeTruthy();
   });
@@ -243,7 +243,7 @@ describe('MapWidget', () => {
       fetchedAt: { markers: Date.now() },
     });
     useWidgetSettingsStore.getState().updateSettings('map', { showPersonnel: false });
-    render(<MapWidget {...props} />);
+    await render(<MapWidget {...props} />);
     await waitFor(() => expect(screen.getByTestId('mock-map-pins')).toHaveTextContent('c1,u1'));
     expect(mocks.fetchMarkers).toHaveBeenCalled();
     // No app-level MapProvider: the widget provides one from the department config.

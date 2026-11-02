@@ -68,9 +68,7 @@ export const boundsToImageCoordinates = (bounds: BoundsFields): ImageCoordinates
 };
 
 export type CustomMapLayerRendering =
-  | { kind: 'tiles'; tileUrlTemplate: string; minZoom?: number; maxZoom?: number; opacity: number }
-  | { kind: 'image'; url: string; coordinates: ImageCoordinates; opacity: number }
-  | { kind: 'none' };
+  { kind: 'tiles'; tileUrlTemplate: string; minZoom?: number; maxZoom?: number; opacity: number } | { kind: 'image'; url: string; coordinates: ImageCoordinates; opacity: number } | { kind: 'none' };
 
 /** How a custom map layer draws: raster tiles when tiled, else its image over its bounds. */
 export const resolveCustomMapLayerRendering = (

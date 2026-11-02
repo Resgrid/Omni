@@ -11,8 +11,8 @@ import { NATIVE_PUSH_REGISTRATION_KEY, NATIVE_PUSH_STALE_REGISTRATIONS_KEY } fro
 import { BASE_API_URL, configureForTest, flushAll, selectVariant, type TestContext } from './helpers';
 import { mockSetAppActive } from './mocks/core';
 import { mockSetIsDevice } from './mocks/expo-device';
-import { mockNotificationState, mockResetNotifications } from './mocks/expo-notifications';
 import * as notifications from './mocks/expo-notifications';
+import { mockNotificationState, mockResetNotifications } from './mocks/expo-notifications';
 import { AuthorizationStatus, mockNotifeeState, mockResetNotifee } from './mocks/notifee';
 
 const rn = jest.requireMock('react-native') as { Platform: { OS: string } };

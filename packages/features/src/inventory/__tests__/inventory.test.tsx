@@ -68,7 +68,7 @@ const store = {
   cancelCount: jest.fn(async () => true),
 };
 
-const renderWithUnit = (node: React.ReactElement, activeUnitId: string | null = '10') => render(<StatusProvider activeUnitId={activeUnitId}>{node}</StatusProvider>);
+const renderWithUnit = async (node: React.ReactElement, activeUnitId: string | null = '10') => render(<StatusProvider activeUnitId={activeUnitId}>{node}</StatusProvider>);
 
 beforeEach(() => {
   activateUnitVariant();
@@ -147,54 +147,54 @@ describe('inventory helpers', () => {
 });
 
 describe('InventoryHomeScreen', () => {
-  it('asks for an active unit first', () => {
-    renderWithUnit(<InventoryHomeScreen />, null);
+  it('asks for an active unit first', async () => {
+    await renderWithUnit(<InventoryHomeScreen />, null);
     expect(screen.getByTestId('inventory-no-unit')).toBeTruthy();
   });
 
   it('shows the unit’s equipment by compartment, recent counts and loads them for counters', async () => {
-    renderWithUnit(<InventoryHomeScreen />);
+    await renderWithUnit(<InventoryHomeScreen />);
     expect(screen.getByTestId('inventory-heading')).toHaveTextContent('inventory.titleFor:Engine 1');
     expect(store.fetchAccess).toHaveBeenCalledWith('10', { bypassCache: false });
     await waitFor(() => expect(store.fetchCounts).toHaveBeenCalledWith('10', ['root', 'cab']));
     expect(within(screen.getByTestId('inventory-location-cab')).getByText('Gloves')).toBeTruthy();
     expect(within(screen.getByTestId('inventory-item-as1')).getByText('inventory.assetStatus.3')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('inventory-count-ct-1'));
+    await fireEvent.press(screen.getByTestId('inventory-count-ct-1'));
     expect(router.push).toHaveBeenCalledWith('/inventory/count/ct-1');
   });
 
-  it('uses the department’s own name for inventory', () => {
+  it('uses the department’s own name for inventory', async () => {
     terminologyStore.setState({ names: { 'module.inventory': 'Equipment' } });
-    renderWithUnit(<InventoryHomeScreen />);
+    await renderWithUnit(<InventoryHomeScreen />);
     expect(screen.getByTestId('inventory-heading')).toHaveTextContent('Equipment · Engine 1');
   });
 
   it('starts a count of the chosen compartment and opens it', async () => {
-    renderWithUnit(<InventoryHomeScreen />);
-    fireEvent.press(screen.getByTestId('inventory-location-option-cab'));
-    fireEvent.press(screen.getByTestId('inventory-start'));
+    await renderWithUnit(<InventoryHomeScreen />);
+    await fireEvent.press(screen.getByTestId('inventory-location-option-cab'));
+    await fireEvent.press(screen.getByTestId('inventory-start'));
     await waitFor(() => expect(store.startCount).toHaveBeenCalledWith(expect.objectContaining({ LocationId: 'cab', IncludeCatalogItems: false, IncludeChildLocations: true })));
     await waitFor(() => expect(router.push).toHaveBeenCalledWith('/inventory/count/ct-1'));
   });
 
-  it('hides counting from crews without Adjust Inventory and lists no counts for them', () => {
+  it('hides counting from crews without Adjust Inventory and lists no counts for them', async () => {
     useInventoryStore.setState({ accessByUnit: { '10': access({ CanCount: false }) } });
-    renderWithUnit(<InventoryHomeScreen />);
+    await renderWithUnit(<InventoryHomeScreen />);
     expect(screen.queryByTestId('inventory-start-count')).toBeNull();
     expect(screen.getByText('inventory.cannotCount')).toBeTruthy();
     expect(store.fetchCounts).not.toHaveBeenCalled();
   });
 
-  it('explains a department where inventory is off or not set up yet', () => {
+  it('explains a department where inventory is off or not set up yet', async () => {
     useInventoryStore.setState({ accessByUnit: { '10': access({ Enabled: false }) } });
-    renderWithUnit(<InventoryHomeScreen />);
+    await renderWithUnit(<InventoryHomeScreen />);
     expect(screen.getByText('inventory.disabled')).toBeTruthy();
     expect(screen.queryByTestId('inventory-start-count')).toBeNull();
   });
 
-  it('marks counts with values not saved yet', () => {
+  it('marks counts with values not saved yet', async () => {
     useInventoryStore.setState({ observedByCount: { 'ct-1': { l1: 2 } } });
-    renderWithUnit(<InventoryHomeScreen />);
+    await renderWithUnit(<InventoryHomeScreen />);
     expect(screen.getByTestId('inventory-count-ct-1-unsaved')).toHaveTextContent('inventory.unsaved:1');
   });
 });
@@ -203,7 +203,7 @@ describe('InventoryCountScreen', () => {
   const open = async (status: number = InventoryCountStatus.Draft) => {
     useInventoryStore.setState({ countsById: { 'ct-1': detail(status) } });
     jest.mocked(useLocalSearchParams).mockReturnValue({ id: 'ct-1' });
-    const view = renderWithUnit(<InventoryCountScreen />);
+    const view = await renderWithUnit(<InventoryCountScreen />);
     // Let the on-open reread settle (it updates screen state).
     await act(async () => {
       await Promise.resolve();
@@ -215,11 +215,11 @@ describe('InventoryCountScreen', () => {
     await open();
     expect(store.fetchCount).toHaveBeenCalledWith('ct-1', { bypassCache: true });
     expect(screen.getByTestId('inventory-count-summary')).toHaveTextContent('inventory.countStatus.0 · inventory.progress:0,2 · inventory.differences:0');
-    fireEvent.press(screen.getByTestId('inventory-more-l1'));
+    await fireEvent.press(screen.getByTestId('inventory-more-l1'));
     expect(useInventoryStore.getState().observedByCount['ct-1']).toEqual({ l1: 5 });
-    fireEvent.press(screen.getByTestId('inventory-missing-l2'));
+    await fireEvent.press(screen.getByTestId('inventory-missing-l2'));
     expect(useInventoryStore.getState().observedByCount['ct-1']).toEqual({ l1: 5, l2: 0 });
-    fireEvent.changeText(screen.getByTestId('inventory-quantity-l1'), '3,5');
+    await fireEvent.changeText(screen.getByTestId('inventory-quantity-l1'), '3,5');
     expect(useInventoryStore.getState().observedByCount['ct-1'].l1).toBe(3.5);
     expect(screen.getByTestId('inventory-count-summary')).toHaveTextContent(/inventory\.differences:2$/);
     expect(screen.getByTestId('inventory-count-unsaved')).toHaveTextContent('inventory.unsaved:2');
@@ -227,18 +227,18 @@ describe('InventoryCountScreen', () => {
 
   it('saves progress through the outbox with the count revision and only the changed lines', async () => {
     await open();
-    fireEvent.press(screen.getByTestId('inventory-matches-l1'));
-    fireEvent.press(screen.getByTestId('inventory-save'));
+    await fireEvent.press(screen.getByTestId('inventory-matches-l1'));
+    await fireEvent.press(screen.getByTestId('inventory-save'));
     await waitFor(() => expect(store.saveCount).toHaveBeenCalledWith('ct-1', { CountId: 'ct-1', Revision: 3, Lines: [{ Id: 'l1', Quantity: 4 }] }));
   });
 
   it('does not complete while offline: the values stay queued on the device', async () => {
     store.saveCount.mockResolvedValueOnce({ outcome: 'queued' as never, id: 'evt-2' });
     await open();
-    fireEvent.press(screen.getByTestId('inventory-matches-l1'));
-    fireEvent.press(screen.getByTestId('inventory-present-l2'));
-    fireEvent.press(screen.getByTestId('inventory-complete'));
-    fireEvent.press(screen.getByTestId('inventory-complete-dialog-confirm', hidden));
+    await fireEvent.press(screen.getByTestId('inventory-matches-l1'));
+    await fireEvent.press(screen.getByTestId('inventory-present-l2'));
+    await fireEvent.press(screen.getByTestId('inventory-complete'));
+    await fireEvent.press(screen.getByTestId('inventory-complete-dialog-confirm', hidden));
     await waitFor(() => expect(store.saveCount).toHaveBeenCalled());
     expect(store.completeCount).not.toHaveBeenCalled();
   });
@@ -246,10 +246,10 @@ describe('InventoryCountScreen', () => {
   it('completes with one request id after saving, then rereads the count', async () => {
     await open();
     useInventoryStore.setState({ completionIdByCount: { 'ct-1': 'req-1' } });
-    fireEvent.press(screen.getByTestId('inventory-matches-l1'));
-    fireEvent.press(screen.getByTestId('inventory-present-l2'));
-    fireEvent.press(screen.getByTestId('inventory-complete'));
-    fireEvent.press(screen.getByTestId('inventory-complete-dialog-confirm', hidden));
+    await fireEvent.press(screen.getByTestId('inventory-matches-l1'));
+    await fireEvent.press(screen.getByTestId('inventory-present-l2'));
+    await fireEvent.press(screen.getByTestId('inventory-complete'));
+    await fireEvent.press(screen.getByTestId('inventory-complete-dialog-confirm', hidden));
     await waitFor(() => expect(store.completeCount).toHaveBeenCalledWith({ CountId: 'ct-1', Revision: 3, RequestId: 'req-1' }));
     expect(store.saveCount).toHaveBeenCalled();
     await waitFor(() => expect(store.fetchCount).toHaveBeenCalledTimes(2));
@@ -262,8 +262,8 @@ describe('InventoryCountScreen', () => {
 
   it('cancels after confirming and goes back', async () => {
     await open();
-    fireEvent.press(screen.getByTestId('inventory-cancel'));
-    fireEvent.press(screen.getByTestId('inventory-cancel-dialog-confirm', hidden));
+    await fireEvent.press(screen.getByTestId('inventory-cancel'));
+    await fireEvent.press(screen.getByTestId('inventory-cancel-dialog-confirm', hidden));
     await waitFor(() => expect(store.cancelCount).toHaveBeenCalledWith({ CountId: 'ct-1', Revision: 3 }));
     await waitFor(() => expect(router.back).toHaveBeenCalled());
   });
@@ -272,14 +272,14 @@ describe('InventoryCountScreen', () => {
     const { unmount } = await open(InventoryCountStatus.Completed);
     expect(screen.getByTestId('inventory-count-completed')).toBeTruthy();
     expect(screen.queryByTestId('inventory-save')).toBeNull();
-    unmount();
+    await unmount();
     await open(InventoryCountStatus.AwaitingWitness);
     expect(screen.getByTestId('inventory-count-witness')).toBeTruthy();
   });
 
   it('reports a count that cannot be loaded', async () => {
     useInventoryStore.setState({ errors: { count: { code: 'network', messageKey: 'errors.data.network' } } });
-    renderWithUnit(<InventoryCountScreen countId="ct-404" />);
+    await renderWithUnit(<InventoryCountScreen countId="ct-404" />);
     await waitFor(() => expect(screen.getByTestId('inventory-count-missing')).toBeTruthy());
   });
 });

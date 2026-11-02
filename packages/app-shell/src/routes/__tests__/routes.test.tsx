@@ -80,16 +80,16 @@ describe('useHref', () => {
     return <Text testID="link">{link === null ? 'hidden' : String(link)}</Text>;
   }
 
-  afterEach(() => {
-    act(() => setRouteContract(defineRoutes(['home'])));
+  afterEach(async () => {
+    await act(() => setRouteContract(defineRoutes(['home'])));
   });
 
-  it('returns null for missing routes and follows the active contract', () => {
-    act(() => setRouteContract(defineRoutes(['home'])));
-    render(<Probe />);
+  it('returns null for missing routes and follows the active contract', async () => {
+    await act(() => setRouteContract(defineRoutes(['home'])));
+    await render(<Probe />);
     expect(screen.getByTestId('link')).toHaveTextContent('hidden');
 
-    act(() => setRouteContract(defineRoutes(['home', 'callDetail'])));
+    await act(() => setRouteContract(defineRoutes(['home', 'callDetail'])));
     expect(screen.getByTestId('link')).toHaveTextContent('/call/5');
   });
 });

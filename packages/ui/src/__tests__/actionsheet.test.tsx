@@ -53,8 +53,8 @@ describe('Actionsheet backdrop guard (Unit)', () => {
 
   // The backdrop mounts full-screen the instant isOpen flips, so the tap that opened the
   // sheet could land on it and close the sheet again.
-  it('keeps overlay-click dismissal disabled immediately after opening', () => {
-    render(
+  it('keeps overlay-click dismissal disabled immediately after opening', async () => {
+    await render(
       <Actionsheet isOpen={true}>
         <Text>content</Text>
       </Actionsheet>
@@ -63,56 +63,56 @@ describe('Actionsheet backdrop guard (Unit)', () => {
     expect(lastProps().closeOnOverlayClick).toBe(false);
   });
 
-  it('arms overlay-click dismissal once the open animation window has passed', () => {
-    render(
+  it('arms overlay-click dismissal once the open animation window has passed', async () => {
+    await render(
       <Actionsheet isOpen={true}>
         <Text>content</Text>
       </Actionsheet>
     );
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(300);
     });
 
     expect(lastProps().closeOnOverlayClick).toBe(true);
   });
 
-  it('re-disarms when the sheet closes so the next open is guarded again', () => {
+  it('re-disarms when the sheet closes so the next open is guarded again', async () => {
     const sheet = (isOpen: boolean) => (
       <Actionsheet isOpen={isOpen}>
         <Text>content</Text>
       </Actionsheet>
     );
-    const { rerender } = render(sheet(true));
+    const { rerender } = await render(sheet(true));
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(300);
     });
     expect(lastProps().closeOnOverlayClick).toBe(true);
 
-    rerender(sheet(false));
+    await rerender(sheet(false));
     expect(lastProps().closeOnOverlayClick).toBe(false);
 
-    rerender(sheet(true));
+    await rerender(sheet(true));
     expect(lastProps().closeOnOverlayClick).toBe(false);
   });
 
-  it('never arms overlay-click dismissal when the caller opted out', () => {
-    render(
+  it('never arms overlay-click dismissal when the caller opted out', async () => {
+    await render(
       <Actionsheet isOpen={true} closeOnOverlayClick={false}>
         <Text>content</Text>
       </Actionsheet>
     );
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(300);
     });
 
     expect(lastProps().closeOnOverlayClick).toBe(false);
   });
 
-  it('leaves uncontrolled sheets armed since they have no isOpen to gate on', () => {
-    render(
+  it('leaves uncontrolled sheets armed since they have no isOpen to gate on', async () => {
+    await render(
       <Actionsheet defaultIsOpen={true}>
         <Text>content</Text>
       </Actionsheet>
@@ -121,15 +121,15 @@ describe('Actionsheet backdrop guard (Unit)', () => {
     expect(lastProps().closeOnOverlayClick).toBe(true);
   });
 
-  it('portals to the app root by default; a native Modal is opt-in (useRNModal)', () => {
-    const { rerender } = render(
+  it('portals to the app root by default; a native Modal is opt-in (useRNModal)', async () => {
+    const { rerender } = await render(
       <Actionsheet isOpen={true}>
         <Text>content</Text>
       </Actionsheet>
     );
     expect(lastProps().useRNModal).toBeUndefined();
 
-    rerender(
+    await rerender(
       <Actionsheet isOpen={true} useRNModal>
         <Text>content</Text>
       </Actionsheet>

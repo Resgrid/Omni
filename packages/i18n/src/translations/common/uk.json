@@ -3272,8 +3272,8 @@
     "attendees": {
       "title": "Учасники"
     },
-    "attendeesCount": "{{count}} учасник",
-    "attendeesCount_plural": "{{count}} учасників",
+    "attendeesCount_one": "{{count}} учасник",
+    "attendeesCount": "{{count}} учасників",
     "confirmSignup": "Підтвердити",
     "confirmUnsignup": {
       "message": "Ви впевнені, що хочете скасувати свою участь у цій події?",
@@ -3285,8 +3285,8 @@
       "attendanceUpdate": "Не вдалося оновити відвідуваність. Будь ласка, спробуйте ще раз.",
       "title": "Помилка"
     },
-    "eventsCount": "{{count}} подія",
-    "eventsCount_plural": "{{count}} подій",
+    "eventsCount_one": "{{count}} подія",
+    "eventsCount": "{{count}} подій",
     "loading": {
       "date": "Завантаження подій для вибраної дати...",
       "today": "Завантаження сьогоднішніх подій...",

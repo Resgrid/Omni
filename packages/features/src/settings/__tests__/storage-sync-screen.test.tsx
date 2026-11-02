@@ -118,7 +118,7 @@ const buildServices = () => {
 const renderScreen = async () => {
   const built = buildServices();
   configureSettings({ storageSync: built.services as unknown as StorageSyncServices });
-  render(<StorageSyncScreen />);
+  await render(<StorageSyncScreen />);
   await screen.findByTestId('storage-size-database');
   return built;
 };
@@ -130,8 +130,8 @@ describe('StorageSyncScreen', () => {
     activateTestVariant('ic');
   });
 
-  it('says when offline storage is not bound yet', () => {
-    render(<StorageSyncScreen />);
+  it('says when offline storage is not bound yet', async () => {
+    await render(<StorageSyncScreen />);
     expect(screen.getByTestId('storage-unavailable')).toBeTruthy();
   });
 
@@ -162,37 +162,37 @@ describe('StorageSyncScreen', () => {
 
   it('retries one change and all failed changes', async () => {
     const { services } = await renderScreen();
-    fireEvent.press(screen.getByTestId('storage-item-evt-2-retry'));
+    await fireEvent.press(screen.getByTestId('storage-item-evt-2-retry'));
     await waitFor(() => expect(services.outbox.retry).toHaveBeenCalledWith('evt-2'));
-    fireEvent.press(screen.getByTestId('storage-retry-all'));
+    await fireEvent.press(screen.getByTestId('storage-retry-all'));
     await waitFor(() => expect(services.outbox.retryAll).toHaveBeenCalled());
   });
 
   it('discards a change only after confirmation', async () => {
     const { services } = await renderScreen();
-    fireEvent.press(screen.getByTestId('storage-item-evt-1-discard'));
+    await fireEvent.press(screen.getByTestId('storage-item-evt-1-discard'));
     expect(within(screen.getByTestId('storage-confirm')).getByText('storage_sync.discard_message')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('storage-confirm-cancel'));
+    await fireEvent.press(screen.getByTestId('storage-confirm-cancel'));
     expect(services.outbox.discard).not.toHaveBeenCalled();
 
-    fireEvent.press(screen.getByTestId('storage-item-evt-1-discard'));
-    fireEvent.press(screen.getByTestId('storage-confirm-confirm'));
+    await fireEvent.press(screen.getByTestId('storage-item-evt-1-discard'));
+    await fireEvent.press(screen.getByTestId('storage-confirm-confirm'));
     await waitFor(() => expect(services.outbox.discard).toHaveBeenCalledWith('evt-1', { confirmed: true }));
   });
 
   it('follows the outbox as it drains', async () => {
     const { publish } = await renderScreen();
-    act(() => publish([ITEMS[1]]));
+    await act(() => publish([ITEMS[1]]));
     expect(screen.queryByTestId('storage-item-evt-1')).toBeNull();
     expect(screen.getByTestId('storage-item-evt-2')).toBeTruthy();
-    act(() => publish([]));
+    await act(() => publish([]));
     expect(screen.getByTestId('storage-pending-empty')).toBeTruthy();
   });
 
   it('shows the last sync and runs "Sync now"', async () => {
     const { services } = await renderScreen();
     expect(screen.getByTestId('storage-last-hydration')).toHaveTextContent(/storage_sync\.never/);
-    fireEvent.press(screen.getByTestId('storage-sync-now'));
+    await fireEvent.press(screen.getByTestId('storage-sync-now'));
     expect(await screen.findByTestId('storage-sync-outcome')).toHaveTextContent('storage_sync.sync_synced');
     expect(services.sync.onReconnect).toHaveBeenCalled();
     // The reconnect sequence drained the outbox already.
@@ -201,8 +201,8 @@ describe('StorageSyncScreen', () => {
 
   it('clears cached data after confirmation, keeping the session', async () => {
     const { services } = await renderScreen();
-    fireEvent.press(screen.getByTestId('storage-clear-cached'));
-    fireEvent.press(screen.getByTestId('storage-confirm-confirm'));
+    await fireEvent.press(screen.getByTestId('storage-clear-cached'));
+    await fireEvent.press(screen.getByTestId('storage-confirm-confirm'));
     await waitFor(() => expect(services.storage.clearCachedData).toHaveBeenCalled());
     expect(fakeAuthStore.getState().logout).not.toHaveBeenCalled();
   });
@@ -210,33 +210,33 @@ describe('StorageSyncScreen', () => {
   it('warns with the unsent count before clearing all local data, then wipes and signs out', async () => {
     fakeAuthStore.setState({ status: 'signedIn', accessToken: 'token' });
     const { services } = await renderScreen();
-    fireEvent.press(screen.getByTestId('storage-clear-all'));
+    await fireEvent.press(screen.getByTestId('storage-clear-all'));
 
     expect(await screen.findByText('storage_sync.clear_all_message_unsent [count=2]')).toBeTruthy();
     expect(services.storage.clearAllLocalData).toHaveBeenCalledWith();
     expect(services.storage.clearAllLocalData).not.toHaveBeenCalledWith({ confirmed: true });
 
-    fireEvent.press(screen.getByTestId('storage-confirm-confirm'));
+    await fireEvent.press(screen.getByTestId('storage-confirm-confirm'));
     await waitFor(() => expect(services.storage.clearAllLocalData).toHaveBeenCalledWith({ confirmed: true }));
     await waitFor(() => expect(fakeAuthStore.getState().logout).toHaveBeenCalledWith('Local data cleared', 'logout'));
   });
 
   it('does nothing when clearing all local data is cancelled', async () => {
     const { services } = await renderScreen();
-    fireEvent.press(screen.getByTestId('storage-clear-all'));
+    await fireEvent.press(screen.getByTestId('storage-clear-all'));
     await screen.findByTestId('storage-confirm-cancel');
-    fireEvent.press(screen.getByTestId('storage-confirm-cancel'));
+    await fireEvent.press(screen.getByTestId('storage-confirm-cancel'));
     expect(services.storage.clearAllLocalData).toHaveBeenCalledTimes(1);
     expect(fakeAuthStore.getState().logout).not.toHaveBeenCalled();
   });
 
   it('shows a copyable diagnostics summary with counts and sizes only', async () => {
     await renderScreen();
-    fireEvent.press(screen.getByTestId('storage-diagnostics-show'));
+    await fireEvent.press(screen.getByTestId('storage-diagnostics-show'));
     const text = await screen.findByTestId('storage-diagnostics-text');
     expect(text).toHaveTextContent(/"itemTypes"/);
     expect(text).not.toHaveTextContent(/evt-1/);
-    fireEvent.press(screen.getByTestId('storage-diagnostics-copy'));
+    await fireEvent.press(screen.getByTestId('storage-diagnostics-copy'));
     await waitFor(() => expect(Clipboard.setStringAsync).toHaveBeenCalledWith(expect.stringContaining('"databaseBytes": 5242880')));
   });
 });

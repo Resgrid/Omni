@@ -71,6 +71,23 @@ describe('@resgrid/i18n', () => {
     });
   });
 
+  describe('plurals (i18next v4 keys)', () => {
+    it('uses `_one` for one and the base key for every other category', async () => {
+      const { i18nModule } = load('responder');
+      const i18n = i18nModule.initI18n({ language: 'en', variantResources: resourcesFor('responder') });
+      expect(i18n.t('calendar.eventsCount', { count: 1 })).toBe('1 event');
+      expect(i18n.t('calendar.eventsCount', { count: 0 })).toBe('0 events');
+      expect(i18n.t('calendar.eventsCount', { count: 5 })).toBe('5 events');
+      expect(i18n.t('pois.results_count', { count: 1 })).toBe('1 POI');
+      expect(i18n.t('maps.poi.results', { count: 1 })).toBe('1 point of interest');
+
+      // Polish has one/few/many/other; the files define `_one` and the base, so few and many use the base.
+      await i18nModule.setLanguage('pl');
+      expect(i18n.t('calendar.eventsCount', { count: 1 })).toBe('1 wydarzenie');
+      expect(i18n.t('calendar.eventsCount', { count: 5 })).toBe('5 wydarzeń');
+    });
+  });
+
   describe('{{appName}}', () => {
     it('interpolates the active variant name by default', () => {
       const { i18nModule } = load('ic');

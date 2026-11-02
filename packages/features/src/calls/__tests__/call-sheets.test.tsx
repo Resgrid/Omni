@@ -39,13 +39,13 @@ afterEach(() => useToastStore.getState().clearToasts());
 describe('CloseCallSheet', () => {
   it('requires a close type, then closes with the note and "notify everyone" on by default', async () => {
     const onClosed = jest.fn();
-    render(<CloseCallSheet isOpen onClose={jest.fn()} callId="5" onClosed={onClosed} />);
+    await render(<CloseCallSheet isOpen onClose={jest.fn()} callId="5" onClosed={onClosed} />);
     await act(async () => fireEvent.press(screen.getByTestId('close-call-submit', hidden)));
     expect(mockCloseCall).not.toHaveBeenCalled();
     expect(lastToast()?.message).toBe('call_detail.close_call_type_required');
 
-    fireEvent.press(screen.getByTestId('close-call-type-3', hidden));
-    fireEvent.changeText(screen.getByTestId('close-call-note', hidden), 'Nothing found');
+    await fireEvent.press(screen.getByTestId('close-call-type-3', hidden));
+    await fireEvent.changeText(screen.getByTestId('close-call-note', hidden), 'Nothing found');
     await act(async () => fireEvent.press(screen.getByTestId('close-call-submit', hidden)));
     expect(mockCloseCall).toHaveBeenCalledWith({ callId: '5', type: 3, note: 'Nothing found', sendNotification: true });
     expect(onClosed).toHaveBeenCalled();
@@ -53,25 +53,25 @@ describe('CloseCallSheet', () => {
 
   it('is blocked with an explanation while the call has an active incident command', async () => {
     useCommandStore.setState({ summaries: [{ IncidentCommandId: 'ic1', DepartmentId: 1, CallId: 5, Status: 0, EstablishedOn: '', AssignedPersonnelCount: 0, AssignedUnitCount: 0 }] });
-    render(<CloseCallSheet isOpen onClose={jest.fn()} callId="5" />);
+    await render(<CloseCallSheet isOpen onClose={jest.fn()} callId="5" />);
     expect(screen.getByTestId('close-call-blocked', hidden)).toBeTruthy();
     expect(screen.getByText('calls.close.blocked_by_command', hidden)).toBeTruthy();
-    fireEvent.press(screen.getByTestId('close-call-type-1', hidden));
+    await fireEvent.press(screen.getByTestId('close-call-type-1', hidden));
     await act(async () => fireEvent.press(screen.getByTestId('close-call-submit', hidden)));
     expect(mockCloseCall).not.toHaveBeenCalled();
   });
 
-  it('treats a command established offline (provisional board) as active', () => {
+  it('treats a command established offline (provisional board) as active', async () => {
     useCommandStore.setState({ boards: { '5': { callId: '5', board: null, adHocUnits: [], adHocPersonnel: [], isProvisional: true, lastRefreshed: null } } });
-    render(<CloseCallSheet isOpen onClose={jest.fn()} callId="5" />);
+    await render(<CloseCallSheet isOpen onClose={jest.fn()} callId="5" />);
     expect(screen.getByTestId('close-call-blocked', hidden)).toBeTruthy();
   });
 
   it("shows the server's reason when it refuses the close", async () => {
     mockCloseCall.mockRejectedValue(new ApiError({ kind: 'http', status: 400, data: 'Close the incident command first.' }));
     const onClose = jest.fn();
-    render(<CloseCallSheet isOpen onClose={onClose} callId="5" />);
-    fireEvent.press(screen.getByTestId('close-call-type-1', hidden));
+    await render(<CloseCallSheet isOpen onClose={onClose} callId="5" />);
+    await fireEvent.press(screen.getByTestId('close-call-type-1', hidden));
     await act(async () => fireEvent.press(screen.getByTestId('close-call-submit', hidden)));
     expect(lastToast()?.message).toBe('Close the incident command first.');
     expect(onClose).not.toHaveBeenCalled();
@@ -79,25 +79,25 @@ describe('CloseCallSheet', () => {
 });
 
 describe('DispatchSelectionModal', () => {
-  it('selects personnel, groups, roles and units, with search', () => {
+  it('selects personnel, groups, roles and units, with search', async () => {
     const onConfirm = jest.fn();
-    render(<DispatchSelectionModal isOpen onClose={jest.fn()} recipients={recipients} value={EMPTY_DISPATCH_SELECTION} onConfirm={onConfirm} />);
-    fireEvent.press(screen.getByTestId('dispatch-option-users-u1', hidden));
-    fireEvent.press(screen.getByTestId('dispatch-option-groups-g1', hidden));
-    fireEvent.press(screen.getByTestId('dispatch-option-roles-r1', hidden));
-    fireEvent.press(screen.getByTestId('dispatch-option-units-7', hidden));
+    await render(<DispatchSelectionModal isOpen onClose={jest.fn()} recipients={recipients} value={EMPTY_DISPATCH_SELECTION} onConfirm={onConfirm} />);
+    await fireEvent.press(screen.getByTestId('dispatch-option-users-u1', hidden));
+    await fireEvent.press(screen.getByTestId('dispatch-option-groups-g1', hidden));
+    await fireEvent.press(screen.getByTestId('dispatch-option-roles-r1', hidden));
+    await fireEvent.press(screen.getByTestId('dispatch-option-units-7', hidden));
     expect(screen.getByTestId('dispatch-option-units-7', hidden).props.accessibilityState).toEqual({ checked: true });
-    fireEvent.changeText(screen.getByTestId('dispatch-selection-search', hidden), 'engine');
+    await fireEvent.changeText(screen.getByTestId('dispatch-selection-search', hidden), 'engine');
     expect(screen.queryByTestId('dispatch-option-users-u1', hidden)).toBeNull();
-    fireEvent.press(screen.getByTestId('dispatch-selection-confirm', hidden));
+    await fireEvent.press(screen.getByTestId('dispatch-selection-confirm', hidden));
     expect(onConfirm).toHaveBeenCalledWith({ everyone: false, users: ['u1'], groups: ['g1'], roles: ['r1'], units: ['7'] });
   });
 
-  it('"Everyone" clears the individual picks', () => {
+  it('"Everyone" clears the individual picks', async () => {
     const onConfirm = jest.fn();
-    render(<DispatchSelectionModal isOpen onClose={jest.fn()} recipients={recipients} value={{ ...EMPTY_DISPATCH_SELECTION, units: ['7'] }} onConfirm={onConfirm} />);
-    fireEvent(screen.getByTestId('dispatch-selection-everyone', hidden), 'valueChange', true);
-    fireEvent.press(screen.getByTestId('dispatch-selection-confirm', hidden));
+    await render(<DispatchSelectionModal isOpen onClose={jest.fn()} recipients={recipients} value={{ ...EMPTY_DISPATCH_SELECTION, units: ['7'] }} onConfirm={onConfirm} />);
+    await fireEvent(screen.getByTestId('dispatch-selection-everyone', hidden), 'valueChange', true);
+    await fireEvent.press(screen.getByTestId('dispatch-selection-confirm', hidden));
     expect(onConfirm).toHaveBeenCalledWith({ ...EMPTY_DISPATCH_SELECTION, everyone: true });
   });
 
@@ -115,8 +115,8 @@ describe('CallNotesPanel', () => {
       useCallDetailStore.setState({ queuedNotes: { n1: { localId: 'n1', callId: input.callId, note: input.note, latitude: null, longitude: null, createdAt: Date.now(), state: 'queued' } } });
       return { outcome: 'queued', id: 'n1' };
     });
-    render(<CallNotesPanel callId="5" />);
-    fireEvent.changeText(screen.getByTestId('call-notes-input'), 'Second alarm requested');
+    await render(<CallNotesPanel callId="5" />);
+    await fireEvent.changeText(screen.getByTestId('call-notes-input'), 'Second alarm requested');
     await act(async () => fireEvent.press(screen.getByTestId('call-notes-add')));
     expect(mockAddNote).toHaveBeenCalledWith({ callId: '5', note: 'Second alarm requested', latitude: null, longitude: null });
     expect(screen.getByText('Second alarm requested')).toBeTruthy();
@@ -124,7 +124,7 @@ describe('CallNotesPanel', () => {
     expect(lastToast()?.message).toBe('callNotes.queued');
   });
 
-  it('hides the composer without the CanAddNote right and never shows a withheld note', () => {
+  it('hides the composer without the CanAddNote right and never shows a withheld note', async () => {
     setRights({ CanAddNote: false });
     useCallDetailStore.setState({
       details: {
@@ -139,7 +139,7 @@ describe('CallNotesPanel', () => {
         },
       },
     });
-    render(<CallNotesPanel callId="5" />);
+    await render(<CallNotesPanel callId="5" />);
     expect(screen.queryByTestId('call-notes-input')).toBeNull();
     expect(screen.getByText('data_protection.protected_value')).toBeTruthy();
     expect(screen.queryByText('REDACTED')).toBeNull();

@@ -36,33 +36,33 @@ afterEach(() => {
 });
 
 describe('registerOfflineMapsSettings', () => {
-  it('shows the section only while offline maps are available, and never on web', () => {
+  it('shows the section only while offline maps are available, and never on web', async () => {
     dispose = registerOfflineMapsSettings();
     expect(ids()).not.toContain(OFFLINE_MAPS_SETTINGS_SECTION_ID);
 
     const fake = createFakeController(offlineState({ availability: 'disabled' }));
-    act(() => configureOfflineMaps({ controller: fake.controller }));
+    await act(() => configureOfflineMaps({ controller: fake.controller }));
     expect(ids()).not.toContain(OFFLINE_MAPS_SETTINGS_SECTION_ID);
 
-    act(() => fake.setState({ availability: 'available' }));
+    await act(() => fake.setState({ availability: 'available' }));
     expect(ids()).toContain(OFFLINE_MAPS_SETTINGS_SECTION_ID);
     expect(ids('web')).not.toContain(OFFLINE_MAPS_SETTINGS_SECTION_ID);
 
-    act(() => fake.setState({ availability: 'disabled' }));
+    await act(() => fake.setState({ availability: 'disabled' }));
     expect(ids()).not.toContain(OFFLINE_MAPS_SETTINGS_SECTION_ID);
   });
 
-  it('renders a row with the status and size that opens Settings → Offline maps', () => {
+  it('renders a row with the status and size that opens Settings → Offline maps', async () => {
     const fake = createFakeController(offlineState({ isInstalled: true, updateAvailable: false, installedBytes: 5 * 1024 * 1024 }));
     configureOfflineMaps({ controller: fake.controller });
     dispose = registerOfflineMapsSettings();
     const section = getSettingsSections(contextFor('android')).find((entry) => entry.id === OFFLINE_MAPS_SETTINGS_SECTION_ID);
     if (!section) throw new Error('section missing');
-    render(<>{section.render(contextFor('android'))}</>);
+    await render(<>{section.render(contextFor('android'))}</>);
     const row = screen.getByTestId('settings-offline-maps');
     expect(row).toHaveTextContent(/offline_maps\.status\.up_to_date/);
     expect(row).toHaveTextContent(/5\.0 MB/);
-    fireEvent.press(row);
+    await fireEvent.press(row);
     expect(router.push).toHaveBeenCalledWith('/settings/offline-maps');
   });
 

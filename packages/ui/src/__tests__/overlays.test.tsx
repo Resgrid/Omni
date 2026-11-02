@@ -17,14 +17,14 @@ describe('NativeModal (Unit)', () => {
     useToastStore.setState({ modalHosts: [] });
   });
 
-  it('renders its content and shows toasts inside the modal window', () => {
-    render(
+  it('renders its content and shows toasts inside the modal window', async () => {
+    await render(
       <NativeModal visible transparent onRequestClose={jest.fn()} testID="native-modal">
         <Text>Sheet content</Text>
       </NativeModal>
     );
 
-    act(() => useToastStore.setState({ toasts: [{ id: '1', type: 'error', message: 'Check-in failed' }] }));
+    await act(() => useToastStore.setState({ toasts: [{ id: '1', type: 'error', message: 'Check-in failed' }] }));
 
     expect(screen.getByText('Sheet content', query)).toBeTruthy();
     expect(screen.getByTestId('modal-toast-host', query)).toBeTruthy();
@@ -32,15 +32,15 @@ describe('NativeModal (Unit)', () => {
     expect(useToastStore.getState().modalHosts).toHaveLength(1);
   });
 
-  it('releases its toast host when it is hidden', () => {
-    const { rerender } = render(
+  it('releases its toast host when it is hidden', async () => {
+    const { rerender } = await render(
       <NativeModal visible onRequestClose={jest.fn()}>
         <Text>Sheet content</Text>
       </NativeModal>
     );
     expect(useToastStore.getState().modalHosts).toHaveLength(1);
 
-    rerender(
+    await rerender(
       <NativeModal visible={false} onRequestClose={jest.fn()}>
         <Text>Sheet content</Text>
       </NativeModal>
@@ -49,15 +49,15 @@ describe('NativeModal (Unit)', () => {
     expect(useToastStore.getState().modalHosts).toEqual([]);
   });
 
-  it('allows every orientation unless the caller narrows it (iOS defaults Modal to portrait)', () => {
-    const { rerender } = render(
+  it('allows every orientation unless the caller narrows it (iOS defaults Modal to portrait)', async () => {
+    const { rerender } = await render(
       <NativeModal visible testID="native-modal">
         <Text>x</Text>
       </NativeModal>
     );
     expect(screen.getByTestId('native-modal', query).props.supportedOrientations).toEqual(ALL_ORIENTATIONS);
 
-    rerender(
+    await rerender(
       <NativeModal visible testID="native-modal" supportedOrientations={['portrait']}>
         <Text>x</Text>
       </NativeModal>
@@ -67,7 +67,7 @@ describe('NativeModal (Unit)', () => {
 });
 
 describe('CustomBottomSheet (Unit + IC)', () => {
-  const renderSheet = (props: Partial<React.ComponentProps<typeof CustomBottomSheet>> = {}) =>
+  const renderSheet = async (props: Partial<React.ComponentProps<typeof CustomBottomSheet>> = {}) =>
     render(
       <CustomBottomSheet isOpen onClose={jest.fn()} testID="bottom-sheet" {...props}>
         <Text>Sheet body</Text>
@@ -83,14 +83,14 @@ describe('CustomBottomSheet (Unit + IC)', () => {
     jest.useRealTimers();
   });
 
-  it('renders nothing until opened', () => {
-    renderSheet({ isOpen: false });
+  it('renders nothing until opened', async () => {
+    await renderSheet({ isOpen: false });
 
     expect(screen.queryByTestId('bottom-sheet', query)).toBeNull();
   });
 
-  it('renders backdrop, content and children in a NativeModal (with toast host and all orientations)', () => {
-    renderSheet();
+  it('renders backdrop, content and children in a NativeModal (with toast host and all orientations)', async () => {
+    await renderSheet();
 
     expect(screen.getByTestId('bottom-sheet-backdrop', query)).toBeTruthy();
     expect(screen.getByTestId('bottom-sheet-content', query)).toBeTruthy();
@@ -99,29 +99,29 @@ describe('CustomBottomSheet (Unit + IC)', () => {
     expect(useToastStore.getState().modalHosts).toHaveLength(1);
   });
 
-  it('ignores backdrop taps until the open animation has settled, then closes', () => {
+  it('ignores backdrop taps until the open animation has settled, then closes', async () => {
     const onClose = jest.fn();
-    renderSheet({ onClose });
+    await renderSheet({ onClose });
 
-    fireEvent.press(screen.getByTestId('bottom-sheet-backdrop', query));
+    await fireEvent.press(screen.getByTestId('bottom-sheet-backdrop', query));
     expect(onClose).not.toHaveBeenCalled();
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(BOTTOM_SHEET_BACKDROP_ARM_DELAY_MS);
     });
-    fireEvent.press(screen.getByTestId('bottom-sheet-backdrop', query));
+    await fireEvent.press(screen.getByTestId('bottom-sheet-backdrop', query));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('shows a spinner and loading text instead of children while loading', () => {
-    renderSheet({ isLoading: true, loadingText: 'Loading roles' });
+  it('shows a spinner and loading text instead of children while loading', async () => {
+    await renderSheet({ isLoading: true, loadingText: 'Loading roles' });
 
     expect(screen.getByText('Loading roles', query)).toBeTruthy();
     expect(screen.queryByText('Sheet body', query)).toBeNull();
   });
 
-  it('uses the theme background token for the sheet surface', () => {
-    renderSheet();
+  it('uses the theme background token for the sheet surface', async () => {
+    await renderSheet();
 
     expect(screen.getByTestId('bottom-sheet-content', query).props.style).toMatchObject({ backgroundColor: '#ffffff' });
   });
@@ -130,15 +130,15 @@ describe('CustomBottomSheet (Unit + IC)', () => {
     // The close used to unmount the Modal only when the animation reported finished === true. A cancelled
     // native-driver animation reports false, and the transparent full-screen Modal stayed mounted, swallowing
     // every touch on the screen underneath.
-    it('unmounts the modal even when the close animation does not finish', () => {
+    it('unmounts the modal even when the close animation does not finish', async () => {
       const parallelSpy = jest.spyOn(Animated, 'parallel');
-      const { rerender } = renderSheet();
+      const { rerender } = await renderSheet();
       expect(screen.getByTestId('bottom-sheet', query)).toBeTruthy();
 
       parallelSpy.mockReturnValue({ start: (callback?: (result: { finished: boolean }) => void) => callback?.({ finished: false }) } as unknown as Animated.CompositeAnimation);
 
-      act(() => {
-        rerender(
+      await act(async () => {
+        await rerender(
           <CustomBottomSheet isOpen={false} onClose={jest.fn()} testID="bottom-sheet">
             <Text>Sheet body</Text>
           </CustomBottomSheet>
@@ -149,8 +149,8 @@ describe('CustomBottomSheet (Unit + IC)', () => {
       parallelSpy.mockRestore();
     });
 
-    it('keeps the sheet mounted when a close is superseded by a re-open', () => {
-      const { rerender } = renderSheet();
+    it('keeps the sheet mounted when a close is superseded by a re-open', async () => {
+      const { rerender } = await renderSheet();
       const parallelSpy = jest.spyOn(Animated, 'parallel');
       let closeCallback: ((result: { finished: boolean }) => void) | undefined;
       parallelSpy.mockReturnValueOnce({
@@ -164,9 +164,9 @@ describe('CustomBottomSheet (Unit + IC)', () => {
           <Text>Sheet body</Text>
         </CustomBottomSheet>
       );
-      act(() => rerender(sheet(false)));
-      act(() => rerender(sheet(true)));
-      act(() => closeCallback?.({ finished: false }));
+      await act(async () => rerender(sheet(false)));
+      await act(async () => rerender(sheet(true)));
+      await act(() => closeCallback?.({ finished: false }));
 
       expect(screen.getByTestId('bottom-sheet', query)).toBeTruthy();
       parallelSpy.mockRestore();
@@ -190,49 +190,49 @@ describe('SideDrawer (IC)', () => {
     </SideDrawer>
   );
 
-  it('renders nothing until opened', () => {
-    render(drawer(false));
+  it('renders nothing until opened', async () => {
+    await render(drawer(false));
 
     expect(screen.queryByTestId('drawer-panel', query)).toBeNull();
   });
 
-  it('shows the panel inside the safe area with its content when open', () => {
-    render(drawer(true));
+  it('shows the panel inside the safe area with its content when open', async () => {
+    await render(drawer(true));
 
     const panel = screen.getByTestId('drawer-panel', query);
     expect(panel.props.style).toMatchObject({ paddingTop: 47, paddingBottom: 34 });
     expect(screen.getByText('Menu', query)).toBeTruthy();
   });
 
-  it('dismisses on a backdrop tap only after the opening tap window', () => {
+  it('dismisses on a backdrop tap only after the opening tap window', async () => {
     const onClose = jest.fn();
-    render(drawer(true, onClose));
+    await render(drawer(true, onClose));
 
-    fireEvent.press(screen.getByTestId('drawer-backdrop', query));
+    await fireEvent.press(screen.getByTestId('drawer-backdrop', query));
     expect(onClose).not.toHaveBeenCalled();
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(SIDE_DRAWER_BACKDROP_ARM_DELAY_MS);
     });
-    fireEvent.press(screen.getByTestId('drawer-backdrop', query));
+    await fireEvent.press(screen.getByTestId('drawer-backdrop', query));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('labels the backdrop as a close control for screen readers', () => {
-    render(drawer(true));
+  it('labels the backdrop as a close control for screen readers', async () => {
+    await render(drawer(true));
 
     const backdrop = screen.getByTestId('drawer-backdrop', query);
     expect(backdrop.props.accessibilityRole).toBe('button');
     expect(backdrop.props.accessibilityLabel).toBe('Close menu');
   });
 
-  it('unmounts after an interrupted close animation', () => {
-    const { rerender } = render(drawer(true));
+  it('unmounts after an interrupted close animation', async () => {
+    const { rerender } = await render(drawer(true));
     const parallelSpy = jest.spyOn(Animated, 'parallel').mockReturnValue({
       start: (callback?: (result: { finished: boolean }) => void) => callback?.({ finished: false }),
     } as unknown as Animated.CompositeAnimation);
 
-    act(() => rerender(drawer(false)));
+    await act(async () => rerender(drawer(false)));
 
     expect(screen.queryByTestId('drawer-panel', query)).toBeNull();
     parallelSpy.mockRestore();

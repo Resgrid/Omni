@@ -92,18 +92,18 @@ describe('call queue helpers', () => {
 });
 
 describe('PendingCallsScreen', () => {
-  it('lists pending calls, searches and opens one', () => {
-    render(<PendingCallsScreen realtime={false} />);
+  it('lists pending calls, searches and opens one', async () => {
+    await render(<PendingCallsScreen realtime={false} />);
     expect(mockFetchPending).toHaveBeenCalledWith({ bypassCache: true });
     expect(screen.getByText('Waiting fire')).toBeTruthy();
-    fireEvent.changeText(screen.getByTestId('pending-calls-search'), '9 oak');
+    await fireEvent.changeText(screen.getByTestId('pending-calls-search'), '9 oak');
     expect(screen.queryByText('Waiting fire')).toBeNull();
-    fireEvent.press(screen.getByTestId('pending-call-row-p2'));
+    await fireEvent.press(screen.getByTestId('pending-call-row-p2'));
     expect(router.push).toHaveBeenCalledWith('/call/p2');
   });
 
   it('dispatches with the proposed recipients preselected', async () => {
-    render(<PendingCallsScreen realtime={false} />);
+    await render(<PendingCallsScreen realtime={false} />);
     await act(async () => fireEvent.press(screen.getByTestId('pending-call-dispatch-p1')));
     expect(mockExtraData).toHaveBeenCalledWith('p1', { bypassCache: true });
     expect(screen.getByTestId('dispatch-selection-confirm', hidden)).toBeTruthy();
@@ -113,8 +113,8 @@ describe('PendingCallsScreen', () => {
   });
 
   it('cancels a pending call only after confirming', async () => {
-    render(<PendingCallsScreen realtime={false} />);
-    fireEvent.press(screen.getByTestId('pending-call-cancel-p1'));
+    await render(<PendingCallsScreen realtime={false} />);
+    await fireEvent.press(screen.getByTestId('pending-call-cancel-p1'));
     expect(mockCancelPending).not.toHaveBeenCalled();
     expect(screen.getByText('pending_calls.cancel_confirm', hidden)).toBeTruthy();
     await act(async () => fireEvent.press(screen.getByTestId('call-queue-confirm-confirm', hidden)));
@@ -122,33 +122,35 @@ describe('PendingCallsScreen', () => {
     expect(useToastStore.getState().toasts[0]).toMatchObject({ type: 'success', message: 'pending_calls.cancel_success' });
   });
 
-  it('hides actions without the create-calls right, refetches on call pushes and shows the empty state', () => {
+  it('hides actions without the create-calls right, refetches on call pushes and shows the empty state', async () => {
     setRights({ CanCreateCalls: false });
-    const { unmount } = render(<PendingCallsScreen />);
+    const { unmount } = await render(<PendingCallsScreen />);
     expect(screen.queryByTestId('pending-call-dispatch-p1')).toBeNull();
     mockFetchPending.mockClear();
-    act(() => emitRealtimeEvent('callAdded', '9'));
+    await act(() => emitRealtimeEvent('callAdded', '9'));
     expect(mockFetchPending).toHaveBeenCalledWith(expect.objectContaining({ bypassCache: true }));
-    unmount();
-    act(() => useCallsStore.setState({ pendingCalls: [] }));
-    render(<PendingCallsScreen realtime={false} />);
+    await unmount();
+    await act(() => {
+      useCallsStore.setState({ pendingCalls: [] });
+    });
+    await render(<PendingCallsScreen realtime={false} />);
     expect(screen.getByText('pending_calls.no_pending_calls')).toBeTruthy();
   });
 });
 
 describe('ScheduledCallsScreen', () => {
   it('dispatches a scheduled call now after confirming, to the recipients already on it', async () => {
-    render(<ScheduledCallsScreen realtime={false} />);
+    await render(<ScheduledCallsScreen realtime={false} />);
     expect(screen.getByText('Burn permit')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('scheduled-call-dispatch-now-s1'));
+    await fireEvent.press(screen.getByTestId('scheduled-call-dispatch-now-s1'));
     await act(async () => fireEvent.press(screen.getByTestId('call-queue-confirm-confirm', hidden)));
     expect(mockDispatchNow).toHaveBeenCalledWith('s1', {});
   });
 
   it('reports a failed dispatch', async () => {
     mockDispatchNow.mockResolvedValueOnce({ ok: false, error: { code: 'rejected', messageKey: 'errors.data.rejected' } } as never);
-    render(<ScheduledCallsScreen realtime={false} />);
-    fireEvent.press(screen.getByTestId('scheduled-call-dispatch-now-s1'));
+    await render(<ScheduledCallsScreen realtime={false} />);
+    await fireEvent.press(screen.getByTestId('scheduled-call-dispatch-now-s1'));
     await act(async () => fireEvent.press(screen.getByTestId('call-queue-confirm-confirm', hidden)));
     expect(useToastStore.getState().toasts[0]).toMatchObject({ type: 'error', message: 'call_queues.dispatch_now_error' });
   });
@@ -171,25 +173,25 @@ describe('ArchivedCallsScreen', () => {
     });
   });
 
-  it('loads when stale, switches years and filters by close type', () => {
-    render(<ArchivedCallsScreen now={() => Date.parse('2026-10-31T12:00:00Z')} />);
+  it('loads when stale, switches years and filters by close type', async () => {
+    await render(<ArchivedCallsScreen now={() => Date.parse('2026-10-31T12:00:00Z')} />);
     expect(load).toHaveBeenCalled();
-    fireEvent.press(screen.getByTestId('archived-year-2025'));
+    await fireEvent.press(screen.getByTestId('archived-year-2025'));
     expect(selectYear).toHaveBeenCalledWith('2025');
-    fireEvent.press(screen.getByTestId('archived-calls-filters-toggle'));
-    fireEvent.press(screen.getByTestId('archived-filter-state-5'));
+    await fireEvent.press(screen.getByTestId('archived-calls-filters-toggle'));
+    await fireEvent.press(screen.getByTestId('archived-filter-state-5'));
     expect(screen.queryByText('Barn fire')).toBeNull();
     expect(screen.getByText('Lift assist')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('archived-filters-clear'));
+    await fireEvent.press(screen.getByTestId('archived-filters-clear'));
     expect(screen.getByText('Barn fire')).toBeTruthy();
   });
 
-  it('reuses a year loaded a moment ago and shows the no-match state', () => {
+  it('reuses a year loaded a moment ago and shows the no-match state', async () => {
     const now = Date.parse('2026-10-31T12:00:00Z');
     useArchivedCallsStore.setState({ fetchedAt: { calls: now - 1000 } });
-    render(<ArchivedCallsScreen now={() => now} />);
+    await render(<ArchivedCallsScreen now={() => now} />);
     expect(load).not.toHaveBeenCalled();
-    fireEvent.changeText(screen.getByTestId('archived-calls-search'), 'nothing like this');
+    await fireEvent.changeText(screen.getByTestId('archived-calls-search'), 'nothing like this');
     expect(screen.getByText('archived_calls.no_matches')).toBeTruthy();
   });
 });
