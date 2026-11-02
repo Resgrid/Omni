@@ -1,0 +1,219 @@
+# Store submissions dispatched by the Resgrid software factory (docs/build/store-publish.md). Every merge into master builds
+# a release with each app's store binaries (release.yml); the factory records it, someone proposes a submission of one
+# platform's package, and a person approves it. The factory's executor then dispatches this workflow, at a reviewed tag of
+# this file, with the ten inputs below. One platform at a time: for example iOS to TestFlight, test, then Android.
+#
+#   upload   for testers, never a release: eas submit to App Store Connect / TestFlight, or a completed release on a Play
+#            testing track (internal, alpha, beta).
+#   publish  releases that same uploaded build, later and only if you decide to: App Store review submission, or promotion
+#            of its version code to Play's production track. Nothing is uploaded again.
+#
+# Before any store call the run confirms with the factory that it is that approved dispatch (the action's receipt names this
+# run, and every input equals what was approved) and that the package is the exact one the release recorded (its SHA-256,
+# SHA256SUMS and fingerprints.json: production channel, built natively from source_sha). The result goes back to the
+# factory as a store receipt.
+#
+# NEVER rename this file: the factory's publishing targets name it. Secrets: docs/build/store-publish.md.
+name: Store publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      factory_submission_id:
+        description: 'Factory submission ID (set by the factory)'
+        type: string
+        required: true
+      source_sha:
+        description: 'Commit of the release'
+        type: string
+        required: true
+      artifact_digest:
+        description: 'sha256:<hex> of the store package'
+        type: string
+        required: true
+      artifact_url:
+        description: 'The store package on its GitHub release'
+        type: string
+        required: true
+      version:
+        description: 'Release tag (<variant>-v<major>.<run>)'
+        type: string
+        required: true
+      release_notes:
+        description: 'Release notes'
+        type: string
+        required: true
+      store:
+        description: 'google-play or apple-ios'
+        type: string
+        required: true
+      app_id:
+        description: 'Android package or iOS bundle ID'
+        type: string
+        required: true
+      channel:
+        description: 'Where uploads go: a Play testing track (internal, alpha, beta) or testflight'
+        type: string
+        required: true
+      operation:
+        description: 'upload (testers) or publish (release the uploaded build)'
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+# One submission at a time per store listing; a queued one waits rather than replacing it.
+concurrency:
+  group: store-publish-${{ inputs.store }}-${{ inputs.app_id }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  EXPO_NO_TELEMETRY: '1'
+  EXPO_NO_DOTENV: '1'
+  # Exact tool version; bump with release.yml.
+  EAS_CLI_VERSION: '24.14.0'
+  # Inputs reach scripts only as environment variables, never spliced into shell.
+  FACTORY_SUBMISSION_ID: ${{ inputs.factory_submission_id }}
+  SOURCE_SHA: ${{ inputs.source_sha }}
+  ARTIFACT_DIGEST: ${{ inputs.artifact_digest }}
+  ARTIFACT_URL: ${{ inputs.artifact_url }}
+  VERSION: ${{ inputs.version }}
+  RELEASE_NOTES: ${{ inputs.release_notes }}
+  STORE: ${{ inputs.store }}
+  APP_ID: ${{ inputs.app_id }}
+  CHANNEL: ${{ inputs.channel }}
+  OPERATION: ${{ inputs.operation }}
+
+jobs:
+  plan:
+    name: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      variant: ${{ steps.plan.outputs.variant }}
+      platform: ${{ steps.plan.outputs.platform }}
+      run_number: ${{ steps.plan.outputs.run_number }}
+      release_status: ${{ steps.plan.outputs.release_status }}
+    steps:
+      # Full history: the app identity is read from the manifest at the release commit, not at this workflow's tag.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Validate the submission
+        id: plan
+        run: node scripts/ci/store-publish.mjs plan
+
+  publish:
+    name: publish (${{ needs.plan.outputs.variant }}, ${{ inputs.store }}, ${{ inputs.operation }})
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    environment: store-${{ needs.plan.outputs.variant }}
+    env:
+      APP_VARIANT: ${{ needs.plan.outputs.variant }}
+      APP_ENV: production
+      RELEASE_RUN_NUMBER: ${{ needs.plan.outputs.run_number }}
+      PLATFORM: ${{ needs.plan.outputs.platform }}
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      FACTORY_URL: ${{ vars.FACTORY_URL }}
+      FACTORY_TOKEN: ${{ secrets.FACTORY_TOKEN }}
+      CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+      CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+      # Nothing touches a store until this step proves the run is the factory's approved dispatch.
+      - name: Confirm the approved dispatch with the factory
+        id: confirm
+        run: node scripts/ci/store-publish.mjs confirm
+
+      - name: Verify the release and the package
+        id: package
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/ci/store-publish.mjs fetch
+
+      # Uploads go through eas submit; a publish talks to the store's API about the build already uploaded.
+      - uses: ./.github/actions/setup-workspace
+        if: inputs.operation == 'upload'
+      - uses: expo/expo-github-action@v8
+        if: inputs.operation == 'upload'
+        with:
+          eas-version: ${{ env.EAS_CLI_VERSION }}
+          token: ${{ secrets.EXPO_TOKEN }}
+          packager: npm
+
+      - name: Store credentials
+        env:
+          IOS_P8_BASE64: ${{ secrets.IOS_P8_BASE64 }}
+          PLAY_SERVICE_ACCOUNT_JSON_BASE64: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON_BASE64 }}
+        run: |
+          set -euo pipefail
+          umask 077; mkdir -p "$RUNNER_TEMP/store-credentials"
+          if [ "$PLATFORM" = ios ]; then
+            if [ -z "$IOS_P8_BASE64" ]; then echo "::error::IOS_P8_BASE64 is not set in store-$APP_VARIANT."; exit 1; fi
+            printf '%s' "$IOS_P8_BASE64" | base64 --decode > "$RUNNER_TEMP/store-credentials/AuthKey.p8"
+            echo "EXPO_ASC_API_KEY_PATH=$RUNNER_TEMP/store-credentials/AuthKey.p8" >> "$GITHUB_ENV"
+            echo "ASC_KEY_PATH=$RUNNER_TEMP/store-credentials/AuthKey.p8" >> "$GITHUB_ENV"
+          fi
+          if [ "$PLATFORM" = android ] && [ -n "$PLAY_SERVICE_ACCOUNT_JSON_BASE64" ]; then
+            printf '%s' "$PLAY_SERVICE_ACCOUNT_JSON_BASE64" | base64 --decode > "$RUNNER_TEMP/store-credentials/play.json"
+            echo "PLAY_SERVICE_ACCOUNT_KEY_PATH=$RUNNER_TEMP/store-credentials/play.json" >> "$GITHUB_ENV"
+            echo "PLAY_KEY_PATH=$RUNNER_TEMP/store-credentials/play.json" >> "$GITHUB_ENV"
+          elif [ "$PLATFORM" = android ] && [ "$OPERATION" = publish ]; then
+            echo "::error::Releasing on Google Play needs PLAY_SERVICE_ACCOUNT_JSON_BASE64 in store-$APP_VARIANT."; exit 1
+          fi
+
+      - name: Submit profile
+        id: profile
+        if: inputs.operation == 'upload'
+        env:
+          ASC_APP_ID: ${{ secrets.ASC_APP_ID }}
+          EXPO_ASC_KEY_ID: ${{ secrets.IOS_ASC_KEY_ID }}
+          EXPO_ASC_ISSUER_ID: ${{ secrets.IOS_ASC_ISSUER_ID }}
+          IOS_APPLE_TEAM_ID: ${{ secrets.IOS_APPLE_TEAM_ID }}
+          PLAY_TRACK: ${{ inputs.channel }}
+          PLAY_RELEASE_STATUS: ${{ needs.plan.outputs.release_status }}
+        run: node scripts/ci/eas-profile.mjs submit --variant "$APP_VARIANT" --platform "$PLATFORM"
+
+      # No retry: a repeated upload of the same build is refused by both stores and would hide the first result.
+      - name: eas submit
+        if: inputs.operation == 'upload'
+        working-directory: apps/omni
+        env:
+          PROFILE: ${{ steps.profile.outputs.profile }}
+          PACKAGE: ${{ steps.package.outputs.path }}
+        run: |
+          set -euo pipefail
+          eas submit --platform "$PLATFORM" --profile "$PROFILE" --path "$PACKAGE" --non-interactive 2>&1 | tee "$RUNNER_TEMP/store/eas-submit.log"
+          node ../../scripts/ci/store-publish.mjs eas-receipt --log "$RUNNER_TEMP/store/eas-submit.log"
+
+      - name: App Store Connect (processing and TestFlight notes, or review)
+        if: needs.plan.outputs.platform == 'ios'
+        env:
+          ASC_APP_ID: ${{ secrets.ASC_APP_ID }}
+          IOS_ASC_KEY_ID: ${{ secrets.IOS_ASC_KEY_ID }}
+          IOS_ASC_ISSUER_ID: ${{ secrets.IOS_ASC_ISSUER_ID }}
+          IOS_RELEASE_TYPE: ${{ vars.IOS_RELEASE_TYPE || 'AFTER_APPROVAL' }}
+        run: node scripts/ci/store-publish.mjs app-store
+
+      - name: Google Play production release
+        if: needs.plan.outputs.platform == 'android' && inputs.operation == 'publish'
+        env:
+          PLAY_ROLLOUT_FRACTION: ${{ vars.PLAY_ROLLOUT_FRACTION }}
+        run: node scripts/ci/store-publish.mjs play-release
+
+      - name: Report to the factory
+        run: node scripts/ci/store-publish.mjs report
+
+      - name: Report the failure to the factory
+        if: failure() && steps.confirm.outcome == 'success'
+        run: node scripts/ci/store-publish.mjs report --failed
+
+      - name: Remove credentials
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/store-credentials"

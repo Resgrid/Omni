@@ -69,12 +69,17 @@ function macNotarize(env) {
   return has(env, 'APPLE_API_KEY', 'APPLE_API_KEY_ID', 'APPLE_API_ISSUER') || has(env, 'APPLE_ID', 'APPLE_APP_SPECIFIC_PASSWORD', 'APPLE_TEAM_ID') || has(env, 'APPLE_KEYCHAIN', 'APPLE_KEYCHAIN_PROFILE');
 }
 
+/**
+ * desktop-icon.png follows the macOS icon grid (rounded square with margin and shadow; macOS does not mask icons), so
+ * it is the macOS and Linux icon; the full-bleed icon.png is the fallback. Windows takes icon.ico when present.
+ */
 function variantIcons(manifest) {
   const assets = path.join(variantsDir, manifest.id, 'assets');
-  const png = path.join(assets, 'icon.png');
+  const desktopPng = path.join(assets, 'desktop-icon.png');
+  const png = fs.existsSync(desktopPng) ? desktopPng : path.join(assets, 'icon.png');
   const ico = path.join(assets, 'icon.ico');
   if (!fs.existsSync(png)) {
-    throw new Error(`Missing ${png}: every variant needs a square icon.png (512 px or larger) for the desktop app.`);
+    throw new Error(`Missing ${png}: every variant needs a square desktop-icon.png or icon.png (512 px or larger) for the desktop app.`);
   }
   // electron-builder derives .icns (macOS) and, without an .ico, the Windows icon from the PNG.
   return { png, ico: fs.existsSync(ico) ? ico : null };

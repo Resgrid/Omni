@@ -6,4 +6,5 @@ module.exports = {
   ...require('./src/client-env'),
   ...require('./src/variants'),
   ...require('./src/versioning'),
+  ...require('./src/web-splash'),
 };

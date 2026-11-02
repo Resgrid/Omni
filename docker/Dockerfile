@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # Resgrid Omni web image for one variant (omni-plan §6.4, §6.6.4 stage 2). Runtime only: the web app is NOT built here.
-# CI exports each variant once (`APP_VARIANT=<v> npx expo export -p web --output-dir dist/<v>` in apps/omni) and this
+# CI exports each variant once (`APP_VARIANT=<v> pnpm web:export` in apps/omni, writing dist/<v>) and this
 # image copies that export into nginx. There are no RUN steps, so amd64 and arm64 images build in seconds without
 # emulating a compile.
 #

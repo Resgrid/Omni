@@ -29,12 +29,17 @@
     "notificationColor": "#2a7dd5",
     "adaptiveIconBackground": "#2484c4",
     "splashBackground": "#2a7dd5",
+    "splashBackgroundDark": "#0e2440",
     "owner": "resgrid"
   },
   "storage": {
     "mmkvId": "ResgridResponder",
-    "keySecret": "RESPONDER_MMKV_KEY",
-    "extraInstances": ["checklists-ciphertext-v1", "ResgridOfflineQueue"]
+    "extraInstances": ["checklists-ciphertext-v1", "ResgridOfflineQueue"],
+    "carryOver": {
+      "ResgridResponder": { "from": "fixed-key", "key": "a330fb72-1916-4cc2-99fe-efd4986b254f" },
+      "ResgridOfflineQueue": { "from": "secure-store", "name": "OFFLINE_QUEUE_ENCRYPTION_KEY" },
+      "checklists-ciphertext-v1": { "from": "unencrypted" }
+    }
   },
   "versioning": {
     "tagPrefix": "responder-v",

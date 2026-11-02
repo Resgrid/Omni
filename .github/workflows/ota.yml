@@ -97,7 +97,6 @@ jobs:
           channel: ${{ inputs.channel }}
           google-services-json-base64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
           google-service-info-plist-base64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_BASE64 }}
-          mmkv-key: ${{ secrets.MMKV_KEY }}
 
       # Resolves the fingerprint with the run number of the release whose binaries are installed, so the update
       # also reports that version; exits 1 on any mismatch.

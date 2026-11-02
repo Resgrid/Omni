@@ -19,7 +19,7 @@ Living tracker for executing [`architecture/omni-plan.md`](architecture/omni-pla
 | Release planning script (versions + build matrix) | ✅ | `scripts/release-plan.mjs` |
 | Spike S2 — per-variant native-module exclusion | ⬜ | needs a native prebuild per variant |
 | Spike S3 — EAS projects / version continuity in CI | ⬜ | |
-| Spike S4 — storage-identity upgrade test | ⬜ | device test |
+| Spike S4 — storage-identity upgrade test | ⬜ | device test: Responder keeps the session (re-key + queue key adoption); the other four start over under device keys |
 | Spike S5 — MapLibre RN on Expo 57 incl. local PMTiles | ⬜ | |
 | Spike S6 — desktop shell packaging, signing, auto-update | 🟡 | `apps/desktop` built: BigBoard Windows NSIS 86 MB (legacy 387 MB); mac/linux packaging and signing/notarization not yet exercised |
 | Spike S7 — durable web storage (SQLite OPFS vs IndexedDB) | ⬜ | |
@@ -60,7 +60,7 @@ Living tracker for executing [`architecture/omni-plan.md`](architecture/omni-pla
 2. **Legacy `http://` server URLs** — R/I/B builds may have stored an http URL; Omni ignores it (default server, user signs in again). Accept, or add a migration prompt?
 3. **Status destination helpers** — strict by default, `{ lenient: true }` reproduces Unit. Which default?
 4. **Core work needed** — register the five OAuth client ids as OpenIddict applications; honour idempotency keys on SaveCall/notes/messages; emit weather alert and checkInUpdated events; merge the `archived-calls` branch (`GetCallYears`, `GetArchivedCalls`, and add `SaveArchivedCall`) into `develop` for Dispatch's archived calls; send department setting 122 (`MappingNavigationConfig`: voice off by default, distance units, arrival radius, On Scene prompt, default avoid options) to the apps — navigation uses the documented defaults until then; deploy the MapLibre plan's Core work (on `develop`, uncommitted on 2026-11-01) to QA, then refresh the Swagger snapshot and empty `packages/api/contract/swagger-v4-pending.json`.
-5. **Legacy MMKV encryption keys in production** — the upgrade path must open the legacy encrypted MMKV stores, but the app shell refuses to read the keys from public `extra` in production builds (`packages/app-shell/src/runtime/legacy-keys.ts`), so production has no key source yet. Recommendation: the legacy keys are already public in the legacy repos' source, so embed them for a one-time migration and then rekey to a SecureStore key. Alternative: a config plugin plus a small native module.
+5. ~~**Legacy MMKV encryption keys in production**~~ — decided 2026-11-01 (plan D8): every native MMKV instance uses a device key generated into SecureStore; there is no key secret. Responder carries its files over (`storage.carryOver`: main instance re-encrypted once from its fixed key, offline queue adopts its existing device key; Omni does not yet import that legacy queue's items). Unit, IC, Dispatch and BigBoard delete their legacy files and users sign in again. Still to prove on devices in spike S4.
 
 ## Phase 2 — app shell
 

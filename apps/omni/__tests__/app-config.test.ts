@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import path from 'node:path';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -57,6 +58,34 @@ describe('app.config per variant', () => {
     expect(pluginNames(build('unit'))).not.toContain('expo-calendar');
     expect(pluginNames(build('ic'))).toContain('withoutBackgroundLocation.js');
     expect(pluginNames(build('unit'))).not.toContain('withoutBackgroundLocation.js');
+  });
+
+  // docs/build/app-icons-and-splash.md: every path the config names exists, and the splash fits Android 12+'s mask.
+  it.each(VARIANT_IDS as string[])('%s uses its generated icon set and splash', (variant) => {
+    const config = build(variant);
+    const assets = `./variants/${variant}/assets`;
+    expect(config.icon).toBe(`${assets}/icon.png`);
+    expect(config.ios.icon).toEqual({ light: `${assets}/icon.png`, dark: `${assets}/ios-icon-dark.png`, tinted: `${assets}/ios-icon-tinted.png` });
+    expect(config.android.adaptiveIcon).toEqual({
+      foregroundImage: `${assets}/adaptive-icon.png`,
+      backgroundImage: `${assets}/adaptive-icon-background.png`,
+      monochromeImage: `${assets}/adaptive-icon-monochrome.png`,
+      backgroundColor: expect.stringMatching(/^#[0-9a-f]{6}$/i),
+    });
+    const splash = config.plugins.find((p: unknown) => Array.isArray(p) && p[0] === 'expo-splash-screen')[1];
+    expect(splash).toEqual({ backgroundColor: expect.any(String), image: `${assets}/splash-icon.png`, imageWidth: 200, dark: { backgroundColor: expect.any(String) } });
+    expect(splash.imageWidth).toBeLessThanOrEqual(288);
+    const notifications = config.plugins.find((p: unknown) => Array.isArray(p) && p[0] === 'expo-notifications')[1];
+    const files = [config.icon, ...Object.values(config.ios.icon), ...Object.values(config.android.adaptiveIcon).filter((v) => String(v).startsWith('./')), splash.image, notifications.icon, config.web.favicon];
+    files.forEach((file) => expect(fs.existsSync(path.resolve(projectRoot, String(file)))).toBe(true));
+  });
+
+  it('badges every icon of non-store builds and none of store builds', () => {
+    const badge = (config: { plugins: unknown[] }) => config.plugins.find((p: unknown) => Array.isArray(p) && String(p[0]).endsWith('with-icon-badge.js')) as [string, { badges: { text: string }[] }] | undefined;
+    expect(badge(build('ic', 'production'))).toBeUndefined();
+    expect(badge(build('ic', 'internal'))).toBeUndefined();
+    const staging = build('ic', 'staging');
+    expect(badge(staging)?.[1].badges.map((b) => b.text)).toEqual(['staging', staging.version]);
   });
 
   it('enables OTA with a fingerprint runtime on the variant EAS project', () => {

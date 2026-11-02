@@ -11,8 +11,8 @@
 //          byte-identical everywhere and the fingerprints agree.
 // dev:     nightly developer builds use `<v>-dev-sim`. Its Android debug APK needs no release keystore, so when
 //          the profile lacks `android.withoutCredentials` a `<v>-dev-sim-ci` copy with it set is derived.
-// submit:  adds the non-interactive submit settings (ascAppId, App Store Connect API key, Play service account
-//          and track) from the environment to `submit.<v>-production` in the runner's eas.json.
+// submit:  adds the non-interactive submit settings (ascAppId, App Store Connect API key, Play service account,
+//          track and release status) from the environment to `submit.<v>-production` in the runner's eas.json.
 //
 // Usage:
 //   node scripts/ci/eas-profile.mjs release --variant unit --channel internal      → android_profile, ios_profile
@@ -104,6 +104,11 @@ function submit(args) {
   } else if (platform === 'android') {
     const android = { ...profile.android, track: env.PLAY_TRACK || 'internal' };
     if (env.PLAY_SERVICE_ACCOUNT_KEY_PATH) android.serviceAccountKeyPath = env.PLAY_SERVICE_ACCOUNT_KEY_PATH;
+    // store-publish.yml: draft for an upload, completed to roll the release out on its track.
+    if (env.PLAY_RELEASE_STATUS) {
+      if (!['completed', 'draft', 'halted', 'inProgress'].includes(env.PLAY_RELEASE_STATUS)) throw new Error(`Unknown PLAY_RELEASE_STATUS "${env.PLAY_RELEASE_STATUS}".`);
+      android.releaseStatus = env.PLAY_RELEASE_STATUS;
+    }
     profile.android = android;
   } else {
     throw new Error(`Unknown platform "${platform}"`);

@@ -62,7 +62,9 @@ function createAppConfig({ variant, appEnv, runNumber, projectRoot, env = proces
     // shell registrations import, so they stay in the startup chunks and the route chunks only add round trips
     // (implementation-status "Web bundle, next steps").
     ['expo-router', { root: `./variants/${variant}/app`, asyncRoutes: { web: false } }],
-    ['expo-splash-screen', { backgroundColor: identity.splashBackground, image: `${assets}/adaptive-icon.png`, imageWidth: 250 }],
+    // Android 12+ draws the image on a 288 dp canvas masked to a 192 dp circle: splash-icon.png keeps the mark inside it
+    // at 200 dp, and iOS shows the same image at 200 pt (docs/build/app-icons-and-splash.md).
+    ['expo-splash-screen', { backgroundColor: identity.splashBackground, image: `${assets}/splash-icon.png`, imageWidth: 200, dark: { backgroundColor: identity.splashBackgroundDark } }],
     ['expo-font', { fonts: ['./assets/fonts/Inter.ttf'] }],
     'expo-localization',
     'expo-web-browser',
@@ -162,7 +164,7 @@ function createAppConfig({ variant, appEnv, runNumber, projectRoot, env = proces
     updates: { url: `https://u.expo.dev/${identity.easProjectId}`, fallbackToCacheTimeout: 0 },
     assetBundlePatterns: ['**/*'],
     ios: {
-      icon: `${assets}/ios-icon.png`,
+      icon: { light: `${assets}/icon.png`, dark: `${assets}/ios-icon-dark.png`, tinted: `${assets}/ios-icon-tinted.png` },
       buildNumber: String(versionInfo.buildNumber),
       supportsTablet: true,
       requireFullScreen: true,
@@ -175,7 +177,12 @@ function createAppConfig({ variant, appEnv, runNumber, projectRoot, env = proces
     },
     android: {
       versionCode: versionInfo.buildNumber,
-      adaptiveIcon: { foregroundImage: `${assets}/adaptive-icon.png`, backgroundColor: identity.adaptiveIconBackground },
+      adaptiveIcon: {
+        foregroundImage: `${assets}/adaptive-icon.png`,
+        backgroundImage: `${assets}/adaptive-icon-background.png`,
+        monochromeImage: `${assets}/adaptive-icon-monochrome.png`,
+        backgroundColor: identity.adaptiveIconBackground,
+      },
       softwareKeyboardLayoutMode: 'resize',
       package: withEnvSuffix(identity.android.package, appEnv),
       ...(googleServicesExists ? { googleServicesFile } : {}),

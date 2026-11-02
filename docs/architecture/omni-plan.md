@@ -55,7 +55,7 @@ Omni is **one Expo project** (`apps/omni`) that builds a selected **variant** (`
 4. **Specialization by configuration first:** capabilities, form factor and navigation shell per variant; separate screens only for each app's home and its signature modules.
 5. **Offline-first everywhere:** durable storage, an ordered idempotent outbox, shift-start hydration and reconnect sync for all five variants, each with its own data scope (§8).
 6. **MapLibre from day one** in Omni's map module, with offline base maps and offline department map data (§9, MapLibre plan §19–§20).
-7. **Seamless upgrade for existing users:** installing the Omni build over today's store build keeps the user signed in with their settings (§5.3.3, §11.3).
+7. **Seamless upgrade for existing users:** installing the Omni build over today's store build keeps the user signed in with their settings (§5.3.3, §11.3). Exception (owner decision 2026-11-01, D8): Unit, IC, Dispatch and BigBoard start their native storage over under device keys, so their users sign in again.
 
 ### 2.2 Non-goals (v1)
 
@@ -120,7 +120,7 @@ All five working trees are clean (2026-10-31 12:00), `develop` = `origin/develop
 | D5 | **Each variant has its own expo-router tree** (`variants/<v>/app`, set through the expo-router `root` option) of thin route files that mount shared screens; canonical paths across variants; typed route contract + per-variant test. | Route sets genuinely differ per app; thin files keep them cheap. The contract test catches links to routes a variant lacks (Dispatch/BigBoard push `/messages/:id` today). |
 | D6 | **pnpm 10 workspaces, `node-linker=hoisted`, catalogs, `patchedDependencies`** (owner-confirmed). No Turborepo/Nx initially (add Turborepo later if CI time demands). | Five lockfiles must be re-resolved into one anyway; catalogs stop version drift. Hoisted is required by notifee's relative Maven path, the U/I zustand Metro paths, a phantom `@expo/config-plugins` import and the CallKeep git dependency. Expo auto-configures Metro for monorepos since SDK 52. |
 | D7 | **Data access stays zustand stores → API functions → cached endpoints**, behind the offline layer. **React Query is dropped** (`@tanstack/react-query`, `react-query-kit`, `@dev-plugins/react-query`) — owner decision; the one `call-sidebar.tsx` use per app moves to the calls store. | One pattern, already used everywhere; the offline-first design is built on persisted stores. |
-| D8 | **Storage identity is frozen per variant.** Each variant keeps today's MMKV instance ids and encryption keys (and extra instances), declared in its manifest, then re-keys once into a SecureStore-generated key. | Changing them signs every user out and wipes settings on upgrade. BigBoard and Unit both use `ResgridUnit` — fine per device, must stay per variant. |
+| D8 | **Storage ids are frozen per variant; encryption keys are per device.** Each variant keeps today's MMKV instance ids (and extra instances), declared in its manifest. Every native instance is encrypted with its own key generated on the device and kept in SecureStore; no key ships in the app or a build secret. Responder carries its legacy files over (`storage.carryOver`: the main instance is re-encrypted once from the store build's fixed key, the offline queue keeps the device key Responder already generated). Unit, IC, Dispatch and BigBoard start over on upgrade: their legacy files are deleted and users sign in again (owner decision 2026-11-01; legacy Dispatch's three keys are not supported). | Device keys are the most secure option. Changing an id loses its data on upgrade. BigBoard and Unit both use `ResgridUnit` — fine per device, must stay per variant. |
 | D9 | **Offline-first is a platform layer (`@resgrid/offline`), not a feature.** Durable storage + outbox + hydration + sync orchestrator implemented once, from IC's design progress, Unit's drainer and Responder's scoping/encryption; every variant registers handlers and a scope (§8). | The owner's requirement; three outboxes today. |
 | D10 | **Maps are MapLibre-only in Omni** (`@resgrid/maps`), born on the MapLibre wrapper API; against servers without the MapLibre fields the client derives a style from today's config (MapLibre plan §8.3). Legacy repos stay on rnmapbox (MapLibre D18). | Porting rnmapbox code into Omni and then porting again would double the work. |
 | D11 | **Electron is a separate thin package** (`apps/desktop`: electron, electron-builder, push receiver, updater) that packages `dist/<variant>` from the web export. Add code signing, notarization and auto-update. | Today's installers bundle the whole RN dependency list (IC: 387 MB installer, 993 MB `app.asar`); target ≈100 MB. |
@@ -216,7 +216,7 @@ export default defineVariant({
     web: { dockerImage: 'resgridllc/unit', legacyEnvPrefix: 'UNIT_' },
     sentryProject: 'unit',
   },
-  storage: { mmkvId: 'ResgridUnit', keySecret: 'UNIT_MMKV_KEY', extraInstances: ['checklists-ciphertext-v1'] }, // frozen (D8)
+  storage: { mmkvId: 'ResgridUnit', extraInstances: ['checklists-ciphertext-v1'] }, // ids frozen, keys per device (D8)
   auth: { clientId: 'Unit', appAccessRight: null, sharedDevice: true, personalLock: false, logoutOn: 'auth-rejection-only' },
   push: { subject: 'unit', novuSubscriber: 'unit', channels: 'full', desktopPush: true },
   capabilities: { /* §5.3.2 */ },
@@ -227,7 +227,7 @@ export default defineVariant({
 });
 ```
 
-The legacy encryption keys move out of source into build secrets (`keySecret`) at the same time; their values do not change.
+Encryption keys are not part of the manifest or the build: each device generates one per instance and keeps it in SecureStore (D8). Only `storage.carryOver` names a legacy key, and only Responder declares one.
 
 #### 5.3.2 Capabilities
 
@@ -254,7 +254,7 @@ Department feature flags (`Chat.System`, `Records.Field.*`, `Checklists.System`,
 
 #### 5.3.3 Identity that must not change
 
-Bundle IDs and Android packages (including `wtdt.resgrid.andriod`), URL schemes, SSO return schemes, passkey associated domains, App Group (`group.com.wavetech.resgrid.shared`, Responder), MMKV ids and keys, persisted store names, Electron appIds and protocols, BigBoard's Electron loopback origin `127.0.0.1:29317` (or a migration of its localStorage), Docker image names and legacy runtime env names (`${PREFIX}_*`), Novu subscriber id formats, push `Source` values, `RESGRID_CLIENT` ids. Full table: Appendix B.
+Bundle IDs and Android packages (including `wtdt.resgrid.andriod`), URL schemes, SSO return schemes, passkey associated domains, App Group (`group.com.wavetech.resgrid.shared`, Responder), MMKV ids (keys are per device, D8), persisted store names, Electron appIds and protocols, BigBoard's Electron loopback origin `127.0.0.1:29317` (or a migration of its localStorage), Docker image names and legacy runtime env names (`${PREFIX}_*`), Novu subscriber id formats, push `Source` values, `RESGRID_CLIENT` ids. Full table: Appendix B.
 
 #### 5.3.4 Routes
 
@@ -569,7 +569,7 @@ The design remains [`offline-first-architecture.md`](../../../int-Coordination/d
 
 ### 8.2 Durable storage layer (`@resgrid/offline`)
 
-- **KV state:** MMKV (native) with the frozen per-variant identity (D8); encrypted.
+- **KV state:** MMKV (native) with the frozen per-variant ids, encrypted with per-device keys (D8).
 - **Queues and large sets:** SQLite (`expo-sqlite`) — owner decision — for the outbox, cached collections that outgrow MMKV (call history, messages), attachment staging manifests and the map pack registry. MMKV keeps small KV state (session, preferences, persisted store snapshots).
 - **Web / Electron:** `react-native-mmkv` on web is localStorage (≈5 MB, evictable) — not durable enough for an outbox. Adapter order: `expo-sqlite` web (OPFS) if spike S7 passes (it needs COOP/COEP headers in nginx and Electron), else IndexedDB. Electron can also use the filesystem through the preload bridge. `navigator.storage.persist()` requested.
 - **Interface:** `DurableStore` (KV), `DurableQueue` (ordered, transactional), `BlobStore` (attachments, map packs) — platform implementations behind one API.
@@ -776,7 +776,7 @@ Omni builds against Core `develop` only (D16). Features whose server side exists
 | # | Risk / question | Mitigation |
 |---|---|---|
 | R1 | Per-variant native-module exclusion is fragile in one Expo project | Spike S2; solve inside the single project (generated `react-native.config.js`, autolinking exclude, Metro stubs, permission plugins). |
-| R2 | Upgrade signs users out or loses queued actions | D8 frozen storage identity; S4 and §11.3 upgrade tests per variant. |
+| R2 | Upgrade signs users out or loses queued actions | D8 frozen storage ids and Responder's carry-over (the other apps start over by owner decision); S4 and §11.3 upgrade tests per variant. |
 | R3 | versionCode regression / tag collisions | D13; seed from store values. |
 | R4 | Metro cache contamination across variants | Per-variant cache dir; CI builds variants in separate jobs. |
 | R5 | MapLibre RN maturity on Expo 57 / New Architecture | S5 (MapLibre R1); wrapper isolates screens. |
@@ -846,7 +846,7 @@ Still open (technical, answered by spikes or device tests, not by the owner): S1
 | Notification colour | #2a7dd5 | #2a7dd5 | #2484c4 | #2a7dd5 | #2a7dd5 |
 | Background location | yes | yes | no (foreground) | no (remove) | no (remove) |
 
-MMKV encryption keys are not reproduced here; they move from source into per-variant build secrets.
+MMKV encryption keys are not reproduced here; Omni generates its own per device (D8). Only Responder's main-instance key appears in its manifest, for the one-time carry-over.
 
 ### C. Evidence
 

@@ -15,21 +15,20 @@ Every variant environment uses the **same secret names**. Each job runs in `envi
 
 ### Build and client configuration
 
-These values are part of the Expo config and therefore of the **fingerprint**. Every job that resolves a runtime version reads them, so change them deliberately: a change forces native builds on the next release.
+Every job that resolves a runtime version reads them. `IOS_APPLE_TEAM_ID` (`ios.appleTeamId`) and the two Firebase files are part of the **fingerprint**, so change them deliberately: a change forces native builds on the next release. The client values (`BASE_API_URL`, `LOGGING_KEY`, `APP_KEY`, `SENTRY_DSN`, `COUNTLY_*`) go into `extra.env`, which the fingerprint leaves out (see "Fingerprint inputs" below).
 
-| Secret                                  | Purpose                                                                                       | Notes                                                                                                                                                               |
-| --------------------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `EXPO_TOKEN`                            | EAS CLI auth (build, update, project lookup)                                                  | Robot token of the Expo account that owns the variant's EAS project                                                                                                 |
-| `BASE_API_URL`                          | Resgrid API host baked into native and web builds                                             | https only. Docker overrides it at runtime                                                                                                                          |
-| `LOGGING_KEY`                           | Client logging key                                                                            |                                                                                                                                                                     |
-| `APP_KEY`                               | Client app key                                                                                |                                                                                                                                                                     |
-| `SENTRY_DSN`                            | The variant's **own** Sentry project DSN                                                      | Legacy Dispatch and BigBoard reported to `unit`. Do not copy that over                                                                                              |
-| `COUNTLY_APP_KEY`, `COUNTLY_SERVER_URL` | Analytics                                                                                     |                                                                                                                                                                     |
-| `MMKV_KEY`                              | MMKV encryption key                                                                           | Exported under the manifest's `storage.keySecret` name (for example `UNIT_MMKV_KEY`) by `scripts/ci/variant-env.mjs`. Copy the **legacy value unchanged** (plan D8) |
-| `IOS_APPLE_TEAM_ID`                     | Apple team id (`ios.appleTeamId`, Live Activities)                                            |                                                                                                                                                                     |
-| `GOOGLE_SERVICES_JSON_BASE64`           | Android `google-services.json`, base64                                                        | Decoded to `$RUNNER_TEMP/firebase`, passed as `GOOGLE_SERVICES_FILE`                                                                                                |
-| `GOOGLE_SERVICE_INFO_PLIST_BASE64`      | iOS `GoogleService-Info.plist`, base64                                                        | Passed as `IOS_GOOGLE_SERVICES_FILE`                                                                                                                                |
-| `SENTRY_AUTH_TOKEN`                     | Native source-map upload during builds, and `sentry-expo-upload-sourcemaps` after OTA updates | Optional                                                                                                                                                            |
+| Secret                                  | Purpose                                                                                       | Notes                                                                  |
+| --------------------------------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `EXPO_TOKEN`                            | EAS CLI auth (build, update, project lookup)                                                  | Robot token of the Expo account that owns the variant's EAS project    |
+| `BASE_API_URL`                          | Resgrid API host baked into native and web builds                                             | https only. Docker overrides it at runtime                             |
+| `LOGGING_KEY`                           | Client logging key                                                                            |                                                                        |
+| `APP_KEY`                               | Client app key                                                                                |                                                                        |
+| `SENTRY_DSN`                            | The variant's **own** Sentry project DSN                                                      | Legacy Dispatch and BigBoard reported to `unit`. Do not copy that over |
+| `COUNTLY_APP_KEY`, `COUNTLY_SERVER_URL` | Analytics                                                                                     |                                                                        |
+| `IOS_APPLE_TEAM_ID`                     | Apple team id (`ios.appleTeamId`, Live Activities)                                            |                                                                        |
+| `GOOGLE_SERVICES_JSON_BASE64`           | Android `google-services.json`, base64                                                        | Decoded to `$RUNNER_TEMP/firebase`, passed as `GOOGLE_SERVICES_FILE`   |
+| `GOOGLE_SERVICE_INFO_PLIST_BASE64`      | iOS `GoogleService-Info.plist`, base64                                                        | Passed as `IOS_GOOGLE_SERVICES_FILE`                                   |
+| `SENTRY_AUTH_TOKEN`                     | Native source-map upload during builds, and `sentry-expo-upload-sourcemaps` after OTA updates | Optional                                                               |
 
 ### Android signing
 
@@ -108,11 +107,10 @@ The submit job runs only in this environment. Anything it needs must be here (or
 
 ## Before the first release (owner checklist)
 
-1. Create the five variant environments and five `store-<variant>` environments (with required reviewers). Fill in the secrets above, copying the legacy values (keystores, MMKV keys, Firebase files).
+1. Create the five variant environments and five `store-<variant>` environments (with required reviewers). Fill in the secrets above, copying the legacy values (keystores, Firebase files). There is no MMKV key secret: each device generates its own storage keys (plan D8).
 2. Create the EAS update channels `production`, `staging`, `internal` in each EAS project (D18).
-3. Add `apps/omni/fingerprint.config.js` with `sourceSkips` for `ExpoConfigVersions` and `ExpoConfigExtraSection` (see "Known limitation" below). Until then every release builds native, which is safe but slow.
-4. Make `ci-ok` a required status check on `master` (branch protection or ruleset), with up-to-date branches or the merge queue.
+3. Make `ci-ok` a required status check on `master` (branch protection or ruleset), with up-to-date branches or the merge queue.
 
-## Known limitation: fingerprints include the version today
+## Fingerprint inputs
 
-The expo config embeds `version` / `buildNumber` (from `RELEASE_RUN_NUMBER`) and `extra.env`, so the fingerprint changes on every run, verified locally with `@expo/fingerprint` 0.20. The pipeline stays correct: it always builds native and `ota.yml` always refuses. OTA updates only become possible after the `fingerprint.config.js` change in step 3 of the checklist.
+The expo config embeds `version` / `buildNumber` (from `RELEASE_RUN_NUMBER`) and `extra.env`, which change on every run without changing native code. `apps/omni/fingerprint.config.js` skips them (`sourceSkips: ['ExpoConfigVersions', 'ExpoConfigExtraSection']`), so the fingerprint only moves when native inputs change and OTA updates can apply. Without that file every release would build native and `ota.yml` would always refuse. Anything new that must force a native build belongs outside `extra`.

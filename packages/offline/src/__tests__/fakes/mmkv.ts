@@ -101,3 +101,7 @@ class FakeMMKV {
 }
 
 export const createMMKV = (config?: FakeMmkvConfig): FakeMMKV => new FakeMMKV(config);
+
+export const existsMMKV = (id: string): boolean => files.has(id);
+
+export const deleteMMKV = (id: string): boolean => files.delete(id);

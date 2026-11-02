@@ -92,6 +92,8 @@ async function main() {
     if (r.native && r.binariesRelease === tag) return `| ${p} | native build | \`${short(r.fingerprint)}\` — binaries attached |`;
     if (r.native) return `| ${p} | native build **failed** | re-run the failed job to complete this release |`;
     if (r.carriedFrom) return `| ${p} | unchanged | binaries in ${r.binariesRelease ?? '—'} |`;
+    // A merge build publishes no update: JavaScript changes reach installed apps only when released with ota.yml.
+    if (!r.update) return `| ${p} | JavaScript only — no update published | binaries in ${r.binariesRelease ?? '—'}; release the update with ota.yml |`;
     return `| ${p} | OTA update (\`${channel}\`) | runtime \`${short(r.fingerprint)}\`; binaries in ${r.binariesRelease}${r.update?.group ? `; update group \`${r.update.group}\`` : ''} |`;
   };
   const summary = [
@@ -112,7 +114,7 @@ async function main() {
 
   // Publish when there is something to download, or when a platform shipped as an OTA update (the release then
   // records the update and points at the binaries it runs on).
-  const shippedOta = Object.values(platforms).some((r) => r && r.native === false && !r.carriedFrom);
+  const shippedOta = Object.values(platforms).some((r) => r && r.native === false && !r.carriedFrom && r.update);
   setOutputs({
     has_assets: String(assets.length > 0 || shippedOta),
     apk: has('-android.apk') ? path.join(outDir, has('-android.apk')) : '',

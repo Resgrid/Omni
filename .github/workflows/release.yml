@@ -1,17 +1,22 @@
 # Release pipeline for all five apps (omni-plan §6.6.2–6.6.5). NEVER rename this file: its run number is M in every
 # version (Responder 11.M, Unit 8.M, IC 2.M, Dispatch 2.M, BigBoard 4.M; build number = base + M).
 #
-#   push to master        → every variant, channel internal (GitHub prerelease)
-#   push tag <variant>-v* → that variant, channel production. The tag is only a trigger: the release itself is named
-#                           <variant>-v<major>.<M> from this run's number (tags created here with GITHUB_TOKEN do not
-#                           re-trigger workflows).
-#   workflow_dispatch     → chosen variants / targets / channel, optional force_native and store submit
+#   push to master        → every variant, channel production: a merge builds the store binaries (release candidates)
+#                           and attaches them to the release. It publishes nothing to users: no OTA update, no Electron
+#                           update feed and no Docker `latest`. The factory reads the release; uploads to TestFlight or a
+#                           Play testing track, and any store release, are approved there (store-publish.yml), and an OTA
+#                           update is released with ota.yml.
+#   push tag <variant>-v* → that variant, channel production, published like a dispatch run (OTA for JavaScript-only
+#                           changes, Electron feed, Docker `latest`). The tag is only a trigger: the release itself is
+#                           named <variant>-v<major>.<M> from this run's number (tags created here with GITHUB_TOKEN do
+#                           not re-trigger workflows).
+#   workflow_dispatch     → chosen variants / targets / channel, optional force_native
 #
 # Stage 0  plan → fingerprint (per variant) → decide       versions once; native build only where the fingerprint changed
 # Stage 1  web · android · ios · ota                        one AAB (+ universal APK), one App Store IPA (+ re-signed ad-hoc IPA)
 # Stage 2  docker · electron                                both consume the web-<variant> artifact; nothing rebuilds the app
 # Stage 3  release (per variant)                            GitHub Release + SHA256SUMS + fingerprints.json, Firebase, Changerawr, Electron feed
-# Stage 4  store-submit (optional)                          eas submit behind the store-<variant> approval environment
+# Stage 4  store-submit (retired)                           store submissions go through the factory (store-publish.yml)
 #
 # Secrets and variables: docs/build/ci-secrets.md. Third-party actions are pinned to major versions (SHA pinning is a follow-up).
 name: Release
@@ -46,7 +51,7 @@ on:
         type: boolean
         default: false
       submit:
-        description: 'Submit the new store binaries with eas submit (production channel only; needs approval)'
+        description: 'Retired: store submissions go through the factory (store-publish.yml); store-<variant> only serves its reviewed tags'
         type: boolean
         default: false
 
@@ -75,6 +80,8 @@ jobs:
     outputs:
       run_number: ${{ steps.trigger.outputs.run_number }}
       channel: ${{ steps.trigger.outputs.channel }}
+      # true for a merge build (push to master): it builds and attaches, and publishes nothing to users.
+      merge_build: ${{ steps.trigger.outputs.merge_build }}
       force_native: ${{ steps.trigger.outputs.force_native }}
       submit: ${{ steps.trigger.outputs.submit }}
       platforms: ${{ steps.targets.outputs.platforms }}
@@ -102,23 +109,26 @@ jobs:
           IN_SUBMIT: ${{ inputs.submit }}
         run: |
           set -euo pipefail
+          merge_build=false
           if [ "$EVENT" = workflow_dispatch ]; then
             variants="${IN_VARIANTS:-all}"; targets="${IN_TARGETS:-all}"; channel="${IN_CHANNEL:-internal}"; force="${IN_FORCE:-false}"; submit="${IN_SUBMIT:-false}"
           elif [ "$REF_TYPE" = tag ]; then
             variants="${REF_NAME%%-v*}"; targets=all; channel=production; force=false; submit=false
           else
-            variants=all; targets=all; channel=internal; force=false; submit=false
+            # A merge into master: production-channel store binaries, nothing published to users.
+            variants=all; targets=all; channel=production; force=false; submit=false; merge_build=true
           fi
           variants="${variants// /}"; targets="${targets// /}"
           {
             echo "variants=$variants"
             echo "targets=$targets"
             echo "channel=$channel"
+            echo "merge_build=$merge_build"
             echo "force_native=$force"
             echo "submit=$submit"
             echo "run_number=$GITHUB_RUN_NUMBER"
           } >> "$GITHUB_OUTPUT"
-          echo "Release run $GITHUB_RUN_NUMBER: variants=$variants targets=$targets channel=$channel force_native=$force submit=$submit"
+          echo "Release run $GITHUB_RUN_NUMBER: variants=$variants targets=$targets channel=$channel merge_build=$merge_build force_native=$force submit=$submit"
 
       - name: Versions and build matrix
         id: plan
@@ -187,7 +197,6 @@ jobs:
           channel: ${{ needs.plan.outputs.channel }}
           google-services-json-base64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
           google-service-info-plist-base64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_BASE64 }}
-          mmkv-key: ${{ secrets.MMKV_KEY }}
 
       - name: Native or OTA
         env:
@@ -246,7 +255,9 @@ jobs:
           PLATFORMS: ${{ needs.plan.outputs.platforms }}
           CHANNEL: ${{ needs.plan.outputs.channel }}
           SUBMIT: ${{ needs.plan.outputs.submit }}
-        run: node scripts/ci/fingerprint.mjs merge --dir decisions --variants "$VARIANTS" --platforms "$PLATFORMS" --channel "$CHANNEL" --submit "$SUBMIT"
+          # A merge build publishes no OTA update; JavaScript-only changes wait for ota.yml.
+          PUBLISH_OTA: ${{ needs.plan.outputs.merge_build != 'true' }}
+        run: node scripts/ci/fingerprint.mjs merge --dir decisions --variants "$VARIANTS" --platforms "$PLATFORMS" --channel "$CHANNEL" --submit "$SUBMIT" --publish-ota "$PUBLISH_OTA"
 
   # ── Stage 1 ──────────────────────────────────────────────────────────────────────────────────────────────────────
   web:
@@ -273,7 +284,6 @@ jobs:
       - uses: ./.github/actions/setup-workspace
       - name: Variant environment
         env:
-          MMKV_KEY: ${{ secrets.MMKV_KEY }}
           VARIANT: ${{ matrix.variant }}
           CHANNEL: ${{ needs.plan.outputs.channel }}
         run: node scripts/ci/variant-env.mjs --variant "$VARIANT" --channel "$CHANNEL" >> "$GITHUB_ENV"
@@ -362,7 +372,6 @@ jobs:
           channel: ${{ needs.plan.outputs.channel }}
           google-services-json-base64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
           google-service-info-plist-base64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_BASE64 }}
-          mmkv-key: ${{ secrets.MMKV_KEY }}
 
       # Keystore outside the project root (never in the EAS archive or an artifact); credentials.json points at it.
       - name: Signing material
@@ -477,7 +486,6 @@ jobs:
           channel: ${{ needs.plan.outputs.channel }}
           google-services-json-base64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
           google-service-info-plist-base64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_BASE64 }}
-          mmkv-key: ${{ secrets.MMKV_KEY }}
 
       # iOS signing uses the EAS-managed distribution certificate and profiles (the production profile has no
       # credentialsSource: local); the App Store Connect API key lets eas-cli validate them non-interactively.
@@ -595,7 +603,6 @@ jobs:
           channel: ${{ needs.plan.outputs.channel }}
           google-services-json-base64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
           google-service-info-plist-base64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_BASE64 }}
-          mmkv-key: ${{ secrets.MMKV_KEY }}
 
       - name: Guard — runtime unchanged since the installed binaries
         env:
@@ -706,7 +713,7 @@ jobs:
           flavor: latest=false
           tags: |
             type=raw,value=${{ env.VERSION }}
-            type=raw,value=latest,enable=${{ needs.plan.outputs.channel == 'production' }}
+            type=raw,value=latest,enable=${{ needs.plan.outputs.channel == 'production' && needs.plan.outputs.merge_build != 'true' }}
             type=raw,value=${{ needs.plan.outputs.channel }},enable=${{ needs.plan.outputs.channel != 'production' }}
 
       # The image only copies the prebuilt export into the nginx runtime (no app build inside Docker).
@@ -982,7 +989,9 @@ jobs:
           if [ -n "$APK" ] && [ -n "$FIREBASE_ANDROID_APP_ID" ]; then distribute "$APK" "$FIREBASE_ANDROID_APP_ID"; fi
           if [ -n "$ADHOC_IPA" ] && [ -n "$FIREBASE_IOS_APP_ID" ]; then distribute "$ADHOC_IPA" "$FIREBASE_IOS_APP_ID"; fi
 
+      # The public changelog follows releases to users, not merge builds.
       - name: Changerawr release notes
+        if: needs.plan.outputs.merge_build != 'true'
         env:
           CHANGERAWR_API_URL: ${{ secrets.CHANGERAWR_API_URL }}
           CHANGERAWR_API_KEY: ${{ secrets.CHANGERAWR_API_KEY }}
@@ -997,7 +1006,9 @@ jobs:
           if [ "$code" -ge 200 ] && [ "$code" -lt 300 ]; then echo "Changerawr: HTTP $code"; else echo "::warning::Changerawr returned HTTP $code"; fi
 
       # Installers and blockmaps first, latest*.yml last: clients never see a manifest that points at missing files.
+      # A merge build attaches the installers but publishes no feed: desktop apps would install it on their own.
       - name: Electron update feed
+        if: needs.plan.outputs.merge_build != 'true'
         env:
           FEED_BUCKET: ${{ vars.ELECTRON_FEED_BUCKET }}
           FEED_ENDPOINT: ${{ vars.ELECTRON_FEED_ENDPOINT }}
@@ -1021,7 +1032,9 @@ jobs:
 
   # ── Stage 4 ──────────────────────────────────────────────────────────────────────────────────────────────────────
   # Only for dispatch runs with submit: true on the production channel, only for platforms built natively in this run.
-  # The store-<variant> environment carries required reviewers and the store credentials.
+  # Retired: the store-<variant> environments release their credentials only to store-publish.yml's reviewed
+  # store-publish-v* tags (docs/build/store-publish.md), so this job, running on master, is refused. Submissions go
+  # through the factory.
   store-submit:
     name: store submit (${{ matrix.variant }}, ${{ matrix.platform }})
     needs: [plan, decide, android, ios, release]

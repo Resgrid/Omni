@@ -32,7 +32,8 @@ describe('prepareBundle', () => {
     expect(fs.existsSync(path.join(bundleDir, 'web', '_expo', 'static', 'js', 'index-1.js'))).toBe(true);
     expect(fs.existsSync(path.join(bundleDir, 'web', '_expo', 'static', 'js', 'index-1.js.map'))).toBe(false);
     expect(fs.existsSync(path.join(bundleDir, 'stale.txt'))).toBe(false);
-    expect(fs.statSync(path.join(bundleDir, 'icon.png')).size).toBeGreaterThan(0);
+    const desktopIcon = path.resolve(__dirname, '..', '..', '..', 'omni', 'variants', 'bigboard', 'assets', 'desktop-icon.png');
+    expect(fs.readFileSync(path.join(bundleDir, 'icon.png')).equals(fs.readFileSync(desktopIcon))).toBe(true);
     const config = JSON.parse(fs.readFileSync(path.join(bundleDir, 'variant-config.json'), 'utf8'));
     expect(config).toMatchObject({ variant: 'bigboard', version: '4.3.0', channel: 'internal', updateFeedUrl: 'https://dl.resgrid.com/updates/bigboard/internal/' });
     expect(result.webBytes).toBeGreaterThan(0);
@@ -45,7 +46,7 @@ describe('prepareBundle', () => {
   });
 
   it('explains how to build a missing export', () => {
-    expect(() => prepareBundle({ variant: 'ic', bundleDir: path.join(tmp, 'b'), webDir: path.join(tmp, 'nope'), log })).toThrow(/expo export -p web --output-dir dist\/ic/);
+    expect(() => prepareBundle({ variant: 'ic', bundleDir: path.join(tmp, 'b'), webDir: path.join(tmp, 'nope'), log })).toThrow(/APP_VARIANT=ic pnpm web:export/);
   });
 
   it('can stage without an export for dev-server runs', () => {

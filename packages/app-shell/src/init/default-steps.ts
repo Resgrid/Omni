@@ -18,30 +18,26 @@ import { configureData, refreshDataWorkingSet } from '@resgrid/data';
 import { getCurrentLanguage, initI18n, isSupportedLanguage, LEGACY_LANGUAGE_STORAGE_KEY, loadLanguage } from '@resgrid/i18n';
 import { configureLocation, type LocationSettings } from '@resgrid/location';
 import { configureNotifications, pushNotificationService, type WebPushFirebaseConfig } from '@resgrid/notifications';
-import { apiCacheTtlFromManifest, CONTRACT_KEYS, createExpoSecureKeyStore, defaultResetRegistry, initOffline, KV_PLATFORM, type OfflineRuntime, readLegacyString } from '@resgrid/offline';
+import { apiCacheTtlFromManifest, CONTRACT_KEYS, defaultResetRegistry, initOffline, type OfflineRuntime, readLegacyString } from '@resgrid/offline';
 import { configureRealtime, teardownRealtime, useRealtimeStore } from '@resgrid/realtime';
 import { configureVoice, initializeVoice, registerVoiceResets } from '@resgrid/voice';
-import Constants from 'expo-constants';
 import * as WebBrowser from 'expo-web-browser';
 
 import { registerNavigationWithSentry } from '../deep-links/navigation';
 import { resolveNotificationRoute } from '../routes/notification-routes';
 import { loadActiveSession, resetActiveSession } from '../runtime/active-session';
 import { createApiCacheBridge } from '../runtime/api-cache-bridge';
-import { createLegacyKeyProvider } from '../runtime/legacy-keys';
 import { getOrCreateDeviceUuid, isThemeMode, readStoredBoolean } from '../runtime/preferences';
 import { getShellRuntime, requireApiContext, requireOfflineRuntime, setShellRuntime } from '../runtime/runtime-holder';
 import { getActiveUnitId, getNotificationsSession, getSessionScope, getSessionUserId, isSessionSignedIn } from '../runtime/session';
 import type { AppShellConfig } from '../runtime/shell-config';
 import { getShellState, resetShellSessionState, setShellState } from '../runtime/shell-state';
+import { registerAppUpdateSteps } from '../updates/update-steps';
 import type { AppInit, InitStep } from './create-app-init';
 
 /** Legacy device-preference keys (Responder `lib/storage`), read as MMKV booleans. */
 export const REALTIME_GEOLOCATION_KEY = 'REALTIME_GEOLOCATION_ENABLED';
 export const BACKGROUND_GEOLOCATION_KEY = 'BACKGROUND_GEOLOCATION_ENABLED';
-
-/** BigBoard's dashboard/widget stores used react-native-mmkv's default instance without a key. */
-const UNENCRYPTED_LEGACY_INSTANCES = ['mmkv.default'] as const;
 
 const webPushConfigFromDepartment = (): WebPushFirebaseConfig | null => {
   const config = getShellState().departmentConfig;
@@ -146,10 +142,10 @@ export function createStartupSteps(config: AppShellConfig): InitStep[] {
         if (getShellRuntime().offline) {
           return;
         }
-        const secureStore = KV_PLATFORM === 'native' ? createExpoSecureKeyStore() : null;
+        // Every native instance is encrypted with a device key from SecureStore; the manifest's storage.carryOver decides
+        // which legacy files survive the upgrade (plan D8).
         const runtime = await initOffline({
           manifest,
-          getLegacyKey: createLegacyKeyProvider({ manifest, appEnv: getEnv().APP_ENV, secureStore, extra: Constants.expoConfig?.extra, unencryptedInstances: UNENCRYPTED_LEGACY_INSTANCES }),
           getScope: getSessionScope,
           logger,
           storageManager: { signOut: () => useAuthStore.getState().logout(undefined, 'logout') },
@@ -334,6 +330,8 @@ export function registerDefaultInitSteps(startup: AppInit, session: AppInit, con
   defaultStepsRegistered = true;
   createStartupSteps(config).forEach((step) => startup.register(step));
   createSessionSteps(config).forEach((step) => session.register(step));
+  // In-app OTA updates: the launch report and foreground checks after Sentry, a background check after the bootstrap.
+  registerAppUpdateSteps(startup, session);
   try {
     // Completes a web SSO popup that loaded the app (expo-auth-session); a no-op everywhere else.
     WebBrowser.maybeCompleteAuthSession();

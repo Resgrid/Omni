@@ -1,6 +1,6 @@
 import { reportOperatorActivity, updateActivity } from '@resgrid/auth';
 import type { VariantManifest } from '@resgrid/config';
-import { isDev } from '@resgrid/core';
+import { isDev, recordUserActivity } from '@resgrid/core';
 import { useThemeColors } from '@resgrid/ui';
 import { Slot, Tabs } from 'expo-router';
 import React, { type ComponentType, useCallback, useMemo, useRef } from 'react';
@@ -11,13 +11,17 @@ import type { NavRegistry } from '../nav/define-nav';
 import { buildTabScreens, findUnregisteredRoutes } from '../nav/filter';
 import { useNavFilterContext, useNavLabel } from '../nav/use-nav-items';
 import { getShellNav } from '../runtime/shell-config';
+import { ShellUpdateNotice } from '../updates/update-notice';
 import { ShellHeader } from './header';
 import { RegisteredBanners, RegisteredOverlays, SessionInitOverlay, ShellOfflineToast, ShellRealtimeBanner } from './overlays';
 import { RegisteredProviders } from './registered-providers';
 import { ShellProvider } from './shell-context';
 import { DrawerSidebar, InlineSidebar } from './sidebar';
 
-/** Activity for the personal lock and the shared-session idle timer, at most every 5 s (a write per touch is too many). */
+/**
+ * Activity for the personal lock, the shared-session idle timer and the wall-display update restart, at most every 5 s
+ * (a write per touch is too many).
+ */
 const ACTIVITY_THROTTLE_MS = 5_000;
 
 function useActivityCapture(): () => boolean {
@@ -28,6 +32,7 @@ function useActivityCapture(): () => boolean {
       last.current = now;
       updateActivity(now);
       reportOperatorActivity(false, now);
+      recordUserActivity(now);
     }
     // Observe only: never take the responder from the touched control.
     return false;
@@ -106,6 +111,7 @@ function ShellFrame({ variant, nav }: { variant: VariantManifest; nav: NavRegist
       </View>
       <DrawerSidebar nav={nav} />
       <ShellOfflineToast />
+      <ShellUpdateNotice />
       <RegisteredOverlays />
       <SessionInitOverlay />
     </View>

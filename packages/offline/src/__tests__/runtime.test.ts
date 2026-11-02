@@ -14,7 +14,7 @@ import { createTestHandler, scopeA } from './helpers';
 
 const manifest = {
   id: 'unit',
-  storage: { mmkvId: 'ResgridUnit', keySecret: 'UNIT_MMKV_KEY', extraInstances: ['checklists-ciphertext-v1'] },
+  storage: { mmkvId: 'ResgridUnit', extraInstances: ['checklists-ciphertext-v1'] },
   offline: { cacheTtl: 'long', storageBudgetMb: 200, mapPacks: 'full' },
 } as unknown as VariantManifest;
 
@@ -28,7 +28,6 @@ describe('initOffline', () => {
 
     const runtime = await initOffline({
       manifest,
-      getLegacyKey: () => 'legacy-unit',
       getScope: () => scope,
       storage: { platform: 'native', backendFactory: createMemoryKvBackendFactory(), secureStore: createMemorySecureKeyStore() },
       db: await createMemoryDb(),

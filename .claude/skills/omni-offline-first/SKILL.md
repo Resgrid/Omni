@@ -32,7 +32,7 @@ RMS legal transitions (submit for review, approve, finalize/attest, amend, void,
 
 ## Durable storage (`@resgrid/offline`)
 
-- KV: MMKV with the variant's frozen id/key (never change them — upgrade would sign users out).
+- KV: MMKV with the variant's frozen instance ids (never change one — upgrade would lose its data), each instance encrypted with its own device key from SecureStore (plan D8). A new instance needs no key work; a legacy file is kept on upgrade only through `storage.carryOver` (Responder only — the other apps start over).
 - Queues and large collections: SQLite (`expo-sqlite`, owner decision); web/Electron use the platform adapter (SQLite OPFS or IndexedDB; Electron filesystem). Do not put the outbox in localStorage.
 - Blobs: attachments staging, offline map packs (iOS/Android: registry in SQLite, files in the app sandbox, excluded from backups; web/Electron: files and a registry snapshot in OPFS, persistent storage requested).
 

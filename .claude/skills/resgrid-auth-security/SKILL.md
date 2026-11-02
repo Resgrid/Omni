@@ -19,7 +19,7 @@ Omni baselines: `docs/architecture/omni-plan.md` §7.3; API details in the `resg
 
 ## Storage of secrets
 
-- Tokens and session live in the variant's encrypted MMKV store (frozen id/key per variant — changing it signs everyone out). Plan: re-key once into a SecureStore-generated key; legacy keys come from build secrets, never source.
+- Tokens and session live in the variant's main MMKV instance (frozen id — changing it signs everyone out), encrypted with a key generated on the device and kept in SecureStore (plan D8). No storage key lives in source or build secrets; the one exception is Responder's legacy fixed key in its manifest's `storage.carryOver`, used once to re-encrypt the upgraded file.
 - No secrets in `EXPO_PUBLIC_*` beyond public client config.
 
 ## Gating UI

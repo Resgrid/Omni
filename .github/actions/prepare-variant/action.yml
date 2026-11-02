@@ -1,7 +1,7 @@
 name: Prepare variant build environment
 description: >-
   Runs identically in every job that resolves a runtime version for a variant (release.yml fingerprint, android, ios and
-  ota jobs; ota.yml). It exports APP_VARIANT / APP_ENV and the MMKV key under the manifest's name, decodes the Firebase
+  ota jobs; ota.yml). It exports APP_VARIANT / APP_ENV, decodes the Firebase
   config files to $RUNNER_TEMP (GOOGLE_SERVICES_FILE / IOS_GOOGLE_SERVICES_FILE) and derives the channel's eas.json release
   profiles. Expo fingerprints hash the expo config, eas.json and the Firebase file contents, so doing this in one place is
   what keeps the fingerprint of a binary equal to the one its OTA updates are published for.
@@ -20,10 +20,6 @@ inputs:
     description: iOS GoogleService-Info.plist, base64 (secret GOOGLE_SERVICE_INFO_PLIST_BASE64)
     required: false
     default: ''
-  mmkv-key:
-    description: MMKV encryption key (secret MMKV_KEY), exported under the manifest's storage.keySecret name
-    required: false
-    default: ''
 outputs:
   android-profile:
     description: eas.json profile for the Android release build (AAB)
@@ -39,7 +35,6 @@ runs:
       env:
         VARIANT: ${{ inputs.variant }}
         CHANNEL: ${{ inputs.channel }}
-        MMKV_KEY: ${{ inputs.mmkv-key }}
       run: node scripts/ci/variant-env.mjs --variant "$VARIANT" --channel "$CHANNEL" >> "$GITHUB_ENV"
 
     # Outside the repository on purpose: never part of an EAS archive, artifact or cache. The fingerprint ignores

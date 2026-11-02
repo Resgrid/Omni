@@ -35,7 +35,6 @@ export {
   type StepPosition,
 } from './init/create-app-init';
 export { loadDepartmentConfig } from './init/default-steps';
-export { createLegacyKeyProvider, type LegacyKeyProviderOptions, type LegacyKeyRequest, legacyKeySecureStoreName, type LegacyKeySource, registerLegacyKeySource } from './runtime/legacy-keys';
 export { completeOnboarding, setSelectedTheme } from './runtime/preferences';
 export { type ShellState, useShellStore } from './runtime/shell-state';
 
