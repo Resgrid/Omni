@@ -1,5 +1,6 @@
 import { isKeepAwakeSupported, setKeepAwake } from '@resgrid/core';
 import { LANGUAGE_AUTONYMS, LANGUAGE_LABEL_KEYS, LANGUAGE_ORDER, OptionSheet, useLanguagePreference } from '@resgrid/features/auth-ui';
+import { useInAppNavigationAvailable } from '@resgrid/features/navigation/hooks/use-in-app-navigation';
 import { type Language, useTranslation } from '@resgrid/i18n';
 import type { ModeType } from '@resgrid/ui';
 import React, { useMemo, useState } from 'react';
@@ -19,12 +20,13 @@ export const PreferencesSection: React.FC = () => {
   const { language, setLanguage } = useLanguagePreference();
   const [picker, setPicker] = useState<Picker>(null);
   const theme = getThemeMode();
-  const navigationApp = getNavigationApp();
+  const inApp = useInAppNavigationAvailable();
+  const navigationApp = getNavigationApp({ inApp });
   const keepAlive = getKeepAlivePreference();
 
   const themeOptions = useMemo(() => (['system', 'light', 'dark'] as const).map((value) => ({ value, label: t(THEME_KEYS[value]) })), [t]);
   const languageOptions = useMemo(() => LANGUAGE_ORDER.map((value) => ({ value, label: t(LANGUAGE_LABEL_KEYS[value]), description: LANGUAGE_AUTONYMS[value] })), [t]);
-  const navigationOptions = useMemo(() => getNavigationAppOptions().map((value) => ({ value, label: t(NAVIGATION_APP_LABEL_KEYS[value]) })), [t]);
+  const navigationOptions = useMemo(() => getNavigationAppOptions(undefined, { inApp }).map((value) => ({ value, label: t(NAVIGATION_APP_LABEL_KEYS[value]) })), [inApp, t]);
   const close = () => setPicker(null);
 
   return (

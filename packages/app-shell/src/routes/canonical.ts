@@ -123,6 +123,8 @@ export const CANONICAL_ROUTES = {
   unitRouteStopContact: route('/routes/stop/contact', [], { module: 'unit-routes' }),
   unitRouteHistory: route('/routes/history/[planId]', ['planId'], { module: 'unit-routes' }),
   unitRouteInstance: route('/routes/history/instance/[id]', ['id'], { module: 'unit-routes' }),
+  /** In-app turn-by-turn (MapLibre plan §9; `?callId=`, `?instanceId=`, or a point handed over in memory): variants with `maps.navigationInApp`. */
+  navigate: route('/navigate', [], { requires: (m) => m.capabilities.maps.navigationInApp }),
   inventory: route('/inventory', [], { module: 'inventory' }),
   inventoryCount: route('/inventory/count/[id]', ['id'], { module: 'inventory' }),
   // BigBoard: the dashboard lives at /home (homeTab); its configure screen takes ?widget=.

@@ -6,14 +6,17 @@ import { useActiveVariant } from '@resgrid/config';
 import { logger } from '@resgrid/core';
 import { ChatIdentityProvider } from '@resgrid/features/chat';
 import { type NavigationHandoff, NavigationHandoffProvider, type NavigationTarget } from '@resgrid/features/contacts';
+import { useInAppNavigationAvailable } from '@resgrid/features/navigation/hooks/use-in-app-navigation';
+import { navigationRoutes, requestPointNavigation } from '@resgrid/features/navigation/routes';
 import { useOfflineMapsController } from '@resgrid/features/offline-maps';
-import { type ActiveUnitAdapter, openMapsWithAddress, openMapsWithDirections, type StorageSyncServices } from '@resgrid/features/settings';
+import { type ActiveUnitAdapter, getNavigationApp, openMapsWithAddress, openMapsWithDirections, type StorageSyncServices, usePreferencesVersion } from '@resgrid/features/settings';
 import { StatusProvider } from '@resgrid/features/status';
 import { UnitRoutesMapProvider } from '@resgrid/features/unit-routes';
 import { acquireLocationFix } from '@resgrid/location';
 import { MapProvider, type MapServices, useOfflineMapOptions } from '@resgrid/maps';
 import { CustomBottomSheet, NativeModal, useResolvedColorScheme } from '@resgrid/ui';
-import React, { type ReactNode } from 'react';
+import { router } from 'expo-router';
+import React, { type ReactNode, useMemo } from 'react';
 
 import { MAP_ICONS } from './map-icons';
 import { getMapLibreWorkerUrl } from './map-worker';
@@ -84,13 +87,31 @@ export function ShellChatIdentityProvider({ children }: ProviderProps) {
   return <ChatIdentityProvider asUnitId={asUnitId}>{children}</ChatIdentityProvider>;
 }
 
-/** Directions open in the navigation app chosen in Settings (Settings → Preferences → Navigation app). */
-const NAVIGATION_HANDOFF: NavigationHandoff = {
-  navigateTo: (target: NavigationTarget) => ('address' in target ? openMapsWithAddress(target.address) : openMapsWithDirections(target.latitude, target.longitude, target.label)),
+/** The navigation app chosen in Settings (Settings → Preferences → Navigation app). */
+const openExternalNavigation = (target: NavigationTarget): Promise<boolean> => ('address' in target ? openMapsWithAddress(target.address) : openMapsWithDirections(target.latitude, target.longitude, target.label));
+
+/** In-app turn-by-turn (MapLibre plan §9.1): a call by id (the server routes to it), any other point handed over in memory. */
+const openInAppNavigation = (target: NavigationTarget): Promise<boolean> => {
+  if ('address' in target) return openExternalNavigation(target);
+  if (target.callId !== undefined) {
+    router.push(navigationRoutes.toCall(target.callId));
+  } else {
+    requestPointNavigation({ latitude: target.latitude, longitude: target.longitude, name: target.label ?? null });
+    router.push(navigationRoutes.toPoint());
+  }
+  return Promise.resolve(true);
 };
 
+/**
+ * Directions: in-app turn-by-turn where the app can navigate and the crew kept it as their choice (the default where it
+ * is offered), else their navigation app. "Open in…" from the navigation screen always goes to the external app.
+ */
 export function ShellNavigationHandoffProvider({ children }: ProviderProps) {
-  return <NavigationHandoffProvider value={NAVIGATION_HANDOFF}>{children}</NavigationHandoffProvider>;
+  const inApp = useInAppNavigationAvailable();
+  usePreferencesVersion();
+  const prefersInApp = inApp && getNavigationApp({ inApp }) === 'resgrid';
+  const value = useMemo<NavigationHandoff>(() => ({ navigateTo: prefersInApp ? openInAppNavigation : openExternalNavigation, openExternal: openExternalNavigation }), [prefersInApp]);
+  return <NavigationHandoffProvider value={value}>{children}</NavigationHandoffProvider>;
 }
 
 /** Unit's route maps (unit-routes map slot) drawn with @resgrid/maps. */

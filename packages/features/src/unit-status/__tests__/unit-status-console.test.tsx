@@ -140,7 +140,7 @@ describe('UnitStatusSidebar', () => {
     await renderSidebar({ activeCallId: '7', onClear });
     expect(screen.getByTestId('unit-active-call-card')).toBeTruthy();
     await fireEvent.press(screen.getByTestId('unit-active-call-directions'));
-    await waitFor(() => expect(navigateTo).toHaveBeenCalledWith({ latitude: 39.5, longitude: -119.8, label: 'Call 7' }));
+    await waitFor(() => expect(navigateTo).toHaveBeenCalledWith({ latitude: 39.5, longitude: -119.8, label: 'Call 7', callId: 7 }));
     expect(screen.queryByTestId('unit-active-call-destination')).toBeNull();
 
     await fireEvent.press(screen.getByTestId('unit-active-call-deselect'));

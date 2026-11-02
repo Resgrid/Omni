@@ -301,7 +301,8 @@ export const useRoutesStore = create<RoutesState>()(
         fetchActiveRoute: async (unitId, options) => {
           await runner.run(
             'active',
-            async () => unwrapItem(await getActiveRouteForUnit(ctx(), { unitId })),
+            // RD8: Omni also sees a paused route (the legacy app's read stays InProgress-only on the server).
+            async () => unwrapItem(await getActiveRouteForUnit(ctx(), { unitId, includePaused: true })),
             (data) => applyRouteProgress(data),
             { trailing: options?.bypassCache === true }
           );

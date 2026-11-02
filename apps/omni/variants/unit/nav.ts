@@ -7,6 +7,7 @@ import { checklistsNav } from '@resgrid/features/checklists/nav';
 import { contactsNav } from '@resgrid/features/contacts/nav';
 import { inventoryNav } from '@resgrid/features/inventory/nav';
 import { mapNav } from '@resgrid/features/map/nav';
+import { navigationNav } from '@resgrid/features/navigation/nav';
 import { notesNav } from '@resgrid/features/notes/nav';
 import { notificationsNav } from '@resgrid/features/notifications/nav';
 import { offlineMapsNav } from '@resgrid/features/offline-maps/nav';
@@ -43,6 +44,7 @@ export const routes = defineRoutes([
   'unitRouteStopContact',
   'unitRouteHistory',
   'unitRouteInstance',
+  'navigate',
   'unitConsole',
   'inventory',
   'inventoryCount',
@@ -99,6 +101,7 @@ export const nav = defineNav([
   ...featureNav(notificationsNav, 'sidebar', { order: 60 }),
   ...featureNav(settingsNavEntries, variant),
   ...featureNav(offlineMapsNav, 'hidden', { order: 906 }),
+  ...featureNav(navigationNav, 'hidden', { order: 907 }),
   ...featureNav(authNavEntries, variant),
   detailNav.callDetail,
   detailNav.callEdit,

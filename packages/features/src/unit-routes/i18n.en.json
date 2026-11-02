@@ -28,5 +28,6 @@
   "unit_routes.stop_type.scheduled_call": "Scheduled call",
   "unit_routes.stop_type.station": "Station",
   "unit_routes.stop_type.waypoint": "Waypoint",
-  "unit_routes.stops_done": "{{done}} of {{total}} stops"
+  "unit_routes.stops_done": "{{done}} of {{total}} stops",
+  "unit_routes.stop_eta": "ETA {{time}}"
 }

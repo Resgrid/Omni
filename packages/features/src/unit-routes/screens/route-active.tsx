@@ -1,4 +1,6 @@
 import { getDataLocationFix, RouteInstanceStatus, useRoutesStore } from '@resgrid/data';
+import { useInAppNavigationAvailable } from '@resgrid/features/navigation/hooks/use-in-app-navigation';
+import { navigationRoutes } from '@resgrid/features/navigation/routes';
 import { useTranslation } from '@resgrid/i18n';
 import type { RouteStopWithDetailsResultData } from '@resgrid/models';
 import { Button, ButtonText, HStack, Loading, Pressable, ScreenHeader, ScrollView, Text, useFormFactor, useToast, View, VStack, ZeroState } from '@resgrid/ui';
@@ -93,6 +95,7 @@ export default function RouteActiveScreen({ instanceId: instanceIdProp, renderMa
   const ownDeviations = useMemo(() => instanceDeviations(deviations, instanceId), [deviations, instanceId]);
   const percent = progressPercent(stops.length > 0 ? stops : instanceStops, instance);
   const isPaused = instance?.Status === RouteInstanceStatus.Paused;
+  const inAppNavigation = useInAppNavigationAvailable();
 
   const onAction = useCallback(
     (kind: StopActionKind, stop: RouteStopWithDetailsResultData) => {
@@ -197,6 +200,16 @@ export default function RouteActiveScreen({ instanceId: instanceIdProp, renderMa
             </Text>
           )}
         </VStack>
+        {inAppNavigation && !isPaused && current ? (
+          <View className="px-4 pb-3">
+            <Button onPress={() => router.push(navigationRoutes.toRouteStops(instance.RouteInstanceId))} testID="route-active-navigate" style={{ minHeight: actionHeight }}>
+              <View style={styles.buttonIcon}>
+                <Navigation size={16} color="#ffffff" />
+              </View>
+              <ButtonText>{t('navigation.navigate')}</ButtonText>
+            </Button>
+          </View>
+        ) : null}
         <HStack space="sm" className="px-4 pb-3">
           <Button variant="outline" className="flex-1" onPress={() => router.push(unitRoutesRoutes.directions(instance.RouteInstanceId))} testID="route-active-directions" style={{ minHeight: actionHeight }}>
             <View style={styles.buttonIcon}>

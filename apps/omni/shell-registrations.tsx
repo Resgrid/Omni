@@ -21,6 +21,7 @@ import { UnitStatusSidebar } from '@resgrid/features/unit-status';
 import { usePathname } from 'expo-router';
 
 import { ACTIVE_UNIT_ADAPTER, clearActiveCall, ShellChatIdentityProvider, ShellMapProvider, ShellNavigationHandoffProvider, ShellRouteMapProvider, ShellStatusProvider, storageSyncServices } from './feature-providers';
+import { registerNavigationSteps } from './navigation-wiring';
 import { registerOfflineMapsSteps } from './offline-maps-wiring';
 import { useCommandRecordsContext } from './records-context';
 
@@ -95,6 +96,9 @@ registerChecklistRunWriter(createDataChecklistRunWriter());
 // Settings → Offline maps follows the pack manager (shown on iOS/Android when the department offers packs).
 registerOfflineMapsSettings();
 registerOfflineMapsSteps();
+
+// In-app turn-by-turn (Unit, `maps.navigationInApp`): routes, prompts, live ETA reports and the navigation location profile.
+registerNavigationSteps();
 
 // Once storage is open, before any screen mounts: Storage & sync (and Unit's unit choice), the Records outbox controls
 // and BigBoard's dashboard storage read the offline runtime; a variant that commands incidents authors records against

@@ -85,5 +85,6 @@
   "storage_sync.title": "Storage & sync",
   "storage_sync.unavailable": "Storage information is not available yet. Try again in a moment.",
   "storage_sync.unknown_size": "—",
-  "storage_sync.up_to_date": "Up to date"
+  "storage_sync.up_to_date": "Up to date",
+  "settings.navigation_app.resgrid": "Resgrid (in-app navigation)"
 }

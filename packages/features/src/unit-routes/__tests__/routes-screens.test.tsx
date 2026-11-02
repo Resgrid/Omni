@@ -23,6 +23,10 @@ import RouteStopContactScreen from '../screens/route-stop-contact';
 import RoutesHomeScreen from '../screens/routes-home';
 import { detailStop, directions, instance, plan, planDetail } from './fixtures';
 
+// In-app navigation availability (maps routing context + Navigation.InApp flag) is switched per test.
+const mockInAppNavigation = { available: false };
+jest.mock('@resgrid/features/navigation/hooks/use-in-app-navigation', () => ({ useInAppNavigationAvailable: () => mockInAppNavigation.available }));
+
 const navigateTo = jest.fn(async () => true);
 const mapCalls: RouteMapSlotProps[] = [];
 const renderMap = (props: RouteMapSlotProps) => {
@@ -282,6 +286,29 @@ describe('RouteDirectionsScreen', () => {
     useRoutesStore.setState({ activeInstance: instance('ri-1') });
     await wrap(<RouteDirectionsScreen />);
     expect(screen.getByTestId('route-directions-none')).toBeTruthy();
+  });
+
+  it('offers in-app navigation through the remaining stops and shows live stop ETAs where the server sends them', async () => {
+    mockInAppNavigation.available = true;
+    try {
+      const live = directions();
+      useRoutesStore.setState({ activeInstance: instance('ri-1'), directions: { ...live, IsLive: true, Waypoints: live.Waypoints.map((waypoint) => ({ ...waypoint, EtaUtc: '2026-11-01T15:42:00Z' })) } });
+      await wrap(<RouteDirectionsScreen />);
+      await fireEvent.press(screen.getByTestId('route-directions-navigate'));
+      expect(router.push).toHaveBeenCalledWith('/navigate?instanceId=ri-1');
+      expect(screen.getAllByText(/unit_routes\.stop_eta/).length).toBeGreaterThan(0);
+      // One stop still goes to the crew's own app.
+      await fireEvent.press(screen.getByTestId('route-directions-open-next'));
+      await waitFor(() => expect(navigateTo).toHaveBeenCalled());
+    } finally {
+      mockInAppNavigation.available = false;
+    }
+  });
+
+  it('hides in-app navigation where the install cannot navigate', async () => {
+    useRoutesStore.setState({ activeInstance: instance('ri-1'), directions: directions() });
+    await wrap(<RouteDirectionsScreen />);
+    expect(screen.queryByTestId('route-directions-navigate')).toBeNull();
   });
 });
 
