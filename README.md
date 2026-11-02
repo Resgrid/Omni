@@ -151,15 +151,24 @@ The quickest way to see an app is the web version — no Xcode or Android Studio
 APP_VARIANT=dispatch pnpm --filter @resgrid/omni web
 ```
 
-On iOS or Android (builds and installs a development build on a simulator, emulator or connected device):
+On iOS or Android, one command per app builds a development build, installs it on a simulator, emulator or connected device, and starts the dev server:
+
+| App | iOS | Android |
+|---|---|---|
+| Responder | `pnpm ios:responder` | `pnpm android:responder` |
+| Unit | `pnpm ios:unit` | `pnpm android:unit` |
+| IC | `pnpm ios:ic` | `pnpm android:ic` |
+| Dispatch | `pnpm ios:dispatch` | `pnpm android:dispatch` |
+| BigBoard | `pnpm ios:bigboard` | `pnpm android:bigboard` |
 
 ```bash
-APP_VARIANT=responder pnpm --filter @resgrid/omni ios
+pnpm ios:responder --device
 ```
 
-```bash
-APP_VARIANT=unit pnpm --filter @resgrid/omni android
-```
+- `--device` lets you pick the simulator, emulator or connected phone; any other [`expo run`](https://docs.expo.dev/more/expo-cli/#compiling) option works too. With npm, put `--` first: `npm run ios:responder -- --device`.
+- The five apps share one generated `apps/omni/ios` and `apps/omni/android` folder. When it holds another app, or the app config changed, the command prebuilds it again first (a few minutes on iOS). `--clean` forces that.
+- One dev server serves one app. If another app's dev server is running, stop it or add `--port 8082`.
+- On a physical iPhone, set `IOS_APPLE_TEAM_ID` to your Apple developer team ID so the build can be signed.
 
 As a desktop app (start the web version first, then in a second terminal):
 

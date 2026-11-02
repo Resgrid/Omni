@@ -154,6 +154,11 @@ export function githubClient(env = process.env) {
       const res = await request(`/repos/${repo}/releases/assets/${assetId}`, { accept: 'application/octet-stream' });
       return res.text();
     },
+    /** Pull requests GitHub associates with a commit (for a commit on the default branch: the merged one that brought it in). */
+    async pullsForCommit(sha) {
+      const res = await request(`/repos/${repo}/commits/${sha}/pulls?per_page=100`);
+      return res.json();
+    },
   };
 }
 

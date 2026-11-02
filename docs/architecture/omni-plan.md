@@ -388,7 +388,8 @@ Stage 2  needs web-<v>
          docker   (ubuntu, ~2 min)        COPY dist into the nginx runtime image (no app build inside Docker) → amd64 + arm64 → Docker Hub + GHCR
          electron (windows / macos / ubuntu, ~5–10 min each)  apps/desktop only (no RN install) + web-<v> → signed NSIS + portable, notarized dmg + zip (x64/arm64), AppImage + deb + rpm
 Stage 3  release per variant (ubuntu, ~3 min)
-         GitHub Release <variant>-v<version> (prerelease for internal) with all assets + SHA256SUMS + fingerprints
+         GitHub Release <variant>-v<version> (prerelease for internal) with all assets + SHA256SUMS + fingerprints;
+           notes: build summary, description of the pull request merged as the commit, commits since the last tag
          Firebase App Distribution (APK → Android testers; iOS testers use TestFlight) · Changerawr notes
          Electron update feed: latest*.yml per variant/channel to object storage (generic provider)
 ```

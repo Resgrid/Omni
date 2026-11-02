@@ -46,6 +46,7 @@ Bundle ids / packages (Responder is `com.wavetech.Resgrid` / `wtdt.resgrid.andri
 
 ```bash
 APP_VARIANT=unit APP_ENV=development npx expo start --clear
+pnpm ios:unit   # or android:<variant>: re-prebuilds apps/omni/<platform> when it holds another variant/env/config, then expo run
 APP_VARIANT=dispatch npx expo export -p web --output-dir dist/dispatch
 APP_VARIANT=ic npx eas-cli build --profile ic-production --platform android --local
 ```

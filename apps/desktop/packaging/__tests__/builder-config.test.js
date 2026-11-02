@@ -4,7 +4,19 @@ const path = require('path');
 
 const { loadAllVariants, loadVariant } = require('@resgrid/config-plugins');
 
-const { APP_STAGE_DIR, DESKTOP_DIR, MODULES_STAGE_DIR, artifactNames, createAppPackageJson, createBuilderConfig, macNotarize, runtimeDependencyNames, windowsSigning } = require('../builder-config');
+const {
+  APP_STAGE_DIR,
+  CERTIFICATE_ENV,
+  DESKTOP_DIR,
+  MODULES_STAGE_DIR,
+  artifactNames,
+  createAppPackageJson,
+  createBuilderConfig,
+  dropBlankCertificateEnv,
+  macNotarize,
+  runtimeDependencyNames,
+  windowsSigning,
+} = require('../builder-config');
 
 const relative = (p) => path.relative(DESKTOP_DIR, p).split(path.sep).join('/');
 
@@ -122,6 +134,21 @@ describe('windowsSigning', () => {
     expect(windowsSigning({ CSC_LINK: 'cert.pfx' }).mode).toBe('pfx');
     expect(windowsSigning({ AZURE_TRUSTED_SIGNING_ENDPOINT: 'x' })).toEqual({ mode: 'none', options: {} });
     expect(build('unit').win.azureSignOptions).toBeUndefined();
+  });
+});
+
+describe('dropBlankCertificateEnv', () => {
+  it('removes the blank certificate variables CI passes for unset secrets and keeps the rest', () => {
+    const env = { CSC_LINK: '', CSC_KEY_PASSWORD: '', WIN_CSC_LINK: '  ', WIN_CSC_KEY_PASSWORD: 'secret', CSC_NAME: 'Resgrid, LLC', APPLE_API_KEY_ID: '', PATH: '/usr/bin' };
+    expect(dropBlankCertificateEnv(env)).toEqual(['CSC_LINK', 'CSC_KEY_PASSWORD', 'WIN_CSC_LINK']);
+    expect(env).toEqual({ WIN_CSC_KEY_PASSWORD: 'secret', CSC_NAME: 'Resgrid, LLC', APPLE_API_KEY_ID: '', PATH: '/usr/bin' });
+  });
+
+  it('covers every certificate variable electron-builder reads without skipping blanks', () => {
+    const env = Object.fromEntries(CERTIFICATE_ENV.map((name) => [name, '']));
+    expect(dropBlankCertificateEnv(env)).toEqual(CERTIFICATE_ENV);
+    expect(env).toEqual({});
+    expect(dropBlankCertificateEnv({ CSC_LINK: 'cert.p12' })).toEqual([]);
   });
 });
 

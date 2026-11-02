@@ -64,6 +64,18 @@ function windowsSigning(env) {
   return { mode: 'none', options: {} };
 }
 
+// Certificate variables electron-builder reads from process.env itself, keeping '' as a value (it only skips null): a
+// blank CSC_LINK is imported as a certificate path, which resolves to the project directory and fails the macOS build
+// ("apps/desktop not a file"). GitHub Actions passes unset secrets as '', so blank ones are removed before building.
+const CERTIFICATE_ENV = ['CSC_LINK', 'CSC_KEY_PASSWORD', 'CSC_NAME', 'CSC_KEYCHAIN', 'CSC_INSTALLER_LINK', 'CSC_INSTALLER_KEY_PASSWORD', 'WIN_CSC_LINK', 'WIN_CSC_KEY_PASSWORD'];
+
+/** Deletes the blank certificate variables from `env` (in place, so electron-builder sees them as unset); returns their names. */
+function dropBlankCertificateEnv(env = process.env) {
+  const blank = CERTIFICATE_ENV.filter((name) => typeof env[name] === 'string' && env[name].trim() === '');
+  for (const name of blank) delete env[name];
+  return blank;
+}
+
 /** Notarization runs when one of electron-builder's credential sets is present (API key preferred). */
 function macNotarize(env) {
   return has(env, 'APPLE_API_KEY', 'APPLE_API_KEY_ID', 'APPLE_API_ISSUER') || has(env, 'APPLE_ID', 'APPLE_APP_SPECIFIC_PASSWORD', 'APPLE_TEAM_ID') || has(env, 'APPLE_KEYCHAIN', 'APPLE_KEYCHAIN_PROFILE');
@@ -241,4 +253,17 @@ function createBuilderConfig({ manifest, runNumber = 0, channel = 'production', 
   };
 }
 
-module.exports = { APP_STAGE_DIR, DESKTOP_DIR, ELECTRON_LANGUAGES, MODULES_STAGE_DIR, artifactNames, createAppPackageJson, createBuilderConfig, macNotarize, runtimeDependencyNames, windowsSigning };
+module.exports = {
+  APP_STAGE_DIR,
+  CERTIFICATE_ENV,
+  DESKTOP_DIR,
+  ELECTRON_LANGUAGES,
+  MODULES_STAGE_DIR,
+  artifactNames,
+  createAppPackageJson,
+  createBuilderConfig,
+  dropBlankCertificateEnv,
+  macNotarize,
+  runtimeDependencyNames,
+  windowsSigning,
+};

@@ -819,6 +819,8 @@ jobs:
     environment: ${{ matrix.variant }}
     permissions:
       contents: write
+      # Release notes: the pull request merged as this commit.
+      pull-requests: read
     concurrency:
       group: release-publish-${{ matrix.variant }}
       cancel-in-progress: false
@@ -891,13 +893,22 @@ jobs:
             --ota-dir artifacts/meta --docker-tags "$tags" --product-name "$PRODUCT_NAME" --summary release-summary.md
           ls -lh release
 
+      # The build summary, the description of the pull request whose merge triggered this build (none for a commit no
+      # merged pull request produced), then the commits since the variant's previous release.
       - name: Release notes
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          node scripts/ci/pr-summary.mjs --commit "$GITHUB_SHA" --out pr-summary.md
           prev="$(git tag --list "${VARIANT}-v*" --sort=-creatordate | grep -vxF "$TAG" | head -n1 || true)"
           {
             cat release-summary.md
             echo
+            if [ -s pr-summary.md ]; then
+              cat pr-summary.md
+              echo
+            fi
             echo "### Changes"
             echo
             if [ -n "$prev" ]; then

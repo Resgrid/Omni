@@ -18,7 +18,7 @@ import { parseArgs } from 'node:util';
 
 const require = createRequire(import.meta.url);
 const { runNumberFromEnv } = require('@resgrid/config-plugins');
-const { createBuilderConfig, windowsSigning, macNotarize } = require('../packaging/builder-config');
+const { createBuilderConfig, dropBlankCertificateEnv, windowsSigning, macNotarize } = require('../packaging/builder-config');
 const { resolveUpdateChannel } = require('../src/core/update-feed');
 const { DESKTOP_DIR, defaultWebDir, directorySize, stageApp } = require('./lib/prepare-bundle');
 
@@ -61,6 +61,8 @@ const platforms = { win: values.win, mac: values.mac, linux: values.linux };
 if (!platforms.win && !platforms.mac && !platforms.linux) {
   platforms[process.platform === 'win32' ? 'win' : process.platform === 'darwin' ? 'mac' : 'linux'] = true;
 }
+const blankCertificateEnv = dropBlankCertificateEnv(process.env);
+if (blankCertificateEnv.length) console.log(`Ignoring blank ${blankCertificateEnv.join(', ')}`);
 if (platforms.win) console.log(`Windows signing: ${windowsSigning(process.env).mode}`);
 if (platforms.mac) console.log(`macOS notarization: ${macNotarize(process.env) ? 'on' : 'off (no APPLE_* credentials)'}`);
 
