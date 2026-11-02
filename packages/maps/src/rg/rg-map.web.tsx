@@ -62,6 +62,9 @@ const SourceContext = createContext<string | null>(null);
 const EMPTY_COLLECTION: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
 const removedMaps = new WeakSet<GLMap>();
 const PROGRAMMATIC = { resgridProgrammatic: true };
+/** Back-off between attempts to load maplibre-gl after a failed load (doubling up to the cap); going online retries at once. */
+const MAPLIBRE_RETRY_BASE_MS = 2_000;
+const MAPLIBRE_RETRY_MAX_MS = 30_000;
 
 /** Never log a Mapbox token that a failed tile/style URL carries. */
 const redactTokens = (message: string): string => message.replace(/access_token=[^&\s"']+/gi, 'access_token=REDACTED');
@@ -135,6 +138,7 @@ export const MapView = forwardRef<MapViewRef, MapViewProps>(function MapView(pro
   const [map, setMap] = useState<GLMap | null>(null);
   const [hasSize, setHasSize] = useState(false);
   const [internalRevision, setInternalRevision] = useState(0);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const latest = useRef(props);
   latest.current = props;
   const latestView = useRef(view);
@@ -231,11 +235,17 @@ export const MapView = forwardRef<MapViewRef, MapViewProps>(function MapView(pro
 
   // Create the map once (per container) when there is a style and a size — after maplibre-gl has loaded (immediately
   // when an earlier map loaded it). The style is read when the map is created, so a switch during the load is kept.
+  // A failed load (an offline web client missing the chunk) is tried again after a back-off, or when the browser is
+  // back online, so the map does not stay blank until the screen remounts.
   useEffect(() => {
     const element = containerRef.current;
     if (!hasSize || !element || mapRef.current || !view.mapStyle) return undefined;
     let cancelled = false;
     let instance: GLMap | null = null;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    const retry = (): void => {
+      if (!cancelled) setLoadAttempt((attempt) => attempt + 1);
+    };
     const create = (gl: MapLibreModule): void => {
       if (cancelled || mapRef.current) return;
       instance = createMap(gl, element);
@@ -244,14 +254,22 @@ export const MapView = forwardRef<MapViewRef, MapViewProps>(function MapView(pro
     if (loadedModule) {
       create(loadedModule);
     } else {
-      void loadMapLibre().then(create, (error: unknown) => {
-        if (cancelled) return;
-        warn('Failed to load maplibre-gl', error);
-        latest.current.onDidFailLoadingMap?.();
-      });
+      void loadMapLibre()
+        .then(create)
+        .catch((error: unknown) => {
+          if (cancelled) return;
+          warn('Failed to load maplibre-gl', error);
+          latest.current.onDidFailLoadingMap?.();
+          // Only a failed import is retried (the loader forgets it); a map that failed to build would fail again.
+          if (getLoadedMapLibre()) return;
+          retryTimer = setTimeout(retry, Math.min(MAPLIBRE_RETRY_BASE_MS * 2 ** loadAttempt, MAPLIBRE_RETRY_MAX_MS));
+          if (typeof window !== 'undefined') window.addEventListener('online', retry);
+        });
     }
     return () => {
       cancelled = true;
+      if (retryTimer) clearTimeout(retryTimer);
+      if (typeof window !== 'undefined') window.removeEventListener('online', retry);
       const created = instance;
       if (!created) return;
       removedMaps.add(created);
@@ -264,9 +282,9 @@ export const MapView = forwardRef<MapViewRef, MapViewProps>(function MapView(pro
         // Already torn down.
       }
     };
-    // Created once per size/availability; style changes go through setStyle below.
+    // Created once per size/availability (or load attempt); style changes go through setStyle below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasSize, ready]);
+  }, [hasSize, ready, loadAttempt]);
 
   // Theme / server / offline switch: full style rebuild (diff: false) so `style.load` fires and children re-add.
   useEffect(() => {

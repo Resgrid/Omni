@@ -159,7 +159,7 @@ describe('@resgrid/i18n', () => {
       const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
       const i18n = i18nModule.initI18n({ language: 'en', variantResources: { en: { greeting: 'Hello' }, loaders } as never });
 
-      await expect(i18nModule.setLanguage('de')).resolves.toBeUndefined();
+      await expect(i18nModule.setLanguage('de')).resolves.toBe(true);
       await new Promise((resolve) => setImmediate(resolve));
       expect(i18n.language).toBe('de');
       expect(i18n.t('greeting')).toBe('Hello');
@@ -167,6 +167,56 @@ describe('@resgrid/i18n', () => {
       await expect(i18nModule.loadLanguage('de')).resolves.toBe(true);
       expect(i18n.t('greeting')).toBe('Hallo');
       expect(de).toHaveBeenCalledTimes(3);
+      warn.mockRestore();
+    });
+
+    it('choosing the current language again loads strings that failed to load at startup', async () => {
+      const { i18nModule } = load('unit');
+      const de = jest
+        .fn()
+        .mockRejectedValueOnce(new Error('offline'))
+        .mockResolvedValue({ default: { greeting: 'Hallo' } });
+      const loaders = Object.fromEntries(['ar', 'de', 'el', 'es', 'fr', 'it', 'pl', 'sv', 'uk'].map((lang) => [lang, lang === 'de' ? de : jest.fn().mockResolvedValue({ default: {} })]));
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const i18n = i18nModule.initI18n({ language: 'de', variantResources: { en: { greeting: 'Hello' }, loaders } as never });
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(i18n.language).toBe('de');
+      expect(i18n.t('greeting')).toBe('Hello');
+
+      await expect(i18nModule.setLanguage('de')).resolves.toBe(true);
+      expect(i18n.t('greeting')).toBe('Hallo');
+      expect(de).toHaveBeenCalledTimes(2);
+      warn.mockRestore();
+    });
+
+    it('keeps the latest choice when an earlier one finishes loading after it', async () => {
+      const { i18nModule } = load('unit');
+      let resolveDe!: (module: { default: Record<string, string> }) => void;
+      const de = jest.fn(() => new Promise<{ default: Record<string, string> }>((resolve) => (resolveDe = resolve)));
+      const loaders = Object.fromEntries(['ar', 'de', 'el', 'es', 'fr', 'it', 'pl', 'sv', 'uk'].map((lang) => [lang, lang === 'de' ? de : jest.fn().mockResolvedValue({ default: { greeting: 'Bonjour' } })]));
+      const i18n = i18nModule.initI18n({ language: 'en', variantResources: { en: { greeting: 'Hello' }, loaders } as never });
+
+      const first = i18nModule.setLanguage('de');
+      await expect(i18nModule.setLanguage('fr')).resolves.toBe(true);
+      expect(i18n.language).toBe('fr');
+
+      resolveDe({ default: { greeting: 'Hallo' } });
+      await expect(first).resolves.toBe(false);
+      expect(i18n.language).toBe('fr');
+      expect(i18n.t('greeting')).toBe('Bonjour');
+    });
+
+    it('loads a variant namespace that had no resources at first once a later init passes them', async () => {
+      const { i18nModule } = load('unit');
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const i18n = i18nModule.initI18n({ language: 'de' });
+      await i18nModule.loadLanguage('de');
+      expect(i18n.hasResourceBundle('de', 'unit')).toBe(false);
+
+      i18nModule.initI18n({ language: 'de', variantResources: resourcesFor('unit') });
+      await i18nModule.loadLanguage('de');
+      expect(i18n.hasResourceBundle('de', 'unit')).toBe(true);
+      expect(i18n.t('login.login_button')).toBe('Anmelden');
       warn.mockRestore();
     });
 

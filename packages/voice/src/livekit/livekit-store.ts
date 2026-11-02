@@ -343,7 +343,8 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => {
       return voiceOk;
     } catch (error) {
       logger.error({ message: 'Failed to connect to voice channel', context: { roomName: roomInfo.Name, error } });
-      if (room && get().currentRoom !== room) await discardRoom();
+      // No room yet (livekit-client failed to load): discardRoom still stops the audio session this attempt started.
+      if (!room || get().currentRoom !== room) await discardRoom();
       if (stale()) return cancelled();
       return failed({ code: error instanceof VoiceTimeoutError ? 'timeout' : 'connect_failed', message: errorMessage(error), roomName: roomInfo.Name });
     }

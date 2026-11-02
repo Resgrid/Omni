@@ -47,8 +47,8 @@ export const useLanguagePreference = (): LanguagePreference => {
   const { i18n } = useTranslation();
   const language: Language = isSupportedLanguage(i18n.language) ? i18n.language : getCurrentLanguage();
   const select = useCallback(async (next: Language) => {
-    await setLanguage(next);
-    devicePreferencesKv()?.set(LEGACY_LANGUAGE_STORAGE_KEY, next);
+    // A newer choice made while this one loaded wins; saving this one would restore it on the next start.
+    if (await setLanguage(next)) devicePreferencesKv()?.set(LEGACY_LANGUAGE_STORAGE_KEY, next);
   }, []);
   return { language, setLanguage: select };
 };

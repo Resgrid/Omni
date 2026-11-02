@@ -82,12 +82,20 @@ test.describe('code splitting', () => {
     for (const chunk of ['maplibre-gl', 'livekit-client', 'ar', 'de', 'el', 'es', 'fr', 'it', 'pl', 'sv', 'uk']) {
       expect(names.filter((name) => new RegExp(`^${chunk}-[0-9a-f]+\\.js$`).test(name)).length, `${chunk} chunk`).toBeGreaterThan(0);
     }
+    const heavyChunk = /\/(maplibre-gl|livekit-client)-[0-9a-f]+\.js$/;
+    // Recorded from navigation on: a chunk requested after the `load` event is not among index.html's scripts.
+    const heavyRequests: string[] = [];
+    page.on('request', (request) => {
+      if (heavyChunk.test(request.url())) heavyRequests.push(request.url());
+    });
     await page.goto('/');
+    await new LoginPage(page).expectForm();
     const entry = await page.locator('script[src]').evaluateAll((elements) => elements.map((element) => (element as HTMLScriptElement).src));
     expect(
-      entry.some((src) => /\/(maplibre-gl|livekit-client)-[0-9a-f]+\.js$/.test(src)),
+      entry.some((src) => heavyChunk.test(src)),
       'heavy chunks in index.html'
     ).toBe(false);
+    expect(heavyRequests, 'heavy chunks requested by the signed-out start').toEqual([]);
   });
 });
 

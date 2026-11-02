@@ -116,6 +116,7 @@ jest.mock('@resgrid/i18n', () => {
     getCurrentLanguage: () => mockI18n.language,
     setLanguage: jest.fn(async (language: string) => {
       mockI18n.language = language;
+      return true;
     }),
   };
 });

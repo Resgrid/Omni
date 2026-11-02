@@ -15,6 +15,7 @@ import { getCallKeepService, resetCallKeepServiceForTests } from '../../callkeep
 import { getHeadsetButtonService, resetHeadsetButtonServiceForTests } from '../../headset/headset-button-service';
 import { getMicrophoneController } from '../../ptt/microphone-controller';
 import { configureVoice, resetVoiceRuntimeForTests } from '../../runtime';
+import * as livekitClient from '../livekit-client';
 import { createInitialLiveKitState, useLiveKitStore } from '../livekit-store';
 
 jest.mock('@resgrid/api', () => ({ getDepartmentVoiceSettings: jest.fn(), canConnectToVoiceSession: jest.fn(), getDepartmentAudioStreams: jest.fn() }));
@@ -163,6 +164,19 @@ describe('connect failures', () => {
     expect(lastRoom().disconnect).toHaveBeenCalled();
     expect(AudioSession.stopAudioSession).toHaveBeenCalled();
     expect(useLiveKitStore.getState()).toMatchObject({ currentRoom: null, isConnecting: false, isConnected: false });
+  });
+
+  it('stops the audio session it started when livekit-client fails to load', async () => {
+    const load = jest.spyOn(livekitClient, 'loadLiveKitClient').mockRejectedValueOnce(new Error('chunk failed'));
+
+    const result = await useLiveKitStore.getState().connectToRoom(channel('1', 'Fireground'));
+
+    expect(result).toMatchObject({ ok: false, error: { code: 'connect_failed', message: 'chunk failed' } });
+    expect(FakeRoom.instances).toHaveLength(0);
+    expect(AudioSession.startAudioSession).toHaveBeenCalled();
+    expect(AudioSession.stopAudioSession).toHaveBeenCalled();
+    expect(useLiveKitStore.getState()).toMatchObject({ currentRoom: null, isConnecting: false, isConnected: false });
+    load.mockRestore();
   });
 
   it('swallows a disconnect failure in the error path rather than masking the original error', async () => {
