@@ -73,7 +73,8 @@ function verifyKey(factory: KvBackendFactory, instanceId: string, key: string): 
  *    key (or none) so the caller re-keys the file in place;
  * 3. for a `secure-store` carry-over: the legacy app's device key, adopted under the Omni name;
  * 4. otherwise a new device key. Anything the legacy app left under this id cannot be read with it, so that file is
- *    deleted first and the instance starts empty (the user signs in again).
+ *    deleted first and the instance starts empty (the user signs in again). A file that cannot be deleted is thrown
+ *    before the new key is saved, so the next launch tries again.
  *
  * A SecureStore read that fails (Keychain locked before the first unlock) is thrown, never treated as "no key": that
  * would delete the user's data.
@@ -124,7 +125,11 @@ export async function resolveInstanceKey(params: {
     }
   }
 
-  const reinitialized = files ? files.exists(instanceId) && files.remove(instanceId) : false;
+  const reinitialized = files ? files.exists(instanceId) : false;
+  // A new key saved over a file that is still there would open it with the wrong key on every launch from now on.
+  if (reinitialized && !files?.remove(instanceId)) {
+    throw new Error(`Could not delete the legacy storage instance "${instanceId}".`);
+  }
   const key = (params.generateKey ?? generateMmkvKey)();
   await secureStore.setItem(secureKeyName(instanceId), key);
   if (reinitialized) {

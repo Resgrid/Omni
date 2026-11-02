@@ -62,13 +62,32 @@ describe('createDuckingVoice', () => {
     expect(ducking.end).toHaveBeenCalledTimes(1);
   });
 
-  it('drops a prompt stopped while the audio was being lowered', async () => {
-    const { engine, voice } = setup();
+  it('drops a prompt stopped while the audio was being lowered and gives the audio back', async () => {
+    const { engine, ducking, voice } = setup();
+    voice.speak('In 500 feet, turn left');
     voice.speak('Turn left');
     voice.stop();
     await flush();
 
     expect(engine.speak).not.toHaveBeenCalled();
+    expect(ducking.begin).toHaveBeenCalledTimes(1);
+    expect(ducking.end).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the audio lowered for a prompt that follows a stop while the audio was being lowered', async () => {
+    const { engine, ducking, finishers, voice } = setup();
+    voice.speak('Turn left');
+    voice.stop();
+    voice.speak('Turn right');
+    await flush();
+
+    expect(ducking.begin).toHaveBeenCalledTimes(1);
+    expect(engine.speak).toHaveBeenCalledTimes(1);
+    expect(engine.speak).toHaveBeenCalledWith('Turn right', expect.any(Function));
+    expect(ducking.end).not.toHaveBeenCalled();
+
+    finishers[0]();
+    expect(ducking.end).toHaveBeenCalledTimes(1);
   });
 
   it('speaks without ducking when the native side refuses (a call owns the audio)', async () => {

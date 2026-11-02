@@ -111,6 +111,17 @@ describe('openVariantStorage — device keys (D8)', () => {
     expect(__getMmkvFile('ResgridIC')?.data.size).toBe(1);
   });
 
+  it('saves no new key when a legacy file cannot be deleted, so the next launch tries again', async () => {
+    __seedMmkvFile('ResgridIC', LEGACY_KEYS.ResgridIC, { authResponse: '{}' });
+    const secureStore = createMemorySecureKeyStore();
+    const files = { exists: jest.fn(() => true), remove: jest.fn(() => false) };
+
+    await expect(openVariantStorage({ manifest: MANIFESTS.ic, platform: 'native', secureStore, backendFactory: createMmkvBackendFactory(), files })).rejects.toThrow('ResgridIC');
+    expect(files.remove).toHaveBeenCalledWith('ResgridIC');
+    expect(await secureStore.getItem(secureKeyName('ResgridIC'))).toBeNull();
+    expect(mmkvConstructed.some((config) => config.id === 'ResgridIC')).toBe(false);
+  });
+
   it('refuses to open native storage without a secure key store', async () => {
     await expect(open(MANIFESTS.ic, null)).rejects.toThrow('secure key store');
   });

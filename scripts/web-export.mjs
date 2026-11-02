@@ -16,6 +16,8 @@ if (!variant) {
 const outputDir = `dist/${variant}`;
 const result = spawnSync('npx', ['expo', 'export', '-p', 'web', '--output-dir', outputDir, '--clear'], { stdio: 'inherit', shell: process.platform === 'win32' });
 if (result.status !== 0) {
+  // spawnSync does not throw: a command that never started reports here, with no output of its own.
+  if (result.error) console.error(`expo export (${variant}) could not start: ${result.error.message}`);
   process.exit(result.status ?? 1);
 }
 // The splash in public/index.html is shared; the variant's mark, name and colours go in after the export.
