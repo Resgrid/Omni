@@ -1,4 +1,4 @@
-// In-memory react-native-mmkv fake. Instances with the same id share one "file" for the life of the
+// In-memory react-native-mmkv (v4 API: createMMKV, remove) fake. Instances with the same id share one "file" for the life of the
 // test (so reopening simulates an app restart), and the file remembers the key it is encrypted with:
 // opening it with another key loses the data (MMKV discards on CRC failure) unless opened read-only.
 interface FakeFile {
@@ -29,7 +29,7 @@ export function __getMmkvFile(id: string): FakeFile | undefined {
   return files.get(id);
 }
 
-export class MMKV {
+class FakeMMKV {
   private readonly data: Map<string, string | number | boolean>;
   private readonly file: FakeFile | null;
   private readonly readOnly: boolean;
@@ -77,9 +77,9 @@ export class MMKV {
     const value = this.data.get(key);
     return typeof value === 'boolean' ? value : undefined;
   }
-  delete(key: string): void {
+  remove(key: string): boolean {
     this.assertWritable();
-    this.data.delete(key);
+    return this.data.delete(key);
   }
   contains(key: string): boolean {
     return this.data.has(key);
@@ -99,3 +99,5 @@ export class MMKV {
     // nothing to trim in memory
   }
 }
+
+export const createMMKV = (config?: FakeMmkvConfig): FakeMMKV => new FakeMMKV(config);

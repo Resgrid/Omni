@@ -121,6 +121,7 @@
     "react-native-keyboard-controller": "catalog:",
     "react-native-logs": "catalog:",
     "react-native-mmkv": "catalog:",
+    "react-native-nitro-modules": "catalog:",
     "react-native-passkey": "catalog:",
     "react-native-permissions": "catalog:",
     "react-native-reanimated": "catalog:",
