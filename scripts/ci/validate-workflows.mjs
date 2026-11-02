@@ -8,11 +8,14 @@
 //     `pnpm <script>` / `pnpm --filter <pkg> <script>` name scripts that exist
 //   - `${{ }}` expressions are balanced
 //   - the variant list in scripts/ci/lib.mjs and ci.yml matches @resgrid/config-plugins
+//   - issue forms (.github/ISSUE_TEMPLATE): the basic form schema, a required App dropdown offering every variant,
+//     and App / Platform options that scripts/ci/issue-labels.mjs can label; the Language options match packages/i18n
 // Usage: node scripts/ci/validate-workflows.mjs
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 
+import { ALL_APPS, appLabelFor, FIELD, loadApps, managedLabels, NOT_SURE, PLATFORM_OPTIONS } from './issue-labels.mjs';
 import { listFiles, repoRoot, VARIANT_IDS } from './lib.mjs';
 
 const require = createRequire(import.meta.url);
@@ -117,6 +120,9 @@ for (const rel of fs.existsSync(maestroDir) ? listFiles(maestroDir).filter((f) =
   }
 }
 
+const issueTemplatesDir = path.join(repoRoot, '.github', 'ISSUE_TEMPLATE');
+const issueForms = fs.existsSync(issueTemplatesDir) ? checkIssueForms(issueTemplatesDir) : 0;
+
 try {
   const { VARIANT_IDS: canonical } = require('@resgrid/config-plugins');
   if (JSON.stringify(canonical) !== JSON.stringify(VARIANT_IDS)) errors.push(`scripts/ci/lib.mjs VARIANT_IDS ${JSON.stringify(VARIANT_IDS)} differ from @resgrid/config-plugins ${JSON.stringify(canonical)}`);
@@ -129,7 +135,7 @@ if (errors.length) {
   console.error(`Workflow validation failed (${errors.length}):\n- ${errors.join('\n- ')}`);
   process.exit(1);
 }
-console.log(`Workflow validation passed: ${workflowFiles.length} workflows, local actions and Maestro flows (${yaml.name}).`);
+console.log(`Workflow validation passed: ${workflowFiles.length} workflows, local actions, Maestro flows and ${issueForms} issue forms (${yaml.name}).`);
 
 // ── helpers ───────────────────────────────────────────────────────────────────────────────────────────────────────
 
@@ -227,6 +233,81 @@ function checkExpressions(file, node, trail = '') {
   }
   if (Array.isArray(node)) node.forEach((v, i) => checkExpressions(file, v, `${trail}[${i}]`));
   else if (node && typeof node === 'object') for (const [k, v] of Object.entries(node)) checkExpressions(file, v, trail ? `${trail}.${k}` : k);
+}
+
+/** Checks every issue form and the chooser config; returns the number of forms. */
+function checkIssueForms(dir) {
+  const FIELD_TYPES = ['markdown', 'input', 'textarea', 'dropdown', 'checkboxes'];
+  const apps = loadApps();
+  const labels = new Set(managedLabels(apps).map((l) => l.name));
+  const languages = (/SUPPORTED_LANGUAGES\s*=\s*\[([^\]]*)\]/.exec(fs.readFileSync(path.join(repoRoot, 'packages', 'i18n', 'src', 'languages.ts'), 'utf8'))?.[1] ?? '').match(/[a-z]{2}/g) ?? [];
+  const names = new Set();
+  let forms = 0;
+  for (const name of fs.readdirSync(dir).filter((f) => /\.ya?ml$/.test(f))) {
+    const file = path.join(dir, name);
+    const doc = parse(file);
+    if (!doc) continue;
+    if (/^config\.ya?ml$/.test(name)) {
+      if (typeof doc.blank_issues_enabled !== 'boolean') err(file, 'blank_issues_enabled must be true or false');
+      for (const link of doc.contact_links ?? []) if (!link?.name || !link.about || !/^https:\/\//.test(link.url ?? '')) err(file, `contact link ${JSON.stringify(link?.name)} needs a name, about and an https url`);
+      continue;
+    }
+    forms++;
+    for (const key of ['name', 'description', 'body']) if (!doc[key]) err(file, `missing ${key}`);
+    if (names.has(doc.name)) err(file, `another form is also named "${doc.name}"`);
+    names.add(doc.name);
+    for (const label of doc.labels ?? []) if (!labels.has(label)) err(file, `label "${label}" is not created by scripts/ci/issue-labels.mjs (managedLabels)`);
+    const ids = new Set();
+    const fields = new Map();
+    for (const [i, item] of (Array.isArray(doc.body) ? doc.body : []).entries()) {
+      const where = `body item ${i + 1}`;
+      if (!FIELD_TYPES.includes(item?.type)) {
+        err(file, `${where}: type must be one of ${FIELD_TYPES.join(', ')}`);
+        continue;
+      }
+      if (item.id !== undefined) {
+        if (!/^[A-Za-z0-9_-]+$/.test(item.id)) err(file, `${where}: id "${item.id}" may only use letters, digits, - and _`);
+        if (ids.has(item.id)) err(file, `${where}: duplicate id "${item.id}"`);
+        ids.add(item.id);
+      }
+      if (item.type === 'markdown') {
+        if (!item.attributes?.value) err(file, `${where}: markdown needs attributes.value`);
+        continue;
+      }
+      const label = item.attributes?.label;
+      if (!label) err(file, `${where}: missing attributes.label`);
+      if (fields.has(label)) err(file, `${where}: duplicate label "${label}" (the labeller reads answers by label)`);
+      fields.set(label, item);
+      const options = item.attributes?.options;
+      if (item.type === 'dropdown' || item.type === 'checkboxes') {
+        if (!Array.isArray(options) || !options.length) err(file, `${where} (${label}): needs options`);
+        else if (item.type === 'dropdown' && (options.some((o) => typeof o !== 'string') || new Set(options).size !== options.length)) err(file, `${where} (${label}): options must be unique strings`);
+        else if (item.type === 'checkboxes' && options.some((o) => !o?.label)) err(file, `${where} (${label}): every checkbox needs a label`);
+      }
+      // A multi-select answer is rendered comma-separated, so an option with a comma could not be read back.
+      if (item.type === 'dropdown' && Object.values(FIELD).includes(label) && options?.some((o) => String(o).includes(','))) err(file, `${where} (${label}): options must not contain commas`);
+    }
+
+    const app = fields.get(FIELD.app);
+    if (app?.type !== 'dropdown' || app.validations?.required !== true) err(file, `needs a required "${FIELD.app}" dropdown so every issue names its app`);
+    else {
+      const options = app.attributes.options ?? [];
+      for (const option of options) if (option !== NOT_SURE && !appLabelFor(option, apps)) err(file, `"${FIELD.app}" option "${option}" must start with a variant displayName or "${ALL_APPS}", or be "${NOT_SURE}"`);
+      for (const a of apps) if (!options.some((o) => appLabelFor(o, apps) === `app: ${a.id}`)) err(file, `"${FIELD.app}" has no option for ${a.displayName}`);
+    }
+    const platform = fields.get(FIELD.platform);
+    if (platform) {
+      if (platform.type !== 'dropdown') err(file, `"${FIELD.platform}" must be a dropdown`);
+      for (const option of platform.attributes?.options ?? []) if (!PLATFORM_OPTIONS[option]) err(file, `"${FIELD.platform}" option "${option}" is not in PLATFORM_OPTIONS (scripts/ci/issue-labels.mjs)`);
+    }
+    const language = fields.get('Language');
+    if (language) {
+      const codes = (language.attributes?.options ?? []).map((o) => /\(([a-z]{2})\)$/.exec(String(o))?.[1]);
+      if (JSON.stringify([...codes].sort()) !== JSON.stringify([...languages].sort()))
+        err(file, `"Language" options ${JSON.stringify(codes)} differ from SUPPORTED_LANGUAGES ${JSON.stringify(languages)} (packages/i18n/src/languages.ts)`);
+    }
+  }
+  return forms;
 }
 
 function loadWorkspacePackages() {

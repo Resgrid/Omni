@@ -3,7 +3,7 @@
 <h1>Resgrid Omni</h1>
 <p>One codebase for every Resgrid client app — Responder, Unit, IC, Dispatch and BigBoard — each built for iOS, Android, Web and Desktop (Windows, macOS, Linux), each with an experience tailored to the people who use it.</p>
 
-<h4> <a href="https://resgrid.com">Resgrid</a> <span> · </span> <a href="docs/architecture/omni-plan.md"> Plan </a> <span> · </span> <a href="https://github.com/Resgrid/Omni/issues"> Report Bug </a> <span> · </span> <a href="https://github.com/Resgrid/Omni/issues"> Request Feature </a> </h4>
+<h4> <a href="https://resgrid.com">Resgrid</a> <span> · </span> <a href="docs/architecture/omni-plan.md"> Plan </a> <span> · </span> <a href="https://github.com/Resgrid/Omni/issues/new?template=1-bug-report.yml"> Report Bug </a> <span> · </span> <a href="https://github.com/Resgrid/Omni/issues/new?template=2-feature-request.yml"> Request Feature </a> <span> · </span> <a href=".github/SUPPORT.md"> Get Help </a> </h4>
 
 </div>
 
@@ -174,6 +174,7 @@ Details: [plan §6.6 and Appendix B](docs/architecture/omni-plan.md).
 
 ## :handshake: Contributing
 
+- Found a problem or have an idea? [Open an issue](https://github.com/Resgrid/Omni/issues/new/choose) — bug report, feature request, question, feedback or translation problem. Every form asks which app it is about and labels the issue with it (`app: unit`, `platform: android`, …); [SUPPORT.md](.github/SUPPORT.md) lists where else to get help, and security problems go through the [security policy](.github/SECURITY.md).
 - Branch from `develop`, open a pull request; `master` is the release branch.
 - Commit messages: `RO-Txxx Summary`.
 - Every change ships with tests; CI runs lint, type-check, Jest, translation parity, dependency rules, API contract tests and per-app route checks.
