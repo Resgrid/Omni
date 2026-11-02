@@ -63,8 +63,8 @@ beforeEach(() => {
   useMessagesStore.setState({ inboxMessages: [], sentMessages: [], recipients: RECIPIENTS, messageDetailsById: {}, readMessageIds: [], queuedMessages: {}, loading: {}, errors: {}, writeError: null, ...store } as never);
 });
 
-afterEach(() => {
-  act(() => jest.runOnlyPendingTimers());
+afterEach(async () => {
+  await act(() => jest.runOnlyPendingTimers());
   jest.useRealTimers();
 });
 
@@ -118,28 +118,28 @@ describe('message format', () => {
 });
 
 describe('MessagesScreen', () => {
-  it('loads both lists on focus, marks unread, filters and searches', () => {
+  it('loads both lists on focus, marks unread, filters and searches', async () => {
     useMessagesStore.setState({ inboxMessages: [message('1'), message('2', { RespondedOn: '2030-05-10T11:00:00' })], sentMessages: [message('9', { Subject: 'Drill tonight', SendingUserId: 'me' })] });
-    render(<MessagesScreen />);
+    await render(<MessagesScreen />);
     expect(store.fetchInboxMessages).toHaveBeenCalledWith({ bypassCache: false });
     expect(store.fetchSentMessages).toHaveBeenCalledWith({ bypassCache: false });
     expect(screen.getByTestId('message-card-1')).toHaveAccessibleName(/messages\.unread/);
     expect(screen.getByTestId('message-card-2')).not.toHaveAccessibleName(/messages\.unread/);
 
-    fireEvent.press(screen.getByTestId('messages-filter-sent'));
+    await fireEvent.press(screen.getByTestId('messages-filter-sent'));
     expect(screen.queryByTestId('message-card-1')).toBeNull();
     expect(screen.getByTestId('message-card-9')).toBeTruthy();
 
-    fireEvent.press(screen.getByTestId('messages-filter-all'));
-    fireEvent.changeText(screen.getByTestId('messages-search-input'), 'drill');
+    await fireEvent.press(screen.getByTestId('messages-filter-all'));
+    await fireEvent.changeText(screen.getByTestId('messages-search-input'), 'drill');
     expect(screen.getByTestId('message-card-9')).toBeTruthy();
     expect(screen.queryByTestId('message-card-1')).toBeNull();
   });
 
-  it('opens a message in the sheet, which marks it read and loads the detail', () => {
+  it('opens a message in the sheet, which marks it read and loads the detail', async () => {
     useMessagesStore.setState({ inboxMessages: [message('5')] });
-    render(<MessagesScreen />);
-    fireEvent.press(screen.getByTestId('message-card-5'));
+    await render(<MessagesScreen />);
+    await fireEvent.press(screen.getByTestId('message-card-5'));
     expect(screen.getByTestId('message-details', q)).toBeTruthy();
     expect(store.markMessageRead).toHaveBeenCalledWith('5');
     expect(store.fetchMessageDetails).toHaveBeenCalledWith('5', { bypassCache: true });
@@ -147,29 +147,29 @@ describe('MessagesScreen', () => {
 
   it('long press selects; deleting the selection asks first', async () => {
     useMessagesStore.setState({ inboxMessages: [message('1'), message('2')] });
-    render(<MessagesScreen />);
-    fireEvent(screen.getByTestId('message-card-1'), 'longPress');
+    await render(<MessagesScreen />);
+    await fireEvent(screen.getByTestId('message-card-1'), 'longPress');
     expect(screen.getByTestId('messages-selection-bar')).toBeTruthy();
     expect(screen.queryByTestId('messages-compose-fab')).toBeNull();
-    fireEvent.press(screen.getByTestId('message-card-2'));
-    fireEvent.press(screen.getByTestId('messages-delete-selected'));
-    fireEvent.press(screen.getByTestId('messages-confirm-sheet-confirm', q));
+    await fireEvent.press(screen.getByTestId('message-card-2'));
+    await fireEvent.press(screen.getByTestId('messages-delete-selected'));
+    await fireEvent.press(screen.getByTestId('messages-confirm-sheet-confirm', q));
     await waitFor(() => expect(store.deleteMessages).toHaveBeenCalledWith(['1', '2']));
     expect(toasts()).toContain('success:messages.deleted');
     expect(screen.queryByTestId('messages-selection-bar')).toBeNull();
   });
 
-  it('shows queued (offline) messages and hides compose without the right', () => {
+  it('shows queued (offline) messages and hides compose without the right', async () => {
     securityStore.setState({ rights: { CanCreateMessage: false } as DepartmentRightsResultData });
     useMessagesStore.setState({ queuedMessages: { q1: { localId: 'q1', input: { Title: 'Pending drill', Body: 'x', Type: 0, Recipients: [] }, createdAt: 1, state: 'queued' } } });
-    render(<MessagesScreen />);
+    await render(<MessagesScreen />);
     expect(screen.getByTestId('queued-message-q1')).toHaveTextContent(/messages\.waiting_to_send/);
     expect(screen.queryByTestId('messages-compose-fab')).toBeNull();
   });
 
-  it('opens compose from the route param', () => {
+  it('opens compose from the route param', async () => {
     (useLocalSearchParams as jest.Mock).mockReturnValue({ compose: '1' });
-    render(<MessagesScreen />);
+    await render(<MessagesScreen />);
     expect(store.fetchRecipients).toHaveBeenCalledWith({ includeUnits: false });
   });
 });
@@ -179,13 +179,13 @@ describe('MessageDetails', () => {
     useMessagesStore.setState({
       messageDetailsById: { '12': message('12', { Type: MessageType.Poll, Recipients: [{ MessageId: '12', UserId: 'u2', Name: 'Pat', RespondedOn: '2030-05-10T11:00:00', Response: '1', Note: 'on my way' }] }) },
     });
-    render(<MessageDetails messageId="12" />);
+    await render(<MessageDetails messageId="12" />);
     expect(screen.getByTestId('message-recipient-u2')).toHaveTextContent(/messages\.response_yes/);
-    fireEvent.press(screen.getByTestId('message-respond-button'));
+    await fireEvent.press(screen.getByTestId('message-respond-button'));
     expect(screen.getByTestId('message-respond-send')).toBeDisabled();
-    fireEvent.press(screen.getByTestId('message-response-2'));
-    fireEvent.changeText(screen.getByTestId('message-response-note'), ' late ');
-    fireEvent.press(screen.getByTestId('message-respond-send'));
+    await fireEvent.press(screen.getByTestId('message-response-2'));
+    await fireEvent.changeText(screen.getByTestId('message-response-note'), ' late ');
+    await fireEvent.press(screen.getByTestId('message-respond-send'));
     await waitFor(() => expect(store.respondToMessage).toHaveBeenCalledWith({ Id: 12, Type: 2, Note: 'late' }));
     expect(toasts()).toContain('success:messages.response_sent');
     expect(store.fetchInboxMessages).toHaveBeenCalledWith({ bypassCache: true });
@@ -193,9 +193,9 @@ describe('MessageDetails', () => {
 
   it('RSVPs to a calendar invitation (1 = attending, 3 = not attending)', async () => {
     useMessagesStore.setState({ messageDetailsById: { '7': message('7', { Type: MessageType.CalendarRsvp, CalendarItemId: 'c1' }) } });
-    render(<MessageDetails messageId="7" />);
+    await render(<MessageDetails messageId="7" />);
     expect(screen.queryByTestId('message-respond-button')).toBeNull();
-    fireEvent.press(screen.getByTestId('message-rsvp-not-attending'));
+    await fireEvent.press(screen.getByTestId('message-rsvp-not-attending'));
     await waitFor(() => expect(store.respondToMessage).toHaveBeenCalledWith({ Id: 7, Type: 3, Note: '' }));
   });
 
@@ -203,26 +203,26 @@ describe('MessageDetails', () => {
     useMessagesStore.setState({ messageDetailsById: { '3': message('3') } });
     const onDeleted = jest.fn();
     store.deleteMessages.mockResolvedValueOnce(false);
-    render(<MessageDetails messageId="3" onDeleted={onDeleted} />);
-    fireEvent.press(screen.getByTestId('message-delete-button'));
-    fireEvent.press(screen.getByTestId('message-delete-confirm'));
+    await render(<MessageDetails messageId="3" onDeleted={onDeleted} />);
+    await fireEvent.press(screen.getByTestId('message-delete-button'));
+    await fireEvent.press(screen.getByTestId('message-delete-confirm'));
     await waitFor(() => expect(toasts()).toContain('error:messages.delete_failed'));
     expect(onDeleted).not.toHaveBeenCalled();
-    fireEvent.press(screen.getByTestId('message-delete-confirm'));
+    await fireEvent.press(screen.getByTestId('message-delete-confirm'));
     await waitFor(() => expect(onDeleted).toHaveBeenCalled());
   });
 
-  it('shows a protected label instead of a withheld subject or body', () => {
+  it('shows a protected label instead of a withheld subject or body', async () => {
     useMessagesStore.setState({ messageDetailsById: { '4': message('4', { Subject: 'REDACTED', Body: 'REDACTED' }) } });
-    render(<MessageDetails messageId="4" />);
+    await render(<MessageDetails messageId="4" />);
     expect(screen.getByTestId('message-details-subject-protected')).toBeTruthy();
     expect(screen.getByTestId('message-details-body-protected')).toBeTruthy();
     expect(screen.queryByText('REDACTED')).toBeNull();
   });
 
-  it('marks an expired message and offers no answer', () => {
+  it('marks an expired message and offers no answer', async () => {
     useMessagesStore.setState({ messageDetailsById: { '8': message('8', { Type: MessageType.Callback, ExpiredOn: '2000-01-01T00:00:00' }) } });
-    render(<MessageDetails messageId="8" />);
+    await render(<MessageDetails messageId="8" />);
     expect(screen.getByTestId('message-details-expired')).toBeTruthy();
     expect(screen.queryByTestId('message-respond-button')).toBeNull();
   });
@@ -231,24 +231,24 @@ describe('MessageDetails', () => {
 describe('ComposeMessageSheet', () => {
   it('validates, keeps Everyone exclusive and sends through the outbox', async () => {
     const onClose = jest.fn();
-    render(<ComposeMessageSheet isOpen onClose={onClose} />);
-    fireEvent.press(screen.getByTestId('compose-send', q));
+    await render(<ComposeMessageSheet isOpen onClose={onClose} />);
+    await fireEvent.press(screen.getByTestId('compose-send', q));
     expect(screen.getByTestId('compose-subject-error', q)).toBeTruthy();
     expect(screen.getByTestId('compose-recipients-error', q)).toBeTruthy();
     expect(store.sendNewMessage).not.toHaveBeenCalled();
 
-    fireEvent.changeText(screen.getByTestId('compose-subject', q), ' Drill ');
-    fireEvent.changeText(screen.getByTestId('compose-body', q), 'Tonight 7pm');
-    fireEvent.press(screen.getByTestId('compose-type-2', q));
-    fireEvent.press(screen.getByTestId('recipient-0', q));
-    fireEvent.press(screen.getByTestId('compose-tab-groups', q));
-    fireEvent.press(screen.getByTestId('recipient-G:1', q));
+    await fireEvent.changeText(screen.getByTestId('compose-subject', q), ' Drill ');
+    await fireEvent.changeText(screen.getByTestId('compose-body', q), 'Tonight 7pm');
+    await fireEvent.press(screen.getByTestId('compose-type-2', q));
+    await fireEvent.press(screen.getByTestId('recipient-0', q));
+    await fireEvent.press(screen.getByTestId('compose-tab-groups', q));
+    await fireEvent.press(screen.getByTestId('recipient-G:1', q));
     expect(screen.getByTestId('compose-recipient-count', q)).toHaveTextContent('messages.recipients_selected:1');
-    fireEvent.press(screen.getByTestId('compose-tab-roles', q));
-    fireEvent.press(screen.getByTestId('recipient-R:2', q));
+    await fireEvent.press(screen.getByTestId('compose-tab-roles', q));
+    await fireEvent.press(screen.getByTestId('recipient-R:2', q));
     expect(screen.queryByTestId('recipient-U:5', q)).toBeNull();
 
-    fireEvent.press(screen.getByTestId('compose-send', q));
+    await fireEvent.press(screen.getByTestId('compose-send', q));
     await waitFor(() =>
       expect(store.sendNewMessage).toHaveBeenCalledWith({
         Title: 'Drill',
@@ -267,43 +267,43 @@ describe('ComposeMessageSheet', () => {
   it('says a message composed offline will be sent later; a refusal keeps the form', async () => {
     store.sendNewMessage.mockResolvedValueOnce({ outcome: 'queued', id: 'evt-2' }).mockResolvedValueOnce({ outcome: 'rejected', id: 'evt-3' });
     const onClose = jest.fn();
-    render(<ComposeMessageSheet isOpen onClose={onClose} />);
-    const fill = () => {
-      fireEvent.changeText(screen.getByTestId('compose-subject', q), 'Drill');
-      fireEvent.changeText(screen.getByTestId('compose-body', q), 'Body');
-      fireEvent.press(screen.getByTestId('recipient-0', q));
+    await render(<ComposeMessageSheet isOpen onClose={onClose} />);
+    const fill = async () => {
+      await fireEvent.changeText(screen.getByTestId('compose-subject', q), 'Drill');
+      await fireEvent.changeText(screen.getByTestId('compose-body', q), 'Body');
+      await fireEvent.press(screen.getByTestId('recipient-0', q));
     };
-    fill();
-    fireEvent.press(screen.getByTestId('compose-send', q));
+    await fill();
+    await fireEvent.press(screen.getByTestId('compose-send', q));
     await waitFor(() => expect(toasts()).toContain('success:messages.queued_offline'));
     expect(onClose).toHaveBeenCalledTimes(1);
 
-    fill();
-    fireEvent.press(screen.getByTestId('compose-send', q));
+    await fill();
+    await fireEvent.press(screen.getByTestId('compose-send', q));
     await waitFor(() => expect(toasts()).toContain('error:messages.send_failed'));
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId('compose-subject', q).props.value).toBe('Drill');
   });
 
-  it('asks before discarding a draft', () => {
+  it('asks before discarding a draft', async () => {
     const onClose = jest.fn();
-    render(<ComposeMessageSheet isOpen onClose={onClose} />);
-    fireEvent.changeText(screen.getByTestId('compose-subject', q), 'Draft');
-    fireEvent.press(screen.getByTestId('compose-cancel', q));
+    await render(<ComposeMessageSheet isOpen onClose={onClose} />);
+    await fireEvent.changeText(screen.getByTestId('compose-subject', q), 'Draft');
+    await fireEvent.press(screen.getByTestId('compose-cancel', q));
     expect(onClose).not.toHaveBeenCalled();
-    fireEvent.press(screen.getByTestId('compose-discard', q));
+    await fireEvent.press(screen.getByTestId('compose-discard', q));
     expect(onClose).toHaveBeenCalled();
   });
 });
 
 describe('MessageDetailScreen', () => {
-  it('loads a message by route id and refuses unsafe ids', () => {
+  it('loads a message by route id and refuses unsafe ids', async () => {
     (useLocalSearchParams as jest.Mock).mockReturnValue({ id: '44' });
-    const { unmount } = render(<MessageDetailScreen />);
+    const { unmount } = await render(<MessageDetailScreen />);
     expect(store.fetchMessageDetails).toHaveBeenCalledWith('44', { bypassCache: true });
-    unmount();
+    await unmount();
     (useLocalSearchParams as jest.Mock).mockReturnValue({ id: '..' });
-    render(<MessageDetailScreen />);
+    await render(<MessageDetailScreen />);
     expect(screen.getByTestId('message-detail-invalid')).toBeTruthy();
   });
 });

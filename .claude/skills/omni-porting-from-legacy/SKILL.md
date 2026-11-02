@@ -31,7 +31,7 @@ The five apps are one scaffold forked four times (Unit → Responder, Unit → D
 
 ## Storage identity
 
-Each variant keeps its legacy MMKV id, encryption key and persisted store names (R `ResgridResponder`; U and B `ResgridUnit`; I `ResgridIC`; D `ResgridDispatch` plus `auth-storage`/`security-storage`). Port storage code through the variant manifest — never hardcode an id or key.
+Each variant keeps its legacy MMKV ids and persisted store names (R `ResgridResponder`; U and B `ResgridUnit`; I `ResgridIC`; D `ResgridDispatch` plus `auth-storage`/`security-storage`). Encryption keys are not ported: Omni encrypts every native instance with a device key (plan D8). Only Responder carries its legacy files over (`storage.carryOver`); the other apps start over and users sign in again. Port storage code through the variant manifest — never hardcode an id or key.
 
 ## While the legacy repos are frozen
 

@@ -37,6 +37,17 @@ export interface MapConfigInput {
   MapRasterTileUrl?: string | null;
   /** §6.6 signed static map template (see `fillStaticMapTemplate`). */
   StaticMapUrlTemplate?: string | null;
+  /** §5.4 / §11.1 traffic overlay: Mapbox Traffic v1 vector tile template (carries the traffic token) and reload interval. */
+  TrafficAvailable?: boolean | null;
+  TrafficTileUrl?: string | null;
+  TrafficRefreshSeconds?: number | null;
+  /** §5.4 routing capabilities (absent on older servers). */
+  RoutingProvider?: string | null;
+  RoutingSupportsTraffic?: boolean | null;
+  RoutingSupportsIncidents?: boolean | null;
+  RoutingSupportsVoice?: boolean | null;
+  /** In-app navigation: provider can navigate (Valhalla/Mapbox, D26) ∧ the department's `Navigation.InApp` flag. */
+  NavigationAvailable?: boolean | null;
 }
 
 export const FALLBACK_MAPBOX_DAY_STYLE = 'mapbox://styles/mapbox/streets-v12';

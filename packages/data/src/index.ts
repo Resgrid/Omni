@@ -157,7 +157,7 @@ export { CalendarAttendingType, type CalendarState, useCalendarStore } from './c
 export { type CertificationsState, useCertificationsStore } from './certifications/certifications-store';
 export { CHECKLIST_RUN_SAVE_EVENT, checklistRunSaveHandler, type ChecklistRunSaveOutcome, type ChecklistRunSavePayload, type ChecklistsState, useChecklistsStore } from './checklists/checklists-store';
 export { type ContactsState, useContactsStore } from './contacts/contacts-store';
-export { type CustomMapsState, useCustomMapsStore } from './mapping/custom-maps-store';
+export { type CustomMapsState, type MapFeatureSearchScope, useCustomMapsStore } from './mapping/custom-maps-store';
 export { type NotesState, searchNotes, useNotesStore } from './notes/notes-store';
 export { type PoisState, selectPoiById, usePoisStore } from './pois/pois-store';
 export { type ProtocolsState, useProtocolsStore } from './protocols/protocols-store';
@@ -272,3 +272,6 @@ export * from './awaiting-resources';
 export * from './call-queues';
 export * from './map-markers';
 export * from './run-cards';
+
+// Live ETAs of navigating units (Dispatch, Big Board)
+export * from './navigation';

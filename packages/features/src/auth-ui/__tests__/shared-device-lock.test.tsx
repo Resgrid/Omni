@@ -38,24 +38,24 @@ describe('SharedDeviceLockScreen', () => {
 
   it('locks on the server first, then unlocks the same session with the operator code', async () => {
     mockCompleteUnlock.mockResolvedValue({ Locked: false });
-    render(<SharedDeviceLockScreen />);
+    await render(<SharedDeviceLockScreen />);
     expect(await screen.findByText('shared_session.locked_operator [operator=J. Doe]')).toBeTruthy();
     expect(mockLockSession).toHaveBeenCalled();
 
-    fireEvent.changeText(screen.getByTestId('shared-lock-code'), '123456');
-    fireEvent.press(screen.getByTestId('shared-lock-unlock'));
+    await fireEvent.changeText(screen.getByTestId('shared-lock-code'), '123456');
+    await fireEvent.press(screen.getByTestId('shared-lock-unlock'));
     await waitFor(() => expect(mockCompleteUnlock).toHaveBeenCalledWith({}, 4, { Method: 'totp', Code: '123456' }));
     expect(mockAfterUnlock).toHaveBeenCalled();
   });
 
   it('shows a refused code and lets anyone end the shift', async () => {
     mockCompleteUnlock.mockRejectedValue({ response: { status: 400, data: { type: 'invalid_totp' } } });
-    render(<SharedDeviceLockScreen />);
-    fireEvent.changeText(await screen.findByTestId('shared-lock-code'), '000000');
-    fireEvent.press(screen.getByTestId('shared-lock-unlock'));
+    await render(<SharedDeviceLockScreen />);
+    await fireEvent.changeText(await screen.findByTestId('shared-lock-code'), '000000');
+    await fireEvent.press(screen.getByTestId('shared-lock-unlock'));
     expect(await screen.findByText('mfa.errors.invalid_totp')).toBeTruthy();
 
-    fireEvent.press(screen.getByTestId('shared-lock-end-shift'));
+    await fireEvent.press(screen.getByTestId('shared-lock-end-shift'));
     expect(mockEndShift).toHaveBeenCalledWith(false);
     await waitFor(() => expect(screen.getByTestId('shared-lock-end-shift')).not.toBeDisabled());
   });

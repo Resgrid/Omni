@@ -73,18 +73,18 @@ describe('call detail tab registration', () => {
     expect(tab.visible?.({ capabilities: { incidentCommand: 'view' } } as never)).toBe(true);
   });
 
-  it('renders nothing in BigBoard', () => {
+  it('renders nothing in BigBoard', async () => {
     activateVariant('bigboard');
-    render(<IncidentCommandTab callId="7" />);
+    await render(<IncidentCommandTab callId="7" />);
     expect(screen.toJSON()).toBeNull();
   });
 });
 
 describe('view tier (Responder/Unit)', () => {
-  it('shows the resource slice: assignment, leads, commander, objectives and live notes', () => {
+  it('shows the resource slice: assignment, leads, commander, objectives and live notes', async () => {
     activateVariant('responder');
     useResourceViewStore.setState({ viewsByCall: { '7': view() } });
-    render(<IncidentCommandTab callId="7" />);
+    await render(<IncidentCommandTab callId="7" />);
     expect(mockFetchIncidentView).toHaveBeenCalledWith('7', null, { bypassCache: false });
     expect(screen.getByTestId('incident-view-panel')).toBeTruthy();
     expect(screen.getByText('Division A')).toBeTruthy();
@@ -100,22 +100,22 @@ describe('view tier (Responder/Unit)', () => {
     expect(screen.queryByTestId('command-board-view')).toBeNull();
   });
 
-  it('passes the active unit in the Unit app', () => {
+  it('passes the active unit in the Unit app', async () => {
     activateVariant('unit');
-    render(<ResourceIncidentPanel callId="7" unitId={12} />);
+    await render(<ResourceIncidentPanel callId="7" unitId={12} />);
     expect(mockFetchIncidentView).toHaveBeenCalledWith('7', 12, { bypassCache: false });
   });
 
-  it('treats no command as an empty state and offers a retry after an error', () => {
+  it('treats no command as an empty state and offers a retry after an error', async () => {
     activateVariant('responder');
     useResourceViewStore.setState({ viewsByCall: { '7': null } });
-    const { unmount } = render(<IncidentCommandTab callId="7" />);
+    const { unmount } = await render(<IncidentCommandTab callId="7" />);
     expect(screen.getByTestId('incident-view-empty')).toBeTruthy();
-    unmount();
+    await unmount();
 
     useResourceViewStore.setState({ viewsByCall: {}, errors: { view: { code: 'network', message: 'offline' } as never } });
-    render(<IncidentCommandTab callId="7" />);
-    fireEvent.press(screen.getByTestId('incident-view-retry'));
+    await render(<IncidentCommandTab callId="7" />);
+    await fireEvent.press(screen.getByTestId('incident-view-retry'));
     expect(mockFetchIncidentView).toHaveBeenLastCalledWith('7', null, { bypassCache: true });
   });
 });
@@ -123,36 +123,36 @@ describe('view tier (Responder/Unit)', () => {
 describe('assist tier (Dispatch)', () => {
   beforeEach(() => activateVariant('dispatch'));
 
-  it('explains when the member may not work command', () => {
+  it('explains when the member may not work command', async () => {
     seedBoard('7', null);
     securityStore.setState({ rights: { CanCreateCalls: true, CanLoginToCommandApp: false } as DepartmentRightsResultData });
-    render(<IncidentCommandTab callId="7" />);
+    await render(<IncidentCommandTab callId="7" />);
     expect(screen.getByTestId('incident-command-tab-not-authorized')).toBeTruthy();
     expect(mockRefreshBoard).not.toHaveBeenCalled();
   });
 
   it('loads the board and lets a call-taker establish command from a template', async () => {
     seedBoard('7', null);
-    render(<IncidentCommandTab callId="7" />);
+    await render(<IncidentCommandTab callId="7" />);
     expect(mockRefreshBoard).toHaveBeenCalledWith('7', { bypassCache: true });
-    fireEvent.press(screen.getByTestId('incident-command-tab-establish'));
+    await fireEvent.press(screen.getByTestId('incident-command-tab-establish'));
     await act(async () => fireEvent.press(screen.getByTestId('start-command-blank', hidden)));
     expect(mockStartCommand).toHaveBeenCalledWith('7', null);
   });
 
-  it('hides establish without CanCreateCalls', () => {
+  it('hides establish without CanCreateCalls', async () => {
     seedBoard('7', null);
     securityStore.setState({ rights: { CanCreateCalls: false } as DepartmentRightsResultData });
-    render(<IncidentCommandTab callId="7" />);
+    await render(<IncidentCommandTab callId="7" />);
     expect(screen.getByTestId('incident-command-tab-empty')).toBeTruthy();
     expect(screen.queryByTestId('incident-command-tab-establish')).toBeNull();
   });
 
-  it('shows the board with an "open full board" action', () => {
+  it('shows the board with an "open full board" action', async () => {
     seedBoard();
-    render(<IncidentCommandTab callId="7" />);
+    await render(<IncidentCommandTab callId="7" />);
     expect(screen.getByTestId('command-board-view')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('incident-command-tab-open-full'));
+    await fireEvent.press(screen.getByTestId('incident-command-tab-open-full'));
     expect(router.push).toHaveBeenCalledWith('/call/7/command');
   });
 });
@@ -160,11 +160,11 @@ describe('assist tier (Dispatch)', () => {
 describe('command tier (IC)', () => {
   beforeEach(() => activateVariant('ic'));
 
-  it('shows a tracked board and opens it on the command tab', () => {
+  it('shows a tracked board and opens it on the command tab', async () => {
     seedBoard();
-    render(<IncidentCommandTab callId="7" />);
+    await render(<IncidentCommandTab callId="7" />);
     expect(screen.getByTestId('command-board-view')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('incident-command-tab-open-board'));
+    await fireEvent.press(screen.getByTestId('incident-command-tab-open-board'));
     expect(useCommandStore.getState().activeCallId).toBe('7');
     expect(router.push).toHaveBeenCalledWith('/command');
   });
@@ -177,7 +177,7 @@ describe('command tier (IC)', () => {
     mockRefreshBoard.mockImplementation(async (callId: string) => {
       useCommandStore.setState((state) => ({ boards: { ...state.boards, [callId]: { callId, board: makeBoard(), adHocUnits: [], adHocPersonnel: [], isProvisional: false, lastRefreshed: 1 } } }));
     });
-    render(<IncidentCommandTab callId="7" />);
+    await render(<IncidentCommandTab callId="7" />);
     expect(screen.queryByTestId('incident-command-tab-establish')).toBeNull();
     await act(async () => fireEvent.press(screen.getByTestId('incident-command-tab-track')));
     expect(mockRefreshBoard).toHaveBeenCalledWith('7', { bypassCache: true });
@@ -186,8 +186,8 @@ describe('command tier (IC)', () => {
 
   it('establishes command and goes to the board', async () => {
     seedBoard('8', makeBoard());
-    render(<IncidentCommandTab callId="7" />);
-    fireEvent.press(screen.getByTestId('incident-command-tab-establish'));
+    await render(<IncidentCommandTab callId="7" />);
+    await fireEvent.press(screen.getByTestId('incident-command-tab-establish'));
     await act(async () => fireEvent.press(screen.getByTestId('start-command-blank', hidden)));
     expect(mockStartCommand).toHaveBeenCalledWith('7', null);
     expect(router.push).toHaveBeenCalledWith('/command');

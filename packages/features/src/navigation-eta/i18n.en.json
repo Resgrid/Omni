@@ -1,0 +1,8 @@
+{
+  "navigation_eta.minutes_one": "ETA {{count}} min",
+  "navigation_eta.minutes": "ETA {{count}} min",
+  "navigation_eta.arriving": "Arriving",
+  "navigation_eta.traffic": "traffic",
+  "navigation_eta.stale": "no update",
+  "navigation_eta.stale_hint": "No update for over a minute"
+}

@@ -1,0 +1,105 @@
+# Field labels "App" and "Platform" drive the labels added by .github/workflows/issue-labels.yml
+# (scripts/ci/issue-labels.mjs); `pnpm workflows:check` keeps them in step. The languages match packages/i18n.
+name: Translation problem
+description: Text is wrong, untranslated, cut off or laid out badly in one of the ten languages.
+labels: ['translation']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The apps ship in ten languages, and some translations still need a native speaker's review. Corrections are very welcome.
+
+        If your department renamed a term (for example "Apparatus" instead of "Unit") and the app does not use the new name, choose **Department term not used** below.
+
+  - type: dropdown
+    id: app
+    attributes:
+      label: App
+      description: Which app shows the text? Choose every app where you have seen it.
+      multiple: true
+      options:
+        - Responder — for department members
+        - Unit — for vehicle and apparatus crews (MDT)
+        - IC — for incident commanders
+        - Dispatch — for dispatchers
+        - BigBoard — for station and EOC wall displays
+        - All apps
+        - Not sure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: language
+    attributes:
+      label: Language
+      multiple: true
+      options:
+        - Arabic (ar)
+        - German (de)
+        - Greek (el)
+        - English (en)
+        - Spanish (es)
+        - French (fr)
+        - Italian (it)
+        - Polish (pl)
+        - Swedish (sv)
+        - Ukrainian (uk)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What is wrong?
+      options:
+        - Wrong or unnatural translation
+        - Not translated (shows English or a code such as settings.title)
+        - Text cut off or overlapping
+        - Right-to-left layout problem (Arabic)
+        - Department term not used
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: screen
+    attributes:
+      label: Where is the text?
+      description: The screen, and the button, label or message on it.
+      placeholder: 'Settings → App updates → Check for updates'
+    validations:
+      required: true
+
+  - type: textarea
+    id: current
+    attributes:
+      label: Text shown now
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggested
+    attributes:
+      label: Suggested text
+      description: What it should say. Leave empty if you are not sure.
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      description: Only if the problem looks different on some platforms (for example cut-off text).
+      multiple: true
+      options:
+        - iOS (iPhone or iPad)
+        - Android (phone or tablet)
+        - Web browser (hosted by Resgrid)
+        - Web (self-hosted Docker image)
+        - Windows desktop app
+        - macOS desktop app
+        - Linux desktop app
+
+  - type: textarea
+    id: attachments
+    attributes:
+      label: Screenshot
+      description: Optional. Blur personal and call details first.

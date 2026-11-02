@@ -1,6 +1,7 @@
+import { styleImageSourceUrl } from '../../lib/offline-style-sources';
 import type { StyleSpecification } from '../../types';
-import { buildFallbackOfflineStyle, composeOfflineStyle } from '../style-composer';
-import { OfflineMapPackKind, type OfflineMapPackRecord, type OfflineStyleInput } from '../types';
+import { buildFallbackOfflineStyle, composeOfflineStyle, OFFLINE_PIXEL_IMAGES_METADATA } from '../style-composer';
+import { type FloorCorners, OfflineMapPackKind, type OfflineMapPackRecord, type OfflineStyleInput } from '../types';
 
 type Json = Record<string, any>;
 
@@ -111,5 +112,48 @@ describe('composeOfflineStyle', () => {
     expect(style.layers.find((layer: Json) => layer.id === 'offline-custom-layer_9').layout).toEqual({ visibility: 'none' });
     expect(style.sources['offline-floor-f1']).toMatchObject({ type: 'image', url: 'file:///data/f1.png' });
     expect(style.sources['offline-dept-pois']).toMatchObject({ type: 'geojson' });
+    expect(style.metadata).toBeUndefined();
+  });
+
+  it('lists pixel-only images (no corners) in the style metadata instead of adding image sources', () => {
+    const corners: FloorCorners = [
+      [0, 1],
+      [1, 1],
+      [1, 0],
+      [0, 0],
+    ];
+    const withMetadata = { ...(template() as unknown as Json), metadata: { 'maputnik:renderer': 'mlgljs', [OFFLINE_PIXEL_IMAGES_METADATA]: { stale: 'file:///old.png' } } } as unknown as StyleSpecification;
+    const style = composeOfflineStyle(
+      input({
+        template: withMetadata,
+        indoorFloors: [
+          { floorId: 'pre plan', imagePath: 'file:///data/pre-plan.png', corners: null },
+          { floorId: 'f1', imagePath: 'file:///data/f1.png', corners },
+          { floorId: 'a-site', imagePath: 'opfs://resgrid-offline-maps/scope/files/site.jpg', corners: null },
+        ],
+      })
+    ) as unknown as Json;
+
+    expect(style.sources['offline-floor-pre_plan']).toBeUndefined();
+    expect(style.sources['offline-floor-a-site']).toBeUndefined();
+    expect(style.layers.map((layer: Json) => layer.id).filter((id: string) => id.startsWith('offline-floor-'))).toEqual(['offline-floor-f1']);
+    expect(style.sources['offline-floor-f1']).toEqual({ type: 'image', url: 'file:///data/f1.png', coordinates: corners });
+    // The template's own metadata is kept; the pixel image list is the composer's.
+    expect(style.metadata).toEqual({
+      'maputnik:renderer': 'mlgljs',
+      [OFFLINE_PIXEL_IMAGES_METADATA]: { 'offline-floor-a-site': 'opfs://resgrid-offline-maps/scope/files/site.jpg', 'offline-floor-pre_plan': 'file:///data/pre-plan.png' },
+    });
+
+    // Viewers find both kinds by the same source id.
+    const composed = style as unknown as StyleSpecification;
+    expect(styleImageSourceUrl(composed, 'offline-floor-pre_plan')).toBe('file:///data/pre-plan.png');
+    expect(styleImageSourceUrl(composed, 'offline-floor-f1')).toBe('file:///data/f1.png');
+    expect(styleImageSourceUrl(composed, 'offline-floor-missing')).toBeNull();
+  });
+
+  it('keeps the template metadata as it is when every floor has corners', () => {
+    const withMetadata = { ...(template() as unknown as Json), metadata: { 'maputnik:renderer': 'mlgljs' } } as unknown as StyleSpecification;
+    const style = composeOfflineStyle(input({ template: withMetadata })) as unknown as Json;
+    expect(style.metadata).toEqual({ 'maputnik:renderer': 'mlgljs' });
   });
 });

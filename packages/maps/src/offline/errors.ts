@@ -31,6 +31,8 @@ export type OfflineMapsErrorCode =
   | 'download-url-expired'
   | 'size-mismatch'
   | 'integrity-failed'
+  /** A verified archive (the glyphs zip) could not be unpacked. */
+  | 'archive-invalid'
   | 'storage-error'
   | 'cancelled'
   | 'nothing-to-download';

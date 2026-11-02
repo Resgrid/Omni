@@ -56,6 +56,8 @@ export const offlineManifestPolicySchema = z.object({
   MaxPackBytes: finite,
   /** Response-area limit (`ResponseAreaMaxBytes`); assumption — Core adds it to `Policy`. */
   ResponseAreaMaxBytes: finite,
+  /** Download policy "manual" (setting 123): packs download only when the member asks (Core `OfflineManifestPolicy.ManualOnly`). */
+  ManualOnly: flag,
 });
 
 export const offlineManifestPackSchema = z.object({
@@ -106,6 +108,8 @@ export interface OfflineManifestPolicy {
   ambientCacheMaxBytes: number | null;
   maxPackBytes: number;
   responseAreaMaxBytes: number;
+  /** Policy "manual": no automatic downloads (shift start, reconnect, foreground); the member downloads from Settings. Optional in persisted snapshots from older builds. */
+  manualOnly?: boolean;
 }
 
 export const DEFAULT_OFFLINE_POLICY: OfflineManifestPolicy = {
@@ -116,6 +120,7 @@ export const DEFAULT_OFFLINE_POLICY: OfflineManifestPolicy = {
   ambientCacheMaxBytes: null,
   maxPackBytes: resolveMaxPackBytes(null),
   responseAreaMaxBytes: resolveResponseAreaMaxBytes(null),
+  manualOnly: false,
 };
 
 /** One file the client downloads. `url` is signed: memory only. */
@@ -149,6 +154,8 @@ export interface OfflineManifestPendingPack {
   name: string;
   sizeBytes: number | null;
   state: 'building' | 'failed';
+  /** Incident/corridor selection reads it (optional in snapshots from older builds). */
+  bounds?: PackBounds | null;
 }
 
 export interface OfflineManifestRejection {
@@ -193,6 +200,9 @@ export const isAllowedPackUrl = (url: string | null, allowLocalHttp?: boolean): 
 };
 
 const SPRITE_FILE = /^sprite(@2x)?\.(json|png)$/;
+
+/** Asset id of the glyph archive (`Styles.Glyphs`). */
+export const GLYPHS_ASSET_ID = 'style:glyphs';
 
 const extensionOf = (url: string, fallback: string): string => {
   const path = url.split(/[?#]/)[0] ?? '';
@@ -260,6 +270,7 @@ export function parseOfflineManifest(raw: unknown, options: ParseOptions = {}): 
     ambientCacheMaxBytes: wire.Policy?.AmbientCacheMaxBytes !== null && wire.Policy?.AmbientCacheMaxBytes !== undefined && wire.Policy.AmbientCacheMaxBytes >= 0 ? wire.Policy.AmbientCacheMaxBytes : null,
     maxPackBytes: resolveMaxPackBytes(wire.Policy?.MaxPackBytes),
     responseAreaMaxBytes: resolveResponseAreaMaxBytes(wire.Policy?.ResponseAreaMaxBytes),
+    manualOnly: wire.Policy?.ManualOnly === true,
   };
 
   const assets: OfflineManifestAsset[] = [];
@@ -313,8 +324,9 @@ export function parseOfflineManifest(raw: unknown, options: ParseOptions = {}): 
         }
       : null;
 
-  // Department data, sprite and style templates first: they are small and every offline map needs them.
-  const departmentData = fileAsset('department-data', 'department-data', OfflineMapPackKind.DepartmentData, 'Department data', wire.DepartmentData, 'json');
+  // Department data, sprite and style templates first: they are small and every offline map needs them. Core serves the
+  // bundle as the gzip file itself (`GetOfflineDepartmentData`, no Content-Encoding), so the SHA-256 covers those bytes.
+  const departmentData = fileAsset('department-data', 'department-data', OfflineMapPackKind.DepartmentData, 'Department data', wire.DepartmentData, 'json.gz');
   if (departmentData) accept(departmentData);
 
   for (const entry of wire.Sprite?.Files ?? []) {
@@ -332,6 +344,10 @@ export function parseOfflineManifest(raw: unknown, options: ParseOptions = {}): 
   if (day) accept(day);
   const night = fileAsset('style:night', 'style', null, 'Night style', wire.Styles?.Night, 'json');
   if (night) accept(night);
+  // Glyph PBF ranges (`GetOfflineAsset/glyphs.zip`): extracted into a local `{fontstack}/{range}.pbf` directory so the
+  // offline styles keep their text layers.
+  const glyphs = fileAsset(GLYPHS_ASSET_ID, 'glyphs', null, 'Map labels', wire.Styles?.Glyphs, 'zip');
+  if (glyphs) accept(glyphs);
 
   for (const entry of wire.Packs ?? []) {
     const result = offlineManifestPackSchema.safeParse(entry);
@@ -349,11 +365,11 @@ export function parseOfflineManifest(raw: unknown, options: ParseOptions = {}): 
     }
     const status = pack.Status ?? (pack.DownloadUrl ? OfflineMapPackStatus.Ready : OfflineMapPackStatus.Queued);
     if (status === OfflineMapPackStatus.Failed) {
-      pending.push({ assetId, kind: assetKind, name, sizeBytes: sizeOf(pack.SizeBytes), state: 'failed' });
+      pending.push({ assetId, kind: assetKind, name, sizeBytes: sizeOf(pack.SizeBytes), state: 'failed', bounds: toBounds(pack.Bounds) });
       continue;
     }
     if (status !== OfflineMapPackStatus.Ready || !pack.DownloadUrl) {
-      pending.push({ assetId, kind: assetKind, name, sizeBytes: sizeOf(pack.SizeBytes), state: 'building' });
+      pending.push({ assetId, kind: assetKind, name, sizeBytes: sizeOf(pack.SizeBytes), state: 'building', bounds: toBounds(pack.Bounds) });
       continue;
     }
     if (!isSha256Hex(pack.Sha256)) {
@@ -390,8 +406,10 @@ export function parseOfflineManifest(raw: unknown, options: ParseOptions = {}): 
       continue;
     }
     const floor = result.data;
+    // No corners: a pixel-only image (D21, a custom map without bounds) — kept, and drawn in its pixel frame. Corners that
+    // are sent but out of range are an error, not a pixel-only image.
     const corners = toCorners(floor.Corners);
-    if (!floor.ImageUrl || !corners) {
+    if (!floor.ImageUrl || (floor.Corners && !corners)) {
       invalidEntries += 1;
       continue;
     }

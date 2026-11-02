@@ -61,11 +61,13 @@ describe('createBuilderConfig', () => {
     expect(config.electronLanguages).toEqual(expect.arrayContaining(['en-US', 'ar', 'de', 'el', 'es', 'fr', 'it', 'pl', 'sv', 'uk']));
   });
 
-  it('uses per-variant icons, with an .ico when the variant has one', () => {
-    expect(build('unit').win.icon).toMatch(/variants[\\/]unit[\\/]assets[\\/]icon\.ico$/);
-    expect(build('bigboard').win.icon).toMatch(/variants[\\/]bigboard[\\/]assets[\\/]icon\.png$/);
-    expect(build('bigboard').nsis.installerIcon).toBeUndefined();
-    expect(build('ic').mac.icon).toMatch(/variants[\\/]ic[\\/]assets[\\/]icon\.png$/);
+  it.each(['responder', 'unit', 'ic', 'dispatch', 'bigboard'])('%s: per-variant icons (.ico on Windows, the macOS-grid desktop icon on macOS and Linux)', (variant) => {
+    const config = build(variant);
+    const asset = (file) => new RegExp(`variants[\\\\/]${variant}[\\\\/]assets[\\\\/]${file.replace('.', '\\.')}$`);
+    expect(config.win.icon).toMatch(asset('icon.ico'));
+    expect(config.nsis.installerIcon).toMatch(asset('icon.ico'));
+    expect(config.mac.icon).toMatch(asset('desktop-icon.png'));
+    expect(config.linux.icon).toMatch(asset('desktop-icon.png'));
   });
 
   it('macOS: hardened runtime with entitlements and usage descriptions', () => {

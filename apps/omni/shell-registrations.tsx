@@ -5,6 +5,7 @@
 import type { ShellGateScreenProps, SidebarContentProps } from '@resgrid/app-shell';
 import { getShellOfflineRuntime, registerInitStep, registerShellBanner, registerShellOverlay, registerShellProvider, registerShellScreens, registerSidebarContent, useShellStore } from '@resgrid/app-shell';
 import { getActiveVariant } from '@resgrid/config';
+import { configureAppUpdates } from '@resgrid/core';
 import { PendingApprovalWatcher } from '@resgrid/features/approve-sign-in';
 import { AccessDeniedScreen, LoginScreen, MaintenanceScreen, OnboardingScreen, PersonalLockScreen, RecoveryCodesSheet, SharedDeviceLockScreen } from '@resgrid/features/auth-ui';
 import { AwaitingResourcesBanner, AwaitingResourcesHost, awaitingResourcesRoutes, registerAwaitingResourcesCallDetailTab } from '@resgrid/features/awaiting-resources';
@@ -20,7 +21,9 @@ import { configureSettings } from '@resgrid/features/settings';
 import { UnitStatusSidebar } from '@resgrid/features/unit-status';
 import { usePathname } from 'expo-router';
 
+import { appUpdatesModule } from './app-updates';
 import { ACTIVE_UNIT_ADAPTER, clearActiveCall, ShellChatIdentityProvider, ShellMapProvider, ShellNavigationHandoffProvider, ShellRouteMapProvider, ShellStatusProvider, storageSyncServices } from './feature-providers';
+import { registerNavigationSteps } from './navigation-wiring';
 import { registerOfflineMapsSteps } from './offline-maps-wiring';
 import { useCommandRecordsContext } from './records-context';
 
@@ -95,6 +98,14 @@ registerChecklistRunWriter(createDataChecklistRunWriter());
 // Settings → Offline maps follows the pack manager (shown on iOS/Android when the department offers packs).
 registerOfflineMapsSettings();
 registerOfflineMapsSteps();
+
+// In-app turn-by-turn (Unit, `maps.navigationInApp`): routes, prompts, live ETA reports and the navigation location profile.
+registerNavigationSteps();
+
+// In-app OTA updates (docs/subsystems/app-updates.md): iOS/Android release builds hand @resgrid/core the expo-updates
+// module (app-updates.native.ts); web, Electron and development builds hand over nothing, so updates stay off there. The
+// shell's init steps check after sign-in and on foreground; Settings → App updates checks on demand.
+configureAppUpdates({ module: appUpdatesModule });
 
 // Once storage is open, before any screen mounts: Storage & sync (and Unit's unit choice), the Records outbox controls
 // and BigBoard's dashboard storage read the offline runtime; a variant that commands incidents authors records against

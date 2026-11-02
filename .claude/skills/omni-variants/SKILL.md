@@ -36,7 +36,7 @@ Department feature flags (`Chat.System`, `Records.Field.*`, `Checklists.System`,
 
 ## Identity that must never change (store continuity)
 
-Bundle ids / packages (Responder is `com.wavetech.Resgrid` / `wtdt.resgrid.andriod` — the typo is permanent), EAS project ids, URL schemes, SSO return schemes, passkey associated domains, Responder's App Group, **MMKV instance ids and encryption keys and persisted store names**, Electron appIds/protocols, BigBoard's Electron loopback origin, Docker image names, legacy runtime env names (`RESPOND_`, `UNIT_`, `IC_`, `DISPATCH_`, `BIGBOARD_`), Novu subscriber id formats, push `Source`, client ids. Changing any of these signs users out, breaks deep links or orphans store listings. If a change is unavoidable, it needs a migration and an upgrade test (legacy store build → Omni build) before merge.
+Bundle ids / packages (Responder is `com.wavetech.Resgrid` / `wtdt.resgrid.andriod` — the typo is permanent), EAS project ids, URL schemes, SSO return schemes, passkey associated domains, Responder's App Group, **MMKV instance ids and persisted store names** (encryption keys are per device, plan D8; only Responder carries legacy files over, via `storage.carryOver`), Electron appIds/protocols, BigBoard's Electron loopback origin, Docker image names, legacy runtime env names (`RESPOND_`, `UNIT_`, `IC_`, `DISPATCH_`, `BIGBOARD_`), Novu subscriber id formats, push `Source`, client ids. Changing any of these signs users out, breaks deep links or orphans store listings. If a change is unavoidable, it needs a migration and an upgrade test (legacy store build → Omni build) before merge.
 
 ## Canonical routes
 

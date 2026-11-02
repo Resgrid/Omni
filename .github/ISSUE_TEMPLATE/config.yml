@@ -1,0 +1,18 @@
+# Issue chooser: every issue goes through a form, so each one names its app (see scripts/ci/issue-labels.mjs).
+blank_issues_enabled: false
+contact_links:
+  - name: Resgrid Help Center
+    url: https://resgrid.zohodesk.com/portal/en/home
+    about: Account, billing, subscription and department setup questions, and how-to guides.
+  - name: Resgrid system status
+    url: https://resgrid.freshstatus.io
+    about: Check here first when every app stops working or cannot connect at once.
+  - name: Resgrid website or server problem
+    url: https://github.com/Resgrid/Core/issues/new/choose
+    about: Problems in the resgrid.com web application or the API belong in the Resgrid Core repository.
+  - name: Report a security vulnerability
+    url: https://github.com/Resgrid/Omni/security/policy
+    about: Please report security problems privately, never in a public issue.
+  - name: Contact Resgrid
+    url: https://resgrid.com/contact
+    about: Anything else, including support for self-hosted installs.

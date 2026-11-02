@@ -77,6 +77,15 @@ describe('Sentry init', () => {
     setEnv({ SENTRY_DSN: 'https://key@sentry/1' });
     expect(createSentryOptions({ tracesSampleRate: 1 }).tracesSampleRate).toBe(1);
   });
+
+  it("keeps the SDK's default integrations, which tag events with the expo-updates id, channel and runtime version", () => {
+    // An integrations ARRAY is added to the defaults; a function or `defaultIntegrations: false` would drop ExpoContext,
+    // which sets the `expo.updates.*` tags and reports emergency launches (docs/subsystems/app-updates.md).
+    setEnv({ SENTRY_DSN: 'https://key@sentry/1' });
+    const options = createSentryOptions();
+    expect(Array.isArray(options.integrations)).toBe(true);
+    expect(options).not.toHaveProperty('defaultIntegrations');
+  });
 });
 
 describe('logger → Sentry forwarding', () => {

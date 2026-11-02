@@ -41,6 +41,11 @@ export interface RealtimeEventMap {
   /** Two hub arguments: the id and the requirements payload. */
   outstandingRequirementsUpdated: [id: string | null, payload: unknown, ...rest: unknown[]];
   unitStatusAlertUpdated: IdEventArgs;
+  /**
+   * Two hub arguments: the unit id and a camel-cased JSON payload `{ unitId, callId, routeInstanceId, state }` (ids and
+   * state only — the ETA is read through `Routing/GetActiveNavigations`, which applies the viewer's visibility).
+   */
+  unitNavigationUpdated: [id: string | null, payload: unknown, ...rest: unknown[]];
 
   chatMessageReceived: ChatEventArgs;
   chatMessageEdited: ChatEventArgs;

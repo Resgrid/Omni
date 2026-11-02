@@ -30,6 +30,7 @@ export * from './personnel';
 export * from './protocols';
 export * from './records';
 export * from './routes';
+export * from './routing';
 export * from './run-cards';
 export * from './security';
 export * from './shifts';

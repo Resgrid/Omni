@@ -1,3 +1,4 @@
+import type { BackgroundTransfer } from './background-transfer';
 import { isAbortError, type OfflineMapsErrorCode } from './errors';
 import type { OfflinePackFileStore } from './file-store';
 import { createSha256, type Sha256Hasher } from './sha256';
@@ -37,6 +38,11 @@ export interface DownloaderDeps {
   createHasher?: () => Sha256Hasher;
   /** Lets the event loop run between hash slices (default `setTimeout(0)`). */
   yieldToEventLoop?: () => Promise<void>;
+  /**
+   * The OS transfer that keeps going while the app is suspended (iOS background URLSession). Used for an asset with no
+   * part on disk yet; a partial file left by the in-app downloader is finished with Range requests as before.
+   */
+  backgroundTransfer?: BackgroundTransfer | null;
 }
 
 const defaultYield = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
@@ -49,7 +55,8 @@ async function hashBytes(hasher: Sha256Hasher, bytes: Uint8Array, yieldToEventLo
 }
 
 /**
- * Downloads one asset to `partPath` with HTTP Range resume (MapLibre plan §19.5): an existing part is re-hashed and
+ * Downloads one asset to `partPath` — through the OS background transfer when there is one and no part yet, else with
+ * HTTP Range resume (MapLibre plan §19.5): an existing part is re-hashed and
  * continued from its size; every chunk is size-checked against the manifest and the hard limit; the finished file is
  * verified against the manifest SHA-256. On integrity or size failure the part is deleted; on network loss, abort or a
  * `canContinue` stop it is kept for the next attempt. The caller moves the verified part into place (atomic swap).
@@ -104,6 +111,37 @@ export async function downloadAsset(deps: DownloaderDeps, request: AssetDownload
     }
     return { status: 'complete', bytes: offset, sha256: digest, resumedFrom };
   };
+
+  if (deps.backgroundTransfer && offset === 0) {
+    const blocked = request.canContinue ? await request.canContinue() : null;
+    if (blocked) return { status: 'stopped', code: blocked, writtenBytes: 0 };
+    const transfer = await deps.backgroundTransfer.download({ url: request.url, path: request.partPath, signal: request.signal, onProgress: (written, size) => request.onProgress?.(written, size ?? total) });
+    if (transfer.status === 'stopped') return { status: 'stopped', code: transfer.code, writtenBytes: 0 };
+    if (transfer.status === 'failed') {
+      await fileStore.remove(request.partPath).catch(() => undefined);
+      return transfer.httpStatus === undefined ? { status: 'failed', code: transfer.code } : { status: 'failed', code: transfer.code, httpStatus: transfer.httpStatus };
+    }
+    // The whole file is on disk: check it like any other download.
+    let size: number;
+    try {
+      size = (await fileStore.size(request.partPath)) ?? 0;
+    } catch {
+      return discard('storage-error');
+    }
+    if (size > limit) return discard(request.expectedBytes !== null && size > request.expectedBytes ? 'size-mismatch' : 'pack-too-large');
+    try {
+      for (let position = 0; position < size; position += chunkBytes) {
+        if (request.signal?.aborted) return { status: 'stopped', code: 'cancelled', writtenBytes: position };
+        await hashBytes(hasher, await fileStore.read(request.partPath, position, Math.min(chunkBytes, size - position)), yieldToEventLoop);
+      }
+    } catch {
+      return discard('storage-error');
+    }
+    offset = size;
+    total = size;
+    request.onProgress?.(offset, total);
+    return finish();
+  }
 
   for (;;) {
     if (total !== null && offset >= total) {

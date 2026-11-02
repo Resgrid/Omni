@@ -72,3 +72,20 @@ export class SearchIndoorLocationsResult extends BaseV4Request {
 export class SearchCustomMapRegionsResult extends BaseV4Request {
   public Data: CustomMapRegionResultData[] = [];
 }
+
+/** Body of `POST Mapping/SignMapResourceUrls` (MapLibre plan D12): custom map tile/image and indoor floor image URLs. */
+export interface SignMapResourceUrlsInput {
+  /** Templates with `{z}/{x}/{y}` are allowed; at most 200 per call. */
+  Urls: string[];
+}
+
+export interface SignedMapResourceUrl {
+  /** The URL as sent. */
+  Url: string;
+  /** The URL with an expiring signature, or null when it is not a map resource of the caller's department. */
+  SignedUrl: string | null;
+}
+
+export class SignMapResourceUrlsResult extends BaseV4Request {
+  public Data: SignedMapResourceUrl[] = [];
+}

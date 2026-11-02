@@ -50,19 +50,19 @@ describe('protocols', () => {
   });
 
   it('lists protocols with plain-text previews and opens the details sheet with the full text', async () => {
-    render(<ProtocolListScreen />);
+    await render(<ProtocolListScreen />);
     expect(screen.getByText('Protocol 1')).toBeTruthy();
     expect(screen.getAllByText('Use for fires').length).toBeGreaterThan(0);
     expect(screen.queryByText('Protocol 3')).toBeNull();
-    fireEvent.changeText(screen.getByTestId('protocol-search'), 'hazmat');
+    await fireEvent.changeText(screen.getByTestId('protocol-search'), 'hazmat');
     expect(screen.queryByText('Protocol 1')).toBeNull();
     await act(async () => fireEvent.press(screen.getByTestId('protocol-card-2')));
     expect(mockFetchProtocol).toHaveBeenCalledWith('2');
     expect(String(screen.getByTestId('webview-html', hidden).props.children)).toContain('Full text');
   });
 
-  it('renders protocol text only through HtmlRenderer, sanitized', () => {
-    render(<ProtocolContent protocol={protocol('1')} />);
+  it('renders protocol text only through HtmlRenderer, sanitized', async () => {
+    await render(<ProtocolContent protocol={protocol('1')} />);
     const html = String(screen.getByTestId('webview-html').props.children);
     expect(html).toContain('<h1>Steps</h1>');
     expect(html).not.toContain('<script');
@@ -70,9 +70,9 @@ describe('protocols', () => {
     expect(screen.getByLabelText('protocols.details.code: P-1')).toBeTruthy();
   });
 
-  it('shows the empty state', () => {
+  it('shows the empty state', async () => {
     useProtocolsStore.setState({ protocols: [] });
-    render(<ProtocolListScreen />);
+    await render(<ProtocolListScreen />);
     expect(screen.getByTestId('protocol-list-empty')).toBeTruthy();
   });
 });

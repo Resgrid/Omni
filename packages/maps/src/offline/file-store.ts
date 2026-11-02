@@ -15,7 +15,7 @@ export interface OfflinePackFileStore {
   /** Reads `length` bytes from `offset` (fewer at the end of the file). */
   read(relativePath: string, offset: number, length: number): Promise<Uint8Array>;
   readText(relativePath: string): Promise<string>;
-  /** Atomic rename within the root; replaces the destination. */
+  /** Atomic rename of a file or a directory tree within the root; replaces the destination. */
   move(fromRelativePath: string, toRelativePath: string): Promise<void>;
   /** Deletes a file or a directory tree; missing paths are ignored. */
   remove(relativePath: string): Promise<void>;
@@ -77,10 +77,23 @@ export function createMemoryPackFileStore(options: { rootUri?: string; disk?: Di
     },
     move: async (from, to) => {
       const source = normalize(from);
+      const destination = normalize(to);
       const data = files.get(source);
-      if (!data) throw new Error('File not found');
-      files.delete(source);
-      files.set(normalize(to), data);
+      if (data) {
+        files.delete(source);
+        files.set(destination, data);
+        return;
+      }
+      // A directory: every file under it moves; the destination tree is replaced.
+      const children = under(source);
+      if (children.length === 0) throw new Error('File not found');
+      files.delete(destination);
+      for (const child of under(destination)) files.delete(child);
+      for (const child of children) {
+        const bytes = files.get(child) as Uint8Array;
+        files.delete(child);
+        files.set(`${destination}${child.slice(source.length)}`, bytes);
+      }
     },
     remove: async (relativePath) => {
       const key = normalize(relativePath);

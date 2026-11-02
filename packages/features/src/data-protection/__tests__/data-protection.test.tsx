@@ -34,18 +34,18 @@ beforeEach(() => {
 });
 
 describe('ProtectedText', () => {
-  it('shows the protected label instead of the REDACTED sentinel', () => {
-    render(<ProtectedText value="REDACTED" fieldId={ProtectedFieldIds.contactEmail} />);
+  it('shows the protected label instead of the REDACTED sentinel', async () => {
+    await render(<ProtectedText value="REDACTED" fieldId={ProtectedFieldIds.contactEmail} />);
     expect(screen.queryByText('REDACTED')).toBeNull();
     expect(screen.getByText('data_protection.protected_value')).toBeTruthy();
   });
 
-  it('trusts the RedactedFields list over the sentinel', () => {
+  it('trusts the RedactedFields list over the sentinel', async () => {
     // A member may type "REDACTED" into a note: with a list that does not name the field it is data.
-    const { rerender } = render(<ProtectedText value="REDACTED" fieldId={ProtectedFieldIds.callNotes} redactedFields={[]} />);
+    const { rerender } = await render(<ProtectedText value="REDACTED" fieldId={ProtectedFieldIds.callNotes} redactedFields={[]} />);
     expect(screen.getByText('REDACTED')).toBeTruthy();
 
-    rerender(<ProtectedText value="Jane" fieldId={ProtectedFieldIds.contactFirstName} redactedFields={['Contacts.FirstName']} />);
+    await rerender(<ProtectedText value="Jane" fieldId={ProtectedFieldIds.contactFirstName} redactedFields={['Contacts.FirstName']} />);
     expect(screen.queryByText('Jane')).toBeNull();
     expect(screen.getByTestId(`protected-field-${ProtectedFieldIds.contactFirstName}`)).toBeTruthy();
   });
@@ -58,8 +58,8 @@ describe('ProtectedText', () => {
 });
 
 describe('ProtectedRevealBar', () => {
-  it('renders nothing when the department is not protected', () => {
-    render(<ProtectedRevealBar onRefresh={jest.fn()} />);
+  it('renders nothing when the department is not protected', async () => {
+    await render(<ProtectedRevealBar onRefresh={jest.fn()} />);
     expect(screen.queryByTestId('protected-reveal-bar')).toBeNull();
   });
 
@@ -67,9 +67,9 @@ describe('ProtectedRevealBar', () => {
     enableProtection();
     mockEnsureGrant.mockResolvedValueOnce('granted');
     const onRefresh = jest.fn();
-    render(<ProtectedRevealBar onRefresh={onRefresh} />);
+    await render(<ProtectedRevealBar onRefresh={onRefresh} />);
 
-    fireEvent.press(screen.getByTestId('protected-reveal-button'));
+    await fireEvent.press(screen.getByTestId('protected-reveal-button'));
     await waitFor(() => expect(onRefresh).toHaveBeenCalledTimes(1));
     expect(mockOpenStepUpPrompt).not.toHaveBeenCalled();
   });
@@ -77,9 +77,9 @@ describe('ProtectedRevealBar', () => {
   it('opens the step-up prompt when a second factor is required', async () => {
     enableProtection();
     mockEnsureGrant.mockResolvedValueOnce('step_up_required');
-    render(<ProtectedRevealBar onRefresh={jest.fn()} />);
+    await render(<ProtectedRevealBar onRefresh={jest.fn()} />);
 
-    fireEvent.press(screen.getByTestId('protected-reveal-button'));
+    await fireEvent.press(screen.getByTestId('protected-reveal-button'));
     await waitFor(() => expect(mockOpenStepUpPrompt).toHaveBeenCalled());
   });
 
@@ -88,9 +88,9 @@ describe('ProtectedRevealBar', () => {
     useAuthStore.setState({ status: 'signedIn' });
     dataProtectionStore.setState({ grantToken: 'grant', stepUpExpiresAt: Date.now() + 60_000 });
     const onRefresh = jest.fn();
-    render(<ProtectedRevealBar onRefresh={onRefresh} />);
+    await render(<ProtectedRevealBar onRefresh={onRefresh} />);
 
-    fireEvent.press(screen.getByTestId('protected-conceal-button'));
+    await fireEvent.press(screen.getByTestId('protected-conceal-button'));
     await waitFor(() => expect(onRefresh).toHaveBeenCalledTimes(1));
     expect(dataProtectionStore.getState().grantToken).toBeNull();
   });
@@ -103,19 +103,19 @@ describe('StepUpPrompt', () => {
     mockVerifyStepUpOtp.mockResolvedValueOnce(true);
     const onClose = jest.fn();
     const onVerified = jest.fn();
-    render(<StepUpPrompt isOpen onClose={onClose} onVerified={onVerified} />);
+    await render(<StepUpPrompt isOpen onClose={onClose} onVerified={onVerified} />);
 
-    fireEvent.changeText(screen.getByTestId('step-up-code-input', q), ' 123456 ');
-    fireEvent.press(screen.getByTestId('step-up-submit', q));
+    await fireEvent.changeText(screen.getByTestId('step-up-code-input', q), ' 123456 ');
+    await fireEvent.press(screen.getByTestId('step-up-submit', q));
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     expect(mockVerifyStepUpOtp).toHaveBeenCalledWith('123456');
     expect(onVerified).toHaveBeenCalled();
   });
 
-  it('shows the translated error for an invalid code', () => {
+  it('shows the translated error for an invalid code', async () => {
     dataProtectionStore.setState({ lastError: 'invalid_totp' });
-    render(<StepUpPrompt isOpen onClose={jest.fn()} />);
+    await render(<StepUpPrompt isOpen onClose={jest.fn()} />);
     expect(screen.getByTestId('step-up-error', q)).toHaveTextContent('data_protection.step_up_invalid_code');
   });
 });

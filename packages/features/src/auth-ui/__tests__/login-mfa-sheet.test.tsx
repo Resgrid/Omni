@@ -21,10 +21,10 @@ const challenge = (overrides: Partial<MfaChallenge> = {}): MfaChallenge => ({
   ...overrides,
 });
 
-const renderSheet = (value: MfaChallenge = challenge()) => {
+const renderSheet = async (value: MfaChallenge = challenge()) => {
   fakeAuthStore.setState({ status: 'mfaRequired', mfaChallenge: value });
   const onLostFactor = jest.fn();
-  render(<LoginMfaSheet isOpen onLostFactor={onLostFactor} />);
+  await render(<LoginMfaSheet isOpen onLostFactor={onLostFactor} />);
   return { onLostFactor };
 };
 
@@ -34,62 +34,62 @@ describe('LoginMfaSheet', () => {
     activateTestVariant('responder');
   });
 
-  it('offers only the accepted methods the member has enrolled', () => {
-    renderSheet();
+  it('offers only the accepted methods the member has enrolled', async () => {
+    await renderSheet();
     expect(screen.getByTestId('login-mfa-code')).toBeTruthy();
     expect(screen.getByTestId('login-mfa-passkey')).toBeTruthy();
     // passkey_approval is accepted by the sign-in but not enrolled by the member.
     expect(screen.queryByTestId('login-mfa-approval')).toBeNull();
   });
 
-  it('hides passkeys where the variant has none', () => {
+  it('hides passkeys where the variant has none', async () => {
     activateTestVariant('bigboard');
-    renderSheet();
+    await renderSheet();
     expect(screen.queryByTestId('login-mfa-passkey')).toBeNull();
   });
 
   it('verifies the authenticator code and clears it', async () => {
-    renderSheet();
-    fireEvent.changeText(screen.getByTestId('login-mfa-code'), ' 123456 ');
-    fireEvent.press(screen.getByTestId('login-mfa-submit'));
+    await renderSheet();
+    await fireEvent.changeText(screen.getByTestId('login-mfa-code'), ' 123456 ');
+    await fireEvent.press(screen.getByTestId('login-mfa-submit'));
     await waitFor(() => expect(fakeAuthStore.getState().verifyLoginMfa).toHaveBeenCalledWith({ method: 'totp', code: '123456' }));
     expect(screen.getByTestId('login-mfa-code').props.value).toBe('');
   });
 
   it('shows a refusal in the member language and stops the spinner', async () => {
     fakeAuthStore.getState().verifyLoginMfa.mockResolvedValueOnce({ ok: false, code: 'invalid_totp', restart: false });
-    renderSheet();
-    fireEvent.changeText(screen.getByTestId('login-mfa-code'), '000000');
-    fireEvent.press(screen.getByTestId('login-mfa-submit'));
+    await renderSheet();
+    await fireEvent.changeText(screen.getByTestId('login-mfa-code'), '000000');
+    await fireEvent.press(screen.getByTestId('login-mfa-submit'));
     expect(await screen.findByText('mfa.errors.invalid_totp')).toBeTruthy();
     expect(screen.getByText('mfa.login.verify')).toBeTruthy();
   });
 
   it('never leaves the spinner running when a step throws (try/finally)', async () => {
     fakeAuthStore.getState().verifyLoginMfa.mockRejectedValueOnce(new Error('boom'));
-    renderSheet();
-    fireEvent.press(screen.getByTestId('login-mfa-passkey'));
+    await renderSheet();
+    await fireEvent.press(screen.getByTestId('login-mfa-passkey'));
     expect(await screen.findByText('mfa.errors.unknown_error')).toBeTruthy();
     expect(screen.getByTestId('login-mfa-passkey')).not.toBeDisabled();
   });
 
   it('switches to a recovery code and sends it as one', async () => {
-    renderSheet();
-    fireEvent.press(screen.getByTestId('login-mfa-recovery-toggle'));
-    fireEvent.changeText(screen.getByTestId('login-mfa-code'), 'abcd-efgh');
-    fireEvent.press(screen.getByTestId('login-mfa-submit'));
+    await renderSheet();
+    await fireEvent.press(screen.getByTestId('login-mfa-recovery-toggle'));
+    await fireEvent.changeText(screen.getByTestId('login-mfa-code'), 'abcd-efgh');
+    await fireEvent.press(screen.getByTestId('login-mfa-submit'));
     await waitFor(() => expect(fakeAuthStore.getState().verifyLoginMfa).toHaveBeenCalledWith({ method: 'recovery_code', code: 'abcd-efgh' }));
   });
 
-  it('cancels the sign-in, dropping the transaction', () => {
-    renderSheet();
-    fireEvent.press(screen.getByTestId('login-mfa-cancel'));
+  it('cancels the sign-in, dropping the transaction', async () => {
+    await renderSheet();
+    await fireEvent.press(screen.getByTestId('login-mfa-cancel'));
     expect(fakeAuthStore.getState().cancelLoginMfa).toHaveBeenCalledTimes(1);
   });
 
-  it('offers the lost-authenticator recovery', () => {
-    const { onLostFactor } = renderSheet();
-    fireEvent.press(screen.getByTestId('login-mfa-lost'));
+  it('offers the lost-authenticator recovery', async () => {
+    const { onLostFactor } = await renderSheet();
+    await fireEvent.press(screen.getByTestId('login-mfa-lost'));
     expect(onLostFactor).toHaveBeenCalled();
   });
 
@@ -98,9 +98,9 @@ describe('LoginMfaSheet', () => {
     const state = fakeAuthStore.getState();
     state.requestLoginApproval.mockResolvedValue({ ApprovalRequestId: 'req-1', MatchNumber: '42', ExpiresIn: 120 });
     state.waitForLoginApproval.mockImplementation(() => new Promise((resolve) => (decide = resolve)));
-    renderSheet(challenge({ methods: ['passkey_approval'], enrolled: ['passkey_approval'], preferred: null }));
+    await renderSheet(challenge({ methods: ['passkey_approval'], enrolled: ['passkey_approval'], preferred: null }));
 
-    fireEvent.press(screen.getByTestId('login-mfa-approval'));
+    await fireEvent.press(screen.getByTestId('login-mfa-approval'));
     expect(await screen.findByTestId('mfa-approval-number')).toHaveTextContent('42');
 
     await act(async () => decide('approved'));
@@ -112,17 +112,17 @@ describe('LoginMfaSheet', () => {
     const state = fakeAuthStore.getState();
     state.requestLoginApproval.mockResolvedValue({ ApprovalRequestId: 'req-1', MatchNumber: '42', ExpiresIn: 120 });
     state.waitForLoginApproval.mockResolvedValue('denied');
-    renderSheet(challenge({ methods: ['passkey_approval'], enrolled: [], preferred: null }));
-    fireEvent.press(screen.getByTestId('login-mfa-approval'));
+    await renderSheet(challenge({ methods: ['passkey_approval'], enrolled: [], preferred: null }));
+    await fireEvent.press(screen.getByTestId('login-mfa-approval'));
     expect(await screen.findByText('mfa.errors.approval_denied')).toBeTruthy();
     expect(state.verifyLoginMfa).not.toHaveBeenCalled();
   });
 
   it('sets up the authenticator a department requires', async () => {
-    renderSheet(challenge({ kind: 'setup', methods: ['totp'], enrolled: [], preferred: null }));
+    await renderSheet(challenge({ kind: 'setup', methods: ['totp'], enrolled: [], preferred: null }));
     expect(await screen.findByTestId('mfa-setup-shared-key')).toHaveTextContent('ABCD EFGH');
-    fireEvent.changeText(screen.getByTestId('login-mfa-code'), '654321');
-    fireEvent.press(screen.getByTestId('login-mfa-submit'));
+    await fireEvent.changeText(screen.getByTestId('login-mfa-code'), '654321');
+    await fireEvent.press(screen.getByTestId('login-mfa-submit'));
     await waitFor(() => expect(fakeAuthStore.getState().verifyLoginMfa).toHaveBeenCalledWith({ method: 'setup', code: '654321' }));
     expect(screen.queryByTestId('login-mfa-lost')).toBeNull();
   });

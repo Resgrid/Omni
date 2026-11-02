@@ -1,4 +1,4 @@
-import axios, { type AxiosError, type AxiosInstance, type AxiosRequestConfig, type InternalAxiosRequestConfig, isAxiosError } from 'axios';
+import { type AxiosError, type AxiosInstance, type AxiosRequestConfig, create as createAxios, type InternalAxiosRequestConfig, isAxiosError } from 'axios';
 
 import { NoActiveSessionError, problemTypeOf, sanitizePath, toApiError } from './api-error';
 import { sharedSession401 } from './shared-session';
@@ -90,7 +90,7 @@ export const createHttpClient = (options: HttpClientOptions): HttpClient => {
   const { getBaseUrl, getAccessToken, refreshAccessToken, onAuthRejected, getHeaders, isAccessTokenExpired, logger } = options;
   const isSessionActive = options.isSessionActive ?? (() => Boolean(getAccessToken()));
 
-  const instance = axios.create({
+  const instance = createAxios({
     timeout: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
   });

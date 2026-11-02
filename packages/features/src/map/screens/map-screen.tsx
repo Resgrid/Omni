@@ -1,6 +1,7 @@
 import { useSecurity, useTerm } from '@resgrid/auth';
-import { useCapability } from '@resgrid/config';
+import { useCapability, useHasModule } from '@resgrid/config';
 import { useNavigationHandoff } from '@resgrid/features/contacts';
+import { useNavigationEtaPins } from '@resgrid/features/navigation-eta';
 import { useStatusContext } from '@resgrid/features/status';
 import { useTranslation } from '@resgrid/i18n';
 import { useCurrentLocation } from '@resgrid/location';
@@ -18,7 +19,10 @@ import {
   MapLegendSheet,
   MapPins,
   MapRecenterButton,
+  MapTrafficButton,
   MapView,
+  OfflineDepartmentLayers,
+  TrafficLayer,
   UnitLocationMarker,
   useFollowCamera,
   useMapCenter,
@@ -31,11 +35,14 @@ import { CircleCheck, MapPin as PoiIcon, Phone, Route, Truck, UserRound } from '
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import { ActiveRouteOverlay } from '../components/active-route-overlay';
 import { MapHighlights } from '../components/map-highlights';
 import { type MapPinAction, MapPinPanel } from '../components/map-pin-details';
+import { useActiveRouteOverlay } from '../hooks/use-active-route-overlay';
 import { useDepartmentLayers } from '../hooks/use-department-layers';
 import { useLiveMapPins } from '../hooks/use-live-map-pins';
 import { useMapViewStore } from '../hooks/use-map-view-store';
+import { TRAFFIC_SURFACES, useTrafficPreference } from '../hooks/use-traffic-preference';
 import { departmentTarget, OWN_LOCATION_ZOOM, pinTarget, resolveHomeTarget } from '../lib/map-camera';
 import { filterMarkers, findEntityPin, findFocusPin, highlightTargets, markerKindOf, parseMapFocus, poiTypeLayers, presentMarkerKinds, type ToggleableMarkerKind } from '../lib/map-markers';
 
@@ -79,11 +86,13 @@ const isPositiveInt = (value: string): boolean => /^[1-9]\d*$/.test(value);
  * The department map (omni-plan §7.10 "Maps", MapLibre through @resgrid/maps; legacy Unit map tab, Responder map panel,
  * Dispatch and BigBoard map screens): calls, units, members (with `CanViewPII`), stations and POIs from the persisted
  * map-markers store, kept live by SignalR pings and the geolocation feed; department layers, the icon legend, pin details
- * with actions and recenter / follow. Style, attribution and offline packs come from the shell's MapProvider.
+ * with actions and recenter / follow; live traffic (hidden when the server has none; the member's choice is remembered on
+ * the device). Style, attribution and offline packs come from the shell's MapProvider.
  *
  * Specialised by capability and form factor, never by app: field devices (`location.transmission`) open on their own
  * position and can make a call the current call; a unit device (`status.subject === 'unit'`) follows the vehicle with
- * the speed-adaptive camera and haloes its unit and the crew's call; wide layouts dock the pin details beside the map.
+ * the speed-adaptive camera and haloes its unit and the crew's call — with the routes module, also its running route
+ * (line, remaining numbered stops, check-in radius); wide layouts dock the pin details beside the map.
  * `/map?callId=` (`unitId`, `userId`, `poiId`) frames one pin.
  */
 export default function MapScreen({ links = NO_LINKS, realtime = true }: MapScreenProps) {
@@ -115,6 +124,15 @@ export default function MapScreen({ links = NO_LINKS, realtime = true }: MapScre
   const hiddenKinds = useMapViewStore((state) => state.hiddenKinds);
   const hiddenPoiTypes = useMapViewStore((state) => state.hiddenPoiTypes);
   const { layers: departmentLayers, toggleLayer } = useDepartmentLayers(mapsCapability.layers);
+  // Offline (§19.2): layers whose GeoJSON was not loaded online draw from the department data bundle. With no layer list
+  // on the device the department's on-by-default layers show.
+  const offlineLayerIds = useMemo(() => (departmentLayers.length > 0 ? departmentLayers.filter((layer) => layer.isOn).map((layer) => layer.id) : null), [departmentLayers]);
+  const onlineLayerIds = useMemo(() => departmentLayers.filter((layer) => layer.isOn && layer.data).map((layer) => layer.id), [departmentLayers]);
+  // Unit: the device unit's running route (variants that ship the routes module).
+  const hasUnitRoutes = useHasModule('unit-routes');
+  const activeRoute = useActiveRouteOverlay(hasUnitRoutes && isUnitDevice, activeUnitId);
+  // Live traffic (§11.1): off until the member turns it on; the choice is remembered on this device.
+  const [isTrafficOn, toggleTraffic] = useTrafficPreference(TRAFFIC_SURFACES.map.id, TRAFFIC_SURFACES.map.defaultOn);
 
   // ---- pins, focus, highlights ------------------------------------------------------------------------------------
 
@@ -122,6 +140,8 @@ export default function MapScreen({ links = NO_LINKS, realtime = true }: MapScre
   // surface a person's name — and the subset the layer toggles leave on, which the map draws.
   const permittedPins = useMemo(() => filterMarkers(live.pins, { hiddenKinds: {}, hiddenPoiTypes: {}, canViewPersonnel: canUserViewPII }), [canUserViewPII, live.pins]);
   const visiblePins = useMemo(() => filterMarkers(permittedPins, { hiddenKinds, hiddenPoiTypes, canViewPersonnel: canUserViewPII }), [canUserViewPII, hiddenKinds, hiddenPoiTypes, permittedPins]);
+  // What the pin layer draws: navigating units carry their live ETA under their label (selection stays on visiblePins).
+  const drawnPins = useNavigationEtaPins(visiblePins);
 
   const focus = parseMapFocus(params);
   const focusKind = focus?.kind ?? null;
@@ -383,9 +403,12 @@ export default function MapScreen({ links = NO_LINKS, realtime = true }: MapScre
     <View style={styles.container} testID="map-screen">
       <MapView style={styles.map} compassEnabled onCameraChanged={handleCameraChanged} testID="map-screen-map" unavailableFallback={<MapUnavailable label={t('maps.unavailable')} />}>
         <Camera ref={cameraRef} defaultSettings={initialCamera} />
+        <TrafficLayer visible={isTrafficOn} idPrefix="map-screen-traffic" />
         {departmentLayers.map((layer) => (layer.isOn && layer.data ? <GeoJsonMapLayer key={layer.id} id={`map-layer-${layer.id}`} data={layer.data} color={layer.color} showLabels /> : null))}
+        {mapsCapability.layers ? <OfflineDepartmentLayers visibleLayerIds={offlineLayerIds} excludeLayerIds={onlineLayerIds} idPrefix="map-screen-offline-layers" /> : null}
+        {activeRoute ? <ActiveRouteOverlay route={activeRoute} /> : null}
         <MapHighlights targets={highlights} colors={highlightColors} />
-        <MapPins pins={visiblePins} onPinPress={handlePinPress} selectedPinId={markedPinId} canViewPersonnel={canUserViewPII} idPrefix="map-screen-pins" />
+        <MapPins pins={drawnPins} onPinPress={handlePinPress} selectedPinId={markedPinId} canViewPersonnel={canUserViewPII} idPrefix="map-screen-pins" />
         {ownLocation ? (
           <UnitLocationMarker
             latitude={ownLocation.latitude}
@@ -416,6 +439,7 @@ export default function MapScreen({ links = NO_LINKS, realtime = true }: MapScre
 
       {mapsCapability.layers ? <MapLayersButton side="left" onPress={() => setIsLayersOpen(true)} testID="map-screen-layers-button" /> : null}
       <MapLegendButton side={controlSide} bottomOffset={legendOffset} onPress={openLegend} testID="map-screen-legend-button" />
+      <MapTrafficButton isOn={isTrafficOn} side={controlSide} bottomOffset={legendOffset + 60} onPress={toggleTraffic} testID="map-screen-traffic-button" />
       {showRecenter ? <MapRecenterButton side={controlSide} bottomOffset={controlSide === 'left' && mapsCapability.layers ? 80 : 20} onPress={recenter} testID="map-screen-recenter-button" /> : null}
 
       {selectedPin ? <MapPinPanel isOpen={true} presentation={docked ? 'docked' : 'sheet'} pin={selectedPin} kindLabel={kindLabelOf(selectedPin)} badges={pinBadges} actions={pinActions} onClose={closePin} /> : null}

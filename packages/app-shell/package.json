@@ -33,6 +33,7 @@
   "devDependencies": {
     "@resgrid/features": "workspace:*",
     "@testing-library/react-native": "catalog:",
+    "test-renderer": "catalog:",
     "typescript": "catalog:"
   }
 }

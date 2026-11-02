@@ -9,6 +9,7 @@ import type { MapColorScheme, StyleSpecification } from '../types';
 import { type MapIconRegistry, type MapPacksProfile, MapProviderContext, type MapProviderContextValue, type MapsCapabilities, type MapStyleState, NO_MAP_CAPABILITIES } from './context';
 import { resolveMapCenter } from './map-center';
 import type { MapOverlaySlots } from './overlay-types';
+import { resolveMapRouting, resolveMapTraffic } from './routing-traffic';
 import { createMapServices, type MapServices } from './services';
 import { defaultMapFetch, loadMapboxStyle, type MapFetch } from './style-loader';
 import { buildRasterStyle, type MapConfigInput, type MapStyleSource, resolveMapStyleSource, styleSourceKey } from './style-resolution';
@@ -79,6 +80,14 @@ const pickMapConfig = (config: MapConfigInput | null | undefined): MapConfigInpu
   MapLibreStyleUrlNight: config?.MapLibreStyleUrlNight,
   MapRasterTileUrl: config?.MapRasterTileUrl,
   StaticMapUrlTemplate: config?.StaticMapUrlTemplate,
+  TrafficAvailable: config?.TrafficAvailable,
+  TrafficTileUrl: config?.TrafficTileUrl,
+  TrafficRefreshSeconds: config?.TrafficRefreshSeconds,
+  RoutingProvider: config?.RoutingProvider,
+  RoutingSupportsTraffic: config?.RoutingSupportsTraffic,
+  RoutingSupportsIncidents: config?.RoutingSupportsIncidents,
+  RoutingSupportsVoice: config?.RoutingSupportsVoice,
+  NavigationAvailable: config?.NavigationAvailable,
 });
 
 const joinAttribution = (...parts: string[]): string => parts.filter((part) => part.length > 0).join(' · ');
@@ -188,6 +197,11 @@ export function MapProvider({ config, colorScheme, apiContext, capabilities, ico
   const resolvedServices = useMemo(() => createMapServices(apiContext, services), [apiContext, services]);
   const resolvedCapabilities = useMemo(() => capabilities ?? readVariantCapabilities(), [capabilities]);
   const template = cleanString(mapConfig.StaticMapUrlTemplate);
+  // configKey covers the routing and traffic fields.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const routing = useMemo(() => resolveMapRouting(mapConfig, resolvedCapabilities.navigationInApp), [configKey, resolvedCapabilities.navigationInApp]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const traffic = useMemo(() => resolveMapTraffic(mapConfig, style.isOffline), [configKey, style.isOffline]);
 
   const value = useMemo<MapProviderContextValue>(
     () => ({
@@ -204,10 +218,15 @@ export function MapProvider({ config, colorScheme, apiContext, capabilities, ico
       services: resolvedServices,
       staticMapUrlTemplate: isSafeMapUrl(template) ? template : null,
       offlineUpdatedAt: offline?.updatedAt ?? null,
+      offlineStaleAfterMs: offline?.staleAfterMs ?? null,
+      // Errors count only while the online style is drawn (the local style's own errors are not a network signal).
+      reportMapError: style.isOffline ? null : (offline?.reportMapError ?? null),
+      routing,
+      traffic,
     }),
     // configKey covers the centre and template fields.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [style, retry, colorScheme, resolvedTheme, configKey, resolvedCapabilities, icons, overlays, resolvedServices, offline?.updatedAt]
+    [style, retry, colorScheme, resolvedTheme, configKey, resolvedCapabilities, icons, overlays, resolvedServices, offline?.updatedAt, offline?.staleAfterMs, offline?.reportMapError, routing, traffic]
   );
 
   return <MapProviderContext.Provider value={value}>{children}</MapProviderContext.Provider>;

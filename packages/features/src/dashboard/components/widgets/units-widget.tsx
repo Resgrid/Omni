@@ -1,6 +1,7 @@
 import { useSecurity } from '@resgrid/auth';
+import { UnitNavigationEtaChip } from '@resgrid/features/navigation-eta';
 import { useTranslation } from '@resgrid/i18n';
-import { HStack, Text, TypeIcon, View } from '@resgrid/ui';
+import { HStack, Text, TypeIcon, View, VStack } from '@resgrid/ui';
 import { BellOff, CircleCheck } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useMemo, useState } from 'react';
@@ -25,6 +26,7 @@ const COLUMN_FLEX: Readonly<Record<UnitsColumnKey, number>> = { name: 1, station
 /**
  * The department's units as a table with status timers: a unit past its time-in-status threshold is highlighted (red
  * alert / amber warning), sorted to the top and — for users with the Create Call right — can be acknowledged or muted.
+ * A unit navigating in the Unit app shows its live ETA under its name.
  */
 export const UnitsWidget: React.FC<WidgetProps> = ({ isEditMode, onRemove, onConfigure }) => {
   const { t } = useTranslation();
@@ -51,12 +53,15 @@ export const UnitsWidget: React.FC<WidgetProps> = ({ isEditMode, onRemove, onCon
     const visible: Record<UnitsColumnKey, boolean> = { name: true, station: settings.showStation, type: settings.showType, state: settings.showState, timestamp: settings.showTimestamp };
     const render: Record<UnitsColumnKey, (entry: AnnotatedUnit) => React.ReactNode> = {
       name: ({ unit }) => (
-        <HStack space="xs" className="items-center">
-          <TypeIcon iconUrl={unit.TypeIconUrl ?? null} mapIcon={unit.TypeMapIcon ?? null} size={fontSize + 4} testID={`unit-type-icon-${unit.UnitId}`} />
-          <CellText fontSize={fontSize} bold>
-            {unit.Name}
-          </CellText>
-        </HStack>
+        <VStack>
+          <HStack space="xs" className="items-center">
+            <TypeIcon iconUrl={unit.TypeIconUrl ?? null} mapIcon={unit.TypeMapIcon ?? null} size={fontSize + 4} testID={`unit-type-icon-${unit.UnitId}`} />
+            <CellText fontSize={fontSize} bold>
+              {unit.Name}
+            </CellText>
+          </HStack>
+          <UnitNavigationEtaChip unitId={unit.UnitId} fontSize={Math.max(9, fontSize - 3)} testID={`units-widget-eta-${unit.UnitId}`} />
+        </VStack>
       ),
       station: ({ unit }) => (
         <CellText fontSize={fontSize} muted>

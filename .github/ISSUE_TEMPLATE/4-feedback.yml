@@ -1,0 +1,86 @@
+# Field labels "App" and "Platform" drive the labels added by .github/workflows/issue-labels.yml
+# (scripts/ci/issue-labels.mjs); `pnpm workflows:check` keeps them in step.
+name: Feedback
+description: Tell us what works well, what is hard to use, or how an app fits the way your department works.
+labels: ['feedback']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Feedback from people using the apps on shift shapes what we work on next. For something that is plainly broken, use **Bug report** instead.
+
+        Issues are public: leave out names, addresses and other personal or call details.
+
+  - type: dropdown
+    id: app
+    attributes:
+      label: App
+      description: Which app is this about?
+      multiple: true
+      options:
+        - Responder — for department members
+        - Unit — for vehicle and apparatus crews (MDT)
+        - IC — for incident commanders
+        - Dispatch — for dispatchers
+        - BigBoard — for station and EOC wall displays
+        - All apps
+        - Not sure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      description: Where do you use it?
+      multiple: true
+      options:
+        - iOS (iPhone or iPad)
+        - Android (phone or tablet)
+        - Web browser (hosted by Resgrid)
+        - Web (self-hosted Docker image)
+        - Windows desktop app
+        - macOS desktop app
+        - Linux desktop app
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind of feedback
+      options:
+        - Something works well
+        - Something is hard to use or slow to reach
+        - Something is confusing or unclear
+        - Hard to use with gloves / in a vehicle / in the dark
+        - Accessibility
+        - Speed / battery / data use
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: role
+    attributes:
+      label: Your role
+      options:
+        - Department member or responder
+        - Vehicle or apparatus crew
+        - Incident commander
+        - Dispatcher
+        - Station or EOC staff
+        - Department administrator
+        - Other
+
+  - type: textarea
+    id: feedback
+    attributes:
+      label: Your feedback
+      description: What happened, which screen it was on, and what would make it better.
+    validations:
+      required: true
+
+  - type: textarea
+    id: attachments
+    attributes:
+      label: Screenshots
+      description: Optional. Blur personal and call details first.

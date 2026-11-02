@@ -21,7 +21,19 @@ export { BluetoothDeviceSheet } from './sections/voice-section';
 
 // Device preferences and the navigation hand-off
 export { ageParts, formatBytes } from './lib/format';
-export { ALL_NAVIGATION_APPS, getNavigationApp, getNavigationAppOptions, NAVIGATION_APP_LABEL_KEYS, NAVIGATION_APP_STORAGE_KEY, type NavigationApp, normalizeNavigationApp, setNavigationApp } from './lib/navigation-app';
+export {
+  ALL_NAVIGATION_APPS,
+  type ExternalNavigationApp,
+  getExternalNavigationApp,
+  getNavigationApp,
+  getNavigationAppOptions,
+  NAVIGATION_APP_LABEL_KEYS,
+  NAVIGATION_APP_STORAGE_KEY,
+  type NavigationApp,
+  type NavigationAppAvailability,
+  normalizeNavigationApp,
+  setNavigationApp,
+} from './lib/navigation-app';
 export { buildNavigationAttempts, openMapsWithAddress, openMapsWithDirections, toNavigationCoordinates } from './lib/navigation-handoff';
 export {
   BACKGROUND_GEOLOCATION_KEY,

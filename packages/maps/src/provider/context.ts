@@ -1,9 +1,11 @@
 import type { Capabilities } from '@resgrid/config';
 import { createContext, useContext } from 'react';
 
+import type { MapLoadErrorKind } from '../offline/types';
 import type { MapColorScheme, MapStyle } from '../types';
 import { FALLBACK_MAP_CENTER, type MapCenter } from './map-center';
 import type { MapOverlaySlots } from './overlay-types';
+import { type MapRoutingCapabilities, type MapTrafficConfig, NO_MAP_ROUTING, NO_MAP_TRAFFIC } from './routing-traffic';
 import { createMapServices, type MapServices } from './services';
 import { LIGHT_MAP_THEME, type MapThemeColors } from './theme';
 
@@ -47,6 +49,14 @@ export interface MapProviderContextValue {
   staticMapUrlTemplate: string | null;
   /** Epoch ms of the last offline pack refresh, for the offline badge. */
   offlineUpdatedAt: number | null;
+  /** The offline badge turns amber when `offlineUpdatedAt` is older than this (manifest `StaleDays`). */
+  offlineStaleAfterMs: number | null;
+  /** Map wrappers report online style errors here (D16 mode switch); null while the offline style is shown or without packs. */
+  reportMapError: ((kind: MapLoadErrorKind) => void) | null;
+  /** §5.4 routing provider capabilities and in-app navigation availability. */
+  routing: MapRoutingCapabilities;
+  /** §11.1 traffic overlay source. */
+  traffic: MapTrafficConfig;
 }
 
 export const NO_MAP_CAPABILITIES: MapsCapabilities = { layers: false, customIndoor: false, navigationInApp: false };
@@ -77,6 +87,10 @@ const DEFAULT_CONTEXT: MapProviderContextValue = {
   services: createMapServices(null),
   staticMapUrlTemplate: null,
   offlineUpdatedAt: null,
+  offlineStaleAfterMs: null,
+  reportMapError: null,
+  routing: NO_MAP_ROUTING,
+  traffic: NO_MAP_TRAFFIC,
 };
 
 export const MapProviderContext = createContext<MapProviderContextValue>(DEFAULT_CONTEXT);
@@ -98,3 +112,9 @@ export const useMapServices = (): MapServices => useContext(MapProviderContext).
 export const useMapIcons = (): MapIconRegistry => useContext(MapProviderContext).icons;
 
 export const useMapCapabilities = (): MapsCapabilities => useContext(MapProviderContext).capabilities;
+
+/** What the install's routing provider supports and whether in-app navigation may be offered (§5.4). */
+export const useMapRouting = (): MapRoutingCapabilities => useContext(MapProviderContext).routing;
+
+/** The traffic overlay source; `available` is false without server traffic tiles or while the map is offline (§11.1). */
+export const useMapTraffic = (): MapTrafficConfig => useContext(MapProviderContext).traffic;

@@ -1,0 +1,65 @@
+# Field labels "App" and "Platform" drive the labels added by .github/workflows/issue-labels.yml
+# (scripts/ci/issue-labels.mjs); `pnpm workflows:check` keeps them in step.
+name: Question
+description: Ask how something in one of the apps works, or whether it can do something.
+labels: ['question']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ask about how the apps work, how to use a feature, or building and running the apps from this repository.
+
+        - Questions about your account, billing, subscription or department setup are answered faster by the [Resgrid Help Center](https://resgrid.zohodesk.com/portal/en/home) or [Resgrid support](https://resgrid.com/contact).
+        - Issues are public: leave out names, addresses and other personal or call details.
+
+  - type: dropdown
+    id: app
+    attributes:
+      label: App
+      description: Which app is your question about?
+      multiple: true
+      options:
+        - Responder — for department members
+        - Unit — for vehicle and apparatus crews (MDT)
+        - IC — for incident commanders
+        - Dispatch — for dispatchers
+        - BigBoard — for station and EOC wall displays
+        - All apps
+        - Not sure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      description: Where are you using it? Leave empty if it does not matter.
+      multiple: true
+      options:
+        - iOS (iPhone or iPad)
+        - Android (phone or tablet)
+        - Web browser (hosted by Resgrid)
+        - Web (self-hosted Docker image)
+        - Windows desktop app
+        - macOS desktop app
+        - Linux desktop app
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Your question
+    validations:
+      required: true
+
+  - type: textarea
+    id: tried
+    attributes:
+      label: What have you tried or looked at?
+      description: Screens, settings or documentation you have already checked.
+
+  - type: input
+    id: version
+    attributes:
+      label: App version
+      description: Settings → About → Version, if the question is about the app's behaviour.
+      placeholder: 'Version 8.12 (100012)'

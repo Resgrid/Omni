@@ -10,9 +10,9 @@ const importedPaths = (code: string): string[] => [...code.matchAll(/from "(luci
 describe('lucide-icon-imports (babel)', () => {
   it('imports each icon from its own module, aliases included', () => {
     const out = transform(`import { Bell, AlertTriangle as Warning, MapPinIcon } from 'lucide-react-native';`);
-    expect(out).toContain('import Bell from "lucide-react-native/dist/esm/icons/bell.js";');
-    expect(out).toContain('import Warning from "lucide-react-native/dist/esm/icons/triangle-alert.js";');
-    expect(out).toContain('import MapPinIcon from "lucide-react-native/dist/esm/icons/map-pin.js";');
+    expect(out).toContain('import Bell from "lucide-react-native/icons/bell";');
+    expect(out).toContain('import Warning from "lucide-react-native/icons/triangle-alert";');
+    expect(out).toContain('import MapPinIcon from "lucide-react-native/icons/map-pin";');
     expect(out).not.toContain("from 'lucide-react-native'");
   });
 
@@ -26,7 +26,7 @@ describe('lucide-icon-imports (babel)', () => {
     const out = transform(`import { Bell, type LucideIcon, createLucideIcon } from 'lucide-react-native';\nimport type { LucideProps } from 'lucide-react-native';`);
     expect(out).toContain("import { type LucideIcon, createLucideIcon } from 'lucide-react-native';");
     expect(out).toContain("import type { LucideProps } from 'lucide-react-native';");
-    expect(out).toContain('import Bell from "lucide-react-native/dist/esm/icons/bell.js";');
+    expect(out).toContain('import Bell from "lucide-react-native/icons/bell";');
   });
 
   it('turns an import left with only types into `import type`, so the icon set is not loaded at runtime', () => {

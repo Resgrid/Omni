@@ -54,6 +54,11 @@ export class GetConfigResultData {
   public TrafficRefreshSeconds?: number;
   /** In-app navigation availability (Navigation.InApp flag + provider support). */
   public NavigationAvailable?: boolean;
+  /** Routing provider (valhalla, mapbox, google, osrm, estimate) and what it supports (MapLibre plan §5.4). */
+  public RoutingProvider?: string;
+  public RoutingSupportsTraffic?: boolean;
+  public RoutingSupportsIncidents?: boolean;
+  public RoutingSupportsVoice?: boolean;
   // MapLibre plan §19 offline maps (additive).
   public OfflineMapsAvailable?: boolean;
   /** Signed URL of Mapping/GetOfflineManifest. */

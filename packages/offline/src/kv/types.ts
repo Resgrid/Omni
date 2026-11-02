@@ -30,4 +30,11 @@ export interface KvBackendConfig {
 
 export type KvBackendFactory = (config: KvBackendConfig) => KvBackend;
 
+/** An instance's files on disk (native MMKV): used to start an instance over when the legacy app's data is not carried over. */
+export interface KvStorageFiles {
+  exists(id: string): boolean;
+  /** Deletes the instance's files. Call before the instance is opened in this process. */
+  remove(id: string): boolean;
+}
+
 export type KvPlatform = 'native' | 'web';

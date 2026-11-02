@@ -60,8 +60,8 @@ beforeEach(() => {
 });
 
 describe('UnitsWidget', () => {
-  it('highlights units past their timer, most urgent first, with the elapsed time', () => {
-    render(<UnitsWidget {...props} />);
+  it('highlights units past their timer, most urgent first, with the elapsed time', async () => {
+    await render(<UnitsWidget {...props} />);
     expect(screen.getByTestId('unit-row-alert')).toBeTruthy();
     expect(screen.getByTestId('unit-row-warn')).toBeTruthy();
     expect(screen.getByText('10m')).toBeTruthy();
@@ -69,80 +69,80 @@ describe('UnitsWidget', () => {
     expect(names.slice(0, 2)).toEqual(['Engine 3', 'Engine 2']);
   });
 
-  it('marks acknowledged and muted rows and only lets Create Call users open the sheet', () => {
+  it('marks acknowledged and muted rows and only lets Create Call users open the sheet', async () => {
     useUnitStatusAlertsStore.setState({ acknowledgements: { '3': ack('3'), '2': ack('2', { Level: 1, Mode: 1 }) } });
-    const { unmount } = render(<UnitsWidget {...props} />);
+    const { unmount } = await render(<UnitsWidget {...props} />);
     expect(screen.getByTestId('unit-row-alert-acknowledged')).toBeTruthy();
     expect(screen.getByTestId('unit-row-warn-muted')).toBeTruthy();
     expect(screen.getByTestId('units-table-row-press-3')).toBeTruthy();
-    unmount();
+    await unmount();
 
     setRights({ CanCreateCalls: false });
-    render(<UnitsWidget {...props} />);
+    await render(<UnitsWidget {...props} />);
     expect(screen.queryByTestId('units-table-row-press-3')).toBeNull();
   });
 
   it('acknowledges with a note through the sheet (online write, no outbox)', async () => {
-    render(<UnitsWidget {...props} />);
-    fireEvent.press(screen.getByTestId('units-table-row-press-3'));
+    await render(<UnitsWidget {...props} />);
+    await fireEvent.press(screen.getByTestId('units-table-row-press-3'));
     expect(await screen.findByTestId('unit-alert-acknowledge-sheet')).toBeTruthy();
-    fireEvent.changeText(screen.getByTestId('unit-alert-note-input'), '  Pump fault  ');
-    fireEvent.press(screen.getByTestId('unit-alert-acknowledge-button'));
+    await fireEvent.changeText(screen.getByTestId('unit-alert-note-input'), '  Pump fault  ');
+    await fireEvent.press(screen.getByTestId('unit-alert-acknowledge-button'));
     await waitFor(() => expect(mocks.acknowledge).toHaveBeenCalledWith({ UnitId: 3, UnitStateId: 103, Level: 2, Mode: 0, MuteMinutes: 0, Note: 'Pump fault' }));
   });
 
   it('mutes for a chosen time and requires a reason when the department says so', async () => {
     setConfig({ UnitStatusThresholds: [{ BaseType: DISPATCHED, WarnSeconds: 120, AlertSeconds: 240 }], UnitStatusAlertNoteRequirement: 2 });
-    render(<UnitsWidget {...props} />);
-    fireEvent.press(screen.getByTestId('units-table-row-press-2'));
+    await render(<UnitsWidget {...props} />);
+    await fireEvent.press(screen.getByTestId('units-table-row-press-2'));
     expect(await screen.findByTestId('unit-alert-note-required-hint')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('unit-alert-mute-button'));
+    await fireEvent.press(screen.getByTestId('unit-alert-mute-button'));
     expect(mocks.acknowledge).not.toHaveBeenCalled();
 
-    fireEvent.changeText(screen.getByTestId('unit-alert-note-input'), 'Known delay');
-    fireEvent.press(screen.getByTestId('unit-alert-mute-option-30'));
-    fireEvent.press(screen.getByTestId('unit-alert-mute-button'));
+    await fireEvent.changeText(screen.getByTestId('unit-alert-note-input'), 'Known delay');
+    await fireEvent.press(screen.getByTestId('unit-alert-mute-option-30'));
+    await fireEvent.press(screen.getByTestId('unit-alert-mute-button'));
     await waitFor(() => expect(mocks.acknowledge).toHaveBeenCalledWith(expect.objectContaining({ UnitId: 2, Level: 1, Mode: 1, MuteMinutes: 30, Note: 'Known delay' })));
   });
 
-  it('hides groups and honours column settings', () => {
+  it('hides groups and honours column settings', async () => {
     useWidgetSettingsStore.getState().updateSettings('units', { showType: false, hideGroups: ['1'] });
-    render(<UnitsWidget {...props} />);
+    await render(<UnitsWidget {...props} />);
     expect(screen.getByTestId('units-table-empty')).toBeTruthy();
     expect(screen.queryByText('dashboard.column.type')).toBeNull();
   });
 });
 
 describe('UnitAlertsWidget', () => {
-  it('lists only breaching units, collapses muted ones and counts units no timer can cover', () => {
+  it('lists only breaching units, collapses muted ones and counts units no timer can cover', async () => {
     useUnitStatusAlertsStore.setState({ acknowledgements: { '2': ack('2', { Level: 1, Mode: 1 }) } });
-    render(<UnitAlertsWidget {...props} />);
+    await render(<UnitAlertsWidget {...props} />);
     expect(screen.getByTestId('unit-alert-alert')).toBeTruthy();
     expect(screen.queryByTestId('unit-alert-warn-muted')).toBeNull();
-    fireEvent.press(screen.getByTestId('unit-alerts-muted-toggle'));
+    await fireEvent.press(screen.getByTestId('unit-alerts-muted-toggle'));
     expect(screen.getByTestId('unit-alert-warn-muted')).toBeTruthy();
     expect(screen.getByTestId('unit-alerts-without-meaning')).toHaveTextContent('unitAlerts.unitsWithoutMeaning:1');
   });
 
-  it('tells "no timers" from "all within their timers" and treats an older server as unknown', () => {
+  it('tells "no timers" from "all within their timers" and treats an older server as unknown', async () => {
     useUnitsStore.setState({ unitInfos: [unit('1', { CurrentStatusTimestampUtc: utcAgo(10) })] });
-    const { unmount } = render(<UnitAlertsWidget {...props} />);
+    const { unmount } = await render(<UnitAlertsWidget {...props} />);
     expect(screen.getByTestId('unit-alerts-empty')).toHaveTextContent('unitAlerts.withinThresholds');
-    unmount();
+    await unmount();
 
     setConfig({ UnitStatusThresholds: [] });
-    const second = render(<UnitAlertsWidget {...props} />);
+    const second = await render(<UnitAlertsWidget {...props} />);
     expect(screen.getByTestId('unit-alerts-empty')).toHaveTextContent('unitAlerts.noThresholds');
-    second.unmount();
+    await second.unmount();
 
     setConfig({ UnitStatusThresholds: undefined as never });
-    render(<UnitAlertsWidget {...props} />);
+    await render(<UnitAlertsWidget {...props} />);
     expect(screen.getByTestId('unit-alerts-error')).toBeTruthy();
   });
 
-  it('waits for config before saying anything', () => {
+  it('waits for config before saying anything', async () => {
     stubDataStores();
-    render(<UnitAlertsWidget {...props} />);
+    await render(<UnitAlertsWidget {...props} />);
     expect(screen.getByTestId('unit-alerts-loading')).toBeTruthy();
   });
 });

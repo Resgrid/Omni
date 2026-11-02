@@ -42,6 +42,7 @@ jest.mock('@resgrid/api', () => {
     'newWorkOrder',
     'getUserCertifications',
     'getCustomMaps',
+    'searchAllMapFeatures',
     'getRecordDeployments',
     'getChecklistAccess',
     'saveChecklistRunProgress',
@@ -238,6 +239,30 @@ describe.each(cases)('$name store', (testCase) => {
     await testCase.fetch();
     await defaultResetRegistry.getStoreResets().get(testCase.reset)?.('server-switch');
     expect(testCase.store.getState()[testCase.field]).toEqual([]);
+  });
+});
+
+describe('custom maps feature search', () => {
+  const search = (): jest.Mock => jest.requireMock<Record<string, jest.Mock>>('@resgrid/api').searchAllMapFeatures;
+
+  it('searches by term and scope, keeps only the newest term’s answer and never persists results', async () => {
+    search().mockResolvedValue(ok([{ FeatureType: 'indoor_zone', Id: 'z1', Name: 'Lobby' }]));
+    await useCustomMapsStore.getState().searchMapFeatures('  lobby ', 'indoor');
+    expect(search()).toHaveBeenCalledWith(expect.anything(), { term: 'lobby', type: 'indoor' });
+    expect(useCustomMapsStore.getState().searchResults).toEqual([{ FeatureType: 'indoor_zone', Id: 'z1', Name: 'Lobby' }]);
+    expect(persisted(runtime.kv, 'omni-custom-maps-storage')?.state).not.toHaveProperty('searchResults');
+
+    let answerOld: (value: unknown) => void = () => undefined;
+    search().mockImplementationOnce(() => new Promise((resolve) => (answerOld = resolve)));
+    const older = useCustomMapsStore.getState().searchMapFeatures('lob');
+    search().mockResolvedValueOnce(ok([{ FeatureType: 'custom_region', Id: 'r1', Name: 'Lobster pound' }]));
+    await useCustomMapsStore.getState().searchMapFeatures('lobs');
+    answerOld(ok([{ FeatureType: 'indoor_zone', Id: 'z2', Name: 'Lobby 2' }]));
+    await older;
+    expect(useCustomMapsStore.getState().searchResults.map((item) => item.Id)).toEqual(['r1']);
+
+    await useCustomMapsStore.getState().searchMapFeatures('   ');
+    expect(useCustomMapsStore.getState().searchResults).toEqual([]);
   });
 });
 

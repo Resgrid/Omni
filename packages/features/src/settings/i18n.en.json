@@ -1,5 +1,23 @@
 {
   "settings.advanced": "Advanced",
+  "settings.app_updates.channel": "Update channel",
+  "settings.app_updates.check": "Check for updates",
+  "settings.app_updates.check_failed": "Couldn't check for updates. Check your connection and try again.",
+  "settings.app_updates.checking": "Checking for updates…",
+  "settings.app_updates.current_update": "Current update",
+  "settings.app_updates.downloading": "Downloading the update…",
+  "settings.app_updates.emergency_launch": "The last update could not start, so the app is running its built-in version.",
+  "settings.app_updates.not_set": "Not set",
+  "settings.app_updates.published": "Published {{date}}",
+  "settings.app_updates.ready": "An update is ready. Restart to finish updating, or it installs the next time the app starts.",
+  "settings.app_updates.restart": "Restart to update",
+  "settings.app_updates.restart_failed": "The app could not restart. The update installs the next time the app starts.",
+  "settings.app_updates.runtime_version": "Runtime version",
+  "settings.app_updates.source": "Running",
+  "settings.app_updates.source_downloaded": "Downloaded update",
+  "settings.app_updates.source_embedded": "Built-in version",
+  "settings.app_updates.title": "App updates",
+  "settings.app_updates.up_to_date": "Up to date. Last checked {{time}}.",
   "settings.audio": "Audio",
   "settings.background_geolocation_denied": "Background location needs the \"Allow all the time\" permission. Allow it in your device settings, then turn this on again.",
   "settings.location": "Location",
@@ -85,5 +103,6 @@
   "storage_sync.title": "Storage & sync",
   "storage_sync.unavailable": "Storage information is not available yet. Try again in a moment.",
   "storage_sync.unknown_size": "—",
-  "storage_sync.up_to_date": "Up to date"
+  "storage_sync.up_to_date": "Up to date",
+  "settings.navigation_app.resgrid": "Resgrid (in-app navigation)"
 }

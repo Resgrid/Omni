@@ -1,7 +1,9 @@
+import { getAppUpdatesState } from '@resgrid/core';
 import React from 'react';
 
 import { setBuiltInSettingsSections, type SettingsSection } from '../registry';
 import { AccountSection } from './account-section';
+import { AppUpdatesSection } from './app-updates-section';
 import { LocationSection } from './location-section';
 import { NotificationsSection } from './notifications-section';
 import { AboutSection, AdvancedSection, LogoutSection } from './other-sections';
@@ -39,6 +41,8 @@ export const BUILT_IN_SETTINGS_SECTIONS: readonly SettingsSection[] = [
     render: () => <VoiceSection />,
   },
   { id: 'advanced', order: 80, title: 'settings.advanced', render: () => <AdvancedSection /> },
+  // In-app OTA updates: iOS/Android release builds only (web redeploys and the Electron updater cover the others).
+  { id: 'app-updates', order: 85, title: 'settings.app_updates.title', visible: () => getAppUpdatesState().enabled, render: () => <AppUpdatesSection /> },
   { id: 'about', order: 90, title: 'settings.about', render: () => <AboutSection /> },
   { id: 'logout', order: 100, title: 'settings.session', visible: (context) => context.isAuthenticated, render: () => <LogoutSection /> },
 ];

@@ -43,31 +43,31 @@ beforeEach(() => {
 });
 
 describe('CommandBoardScreen', () => {
-  it('shows the active board and refreshes it on focus', () => {
-    render(<CommandBoardScreen />);
+  it('shows the active board and refreshes it on focus', async () => {
+    await render(<CommandBoardScreen />);
     expect(screen.getByTestId('command-board-view')).toBeTruthy();
     expect(mockRefreshBoard).toHaveBeenCalledWith('7');
     expect(mockFetchTimeline).toHaveBeenCalledWith('7');
-    fireEvent.press(screen.getByTestId('command-open-log'));
+    await fireEvent.press(screen.getByTestId('command-open-log'));
     expect(router.push).toHaveBeenCalledWith('/command-log/7');
   });
 
-  it('switches between incidents and ignores empty board entries', () => {
+  it('switches between incidents and ignores empty board entries', async () => {
     useCommandStore.setState({ boards: { '7': boardState('7', makeBoard()), '8': boardState('8', makeBoard()), '9': boardState('9', null) } });
-    render(<CommandBoardScreen />);
+    await render(<CommandBoardScreen />);
     expect(screen.getByTestId('command-board-tab-7')).toBeTruthy();
     expect(screen.queryByTestId('command-board-tab-9')).toBeNull();
-    fireEvent.press(screen.getByTestId('command-board-tab-8'));
+    await fireEvent.press(screen.getByTestId('command-board-tab-8'));
     expect(useCommandStore.getState().activeCallId).toBe('8');
   });
 
-  it('shows the empty state without a board and is unavailable outside the command tier', () => {
+  it('shows the empty state without a board and is unavailable outside the command tier', async () => {
     useCommandStore.setState({ boards: {}, activeCallId: null });
-    const { unmount } = render(<CommandBoardScreen />);
-    fireEvent.press(screen.getByTestId('command-go-to-incidents'));
+    const { unmount } = await render(<CommandBoardScreen />);
+    await fireEvent.press(screen.getByTestId('command-go-to-incidents'));
     expect(router.push).toHaveBeenCalledWith('/incidents');
-    unmount();
-    render(<CommandBoardScreen tier="assist" />);
+    await unmount();
+    await render(<CommandBoardScreen tier="assist" />);
     expect(screen.getByText('incident_command.not_available')).toBeTruthy();
   });
 });
@@ -79,34 +79,34 @@ describe('IncidentsListScreen', () => {
     expect(matchesIncidentSearch(summary(7), 'zzz')).toBe(false);
   });
 
-  it('lists active incidents, filters by search and includes ended ones on request', () => {
+  it('lists active incidents, filters by search and includes ended ones on request', async () => {
     const fetchIncidents = jest.fn(async () => undefined);
     useCommandStore.setState({ summaries: [summary(7), summary(8, { Status: IncidentCommandStatus.Closed, Name: 'Ended one' })], fetchIncidents });
-    render(<IncidentsListScreen />);
+    await render(<IncidentsListScreen />);
     expect(fetchIncidents).toHaveBeenCalledWith(false);
     expect(screen.getByText('Incident 7')).toBeTruthy();
     expect(screen.queryByText('Ended one')).toBeNull();
-    fireEvent.press(screen.getByTestId('incidents-filter-all'));
+    await fireEvent.press(screen.getByTestId('incidents-filter-all'));
     expect(fetchIncidents).toHaveBeenLastCalledWith(true);
     expect(screen.getByText('Ended one')).toBeTruthy();
-    fireEvent.changeText(screen.getByTestId('incidents-search'), 'nothing');
+    await fireEvent.changeText(screen.getByTestId('incidents-search'), 'nothing');
     expect(screen.getByTestId('incidents-no-results')).toBeTruthy();
   });
 
   it('opens an active incident on the command board and an ended one at its call', async () => {
     useCommandStore.setState({ summaries: [summary(7), summary(8, { Status: IncidentCommandStatus.Closed })], fetchIncidents: jest.fn(async () => undefined) });
-    render(<IncidentsListScreen />);
+    await render(<IncidentsListScreen />);
     await act(async () => fireEvent.press(screen.getByTestId('incident-card-ic-7')));
     expect(useCommandStore.getState().activeCallId).toBe('7');
     expect(router.push).toHaveBeenCalledWith('/command');
-    fireEvent.press(screen.getByTestId('incidents-filter-all'));
+    await fireEvent.press(screen.getByTestId('incidents-filter-all'));
     await act(async () => fireEvent.press(screen.getByTestId('incident-card-ic-8')));
     expect(router.push).toHaveBeenLastCalledWith('/call/8');
   });
 });
 
 describe('CommandLogScreen', () => {
-  it('lists entries newest first and filters them', () => {
+  it('lists entries newest first and filters them', async () => {
     useCommandStore.setState({
       boards: {
         '7': boardState('7', makeBoard(), {
@@ -117,60 +117,60 @@ describe('CommandLogScreen', () => {
         }),
       },
     });
-    render(<CommandLogScreen callId="7" />);
+    await render(<CommandLogScreen callId="7" />);
     expect(mockFetchTimeline).toHaveBeenCalledWith('7');
     expect(screen.getAllByTestId(/^command-log-entry-/).map((row) => row.props.testID)).toEqual(['command-log-entry-l2', 'command-log-entry-l1']);
-    fireEvent.changeText(screen.getByTestId('command-log-search'), 'engine');
+    await fireEvent.changeText(screen.getByTestId('command-log-search'), 'engine');
     expect(screen.getByText('incident_command.log_results:1,2')).toBeTruthy();
   });
 
-  it('rejects an unsafe route id', () => {
+  it('rejects an unsafe route id', async () => {
     jest.mocked(useLocalSearchParams).mockReturnValue({ callId: '../x' });
-    render(<CommandLogScreen />);
+    await render(<CommandLogScreen />);
     expect(screen.getByTestId('command-log-invalid')).toBeTruthy();
   });
 });
 
 describe('CommandMapScreen', () => {
-  it('draws the sites and units on the incident', () => {
+  it('draws the sites and units on the incident', async () => {
     seedBoard('7', makeBoard({ Command: { ...makeBoard().Command, CommandPostLatitude: '39.6', CommandPostLongitude: '-104.8' }, Nodes: [node('n1', { Color: '#ef4444' })] }));
     useUnitsStore.setState({ units: [unit('unit-1', 'Engine 1', { Latitude: '39.61', Longitude: '-104.81' }), unit('unit-2', 'Ladder 2')] });
-    render(<CommandMapScreen callId="7" />);
+    await render(<CommandMapScreen callId="7" />);
     expect(screen.getByTestId('command-map-site-command-post')).toBeTruthy();
     expect(screen.getByTestId('command-map-resource-a1')).toBeTruthy();
     expect(screen.queryByTestId('command-map-resource-a2')).toBeNull();
   });
 
-  it('says when there is nothing to place on the map', () => {
-    render(<CommandMapScreen callId="7" />);
+  it('says when there is nothing to place on the map', async () => {
+    await render(<CommandMapScreen callId="7" />);
     expect(screen.getByTestId('command-map-no-positions')).toBeTruthy();
   });
 });
 
 describe('ResourceMapScreen', () => {
-  it('shows a valid position and refuses a bad one', () => {
+  it('shows a valid position and refuses a bad one', async () => {
     jest.mocked(useLocalSearchParams).mockReturnValue({ latitude: '39.5', longitude: '-104.9', title: 'Engine 1', color: 'javascript:alert(1)' });
-    const { unmount } = render(<ResourceMapScreen />);
+    const { unmount } = await render(<ResourceMapScreen />);
     expect(screen.getByTestId('resource-map-marker')).toBeTruthy();
     expect(screen.getByText('Engine 1')).toBeTruthy();
-    unmount();
+    await unmount();
     jest.mocked(useLocalSearchParams).mockReturnValue({ latitude: 'abc', longitude: '1' });
-    render(<ResourceMapScreen />);
+    await render(<ResourceMapScreen />);
     expect(screen.getByTestId('resource-map-unknown')).toBeTruthy();
   });
 });
 
 describe('CallCommandScreen', () => {
-  it('hosts the call board full screen without an "open full board" action', () => {
+  it('hosts the call board full screen without an "open full board" action', async () => {
     activateVariant('dispatch');
-    render(<CallCommandScreen callId="7" />);
+    await render(<CallCommandScreen callId="7" />);
     expect(screen.getByTestId('command-board-view')).toBeTruthy();
     expect(screen.queryByTestId('incident-command-tab-open-full')).toBeNull();
   });
 
-  it('rejects an unsafe id', () => {
+  it('rejects an unsafe id', async () => {
     jest.mocked(useLocalSearchParams).mockReturnValue({ id: '../../etc' });
-    render(<CallCommandScreen />);
+    await render(<CallCommandScreen />);
     expect(screen.getByTestId('call-command-invalid')).toBeTruthy();
   });
 });

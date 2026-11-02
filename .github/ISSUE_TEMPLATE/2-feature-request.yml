@@ -1,0 +1,98 @@
+# Field labels "App", "Platform" and "Could an older version of the app do this?" drive the labels added by
+# .github/workflows/issue-labels.yml (scripts/ci/issue-labels.mjs); `pnpm workflows:check` keeps them in step.
+name: Feature request
+description: Suggest something new for one or more of the apps, or a change to how something works.
+labels: ['enhancement']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ideas are welcome. Requests that help many departments are the most likely to be built.
+
+        - Features of the resgrid.com website or the server (reports, department settings, billing) belong in [Resgrid Core](https://github.com/Resgrid/Core/issues).
+        - Issues are public: describe your workflow without names, addresses or other personal or call details.
+
+  - type: dropdown
+    id: app
+    attributes:
+      label: App
+      description: Which app should get this? Choose every app it applies to.
+      multiple: true
+      options:
+        - Responder — for department members
+        - Unit — for vehicle and apparatus crews (MDT)
+        - IC — for incident commanders
+        - Dispatch — for dispatchers
+        - BigBoard — for station and EOC wall displays
+        - All apps
+        - Not sure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      description: Where would you use it? Leave empty if it applies everywhere.
+      multiple: true
+      options:
+        - iOS (iPhone or iPad)
+        - Android (phone or tablet)
+        - Web browser (hosted by Resgrid)
+        - Web (self-hosted Docker image)
+        - Windows desktop app
+        - macOS desktop app
+        - Linux desktop app
+
+  - type: dropdown
+    id: role
+    attributes:
+      label: Who would use it?
+      multiple: true
+      options:
+        - Department members and responders
+        - Vehicle and apparatus crews
+        - Incident commanders
+        - Dispatchers
+        - Station or EOC staff watching a wall display
+        - Department administrators
+        - Other
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: What are you trying to do today, and what gets in the way? A real scenario helps the most.
+      placeholder: 'During a working fire, the IC needs to … but today they have to …'
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: What would you like to happen?
+      description: Describe the feature or change. Sketches and screenshots are welcome.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What do you do instead today?
+      description: Workarounds, other tools, or other ways this could be solved.
+
+  - type: dropdown
+    id: regressed
+    attributes:
+      label: Could an older version of the app do this?
+      description: The five apps were rebuilt on one shared codebase; tell us if something an older version did is missing.
+      options:
+        - Yes — an older version could do this
+        - No
+        - Not sure
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Anything else?
+      description: How many people or units it would help, how often it comes up, links to similar features elsewhere.

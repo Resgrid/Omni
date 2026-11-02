@@ -17,6 +17,7 @@
     "date-fns": "catalog:",
     "expo-constants": "catalog:",
     "expo-keep-awake": "catalog:",
+    "expo-modules-core": "catalog:",
     "expo-router": "catalog:",
     "react": "catalog:",
     "react-native": "catalog:",

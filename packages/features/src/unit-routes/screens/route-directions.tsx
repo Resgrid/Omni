@@ -1,5 +1,7 @@
 import { useRoutesStore } from '@resgrid/data';
 import { useNavigationHandoff } from '@resgrid/features/contacts';
+import { useInAppNavigationAvailable } from '@resgrid/features/navigation/hooks/use-in-app-navigation';
+import { navigationRoutes } from '@resgrid/features/navigation/routes';
 import { useTranslation } from '@resgrid/i18n';
 import type { RouteDirectionWaypointData } from '@resgrid/models';
 import { Button, ButtonText, HStack, Loading, Pressable, ScreenHeader, ScrollView, Text, useToast, View, VStack, ZeroState } from '@resgrid/ui';
@@ -9,7 +11,7 @@ import React, { useCallback, useEffect, useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 
 import { RouteStats } from '../components/route-stats';
-import { formatArrivalTime, formatDistance, formatDuration } from '../lib/route-format';
+import { formatArrivalTime, formatDistance, formatDuration, formatRouteTime } from '../lib/route-format';
 import { isMappable, parseRouteGeometry } from '../lib/route-geo';
 import { mapBounds, routeColor, waypointMapStops } from '../lib/route-map';
 import { isStopDone, sortStops, stopStatusLook } from '../lib/route-status';
@@ -24,8 +26,8 @@ export interface RouteDirectionsScreenProps {
 /**
  * Directions for the running route (`/routes/directions?instanceId=`): the server's route from the unit's position through
  * the remaining stops (`GetInstanceDirections` — Unit called the Mapbox Directions API from the device with its token),
- * distance, drive time and arrival, every waypoint, and hand-off of the next stop to the crew's navigation app.
- * In-app turn-by-turn is a later phase (`@resgrid/navigation`).
+ * distance, drive time and arrival (live per-stop ETAs from the server), every waypoint, in-app turn-by-turn through the
+ * remaining stops where the install can navigate (`/navigate`), and hand-off of a stop to the crew's navigation app.
  */
 export default function RouteDirectionsScreen({ instanceId: instanceIdProp, renderMap }: RouteDirectionsScreenProps) {
   const { t } = useTranslation();
@@ -51,12 +53,14 @@ export default function RouteDirectionsScreen({ instanceId: instanceIdProp, rend
   const origin = directions && isMappable(directions.OriginLatitude, directions.OriginLongitude) ? { latitude: directions.OriginLatitude as number, longitude: directions.OriginLongitude as number } : null;
   const color = routeColor(plans.find((plan) => plan.RoutePlanId === (directions?.RoutePlanId ?? activeInstance?.RoutePlanId))?.RouteColor);
 
+  const inAppNavigation = useInAppNavigationAvailable();
   const navigateTo = useCallback(
     async (waypoint: RouteDirectionWaypointData) => {
       const label = waypoint.Name || t('routes.destination');
       const target = isMappable(waypoint.Latitude, waypoint.Longitude) ? { latitude: waypoint.Latitude, longitude: waypoint.Longitude, label } : waypoint.Address ? { address: waypoint.Address, label } : null;
       if (!target) return;
-      const opened = await handoff.navigateTo(target);
+      // In-app guidance follows the whole route (the Navigate button); a single stop always opens the crew's app.
+      const opened = await (handoff.openExternal ?? handoff.navigateTo)(target);
       if (!opened) toast.error(t('map.failed_to_open_maps'));
     },
     [handoff, t, toast]
@@ -89,12 +93,20 @@ export default function RouteDirectionsScreen({ instanceId: instanceIdProp, rend
               stats={[
                 { id: 'distance', label: t('routes.estimated_distance'), value: formatDistance(directions.EstimatedDistanceMeters) },
                 { id: 'duration', label: t('routes.estimated_duration'), value: formatDuration(directions.EstimatedDurationSeconds, t) },
-                { id: 'eta', label: t('routes.eta'), value: formatArrivalTime(directions.EstimatedDurationSeconds) },
+                { id: 'eta', label: t('routes.eta'), value: formatArrivalTime(directions.EstimatedDurationWithDwellSeconds ?? directions.EstimatedDurationSeconds) },
               ]}
             />
           </VStack>
+          {inAppNavigation && next && instanceId ? (
+            <Button onPress={() => router.push(navigationRoutes.toRouteStops(instanceId))} testID="route-directions-navigate" style={{ minHeight: 52 }}>
+              <View style={styles.buttonIcon}>
+                <Navigation size={16} color="#ffffff" />
+              </View>
+              <ButtonText>{t('navigation.navigate')}</ButtonText>
+            </Button>
+          ) : null}
           {next ? (
-            <Button onPress={() => void navigateTo(next)} testID="route-directions-open-next" style={{ minHeight: 52 }}>
+            <Button variant={inAppNavigation ? 'outline' : 'solid'} onPress={() => void navigateTo(next)} testID="route-directions-open-next" style={{ minHeight: 52 }}>
               <View style={styles.buttonIcon}>
                 <ExternalLink size={16} color="#ffffff" />
               </View>
@@ -118,6 +130,11 @@ export default function RouteDirectionsScreen({ instanceId: instanceIdProp, rend
                     <Text className="text-xs" style={{ color: look.color }}>
                       {t(look.labelKey)}
                     </Text>
+                    {!isStopDone(waypoint.Status) && waypoint.EtaUtc ? (
+                      <Text className="text-xs text-typography-500" testID={`route-directions-eta-${id}`}>
+                        {t('unit_routes.stop_eta', { time: formatRouteTime(waypoint.EtaUtc) })}
+                      </Text>
+                    ) : null}
                   </VStack>
                   {isStopDone(waypoint.Status) ? null : (
                     <Pressable onPress={() => void navigateTo(waypoint)} accessibilityRole="button" accessibilityLabel={t('routes.open_in_maps')} testID={`route-directions-navigate-${id}`} className="p-3">

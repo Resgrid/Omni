@@ -1,3 +1,4 @@
+import { UnitNavigationEtaChip } from '@resgrid/features/navigation-eta';
 import { CurrentStatusBadge } from '@resgrid/features/status';
 import { useTranslation } from '@resgrid/i18n';
 import { type UnitInfoResultData } from '@resgrid/models';
@@ -12,7 +13,10 @@ export interface UnitCardProps {
   hasPendingStatus?: boolean;
 }
 
-/** A unit row (Responder card + Unit's unit-type icon): type icon, name, type, group, current status and destination. */
+/**
+ * A unit row (Responder card + Unit's unit-type icon): type icon, name, type, group, current status, live navigation ETA
+ * (Dispatch/BigBoard, MapLibre §9.4 — empty where ETAs are not synced) and destination.
+ */
 export const UnitCard: React.FC<UnitCardProps> = React.memo(({ unit, onPress, hasPendingStatus = false }) => {
   const { t } = useTranslation();
   return (
@@ -35,6 +39,7 @@ export const UnitCard: React.FC<UnitCardProps> = React.memo(({ unit, onPress, ha
             {unit.Type ? <Text className="text-xs text-typography-500">{unit.Type}</Text> : null}
           </HStack>
           <CurrentStatusBadge text={unit.CurrentStatus} color={unit.CurrentStatusColor} baseType={unit.CurrentStatusBaseType} isPending={hasPendingStatus} size="sm" testID={`unit-card-${unit.UnitId}-status`} />
+          <UnitNavigationEtaChip unitId={unit.UnitId} testID={`unit-card-${unit.UnitId}-eta`} />
           {unit.GroupName ? (
             <HStack space="xs" className="items-center">
               <Building2 size={12} color="#9ca3af" />

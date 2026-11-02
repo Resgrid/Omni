@@ -63,6 +63,15 @@ export function RasterSource({ id, children, ...props }: any) {
   );
 }
 
+export function VectorSource({ id, children, ...props }: any) {
+  useMountCount(`source:${id}`);
+  return (
+    <View testID={`mlrn-vector-source-${id}`} {...props}>
+      {cloneWithSource(children, id)}
+    </View>
+  );
+}
+
 export function ImageSource({ id, children, ...props }: any) {
   useMountCount(`source:${id}`);
   return (

@@ -62,7 +62,7 @@ describe('AccountSecurityScreen', () => {
   });
 
   it('shows the authenticator, recovery codes left, this app’s passkeys and the others', async () => {
-    render(<AccountSecurityScreen />);
+    await render(<AccountSecurityScreen />);
     expect(await screen.findByTestId('passkey-pk-1')).toBeTruthy();
     expect(screen.getByTestId('account-recovery-codes')).toHaveTextContent('mfa.account.recovery_codes_left [count=2]');
     expect(screen.getByTestId('account-passkeys-unit')).toHaveTextContent('mfa.account.passkeys_elsewhere [app=Resgrid Unit,count=1]');
@@ -72,11 +72,11 @@ describe('AccountSecurityScreen', () => {
   it('asks for the password when the server wants fresh proof, then retries the change', async () => {
     mockRevokePasskey.mockRejectedValueOnce({ response: { status: 403, data: { type: 'reauthentication_required' } } }).mockResolvedValueOnce({ Revoked: 1, SessionsEnded: 0, CurrentSessionEnded: false });
     mockReauthenticate.mockResolvedValue({ VerifiedAt: '2026-11-01T00:00:00Z' });
-    render(<AccountSecurityScreen />);
-    fireEvent.press(await screen.findByTestId('passkey-remove-pk-1'));
+    await render(<AccountSecurityScreen />);
+    await fireEvent.press(await screen.findByTestId('passkey-remove-pk-1'));
 
-    fireEvent.changeText(await screen.findByTestId('account-verify-secret'), 'secret');
-    fireEvent.press(screen.getByTestId('account-verify-submit'));
+    await fireEvent.changeText(await screen.findByTestId('account-verify-secret'), 'secret');
+    await fireEvent.press(screen.getByTestId('account-verify-submit'));
 
     await waitFor(() => expect(mockRevokePasskey).toHaveBeenCalledTimes(2));
     expect(mockReauthenticate).toHaveBeenCalledWith({}, 'secret');
@@ -85,7 +85,7 @@ describe('AccountSecurityScreen', () => {
 
   it('hides passkeys in a variant without them', async () => {
     activateTestVariant('bigboard');
-    render(<AccountSecurityScreen />);
+    await render(<AccountSecurityScreen />);
     expect(await screen.findByTestId('account-totp')).toBeTruthy();
     expect(screen.queryByTestId('account-passkeys')).toBeNull();
   });

@@ -1,10 +1,10 @@
 import { useTranslation } from '@resgrid/i18n';
-import { Building2, Info, Layers, LocateFixed, type LucideIcon, Search } from 'lucide-react-native';
+import { Building2, Car, Info, Layers, LocateFixed, type LucideIcon, Search } from 'lucide-react-native';
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useMapTheme } from '../provider/context';
+import { useMapTheme, useMapTraffic } from '../provider/context';
 import { MapSheet } from '../provider/overlays';
 import { SheetButton, SheetHeader } from './sheet-parts';
 
@@ -56,6 +56,18 @@ export const MapLayersButton: React.FC<Omit<MapControlButtonProps, 'icon' | 'acc
 export const MapRecenterButton: React.FC<Omit<MapControlButtonProps, 'icon' | 'accessibilityLabel'>> = ({ testID = 'map-recenter-button', ...props }) => {
   const { t } = useTranslation();
   return <MapControlButton icon={LocateFixed} accessibilityLabel={t('map.recenter_map')} testID={testID} {...props} />;
+};
+
+export interface MapTrafficButtonProps extends Omit<MapControlButtonProps, 'icon' | 'accessibilityLabel' | 'active'> {
+  /** Whether the traffic overlay is shown (the caller keeps the choice, e.g. remembered per device). */
+  isOn: boolean;
+}
+
+/** Live traffic on/off (§11.1). Renders nothing when the server has no traffic or the map is offline. */
+export const MapTrafficButton: React.FC<MapTrafficButtonProps> = ({ isOn, testID = 'map-traffic-button', ...props }) => {
+  const { t } = useTranslation();
+  const { available } = useMapTraffic();
+  return available ? <MapControlButton icon={Car} accessibilityLabel={t('maps.traffic')} active={isOn} testID={testID} {...props} /> : null;
 };
 
 export interface MapLayerToggleItem {

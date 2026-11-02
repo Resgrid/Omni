@@ -1,0 +1,13 @@
+{
+  "name": "resgrid-brand-assets",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Renders the app icons, splash images and favicons of the five Omni variants from their SVG masters. Standalone (not a workspace package): pnpm install --ignore-workspace.",
+  "type": "module",
+  "scripts": {
+    "generate": "node generate.mjs"
+  },
+  "devDependencies": {
+    "@resvg/resvg-js": "2.6.2"
+  }
+}

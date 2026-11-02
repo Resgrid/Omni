@@ -297,7 +297,7 @@ function joinHubGroup(hub: RealtimeHubKey): Promise<void> {
 // ---------------------------------------------------------------------------------------------------------------
 // Hub message → consumer event
 
-type IdEventName = Exclude<EventingEventName, 'departmentUpdated' | 'outstandingRequirementsUpdated'>;
+type IdEventName = Exclude<EventingEventName, 'departmentUpdated' | 'outstandingRequirementsUpdated' | 'unitNavigationUpdated'>;
 type PlainChatEventName = Exclude<ChatEventName, 'chatPresenceChanged'>;
 
 function noteEvent(name: RealtimeEventName): void {
@@ -310,6 +310,8 @@ function forwardEventingEvent(name: EventingEventName, args: unknown[]): void {
     emitRealtimeEvent('departmentUpdated', ...args);
   } else if (name === 'outstandingRequirementsUpdated') {
     emitRealtimeEvent('outstandingRequirementsUpdated', toRealtimeId(args[0]), args[1], ...args.slice(2));
+  } else if (name === 'unitNavigationUpdated') {
+    emitRealtimeEvent('unitNavigationUpdated', toRealtimeId(args[0]), args[1], ...args.slice(2));
   } else {
     const idEvent: IdEventName = name;
     const eventArgs: RealtimeEventMap[IdEventName] = [toRealtimeId(args[0]), ...args.slice(1)];

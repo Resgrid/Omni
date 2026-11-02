@@ -19,7 +19,32 @@ const path = require('path');
 const OUTPUT_DIR = path.join('.expo', 'app-icon-badge');
 const RENDERER_VERSION = require('app-icon-badge/package.json').version;
 
+// Every icon a build shows. The badge overlays are 1024×1024 and composited at the origin without scaling, so each
+// source must be a 1024×1024 PNG (scripts/variants-check.ts enforces it for the variant assets).
 function getIconTargets(config) {
+  const iosIcon = config.ios?.icon;
+  // iOS 18 appearances: `ios.icon` is either one path or { light, dark, tinted }.
+  const iosTargets =
+    iosIcon && typeof iosIcon === 'object'
+      ? ['light', 'dark', 'tinted'].map((appearance) => ({
+          name: appearance === 'light' ? 'ios-icon' : `ios-icon-${appearance}`,
+          source: iosIcon[appearance],
+          isAdaptiveIcon: false,
+          apply: (iconPath) => {
+            config.ios.icon[appearance] = iconPath;
+          },
+        }))
+      : [
+          {
+            name: 'ios-icon',
+            source: iosIcon,
+            isAdaptiveIcon: false,
+            apply: (iconPath) => {
+              config.ios.icon = iconPath;
+            },
+          },
+        ];
+
   return [
     {
       name: 'icon',
@@ -29,14 +54,7 @@ function getIconTargets(config) {
         config.icon = iconPath;
       },
     },
-    {
-      name: 'ios-icon',
-      source: config.ios?.icon,
-      isAdaptiveIcon: false,
-      apply: (iconPath) => {
-        config.ios.icon = iconPath;
-      },
-    },
+    ...iosTargets,
     {
       name: 'adaptive-icon',
       source: config.android?.adaptiveIcon?.foregroundImage,
@@ -98,8 +116,10 @@ function renderBadges(projectRoot, targets, badges) {
 
   targets.forEach((target) => {
     const current = path.basename(target.output);
+    // Exact shape, so `ios-icon` never matches the outputs of `ios-icon-dark`.
+    const previous = new RegExp(`^${target.name}-[0-9a-f]{12}\\.png$`);
     fs.readdirSync(outputDir)
-      .filter((file) => file.startsWith(`${target.name}-`) && file !== current)
+      .filter((file) => previous.test(file) && file !== current)
       .forEach((file) => fs.rmSync(path.join(outputDir, file), { force: true }));
   });
 }
@@ -126,6 +146,7 @@ const withIconBadge = (config, { enabled = true, badges = [] } = {}) => {
 };
 
 module.exports = withIconBadge;
+module.exports.getIconTargets = getIconTargets;
 
 if (require.main === module) {
   const { addBadge } = require('app-icon-badge');

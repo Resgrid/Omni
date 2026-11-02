@@ -177,12 +177,7 @@ export interface RecordDeploymentConnectorRunData {
 
 /** Where the source's latest snapshot and the department's own record disagree. Never applied by a client. */
 export type RecordDeploymentReconciliationKind =
-  | 'source_released_local_not_returned'
-  | 'source_closed_local_open'
-  | 'source_request_missing_locally'
-  | 'local_fill_missing_in_source'
-  | 'source_status_ahead'
-  | 'source_status_behind';
+  'source_released_local_not_returned' | 'source_closed_local_open' | 'source_request_missing_locally' | 'local_fill_missing_in_source' | 'source_status_ahead' | 'source_status_behind';
 
 export interface RecordDeploymentReconciliationData {
   ConnectorId?: string | null;

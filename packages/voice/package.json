@@ -24,6 +24,7 @@
     "zustand": "catalog:"
   },
   "devDependencies": {
-    "@testing-library/react-native": "catalog:"
+    "@testing-library/react-native": "catalog:",
+    "test-renderer": "catalog:"
   }
 }

@@ -11,7 +11,7 @@ Resgrid Omni is **one Expo (prebuild/CNG) React Native codebase that builds the 
 
 ## Stack
 
-Expo SDK 58 · React Native 0.88 (New Architecture, Hermes) · React 19.3 · TypeScript (strict) · expo-router 58 · zustand + react-native-mmkv · axios · gluestack-ui v5 + NativeWind 5 RC + Tailwind 4 (CSS config) · lucide-react-native · react-hook-form + zod · i18next (10 languages) · @microsoft/signalr · Novu + expo-notifications + notifee · LiveKit · MapLibre (`@maplibre/maplibre-react-native`, `maplibre-gl`) · Sentry · Countly · Jest 29 + jest-expo + @testing-library/react-native · Electron 40 · pnpm workspaces.
+Expo SDK 58 · React Native 0.88 (New Architecture, Hermes) · React 19.3 · TypeScript (strict) · expo-router 58 · zustand + react-native-mmkv · axios · gluestack-ui v5 + NativeWind 5 RC + Tailwind 4 (CSS config) · lucide-react-native · react-hook-form + zod · i18next (10 languages) · @microsoft/signalr · Novu + expo-notifications + notifee · LiveKit · MapLibre (`@maplibre/maplibre-react-native`, `maplibre-gl`) · Sentry · Countly · Jest 30 + jest-expo + @testing-library/react-native 14 · Electron 45 · pnpm workspaces.
 
 ## Layout (target — see plan §5.1)
 
@@ -30,7 +30,7 @@ docs/                      architecture/, build/, subsystems/
 
 Never fork code per app. In order of preference: **capability** (`useCapability()` from the variant manifest) → **form factor** (`useFormFactor()`) → **platform file at a leaf** (`.web.tsx` only for renderers/platform APIs) → **variant-only screen** (only each app's home and signature modules). Per-app facts live only in `apps/omni/variants/<v>/variant.json` (read at build time by `@resgrid/config-plugins` and at runtime through `variant.ts`, validated by the zod schema in `@resgrid/config`). Use the `omni-variants` skill for any change that applies to some apps but not others.
 
-**Never change without a migration and an upgrade test:** bundle ids/packages (Responder's `wtdt.resgrid.andriod` typo is permanent), EAS project ids, URL and SSO schemes, associated domains, App Group, **MMKV ids/keys and persisted store names**, Electron appIds/protocols, Docker image names, legacy runtime env names, Novu subscriber formats, push `Source`, client ids.
+**Never change without a migration and an upgrade test:** bundle ids/packages (Responder's `wtdt.resgrid.andriod` typo is permanent), EAS project ids, URL and SSO schemes, associated domains, App Group, **MMKV ids and persisted store names** (encryption keys are per device, plan D8), Electron appIds/protocols, Docker image names, legacy runtime env names, Novu subscriber formats, push `Source`, client ids.
 
 ## Conventions
 
@@ -60,6 +60,7 @@ Never fork code per app. In order of preference: **capability** (`useCapability(
 
 - Every module ships with Jest tests; CI runs Jest, type-check, lint, translation parity, dependency rules, API contract tests and per-variant route contract tests on every PR.
 - `jest.mock()` factories may only reference variables prefixed `mock`. Mocks of the auth store need `getState()`. Keep route files (`variants/*/app/**`) free of tests and logic — test the screens in `@resgrid/features`.
+- RNTL 14: `render`, `renderHook`, `fireEvent`, `act`, `rerender` and `unmount` are async — always `await` them (`react-native-testing` skill, v14 reference).
 - After dependency bumps, suspect stale `node_modules`/Metro cache first.
 - Variant-affecting changes: review the `expo config` snapshot diff for every variant.
 

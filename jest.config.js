@@ -19,6 +19,7 @@ module.exports = {
     '<rootDir>/packages/ui',
     '<rootDir>/packages/app-shell',
     '<rootDir>/packages/features',
+    '<rootDir>/packages/navigation',
     '<rootDir>/packages/maps/jest.native.config.js',
     '<rootDir>/packages/maps/jest.web.config.js',
     '<rootDir>/apps/omni',

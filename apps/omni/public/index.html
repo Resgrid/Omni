@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="%LANG_ISO_CODE%">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <title>%WEB_TITLE%</title>
+    <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
+    <style id="expo-reset">
+      /* These styles make the body full-height */
+      html,
+      body {
+        height: 100%;
+      }
+      /* These styles disable body scrolling if you are using <ScrollView> */
+      body {
+        overflow: hidden;
+      }
+      /* These styles make the root element full-height */
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+    </style>
+    <!--
+      Splash for web and Electron (docs/build/app-icons-and-splash.md): shown while the bundle loads, inside #root so React
+      replaces it on its first render, the moment the native splash hides on iOS and Android. scripts/web-export.mjs puts
+      the variant's mark, name and colours into the markers; `expo start --web` shows the default colours only.
+    -->
+    <style id="resgrid-splash">
+      :root {
+        --rg-splash-bg: #2a7dd5;
+        --rg-splash-bg-dark: #0e2440;
+      }
+      body {
+        margin: 0;
+      }
+      #rg-splash {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: var(--rg-splash-bg);
+        color: #ffffff;
+        font-family:
+          system-ui,
+          -apple-system,
+          'Segoe UI',
+          Roboto,
+          'Helvetica Neue',
+          Arial,
+          sans-serif;
+        user-select: none;
+      }
+      #rg-splash .rg-splash-mark {
+        width: clamp(112px, 16vmin, 168px);
+        aspect-ratio: 1;
+      }
+      #rg-splash .rg-splash-mark svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+        overflow: visible;
+      }
+      #rg-splash .rg-splash-name {
+        margin-top: 32px;
+        font-size: 18px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+      }
+      #rg-splash .rg-splash-progress {
+        margin-top: 20px;
+        width: 120px;
+        height: 3px;
+        border-radius: 2px;
+        background: rgba(255, 255, 255, 0.25);
+        overflow: hidden;
+      }
+      #rg-splash .rg-splash-progress::after {
+        content: '';
+        display: block;
+        width: 40%;
+        height: 100%;
+        border-radius: 2px;
+        background: #ffffff;
+        animation: rg-splash-progress 1.2s ease-in-out infinite;
+      }
+      @keyframes rg-splash-progress {
+        from {
+          transform: translateX(-100%);
+        }
+        to {
+          transform: translateX(250%);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #rg-splash .rg-splash-progress::after {
+          animation: none;
+          width: 100%;
+          opacity: 0.6;
+        }
+      }
+      @media (prefers-color-scheme: dark) {
+        #rg-splash {
+          background: var(--rg-splash-bg-dark);
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- Use static rendering with Expo Router to support running without JavaScript. -->
+    <noscript> You need to enable JavaScript to run this app. </noscript>
+    <!-- The root element for your Expo app. -->
+    <div id="root">
+      <div id="rg-splash" aria-busy="true">
+        <div class="rg-splash-mark"><!--resgrid:splash-mark--></div>
+        <div class="rg-splash-name"><!--resgrid:splash-name--></div>
+        <div class="rg-splash-progress"></div>
+      </div>
+    </div>
+  </body>
+</html>

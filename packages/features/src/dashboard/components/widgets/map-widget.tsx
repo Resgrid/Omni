@@ -1,5 +1,6 @@
 import { useSecurity } from '@resgrid/auth';
 import { getDataApiContext, hasDataApiContext, useMapMarkersStore } from '@resgrid/data';
+import { useNavigationEtaPins } from '@resgrid/features/navigation-eta';
 import { useTranslation } from '@resgrid/i18n';
 import { Camera, type CameraRef, MapPins, MapProvider, MapView, useFitBounds, useMapProviderContext } from '@resgrid/maps';
 import type { MapMakerInfoData } from '@resgrid/models';
@@ -69,6 +70,8 @@ const DepartmentMap: React.FC<{ isEditMode: boolean }> = ({ isEditMode }) => {
   useRealtimeRefetch(MAP_EVENTS, refreshBypassingCache);
 
   const visiblePins = useMemo(() => filterMapPins(pins, settings), [pins, settings]);
+  // Navigating units carry their live ETA under their label (labels on); the fit below uses the plain pins.
+  const etaPins = useNavigationEtaPins(visiblePins);
   const center = useMemo<[number, number]>(
     () =>
       resolveWidgetCenter(settings, { latitude: config?.MapCenterLatitude, longitude: config?.MapCenterLongitude }) ??
@@ -96,7 +99,7 @@ const DepartmentMap: React.FC<{ isEditMode: boolean }> = ({ isEditMode }) => {
         zoomLevel={settings.showAllMarkers ? undefined : settings.zoomLevel}
         animationDuration={0}
       />
-      <MapPins pins={visiblePins} canViewPersonnel={canUserViewPII} showLabels={!settings.hideLabels} idPrefix="dashboard-pins" />
+      <MapPins pins={etaPins} canViewPersonnel={canUserViewPII} showLabels={!settings.hideLabels} idPrefix="dashboard-pins" />
     </MapView>
   );
 };

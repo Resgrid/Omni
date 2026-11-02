@@ -61,6 +61,8 @@ jobs:
         run: pnpm eas:check
       - name: Workflow files
         run: node scripts/ci/validate-workflows.mjs
+      - name: CI script tests
+        run: node --test "scripts/ci/__tests__/*.test.mjs"
       # Contract suites from plan §12; they run as soon as the root scripts exist.
       - name: API contract tests
         run: pnpm run --if-present contract:check

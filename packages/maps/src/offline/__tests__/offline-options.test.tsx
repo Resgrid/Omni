@@ -31,9 +31,12 @@ const installed = (overrides: Partial<OfflineInstalledSet> = {}): OfflineInstall
   indoorFloors: [],
   templates: { light: null, dark: null },
   spritePath: null,
+  glyphsPath: null,
   departmentDataPath: null,
+  departmentData: null,
   attribution: 'Protomaps © OpenStreetMap',
   updatedAt: 42,
+  staleDays: 7,
   preferLocal: false,
   ...overrides,
 });
@@ -71,10 +74,28 @@ describe('createOfflineMapOptions', () => {
     expect(deriveMapStyleState(source, 'light', null, online)).toMatchObject({ kind: 'maplibre', isOffline: false });
     expect(createOfflineMapOptions({ installed: installed(), isOnline: true, preferLocal: true })?.mode).toBe('local-preferred');
   });
+
+  it('hands the composer the local glyphs and the department data, and the badge its stale threshold', () => {
+    const departmentData = { stations: { type: 'FeatureCollection' as const, features: [] } };
+    const template = { version: 8, glyphs: '{glyphs}/{fontstack}/{range}.pbf', sources: { protomaps: { type: 'vector', url: '{basemap}' } }, layers: [] } as never;
+    const onMapError = jest.fn();
+    const offline = createOfflineMapOptions({
+      installed: installed({ glyphsPath: 'file:///data/glyphs-1', departmentData, templates: { light: template, dark: null }, staleDays: 3 }),
+      isOnline: false,
+      onMapError,
+    });
+    const style = offline?.getStyle('light') as unknown as { glyphs: string; sources: Record<string, unknown> };
+    expect(style.glyphs).toBe('file:///data/glyphs-1/{fontstack}/{range}.pbf');
+    expect(style.sources['offline-dept-stations']).toEqual({ type: 'geojson', data: departmentData.stations, attribution: 'Protomaps © OpenStreetMap' });
+    expect(offline?.staleAfterMs).toBe(3 * 24 * 60 * 60 * 1000);
+    offline?.reportMapError?.('tile');
+    expect(onMapError).toHaveBeenCalledWith('tile');
+    expect(createOfflineMapOptions({ installed: installed(), isOnline: true })?.reportMapError).toBeUndefined();
+  });
 });
 
 describe('useOfflineMapOptions', () => {
-  it('follows connectivity and the installed set', () => {
+  it('follows connectivity and the installed set', async () => {
     let set: OfflineInstalledSet | null = installed();
     const listeners = new Set<() => void>();
     const controller = {
@@ -86,28 +107,58 @@ describe('useOfflineMapOptions', () => {
       markUsed: jest.fn(),
     } as unknown as OfflineMapsController;
     const connectivity = createManualConnectivitySource(true);
-    const { result } = renderHook(() => useOfflineMapOptions(controller, { connectivity }));
+    const { result } = await renderHook(() => useOfflineMapOptions(controller, { connectivity }));
     expect(result.current?.mode).toBe('online');
 
-    act(() => connectivity.setOnline(false));
+    await act(() => connectivity.setOnline(false));
     expect(result.current?.mode).toBe('offline');
     const style = result.current?.getStyle('dark');
     expect(style).toBeTruthy();
 
     // A new options object for the same installed revision hands out the same style object (no restyle).
-    act(() => connectivity.setOnline(true));
-    act(() => connectivity.setOnline(false));
+    await act(() => connectivity.setOnline(true));
+    await act(() => connectivity.setOnline(false));
     expect(result.current?.getStyle('dark')).toBe(style);
 
-    act(() => {
+    await act(() => {
       set = null;
       listeners.forEach((listener) => listener());
     });
     expect(result.current).toBeNull();
   });
 
-  it('is null without a controller', () => {
-    const { result } = renderHook(() => useOfflineMapOptions(null));
+  it('goes offline after more than 5 tile errors in 30 s and back once connectivity has been stable for 30 s', async () => {
+    const set = installed();
+    const controller = { subscribe: () => () => undefined, getInstalledSet: () => set, markUsed: jest.fn() } as unknown as OfflineMapsController;
+    let now = 0;
+    const timers: { at: number; run: () => void }[] = [];
+    const switchOptions = {
+      now: () => now,
+      setTimer: (run: () => void, ms: number) => timers.push({ at: now + ms, run }),
+      clearTimer: () => {
+        timers.length = 0;
+      },
+    };
+    const connectivity = createManualConnectivitySource(true);
+    const { result } = await renderHook(() => useOfflineMapOptions(controller, { connectivity, switchOptions }));
+    expect(result.current?.mode).toBe('online');
+
+    await act(() => {
+      for (let i = 0; i < 6; i++) result.current?.reportMapError?.('tile');
+    });
+    expect(result.current?.mode).toBe('offline');
+
+    // Back online after a loss only when the 30 s release fires.
+    await act(() => connectivity.setOnline(false));
+    await act(() => connectivity.setOnline(true));
+    expect(result.current?.mode).toBe('offline');
+    now += 30_000;
+    await act(() => timers.splice(0).forEach((timer) => timer.run()));
+    expect(result.current?.mode).toBe('online');
+  });
+
+  it('is null without a controller', async () => {
+    const { result } = await renderHook(() => useOfflineMapOptions(null));
     expect(result.current).toBeNull();
   });
 });

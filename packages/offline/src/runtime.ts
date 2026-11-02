@@ -4,7 +4,6 @@ import { apiCacheTtlFromManifest, createDurableApiCache, type DurableApiCache } 
 import { openDurableDb, type OpenDurableDbOptions } from './db/open-db';
 import { applySchema } from './db/schema';
 import type { DurableDb, SchemaModule, SchemaResult } from './db/types';
-import type { LegacyKeyProvider } from './kv/keys';
 import { openVariantStorage, type OpenVariantStorageOptions, type VariantStorage } from './kv/open-storage';
 import { KV_PLATFORM } from './kv/platform';
 import { createExpoSecureKeyStore } from './kv/secure-store';
@@ -25,11 +24,10 @@ import type { OfflineScope } from './util/scope';
 export interface InitOfflineOptions {
   /** Defaults to `getActiveVariant()`. */
   manifest?: VariantManifest;
-  getLegacyKey: LegacyKeyProvider;
   /** The signed-in session (server + department + user + unit), or null. */
   getScope: () => OfflineScope | null;
   logger?: OfflineLogger;
-  storage?: Omit<OpenVariantStorageOptions, 'manifest' | 'getLegacyKey'>;
+  storage?: Omit<OpenVariantStorageOptions, 'manifest'>;
   /** Defaults to `openDurableDb()` (expo-sqlite native, memory engine on web until spike S7). */
   db?: DurableDb;
   dbOptions?: OpenDurableDbOptions;
@@ -72,7 +70,7 @@ export function registerOutboxRetention(registry: RetentionRegistry, outbox: Out
 }
 
 /**
- * Composition root for the app shell: opens the frozen MMKV instances, the offline database, the
+ * Composition root for the app shell: opens the variant's MMKV instances (frozen ids, device keys), the offline database, the
  * outbox, API cache, wiper, storage manager and sync orchestrator for the active variant.
  */
 export async function initOffline(options: InitOfflineOptions): Promise<OfflineRuntime> {
@@ -85,7 +83,7 @@ export async function initOffline(options: InitOfflineOptions): Promise<OfflineR
     areas: options.registries?.areas ?? defaultStorageAreaRegistry,
   };
 
-  const storage = await openVariantStorage({ ...options.storage, manifest, getLegacyKey: options.getLegacyKey });
+  const storage = await openVariantStorage({ ...options.storage, manifest });
   const db = options.db ?? (await openDurableDb(options.dbOptions));
   const schema = await applySchema(db, [outboxSchemaModule, ...(options.schemaModules ?? [])]);
 

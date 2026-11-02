@@ -1,5 +1,6 @@
 import { useTerm } from '@resgrid/auth';
 import { selectPendingUnitStatus, useUnitsStore, useUnitStatusStore } from '@resgrid/data';
+import { useIsNavigationEtaEnabled, useNavigationEtaSync } from '@resgrid/features/navigation-eta';
 import { AvailabilityFilterChips } from '@resgrid/features/status';
 import { useTranslation } from '@resgrid/i18n';
 import { type UnitInfoResultData } from '@resgrid/models';
@@ -22,7 +23,8 @@ export interface UnitsListScreenProps {
 
 /**
  * The department's units (Responder list + filters, Dispatch/BigBoard reuse): search, server filter options, an
- * availability filter by status meaning, pull to refresh and live updates on `unitStatusUpdated`.
+ * availability filter by status meaning, pull to refresh, live updates on `unitStatusUpdated` and, where the app shows
+ * them, navigating units' live ETAs.
  */
 export default function UnitsListScreen({ onSelectUnit }: UnitsListScreenProps) {
   const { t } = useTranslation();
@@ -36,6 +38,8 @@ export default function UnitsListScreen({ onSelectUnit }: UnitsListScreenProps) 
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const activeFilter = toActiveFilter(selectedFilters);
+  // Dispatch and BigBoard: live ETAs of units navigating in the Unit app.
+  useNavigationEtaSync(useIsNavigationEtaEnabled());
 
   const load = useCallback((bypassCache: boolean) => useUnitsStore.getState().fetchUnitInfos({ activeFilter, bypassCache }), [activeFilter]);
 

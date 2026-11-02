@@ -1,0 +1,206 @@
+# Field labels "App", "Platform", "Resgrid server" and "Did this work before?" drive the labels added by
+# .github/workflows/issue-labels.yml (scripts/ci/issue-labels.mjs). Rename them, or change their options, only together
+# with that file; `pnpm workflows:check` fails when they drift apart.
+name: Bug report
+description: Something in Responder, Unit, IC, Dispatch or BigBoard is broken, crashes or behaves wrongly.
+labels: ['bug']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping make the Resgrid apps better. Before you start:
+
+        - **Is every app down at once?** Check [Resgrid system status](https://resgrid.freshstatus.io) first.
+        - **Account, billing or department setup?** The [Resgrid Help Center](https://resgrid.zohodesk.com/portal/en/home) can help faster.
+        - **Problem on the resgrid.com website or the API itself?** Report it in [Resgrid Core](https://github.com/Resgrid/Core/issues).
+        - **Security problem?** Do not open an issue; follow the [security policy](https://github.com/Resgrid/Omni/security/policy).
+
+        > [!WARNING]
+        > Issues are public. Do not include passwords, tokens, personal details of members, patients or callers, call addresses or notes, or anything your department treats as protected. Blur them in screenshots.
+
+  - type: dropdown
+    id: app
+    attributes:
+      label: App
+      description: Which app shows the problem? Choose every app where you have seen it. The app name is on its icon and in Settings → About → App Name.
+      multiple: true
+      options:
+        - Responder — for department members
+        - Unit — for vehicle and apparatus crews (MDT)
+        - IC — for incident commanders
+        - Dispatch — for dispatchers
+        - BigBoard — for station and EOC wall displays
+        - All apps
+        - Not sure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      description: Where does it happen? Choose every platform where you have seen it.
+      multiple: true
+      options:
+        - iOS (iPhone or iPad)
+        - Android (phone or tablet)
+        - Web browser (hosted by Resgrid)
+        - Web (self-hosted Docker image)
+        - Windows desktop app
+        - macOS desktop app
+        - Linux desktop app
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: App version
+      description: Settings → About → Version, including the build number in brackets.
+      placeholder: 'Version 8.12 (100012)'
+    validations:
+      required: true
+
+  - type: input
+    id: update
+    attributes:
+      label: Current update
+      description: 'iOS and Android only: Settings → App updates → Current update and Update channel. Leave empty if that section is not shown.'
+      placeholder: 'a1b2c3d4, production'
+
+  - type: input
+    id: device
+    attributes:
+      label: Device and operating system
+      description: Device model and OS version; for the web app, the browser and its version.
+      placeholder: 'iPhone 15, iOS 26.1 · Samsung Galaxy Tab Active5, Android 15 · Chrome 141 on Windows 11'
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install-source
+    attributes:
+      label: Where did you get the app?
+      options:
+        - App Store or Google Play
+        - TestFlight or Firebase App Distribution (test build)
+        - Downloaded from a GitHub release
+        - Hosted web app from Resgrid
+        - Self-hosted Docker image
+        - Built from source
+        - Not sure
+
+  - type: dropdown
+    id: server
+    attributes:
+      label: Resgrid server
+      description: The server chosen on the sign-in screen (Settings → Server URL).
+      options:
+        - Resgrid North America (api.resgrid.com)
+        - Resgrid Europe (api-eu-central.resgrid.com)
+        - Self-hosted Resgrid Core
+        - Not sure
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area of the app
+      description: The part of the app the problem is in.
+      options:
+        - Sign-in / single sign-on / MFA / passkeys
+        - Calls and dispatching
+        - Personnel status and staffing
+        - Unit status / crew / roles
+        - Messages / chat / notification inbox
+        - Push notifications and alert sounds
+        - Maps / offline maps / navigation
+        - Offline use and pending changes
+        - Push-to-talk and audio
+        - Incident command
+        - Shifts / calendar / trades
+        - Records / checklists / forms
+        - Location sharing
+        - Dashboard widgets (BigBoard)
+        - Settings
+        - Installing / starting / updating the app
+        - Other
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the problem. Include the exact text of any error message.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The steps that lead to the problem, from opening the app.
+      placeholder: |
+        1. Open Calls
+        2. Tap a call
+        3. Tap Set Status
+        4. …
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: How often does it happen?
+      options:
+        - Every time
+        - Sometimes
+        - It happened once
+
+  - type: dropdown
+    id: network
+    attributes:
+      label: Network connection at the time
+      description: The apps work offline and send queued changes when the connection returns, so the connection matters.
+      options:
+        - Online
+        - Weak or dropping in and out
+        - Offline
+        - Not sure
+
+  - type: dropdown
+    id: regressed
+    attributes:
+      label: Did this work before?
+      options:
+        - Yes — it started after an app update
+        - Yes — it started after a department or device setting changed
+        - No — it has never worked
+        - Not sure
+
+  - type: textarea
+    id: attachments
+    attributes:
+      label: Screenshots, recordings or logs
+      description: Drag files here. Blur personal and call details first.
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Anything else?
+      description: Department settings that may matter (time zone, custom statuses, renamed terms such as "Apparatus" for units), peripherals (Bluetooth headset, PTT button, vehicle mount), kiosk or wall display mode, or anything else that helps.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you submit
+      options:
+        - label: I searched the [existing issues](https://github.com/Resgrid/Omni/issues?q=is%3Aissue) and this is not a duplicate.
+          required: true
+        - label: I removed passwords, tokens and personal or call details from this report and its attachments.
+          required: true

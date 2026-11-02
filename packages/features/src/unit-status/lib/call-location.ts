@@ -17,23 +17,29 @@ export const isUsablePoint = (latitude: unknown, longitude: unknown): boolean =>
   return Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
 };
 
-type CallLocationFields = Pick<CallResultData, 'Latitude' | 'Longitude' | 'Address' | 'Name' | 'Geolocation' | 'RedactedFields'>;
+type CallLocationFields = Pick<CallResultData, 'Latitude' | 'Longitude' | 'Address' | 'Name' | 'Geolocation' | 'RedactedFields'> & Partial<Pick<CallResultData, 'CallId'>>;
 
 const geolocationPoint = (geolocation: string | null | undefined): { latitude: number; longitude: number } | null => {
   const [lat, lng] = (geolocation ?? '').split(',');
   return isUsablePoint(lat, lng) ? { latitude: Number(lat), longitude: Number(lng) } : null;
 };
 
+const callIdOf = (call: CallLocationFields): { callId: number } | Record<string, never> => {
+  const id = Number(call.CallId);
+  return Number.isInteger(id) && id > 0 ? { callId: id } : {};
+};
+
 /**
  * Where "Directions" on the active call goes (Unit call sidebar): the call's coordinates, else its address. Protected
- * (withheld) location values never leave the app in a navigation URL.
+ * (withheld) location values never leave the app in a navigation URL. A point target carries the call id so in-app
+ * navigation routes to the call through the server; a withheld location never gets one (the route would reveal it).
  */
 export function callLocationTarget(call: CallLocationFields): NavigationTarget | null {
   const label = revealedValue(call.RedactedFields, ProtectedFieldIds.callName, call.Name) ?? undefined;
   const geolocationWithheld = revealedValue(call.RedactedFields, ProtectedFieldIds.callGeolocation, call.Geolocation ?? '') === null;
-  if (!geolocationWithheld && isUsablePoint(call.Latitude, call.Longitude)) return { latitude: Number(call.Latitude), longitude: Number(call.Longitude), label };
+  if (!geolocationWithheld && isUsablePoint(call.Latitude, call.Longitude)) return { latitude: Number(call.Latitude), longitude: Number(call.Longitude), label, ...callIdOf(call) };
   const fromGeolocation = geolocationWithheld ? null : geolocationPoint(call.Geolocation);
-  if (fromGeolocation) return { ...fromGeolocation, label };
+  if (fromGeolocation) return { ...fromGeolocation, label, ...callIdOf(call) };
   const address = revealedValue(call.RedactedFields, ProtectedFieldIds.callAddress, call.Address)?.trim() ?? '';
   return address !== '' ? { address, label } : null;
 }

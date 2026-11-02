@@ -44,10 +44,11 @@ Status: target design from `docs/architecture/omni-plan.md` §6 (2026-10-31). Ea
 - `nightly.yml`: dev-client/simulator builds and e2e; `ota.yml`: manual JS-only updates.
 - Rules: build each thing once (never rebuild the web app inside Docker or Electron jobs; never build dev clients on the release path); `fail-fast: false`; per-job timeouts; retries on network steps; release concurrency queues, PR concurrency cancels; signing material only in `$RUNNER_TEMP`, removed in an `always()` step.
 - Electron updates use a generic feed per variant (`updates/<variant>/<channel>/`), not electron-updater's GitHub provider (five apps share one repo's releases).
-- Secrets: one GitHub Environment per variant with identical secret names inside each (`EAS_PROJECT_ID`, `GOOGLE_SERVICES_JSON_BASE64`, `GRADLE_PROPERTIES`, MMKV key secret, signing material, Sentry DSN for that variant's own project…), plus `store-<variant>` environments for submission. Never prefix-hack names in workflows.
+- Secrets: one GitHub Environment per variant with identical secret names inside each (`EAS_PROJECT_ID`, `GOOGLE_SERVICES_JSON_BASE64`, `GRADLE_PROPERTIES`, signing material, Sentry DSN for that variant's own project…), plus `store-<variant>` environments for submission. Never prefix-hack names in workflows. There is no MMKV key secret: storage keys are generated per device (plan D8).
 
 ## Config plugins and patches
 
 - One copy of each plugin in `@resgrid/config-plugins`; a variant opts in through its manifest. Notables: Live Activities (team id from env, never hardcoded), `withRestrictedBootReceivers` (all variants; Android 15 boot-receiver crash), `withoutBackgroundLocation` (IC posture), icon badge, MediaButton/InCallAudio native modules, notification sounds.
+- Icons, splash images and favicons are generated from vector masters (`node scripts/brand-assets/generate.mjs`), never hand-edited; badged icons must stay 1024×1024 (`pnpm variants:check`). Web/Electron splash lives in `apps/omni/public/index.html` and is stamped by `pnpm web:export`. → `docs/build/app-icons-and-splash.md`
 - Patches via pnpm `patchedDependencies`, one copy each (`@gluestack-ui/core`, `react-native-webview`). Document why each patch exists next to it.
 - Upgrades: use the `expo-upgrade` skill; one PR bumps the catalog and is verified by the full variant matrix.

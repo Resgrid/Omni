@@ -7,10 +7,21 @@ import { Linking, Platform } from 'react-native';
  * department/user's chosen app (R/U/I 10-app hand-off) through `NavigationHandoffProvider`; until then the platform
  * default opens. The app never calls a routing provider itself — it hands the destination to the user's app.
  */
-export type NavigationTarget = { latitude: number; longitude: number; label?: string } | { address: string; label?: string };
+export type NavigationTarget =
+  | {
+      latitude: number;
+      longitude: number;
+      label?: string;
+      /** The call the point belongs to: in-app navigation routes to the call itself (Routing/GetCallRoute). */
+      callId?: number;
+    }
+  | { address: string; label?: string };
 
 export interface NavigationHandoff {
+  /** Directions to a target: in-app turn-by-turn where the app offers it and the crew chose it, else their navigation app. */
   navigateTo: (target: NavigationTarget) => Promise<boolean>;
+  /** Always the crew's external navigation app ("Open in…" from the in-app navigation screen). Defaults to `navigateTo`. */
+  openExternal?: (target: NavigationTarget) => Promise<boolean>;
 }
 
 const encode = (value: string): string => encodeURIComponent(value);

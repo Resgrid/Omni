@@ -2,7 +2,8 @@ import { getBaseApiUrl, switchServer, useAuthStore } from '@resgrid/auth';
 import { initI18n } from '@resgrid/i18n';
 import { configureLocation } from '@resgrid/location';
 import { configureNotifications, type NotificationsDependencies, pushNotificationService } from '@resgrid/notifications';
-import { defaultResetRegistry } from '@resgrid/offline';
+import { defaultResetRegistry, secureKeyName } from '@resgrid/offline';
+import { __resetSecureStoreFake, setItemAsync } from '@resgrid/offline/__tests__/fakes/expo-secure-store';
 import { __getMmkvFile, __resetMmkvFake, __seedMmkvFile } from '@resgrid/offline/__tests__/fakes/mmkv';
 import { configureRealtime, teardownRealtime } from '@resgrid/realtime';
 import { configureVoice, registerVoiceResets } from '@resgrid/voice';
@@ -10,13 +11,13 @@ import { configureVoice, registerVoiceResets } from '@resgrid/voice';
 import { activateVariant } from '../../__tests__/helpers/variants';
 import { defineRoutes } from '../../routes/define-routes';
 import { setRouteContract } from '../../routes/href';
-import { registerLegacyKeySource, resetLegacyKeySourcesForTests } from '../../runtime/legacy-keys';
 import { getShellRuntime, resetShellRuntimeForTests } from '../../runtime/runtime-holder';
 import { getShellState, resetShellStateForTests } from '../../runtime/shell-state';
 import { createAppInit } from '../create-app-init';
 import { createStartupSteps, resetDefaultStepsForTests } from '../default-steps';
 
-const LEGACY_KEY = 'legacy-unit-key1';
+const LEGACY_KEY = '9f066882-5c07-47a4-9bf3-783074b590d5';
+const DEVICE_KEY = 'DEVICEKEY0123456';
 
 function startup() {
   const variant = activateVariant('unit');
@@ -34,7 +35,7 @@ describe('startup steps', () => {
     __resetMmkvFake();
     resetShellRuntimeForTests();
     resetShellStateForTests();
-    resetLegacyKeySourcesForTests();
+    __resetSecureStoreFake();
     resetDefaultStepsForTests();
     defaultResetRegistry.clear();
     setRouteContract(defineRoutes(['home']));
@@ -60,29 +61,34 @@ describe('startup steps', () => {
     expect(pushNotificationService.initialize).toHaveBeenCalledTimes(1);
   });
 
-  it('opens the frozen MMKV instance with the legacy key from a registered build-secret source and reads device preferences', async () => {
-    __seedMmkvFile('ResgridUnit', LEGACY_KEY, { SELECTED_THEME: 'dark', IS_FIRST_TIME: false, local: 'de' });
-    registerLegacyKeySource(({ keySecret, instanceId }) => (keySecret === 'UNIT_MMKV_KEY' && instanceId === 'ResgridUnit' ? LEGACY_KEY : null));
+  it('opens the frozen MMKV instance with its device key from SecureStore and reads device preferences', async () => {
+    await setItemAsync(secureKeyName('ResgridUnit'), DEVICE_KEY);
+    __seedMmkvFile('ResgridUnit', DEVICE_KEY, { SELECTED_THEME: 'dark', IS_FIRST_TIME: false, local: 'de' });
     const { init } = startup();
 
     await init.run();
 
-    expect(getShellRuntime().offline?.storage.keySources.ResgridUnit).toBe('legacy');
+    expect(getShellRuntime().offline?.storage.keySources.ResgridUnit).toBe('secure');
+    expect(getShellRuntime().offline?.storage.reinitialized).toEqual([]);
     expect(getShellState().themeMode).toBe('dark');
     expect(getShellState().onboardingRequired).toBe(false);
     expect(initI18n).toHaveBeenLastCalledWith({ language: 'de', variantResources: undefined });
-    expect(__getMmkvFile('ResgridUnit')?.data.get('SELECTED_THEME')).toBe('dark');
+    expect(__getMmkvFile('ResgridUnit')?.key).toBe(DEVICE_KEY);
   });
 
-  it('without a key source the legacy (encrypted) data is not readable — the documented S4 gap', async () => {
-    __seedMmkvFile('ResgridUnit', LEGACY_KEY, { SELECTED_THEME: 'dark' });
+  it('starts an upgraded Unit install over: the legacy file is deleted and the user onboards again under a new device key', async () => {
+    __seedMmkvFile('ResgridUnit', LEGACY_KEY, { SELECTED_THEME: 'dark', IS_FIRST_TIME: false });
     const { init } = startup();
 
     await init.run();
 
-    expect(getShellRuntime().offline?.storage.keySources.ResgridUnit).toBe('none');
+    const storage = getShellRuntime().offline?.storage;
+    expect(storage?.keySources.ResgridUnit).toBe('secure');
+    expect(storage?.reinitialized).toEqual(['ResgridUnit']);
     expect(getShellState().themeMode).toBe('system');
     expect(getShellState().onboardingRequired).toBe(true);
+    expect(__getMmkvFile('ResgridUnit')?.key).not.toBe(LEGACY_KEY);
+    expect(__getMmkvFile('ResgridUnit')?.data.has('SELECTED_THEME')).toBe(false);
   });
 
   it('wires notifications deep links to the route contract', async () => {

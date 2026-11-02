@@ -13,14 +13,17 @@ import {
   Marker,
   RasterSource as MLRasterSource,
   UserLocation as MLUserLocation,
+  VectorSource as MLVectorSource,
 } from '@maplibre/maplibre-react-native';
 import React, { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import { useMapProviderContext } from '../provider/context';
 import { isValidLngLat } from '../types';
 import { isJumpMode, paddingFromArgument, toCameraTarget, toEdgePadding, toInitialView, toNamedAnchor, toTrackUserLocation, validBounds } from './camera-utils';
 import { MapPlaceholder } from './map-placeholder';
-import { MapRenderContext, useStyleRevision } from './render-context';
+import { OfflineMapBadge } from './offline-map-badge';
+import { firstSymbolLayerId, MapRenderContext, useBelowLabelsLayerId, useStyleRevision } from './render-context';
 import { styleSignature, toPaintAndLayout } from './style-props';
 import type {
   AttributionPosition,
@@ -43,12 +46,15 @@ import type {
   ShapeSourceProps,
   SymbolLayerProps,
   UserLocationProps,
+  VectorSourceProps,
 } from './types';
 import { useViewStyle } from './use-view-style';
 
 /** iOS / Android renderer of the wrapper API over `@maplibre/maplibre-react-native` 11. */
 
 const EMPTY_COLLECTION: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
+/** Empty layer added before the app's layers when the style is a URL (its label layers are unknown here). */
+const OVERLAY_ANCHOR_LAYER_ID = 'rg-overlay-anchor';
 
 const ORNAMENT_POSITIONS: Record<AttributionPosition, { top: number; left: number } | { top: number; right: number } | { bottom: number; right: number } | { bottom: number; left: number }> = {
   'bottom-right': { bottom: 8, right: 8 },
@@ -80,6 +86,9 @@ export const MapView = forwardRef<MapViewRef, MapViewProps>(function MapView(pro
     unavailableFallback,
   } = props;
   const view = useViewStyle(props);
+  const { reportMapError } = useMapProviderContext();
+  // The provider's style (not one passed in): its load failures feed the D16 offline switch, and the offline badge is its.
+  const usesProviderStyle = !(props.mapStyle ?? props.styleURL);
   const mapRef = useRef<MapRef>(null);
   const [internalRevision, setInternalRevision] = useState(0);
   const loadedStyleKey = useRef<string | null>(null);
@@ -106,7 +115,8 @@ export const MapView = forwardRef<MapViewRef, MapViewProps>(function MapView(pro
     loadedStyleKey.current = view.styleKey;
   }, [view.styleKey]);
 
-  const renderContext = useMemo(() => ({ styleRevision: internalRevision + styleRevision }), [internalRevision, styleRevision]);
+  const firstLabelLayerId = useMemo(() => firstSymbolLayerId(view.mapStyle), [view.mapStyle]);
+  const renderContext = useMemo(() => ({ styleRevision: internalRevision + styleRevision, belowLabelsLayerId: firstLabelLayerId ?? OVERLAY_ANCHOR_LAYER_ID }), [internalRevision, styleRevision, firstLabelLayerId]);
   const canPan = interactive ? scrollEnabled : false;
   const canZoom = interactive ? zoomEnabled : false;
   const canRotate = interactive ? rotateEnabled : false;
@@ -152,14 +162,33 @@ export const MapView = forwardRef<MapViewRef, MapViewProps>(function MapView(pro
             : undefined
         }
         onDidFinishLoadingMap={onDidFinishLoadingMap ? () => onDidFinishLoadingMap() : undefined}
-        onDidFailLoadingMap={onDidFailLoadingMap ? () => onDidFailLoadingMap() : undefined}
+        onDidFailLoadingMap={() => {
+          // MapLibre Native reports no per-tile errors; a style that failed to load is the switch's signal here (overlay
+          // sources the app adds — traffic, custom maps, routes — never raise it).
+          if (usesProviderStyle) reportMapError?.('style');
+          onDidFailLoadingMap?.();
+        }}
         onDidFinishLoadingStyle={handleStyleLoaded}
       >
+        {firstLabelLayerId ? null : <OverlayAnchor />}
         {children}
+        <OfflineMapBadge active={usesProviderStyle} attributionPosition={attributionPosition} />
       </MLMap>
     </MapRenderContext.Provider>
   );
 });
+
+const OVERLAY_ANCHOR_LAYER = { id: OVERLAY_ANCHOR_LAYER_ID, type: 'line' } as unknown as LayerProps;
+
+/** The `belowLabels` target on URL styles: mounted first, so it sits above the base style and below every app layer. */
+function OverlayAnchor() {
+  const revision = useStyleRevision();
+  return (
+    <GeoJSONSource key={`${OVERLAY_ANCHOR_LAYER_ID}:${revision}`} id={`${OVERLAY_ANCHOR_LAYER_ID}-source`} data={EMPTY_COLLECTION}>
+      <Layer {...OVERLAY_ANCHOR_LAYER} />
+    </GeoJSONSource>
+  );
+}
 
 export const Camera = forwardRef<CameraRef, CameraProps>(function Camera(props, ref) {
   const inner = useRef<MLCameraRef>(null);
@@ -256,12 +285,23 @@ export function ShapeSource({ id, shape, onPress, cluster, clusterRadius, cluste
   );
 }
 
+// MapLibre Native reads a tile source's `tiles` only when the source is added, so new tiles (a renewed signature, a
+// traffic reload) re-add the source: the tiles are part of the key.
 export function RasterSource({ id, tileUrlTemplates, tileSize = 256, minZoomLevel, maxZoomLevel, attribution, scheme, children }: RasterSourceProps) {
   const revision = useStyleRevision();
   return (
-    <MLRasterSource key={`${id}:${revision}`} id={id} tiles={tileUrlTemplates} tileSize={tileSize} minzoom={minZoomLevel} maxzoom={maxZoomLevel} attribution={attribution} scheme={scheme}>
+    <MLRasterSource key={`${id}:${revision}:${tileUrlTemplates.join('|')}`} id={id} tiles={tileUrlTemplates} tileSize={tileSize} minzoom={minZoomLevel} maxzoom={maxZoomLevel} attribution={attribution} scheme={scheme}>
       {children}
     </MLRasterSource>
+  );
+}
+
+export function VectorSource({ id, tileUrlTemplates, minZoomLevel, maxZoomLevel, attribution, scheme, children }: VectorSourceProps) {
+  const revision = useStyleRevision();
+  return (
+    <MLVectorSource key={`${id}:${revision}:${tileUrlTemplates.join('|')}`} id={id} tiles={tileUrlTemplates} minzoom={minZoomLevel} maxzoom={maxZoomLevel} attribution={attribution} scheme={scheme}>
+      {children}
+    </MLVectorSource>
   );
 }
 
@@ -279,9 +319,11 @@ type InjectedSource = { source?: string };
 
 const useNativeLayerProps = (type: LayerType, props: (LineLayerProps | FillLayerProps | SymbolLayerProps | CircleLayerProps | HeatmapLayerProps | RasterLayerProps) & InjectedSource): LayerProps => {
   const signature = styleSignature(props.style);
+  const labelLayerId = useBelowLabelsLayerId();
   // The signature captures the style object's content (inline style objects change identity every render).
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const { paint, layout } = useMemo(() => toPaintAndLayout(type, props.style), [type, signature]);
+  const labelsBelow = props.belowLabels ? (labelLayerId ?? undefined) : undefined;
   const spec = {
     id: props.id,
     type,
@@ -292,7 +334,7 @@ const useNativeLayerProps = (type: LayerType, props: (LineLayerProps | FillLayer
     maxzoom: props.maxZoomLevel,
     paint,
     layout,
-    beforeId: props.belowLayerID,
+    beforeId: props.belowLayerID ?? labelsBelow,
     afterId: props.aboveLayerID,
     layerIndex: props.layerIndex,
   };

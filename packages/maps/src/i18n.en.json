@@ -5,6 +5,7 @@
   "maps.legend.no_meaning": "No meaning",
   "maps.map_layers": "Map layers",
   "maps.no_layers": "No map layers",
+  "maps.traffic": "Live traffic",
   "maps.picker.tap_to_select": "Tap the map to choose a location",
   "maps.picker.looking_up_address": "Looking up address…",
   "maps.poi.filter_title": "Filter points of interest",
@@ -17,5 +18,13 @@
   "maps.poi.view_on_map": "View on map",
   "maps.poi.search_placeholder": "Search points of interest…",
   "maps.poi.results": "{{count}} points of interest",
-  "maps.poi.results_one": "{{count}} point of interest"
+  "maps.poi.results_one": "{{count}} point of interest",
+  "maps.offline.badge": "Offline map",
+  "maps.offline.badge_updated_now": "Offline map · updated just now",
+  "maps.offline.badge_updated_minutes": "Offline map · updated {{count}} min ago",
+  "maps.offline.badge_updated_hours": "Offline map · updated {{count}} h ago",
+  "maps.offline.badge_updated_days": "Offline map · updated {{count}} d ago",
+  "maps.offline.badge_details": "This map is drawn from maps saved on this device.",
+  "maps.offline.badge_stale": "These maps have not been updated for a while. Connect to the internet to refresh them.",
+  "maps.offline.badge_attribution": "Map data: {{attribution}}"
 }

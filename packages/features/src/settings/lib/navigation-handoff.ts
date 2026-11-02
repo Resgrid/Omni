@@ -1,7 +1,7 @@
 import { logger } from '@resgrid/core';
 import { Linking, Platform } from 'react-native';
 
-import { getNavigationApp, type NavigationApp } from './navigation-app';
+import { type ExternalNavigationApp, getExternalNavigationApp } from './navigation-app';
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Turn-by-turn hand-off to the navigation app chosen in Settings (Responder/Unit/IC `lib/navigation.ts`, for every
@@ -135,7 +135,7 @@ const osmandAttempts = ({ coordinates, address, label, origin }: NavigationDesti
     : null;
 };
 
-const buildMobileAppAttempts = (destination: NavigationDestination, app: NavigationApp, platform: string): NavigationAttempt[] | null => {
+const buildMobileAppAttempts = (destination: NavigationDestination, app: ExternalNavigationApp, platform: string): NavigationAttempt[] | null => {
   const { coordinates } = destination;
   switch (app) {
     case 'gaia_gps': {
@@ -168,7 +168,7 @@ const buildMobileAppAttempts = (destination: NavigationDestination, app: Navigat
 };
 
 /** The URLs to try, in order, for a navigation app on a platform (exported for tests and the variant route contract). */
-export const buildNavigationAttempts = (destination: NavigationDestination, app: NavigationApp, platform: string): NavigationAttempt[] => {
+export const buildNavigationAttempts = (destination: NavigationDestination, app: ExternalNavigationApp, platform: string): NavigationAttempt[] => {
   const webFallback: NavigationAttempt = { url: googleMapsWebUrl(destination) };
   const isNativePlatform = platform === 'ios' || platform === 'android';
 
@@ -193,7 +193,7 @@ export const buildNavigationAttempts = (destination: NavigationDestination, app:
   return [webFallback];
 };
 
-const openFirstAvailable = async (attempts: NavigationAttempt[], navigationApp: NavigationApp): Promise<boolean> => {
+const openFirstAvailable = async (attempts: NavigationAttempt[], navigationApp: ExternalNavigationApp): Promise<boolean> => {
   let lastError: unknown;
   for (const attempt of attempts) {
     try {
@@ -219,7 +219,7 @@ const openNavigation = async (destination: NavigationDestination): Promise<boole
     logger.warn({ message: 'Navigation requested without usable coordinates or an address' });
     return false;
   }
-  const navigationApp = getNavigationApp();
+  const navigationApp = getExternalNavigationApp();
   return openFirstAvailable(buildNavigationAttempts(destination, navigationApp, Platform.OS), navigationApp);
 };
 

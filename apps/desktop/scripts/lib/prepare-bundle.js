@@ -51,7 +51,7 @@ function prepareBundle({ variant, bundleDir, webDir = defaultWebDir(variant), ru
     webSource = path.resolve(webDir);
     const index = path.join(webSource, 'index.html');
     if (!fs.existsSync(index)) {
-      throw new Error(`No web export at ${webSource}. Build it first:\n  cd apps/omni && APP_VARIANT=${variant} npx expo export -p web --output-dir dist/${variant}`);
+      throw new Error(`No web export at ${webSource}. Build it first:\n  cd apps/omni && APP_VARIANT=${variant} pnpm web:export`);
     }
     // Packaging another variant's export would ship the wrong app under this one's identity.
     const title = /<title>([^<]*)<\/title>/i.exec(fs.readFileSync(index, 'utf8'));
@@ -66,7 +66,10 @@ function prepareBundle({ variant, bundleDir, webDir = defaultWebDir(variant), ru
   if (webSource) {
     fs.cpSync(webSource, path.join(target, 'web'), { recursive: true, filter: (source) => !source.endsWith('.map') });
   }
-  fs.copyFileSync(path.join(variantsDir, variant, 'assets', 'icon.png'), path.join(target, 'icon.png'));
+  // Window and notification icon on Windows and Linux: the desktop artwork when the variant has it.
+  const assets = path.join(variantsDir, variant, 'assets');
+  const desktopIcon = path.join(assets, 'desktop-icon.png');
+  fs.copyFileSync(fs.existsSync(desktopIcon) ? desktopIcon : path.join(assets, 'icon.png'), path.join(target, 'icon.png'));
   fs.writeFileSync(path.join(target, 'variant-config.json'), `${JSON.stringify(config, null, 2)}\n`);
 
   return { manifest, config, bundleDir: target, webBytes: webSource ? directorySize(path.join(target, 'web')) : 0 };

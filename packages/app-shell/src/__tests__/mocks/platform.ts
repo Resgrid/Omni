@@ -45,6 +45,8 @@ export const voice = {
   configureVoice: jest.fn(),
   initializeVoice: jest.fn(async () => undefined),
   registerVoiceResets: jest.fn(() => () => undefined),
+  // The slice of the LiveKit store the app-update restart guard reads.
+  useLiveKitStore: create<{ isConnected: boolean; isConnecting: boolean }>(() => ({ isConnected: false, isConnecting: false })),
 };
 
 export const location = {

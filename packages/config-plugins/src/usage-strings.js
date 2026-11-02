@@ -7,10 +7,11 @@ const usage = {
     `${n} uses Bluetooth to connect to wireless headsets and speaker-microphone accessories for Push-to-Talk audio. For example, when you pair a Bluetooth speaker-mic, pressing its talk button transmits your voice to your department audio channel.`,
   faceId: (n) =>
     `${n} uses Face ID to unlock the securely stored credentials that keep you signed in to your department. For example, after your device locks, Face ID confirms it is you before the app restores your session.`,
-  locationWhenInUse: (n) =>
-    `${n} uses your location while you use the app to show your position on the department map and to attach your coordinates when you set a status or respond to a call. For example, when you respond to a call, your location is shared with dispatch so they can see who is closest to the scene.`,
-  locationAlways: (n) =>
-    `${n} uses your location, including in the background, to keep your department's dispatch map updated with your position. For example, while you are en route to an emergency call, your location is periodically sent to dispatchers so they can track your arrival and coordinate resources, even when the app is not on screen.`,
+  // `navigation`: the variant has in-app turn-by-turn navigation (capabilities.maps.navigationInApp, Unit).
+  locationWhenInUse: (n, { navigation = false } = {}) =>
+    `${n} uses your location while you use the app to show your position on the department map${navigation ? ', to guide you turn by turn to a call or route stop' : ''} and to attach your coordinates when you set a status or respond to a call. For example, when you respond to a call, your location is shared with dispatch so they can see who is closest to the scene${navigation ? ', and the app follows your position along the route to announce the next turn' : ''}.`,
+  locationAlways: (n, { navigation = false } = {}) =>
+    `${n} uses your location, including in the background, to keep your department's dispatch map updated with your position${navigation ? ' and to keep turn-by-turn navigation going when the screen is locked' : ''}. For example, while you are en route to an emergency call, your location is periodically sent to dispatchers so they can track your arrival and coordinate resources, even when the app is not on screen.`,
   motion: (n) =>
     `${n} uses motion data to improve the accuracy of your location on the department map. For example, while you are driving to a call, motion data helps distinguish travel from a stop so dispatchers see an accurate position and heading.`,
   photos: (n) =>

@@ -49,6 +49,8 @@ let activeNamespaces: { ns: Namespace; resources: NamespaceResources | undefined
 /** `${namespace}/${language}` bundles added to the instance (English is added at init), and loads in flight. */
 const loadedBundles = new Set<string>();
 const pendingBundles = new Map<string, Promise<void>>();
+/** Bumped by every `setLanguage` call, so a choice whose strings load slowly does not override a later one. */
+let languageRequest = 0;
 
 const isDev = (): boolean => typeof __DEV__ !== 'undefined' && __DEV__;
 
@@ -108,11 +110,14 @@ const buildResources = (variantId: VariantId | undefined, variantResources: Name
 };
 
 const loadBundle = (ns: Namespace, resources: NamespaceResources | undefined, language: LoadableLanguage): Promise<void> => {
+  // Nothing to load (and nothing recorded): a later initI18n with the namespace's resources still loads it.
+  if (!resources) return Promise.resolve();
   const key = `${ns}/${language}`;
   if (loadedBundles.has(key)) return Promise.resolve();
   const pending = pendingBundles.get(key);
   if (pending) return pending;
-  const load = (resources ? resources.loaders[language]().then((module) => module.default) : Promise.resolve<TranslationTree>({}))
+  const load = resources.loaders[language]()
+    .then((module) => module.default)
     .then((tree) => {
       i18n.addResourceBundle(language, ns, tree, true, true);
       loadedBundles.add(key);
@@ -188,9 +193,8 @@ export function initI18n(options: InitI18nOptions = {}): typeof i18n {
     ns: [COMMON_NAMESPACE, ...(variantId ? [variantId] : [])],
     defaultNS,
     fallbackNS: COMMON_NAMESPACE,
-    // Legacy files use v3 plural keys (`_plural`); keep their behaviour until the keys are migrated.
-    compatibilityJSON: 'v3',
-    initImmediate: false,
+    // Plurals use i18next v4 keys: `x_one`, `x_few`… with the base `x` as the fallback for categories a language omits.
+    initAsync: false,
     interpolation: {
       // React escapes rendered text already.
       escapeValue: false,
@@ -203,12 +207,19 @@ export function initI18n(options: InitI18nOptions = {}): typeof i18n {
   return i18n;
 }
 
-/** Changes the UI language. Persisting the choice is the caller's job (the app's storage); language survives logout. */
-export async function setLanguage(language: Language): Promise<void> {
+/**
+ * Changes the UI language. Resolves `false` when a newer call superseded this one while its strings loaded: the newer
+ * choice stays, and the caller must not persist this one. Persisting is the caller's job (the app's storage); language
+ * survives logout.
+ */
+export async function setLanguage(language: Language): Promise<boolean> {
   if (!isSupportedLanguage(language)) throw new Error(`Unsupported language: ${String(language)}`);
-  if (i18n.language === language) return;
+  const request = ++languageRequest;
+  // Also for the current language: its strings may have failed to load (an offline start), and this retries them.
   await loadLanguage(language);
-  await i18n.changeLanguage(language);
+  if (request !== languageRequest) return false;
+  if (i18n.language !== language) await i18n.changeLanguage(language);
+  return true;
 }
 
 /** Legacy name for `setLanguage`. */

@@ -1,4 +1,4 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
 exports[`createBuilderConfig matches the per-variant snapshot (identity, protocols, artifact names, targets) 1`] = `
 [

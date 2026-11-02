@@ -1,8 +1,7 @@
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock factories are hoisted above imports, so they require modules lazily. */
 // Shared test setup for the auth-ui and settings features: the native-module mocks @resgrid/ui's own jest.setup provides
 // (packages/features/jest.config.js has none yet), plus a key-echoing i18n mock. Import it first in every test file.
-import '@testing-library/react-native/extend-expect';
-
+// RNTL registers its Jest matchers when it is imported (v14 has no extend-expect entry).
 import type { useToastStore } from '@resgrid/ui/toast/store';
 import { configure } from '@testing-library/react-native';
 
@@ -117,6 +116,7 @@ jest.mock('@resgrid/i18n', () => {
     getCurrentLanguage: () => mockI18n.language,
     setLanguage: jest.fn(async (language: string) => {
       mockI18n.language = language;
+      return true;
     }),
   };
 });

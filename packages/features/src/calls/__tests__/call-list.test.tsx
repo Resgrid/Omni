@@ -38,9 +38,9 @@ beforeEach(() => {
 });
 
 describe('CallListScreen', () => {
-  it('lists queued offline calls first with the "Queued — not dispatched yet" badge, then active calls (never Pending)', () => {
+  it('lists queued offline calls first with the "Queued — not dispatched yet" badge, then active calls (never Pending)', async () => {
     activateVariant('responder');
-    render(<CallListScreen realtime={false} />);
+    await render(<CallListScreen realtime={false} />);
     const rows = screen.getAllByTestId(/^call-card-(local-1|1)$/);
     expect(rows.map((row) => row.props.testID)).toEqual(['call-card-local-1', 'call-card-1']);
     expect(within(screen.getByTestId('call-card-local-1')).getByText('calls.queued.badge')).toBeTruthy();
@@ -48,83 +48,83 @@ describe('CallListScreen', () => {
     expect(screen.queryByText('Pending-state call')).toBeNull();
   });
 
-  it('shows the Pending and Scheduled tabs only with capabilities.calls.queues', () => {
+  it('shows the Pending and Scheduled tabs only with capabilities.calls.queues', async () => {
     activateVariant('responder');
-    const { unmount } = render(<CallListScreen realtime={false} />);
+    const { unmount } = await render(<CallListScreen realtime={false} />);
     expect(screen.queryByTestId('call-list-tabs')).toBeNull();
     expect(mockFetchPending).not.toHaveBeenCalled();
-    unmount();
+    await unmount();
 
     activateVariant('dispatch');
-    render(<CallListScreen realtime={false} />);
+    await render(<CallListScreen realtime={false} />);
     expect(screen.getByTestId('call-list-tab-pending')).toBeTruthy();
     expect(mockFetchPending).toHaveBeenCalled();
-    fireEvent.press(screen.getByTestId('call-list-tab-pending'));
+    await fireEvent.press(screen.getByTestId('call-list-tab-pending'));
     expect(screen.getByText('Waiting call')).toBeTruthy();
     expect(screen.queryByText('Server call')).toBeNull();
-    fireEvent.press(screen.getByTestId('call-list-tab-scheduled'));
+    await fireEvent.press(screen.getByTestId('call-list-tab-scheduled'));
     expect(screen.getByText('Tomorrow call')).toBeTruthy();
   });
 
-  it('shows the offline banner with the queued count while offline', () => {
+  it('shows the offline banner with the queued count while offline', async () => {
     activateVariant('unit');
     jest.mocked(useNetInfo).mockReturnValue({ isConnected: false, isInternetReachable: false } as never);
-    render(<CallListScreen realtime={false} />);
+    await render(<CallListScreen realtime={false} />);
     expect(screen.getByTestId('offline-call-banner')).toBeTruthy();
     expect(screen.getByText('calls.offline.list_banner_queued:1')).toBeTruthy();
   });
 
-  it('opens a rejected queued call in the correction form and a server call in its detail', () => {
+  it('opens a rejected queued call in the correction form and a server call in its detail', async () => {
     activateVariant('responder');
     useCallsStore.setState((state) => ({ queuedCalls: { 'local-1': { ...state.queuedCalls['local-1'], state: 'rejected' } } }));
-    render(<CallListScreen realtime={false} />);
-    fireEvent.press(within(screen.getByTestId('call-list')).getAllByRole('button')[0]);
+    await render(<CallListScreen realtime={false} />);
+    await fireEvent.press(within(screen.getByTestId('call-list')).getAllByRole('button')[0]);
     expect(router.push).toHaveBeenCalledWith('/call/new?correct=local-1');
-    fireEvent.press(screen.getByLabelText(/Server call/));
+    await fireEvent.press(screen.getByLabelText(/Server call/));
     expect(router.push).toHaveBeenCalledWith('/call/1');
   });
 
-  it('hides "New call" without calls.create or without the CanCreateCalls right', () => {
+  it('hides "New call" without calls.create or without the CanCreateCalls right', async () => {
     activateVariant('bigboard');
-    const { unmount } = render(<CallListScreen realtime={false} />);
+    const { unmount } = await render(<CallListScreen realtime={false} />);
     expect(screen.queryByTestId('call-list-new')).toBeNull();
-    unmount();
+    await unmount();
 
     activateVariant('responder');
     setRights({ CanCreateCalls: false });
-    const second = render(<CallListScreen realtime={false} />);
+    const second = await render(<CallListScreen realtime={false} />);
     expect(screen.queryByTestId('call-list-new')).toBeNull();
-    second.unmount();
+    await second.unmount();
 
     setRights({});
-    render(<CallListScreen realtime={false} />);
-    fireEvent.press(screen.getByTestId('call-list-new'));
+    await render(<CallListScreen realtime={false} />);
+    await fireEvent.press(screen.getByTestId('call-list-new'));
     expect(router.push).toHaveBeenCalledWith('/call/new');
   });
 
-  it('flags a synced queued call as a possible duplicate', () => {
+  it('flags a synced queued call as a possible duplicate', async () => {
     activateVariant('responder');
     useCallsStore.setState({ syncedCalls: { 'local-9': { localId: 'local-9', callId: '55', number: '26-55', syncedAt: Date.now(), possibleDuplicate: true, duplicateCallIds: ['44'], acknowledged: false } } });
-    render(<CallListScreen realtime={false} />);
+    await render(<CallListScreen realtime={false} />);
     expect(screen.getByTestId('possible-duplicate-local-9')).toBeTruthy();
     expect(screen.getByText('calls.queued.synced_with_number:26-55')).toBeTruthy();
-    fireEvent.press(screen.getByText('calls.queued.view_duplicate'));
+    await fireEvent.press(screen.getByText('calls.queued.view_duplicate'));
     expect(router.push).toHaveBeenCalledWith('/call/44');
-    fireEvent.press(screen.getByTestId('dismiss-synced-local-9'));
+    await fireEvent.press(screen.getByTestId('dismiss-synced-local-9'));
     expect(screen.queryByTestId('possible-duplicate-local-9')).toBeNull();
   });
 
-  it('filters by search text', () => {
+  it('filters by search text', async () => {
     activateVariant('responder');
-    render(<CallListScreen realtime={false} />);
-    fireEvent.changeText(screen.getByTestId('call-filters-search'), 'server');
+    await render(<CallListScreen realtime={false} />);
+    await fireEvent.changeText(screen.getByTestId('call-filters-search'), 'server');
     expect(screen.getByText('Server call')).toBeTruthy();
     expect(screen.queryByText('Queued fire')).toBeNull();
   });
 
   it('refetches bypassing caches on a call push', async () => {
     activateVariant('responder');
-    render(<CallListScreen />);
+    await render(<CallListScreen />);
     mockFetchCalls.mockClear();
     await act(async () => {
       emitRealtimeEvent('callAdded', '77');

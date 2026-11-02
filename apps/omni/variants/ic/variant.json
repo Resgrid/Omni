@@ -29,11 +29,11 @@
     "notificationColor": "#2484c4",
     "adaptiveIconBackground": "#2484c4",
     "splashBackground": "#2a7dd5",
+    "splashBackgroundDark": "#0e2440",
     "owner": "resgrid"
   },
   "storage": {
     "mmkvId": "ResgridIC",
-    "keySecret": "IC_MMKV_KEY",
     "extraInstances": []
   },
   "versioning": {

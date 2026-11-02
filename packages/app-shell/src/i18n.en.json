@@ -33,5 +33,9 @@
   "shell.gate.back_to_sign_in": "Back to sign in",
   "shell.push.default_title": "New notification",
   "shell.push.view": "View",
-  "shell.push.close": "Close"
+  "shell.push.close": "Close",
+  "shell.update_ready_title": "Update ready",
+  "shell.update_ready_message": "Tap to restart now. Otherwise the update installs the next time the app starts.",
+  "shell.update_ready_wall_message": "Tap to restart now, or the display restarts by itself after {{minutes}} minutes without use.",
+  "shell.update_restart_failed": "The app could not restart. The update installs the next time the app starts."
 }

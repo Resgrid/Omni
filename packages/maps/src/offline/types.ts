@@ -29,7 +29,7 @@ export enum OfflineMapPackStatus {
  * vector sources; `custom-map` a raster PMTiles source; the rest are department data, sprite, style templates and
  * indoor floor images.
  */
-export type OfflineAssetKind = 'basemap' | 'incident' | 'corridor' | 'custom-map' | 'department-data' | 'sprite' | 'style' | 'indoor-floor';
+export type OfflineAssetKind = 'basemap' | 'incident' | 'corridor' | 'custom-map' | 'department-data' | 'sprite' | 'style' | 'glyphs' | 'indoor-floor';
 
 /** D16: online (department style), offline (composite local style) or local-preferred inside the response area. */
 export type OfflineMapMode = 'online' | 'offline' | 'local-preferred';
@@ -49,7 +49,7 @@ export type FloorCorners = [[number, number], [number, number], [number, number]
 
 /** One row of the registry table (`offline_map_packs`, plan §19.5). */
 export interface OfflineMapPackRecord {
-  /** Asset id: `pack:<PackId>`, `department-data`, `sprite:<file>`, `style:day|night`, `floor:<FloorId>`. */
+  /** Asset id: `pack:<PackId>`, `department-data`, `sprite:<file>`, `style:day|night|glyphs`, `floor:<FloorId>`. */
   packId: string;
   /** Pack kind for PMTiles/department data/sprite; null for style templates and indoor floor images. */
   kind: OfflineMapPackKind | null;
@@ -61,7 +61,7 @@ export interface OfflineMapPackRecord {
   version: string;
   sha256: string;
   bytes: number;
-  /** Local file URI (`file://…`), never a remote URL. Resolved at read time (the iOS sandbox path changes on update). */
+  /** Local file URI (`file://…`; the glyph directory for `style:glyphs`), never a remote URL. Resolved at read time (the iOS sandbox path changes on update). */
   path: string;
   bounds: PackBounds | null;
   minZoom: number;
@@ -98,7 +98,8 @@ export type OfflineDepartmentData = Record<string, GeoJSON.FeatureCollection>;
 export interface OfflineIndoorFloor {
   floorId: string;
   imagePath: string;
-  corners: FloorCorners;
+  /** Null for a pixel-only image (no bounds): listed in the style metadata, not placed on the map. */
+  corners: FloorCorners | null;
 }
 
 /** Everything the composer needs to build the offline style for one theme. */
@@ -124,6 +125,14 @@ export interface OfflineStyleComposer {
   compose(input: OfflineStyleInput): StyleSpecification | null;
 }
 
+/**
+ * A map error the wrappers report while they draw the online style (D16 mode switch): `tile` for a tile of a source the
+ * base style itself declares (more than 5 within 30 s switch to the local style — sources the app adds, such as traffic,
+ * custom maps, indoor floors or routes, never count), `style` for a style that failed to load at all (the map has nothing
+ * to draw, so it switches at once).
+ */
+export type MapLoadErrorKind = 'tile' | 'style';
+
 /** What `MapProvider` needs at runtime to switch to the offline style (D16). */
 export interface MapOfflineOptions {
   mode: OfflineMapMode;
@@ -133,6 +142,10 @@ export interface MapOfflineOptions {
   attribution?: string;
   /** Epoch ms of the last successful manifest refresh (badge: "updated 2 d ago"). */
   updatedAt?: number | null;
+  /** The badge turns amber when `updatedAt` is older than this (the manifest's `StaleDays`). */
+  staleAfterMs?: number | null;
+  /** Online style errors from the map wrappers (D16: tile errors past a threshold switch to the local style). */
+  reportMapError?: (kind: MapLoadErrorKind) => void;
 }
 
 /** Shared base-map attribution on every offline map (plan §19.11). */

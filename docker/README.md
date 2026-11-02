@@ -105,7 +105,7 @@ They are served as JSON. When they are absent, these paths return 404 and never 
 CI does this in the release workflow. To build locally, export the variant first, then build from the repository root:
 
 ```bash
-cd apps/omni && APP_VARIANT=unit APP_ENV=production npx expo export -p web --output-dir dist/unit && cd ../..
+cd apps/omni && APP_VARIANT=unit APP_ENV=production pnpm web:export && cd ../..
 docker buildx build -f docker/Dockerfile --build-arg APP_VARIANT=unit --build-arg APP_VERSION=8.12 \
   --platform linux/amd64,linux/arm64 -t resgridllc/unit:8.12 .
 ```

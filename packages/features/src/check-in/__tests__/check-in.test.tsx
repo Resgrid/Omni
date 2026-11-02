@@ -92,17 +92,17 @@ describe('check-in rules', () => {
 });
 
 describe('CheckInTimerCard', () => {
-  it('shows status, progress and the check-in button with an accessible label', () => {
+  it('shows status, progress and the check-in button with an accessible label', async () => {
     const onCheckIn = jest.fn();
-    render(<CheckInTimerCard timer={timer({ Status: 'Warning' })} onCheckIn={onCheckIn} testID="card" />);
+    await render(<CheckInTimerCard timer={timer({ Status: 'Warning' })} onCheckIn={onCheckIn} testID="card" />);
     expect(screen.getByText('check_in.status_warning')).toBeTruthy();
     expect(screen.getByRole('progressbar').props.accessibilityValue).toMatchObject({ max: 20, now: 10 });
-    fireEvent.press(screen.getByLabelText('check_in.perform_check_in: Pat Smith'));
+    await fireEvent.press(screen.getByLabelText('check_in.perform_check_in: Pat Smith'));
     expect(onCheckIn).toHaveBeenCalled();
   });
 
-  it('marks a check-in queued offline and hides the button when not allowed', () => {
-    render(<CheckInTimerCard timer={timer({})} onCheckIn={jest.fn()} showCheckInButton={false} isQueued testID="card" />);
+  it('marks a check-in queued offline and hides the button when not allowed', async () => {
+    await render(<CheckInTimerCard timer={timer({})} onCheckIn={jest.fn()} showCheckInButton={false} isQueued testID="card" />);
     expect(screen.getByTestId('card-queued')).toBeTruthy();
     expect(screen.queryByTestId('card-button')).toBeNull();
   });
@@ -111,17 +111,17 @@ describe('CheckInTimerCard', () => {
 describe('CheckInTab', () => {
   it('self (Responder): buttons only on own timers, no PAR list, free check-in of types for self', async () => {
     activateVariant('responder');
-    render(<CheckInTab callId="10" timersEnabled identity={{ userId: 'u1', unitIds: [] }} pollMs={0} />);
+    await render(<CheckInTab callId="10" timersEnabled identity={{ userId: 'u1', unitIds: [] }} pollMs={0} />);
     expect(screen.getByTestId('check-in-timer-0-u1-button')).toBeTruthy();
     expect(screen.queryByTestId('check-in-timer-0-u9-button')).toBeNull();
     expect(screen.queryByTestId('check-in-timer-1-3-button')).toBeNull();
     expect(screen.queryByTestId('check-in-par-list')).toBeNull();
     expect(screen.getByText('All accounted')).toBeTruthy();
 
-    fireEvent.press(screen.getByTestId('check-in-quick'));
+    await fireEvent.press(screen.getByTestId('check-in-quick'));
     expect(screen.queryByTestId('check-in-sheet-type-1', hidden)).toBeNull();
     expect(screen.getByTestId('check-in-sheet-type-3', hidden)).toBeTruthy();
-    fireEvent.press(screen.getByTestId('check-in-sheet-type-3', hidden));
+    await fireEvent.press(screen.getByTestId('check-in-sheet-type-3', hidden));
     await act(async () => fireEvent.press(screen.getByTestId('check-in-sheet-confirm', hidden)));
     expect(mockPerformCheckIn).toHaveBeenCalledWith({ callId: 10, checkInType: 3, userId: null, unitId: null, note: null });
     expect(lastToast()?.message).toBe('check_in.check_in_success');
@@ -130,33 +130,33 @@ describe('CheckInTab', () => {
   it("others (IC/Dispatch): every timer and the PAR list check in on the person's behalf; offline it queues", async () => {
     activateVariant('dispatch');
     mockPerformCheckIn.mockResolvedValue({ outcome: 'queued', id: 'c2' });
-    render(<CheckInTab callId="10" timersEnabled identity={{ userId: 'd1', unitIds: [] }} pollMs={0} />);
+    await render(<CheckInTab callId="10" timersEnabled identity={{ userId: 'd1', unitIds: [] }} pollMs={0} />);
     expect(screen.getByTestId('check-in-timer-0-u9-button')).toBeTruthy();
     expect(screen.getByTestId('check-in-par-list')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('par-row-u2-check-in'));
+    await fireEvent.press(screen.getByTestId('par-row-u2-check-in'));
     await act(async () => fireEvent.press(screen.getByTestId('check-in-sheet-confirm', hidden)));
     expect(mockPerformCheckIn).toHaveBeenCalledWith(expect.objectContaining({ callId: 10, checkInType: CheckInType.Personnel, userId: 'u2' }));
     expect(lastToast()).toMatchObject({ type: 'info', message: 'check_in.queued_offline' });
 
-    fireEvent.press(screen.getByTestId('check-in-timer-0-u9-button'));
+    await fireEvent.press(screen.getByTestId('check-in-timer-0-u9-button'));
     await act(async () => fireEvent.press(screen.getByTestId('check-in-sheet-confirm', hidden)));
     expect(mockPerformCheckIn).toHaveBeenLastCalledWith(expect.objectContaining({ userId: 'u9' }));
   });
 
-  it('read-only without check-in capabilities (BigBoard)', () => {
+  it('read-only without check-in capabilities (BigBoard)', async () => {
     activateVariant('bigboard');
-    render(<CheckInTab callId="10" timersEnabled pollMs={0} />);
+    await render(<CheckInTab callId="10" timersEnabled pollMs={0} />);
     expect(screen.queryByTestId('check-in-quick')).toBeNull();
     expect(screen.queryByTestId('check-in-timer-0-u1-button')).toBeNull();
   });
 
-  it('offers to enable timers only to checkIn.others', () => {
+  it('offers to enable timers only to checkIn.others', async () => {
     activateVariant('ic');
-    const { unmount } = render(<CheckInTab callId="10" timersEnabled={false} pollMs={0} />);
+    const { unmount } = await render(<CheckInTab callId="10" timersEnabled={false} pollMs={0} />);
     expect(screen.getByTestId('check-in-enable-timers')).toBeTruthy();
-    unmount();
+    await unmount();
     activateVariant('unit');
-    render(<CheckInTab callId="10" timersEnabled={false} pollMs={0} />);
+    await render(<CheckInTab callId="10" timersEnabled={false} pollMs={0} />);
     expect(screen.queryByTestId('check-in-enable-timers')).toBeNull();
     expect(screen.getByText('check_in.timers_disabled')).toBeTruthy();
   });

@@ -78,13 +78,33 @@ const identitySchema = z.object({
   notificationColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
   adaptiveIconBackground: z.string().regex(/^#[0-9a-fA-F]{6}$/),
   splashBackground: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+  splashBackgroundDark: z.string().regex(/^#[0-9a-fA-F]{6}$/),
 });
 
-const storageSchema = z.object({
-  mmkvId: z.string().min(1),
-  keySecret: z.string().regex(/^[A-Z0-9_]+$/),
-  extraInstances: z.array(z.string()),
-});
+/**
+ * How an MMKV instance the legacy app wrote is carried into Omni on upgrade (plan D8). Every native instance is
+ * encrypted with a key generated on the device and kept in SecureStore; an instance without a carry-over entry is
+ * deleted and starts empty the first time Omni opens it (the user signs in again).
+ */
+export const storageCarryOverSchema = z.discriminatedUnion('from', [
+  // Opened once with the legacy app's fixed key, then re-encrypted in place with a device key.
+  z.object({ from: z.literal('fixed-key'), key: z.string().min(1) }),
+  // Already encrypted with a device key the legacy app kept in SecureStore under `name`: that key is adopted.
+  z.object({ from: z.literal('secure-store'), name: z.string().min(1) }),
+  // Written without encryption: encrypted in place with a device key.
+  z.object({ from: z.literal('unencrypted') }),
+]);
+export type StorageCarryOver = z.infer<typeof storageCarryOverSchema>;
+
+const storageSchema = z
+  .object({
+    mmkvId: z.string().min(1),
+    extraInstances: z.array(z.string()),
+    carryOver: z.record(z.string(), storageCarryOverSchema).optional(),
+  })
+  .refine((storage) => Object.keys(storage.carryOver ?? {}).every((id) => id === storage.mmkvId || storage.extraInstances.includes(id)), {
+    message: 'storage.carryOver may only name declared instances (mmkvId or extraInstances)',
+  });
 
 const versioningSchema = z.object({
   tagPrefix: z.string().regex(/^[a-z]+-v$/),

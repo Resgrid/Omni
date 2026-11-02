@@ -1,4 +1,5 @@
 import { useCallsStore, useNotesStore, usePersonnelStore, useUnitsStore, useUnitStatusAlertsStore, useWeatherAlertsStore } from '@resgrid/data';
+import { useNavigationEtaFlag, useNavigationEtaSync } from '@resgrid/features/navigation-eta';
 import { useWeatherAlertsRealtime } from '@resgrid/features/weather-alerts';
 import { type RealtimeEventName, useRealtimeRefetch } from '@resgrid/realtime';
 import { useCallback, useEffect, useMemo } from 'react';
@@ -42,6 +43,9 @@ export function useDashboardData(widgetTypes: readonly WidgetType[], enabled: bo
   const wantsWeatherAlerts = has('weatherAlerts');
   const wantsUnitAlerts = has('unitAlerts');
   const wantsConfig = has('config');
+  // The dashboard is an ETA module (MapLibre plan §9.4): only the department flag decides.
+  const navigationEtaFlag = useNavigationEtaFlag();
+  const wantsNavigations = has('navigations') && navigationEtaFlag;
 
   const refreshCalls = useCallback(async () => {
     const tasks: Promise<void>[] = [];
@@ -104,6 +108,8 @@ export function useDashboardData(widgetTypes: readonly WidgetType[], enabled: bo
   useRealtimeRefetch(UNIT_ALERT_EVENTS, refreshUnitAlerts, wantsUnitAlerts);
   useRealtimeRefetch(CONFIG_EVENTS, refreshConfig, wantsConfig);
   useWeatherAlertsRealtime(wantsWeatherAlerts);
+  // Loads the navigating units' ETAs and keeps them live (`unitNavigationUpdated`, hub rejoins).
+  useNavigationEtaSync(wantsNavigations);
 
   return sources;
 }

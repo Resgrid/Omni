@@ -9,7 +9,7 @@ export { getOfflineLogger, noopLogger, setOfflineLogger } from './util/logger';
 export type { OfflineScope } from './util/scope';
 export { isSameSession, normalizeServer, scopeKey } from './util/scope';
 
-// KV (MMKV with the frozen per-variant identity)
+// KV (MMKV with the frozen per-variant ids and device keys)
 export { CONTRACT_KEYS, DEVICE_PREFERENCE_KEYS, readLegacyString, SESSION_KEYS, VARIANT_PRESERVED_KEYS, writeLegacyString } from './kv/contract-keys';
 export { type ClearResult, DurableKv, type GetJsonOptions, type KeyFilter } from './kv/durable-kv';
 export {
@@ -18,7 +18,6 @@ export {
   type InstanceKeyState,
   KEY_SENTINEL_KEY,
   keySidecarId,
-  type LegacyKeyProvider,
   MMKV_KEY_LENGTH,
   pendingSecureKeyName,
   type RekeyResult,
@@ -28,11 +27,11 @@ export {
   secureKeyName,
 } from './kv/keys';
 export { createMemoryKvBackend, createMemoryKvBackendFactory } from './kv/memory-backend';
-export { createMmkvBackend, createMmkvBackendFactory } from './kv/mmkv-backend';
+export { createMmkvBackend, createMmkvBackendFactory, createMmkvStorageFiles } from './kv/mmkv-backend';
 export { defaultWebKeyLayout, openVariantStorage, type OpenVariantStorageOptions, type StorageManifest, type VariantStorage } from './kv/open-storage';
-export { createDefaultKvBackendFactory, KV_PLATFORM } from './kv/platform';
+export { createDefaultKvBackendFactory, createDefaultKvStorageFiles, KV_PLATFORM } from './kv/platform';
 export { createExpoSecureKeyStore, createMemorySecureKeyStore, getOrCreateSecureKey, type SecureKeyStore } from './kv/secure-store';
-export type { KvBackend, KvBackendConfig, KvBackendFactory, KvPlatform } from './kv/types';
+export type { KvBackend, KvBackendConfig, KvBackendFactory, KvPlatform, KvStorageFiles } from './kv/types';
 export { createWebKvBackend, createWebKvBackendFactory, getDefaultWebStorage, RAW_LAYOUT_LEDGER_KEY, type StorageLike, type WebKeyLayout, type WebKvBackendOptions } from './kv/web-backend';
 export { createGuardedStateStorage, type GuardedStateStorageOptions } from './kv/zustand-storage';
 

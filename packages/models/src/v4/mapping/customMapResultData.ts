@@ -31,6 +31,11 @@ export interface CustomMapLayerResultData {
   BoundsSWLat: number | null;
   BoundsSWLon: number | null;
   Opacity: number;
+  /**
+   * Signed Web Mercator tile template (`{z}/{x}/{y}`) for georeferenced layers (MapLibre plan §6.7); null for pixel-only
+   * layers. Absent on older servers, whose `GetCustomMapTile` tiles are a pixel pyramid that cannot be placed on a map.
+   */
+  MercatorTileUrl?: string | null;
   Regions: CustomMapRegionResultData[];
 }
 
@@ -53,8 +58,10 @@ export interface CustomMapRegionResultData {
   IsDispatchable: boolean;
 }
 
+/** Core `CustomMapType` (persisted; the legacy apps' copy had the values shifted). */
 export enum CustomMapType {
-  Outdoor = 0,
-  Event = 1,
-  General = 2,
+  Indoor = 0,
+  Outdoor = 1,
+  Event = 2,
+  Custom = 3,
 }

@@ -1,8 +1,8 @@
 // In-app notification sounds (Unit/IC notification-sound.service), modern set only.
 import { KIND_SOUNDS, notificationSoundService, soundForNotification } from '../notification-sound';
 import { isModernSound } from '../sounds';
-import { mockAudioState, mockResetAudio } from './mocks/expo-audio';
 import * as audio from './mocks/expo-audio';
+import { mockAudioState, mockResetAudio } from './mocks/expo-audio';
 
 const rn = jest.requireMock('react-native') as { Platform: { OS: string } };
 

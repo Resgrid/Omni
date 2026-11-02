@@ -1,4 +1,4 @@
-// In-memory stand-in for expo-file-system's SDK 57 `File` / `Directory` / `Paths` API (only what the pack store uses).
+// In-memory stand-in for expo-file-system's SDK 58 `File` / `Directory` / `Paths` API (only what the pack store uses).
 export const mockFs = { files: new Map<string, Uint8Array>(), dirs: new Set<string>(), free: 5_000, total: 50_000 };
 
 type Part = string | { uri: string };
@@ -28,6 +28,29 @@ export class Directory {
   }
   get size(): number | null {
     return null;
+  }
+  get parentDirectory(): Directory {
+    return new Directory(parentOf(this.uri));
+  }
+  async move(destination: Directory): Promise<void> {
+    if (!this.exists) throw new Error('Missing');
+    if (mockFs.dirs.has(destination.uri)) throw new Error('Destination exists (the source would move inside it)');
+    if (!mockFs.dirs.has(parentOf(destination.uri))) throw new Error('Parent missing');
+    const from = this.uri;
+    for (const key of [...mockFs.files.keys()]) {
+      if (key.startsWith(`${from}/`)) {
+        const data = mockFs.files.get(key) as Uint8Array;
+        mockFs.files.delete(key);
+        mockFs.files.set(`${destination.uri}${key.slice(from.length)}`, data);
+      }
+    }
+    for (const key of [...mockFs.dirs]) {
+      if (key === from || key.startsWith(`${from}/`)) {
+        mockFs.dirs.delete(key);
+        mockFs.dirs.add(`${destination.uri}${key.slice(from.length)}`);
+      }
+    }
+    this.uri = destination.uri;
   }
   create(options: { intermediates?: boolean } = {}): void {
     if (!options.intermediates && !mockFs.dirs.has(parentOf(this.uri))) throw new Error('Parent missing');
@@ -126,3 +149,101 @@ export const Paths = {
 };
 
 export const FileMode = { ReadOnly: 'r', ReadWrite: 'rw' };
+
+type DownloadTaskState = 'idle' | 'active' | 'paused' | 'completed' | 'cancelled' | 'error';
+
+interface DownloadTaskOptions {
+  sessionType?: 'background' | 'foreground';
+  onProgress?: (data: { bytesWritten: number; totalBytes: number }) => void;
+}
+
+interface DownloadPauseState {
+  url: string;
+  fileUri: string;
+  isDirectory: boolean;
+  resumeData?: string;
+}
+
+/**
+ * Background transfers (`DownloadTask`): every task is recorded in `mockDownloads.tasks`; `mockDownloads.run` decides
+ * what `downloadAsync`/`resumeAsync` do (helpers on the task write the file, report progress or wait for a pause).
+ */
+export const mockDownloads = {
+  tasks: [] as DownloadTask[],
+  restored: [] as DownloadPauseState[],
+  run: null as ((task: DownloadTask, mode: 'download' | 'resume') => Promise<File | null>) | null,
+  reset(): void {
+    this.tasks.length = 0;
+    this.restored.length = 0;
+    this.run = null;
+  },
+};
+
+export class DownloadTask {
+  state: DownloadTaskState = 'idle';
+  calls: string[] = [];
+  released = false;
+  private pauseWaiters: (() => void)[] = [];
+
+  constructor(
+    public url: string,
+    public destination: File,
+    public options: DownloadTaskOptions = {}
+  ) {
+    mockDownloads.tasks.push(this);
+  }
+
+  static fromSavable(state: DownloadPauseState, options?: DownloadTaskOptions): DownloadTask {
+    if (state.resumeData === 'corrupt') throw new Error('Invalid resume data');
+    mockDownloads.restored.push(state);
+    const task = new DownloadTask(state.url, new File(state.fileUri), options);
+    task.state = 'paused';
+    return task;
+  }
+
+  /** Writes the finished file where the OS would move it. */
+  complete(body: Uint8Array): File {
+    mockFs.files.set(this.destination.uri, body);
+    this.state = 'completed';
+    return this.destination;
+  }
+
+  /** Resolves once `pauseAsync` ran (what a pending `downloadAsync` resolves with: null). */
+  untilPaused(): Promise<null> {
+    return new Promise((resolve) => this.pauseWaiters.push(() => resolve(null)));
+  }
+
+  private start(mode: 'download' | 'resume'): Promise<File | null> {
+    this.calls.push(mode);
+    this.state = 'active';
+    if (!mockDownloads.run) return Promise.resolve(this.complete(new Uint8Array(0)));
+    return mockDownloads.run(this, mode).catch((error: unknown) => {
+      this.state = 'error';
+      throw error;
+    });
+  }
+
+  downloadAsync(): Promise<File | null> {
+    return this.start('download');
+  }
+
+  resumeAsync(): Promise<File | null> {
+    return this.start('resume');
+  }
+
+  async pauseAsync(): Promise<void> {
+    this.calls.push('pause');
+    this.state = 'paused';
+    for (const waiter of this.pauseWaiters.splice(0)) waiter();
+  }
+
+  savable(): DownloadPauseState {
+    if (this.state !== 'paused') throw new Error('Only a paused task can be saved');
+    return { url: this.url, fileUri: this.destination.uri, isDirectory: false, resumeData: `resume:${this.url}` };
+  }
+
+  release(): void {
+    this.calls.push('release');
+    this.released = true;
+  }
+}

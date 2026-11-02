@@ -2,18 +2,33 @@ import { isDev } from '@resgrid/core';
 import type { DurableDb } from '@resgrid/offline';
 
 import type { StyleSpecification } from '../types';
+import type { BackgroundTransfer } from './background-transfer';
+import { decodeOfflineDepartmentData } from './department-data';
 import { DEFAULT_CHUNK_BYTES, downloadAsset } from './downloader';
-import { actionFailed, actionOk, errorName, type OfflineMapsActionResult, type OfflineMapsErrorCode } from './errors';
+import { actionFailed, actionOk, errorName, isAbortError, type OfflineMapsActionResult, type OfflineMapsErrorCode } from './errors';
 import type { OfflinePackFileStore } from './file-store';
-import { DEFAULT_OFFLINE_POLICY, type OfflineManifest, type OfflineManifestAsset, type OfflineManifestPolicy, type OfflineManifestSnapshot, type OfflineSnapshotAsset, toManifestSnapshot } from './manifest';
+import { extractGlyphArchive, GlyphArchiveError } from './glyphs';
+import {
+  DEFAULT_OFFLINE_POLICY,
+  GLYPHS_ASSET_ID,
+  type OfflineManifest,
+  type OfflineManifestAsset,
+  type OfflineManifestPendingPack,
+  type OfflineManifestPolicy,
+  type OfflineManifestRejection,
+  type OfflineManifestSnapshot,
+  type OfflineSnapshotAsset,
+  toManifestSnapshot,
+} from './manifest';
 import { fetchOfflineManifest, type OfflineMapsAvailability, type OfflineMapsConfigInput, resolveOfflineMapsAvailability } from './manifest-client';
 import type { OfflineNetworkProbe } from './network';
+import { EMPTY_PACK_FOCUS, isExtraPackWanted, type OfflinePackFocus, type OfflinePackSelection } from './pack-selection';
 import { isOfflineMapPacksSupported } from './platform';
 import { createDbOfflinePackRegistry, type DbOfflinePackRegistry, offlinePackScopeKey } from './registry';
 import { sha256Hex } from './sha256';
 import { evaluateManifestSizes, LOW_STORAGE_FREE_RATIO, type ManifestSizeEvaluation, wouldExhaustStorage } from './size-guard';
 import { defaultOfflineFetch, type OfflineFetch } from './transport';
-import { OFFLINE_MAP_ATTRIBUTION, type OfflineAssetKind, type OfflineIndoorFloor, type OfflineMapPackRecord, type OfflinePackScope } from './types';
+import { OFFLINE_MAP_ATTRIBUTION, type OfflineAssetKind, type OfflineDepartmentData, type OfflineIndoorFloor, type OfflineMapPackRecord, type OfflinePackScope, type PackBounds } from './types';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const GB = 1024 * 1024 * 1024;
@@ -22,12 +37,25 @@ const GB = 1024 * 1024 * 1024;
 export const OFFLINE_MAPS_WIFI_ONLY_KEY = 'resgrid.maps.offline.wifiOnly';
 const SNAPSHOT_KEY = 'resgrid.maps.offline.snapshot.';
 const INSTALLED_KEY = 'resgrid.maps.offline.installed.';
+/** Set when the member deleted the maps: automatic downloads stay off for that account until they download again. */
+const REMOVED_KEY = 'resgrid.maps.offline.removed.';
+/** While packs this device wants are still being built, the manifest is checked again this often (and on foreground). */
+export const OFFLINE_PENDING_RECHECK_MS = 2 * 60 * 1000;
+/** Rechecks per session while packs build (30 minutes at the interval above). */
+const PENDING_RECHECK_LIMIT = 15;
+/** `autoSync({ refresh: 'now' })` refetches at most this often. */
+const FORCED_REFRESH_MIN_MS = 60 * 1000;
+/** Codes that mean "not now" rather than a failure (hydration does not mark the step failed). */
+const DEFERRED_CODES = new Set<OfflineMapsErrorCode>(['waiting-for-wifi', 'offline', 'cancelled', 'disabled', 'unsupported-platform', 'no-session', 'nothing-to-download']);
+
+/** True when an automatic sync stopped for a reason that is not a failure (policy, network, no session). */
+export const isDeferredOfflineMapsResult = (result: OfflineMapsActionResult): boolean => result.ok || DEFERRED_CODES.has(result.code);
 /** Default device budget for all packs; unpinned packs are evicted (LRU) above it or when < 10 % of the device is free. */
 export const DEFAULT_OFFLINE_PACKS_BUDGET_BYTES = 2 * GB;
 /** Ambient cache bounds applied to `AmbientCacheMaxBytes`. */
 export const AMBIENT_CACHE_MAX_BYTES_CEILING = 2 * GB;
 
-const DOWNLOAD_PRIORITY: Record<OfflineAssetKind, number> = { 'department-data': 0, sprite: 1, style: 2, basemap: 3, incident: 4, corridor: 5, 'custom-map': 6, 'indoor-floor': 7 };
+const DOWNLOAD_PRIORITY: Record<OfflineAssetKind, number> = { 'department-data': 0, sprite: 1, style: 2, glyphs: 2, basemap: 3, incident: 4, corridor: 5, 'custom-map': 6, 'indoor-floor': 7 };
 const VECTOR_KINDS = new Set<OfflineAssetKind>(['basemap', 'incident', 'corridor']);
 
 /** Small KV surface (`DurableKv` from `@resgrid/offline` fits). */
@@ -120,10 +148,24 @@ export interface OfflineInstalledSet {
   indoorFloors: OfflineIndoorFloor[];
   templates: { light: StyleSpecification | null; dark: StyleSpecification | null };
   spritePath: string | null;
+  /** Local glyph directory (`file://…` on iOS/Android, `opfs://…` on the web), for the templates' `{glyphs}` placeholder. */
+  glyphsPath: string | null;
   departmentDataPath: string | null;
+  /** The decoded DepartmentData bundle (GeoJSON by section), cached per installed version. */
+  departmentData: OfflineDepartmentData | null;
   attribution: string;
   updatedAt: number | null;
+  /** The manifest's stale threshold (badge turns amber past it). */
+  staleDays: number;
   preferLocal: boolean;
+}
+
+/** `autoSync` options. */
+export interface OfflineAutoSyncOptions {
+  /** `if-stale` (default): refetch the manifest only when older than `RefreshHours`; `now`: refetch unless checked in the last minute. */
+  refresh?: 'if-stale' | 'now';
+  /** Download progress 0..1 (hydration checklist). */
+  onProgress?: (fraction: number) => void;
 }
 
 /** The surface the Offline maps screen and `useOfflineMapOptions` use. */
@@ -147,8 +189,10 @@ export interface OfflineMapsController {
 export interface OfflinePackManagerOptions {
   /** The offline database (`initOffline().db`). */
   db: DurableDb;
-  /** `createExpoPackFileStore()` on native; null on web/Electron (feature unsupported). */
+  /** `createExpoPackFileStore()` on native, `createOpfsPackFileStore()` on web/Electron; null when unsupported. */
   fileStore: OfflinePackFileStore | null;
+  /** The OS transfer that continues with the app suspended (iOS background URLSession); null downloads in-app only. */
+  backgroundTransfer?: BackgroundTransfer | null;
   /** The signed-in server/department/user, or null. */
   getScope: () => OfflinePackScope | null;
   /** Resgrid API base URL (the manifest must come from this origin). */
@@ -167,6 +211,14 @@ export interface OfflinePackManagerOptions {
   progressIntervalMs?: number;
   /** Diagnostic logger (codes, counts and sizes only). */
   log?: (message: string, context?: Record<string, unknown>) => void;
+  /**
+   * Which incident and corridor packs this device keeps (plan §19.7, `resolveExtraPackPolicy` + the app's focus).
+   * Omitted: every listed pack is downloaded.
+   */
+  packSelection?: OfflinePackSelection | null;
+  /** Timer seam for the pending-pack recheck (tests). */
+  setTimer?: (callback: () => void, ms: number) => unknown;
+  clearTimer?: (handle: unknown) => void;
 }
 
 interface InstalledInfo {
@@ -214,6 +266,11 @@ const freshState = (wifiOnly: boolean): OfflineMapsState => ({
 const isCurrent = (row: OfflineMapPackRecord | undefined, asset: Pick<OfflineSnapshotAsset, 'version' | 'sha256'>): boolean =>
   row !== undefined && row.version === asset.version && (asset.sha256 === null || row.sha256 === asset.sha256);
 
+const departmentDataKey = (row: OfflineMapPackRecord): string => `${row.version}@${row.sha256}@${row.path}`;
+
+/** Items stored as a directory tree (the extracted glyphs) rather than one file. */
+const isDirectoryItem = (packId: string): boolean => packId === GLYPHS_ASSET_ID;
+
 /** Clamps `AmbientCacheMaxBytes` to [0, 2 GB]; null when absent or invalid. */
 export const normalizeAmbientCacheBytes = (value: number | null | undefined): number | null =>
   typeof value === 'number' && Number.isFinite(value) && value >= 0 ? Math.min(Math.floor(value), AMBIENT_CACHE_MAX_BYTES_CEILING) : null;
@@ -248,6 +305,10 @@ export class OfflinePackManager implements OfflineMapsController {
   private initialized: Promise<void> | null = null;
   private appliedAmbientBytes: number | null = null;
   private lastProgressEmit = 0;
+  /** Decoded DepartmentData, keyed by the installed row (version + hash + path). */
+  private departmentData: { key: string; data: OfflineDepartmentData | null } | null = null;
+  private recheckTimer: unknown = null;
+  private recheckCount = 0;
 
   constructor(private readonly options: OfflinePackManagerOptions) {
     this.kv = options.kv ?? createMemoryOfflineMapsKv();
@@ -316,6 +377,8 @@ export class OfflinePackManager implements OfflineMapsController {
   /** The signed-in session changed (call after login, department or server switch). */
   async onSessionChanged(): Promise<void> {
     this.cancel();
+    this.stopPendingRecheck();
+    this.recheckCount = 0;
     await this.init();
     await this.loadScope(true);
   }
@@ -335,6 +398,7 @@ export class OfflinePackManager implements OfflineMapsController {
     this.relativePaths = new Map();
     this.snapshot = null;
     this.templates = { light: null, dark: null };
+    this.departmentData = null;
     if (current && this.registry) {
       try {
         for (const row of await this.registry.list(current.scope)) this.rows.set(row.packId, row);
@@ -344,6 +408,7 @@ export class OfflinePackManager implements OfflineMapsController {
       }
       this.snapshot = this.readJson<OfflineManifestSnapshot>(`${SNAPSHOT_KEY}${current.key}`);
       await this.loadTemplates();
+      await this.loadDepartmentData();
     }
     await this.refreshFreeSpace();
     this.recompute();
@@ -393,8 +458,37 @@ export class OfflinePackManager implements OfflineMapsController {
 
   // ── Derived state ─────────────────────────────────────────────────────────────────────────────────────────────────
 
+  /**
+   * Incident and corridor packs this device keeps (plan §19.7); every other item is always wanted. Without a selection
+   * option everything listed is wanted.
+   */
+  private wantedFilter(): (item: { kind: OfflineAssetKind | null; bounds?: PackBounds | null }) => boolean {
+    const selection = this.options.packSelection;
+    if (!selection) return () => true;
+    let focus: OfflinePackFocus = EMPTY_PACK_FOCUS;
+    try {
+      focus = selection.getFocus();
+    } catch (error) {
+      this.log('Offline pack focus could not be read', { error: errorName(error) });
+    }
+    return (item) => (item.kind === null ? true : isExtraPackWanted(item.kind, item.bounds, selection.policy, focus));
+  }
+
+  /** The manifest (or snapshot) narrowed to what this device wants. */
+  private selectWanted<T extends { assets: (OfflineSnapshotAsset | OfflineManifestAsset)[]; pending: OfflineManifestPendingPack[]; rejected: OfflineManifestRejection[] }>(source: T): T {
+    const wanted = this.wantedFilter();
+    return { ...source, assets: source.assets.filter((asset) => wanted(asset)), pending: source.pending.filter((pack) => wanted(pack)) };
+  }
+
+  /** Rows the source no longer lists (or this device no longer wants); a pack rebuilding or now refused keeps its copy. */
+  private removalsFor(source: { assets: { assetId: string }[]; pending: { assetId: string }[]; rejected: { assetId: string }[] }): string[] {
+    const keep = new Set([...source.assets.map((asset) => asset.assetId), ...source.pending.map((pack) => pack.assetId), ...source.rejected.map((entry) => entry.assetId)]);
+    return [...this.rows.keys()].filter((packId) => !keep.has(packId));
+  }
+
   private computePlan(manifest: OfflineManifest): DownloadPlan {
-    const evaluation = evaluateManifestSizes(manifest);
+    const selected = this.selectWanted(manifest);
+    const evaluation = evaluateManifestSizes(selected);
     const toDownload: PlanItem[] = [];
     let pendingBytes = 0;
     for (const asset of evaluation.allowed) {
@@ -404,15 +498,12 @@ export class OfflinePackManager implements OfflineMapsController {
       pendingBytes += asset.sizeBytes ?? 0;
     }
     toDownload.sort((a, b) => DOWNLOAD_PRIORITY[a.asset.kind] - DOWNLOAD_PRIORITY[b.asset.kind] || a.asset.name.localeCompare(b.asset.name));
-    // Only items the manifest no longer mentions go; a pack that is rebuilding, or now refused, keeps its verified copy.
-    const keep = new Set([...manifest.assets.map((asset) => asset.assetId), ...manifest.pending.map((pack) => pack.assetId), ...manifest.rejected.map((entry) => entry.assetId)]);
-    const toRemove = [...this.rows.keys()].filter((packId) => !keep.has(packId));
-    return { evaluation, toDownload, toRemove, pendingBytes };
+    return { evaluation, toDownload, toRemove: this.removalsFor(selected), pendingBytes };
   }
 
   private recompute(): void {
     const availability = this.configLoaded || this.availability === 'unsupported' ? this.availability : 'unknown';
-    const snapshot = this.snapshot;
+    const snapshot = this.snapshot ? this.selectWanted(this.snapshot) : null;
     const rows = this.rows;
     const installed = this.installedInfo();
     const installedBytes = [...rows.values()].reduce((sum, row) => sum + row.bytes, 0);
@@ -484,23 +575,27 @@ export class OfflinePackManager implements OfflineMapsController {
     }
     const sprite = rows.find((row) => row.packId === 'sprite:sprite.json');
     const departmentData = rows.find((row) => row.assetKind === 'department-data');
-    const floors: OfflineIndoorFloor[] = rows
-      .filter((row) => row.assetKind === 'indoor-floor' && row.floorId && row.corners)
-      .map((row) => ({ floorId: row.floorId as string, imagePath: row.path, corners: row.corners as NonNullable<OfflineMapPackRecord['corners']> }));
+    const glyphs = rows.find((row) => row.packId === GLYPHS_ASSET_ID);
+    const floors: OfflineIndoorFloor[] = rows.filter((row) => row.assetKind === 'indoor-floor' && row.floorId).map((row) => ({ floorId: row.floorId as string, imagePath: row.path, corners: row.corners ?? null }));
     const customMapPacks = rows.filter((row) => row.assetKind === 'custom-map');
     const attribution = this.snapshot?.attribution ?? OFFLINE_MAP_ATTRIBUTION;
     const preferLocal = this.snapshot?.policy.preferLocalInAo ?? DEFAULT_OFFLINE_POLICY.preferLocalInAo;
+    const staleDays = this.snapshot?.policy.staleDays ?? DEFAULT_OFFLINE_POLICY.staleDays;
     const updatedAt = this.installedInfo()?.updatedAt ?? null;
+    const decoded = departmentData && this.departmentData?.key === departmentDataKey(departmentData) ? this.departmentData.data : null;
     // The revision changes only when the composed style would change, so maps do not restyle on unrelated refreshes.
     const signature = JSON.stringify([
-      [...vector, ...customMapPacks, ...rows.filter((row) => row.assetKind === 'indoor-floor' || row.assetKind === 'sprite' || row.assetKind === 'style')].map((row) => `${row.packId}@${row.version}@${row.path}`).sort(),
+      [...vector, ...customMapPacks, ...rows.filter((row) => row.assetKind === 'indoor-floor' || row.assetKind === 'sprite' || row.assetKind === 'style' || row.assetKind === 'glyphs')]
+        .map((row) => `${row.packId}@${row.version}@${row.path}`)
+        .sort(),
+      departmentData && decoded ? departmentDataKey(departmentData) : null,
       attribution,
       preferLocal,
     ]);
     if (signature !== this.styleSignature) {
       this.styleSignature = signature;
       this.revision += 1;
-    } else if (this.installedSet && this.installedSet.revision === this.revision && this.installedSet.updatedAt === updatedAt) {
+    } else if (this.installedSet && this.installedSet.revision === this.revision && this.installedSet.updatedAt === updatedAt && this.installedSet.staleDays === staleDays) {
       return;
     }
     this.installedSet = {
@@ -510,11 +605,35 @@ export class OfflinePackManager implements OfflineMapsController {
       indoorFloors: floors,
       templates: this.templates,
       spritePath: sprite ? sprite.path.replace(/\.json$/, '') : null,
+      glyphsPath: glyphs ? glyphs.path.replace(/\/+$/, '') : null,
       departmentDataPath: departmentData ? departmentData.path : null,
+      departmentData: decoded,
       attribution,
       updatedAt,
+      staleDays,
       preferLocal,
     };
+  }
+
+  /** Reads and decodes the installed DepartmentData bundle once per installed version (gzip JSON, plan §19.3). */
+  private async loadDepartmentData(): Promise<void> {
+    const row = [...this.rows.values()].find((candidate) => candidate.assetKind === 'department-data');
+    const relative = row ? this.relativePaths.get(row.packId) : undefined;
+    if (!row || !relative || !this.options.fileStore) {
+      this.departmentData = null;
+      return;
+    }
+    const key = departmentDataKey(row);
+    if (this.departmentData?.key === key) return;
+    let data: OfflineDepartmentData | null = null;
+    try {
+      const size = await this.fileStore.size(relative);
+      data = size !== null && size > 0 ? decodeOfflineDepartmentData(await this.fileStore.read(relative, 0, size)) : null;
+    } catch (error) {
+      this.log('Offline department data could not be read', { error: errorName(error) });
+    }
+    if (data === null) this.log('Offline department data is not usable', { bytes: row.bytes });
+    this.departmentData = { key, data };
   }
 
   private async loadTemplates(): Promise<void> {
@@ -544,11 +663,21 @@ export class OfflinePackManager implements OfflineMapsController {
 
   refreshIfStale = async (): Promise<OfflineMapsActionResult> => {
     await this.ensureScope();
-    const checkedAt = this.snapshot?.checkedAt ?? null;
-    const refreshMs = (this.snapshot?.policy.refreshHours ?? DEFAULT_OFFLINE_POLICY.refreshHours) * 60 * 60 * 1000;
-    if (checkedAt !== null && this.now() - checkedAt < refreshMs) return actionOk;
-    return this.refreshManifest();
+    return this.isManifestStale() ? this.refreshManifest() : actionOk;
   };
+
+  /** Never checked, older than `RefreshHours`, or packs this device wants are still being built and the last check is a few minutes old. */
+  private isManifestStale(): boolean {
+    const checkedAt = this.snapshot?.checkedAt ?? null;
+    if (checkedAt === null) return true;
+    const age = this.now() - checkedAt;
+    const refreshMs = (this.snapshot?.policy.refreshHours ?? DEFAULT_OFFLINE_POLICY.refreshHours) * 60 * 60 * 1000;
+    return age >= refreshMs || (age >= OFFLINE_PENDING_RECHECK_MS && this.hasWantedBuildingPacks());
+  }
+
+  private hasWantedBuildingPacks(): boolean {
+    return this.snapshot ? this.selectWanted(this.snapshot).pending.some((pack) => pack.state === 'building') : false;
+  }
 
   private async doRefresh(): Promise<OfflineMapsActionResult> {
     const current = await this.ensureScope();
@@ -607,7 +736,13 @@ export class OfflinePackManager implements OfflineMapsController {
     }
   }
 
+  /** The member asked to download (Settings): automatic downloads resume for this account after a delete. */
   download = (): Promise<OfflineMapsActionResult> => {
+    if (this.loadedScopeKey) this.kv.delete(`${REMOVED_KEY}${this.loadedScopeKey}`);
+    return this.startDownload();
+  };
+
+  private startDownload(): Promise<OfflineMapsActionResult> {
     if (this.downloading) return this.downloading;
     const run = this.doDownload().finally(() => {
       if (this.downloading === run) this.downloading = null;
@@ -615,7 +750,98 @@ export class OfflinePackManager implements OfflineMapsController {
     });
     this.downloading = run;
     return run;
+  }
+
+  // ── Automatic sync (hydration, reconnect, foreground, focus changes) ─────────────────────────────────────────────
+
+  /** False when the department's policy is "manual" or the member deleted the maps on this account. */
+  private autoDownloadAllowed(): boolean {
+    if (this.snapshot?.policy.manualOnly === true) return false;
+    return !(this.loadedScopeKey !== null && this.kv.getBoolean(`${REMOVED_KEY}${this.loadedScopeKey}`) === true);
+  }
+
+  /**
+   * Shift-start hydration, reconnect, app foreground and focus changes (plan §19.5, §19.9): refreshes the manifest when
+   * it is stale (or now), then downloads what is missing or outdated and drops what is no longer listed or wanted —
+   * unless the policy is "manual" or the member deleted the maps. The Wi-Fi-only rule applies as for a manual download
+   * (`waiting-for-wifi`). While packs this device wants are still being built, it checks again every few minutes.
+   */
+  autoSync = async (options: OfflineAutoSyncOptions = {}): Promise<OfflineMapsActionResult> => {
+    const current = await this.ensureScope();
+    if (this.availability !== 'available') return actionFailed(this.availability === 'unsupported' ? 'unsupported-platform' : 'disabled');
+    if (!current) return actionFailed('no-session');
+
+    const checkedAt = this.snapshot?.checkedAt ?? null;
+    const refreshNow = options.refresh === 'now' ? checkedAt === null || this.now() - checkedAt >= FORCED_REFRESH_MIN_MS : this.isManifestStale();
+    if (refreshNow) {
+      const refreshed = await this.refreshManifest({ force: options.refresh === 'now' });
+      if (!refreshed.ok) return refreshed;
+    }
+    if (!this.autoDownloadAllowed()) {
+      this.log('Offline packs not downloaded automatically', { manual: this.snapshot?.policy.manualOnly === true });
+      return actionOk;
+    }
+    this.recompute();
+    const snapshot = this.snapshot ? this.selectWanted(this.snapshot) : null;
+    const removals = snapshot ? this.removalsFor(snapshot) : [];
+    let result: OfflineMapsActionResult = actionOk;
+    if (this.state.updateAvailable || removals.length > 0) {
+      const unsubscribe = options.onProgress
+        ? this.subscribe(() => {
+            const fraction = this.state.progress?.fraction;
+            if (typeof fraction === 'number') options.onProgress?.(fraction);
+          })
+        : null;
+      try {
+        result = await this.startDownload();
+      } finally {
+        unsubscribe?.();
+      }
+    }
+    this.schedulePendingRecheck();
+    return result;
   };
+
+  /**
+   * Whether the maps step of shift-start hydration is current (plan §19.8: "field ready" needs DepartmentData and the
+   * response-area base map): true when the department offers no packs, the policy is manual or the member deleted
+   * them; otherwise the manifest must be fresh and those items installed and current.
+   */
+  isHydrationCurrent = async (): Promise<boolean> => {
+    const current = await this.ensureScope();
+    if (this.availability !== 'available' || !current) return true;
+    if (!this.snapshot || this.isManifestStale()) return false;
+    if (!this.autoDownloadAllowed()) return true;
+    const evaluation = evaluateManifestSizes(this.selectWanted(this.snapshot));
+    return evaluation.allowed.filter((asset) => asset.kind === 'department-data' || asset.kind === 'basemap').every((asset) => isCurrent(this.rows.get(asset.assetId), asset));
+  };
+
+  /** The device's focus changed (active call, commanded incidents, route): re-plans and fetches what is now wanted. */
+  refreshSelection = (): Promise<OfflineMapsActionResult> => {
+    this.recompute();
+    return this.autoSync({ refresh: 'now' });
+  };
+
+  private schedulePendingRecheck(): void {
+    if (this.recheckTimer !== null || !this.hasWantedBuildingPacks() || !this.autoDownloadAllowed()) {
+      if (!this.hasWantedBuildingPacks()) this.recheckCount = 0;
+      return;
+    }
+    if (this.recheckCount >= PENDING_RECHECK_LIMIT) return;
+    this.recheckCount += 1;
+    const setTimer = this.options.setTimer ?? ((callback: () => void, ms: number) => setTimeout(callback, ms));
+    this.recheckTimer = setTimer(() => {
+      this.recheckTimer = null;
+      void this.autoSync({ refresh: 'now' }).catch((error: unknown) => this.log('Offline pack recheck failed', { error: errorName(error) }));
+    }, OFFLINE_PENDING_RECHECK_MS);
+  }
+
+  private stopPendingRecheck(): void {
+    if (this.recheckTimer === null) return;
+    const clearTimer = this.options.clearTimer ?? ((handle: unknown) => clearTimeout(handle as ReturnType<typeof setTimeout>));
+    clearTimer(this.recheckTimer);
+    this.recheckTimer = null;
+  }
 
   cancel = (): void => {
     this.abort?.abort();
@@ -683,9 +909,10 @@ export class OfflinePackManager implements OfflineMapsController {
       const { asset, previousPath } = items[index];
       const fileBase = sha256Hex(`${asset.assetId}|${asset.version}|${asset.sha256 ?? ''}`).slice(0, 24);
       const partPath = `${current.key}/tmp/${fileBase}.part`;
-      const finalPath = asset.kind === 'sprite' ? `${current.key}/files/sprite/${asset.name}` : `${current.key}/files/${fileBase}.${asset.fileExtension}`;
+      const isGlyphs = asset.kind === 'glyphs';
+      const finalPath = asset.kind === 'sprite' ? `${current.key}/files/sprite/${asset.name}` : isGlyphs ? `${current.key}/files/glyphs-${fileBase}` : `${current.key}/files/${fileBase}.${asset.fileExtension}`;
       const result = await downloadAsset(
-        { fileStore: this.fileStore, fetchImpl: this.fetchImpl },
+        { fileStore: this.fileStore, fetchImpl: this.fetchImpl, backgroundTransfer: this.options.backgroundTransfer ?? null },
         {
           url: asset.url,
           partPath,
@@ -723,8 +950,19 @@ export class OfflinePackManager implements OfflineMapsController {
         continue;
       }
 
+      const stagingPath = `${current.key}/tmp/glyphs-${fileBase}`;
       try {
-        await this.fileStore.move(partPath, finalPath);
+        let installedBytes = result.bytes;
+        if (isGlyphs) {
+          // The verified zip is extracted into a staging directory, which then replaces the installed one in one move.
+          const extracted = await extractGlyphArchive(this.fileStore, partPath, stagingPath, { signal: abort.signal });
+          await this.fileStore.move(stagingPath, finalPath);
+          await this.fileStore.remove(partPath);
+          installedBytes = extracted.bytes;
+          this.log('Offline glyphs installed', { files: extracted.files, fontstacks: extracted.fontstacks.length, bytes: extracted.bytes });
+        } else {
+          await this.fileStore.move(partPath, finalPath);
+        }
         const record: OfflineMapPackRecord = {
           packId: asset.assetId,
           kind: asset.packKind,
@@ -733,7 +971,7 @@ export class OfflinePackManager implements OfflineMapsController {
           key: asset.key,
           version: asset.version,
           sha256: result.sha256,
-          bytes: result.bytes,
+          bytes: installedBytes,
           path: this.fileStore.uriFor(finalPath),
           bounds: asset.bounds,
           minZoom: asset.minZoom,
@@ -754,9 +992,15 @@ export class OfflinePackManager implements OfflineMapsController {
           await this.fileStore.remove(previousRelative).catch(() => undefined);
         }
       } catch (error) {
-        this.log('Offline pack install failed', { error: errorName(error), kind: asset.kind });
+        await this.fileStore.remove(stagingPath).catch(() => undefined);
+        if (isAbortError(error)) {
+          // Stopped while extracting: the verified part stays, so the next attempt only extracts.
+          this.log('Offline pack download stopped', { code: 'cancelled' });
+          return this.finishWith(actionFailed('cancelled'), 'paused');
+        }
+        this.log('Offline pack install failed', { error: errorName(error), kind: asset.kind, ...(error instanceof GlyphArchiveError ? { reason: error.reason } : {}) });
         await this.fileStore.remove(partPath).catch(() => undefined);
-        firstFailure ??= actionFailed('storage-error');
+        firstFailure ??= actionFailed(error instanceof GlyphArchiveError ? 'archive-invalid' : 'storage-error');
       }
       completedBytes += asset.sizeBytes ?? result.bytes;
       this.reportProgress(completedBytes, totalBytes, items[index + 1]?.asset.name ?? null, index + 1, items.length, true);
@@ -768,6 +1012,7 @@ export class OfflinePackManager implements OfflineMapsController {
       this.writeInstalledInfo({ manifestVersion: manifest.version, updatedAt: this.now() });
     }
     if (items.some((item) => item.asset.kind === 'style')) await this.loadTemplates();
+    await this.loadDepartmentData();
     await this.refreshFreeSpace();
     this.log('Offline pack download finished', { ok: firstFailure === null });
     return this.finishWith(firstFailure ?? actionOk, firstFailure ? 'error' : 'idle');
@@ -804,6 +1049,7 @@ export class OfflinePackManager implements OfflineMapsController {
 
   deleteAll = async (): Promise<void> => {
     await this.stopDownload();
+    this.stopPendingRecheck();
     const current = await this.ensureScope();
     if (!current || !this.options.fileStore || !this.registry) return;
     await this.fileStore.remove(current.key);
@@ -811,7 +1057,10 @@ export class OfflinePackManager implements OfflineMapsController {
     this.rows = new Map();
     this.relativePaths = new Map();
     this.templates = { light: null, dark: null };
+    this.departmentData = null;
     this.writeInstalledInfo(null);
+    // The member chose to remove them: no automatic download brings them back until they download again.
+    this.kv.set(`${REMOVED_KEY}${current.key}`, true);
     await this.refreshFreeSpace();
     this.log('Offline packs deleted');
     this.recompute();
@@ -821,12 +1070,14 @@ export class OfflinePackManager implements OfflineMapsController {
   /** "Clear cached data": every pack on the device, all scopes. */
   clearAll = async (): Promise<void> => {
     await this.stopDownload();
+    this.stopPendingRecheck();
     await this.init();
     if (this.options.fileStore) await this.fileStore.remove('');
     await this.registry?.wipe();
     this.rows = new Map();
     this.relativePaths = new Map();
     this.templates = { light: null, dark: null };
+    this.departmentData = null;
     this.writeInstalledInfo(null);
     await this.refreshFreeSpace();
     this.recompute();
@@ -835,7 +1086,11 @@ export class OfflinePackManager implements OfflineMapsController {
 
   /** Logout / department / server switch / "Clear all local data" (D17): packs, rows and the manifest summary go. */
   wipe = async (): Promise<void> => {
-    if (this.loadedScopeKey) this.kv.delete(`${SNAPSHOT_KEY}${this.loadedScopeKey}`);
+    if (this.loadedScopeKey) {
+      this.kv.delete(`${SNAPSHOT_KEY}${this.loadedScopeKey}`);
+      this.kv.delete(`${REMOVED_KEY}${this.loadedScopeKey}`);
+    }
+    this.recheckCount = 0;
     await this.clearAll();
     this.manifest = null;
     this.snapshot = null;
@@ -901,15 +1156,20 @@ export class OfflinePackManager implements OfflineMapsController {
       return removed;
     }
 
-    // Rows whose file is gone; files nothing references.
+    // Rows whose file (or directory, for the glyphs) is gone; files nothing references.
     const rows = await this.registry.rowsForScopeKey(current.key);
     const referenced = new Set<string>();
+    const referencedDirectories: string[] = [];
     for (const row of rows) {
-      if ((await this.fileStore.size(row.relativePath)) === null) {
+      const directory = isDirectoryItem(row.packId);
+      const present = directory ? (await this.fileStore.list(row.relativePath)).length > 0 : (await this.fileStore.size(row.relativePath)) !== null;
+      if (!present) {
         await this.registry.removeByScopeKey(current.key, row.packId);
         this.rows.delete(row.packId);
         this.relativePaths.delete(row.packId);
         removed += 1;
+      } else if (directory) {
+        referencedDirectories.push(`${row.relativePath}/`);
       } else {
         referenced.add(row.relativePath);
       }
@@ -924,14 +1184,14 @@ export class OfflinePackManager implements OfflineMapsController {
       return files;
     };
     for (const file of await walk(`${current.key}/files`)) {
-      if (!referenced.has(file)) {
+      if (!referenced.has(file) && !referencedDirectories.some((directory) => file.startsWith(directory))) {
         await this.fileStore.remove(file);
         removed += 1;
       }
     }
 
-    // Partial downloads for items/versions the manifest no longer offers.
-    const wantedParts = new Set((this.snapshot?.assets ?? []).map((asset) => `${sha256Hex(`${asset.assetId}|${asset.version}|${asset.sha256 ?? ''}`).slice(0, 24)}.part`));
+    // Partial downloads for items/versions the manifest no longer offers (and leftover glyph staging directories).
+    const wantedParts = new Set((this.snapshot ? this.selectWanted(this.snapshot).assets : []).map((asset) => `${sha256Hex(`${asset.assetId}|${asset.version}|${asset.sha256 ?? ''}`).slice(0, 24)}.part`));
     for (const entry of await this.fileStore.list(`${current.key}/tmp`)) {
       if (!wantedParts.has(entry.name)) {
         await this.fileStore.remove(`${current.key}/tmp/${entry.name}`);

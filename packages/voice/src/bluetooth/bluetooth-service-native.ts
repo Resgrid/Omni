@@ -165,7 +165,14 @@ export class NativeBluetoothAudioService extends BluetoothAudioServiceBase {
     store.setIsScanning(true);
     store.clearDevices();
     try {
-      await BleManager.scan([], durationMs / 1000, false, { matchMode: BleScanMatchMode.Sticky, scanMode: BleScanMode.LowLatency, callbackType: BleScanCallbackType.AllMatches });
+      await BleManager.scan({
+        serviceUUIDs: [],
+        seconds: durationMs / 1000,
+        allowDuplicates: false,
+        matchMode: BleScanMatchMode.Sticky,
+        scanMode: BleScanMode.LowLatency,
+        callbackType: BleScanCallbackType.AllMatches,
+      });
       this.scanTimeout = setTimeout(() => this.handleScanStopped(), durationMs);
     } catch (error) {
       useBluetoothAudioStore.getState().setIsScanning(false);

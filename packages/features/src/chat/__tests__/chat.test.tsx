@@ -105,9 +105,9 @@ describe('chat format', () => {
 });
 
 describe('ChatGate', () => {
-  it('redirects home when the department has Chat.System off', () => {
+  it('redirects home when the department has Chat.System off', async () => {
     enableChat(false);
-    render(
+    await render(
       <ChatGate>
         <Text>chat</Text>
       </ChatGate>
@@ -116,9 +116,9 @@ describe('ChatGate', () => {
     expect(screen.queryByText('chat')).toBeNull();
   });
 
-  it('redirects home when the variant has no chat hub', () => {
+  it('redirects home when the variant has no chat hub', async () => {
     mockCapabilities.realtime.chatHub = false;
-    render(
+    await render(
       <ChatGate>
         <Text>chat</Text>
       </ChatGate>
@@ -126,16 +126,18 @@ describe('ChatGate', () => {
     expect(screen.getByTestId('redirect')).toBeTruthy();
   });
 
-  it('waits while flags are still loading, then renders chat', () => {
+  it('waits while flags are still loading, then renders chat', async () => {
     featureFlagsStore.setState({ flags: {}, isLoaded: false });
-    const { rerender } = render(
+    const { rerender } = await render(
       <ChatGate>
         <Text>chat</Text>
       </ChatGate>
     );
     expect(screen.getByTestId('chat-gate-loading')).toBeTruthy();
-    act(() => enableChat());
-    rerender(
+    await act(() => {
+      enableChat();
+    });
+    await rerender(
       <ChatGate>
         <Text>chat</Text>
       </ChatGate>
@@ -145,34 +147,34 @@ describe('ChatGate', () => {
 });
 
 describe('ChatChannelsScreen', () => {
-  it('lists sections with unread counts and opens a conversation', () => {
-    render(<ChatChannelsScreen />);
+  it('lists sections with unread counts and opens a conversation', async () => {
+    await render(<ChatChannelsScreen />);
     expect(screen.getByTestId('chat-channel-c1-unread')).toHaveTextContent('3');
-    fireEvent.press(screen.getByTestId('chat-channel-c1'));
+    await fireEvent.press(screen.getByTestId('chat-channel-c1'));
     expect(router.push).toHaveBeenCalledWith('/chat/c1');
   });
 });
 
 describe('ChatConversationScreen', () => {
-  it('marks the channel active on focus and clears it on blur', () => {
-    const { unmount } = render(<ChatConversationScreen channelId="c1" />);
+  it('marks the channel active on focus and clears it on blur', async () => {
+    const { unmount } = await render(<ChatConversationScreen channelId="c1" />);
     expect(setActiveChatChannel).toHaveBeenCalledWith('c1', null);
     useRealtimeStore.setState({ activeChatChannel: { channelId: 'c1', asUnitId: null } });
-    unmount();
+    await unmount();
     expect(setActiveChatChannel).toHaveBeenLastCalledWith(null);
   });
 
-  it('joins the channel group (as the unit when acting as one) and rejoins after a chat hub reconnect', () => {
+  it('joins the channel group (as the unit when acting as one) and rejoins after a chat hub reconnect', async () => {
     const invoke = jest.spyOn(signalRService, 'invoke').mockResolvedValue(undefined);
     try {
-      render(
+      await render(
         <ChatIdentityProvider asUnitId={7}>
           <ChatConversationScreen channelId="c1" />
         </ChatIdentityProvider>
       );
       expect(invoke).toHaveBeenCalledWith(expect.any(String), 'JoinChannel', 'c1', 7);
       invoke.mockClear();
-      act(() => emitRealtimeEvent('chatHubJoined', { hub: 'chat', rejoin: true, at: 1 }));
+      await act(() => emitRealtimeEvent('chatHubJoined', { hub: 'chat', rejoin: true, at: 1 }));
       expect(invoke).toHaveBeenCalledWith(expect.any(String), 'JoinChannel', 'c1', 7);
     } finally {
       invoke.mockRestore();
@@ -180,24 +182,24 @@ describe('ChatConversationScreen', () => {
   });
 
   it('passes the unit identity to SetActiveChannel and sends (Unit)', async () => {
-    render(
+    await render(
       <ChatIdentityProvider asUnitId={7}>
         <ChatConversationScreen channelId="c1" />
       </ChatIdentityProvider>
     );
     expect(setActiveChatChannel).toHaveBeenCalledWith('c1', 7);
 
-    fireEvent.changeText(screen.getByTestId('chat-composer-input'), 'On scene');
-    fireEvent.press(screen.getByTestId('chat-composer-send'));
+    await fireEvent.changeText(screen.getByTestId('chat-composer-input'), 'On scene');
+    await fireEvent.press(screen.getByTestId('chat-composer-send'));
     await waitFor(() => expect(sendMessage).toHaveBeenCalledWith({ channelId: 'c1', body: 'On scene', priority: 0, asUnitId: 7 }));
   });
 
   it('queues a message offline without an error and clears the composer; urgent sets the priority', async () => {
-    render(<ChatConversationScreen channelId="c1" />);
+    await render(<ChatConversationScreen channelId="c1" />);
 
-    fireEvent.press(screen.getByTestId('chat-composer-urgent'));
-    fireEvent.changeText(screen.getByTestId('chat-composer-input'), '  Mayday  ');
-    fireEvent.press(screen.getByTestId('chat-composer-send'));
+    await fireEvent.press(screen.getByTestId('chat-composer-urgent'));
+    await fireEvent.changeText(screen.getByTestId('chat-composer-input'), '  Mayday  ');
+    await fireEvent.press(screen.getByTestId('chat-composer-send'));
 
     await waitFor(() => expect(sendMessage).toHaveBeenCalledWith({ channelId: 'c1', body: 'Mayday', priority: 1 }));
     expect(screen.getByTestId('chat-composer-input').props.value).toBe('');
@@ -205,8 +207,8 @@ describe('ChatConversationScreen', () => {
     expect(useChatStore.getState().markChannelRead).toHaveBeenCalledWith('c1', undefined);
   });
 
-  it('rejects an unsafe channel id', () => {
-    render(<ChatConversationScreen channelId="../settings" />);
+  it('rejects an unsafe channel id', async () => {
+    await render(<ChatConversationScreen channelId="../settings" />);
     expect(screen.getByTestId('chat-conversation-invalid')).toBeTruthy();
     expect(setActiveChatChannel).not.toHaveBeenCalled();
   });
@@ -217,21 +219,23 @@ describe('MessageActionsSheet', () => {
   // The actionsheet portals into the overlay host the app's GluestackUIProvider mounts.
   const wrapper = ({ children }: { children?: React.ReactNode }) => <GluestackUIProvider>{children}</GluestackUIProvider>;
 
-  it('offers edit and delete on own messages, report on others', () => {
+  it('offers edit and delete on own messages, report on others', async () => {
     const handlers = { onReact: jest.fn(), onCopy: jest.fn(), onEdit: jest.fn(), onDelete: jest.fn(), onFlag: jest.fn() };
-    const { rerender } = render(<MessageActionsSheet message={message('m2', { SenderUserId: 'me' })} isOpen onClose={jest.fn()} isOwn isModerator={false} {...handlers} />, { wrapper });
+    const { rerender } = await render(<MessageActionsSheet message={message('m2', { SenderUserId: 'me' })} isOpen onClose={jest.fn()} isOwn isModerator={false} {...handlers} />, { wrapper });
     expect(screen.getByTestId('message-action-edit', q)).toBeTruthy();
     expect(screen.queryByTestId('message-action-flag', q)).toBeNull();
 
-    rerender(<MessageActionsSheet message={message('m1')} isOpen onClose={jest.fn()} isOwn={false} isModerator={false} {...handlers} />);
+    await rerender(<MessageActionsSheet message={message('m1')} isOpen onClose={jest.fn()} isOwn={false} isModerator={false} {...handlers} />);
     expect(screen.queryByTestId('message-action-edit', q)).toBeNull();
-    fireEvent.press(screen.getByTestId('message-action-flag', q));
-    fireEvent.press(screen.getByTestId('message-flag-3', q));
+    await fireEvent.press(screen.getByTestId('message-action-flag', q));
+    await fireEvent.press(screen.getByTestId('message-flag-3', q));
     expect(handlers.onFlag).toHaveBeenCalledWith(expect.objectContaining({ ChatMessageId: 'm1' }), 3);
   });
 
-  it('removes reactions, edits and deletes in a frozen (closed incident) chat', () => {
-    render(<MessageActionsSheet message={message('m2')} isOpen onClose={jest.fn()} isOwn isModerator frozen onReact={jest.fn()} onEdit={jest.fn()} onDelete={jest.fn()} onModeratorDelete={jest.fn()} />, { wrapper });
+  it('removes reactions, edits and deletes in a frozen (closed incident) chat', async () => {
+    await render(<MessageActionsSheet message={message('m2')} isOpen onClose={jest.fn()} isOwn isModerator frozen onReact={jest.fn()} onEdit={jest.fn()} onDelete={jest.fn()} onModeratorDelete={jest.fn()} />, {
+      wrapper,
+    });
     expect(screen.queryByTestId('message-react-👍', q)).toBeNull();
     expect(screen.queryByTestId('message-action-edit', q)).toBeNull();
     expect(screen.getByTestId('message-action-moderator-delete', q)).toBeTruthy();
@@ -243,12 +247,12 @@ describe('NewConversationSheet', () => {
     usePersonnelStore.setState({ personnel: [{ UserId: 'u2', FirstName: 'Sam', LastName: 'Lee' } as PersonnelInfoResultData, { UserId: 'me', FirstName: 'Me' } as PersonnelInfoResultData] });
     mockStartDirect.mockResolvedValueOnce(channel('d2', 'Sam Lee', ChatChannelType.DirectMessage));
     const onCreated = jest.fn();
-    render(<NewConversationSheet isOpen onClose={jest.fn()} onCreated={onCreated} />);
+    await render(<NewConversationSheet isOpen onClose={jest.fn()} onCreated={onCreated} />);
     const q = { includeHiddenElements: true } as const;
 
     expect(screen.queryByTestId('new-conversation-person-me', q)).toBeNull();
-    fireEvent.press(screen.getByTestId('new-conversation-person-u2', q));
-    fireEvent.press(screen.getByTestId('new-conversation-create', q));
+    await fireEvent.press(screen.getByTestId('new-conversation-person-u2', q));
+    await fireEvent.press(screen.getByTestId('new-conversation-create', q));
     await waitFor(() => expect(onCreated).toHaveBeenCalledWith(expect.objectContaining({ ChatChannelId: 'd2' })));
     expect(mockStartDirect).toHaveBeenCalledWith('u2');
   });

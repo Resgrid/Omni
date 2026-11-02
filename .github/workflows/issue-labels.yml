@@ -1,0 +1,63 @@
+# Labels issues opened from the forms in .github/ISSUE_TEMPLATE so each one shows which app and platform it is about:
+# "app: <variant>" (the App answer, matched to each variant.json displayName), "platform: <platform>", "self-hosted",
+# "regression", and "needs-triage" on new issues. The logic is scripts/ci/issue-labels.mjs.
+# Creates any missing label first, including the type labels the forms set (GitHub drops a form label that does not
+# exist yet); run it once by hand after merging to create them all up front. Only adds labels, never removes them,
+# so a maintainer's relabelling sticks when the reporter edits the issue.
+# The issue body is untrusted: it is only parsed in JavaScript and matched against fixed labels, never run or
+# interpolated into a shell.
+name: Issue labels
+
+on:
+  issues:
+    types:
+      - opened
+      - edited
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: github.event_name == 'workflow_dispatch' || github.event.action == 'opened' || github.event.changes.body
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /scripts/ci/lib.mjs
+            /scripts/ci/issue-labels.mjs
+            /apps/omni/variants/*/variant.json
+
+      - uses: actions/github-script@v9.0.0
+        name: Add app and platform labels
+        with:
+          script: |
+            const { labelsForIssue, loadApps, managedLabels } = await import(`${process.env.GITHUB_WORKSPACE}/scripts/ci/issue-labels.mjs`);
+            const apps = loadApps();
+
+            const existing = new Set((await github.paginate(github.rest.issues.listLabelsForRepo, { ...context.repo, per_page: 100 })).map((l) => l.name.toLowerCase()));
+            for (const label of managedLabels(apps)) {
+              if (existing.has(label.name.toLowerCase())) continue;
+              try {
+                await github.rest.issues.createLabel({ ...context.repo, ...label });
+                core.info(`Created label "${label.name}"`);
+              } catch (error) {
+                if (error.status !== 422) throw error; // 422: created meanwhile by another run
+              }
+            }
+
+            const issue = context.payload.issue;
+            if (!issue) return;
+            const labels = labelsForIssue(issue.body, apps);
+            if (context.payload.action === 'opened') labels.push('needs-triage');
+            const have = new Set(issue.labels.map((l) => l.name));
+            const add = labels.filter((l) => !have.has(l));
+            if (add.length) await github.rest.issues.addLabels({ ...context.repo, issue_number: issue.number, labels: add });
+            core.info(add.length ? `Added: ${add.join(', ')}` : 'No labels to add');

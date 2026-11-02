@@ -9,12 +9,14 @@
 //   decide  release.yml stage 0 — per variant: fingerprint each platform, compare with the newest release of the
 //           same variant and channel (excluding this run's own tag, so re-runs stay native), write a decision file.
 //   check   ota.yml — refuse (exit 1) unless every requested platform matches the installed runtime.
-//   merge   release.yml stage 0 — fold the per-variant decision files into the build / OTA / submit matrices.
+//   merge   release.yml stage 0 — fold the per-variant decision files into the build / OTA / submit matrices. With
+//           --publish-ota false (merge builds on master) a JavaScript-only change publishes no update: an update on
+//           the production channel reaches every installed store build, so it is released deliberately (ota.yml).
 //
 // Usage:
 //   node scripts/ci/fingerprint.mjs decide --variant unit --channel internal --platforms android,ios --tag unit-v8.12 [--force-native] --out decision-unit.json
 //   node scripts/ci/fingerprint.mjs check  --variant unit --channel production --platforms android,ios [--run-number 12] [--exclude-tag unit-v8.12]
-//   node scripts/ci/fingerprint.mjs merge  --dir decisions --variants '["unit"]' --platforms android,ios --channel internal [--submit true]
+//   node scripts/ci/fingerprint.mjs merge  --dir decisions --variants '["unit"]' --platforms android,ios --channel internal [--submit true] [--publish-ota false]
 import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import path from 'node:path';
@@ -132,6 +134,7 @@ function merge(args) {
   const platforms = args.platforms ? csv(args.platforms, PLATFORMS) : [];
   const channel = requireArg(args, 'channel');
   const submit = (args.submit === true || args.submit === 'true') && channel === 'production';
+  const publishOta = args['publish-ota'] !== 'false';
   for (const v of variants) if (!VARIANT_IDS.includes(v)) throw new Error(`Unknown variant "${v}"`);
 
   const android = [];
@@ -147,8 +150,9 @@ function merge(args) {
       const d = decision?.platforms?.[platform];
       // A missing decision (fingerprint job failed) means native: shipping an OTA to an unknown runtime is never safe.
       const native = d ? d.native : true;
-      (native ? nativePlatforms : otaPlatforms).push(platform);
-      table.push(`| ${variant} | ${platform} | ${native ? 'native' : 'OTA'} | ${d ? d.reason : 'no decision file — defaulting to native'} |`);
+      if (native || publishOta) (native ? nativePlatforms : otaPlatforms).push(platform);
+      const route = native ? 'native' : publishOta ? 'OTA' : 'JS only — not published';
+      table.push(`| ${variant} | ${platform} | ${route} | ${d ? d.reason : 'no decision file — defaulting to native'}${native || publishOta ? '' : '; release it with ota.yml'} |`);
     }
     if (nativePlatforms.includes('android')) android.push({ variant });
     if (nativePlatforms.includes('ios')) ios.push({ variant });

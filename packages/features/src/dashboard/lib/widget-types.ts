@@ -133,13 +133,14 @@ const COMPACT_SIZES: Readonly<Record<WidgetType, WidgetSize>> = {
 export const defaultWidgetSize = (type: WidgetType, sizeClass: GridSizeClass): WidgetSize => (sizeClass === 'large' ? LARGE_SIZES[type] : COMPACT_SIZES[type]);
 
 /** Server data a widget reads; the dashboard loads and live-refreshes only what the widgets on the board need. */
-export type DashboardDataSource = 'calls' | 'callPriorities' | 'scheduledCalls' | 'units' | 'personnel' | 'personnelOptions' | 'notes' | 'weatherAlerts' | 'unitAlerts' | 'config';
+/** `navigations`: live ETAs of units navigating in the Unit app (MapLibre plan §9.4; departments with Navigation.InApp). */
+export type DashboardDataSource = 'calls' | 'callPriorities' | 'scheduledCalls' | 'units' | 'personnel' | 'personnelOptions' | 'notes' | 'weatherAlerts' | 'unitAlerts' | 'config' | 'navigations';
 
 export const WIDGET_DATA_SOURCES: Readonly<Record<WidgetType, readonly DashboardDataSource[]>> = {
   personnel: ['personnel'],
-  units: ['units', 'unitAlerts', 'config'],
-  calls: ['calls', 'callPriorities'],
-  map: ['config'],
+  units: ['units', 'unitAlerts', 'config', 'navigations'],
+  calls: ['calls', 'callPriorities', 'navigations'],
+  map: ['config', 'navigations'],
   weather: ['config'],
   notes: ['notes'],
   time: [],

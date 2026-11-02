@@ -1705,6 +1705,17 @@
       "search_placeholder": "Search points of interest…",
       "results": "{{count}} points of interest",
       "results_one": "{{count}} point of interest"
+    },
+    "traffic": "Live traffic",
+    "offline": {
+      "badge": "Offline map",
+      "badge_updated_now": "Offline map · updated just now",
+      "badge_updated_minutes": "Offline map · updated {{count}} min ago",
+      "badge_updated_hours": "Offline map · updated {{count}} h ago",
+      "badge_updated_days": "Offline map · updated {{count}} d ago",
+      "badge_details": "This map is drawn from maps saved on this device.",
+      "badge_stale": "These maps have not been updated for a while. Connect to the internet to refresh them.",
+      "badge_attribution": "Map data: {{attribution}}"
     }
   },
   "mfa": {
@@ -2692,7 +2703,8 @@
       "organic_maps": "Organic Maps",
       "osmand": "OsmAnd",
       "title": "Application de navigation",
-      "waze": "Waze"
+      "waze": "Waze",
+      "resgrid": "Resgrid (in-app navigation)"
     },
     "no_units_available": "Aucune unité disponible",
     "none_selected": "Aucun sélectionné",
@@ -2761,7 +2773,27 @@
       "play": "Play the {{name}} sound",
       "test_title": "Test alert sounds"
     },
-    "units_load_failed": "Impossible de charger les unités. Vérifiez votre connexion et réessayez."
+    "units_load_failed": "Impossible de charger les unités. Vérifiez votre connexion et réessayez.",
+    "app_updates": {
+      "channel": "Canal de mise à jour",
+      "check": "Rechercher des mises à jour",
+      "check_failed": "Impossible de rechercher des mises à jour. Vérifiez votre connexion et réessayez.",
+      "checking": "Recherche de mises à jour…",
+      "current_update": "Mise à jour actuelle",
+      "downloading": "Téléchargement de la mise à jour…",
+      "emergency_launch": "La dernière mise à jour n'a pas pu démarrer : l'application utilise donc sa version intégrée.",
+      "not_set": "Non défini",
+      "published": "Publiée le {{date}}",
+      "ready": "Une mise à jour est prête. Redémarrez pour terminer la mise à jour, sinon elle sera installée au prochain démarrage de l'application.",
+      "restart": "Redémarrer pour mettre à jour",
+      "restart_failed": "L'application n'a pas pu redémarrer. La mise à jour sera installée au prochain démarrage de l'application.",
+      "runtime_version": "Version de l'environnement d'exécution",
+      "source": "En cours",
+      "source_downloaded": "Mise à jour téléchargée",
+      "source_embedded": "Version intégrée",
+      "title": "Mises à jour de l'application",
+      "up_to_date": "À jour. Dernière vérification : {{time}}."
+    }
   },
   "shared_session": {
     "bar": "Appareil partagé",
@@ -3132,7 +3164,11 @@
       "default_title": "New notification",
       "view": "View",
       "close": "Close"
-    }
+    },
+    "update_ready_title": "Mise à jour prête",
+    "update_ready_message": "Touchez pour redémarrer maintenant. Sinon, la mise à jour sera installée au prochain démarrage de l'application.",
+    "update_ready_wall_message": "Touchez pour redémarrer maintenant, sinon l'écran redémarrera de lui-même après {{minutes}} minutes sans utilisation.",
+    "update_restart_failed": "L'application n'a pas pu redémarrer. La mise à jour sera installée au prochain démarrage de l'application."
   },
   "access_denied": {
     "back_to_sign_in": "Back to sign in",
@@ -3272,8 +3308,8 @@
     "attendees": {
       "title": "Participants"
     },
-    "attendeesCount": "{{count}} participant",
-    "attendeesCount_plural": "{{count}} participants",
+    "attendeesCount_one": "{{count}} participant",
+    "attendeesCount": "{{count}} participants",
     "confirmSignup": "Confirmer",
     "confirmUnsignup": {
       "message": "Êtes-vous sûr(e) de vouloir annuler votre participation à cet événement ?",
@@ -3285,8 +3321,8 @@
       "attendanceUpdate": "Échec de la mise à jour de la participation. Veuillez réessayer.",
       "title": "Erreur"
     },
-    "eventsCount": "{{count}} événement",
-    "eventsCount_plural": "{{count}} événements",
+    "eventsCount_one": "{{count}} événement",
+    "eventsCount": "{{count}} événements",
     "loading": {
       "date": "Chargement des événements pour la date sélectionnée...",
       "today": "Chargement des événements d'aujourd'hui...",
@@ -4005,7 +4041,8 @@
       "unsafe_url": "A map file address was not secure and was skipped.",
       "unsupported_kind": "This map type needs a newer version of the app.",
       "unsupported_platform": "Offline maps are not available on this device.",
-      "waiting_for_wifi": "Connect to Wi-Fi to continue, or turn off Wi-Fi only."
+      "waiting_for_wifi": "Connect to Wi-Fi to continue, or turn off Wi-Fi only.",
+      "archive_invalid": "The map labels could not be unpacked. Check for updates and try again."
     },
     "item": {
       "basemap": "Base map",
@@ -4096,7 +4133,8 @@
       "station": "Station",
       "waypoint": "Waypoint"
     },
-    "stops_done": "{{done}} of {{total}} stops"
+    "stops_done": "{{done}} of {{total}} stops",
+    "stop_eta": "ETA {{time}}"
   },
   "unit_status": {
     "console_title": "Status console",
@@ -4109,5 +4147,77 @@
     "reportQueued": "Saved. The report will be sent when you are back online.",
     "reportSent": "Report sent",
     "reportWaiting": "Waiting to send"
+  },
+  "navigation": {
+    "arrival_time": "Arrive {{time}}",
+    "distance": {
+      "ft": "{{value}} ft",
+      "km": "{{value}} km",
+      "m": "{{value}} m",
+      "mi": "{{value}} mi"
+    },
+    "end": "End navigation",
+    "minutes_one": "{{count}} min",
+    "minutes_other": "{{count}} min",
+    "mute": "Mute voice guidance",
+    "open_external": "Open in navigation app",
+    "overview": "Show the whole route",
+    "recenter": "Follow vehicle",
+    "remaining": "{{minutes}} · {{distance}}",
+    "rerouting": "Finding a new route…",
+    "safety_body": "Keep your eyes on the road and follow posted signs and limits. Set up the route before you drive and do not type while moving. Road restrictions are only as complete as the map data.",
+    "safety_ok": "I understand",
+    "safety_title": "Drive safely",
+    "simulation": "Simulated drive",
+    "traffic_aware": "live traffic",
+    "unmute": "Turn voice guidance on",
+    "using_last_route": "Directions unavailable — following the last route",
+    "vehicle_limits_all": "Route avoids roads too low, narrow or weak for this vehicle",
+    "vehicle_limits_none": "Vehicle size and weight are not checked by this routing service",
+    "vehicle_limits_size": "Route checks this vehicle's height, width and weight (not length, axles or hazmat)",
+    "voice": {
+      "rerouted": "Rerouting",
+      "navigating": "Navigating",
+      "navigating_to": "Navigating to {{name}}"
+    },
+    "arrival": {
+      "at": "You have arrived at {{name}}",
+      "auto_check_in": "Checking in at this stop in {{seconds}} s",
+      "cancel": "Cancel",
+      "check_in": "Check in",
+      "check_out_continue": "Check out and go to the next stop",
+      "continue": "Go to the next stop",
+      "not_yet": "Not there yet",
+      "open_stop": "Open stop details",
+      "set_status": "Set {{status}}",
+      "stop_fallback": "the stop",
+      "stop_title": "Arrived at {{name}}",
+      "title": "You have arrived"
+    },
+    "back": "Back",
+    "error": {
+      "failed": "Directions could not be loaded. Check your connection and try again.",
+      "no_destination": "Nothing to navigate to.",
+      "no_position": "Your position is not known yet. Make sure location is on and try again.",
+      "no_route": "No route was found to this destination.",
+      "unavailable": "In-app navigation is not available for this route. Use your navigation app instead."
+    },
+    "loading": "Finding the route…",
+    "navigate": "Navigate",
+    "retry": "Try again",
+    "title": "Navigation"
+  },
+  "navigation_eta": {
+    "minutes_one": "ETA {{count}} min",
+    "minutes": "ETA {{count}} min",
+    "arriving": "Arriving",
+    "traffic": "traffic",
+    "stale": "no update",
+    "stale_hint": "No update for over a minute"
+  },
+  "custom_maps": {
+    "image_not_offline": "This map image is not saved on this device. It shows again when you are back online.",
+    "nothing_to_show": "Nothing to show on this device",
+    "nothing_to_show_detail": "This map has no image or map tiles this app can draw. Open it on the website instead."
   }
 }

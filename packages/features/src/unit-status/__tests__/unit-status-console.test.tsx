@@ -50,9 +50,9 @@ const makeCall = (CallId: string, overrides: Partial<CallResultData> = {}): Call
 
 const navigateTo = jest.fn(async () => true);
 
-const renderSidebar = (props: { activeUnitId?: string | null; activeCallId?: string | null; holdToConfirm?: boolean; onClear?: () => void; onCallChange?: (id: string) => void } = {}) => {
+const renderSidebar = async (props: { activeUnitId?: string | null; activeCallId?: string | null; holdToConfirm?: boolean; onClear?: () => void; onCallChange?: (id: string) => void } = {}) => {
   const onNavigate = jest.fn();
-  render(
+  await render(
     <NavigationHandoffProvider value={{ navigateTo }}>
       <StatusProvider
         activeUnitId={props.activeUnitId === undefined ? 'u1' : props.activeUnitId}
@@ -97,16 +97,16 @@ beforeEach(() => {
 });
 
 describe('UnitStatusSidebar', () => {
-  it('asks for an active unit when none is set, with a way to settings', () => {
-    const { onNavigate } = renderSidebar({ activeUnitId: null });
+  it('asks for an active unit when none is set, with a way to settings', async () => {
+    const { onNavigate } = await renderSidebar({ activeUnitId: null });
     expect(screen.getByText('common.noActiveUnit')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('unit-status-panel-settings'));
+    await fireEvent.press(screen.getByTestId('unit-status-panel-settings'));
     expect(router.push).toHaveBeenCalledWith('/settings');
     expect(onNavigate).toHaveBeenCalled();
   });
 
-  it('shows the unit, its current status (by id, in the department colour) and its status buttons', () => {
-    renderSidebar();
+  it('shows the unit, its current status (by id, in the department colour) and its status buttons', async () => {
+    await renderSidebar();
     expect(screen.getByTestId('unit-summary-card-name')).toHaveTextContent('Engine 1');
     expect(screen.getByText('Station 1')).toBeTruthy();
     expect(within(screen.getByTestId('unit-current-status')).getByText('In Quarters')).toBeTruthy();
@@ -115,43 +115,43 @@ describe('UnitStatusSidebar', () => {
     expect(screen.getByTestId('unit-roles-button')).toBeTruthy();
   });
 
-  it('shows a queued status as pending sync', () => {
+  it('shows a queued status as pending sync', async () => {
     useUnitStatusStore.setState({ queuedStatuses: { q1: { localId: 'q1', unitId: 'u1', statusType: '31', respondingTo: '', respondingToType: null, note: '', createdAt: 1, state: 'queued' } } });
-    renderSidebar();
+    await renderSidebar();
     expect(screen.getByTestId('unit-current-status-badge-pending')).toBeTruthy();
     expect(within(screen.getByTestId('unit-current-status')).getByText('Responding')).toBeTruthy();
   });
 
   it('opens the unit status sheet on the tapped status', async () => {
-    renderSidebar();
-    fireEvent.press(screen.getByTestId('unit-status-buttons-31'));
+    await renderSidebar();
+    await fireEvent.press(screen.getByTestId('unit-status-buttons-31'));
     await waitFor(() => expect(screen.getByTestId('unit-status-sheet', hidden)).toBeTruthy());
     expect(useUnitStatusStore.getState().fetchDestinationData).toHaveBeenCalledWith('u1');
   });
 
-  it('uses press-and-hold buttons when the department requires it', () => {
-    renderSidebar({ holdToConfirm: true });
+  it('uses press-and-hold buttons when the department requires it', async () => {
+    await renderSidebar({ holdToConfirm: true });
     expect(screen.getByTestId('unit-status-buttons-hold-31')).toBeTruthy();
     expect(screen.queryByTestId('unit-status-buttons-31')).toBeNull();
   });
 
   it('shows the active call with directions handed off to the navigation app, and deselects after confirming', async () => {
     const onClear = jest.fn();
-    renderSidebar({ activeCallId: '7', onClear });
+    await renderSidebar({ activeCallId: '7', onClear });
     expect(screen.getByTestId('unit-active-call-card')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('unit-active-call-directions'));
-    await waitFor(() => expect(navigateTo).toHaveBeenCalledWith({ latitude: 39.5, longitude: -119.8, label: 'Call 7' }));
+    await fireEvent.press(screen.getByTestId('unit-active-call-directions'));
+    await waitFor(() => expect(navigateTo).toHaveBeenCalledWith({ latitude: 39.5, longitude: -119.8, label: 'Call 7', callId: 7 }));
     expect(screen.queryByTestId('unit-active-call-destination')).toBeNull();
 
-    fireEvent.press(screen.getByTestId('unit-active-call-deselect'));
-    fireEvent.press(screen.getByTestId('unit-active-call-deselect-dialog-confirm', hidden));
+    await fireEvent.press(screen.getByTestId('unit-active-call-deselect'));
+    await fireEvent.press(screen.getByTestId('unit-active-call-deselect-dialog-confirm', hidden));
     expect(onClear).toHaveBeenCalled();
   });
 
-  it('hides deselect when the shell cannot clear the active call, and opens call details', () => {
-    const { onNavigate } = renderSidebar({ activeCallId: '7' });
+  it('hides deselect when the shell cannot clear the active call, and opens call details', async () => {
+    const { onNavigate } = await renderSidebar({ activeCallId: '7' });
     expect(screen.queryByTestId('unit-active-call-deselect')).toBeNull();
-    fireEvent.press(screen.getByTestId('unit-active-call-details'));
+    await fireEvent.press(screen.getByTestId('unit-active-call-details'));
     expect(router.push).toHaveBeenCalledWith('/call/7');
     expect(onNavigate).toHaveBeenCalled();
   });
@@ -159,16 +159,16 @@ describe('UnitStatusSidebar', () => {
   it('picks a new active call from the open calls', async () => {
     const onCallChange = jest.fn();
     useCallsStore.setState({ calls: [makeCall('7'), makeCall('8', { Name: 'Medical' })] });
-    renderSidebar({ onCallChange });
+    await renderSidebar({ onCallChange });
     expect(screen.getByTestId('unit-active-call-none')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('unit-active-call-trigger'));
+    await fireEvent.press(screen.getByTestId('unit-active-call-trigger'));
     await waitFor(() => expect(screen.getByTestId('active-call-sheet-call-8', hidden)).toBeTruthy());
     expect(useCallsStore.getState().fetchCalls).toHaveBeenCalledWith({ bypassCache: true });
-    fireEvent.press(screen.getByTestId('active-call-sheet-call-8', hidden));
+    await fireEvent.press(screen.getByTestId('active-call-sheet-call-8', hidden));
     expect(onCallChange).toHaveBeenCalledWith('8');
   });
 
-  it('shows the active call’s most urgent check-in timer', () => {
+  it('shows the active call’s most urgent check-in timer', async () => {
     useCallsStore.setState({ calls: [makeCall('7', { CheckInTimersEnabled: true })] });
     useCheckInTimersStore.setState({
       statusesByCall: {
@@ -178,39 +178,39 @@ describe('UnitStatusSidebar', () => {
         ],
       },
     });
-    renderSidebar({ activeCallId: '7' });
+    await renderSidebar({ activeCallId: '7' });
     expect(screen.getByTestId('unit-check-in-summary-timer')).toBeTruthy();
     expect(useCheckInTimersStore.getState().fetchTimerStatuses).toHaveBeenCalledWith(7);
   });
 
-  it('gates quick actions by department flags and the active unit', () => {
-    renderSidebar();
+  it('gates quick actions by department flags and the active unit', async () => {
+    await renderSidebar();
     expect(screen.queryByTestId('unit-quick-actions-chat')).toBeNull();
     expect(screen.getByTestId('unit-quick-actions-inventory')).toBeTruthy();
     expect(screen.getByTestId('unit-quick-actions-settings')).toBeTruthy();
   });
 
-  it('opens a flag-enabled quick action and closes the drawer', () => {
+  it('opens a flag-enabled quick action and closes the drawer', async () => {
     featureFlagsStore.setState({ flags: { [FeatureFlagKeys.ChatSystem]: { enabled: true } }, isLoaded: true });
-    const { onNavigate } = renderSidebar();
-    fireEvent.press(screen.getByTestId('unit-quick-actions-chat'));
+    const { onNavigate } = await renderSidebar();
+    await fireEvent.press(screen.getByTestId('unit-quick-actions-chat'));
     expect(router.push).toHaveBeenCalledWith('/chat');
     expect(onNavigate).toHaveBeenCalled();
   });
 
   it('offers Lock and Switch operator on a shared vehicle session', async () => {
     useSharedSessionStore.setState({ shared: true, operator: 'Pat Doe', installationLabel: 'Engine 1 MDT' });
-    renderSidebar();
+    await renderSidebar();
     expect(screen.getByText('shared_session.locked_operator:Pat Doe')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('unit-shared-session-lock'));
+    await fireEvent.press(screen.getByTestId('unit-shared-session-lock'));
     expect(mockLock).toHaveBeenCalledWith('explicit');
-    fireEvent.press(screen.getByTestId('unit-shared-session-switch'));
-    fireEvent.press(screen.getByTestId('unit-shared-session-switch-dialog-confirm', hidden));
+    await fireEvent.press(screen.getByTestId('unit-shared-session-switch'));
+    await fireEvent.press(screen.getByTestId('unit-shared-session-switch-dialog-confirm', hidden));
     await waitFor(() => expect(mockEndShift).toHaveBeenCalledWith(true));
   });
 
-  it('hides the shared-session controls on a personal session', () => {
-    renderSidebar();
+  it('hides the shared-session controls on a personal session', async () => {
+    await renderSidebar();
     expect(screen.queryByTestId('unit-shared-session')).toBeNull();
   });
 });
@@ -218,28 +218,28 @@ describe('UnitStatusSidebar', () => {
 describe('StatusButtons', () => {
   const metrics = { buttonMinHeight: 48, labelClassName: 'text-base', statusColumns: 1 };
 
-  it('narrows to the current status’s next statuses until the crew asks for all', () => {
+  it('narrows to the current status’s next statuses until the crew asks for all', async () => {
     const statuses = [option(1, 'Available', { NextIds: [2] }), option(2, 'Responding'), option(3, 'On Scene')];
-    render(<StatusButtons statuses={statuses} currentStatusId="1" holdToConfirm={false} onSelect={jest.fn()} metrics={metrics} />);
+    await render(<StatusButtons statuses={statuses} currentStatusId="1" holdToConfirm={false} onSelect={jest.fn()} metrics={metrics} />);
     expect(screen.getByTestId('unit-status-buttons-2')).toBeTruthy();
     expect(screen.queryByTestId('unit-status-buttons-3')).toBeNull();
-    fireEvent.press(screen.getByTestId('unit-status-buttons-show-all'));
+    await fireEvent.press(screen.getByTestId('unit-status-buttons-show-all'));
     expect(screen.getByTestId('unit-status-buttons-3')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('unit-status-buttons-show-next'));
+    await fireEvent.press(screen.getByTestId('unit-status-buttons-show-next'));
     expect(screen.queryByTestId('unit-status-buttons-3')).toBeNull();
   });
 
-  it('reports the tapped status (not hold-confirmed)', () => {
+  it('reports the tapped status (not hold-confirmed)', async () => {
     const onSelect = jest.fn();
-    render(<StatusButtons statuses={[option(2, 'Responding')]} currentStatusId={null} holdToConfirm={false} onSelect={onSelect} metrics={metrics} />);
-    fireEvent.press(screen.getByTestId('unit-status-buttons-2'));
+    await render(<StatusButtons statuses={[option(2, 'Responding')]} currentStatusId={null} holdToConfirm={false} onSelect={onSelect} metrics={metrics} />);
+    await fireEvent.press(screen.getByTestId('unit-status-buttons-2'));
     expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ Id: 2 }), false);
   });
 });
 
 describe('UnitConsoleScreen', () => {
-  it('renders the full-screen console with the set-status heading', () => {
-    render(
+  it('renders the full-screen console with the set-status heading', async () => {
+    await render(
       <StatusProvider activeUnitId="u1">
         <UnitConsoleScreen />
       </StatusProvider>

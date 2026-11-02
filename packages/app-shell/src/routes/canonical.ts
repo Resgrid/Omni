@@ -39,6 +39,8 @@ const hasChatHub = (m: VariantManifest): boolean => m.capabilities.realtime.chat
 /** Field Records exist where the variant has its own `Records.Field.<App>` flag (BigBoard has none). */
 const hasFieldRecords = (m: VariantManifest): boolean => recordsFieldFlagKey(m.id) !== null;
 const commandTier = { requires: (m: VariantManifest) => m.capabilities.incidentCommand === 'command', module: 'incident-command' } as const;
+/** The custom / indoor maps browser (`features/custom-maps`). */
+const customIndoorMaps = { requires: (m: VariantManifest) => m.capabilities.maps.customIndoor } as const;
 
 export const CANONICAL_ROUTES = {
   home: route('/'),
@@ -106,10 +108,10 @@ export const CANONICAL_ROUTES = {
   settingsOfflineMaps: route('/settings/offline-maps', [], { requires: (m) => m.offline.mapPacks !== 'display' }),
   /** The department map (features/map; `?callId=`, `?unitId=`, `?userId=`, `?poiId=` focus a pin). `/maps` is the custom/indoor maps browser. */
   map: route('/map'),
-  maps: route('/maps'),
-  mapsSearch: route('/maps/search'),
-  customMap: route('/maps/custom/[id]', ['id']),
-  indoorMap: route('/maps/indoor/[id]', ['id']),
+  maps: route('/maps', [], customIndoorMaps),
+  mapsSearch: route('/maps/search', [], customIndoorMaps),
+  customMap: route('/maps/custom/[id]', ['id'], customIndoorMaps),
+  indoorMap: route('/maps/indoor/[id]', ['id'], customIndoorMaps),
   workOrderDetail: route('/work-orders/[id]', ['id'], { module: 'work-orders' }),
   approveSignIn: route('/approve-sign-in', [], { requires: (m) => m.capabilities.push.approveSignIns, module: 'approve-sign-in' }),
   // Unit: the status console (Electron MDT / desktop), the routes stack and the unit's inventory counts.
@@ -123,6 +125,8 @@ export const CANONICAL_ROUTES = {
   unitRouteStopContact: route('/routes/stop/contact', [], { module: 'unit-routes' }),
   unitRouteHistory: route('/routes/history/[planId]', ['planId'], { module: 'unit-routes' }),
   unitRouteInstance: route('/routes/history/instance/[id]', ['id'], { module: 'unit-routes' }),
+  /** In-app turn-by-turn (MapLibre plan §9; `?callId=`, `?instanceId=`, or a point handed over in memory): variants with `maps.navigationInApp`. */
+  navigate: route('/navigate', [], { requires: (m) => m.capabilities.maps.navigationInApp }),
   inventory: route('/inventory', [], { module: 'inventory' }),
   inventoryCount: route('/inventory/count/[id]', ['id'], { module: 'inventory' }),
   // BigBoard: the dashboard lives at /home (homeTab); its configure screen takes ?widget=.

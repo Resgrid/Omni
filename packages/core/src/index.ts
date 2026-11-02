@@ -6,6 +6,7 @@ export type { AnalyticsEventProperties, CountlyClient } from './analytics/types'
 export { isDev, isJest } from './dev';
 export * from './env/env';
 export * from './lifecycle/app-lifecycle';
+export * from './lifecycle/user-activity';
 export * from './logging/logger';
 export * from './logging/sanitize';
 export * from './logging/types';
@@ -13,6 +14,22 @@ export * from './navigation/router';
 export * from './platform/platform';
 export * from './sentry/filters';
 export * from './sentry/sentry';
+export * from './updates/app-updates';
+export type {
+  AppUpdateApplyResult,
+  AppUpdateApplyTrigger,
+  AppUpdateCheckTrigger,
+  AppUpdateRestartGuard,
+  AppUpdatesState,
+  AppUpdateStatus,
+  CurrentAppUpdate,
+  PendingAppUpdate,
+  UpdatesCheckResult,
+  UpdatesFetchResult,
+  UpdatesManifestLike,
+  UpdatesModule,
+} from './updates/types';
+export * from './updates/use-app-updates';
 export * from './utils/dates';
 export * from './utils/keep-alive';
 export * from './utils/request-errors';

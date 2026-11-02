@@ -22,10 +22,10 @@ const STATUSES = [AVAILABLE, RESPONDING, ON_SCENE];
 const call = (CallId: string, Name: string): CallResultData => ({ CallId, Name, Number: CallId }) as CallResultData;
 const station = (GroupId: string, Name: string): GroupResultData => ({ GroupId, Name, TypeId: '2' }) as GroupResultData;
 
-const renderPicker = (props: Partial<StatusPickerProps> = {}) => {
+const renderPicker = async (props: Partial<StatusPickerProps> = {}) => {
   const onSubmitStatus = jest.fn(async () => 'sent' as const);
   const onClose = jest.fn();
-  const utils = render(<StatusPicker isOpen onClose={onClose} subject="unit" statuses={STATUSES} onSubmitStatus={onSubmitStatus} {...props} />);
+  const utils = await render(<StatusPicker isOpen onClose={onClose} subject="unit" statuses={STATUSES} onSubmitStatus={onSubmitStatus} {...props} />);
   return { ...utils, onSubmitStatus: (props.onSubmitStatus as jest.Mock | undefined) ?? onSubmitStatus, onClose };
 };
 
@@ -35,10 +35,10 @@ beforeEach(() => {
 
 describe('StatusPicker', () => {
   it('submits a status without destination or note and closes with a success toast', async () => {
-    const { onSubmitStatus, onClose } = renderPicker();
+    const { onSubmitStatus, onClose } = await renderPicker();
 
-    fireEvent.press(screen.getByTestId('status-option-10', q));
-    fireEvent.press(screen.getByTestId('status-picker-submit', q));
+    await fireEvent.press(screen.getByTestId('status-option-10', q));
+    await fireEvent.press(screen.getByTestId('status-picker-submit', q));
 
     await waitFor(() => expect(onSubmitStatus).toHaveBeenCalledTimes(1));
     expect(onSubmitStatus).toHaveBeenCalledWith(expect.objectContaining({ status: AVAILABLE, respondingTo: '', respondingToType: null, note: '' }));
@@ -46,104 +46,104 @@ describe('StatusPicker', () => {
     expect(useToastStore.getState().toasts[0]).toEqual(expect.objectContaining({ type: 'success', message: 'status.status_saved_successfully' }));
   });
 
-  it('titles the unit picker and shows who an on-behalf status is for', () => {
-    renderPicker({ isOnBehalf: true, subjectName: 'Engine 1' });
+  it('titles the unit picker and shows who an on-behalf status is for', async () => {
+    await renderPicker({ isOnBehalf: true, subjectName: 'Engine 1' });
     expect(screen.getByText('status.select_unit_status', q)).toBeTruthy();
     expect(screen.getByTestId('status-picker-on-behalf', q)).toHaveTextContent('status.on_behalf_of:Engine 1');
   });
 
   it('defaults a destination status to the active call and lets the crew pick a station instead (lenient Detail)', async () => {
     const calls = [call('100', 'Structure Fire'), call('101', 'Medical')];
-    const { onSubmitStatus } = renderPicker({ destinations: { calls, stations: [station('7', 'Station 7')], pois: [] }, defaultCall: calls[1], lenientDestinations: true });
+    const { onSubmitStatus } = await renderPicker({ destinations: { calls, stations: [station('7', 'Station 7')], pois: [] }, defaultCall: calls[1], lenientDestinations: true });
 
-    fireEvent.press(screen.getByTestId('status-option-11', q));
-    fireEvent.press(screen.getByTestId('status-picker-next', q));
+    await fireEvent.press(screen.getByTestId('status-option-11', q));
+    await fireEvent.press(screen.getByTestId('status-picker-next', q));
 
     expect(screen.getByTestId('status-destination-call-101', q).props.accessibilityState).toEqual({ selected: true });
-    fireEvent.press(screen.getByTestId('status-destination-tab-station', q));
-    fireEvent.press(screen.getByTestId('status-destination-station-7', q));
-    fireEvent.press(screen.getByTestId('status-picker-submit', q));
+    await fireEvent.press(screen.getByTestId('status-destination-tab-station', q));
+    await fireEvent.press(screen.getByTestId('status-destination-station-7', q));
+    await fireEvent.press(screen.getByTestId('status-picker-submit', q));
 
     await waitFor(() => expect(onSubmitStatus).toHaveBeenCalledWith(expect.objectContaining({ respondingTo: '7', respondingToType: 1 })));
   });
 
   it('keeps an explicit "No destination" instead of re-applying the default call', async () => {
     const calls = [call('100', 'Structure Fire')];
-    const { onSubmitStatus } = renderPicker({ destinations: { calls, stations: [], pois: [] }, defaultCall: calls[0] });
+    const { onSubmitStatus } = await renderPicker({ destinations: { calls, stations: [], pois: [] }, defaultCall: calls[0] });
 
-    fireEvent.press(screen.getByTestId('status-option-11', q));
-    fireEvent.press(screen.getByTestId('status-picker-next', q));
-    fireEvent.press(screen.getByTestId('status-destination-none', q));
-    fireEvent.press(screen.getByTestId('status-picker-submit', q));
+    await fireEvent.press(screen.getByTestId('status-option-11', q));
+    await fireEvent.press(screen.getByTestId('status-picker-next', q));
+    await fireEvent.press(screen.getByTestId('status-destination-none', q));
+    await fireEvent.press(screen.getByTestId('status-picker-submit', q));
 
     await waitFor(() => expect(onSubmitStatus).toHaveBeenCalledWith(expect.objectContaining({ respondingTo: '', respondingToType: null })));
   });
 
   it('carries the default call silently for a status without a destination step', async () => {
     const calls = [call('100', 'Structure Fire')];
-    const { onSubmitStatus } = renderPicker({ destinations: { calls, stations: [], pois: [] }, defaultCall: calls[0] });
+    const { onSubmitStatus } = await renderPicker({ destinations: { calls, stations: [], pois: [] }, defaultCall: calls[0] });
 
-    fireEvent.press(screen.getByTestId('status-option-10', q));
-    fireEvent.press(screen.getByTestId('status-picker-submit', q));
+    await fireEvent.press(screen.getByTestId('status-option-10', q));
+    await fireEvent.press(screen.getByTestId('status-picker-submit', q));
 
     await waitFor(() => expect(onSubmitStatus).toHaveBeenCalledWith(expect.objectContaining({ respondingTo: '100', respondingToType: 2 })));
   });
 
   it('requires a note when the status asks for one', async () => {
-    const { onSubmitStatus } = renderPicker();
+    const { onSubmitStatus } = await renderPicker();
 
-    fireEvent.press(screen.getByTestId('status-option-12', q));
-    fireEvent.press(screen.getByTestId('status-picker-next', q));
+    await fireEvent.press(screen.getByTestId('status-option-12', q));
+    await fireEvent.press(screen.getByTestId('status-picker-next', q));
 
     const submit = screen.getByTestId('status-picker-submit', q);
     expect(submit.props.accessibilityState?.disabled ?? submit.props.disabled).toBeTruthy();
-    fireEvent.press(submit);
+    await fireEvent.press(submit);
     expect(onSubmitStatus).not.toHaveBeenCalled();
 
-    fireEvent.changeText(screen.getByTestId('status-picker-note-input', q), '  Command established  ');
-    fireEvent.press(screen.getByTestId('status-picker-submit', q));
+    await fireEvent.changeText(screen.getByTestId('status-picker-note-input', q), '  Command established  ');
+    await fireEvent.press(screen.getByTestId('status-picker-submit', q));
     await waitFor(() => expect(onSubmitStatus).toHaveBeenCalledWith(expect.objectContaining({ status: ON_SCENE, note: 'Command established' })));
   });
 
-  it('waits for the destination lists before submitting a status that may carry a call', () => {
-    const { onSubmitStatus } = renderPicker({ isLoadingDestinations: true, hasPotentialDefaultCall: true });
-    fireEvent.press(screen.getByTestId('status-option-10', q));
-    fireEvent.press(screen.getByTestId('status-picker-submit', q));
+  it('waits for the destination lists before submitting a status that may carry a call', async () => {
+    const { onSubmitStatus } = await renderPicker({ isLoadingDestinations: true, hasPotentialDefaultCall: true });
+    await fireEvent.press(screen.getByTestId('status-option-10', q));
+    await fireEvent.press(screen.getByTestId('status-picker-submit', q));
     expect(onSubmitStatus).not.toHaveBeenCalled();
   });
 
-  it('marks the current status by id, and by BaseType when the id is not in the set — never by text', () => {
-    const { rerender } = renderPicker({ current: { StateId: 11 } });
+  it('marks the current status by id, and by BaseType when the id is not in the set — never by text', async () => {
+    const { rerender } = await renderPicker({ current: { StateId: 11 } });
     expect(screen.getByTestId('status-option-11', q).props.accessibilityLabel).toBe('Responding, status.current');
 
     // A department option named "Responding" with another meaning must not be matched by its text.
-    rerender(<StatusPicker isOpen onClose={jest.fn()} subject="unit" statuses={STATUSES} current={{ StateId: 999, BaseType: ActionBaseTypes.OnScene }} onSubmitStatus={jest.fn()} />);
+    await rerender(<StatusPicker isOpen onClose={jest.fn()} subject="unit" statuses={STATUSES} current={{ StateId: 999, BaseType: ActionBaseTypes.OnScene }} onSubmitStatus={jest.fn()} />);
     expect(screen.getByTestId('status-option-12', q).props.accessibilityLabel).toBe('On Scene, status.current');
     expect(screen.getByTestId('status-option-11', q).props.accessibilityLabel).toBe('Responding');
   });
 
-  it('offers only the next statuses of the current one until "show all" is chosen', () => {
+  it('offers only the next statuses of the current one until "show all" is chosen', async () => {
     const withNext = [status(1, 'Available', { NextIds: [2] }), status(2, 'Responding'), status(3, 'Out of Service')];
-    renderPicker({ statuses: withNext, current: { StateId: 1 } });
+    await renderPicker({ statuses: withNext, current: { StateId: 1 } });
 
     expect(screen.queryByTestId('status-option-3', q)).toBeNull();
-    fireEvent.press(screen.getByTestId('status-picker-show-all', q));
+    await fireEvent.press(screen.getByTestId('status-picker-show-all', q));
     expect(screen.getByTestId('status-option-3', q)).toBeTruthy();
   });
 
   it('saves a held status at once when nothing more is needed (hold-to-confirm)', async () => {
-    const { onSubmitStatus } = renderPicker({ holdToConfirm: true });
+    const { onSubmitStatus } = await renderPicker({ holdToConfirm: true });
 
     expect(screen.queryByTestId('status-option-10', q)).toBeNull();
-    fireEvent(screen.getByTestId('status-hold-10', q), 'accessibilityAction', { nativeEvent: { actionName: 'activate' } });
+    await fireEvent(screen.getByTestId('status-hold-10', q), 'accessibilityAction', { nativeEvent: { actionName: 'activate' } });
 
     await waitFor(() => expect(onSubmitStatus).toHaveBeenCalledWith(expect.objectContaining({ status: AVAILABLE })));
   });
 
   it('opens the note step after a hold when the held status needs a note', async () => {
-    const { onSubmitStatus } = renderPicker({ holdToConfirm: true });
+    const { onSubmitStatus } = await renderPicker({ holdToConfirm: true });
 
-    fireEvent(screen.getByTestId('status-hold-12', q), 'accessibilityAction', { nativeEvent: { actionName: 'activate' } });
+    await fireEvent(screen.getByTestId('status-hold-12', q), 'accessibilityAction', { nativeEvent: { actionName: 'activate' } });
 
     await waitFor(() => expect(screen.getByTestId('status-picker-note-input', q)).toBeTruthy());
     expect(onSubmitStatus).not.toHaveBeenCalled();
@@ -151,33 +151,33 @@ describe('StatusPicker', () => {
 
   it('shows the staffing tab and submits staffing separately', async () => {
     const onSubmitStaffing = jest.fn(async () => 'queued' as const);
-    const { onClose } = renderPicker({
+    const { onClose } = await renderPicker({
       subject: 'personnel',
       showStaffing: true,
       staffingOptions: [status(0, 'Available'), status(2, 'Unavailable')],
       onSubmitStaffing,
     });
 
-    fireEvent.press(screen.getByTestId('status-picker-tab-staffing', q));
-    fireEvent.press(screen.getByTestId('staffing-option-2', q));
-    fireEvent.press(screen.getByTestId('status-picker-submit', q));
+    await fireEvent.press(screen.getByTestId('status-picker-tab-staffing', q));
+    await fireEvent.press(screen.getByTestId('staffing-option-2', q));
+    await fireEvent.press(screen.getByTestId('status-picker-submit', q));
 
     await waitFor(() => expect(onSubmitStaffing).toHaveBeenCalledWith({ staffing: expect.objectContaining({ Id: 2 }), note: '' }));
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     expect(useToastStore.getState().toasts[0]).toEqual(expect.objectContaining({ type: 'warning', message: 'status.status_queued' }));
   });
 
-  it('hides the staffing tab when the variant has no staffing capability', () => {
-    renderPicker({ subject: 'personnel', showStaffing: false, staffingOptions: [status(0, 'Available')] });
+  it('hides the staffing tab when the variant has no staffing capability', async () => {
+    await renderPicker({ subject: 'personnel', showStaffing: false, staffingOptions: [status(0, 'Available')] });
     expect(screen.queryByTestId('status-picker-tab-staffing', q)).toBeNull();
   });
 
   it('stays open with an error when the server rejects the status', async () => {
     const onSubmitStatus = jest.fn(async () => 'rejected' as const);
-    const { onClose } = renderPicker({ onSubmitStatus });
+    const { onClose } = await renderPicker({ onSubmitStatus });
 
-    fireEvent.press(screen.getByTestId('status-option-10', q));
-    fireEvent.press(screen.getByTestId('status-picker-submit', q));
+    await fireEvent.press(screen.getByTestId('status-option-10', q));
+    await fireEvent.press(screen.getByTestId('status-picker-submit', q));
 
     await waitFor(() => expect(screen.getByTestId('status-picker-error', q)).toHaveTextContent('status.failed_to_save_status'));
     expect(onClose).not.toHaveBeenCalled();
@@ -188,22 +188,22 @@ describe('HoldToConfirmButton', () => {
   beforeEach(() => jest.useFakeTimers());
   afterEach(() => jest.useRealTimers());
 
-  it('confirms after the hold duration and treats a short press as a tap', () => {
+  it('confirms after the hold duration and treats a short press as a tap', async () => {
     const onConfirm = jest.fn();
     const onTap = jest.fn();
-    render(
+    await render(
       <HoldToConfirmButton onConfirm={onConfirm} onTap={onTap} backgroundColor="#000000" foregroundColor="#FFFFFF" testID="hold">
         <></>
       </HoldToConfirmButton>
     );
 
-    fireEvent(screen.getByTestId('hold'), 'pressIn');
-    fireEvent(screen.getByTestId('hold'), 'pressOut');
+    await fireEvent(screen.getByTestId('hold'), 'pressIn');
+    await fireEvent(screen.getByTestId('hold'), 'pressOut');
     expect(onTap).toHaveBeenCalledTimes(1);
     expect(onConfirm).not.toHaveBeenCalled();
 
-    fireEvent(screen.getByTestId('hold'), 'pressIn');
-    act(() => {
+    await fireEvent(screen.getByTestId('hold'), 'pressIn');
+    await act(() => {
       jest.advanceTimersByTime(2000);
     });
     expect(onConfirm).toHaveBeenCalledTimes(1);

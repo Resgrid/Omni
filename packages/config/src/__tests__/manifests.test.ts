@@ -37,6 +37,25 @@ describe('variant manifests', () => {
     expect(m.storage.mmkvId).toBe(mmkvId);
   });
 
+  // Plan D8: device keys everywhere. Only Responder carries its legacy files over (its store build's fixed key for the
+  // main instance, its own device key for the offline queue); every other app starts over on upgrade.
+  it('carries legacy storage over for Responder only', () => {
+    expect(load('responder').storage.carryOver).toEqual({
+      ResgridResponder: { from: 'fixed-key', key: 'a330fb72-1916-4cc2-99fe-efd4986b254f' },
+      ResgridOfflineQueue: { from: 'secure-store', name: 'OFFLINE_QUEUE_ENCRYPTION_KEY' },
+      'checklists-ciphertext-v1': { from: 'unencrypted' },
+    });
+    for (const id of VARIANT_IDS.filter((variant) => variant !== 'responder')) {
+      expect(load(id).storage.carryOver).toBeUndefined();
+    }
+  });
+
+  it('rejects a carry-over for an instance the manifest does not declare', () => {
+    const manifest = JSON.parse(fs.readFileSync(path.join(variantsDir, 'ic', 'variant.json'), 'utf8'));
+    manifest.storage.carryOver = { ResgridUnit: { from: 'unencrypted' } };
+    expect(() => parseVariantManifest(manifest)).toThrow('storage.carryOver');
+  });
+
   // Every Omni build must sort above every legacy build (omni-plan Appendix B).
   it.each([
     ['responder', '10.312', 5080657],

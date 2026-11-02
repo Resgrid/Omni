@@ -1,4 +1,5 @@
 import { personnelFullName } from '@resgrid/data';
+import { UnitNavigationEtaChip } from '@resgrid/features/navigation-eta';
 import { readableColors } from '@resgrid/features/status';
 import { useTranslation } from '@resgrid/i18n';
 import type { PersonnelInfoResultData, UnitInfoResultData } from '@resgrid/models';
@@ -62,7 +63,10 @@ export interface ConsoleUnitRowProps {
   onSetStatusForCall?: (unitId: string) => void;
 }
 
-/** A unit on the console: type icon, name, type · group, crew seats, destination and its status in the department colour. */
+/**
+ * A unit on the console: type icon, name, type · group, crew seats, destination, its live ETA while it navigates in the
+ * Unit app, and its status in the department colour.
+ */
 export const ConsoleUnitRow: React.FC<ConsoleUnitRowProps> = React.memo(({ unit, isSelected, isOnCall, isSelectionMode, hasPendingStatus = false, onPress, onLongPress, onSetStatusForCall }) => {
   const { t } = useTranslation();
   const subtitle = [unit.Type, unit.GroupName]
@@ -108,6 +112,7 @@ export const ConsoleUnitRow: React.FC<ConsoleUnitRowProps> = React.memo(({ unit,
               </Text>
             </HStack>
           ) : null}
+          <UnitNavigationEtaChip unitId={unit.UnitId} testID={`console-unit-${unit.UnitId}-eta`} />
         </VStack>
         <VStack space="xs" className="items-end">
           <StatusPill text={unit.CurrentStatus} color={unit.CurrentStatusColor} testID={`console-unit-${unit.UnitId}-status`} />

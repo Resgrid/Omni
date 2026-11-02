@@ -100,3 +100,18 @@ export interface NewRoutePlanInput {
 export interface UpdateRoutePlanInput extends NewRoutePlanInput {
   RoutePlanId: string;
 }
+
+/** Core `RouteDeviationTypes` (persisted, never renumber). */
+export const RouteDeviationType = { OffRoute: 0, MissedStop: 1, OutOfOrder: 2, LateArrival: 3, LongDwell: 4 } as const;
+
+/** Body of `POST Routes/RecordDeviation` (MapLibre plan §10.4): navigation posts OffRoute with the distance from the line. */
+export interface RecordRouteDeviationInput {
+  RouteInstanceId: string;
+  /** `RouteDeviationType`. */
+  DeviationType: number;
+  Latitude: number;
+  Longitude: number;
+  /** Distance from the planned line (OffRoute). */
+  DistanceMeters: number;
+  Notes?: string | null;
+}

@@ -6,6 +6,7 @@ import { callQueuesNav } from '@resgrid/features/call-queues/nav';
 import { callsNav } from '@resgrid/features/calls/nav';
 import { chatNav } from '@resgrid/features/chat/nav';
 import { contactsNav } from '@resgrid/features/contacts/nav';
+import { customMapsNav } from '@resgrid/features/custom-maps/nav';
 import { dispatchConsoleNav } from '@resgrid/features/dispatch-console/nav';
 import { mapNav } from '@resgrid/features/map/nav';
 import { notesNav } from '@resgrid/features/notes/nav';
@@ -43,6 +44,10 @@ export const routes = defineRoutes([
   'pois',
   'poiDetail',
   'map',
+  'maps',
+  'mapsSearch',
+  'customMap',
+  'indoorMap',
   'personnel',
   'personnelDetail',
   'units',
@@ -101,6 +106,7 @@ export const nav = defineNav([
   ...featureNav(chatNav, 'sidebar', { order: 60 }),
   ...featureNav(notificationsNav, 'sidebar', { order: 70 }),
   ...featureNav(settingsNavEntries, variant),
+  ...featureNav(customMapsNav, { maps: 'sidebar', 'maps-search': 'hidden' }, { order: 26 }),
   ...featureNav(offlineMapsNav, 'hidden', { order: 906 }),
   ...featureNav(authNavEntries, variant),
   detailNav.callDetail,

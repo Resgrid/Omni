@@ -82,51 +82,51 @@ describe('NotificationsInboxScreen', () => {
   it('opens an item with a safe target like a tapped push and marks it read', async () => {
     const call = novuItem('n1', 'C1234');
     setInbox([call]);
-    render(<NotificationsInboxScreen />);
+    await render(<NotificationsInboxScreen />);
 
     expect(screen.getByTestId('notification-row-n1-unread')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('notification-row-n1'));
+    await fireEvent.press(screen.getByTestId('notification-row-n1'));
     await waitFor(() => expect(mockOpenInboxItem).toHaveBeenCalledWith(expect.objectContaining({ id: 'n1', data: { eventCode: 'C1234', unit: 'E1' } })));
     expect(call.read).toHaveBeenCalled();
   });
 
   it('never navigates for an unsafe id: the detail sheet opens instead', async () => {
     setInbox([novuItem('n2', 'g:a/b?c')]);
-    render(<NotificationsInboxScreen />);
+    await render(<NotificationsInboxScreen />);
 
-    fireEvent.press(screen.getByTestId('notification-row-n2'));
+    await fireEvent.press(screen.getByTestId('notification-row-n2'));
     await waitFor(() => expect(screen.getByTestId('notification-detail-sheet', q)).toBeTruthy());
     expect(mockOpenInboxItem).not.toHaveBeenCalled();
     expect(screen.queryByTestId('notification-detail-open', q)).toBeNull();
     expect(screen.getByText('E1', q)).toBeTruthy();
   });
 
-  it('waits for the Novu provider before rendering the inbox', () => {
-    render(<NotificationsInboxScreen isReady={false} />);
+  it('waits for the Novu provider before rendering the inbox', async () => {
+    await render(<NotificationsInboxScreen isReady={false} />);
     expect(screen.getByTestId('notifications-inbox-pending')).toBeTruthy();
   });
 
-  it('shows the empty state', () => {
+  it('shows the empty state', async () => {
     setInbox([]);
-    render(<NotificationsInboxScreen />);
+    await render(<NotificationsInboxScreen />);
     expect(screen.getByTestId('notifications-empty')).toBeTruthy();
   });
 });
 
 describe('PushNotificationModal', () => {
   it('shows a call push with "View Call" and navigates through the variant resolver', async () => {
-    render(<PushNotificationModal />);
+    await render(<PushNotificationModal />);
     await act(() => usePushNotificationModalStore.getState().showNotificationModal({ eventCode: 'C55', title: 'Structure Fire', body: '1 Main St' }));
 
     expect(screen.getByText('Structure Fire', q)).toBeTruthy();
     expect(screen.getByTestId('push-notification-type', q)).toHaveTextContent('push_notifications.types.call');
-    fireEvent.press(screen.getByTestId('push-notification-view', q));
+    await fireEvent.press(screen.getByTestId('push-notification-view', q));
     expect(mockNavigate).toHaveBeenCalledWith(expect.objectContaining({ kind: 'call', id: '55' }));
     expect(usePushNotificationModalStore.getState().isOpen).toBe(false);
   });
 
   it('hides "View" for a target the variant has no route for and for unsafe ids', async () => {
-    render(<PushNotificationModal />);
+    await render(<PushNotificationModal />);
     await act(() => usePushNotificationModalStore.getState().showNotificationModal({ eventCode: 'M12', body: 'Weekly drill' }));
     expect(screen.queryByTestId('push-notification-view', q)).toBeNull();
 
@@ -136,21 +136,21 @@ describe('PushNotificationModal', () => {
 
   it('confirms a communication test receipt and stays open on failure', async () => {
     mockRecordPushResponse.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce({});
-    render(<PushNotificationModal />);
+    await render(<PushNotificationModal />);
     await act(() => usePushNotificationModalStore.getState().showNotificationModal({ eventCode: 'CT:tok-1', body: 'Test' }));
 
-    fireEvent.press(screen.getByTestId('push-notification-confirm-receipt', q));
+    await fireEvent.press(screen.getByTestId('push-notification-confirm-receipt', q));
     await waitFor(() => expect(mockRecordPushResponse).toHaveBeenCalledWith({}, { ResponseToken: 'tok-1' }));
     expect(usePushNotificationModalStore.getState().isOpen).toBe(true);
 
-    fireEvent.press(screen.getByTestId('push-notification-confirm-receipt', q));
+    await fireEvent.press(screen.getByTestId('push-notification-confirm-receipt', q));
     await waitFor(() => expect(usePushNotificationModalStore.getState().isOpen).toBe(false));
   });
 
   it('dismisses', async () => {
-    render(<PushNotificationModal />);
+    await render(<PushNotificationModal />);
     await act(() => usePushNotificationModalStore.getState().showNotificationModal({ eventCode: 'N9', body: 'Hello' }));
-    fireEvent.press(screen.getByTestId('push-notification-dismiss', q));
+    await fireEvent.press(screen.getByTestId('push-notification-dismiss', q));
     expect(usePushNotificationModalStore.getState().isOpen).toBe(false);
   });
 });

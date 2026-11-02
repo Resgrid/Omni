@@ -211,7 +211,8 @@ describe('discovery and preferred device', () => {
     const init = fresh.initialize();
     await jest.advanceTimersByTimeAsync(600);
     await init;
-    expect(BleManager.scan).toHaveBeenCalled();
+    // react-native-ble-manager 12.4+ takes one options object (positional arguments are ignored).
+    expect(BleManager.scan).toHaveBeenCalledWith(expect.objectContaining({ serviceUUIDs: [], allowDuplicates: false }));
 
     BleManager.getConnectedPeripherals.mockResolvedValue([ainaDevice]);
     BleManager.retrieveServices.mockResolvedValue({ ...ainaDevice, characteristics: [] });

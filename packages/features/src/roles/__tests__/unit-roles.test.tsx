@@ -51,7 +51,7 @@ describe('UnitRolesSheet', () => {
     usePersonnelStore.setState({ personnel: [person('a', 'Alex'), person('b', 'Blair', ['Captain'])], fetchPersonnel: jest.fn(async () => undefined) });
   });
 
-  const renderSheet = (onClose = jest.fn()) =>
+  const renderSheet = async (onClose = jest.fn()) =>
     render(
       <StatusProvider activeUnitId="u1">
         <UnitRolesSheet isOpen onClose={onClose} />
@@ -60,17 +60,17 @@ describe('UnitRolesSheet', () => {
 
   it('shows who sits where and saves a reassignment', async () => {
     const onClose = jest.fn();
-    renderSheet(onClose);
+    await renderSheet(onClose);
 
     expect(screen.getByTestId('role-assignment-driver-name', q)).toHaveTextContent('Alex Doe');
     expect(screen.getByTestId('role-assignment-officer-name', q)).toHaveTextContent('roles.unassigned');
 
-    fireEvent.press(screen.getByTestId('role-assignment-officer', q));
+    await fireEvent.press(screen.getByTestId('role-assignment-officer', q));
     expect(screen.getByTestId('role-user-a-elsewhere', q)).toHaveTextContent('Driver');
     expect(screen.getByTestId('role-user-a-unqualified', q)).toBeTruthy();
-    fireEvent.press(screen.getByTestId('role-user-b', q));
+    await fireEvent.press(screen.getByTestId('role-user-b', q));
 
-    fireEvent.press(screen.getByTestId('unit-roles-save', q));
+    await fireEvent.press(screen.getByTestId('unit-roles-save', q));
     await waitFor(() =>
       expect(assignRoles).toHaveBeenCalledWith({
         UnitId: 'u1',
@@ -86,11 +86,11 @@ describe('UnitRolesSheet', () => {
   it('keeps the picks and shows the error when the save fails', async () => {
     assignRoles.mockRejectedValueOnce(new Error('offline'));
     const onClose = jest.fn();
-    renderSheet(onClose);
+    await renderSheet(onClose);
 
-    fireEvent.press(screen.getByTestId('role-assignment-driver', q));
-    fireEvent.press(screen.getByTestId('role-user-unassign', q));
-    fireEvent.press(screen.getByTestId('unit-roles-save', q));
+    await fireEvent.press(screen.getByTestId('role-assignment-driver', q));
+    await fireEvent.press(screen.getByTestId('role-user-unassign', q));
+    await fireEvent.press(screen.getByTestId('unit-roles-save', q));
 
     await waitFor(() => expect(screen.getByTestId('unit-roles-save-error', q)).toHaveTextContent('roles.save_error'));
     expect(onClose).not.toHaveBeenCalled();

@@ -23,29 +23,29 @@ const withMode = (mode: 'light' | 'dark' | 'system') =>
 describe('useThemeColors', () => {
   afterEach(() => mockOsScheme.mockReturnValue('light'));
 
-  it('returns light token colours in light mode', () => {
-    const { result } = renderHook(() => useThemeColors(), { wrapper: withMode('light') });
+  it('returns light token colours in light mode', async () => {
+    const { result } = await renderHook(() => useThemeColors(), { wrapper: withMode('light') });
 
     expect(result.current).toMatchObject({ scheme: 'light', isDark: false, background: lightTokens['background-0'], text: lightTokens['typography-900'], primary: lightTokens['primary-500'] });
   });
 
-  it('returns dark token colours in dark mode', () => {
-    const { result } = renderHook(() => useThemeColors(), { wrapper: withMode('dark') });
+  it('returns dark token colours in dark mode', async () => {
+    const { result } = await renderHook(() => useThemeColors(), { wrapper: withMode('dark') });
 
     expect(result.current).toMatchObject({ scheme: 'dark', isDark: true, background: darkTokens['background-0'], text: darkTokens['typography-900'], error: darkTokens['error-500'] });
   });
 
-  it('follows the OS in system mode, and without a provider', () => {
+  it('follows the OS in system mode, and without a provider', async () => {
     mockOsScheme.mockReturnValue('dark');
 
-    expect(renderHook(() => useThemeColors(), { wrapper: withMode('system') }).result.current.isDark).toBe(true);
-    expect(renderHook(() => useThemeColors()).result.current.isDark).toBe(true);
+    expect((await renderHook(() => useThemeColors(), { wrapper: withMode('system') })).result.current.isDark).toBe(true);
+    expect((await renderHook(() => useThemeColors())).result.current.isDark).toBe(true);
   });
 
-  it('lets an explicit mode override the OS (web cannot see the explicit choice otherwise)', () => {
+  it('lets an explicit mode override the OS (web cannot see the explicit choice otherwise)', async () => {
     mockOsScheme.mockReturnValue('dark');
 
-    expect(renderHook(() => useResolvedColorScheme(), { wrapper: withMode('light') }).result.current).toBe('light');
+    expect((await renderHook(() => useResolvedColorScheme(), { wrapper: withMode('light') })).result.current).toBe('light');
   });
 
   it('formats a token with alpha as rgba', () => {
@@ -53,10 +53,10 @@ describe('useThemeColors', () => {
     expect(getThemeColors('dark').token('primary-600')).toBe(darkTokens['primary-600']);
   });
 
-  it('memoizes one object per scheme', () => {
-    const { result, rerender } = renderHook(() => useThemeColors(), { wrapper: withMode('light') });
+  it('memoizes one object per scheme', async () => {
+    const { result, rerender } = await renderHook(() => useThemeColors(), { wrapper: withMode('light') });
     const first = result.current;
-    rerender({});
+    await rerender({});
     expect(result.current).toBe(first);
   });
 

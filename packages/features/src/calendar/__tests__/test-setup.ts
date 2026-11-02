@@ -30,7 +30,7 @@ jest.doMock('@resgrid/i18n', () => {
     LEGACY_LANGUAGE_STORAGE_KEY: 'local',
     isSupportedLanguage: (value: unknown) => typeof value === 'string' && mockLanguages.includes(value),
     getCurrentLanguage: () => mockI18n.language,
-    setLanguage: jest.fn(async () => undefined),
+    setLanguage: jest.fn(async () => true),
     useTranslation: () => ({ t: mockT, i18n: mockI18n }),
     translate: mockT,
   };

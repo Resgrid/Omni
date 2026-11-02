@@ -55,9 +55,18 @@ jest.mock('@resgrid/maps', () => {
       ),
     UnitLocationMarker: ({ latitude, longitude }: { latitude: number; longitude: number }) => mockReact.createElement(Text, { testID: 'mock-own-location' }, `${latitude},${longitude}`),
     GeoJsonMapLayer: ({ id }: { id: string }) => mockReact.createElement(View, { testID: `mock-${id}` }),
+    OfflineDepartmentLayers: ({ visibleLayerIds, excludeLayerIds, idPrefix }: { visibleLayerIds?: string[] | null; excludeLayerIds?: string[]; idPrefix?: string }) =>
+      mockReact.createElement(Text, { testID: `mock-${idPrefix ?? 'offline-dept-layers'}` }, JSON.stringify({ visible: visibleLayerIds ?? null, exclude: excludeLayerIds ?? [] })),
     ShapeSource: ({ id, shape, children }: { id: string; shape?: { features?: unknown[] }; children?: unknown }) =>
       mockReact.createElement(View, { testID: `mock-source-${id}`, accessibilityLabel: String(shape?.features?.length ?? 0) }, children),
     CircleLayer: () => null,
+    FillLayer: () => null,
+    LineLayer: () => null,
+    SymbolLayer: () => null,
+    TrafficLayer: ({ visible = true, idPrefix }: { visible?: boolean; idPrefix?: string }) =>
+      mockReact.createElement(View, { testID: `mock-traffic-${idPrefix ?? 'rg-traffic'}`, accessibilityLabel: visible ? 'visible' : 'hidden' }),
+    MapTrafficButton: ({ isOn, onPress, testID, side = 'right', bottomOffset = 20 }: { isOn: boolean; onPress: () => void; testID?: string; side?: string; bottomOffset?: number }) =>
+      mockReact.createElement(Pressable, { onPress, testID: testID ?? 'map-traffic-button', accessibilityHint: `${side}:${bottomOffset}`, accessibilityState: { selected: isOn } }),
     MapFocusBanner: ({ title, detail, onRecenter }: { title: string; detail?: string | null; onRecenter?: () => void }) =>
       mockReact.createElement(
         View,

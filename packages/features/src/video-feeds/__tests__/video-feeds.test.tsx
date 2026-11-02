@@ -74,7 +74,7 @@ describe('feed format utils', () => {
 describe('VideoFeedsTab', () => {
   it('view: everyone watches and copies; no add, edit or delete', async () => {
     activateVariant('responder');
-    render(<VideoFeedsTab callId="10" />);
+    await render(<VideoFeedsTab callId="10" />);
     expect(screen.getByText('Drone 1')).toBeTruthy();
     expect(screen.queryByTestId('video-feeds-add')).toBeNull();
     expect(screen.queryByTestId('video-feed-edit-f1')).toBeNull();
@@ -86,47 +86,47 @@ describe('VideoFeedsTab', () => {
 
   it('manage (Dispatch): add with validation, and delete after confirmation', async () => {
     activateVariant('dispatch');
-    render(<VideoFeedsTab callId="10" />);
-    fireEvent.press(screen.getByTestId('video-feeds-add'));
+    await render(<VideoFeedsTab callId="10" />);
+    await fireEvent.press(screen.getByTestId('video-feeds-add'));
     await act(async () => fireEvent.press(screen.getByTestId('video-feed-form-save', hidden)));
     expect(mockSaveFeed).not.toHaveBeenCalled();
     expect(screen.getByText('video_feeds.name_required', hidden)).toBeTruthy();
-    fireEvent.changeText(screen.getByTestId('video-feed-form-name', hidden), 'Traffic cam');
-    fireEvent.changeText(screen.getByTestId('video-feed-form-url', hidden), 'https://cams.example.org/stream.mpd');
+    await fireEvent.changeText(screen.getByTestId('video-feed-form-name', hidden), 'Traffic cam');
+    await fireEvent.changeText(screen.getByTestId('video-feed-form-url', hidden), 'https://cams.example.org/stream.mpd');
     await act(async () => fireEvent.press(screen.getByTestId('video-feed-form-save', hidden)));
     expect(mockSaveFeed).toHaveBeenCalledWith(expect.objectContaining({ CallId: '10', Name: 'Traffic cam', Url: 'https://cams.example.org/stream.mpd', FeedFormat: CallVideoFeedFormat.DASH }));
 
-    fireEvent.press(screen.getByTestId('video-feed-delete-f1'));
+    await fireEvent.press(screen.getByTestId('video-feed-delete-f1'));
     await act(async () => fireEvent.press(screen.getByTestId('video-feed-delete-confirm-button', hidden)));
     expect(mockDeleteFeed).toHaveBeenCalledWith('f1', '10');
   });
 
-  it('BigBoard (videoFeeds none) can still render the tab read-only when embedded, without manage actions', () => {
+  it('BigBoard (videoFeeds none) can still render the tab read-only when embedded, without manage actions', async () => {
     activateVariant('bigboard');
-    render(<VideoFeedsTab callId="10" />);
+    await render(<VideoFeedsTab callId="10" />);
     expect(screen.queryByTestId('video-feeds-add')).toBeNull();
   });
 });
 
 describe('VideoFeedPlayer', () => {
-  it('plays HLS in expo-video only where the variant links the video module, else in a page view', () => {
+  it('plays HLS in expo-video only where the variant links the video module, else in a page view', async () => {
     activateVariant('unit');
-    const { unmount } = render(<VideoFeedPlayer feed={feed()} isOpen onClose={jest.fn()} onCopyUrl={jest.fn()} />);
+    const { unmount } = await render(<VideoFeedPlayer feed={feed()} isOpen onClose={jest.fn()} onCopyUrl={jest.fn()} />);
     expect(screen.getByTestId('video-feed-native-player', hidden)).toBeTruthy();
-    unmount();
+    await unmount();
     activateVariant('dispatch');
-    render(<VideoFeedPlayer feed={feed()} isOpen onClose={jest.fn()} onCopyUrl={jest.fn()} />);
+    await render(<VideoFeedPlayer feed={feed()} isOpen onClose={jest.fn()} onCopyUrl={jest.fn()} />);
     expect(screen.queryByTestId('video-feed-native-player', hidden)).toBeNull();
     expect(screen.getByTestId('video-feed-webview', hidden)).toBeTruthy();
   });
 
-  it('offers only "Copy URL" for RTSP', () => {
+  it('offers only "Copy URL" for RTSP', async () => {
     activateVariant('unit');
     const onCopyUrl = jest.fn();
-    render(<VideoFeedPlayer feed={feed({ Url: 'rtsp://cam/1', FeedFormat: CallVideoFeedFormat.RTSP })} isOpen onClose={jest.fn()} onCopyUrl={onCopyUrl} />);
+    await render(<VideoFeedPlayer feed={feed({ Url: 'rtsp://cam/1', FeedFormat: CallVideoFeedFormat.RTSP })} isOpen onClose={jest.fn()} onCopyUrl={onCopyUrl} />);
     expect(screen.getByText('video_feeds.rtsp_not_supported', hidden)).toBeTruthy();
     expect(screen.queryByTestId('video-feed-webview', hidden)).toBeNull();
-    fireEvent.press(screen.getByTestId('video-feed-player-copy', hidden));
+    await fireEvent.press(screen.getByTestId('video-feed-player-copy', hidden));
     expect(onCopyUrl).toHaveBeenCalled();
   });
 });

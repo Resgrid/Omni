@@ -1,14 +1,15 @@
 import './test-setup';
 
 import { buildNewCallInput } from '@resgrid/api';
-import type { SecurityView } from '@resgrid/auth';
+import { featureFlagsStore, type SecurityView } from '@resgrid/auth';
 import { getActiveVariant } from '@resgrid/config';
-import { useCallDetailStore, useCallsStore, useCallVideoFeedsStore, useCheckInTimersStore } from '@resgrid/data';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { useCallDetailStore, useCallsStore, useCallVideoFeedsStore, useCheckInTimersStore, useNavigationEtaStore } from '@resgrid/data';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import React from 'react';
 import { Text } from 'react-native';
 
+import { CallDispatchedPanel } from '../components/detail/call-dispatched-panel';
 import { BUILT_IN_CALL_DETAIL_TABS, registerBuiltInCallDetailTabs } from '../detail-tabs/built-in-tabs';
 import { type CallDetailTabContext, getCallDetailTabs, registerCallDetailTab, resolveCallDetailTabs } from '../detail-tabs/registry';
 import CallDetailScreen from '../screens/call-detail';
@@ -142,9 +143,9 @@ describe('CallDetailScreen', () => {
     useCallVideoFeedsStore.setState({ feedsByCall: {}, fetchFeeds: jest.fn(async () => undefined) });
   });
 
-  it('renders the call, its nature through HtmlRenderer (sanitized) and the registered tabs', () => {
+  it('renders the call, its nature through HtmlRenderer (sanitized) and the registered tabs', async () => {
     activateVariant('responder');
-    render(<CallDetailScreen />);
+    await render(<CallDetailScreen />);
     expect(screen.getByTestId('call-detail-title').props.children).toBe('House fire (#C-10)');
     const html = String(screen.getAllByTestId('webview-html')[0].props.children);
     expect(html).toContain('Flames visible');
@@ -154,50 +155,109 @@ describe('CallDetailScreen', () => {
     expect(screen.queryByText('check_in.tab_title')).toBeNull();
   });
 
-  it('renders a tab a module registered', () => {
+  it('renders a tab a module registered', async () => {
     activateVariant('responder');
     const remove = registerCallDetailTab({ id: 'records', order: 85, title: 'records.title', render: () => <Text>Records panel</Text> });
-    const { unmount } = render(<CallDetailScreen />);
+    const { unmount } = await render(<CallDetailScreen />);
     expect(screen.getByText('records.title')).toBeTruthy();
-    unmount();
+    await unmount();
     remove();
   });
 
-  it('opens the menu with edit and close for users who may, and routes edit to the canonical path', () => {
+  it('opens the menu with edit and close for users who may, and routes edit to the canonical path', async () => {
     activateVariant('responder');
-    render(<CallDetailScreen />);
-    fireEvent.press(screen.getByTestId('call-detail-menu-button'));
+    await render(<CallDetailScreen />);
+    await fireEvent.press(screen.getByTestId('call-detail-menu-button'));
     expect(screen.getByTestId('call-menu-close', hidden)).toBeTruthy();
-    fireEvent.press(screen.getByTestId('call-menu-edit', hidden));
+    await fireEvent.press(screen.getByTestId('call-menu-edit', hidden));
     expect(router.push).toHaveBeenCalledWith('/call/10/edit');
   });
 
-  it('offers neither edit nor close without the CanCreateCalls right', () => {
+  it('offers neither edit nor close without the CanCreateCalls right', async () => {
     activateVariant('responder');
     setRights({ CanCreateCalls: false });
-    render(<CallDetailScreen />);
-    fireEvent.press(screen.getByTestId('call-detail-menu-button'));
+    await render(<CallDetailScreen />);
+    await fireEvent.press(screen.getByTestId('call-detail-menu-button'));
     expect(screen.queryByTestId('call-menu-edit', hidden)).toBeNull();
     expect(screen.queryByTestId('call-menu-close', hidden)).toBeNull();
     expect(screen.getByTestId('call-menu-notes', hidden)).toBeTruthy();
   });
 
-  it('shows a queued call as "not dispatched yet" and offers correction when it was rejected', () => {
+  it('shows a queued call as "not dispatched yet" and offers correction when it was rejected', async () => {
     activateVariant('unit');
     const request = { name: 'Offline call', nature: 'Smoke', priority: 1 };
     jest.mocked(useLocalSearchParams).mockReturnValue({ id: 'local-5' });
     useCallsStore.setState({ queuedCalls: { 'local-5': { localId: 'local-5', request, input: buildNewCallInput(request), createdAt: 1, state: 'rejected' } } });
-    render(<CallDetailScreen />);
+    await render(<CallDetailScreen />);
     expect(screen.getByTestId('queued-call-detail')).toBeTruthy();
     expect(screen.getByText('calls.queued.rejected_badge')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('queued-call-correct'));
+    await fireEvent.press(screen.getByTestId('queued-call-correct'));
     expect(router.push).toHaveBeenCalledWith('/call/new?correct=local-5');
   });
 
-  it('refuses an unsafe route id', () => {
+  it('refuses an unsafe route id', async () => {
     activateVariant('responder');
     jest.mocked(useLocalSearchParams).mockReturnValue({ id: '../x' });
-    render(<CallDetailScreen />);
+    await render(<CallDetailScreen />);
     expect(screen.getByTestId('call-detail-invalid')).toBeTruthy();
+  });
+});
+
+describe('CallDispatchedPanel live ETAs', () => {
+  const dispatches = [
+    { Id: '7', Type: 'Unit', Name: 'Engine 7' },
+    { Id: 'u-1', Type: 'User', Name: 'Pat Doe' },
+  ] as never;
+  const navigation = (CallId: number) => ({
+    UnitId: 7,
+    CallId,
+    RouteInstanceId: null,
+    RouteInstanceStopId: null,
+    State: 1,
+    EtaUtc: new Date(Date.now() + 6 * 60_000).toISOString(),
+    RemainingSeconds: 360,
+    RemainingMeters: 5000,
+    IsTrafficAware: false,
+    Provider: 'valhalla',
+    ReportedOn: new Date().toISOString(),
+    IsStale: false,
+  });
+  const fetchActiveNavigations = jest.fn(async () => undefined);
+
+  beforeEach(() => {
+    fetchActiveNavigations.mockClear();
+    featureFlagsStore.setState({ flags: { 'Navigation.InApp': { enabled: true } } as never, isLoaded: true });
+    useNavigationEtaStore.setState({ navigations: { '7': navigation(12) }, serverClockOffsetMs: 0, fetchActiveNavigations });
+  });
+
+  // Still mounted here (RNTL unmounts after): reset inside act.
+  afterEach(async () => {
+    await act(() => {
+      featureFlagsStore.setState({ flags: {} });
+      useNavigationEtaStore.setState(useNavigationEtaStore.getInitialState());
+    });
+  });
+
+  it("shows a dispatched unit's ETA to this call where the app shows ETAs (Dispatch)", async () => {
+    activateVariant('dispatch');
+    await render(<CallDispatchedPanel dispatches={dispatches} callId="12" />);
+    expect(fetchActiveNavigations).toHaveBeenCalledWith({ bypassCache: true });
+    expect(screen.getByTestId('call-dispatched-7-eta')).toHaveTextContent('navigation_eta.minutes:6');
+    expect(screen.queryByTestId('call-dispatched-u-1-eta')).toBeNull();
+  });
+
+  it('shows no ETA for a unit navigating to another call', async () => {
+    activateVariant('dispatch');
+    useNavigationEtaStore.setState({ navigations: { '7': navigation(30) } });
+    await render(<CallDispatchedPanel dispatches={dispatches} callId="12" />);
+    expect(screen.queryByTestId('call-dispatched-7-eta')).toBeNull();
+  });
+
+  it('neither loads nor shows ETAs in apps without an ETA module (Responder)', async () => {
+    activateVariant('responder');
+    await render(<CallDispatchedPanel dispatches={dispatches} callId="12" />);
+    expect(fetchActiveNavigations).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('call-dispatched-7-eta')).toBeNull();
+    expect(screen.getByText('Engine 7')).toBeTruthy();
   });
 });
