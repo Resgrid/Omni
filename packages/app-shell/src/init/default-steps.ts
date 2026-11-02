@@ -13,7 +13,7 @@ import {
   useAuthStore,
 } from '@resgrid/auth';
 import type { VariantManifest } from '@resgrid/config';
-import { getEnv, initSentry, logger, setSentryUser } from '@resgrid/core';
+import { analyticsService, getEnv, initSentry, logger, setSentryUser } from '@resgrid/core';
 import { configureData, refreshDataWorkingSet } from '@resgrid/data';
 import { getCurrentLanguage, initI18n, isSupportedLanguage, LEGACY_LANGUAGE_STORAGE_KEY, loadLanguage } from '@resgrid/i18n';
 import { configureLocation, type LocationSettings } from '@resgrid/location';
@@ -60,10 +60,13 @@ const cachePolicyFor = (manifest: VariantManifest): ApiCachePolicy => {
   return { ttlMs: (_path, defaultTtl) => (manifest.offline.cacheTtl === 'long' ? Math.max(defaultTtl, variantTtl) : defaultTtl) };
 };
 
-/** Loads `Config/GetConfig` for the signed-in department (EventingUrl, Novu, web push, location thresholds). */
-export async function loadDepartmentConfig(): Promise<void> {
+/**
+ * Loads `Config/GetConfig` for the signed-in department (EventingUrl, Novu, web push, location thresholds, signed map
+ * URLs). `forceRefresh` fetches it again even while the cached copy is fresh (its signed map URLs are about to expire).
+ */
+export async function loadDepartmentConfig(options: { forceRefresh?: boolean } = {}): Promise<void> {
   try {
-    const result = await getConfig(requireApiContext(), { key: getEnv().APP_KEY || undefined });
+    const result = await getConfig(requireApiContext(), { key: getEnv().APP_KEY || undefined }, options.forceRefresh ? { forceRefresh: true } : undefined);
     if (result?.Data) {
       setShellState({ departmentConfig: result.Data });
     }
@@ -94,6 +97,12 @@ function wireOfflineStatus(runtime: OfflineRuntime): void {
   });
 }
 
+/** The signed-in user (opaque id only) for error reporting and analytics; null on sign-out. */
+const setTelemetryUser = (userId: string | null): void => {
+  setSentryUser(userId);
+  analyticsService.identifyUser(userId);
+};
+
 let registrationDisposers: (() => void)[] | null = null;
 
 /** Wipe/teardown hooks: run on every sign-out, department switch and server switch (the offline wiper drives them). */
@@ -122,8 +131,18 @@ export function createStartupSteps(config: AppShellConfig): InitStep[] {
       id: 'startup.sentry',
       optional: true,
       run: () => {
+        // configureAppShell already initialised Sentry before the first render; this is idempotent.
         initSentry();
         registerNavigationWithSentry();
+      },
+    },
+    {
+      id: 'startup.analytics',
+      optional: true,
+      // Countly (skipped without COUNTLY_APP_KEY / COUNTLY_SERVER_URL). Not awaited: analytics never holds up startup, and
+      // views, the app-loaded mark and the user id that arrive first are sent once it is up.
+      run: () => {
+        void analyticsService.initializeWithEnv();
       },
     },
     {
@@ -181,7 +200,7 @@ export function createStartupSteps(config: AppShellConfig): InitStep[] {
           defaultServerUrl: env.BASE_API_URL,
           services: { wipeScope: (reason) => offline.wiper.wipeScope(reason), apiCache: offline.apiCache },
           logger,
-          setTelemetryUser: setSentryUser,
+          setTelemetryUser,
           isMobileApp: env.IS_MOBILE_APP,
           apiCache: createApiCacheBridge(offline.apiCache),
           cachePolicy: cachePolicyFor(manifest),

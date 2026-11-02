@@ -86,7 +86,9 @@ export interface StopArrivalPanelProps {
 
 /**
  * Arrived at a route stop (§10.7): check in (by hand, or by itself after the crew has stood still at the stop for
- * 10 s — cancellable, through `GeofenceCheckIn`), then check out and drive on to the next stop on the same route.
+ * 10 s — cancellable, through `GeofenceCheckIn`), then check out and drive on to the next stop on the same route. The
+ * live route's last leg runs to the route's end point (its station by default) and carries no stop: arriving there
+ * offers no check-in, only ending the guidance.
  */
 export const StopArrivalPanel: React.FC<StopArrivalPanelProps> = ({ unitId, onEnd, onOpenStop }) => {
   const { t } = useTranslation();
@@ -102,7 +104,8 @@ export const StopArrivalPanel: React.FC<StopArrivalPanelProps> = ({ unitId, onEn
   const [busy, setBusy] = useState(false);
   const stopped = fix !== null && (fix.speed ?? 0) < GEOFENCE_STOPPED_SPEED_MPS;
   const numericUnitId = unitId !== null && Number.isInteger(Number(unitId)) ? Number(unitId) : null;
-  const canAutoCheckIn = status === PENDING && stopped && !autoCancelled && numericUnitId !== null && fix !== null;
+  const isRouteEnd = legStop !== null && !routeInstanceStopId;
+  const canAutoCheckIn = !isRouteEnd && status === PENDING && stopped && !autoCancelled && numericUnitId !== null && fix !== null;
 
   useEffect(() => {
     if (!canAutoCheckIn) {
@@ -143,6 +146,15 @@ export const StopArrivalPanel: React.FC<StopArrivalPanelProps> = ({ unitId, onEn
     }
     useNavigationStore.getState().continueToNextLeg();
   };
+
+  if (isRouteEnd) {
+    return (
+      <View style={panelStyle.panel} testID="navigation-arrival-route-end">
+        <Text className="text-xl font-bold">{legStop?.name ? t('navigation.arrival.at', { name: legStop.name }) : t('navigation.arrival.title')}</Text>
+        <NotYetAndEnd onNotYet={() => useNavigationStore.getState().resumeAfterArrival()} onEnd={onEnd} testID="navigation-arrival-route-end" />
+      </View>
+    );
+  }
 
   return (
     <View style={panelStyle.panel} testID="navigation-arrival-stop">

@@ -1,3 +1,4 @@
+import { initSentry } from '@resgrid/core';
 import { initI18n } from '@resgrid/i18n';
 
 import { sessionInit, startupInit } from './init/app-init';
@@ -13,11 +14,13 @@ import { applyAppShellConfig, type AppShellConfig, getOptionalAppShellConfig } f
  * export { RootLayout as default } from '@resgrid/app-shell';
  * ```
  *
- * Initialises translations (device language; the stored choice follows once storage is open), sets the route contract
- * and navigation, registers gate screens and the default init steps. The background-location bootstrap is registered by
+ * Initialises Sentry and translations (device language; the stored choice follows once storage is open), sets the route
+ * contract and navigation, registers gate screens and the default init steps. The background-location bootstrap is registered by
  * the app entry (apps/omni/index.ts), which must do it before anything mounts; it calls `runBackgroundStartup()`.
  */
 export function configureAppShell(config: AppShellConfig): void {
+  // Before the first render, so errors in it are reported and the wrapped root marks the end of app start. Idempotent.
+  initSentry();
   // Before the first render: react-i18next's useTranslation skips its state hook while no instance is registered and
   // adds it once one is, which changes the hook order of every mounted component (React error #311).
   initI18n({ variantResources: config.i18nResources });

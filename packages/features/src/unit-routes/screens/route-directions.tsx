@@ -93,7 +93,8 @@ export default function RouteDirectionsScreen({ instanceId: instanceIdProp, rend
               stats={[
                 { id: 'distance', label: t('routes.estimated_distance'), value: formatDistance(directions.EstimatedDistanceMeters) },
                 { id: 'duration', label: t('routes.estimated_duration'), value: formatDuration(directions.EstimatedDurationSeconds, t) },
-                { id: 'eta', label: t('routes.eta'), value: formatArrivalTime(directions.EstimatedDurationWithDwellSeconds ?? directions.EstimatedDurationSeconds) },
+                // Only a live route runs from the crew's position; a stored one runs from the route's start.
+                ...(directions.IsLive ? [{ id: 'eta', label: t('routes.eta'), value: formatArrivalTime(directions.EstimatedDurationWithDwellSeconds ?? directions.EstimatedDurationSeconds) }] : []),
               ]}
             />
           </VStack>

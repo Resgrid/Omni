@@ -72,7 +72,7 @@ describe('parseOfflineManifest', () => {
     expect(manifest.invalidEntries).toBe(1); // the sprite file with an unsafe name
   });
 
-  it('reads Core’s manifest (OfflineMapPackService + MappingController): manual policy, building packs with bounds, unplaced images', () => {
+  it('reads Core’s manifest (OfflineMapPackService + MappingController): manual policy, building packs with bounds and ids, unplaced images', () => {
     const result = parseOfflineManifest({
       Data: {
         ManifestVersion: 'v1#0123456789abcdef',
@@ -95,6 +95,8 @@ describe('parseOfflineManifest', () => {
             DownloadUrl: null,
             ExpiresUtc: null,
             CustomMapLayerId: null,
+            CallIds: [14, 15, 14],
+            RoutePlanIds: ['plan-north', ''],
           },
         ],
         DepartmentData: { Url: 'https://api.resgrid.test/api/v4/Mapping/GetOfflineDepartmentData?d=1&e=2&sig=x', Version: 'abcdef0123456789', Sha256: sha(bytesOf(10)), SizeBytes: 10 },
@@ -107,7 +109,9 @@ describe('parseOfflineManifest', () => {
     });
     if (!result.ok) throw new Error(result.code);
     expect(result.manifest.policy).toMatchObject({ wifiOnly: false, manualOnly: true, refreshHours: 12, staleDays: 3, preferLocalInAo: true, maxPackBytes: OFFLINE_PACK_BYTES_CEILING });
-    expect(result.manifest.pending).toEqual([{ assetId: 'pack:p1', kind: 'incident', name: 'Call 26-14', sizeBytes: null, state: 'building', bounds: [-121.2890625, 38.27, -120.9375, 38.55] }]);
+    expect(result.manifest.pending).toEqual([
+      { assetId: 'pack:p1', kind: 'incident', name: 'Call 26-14', sizeBytes: null, state: 'building', bounds: [-121.2890625, 38.27, -120.9375, 38.55], callIds: ['14', '15'], routePlanIds: ['plan-north'] },
+    ]);
     expect(result.manifest.assets.map((asset) => asset.assetId)).toEqual(['department-data', 'floor:img-1']);
     // A custom map image with no position (D21) is kept as a pixel-only image: downloaded, drawn in its pixel frame.
     expect(result.manifest.assets.find((asset) => asset.assetId === 'floor:img-1')).toMatchObject({

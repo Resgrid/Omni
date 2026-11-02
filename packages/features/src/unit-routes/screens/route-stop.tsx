@@ -1,4 +1,4 @@
-import { useRoutesStore } from '@resgrid/data';
+import { RouteInstanceStatus, useRoutesStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import { Button, ButtonSpinner, ButtonText, HStack, Pressable, ScreenHeader, ScrollView, Text, Textarea, TextareaInput, useFormFactor, useToast, View, VStack, ZeroState } from '@resgrid/ui';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -43,6 +43,7 @@ export default function RouteStopScreen({ stopId: stopIdProp, renderMap }: Route
   const stop = useRoutesStore((state) => (stopId ? (state.stopDetails.find((row) => row.RouteInstanceStopId === stopId) ?? state.stopDetails.find((row) => row.RouteStopId === stopId)) : undefined)) ?? null;
   const plan = useRoutesStore((state) => (stop && state.activePlan?.RoutePlanId === stop.RoutePlanId ? state.activePlan : null));
   const planColor = useRoutesStore((state) => state.routePlans.find((row) => row.RoutePlanId === stop?.RoutePlanId)?.RouteColor ?? null);
+  const routeInProgress = useRoutesStore((state) => state.activeInstance?.Status === RouteInstanceStatus.InProgress);
   const { checkIn, checkOut, skip, busyStopId } = useStopActions();
   const [notes, setNotes] = useState(stop?.InstanceNotes ?? '');
   const [isSaving, setIsSaving] = useState(false);
@@ -171,7 +172,15 @@ export default function RouteStopScreen({ stopId: stopIdProp, renderMap }: Route
         ) : null}
 
         <View className="mt-2 px-4">
-          <StopCard stop={stop} isCurrent onAction={(kind) => onAction(kind)} isBusy={busyStopId === id} actionMinHeight={isElectron || isDesktop ? 64 : 48} testID="route-stop-actions" />
+          <StopCard
+            stop={stop}
+            isCurrent
+            onAction={(kind) => onAction(kind)}
+            routeInProgress={routeInProgress}
+            isBusy={busyStopId === id}
+            actionMinHeight={isElectron || isDesktop ? 64 : 48}
+            testID="route-stop-actions"
+          />
         </View>
       </ScrollView>
       <SkipStopDialog

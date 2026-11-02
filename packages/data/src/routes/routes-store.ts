@@ -15,6 +15,7 @@ import {
   getStopContact,
   getStopsForInstance,
   getUnacknowledgedDeviations,
+  isApiError,
   pauseRoute,
   resumeRoute,
   skipStop,
@@ -42,7 +43,7 @@ import { defineDataHandler, submitWrite, type WriteResult } from '../core/outbox
 import { dataPersistOptions, registerPersistedStore } from '../core/persist';
 import { registerDataStoreReset } from '../core/reset';
 import { type DataLocationFix, dataNow, getDataApiContext, getDataLocationFix } from '../core/runtime';
-import { createSliceRunner, emptySliceMeta, type FetchOptions, type SliceMeta, type SliceRunner } from '../core/slices';
+import { cacheOptions, createSliceRunner, emptySliceMeta, type FetchOptions, type SliceMeta, type SliceRunner } from '../core/slices';
 
 /** Core `RouteInstanceStatus`. RD11: Unit sent 2 (Completed) for pause; paused is 5. */
 export const RouteInstanceStatus = { Scheduled: 0, InProgress: 1, Completed: 2, Cancelled: 3, Abandoned: 4, Paused: 5 } as const;
@@ -248,18 +249,20 @@ export const useRoutesStore = create<RoutesState>()(
       return {
         ...initialData(),
 
-        fetchRoutePlans: async (unitId) => {
+        fetchRoutePlans: async (unitId, options) => {
           await runner.run(
             'plans',
             async () => unwrapList(await getRoutePlansForUnit(ctx(), { unitId })),
-            (routePlans) => ({ routePlans })
+            (routePlans) => ({ routePlans }),
+            { trailing: options?.bypassCache === true }
           );
         },
-        fetchAllRoutePlans: async () => {
+        fetchAllRoutePlans: async (options) => {
           await runner.run(
             'plans',
-            async () => unwrapList(await getRoutePlans(ctx())),
-            (routePlans) => ({ routePlans })
+            async () => unwrapList(await getRoutePlans(ctx(), cacheOptions(options))),
+            (routePlans) => ({ routePlans }),
+            { trailing: options?.bypassCache === true }
           );
         },
         fetchRoutePlan: async (routePlanId) => {
@@ -279,7 +282,27 @@ export const useRoutesStore = create<RoutesState>()(
           }),
         endRouteInstance: (instanceId) =>
           act(async () => {
-            assertV4Success(await endRoute(ctx(), { RouteInstanceId: instanceId }));
+            // Core ends only a running route: a paused one is resumed first, and paused again when the end fails, so a
+            // failed end does not leave it running. If that pause fails too, the store shows it running, as Core has it.
+            const current = get().activeInstance;
+            const wasPaused = current?.RouteInstanceId === instanceId && current.Status === RouteInstanceStatus.Paused;
+            if (wasPaused) {
+              assertV4Success(await resumeRoute(ctx(), { RouteInstanceId: instanceId }));
+              setInstanceStatus(instanceId, RouteInstanceStatus.InProgress);
+            }
+            try {
+              assertV4Success(await endRoute(ctx(), { RouteInstanceId: instanceId }));
+            } catch (error) {
+              if (wasPaused) {
+                try {
+                  assertV4Success(await pauseRoute(ctx(), { RouteInstanceId: instanceId }));
+                  setInstanceStatus(instanceId, RouteInstanceStatus.Paused);
+                } catch {
+                  // The end error is the one the crew sees.
+                }
+              }
+              throw error;
+            }
             set(clearedRoute());
           }),
         pauseRouteInstance: (instanceId) =>
@@ -302,7 +325,15 @@ export const useRoutesStore = create<RoutesState>()(
           await runner.run(
             'active',
             // RD8: Omni also sees a paused route (the legacy app's read stays InProgress-only on the server).
-            async () => unwrapItem(await getActiveRouteForUnit(ctx(), { unitId, includePaused: true })),
+            async () => {
+              try {
+                return unwrapItem(await getActiveRouteForUnit(ctx(), { unitId, includePaused: true }));
+              } catch (error) {
+                // Core answers a bare HTTP 404 (not a not_found envelope) when the unit has no running or paused route.
+                if (isApiError(error) && error.kind === 'http' && error.status === 404) return null;
+                throw error;
+              }
+            },
             (data) => applyRouteProgress(data),
             { trailing: options?.bypassCache === true }
           );

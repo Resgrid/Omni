@@ -36,7 +36,7 @@ export interface NavigationProgressReport {
   routeInstanceId: string | null;
   routeInstanceStopId: string | null;
   state: number;
-  etaUtc: string;
+  /** Seconds left at `at`; the ETA is set on the server's clock (a device clock can be minutes off). */
   remainingSeconds: number;
   remainingMeters: number;
   isTrafficAware: boolean;

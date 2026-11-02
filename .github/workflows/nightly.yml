@@ -1,8 +1,8 @@
 # Nightly developer builds and device e2e (omni-plan §6.6.2 principle 3, §6.6.3, §12) — kept off the release path.
-#   dev-build    <variant>-dev-sim per variant: Android dev-client APK (emulator-installable) and iOS simulator build
+#   dev-build    <variant>-dev-sim per variant: Android dev-client APK (emulator-installable). No iOS builds in CI:
+#                iOS dev, simulator and ad-hoc builds are made on a Mac (pnpm ios:adhoc, scripts/ci/maestro-ios.sh)
 #   e2e-android  Maestro flows on an Android emulator against the dev-client APK + Metro; one variant per night
 #                (rotates by UTC day) unless e2e_variants says otherwise
-#   e2e-ios      the same on an iOS simulator (dispatch only, opt-in)
 #   warm-caches  pnpm stores, Electron and Playwright downloads on the default branch, so PR and release runs hit them
 name: Nightly
 
@@ -19,14 +19,6 @@ on:
         description: 'Maestro e2e: rotate, all, none, or comma-separated variants'
         type: string
         default: rotate
-      ios_builds:
-        description: 'Build iOS simulator dev builds'
-        type: boolean
-        default: true
-      ios_e2e:
-        description: 'Also run Maestro on an iOS simulator'
-        type: boolean
-        default: false
 
 permissions:
   contents: read
@@ -54,8 +46,6 @@ jobs:
     outputs:
       variants: ${{ steps.select.outputs.variants }}
       e2e: ${{ steps.select.outputs.e2e }}
-      matrix_dev: ${{ steps.matrix.outputs.matrix_dev }}
-      ios_e2e: ${{ steps.matrix.outputs.ios_e2e }}
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-workspace
@@ -67,33 +57,18 @@ jobs:
           VARIANTS: ${{ inputs.variants || 'all' }}
           E2E: ${{ inputs.e2e_variants || 'rotate' }}
         run: node scripts/ci/variants-matrix.mjs --variants "$VARIANTS" --e2e "$E2E"
-      - name: Build matrix
-        id: matrix
-        env:
-          VARIANTS: ${{ steps.select.outputs.variants }}
-          E2E: ${{ steps.select.outputs.e2e }}
-          # On schedule `inputs` is empty (null == false is true in expressions), so test the event first.
-          IOS_BUILDS: ${{ github.event_name == 'workflow_dispatch' && inputs.ios_builds == false && 'false' || 'true' }}
-          IOS_E2E: ${{ github.event_name == 'workflow_dispatch' && inputs.ios_e2e == true && 'true' || 'false' }}
-        run: |
-          set -euo pipefail
-          platforms='["android"]'
-          if [ "$IOS_BUILDS" = true ]; then platforms='["android","ios"]'; fi
-          dev="$(jq -cn --argjson v "$VARIANTS" --argjson p "$platforms" '{include: [$v[] as $variant | $p[] as $platform | {variant: $variant, platform: $platform}]}')"
-          ios_e2e=false; if [ "$IOS_BUILDS" = true ] && [ "$IOS_E2E" = true ] && [ "$E2E" != '[]' ]; then ios_e2e=true; fi
-          { echo "matrix_dev=$dev"; echo "ios_e2e=$ios_e2e"; } >> "$GITHUB_OUTPUT"
-          echo "dev builds: $dev"; echo "e2e: $E2E (iOS: $ios_e2e)"
 
   dev-build:
-    name: dev build (${{ matrix.variant }}, ${{ matrix.platform }})
+    name: dev build (${{ matrix.variant }}, android)
     needs: plan
-    runs-on: ${{ matrix.platform == 'ios' && 'macos-26' || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 90
     # Only EXPO_TOKEN is used; dev builds keep the development defaults (QA API, no Firebase, no production keys).
     environment: ${{ matrix.variant }}
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.plan.outputs.matrix_dev) }}
+      matrix:
+        variant: ${{ fromJSON(needs.plan.outputs.variants) }}
     env:
       APP_VARIANT: ${{ matrix.variant }}
       APP_ENV: development
@@ -102,56 +77,42 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Free disk space and move temp dirs off tmpfs
-        if: matrix.platform == 'android'
         run: |
           sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost /usr/share/swift /usr/local/.ghcup || true
           mkdir -p "$RUNNER_TEMP/tmp" "$RUNNER_TEMP/eas-build"
           echo "TMPDIR=$RUNNER_TEMP/tmp" >> "$GITHUB_ENV"
           echo "EAS_LOCAL_BUILD_WORKINGDIR=$RUNNER_TEMP/eas-build" >> "$GITHUB_ENV"
       - uses: actions/setup-java@v5
-        if: matrix.platform == 'android'
         with:
           distribution: temurin
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v4
-        if: matrix.platform == 'android'
       - uses: ./.github/actions/setup-workspace
       - uses: expo/expo-github-action@v8
         with:
           eas-version: ${{ env.EAS_CLI_VERSION }}
           token: ${{ secrets.EXPO_TOKEN }}
           packager: npm
-      - name: Restore CocoaPods cache
-        if: matrix.platform == 'ios'
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/Library/Caches/CocoaPods
-            ~/.cocoapods/repos
-          key: pods-${{ matrix.variant }}-${{ hashFiles('pnpm-lock.yaml', format('apps/omni/variants/{0}/variant.json', matrix.variant), 'packages/config-plugins/**') }}
-          restore-keys: pods-${{ matrix.variant }}-
       - name: Restore EAS local build cache
         uses: actions/cache@v4
         with:
           path: ~/.eas-build-local
-          key: eas-build-local-${{ matrix.platform }}-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: eas-build-local-${{ matrix.platform }}-
+          key: eas-build-local-android-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: eas-build-local-android-
       - name: Profile
         id: profile
-        run: node scripts/ci/eas-profile.mjs dev --variant "$APP_VARIANT" --platform "${{ matrix.platform }}"
+        run: node scripts/ci/eas-profile.mjs dev --variant "$APP_VARIANT" --platform android
       - name: Build (eas build --local)
         working-directory: apps/omni
         env:
           PROFILE: ${{ steps.profile.outputs.profile }}
-          PLATFORM: ${{ matrix.platform }}
         run: |
           set -euo pipefail
           mkdir -p "$GITHUB_WORKSPACE/out"
-          if [ "$PLATFORM" = android ]; then output="$GITHUB_WORKSPACE/out/${APP_VARIANT}-dev-sim.apk"; else output="$GITHUB_WORKSPACE/out/${APP_VARIANT}-dev-sim-ios.tar.gz"; fi
-          eas build --local --platform "$PLATFORM" --profile "$PROFILE" --non-interactive --output "$output"
+          eas build --local --platform android --profile "$PROFILE" --non-interactive --output "$GITHUB_WORKSPACE/out/${APP_VARIANT}-dev-sim.apk"
       - uses: actions/upload-artifact@v4
         with:
-          name: dev-${{ matrix.variant }}-${{ matrix.platform }}
+          name: dev-${{ matrix.variant }}-android
           path: out/
           retention-days: 7
           if-no-files-found: error
@@ -209,49 +170,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: maestro-android-${{ matrix.variant }}
-          path: |
-            maestro-output
-            ~/.maestro/tests
-            ${{ runner.temp }}/metro.log
-          retention-days: 7
-          if-no-files-found: ignore
-
-  e2e-ios:
-    name: maestro ios (${{ matrix.variant }})
-    needs: [plan, dev-build]
-    if: ${{ !cancelled() && needs.plan.outputs.ios_e2e == 'true' }}
-    runs-on: macos-26
-    timeout-minutes: 60
-    strategy:
-      fail-fast: false
-      matrix:
-        variant: ${{ fromJSON(needs.plan.outputs.e2e) }}
-    env:
-      APP_VARIANT: ${{ matrix.variant }}
-      APP_ENV: development
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup-workspace
-      - uses: actions/download-artifact@v4
-        with:
-          name: dev-${{ matrix.variant }}-ios
-          path: ${{ runner.temp }}/app
-      - name: Install Maestro
-        run: |
-          bash scripts/ci/retry.sh 3 15 bash -c 'curl -fsSL "https://get.maestro.mobile.dev" | bash'
-          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
-      - name: Start Metro
-        run: bash scripts/ci/start-metro.sh ios "$RUNNER_TEMP/metro.log"
-      - name: Maestro on the iOS simulator
-        env:
-          APP_TARBALL: ${{ runner.temp }}/app/${{ matrix.variant }}-dev-sim-ios.tar.gz
-          MAESTRO_OUTPUT: ${{ github.workspace }}/maestro-output
-        run: bash scripts/ci/maestro-ios.sh
-      - name: Upload Maestro results
-        if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: maestro-ios-${{ matrix.variant }}
           path: |
             maestro-output
             ~/.maestro/tests

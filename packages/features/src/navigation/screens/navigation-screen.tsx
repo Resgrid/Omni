@@ -27,6 +27,7 @@ const isDevelopmentBuild = (): boolean => typeof __DEV__ !== 'undefined' && __DE
 
 const ERROR_KEYS: Record<NavigationErrorCode, string> = {
   'no-position': 'navigation.error.no_position',
+  'no-destination': 'navigation.error.no_destination',
   'no-route': 'navigation.error.no_route',
   unavailable: 'navigation.error.unavailable',
   failed: 'navigation.error.failed',

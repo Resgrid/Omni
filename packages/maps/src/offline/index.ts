@@ -81,6 +81,7 @@ export {
   CORRIDOR_FOCUS_KM,
   distanceToBoundsKm,
   EMPTY_PACK_FOCUS,
+  type ExtraPackFacts,
   INCIDENT_FOCUS_KM,
   isExtraPackWanted,
   NO_EXTRA_PACKS,
@@ -109,13 +110,18 @@ export {
   buildFallbackOfflineStyle,
   composeOfflineStyle,
   GLYPHS_PLACEHOLDER,
+  OFFLINE_COVERAGE_METADATA,
   OFFLINE_CUSTOM_MAP_PREFIX,
   OFFLINE_DEPARTMENT_SOURCE_PREFIX,
   OFFLINE_FLOOR_PREFIX,
+  OFFLINE_REMOTE_FALLBACK_PREFIX,
+  type OfflineCoverage,
   offlineSafeId,
   offlineStyleComposer,
   pmtilesUrlFor,
+  type RemoteFallbackSource,
   SPRITE_PLACEHOLDER,
+  withRemoteFallback,
 } from './style-composer';
 export { defaultOfflineFetch, fetchRange, type OfflineFetch, type OfflineFetchResponse, parseContentRange, type RangeResponse } from './transport';
 export {

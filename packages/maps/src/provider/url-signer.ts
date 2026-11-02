@@ -227,3 +227,23 @@ export function createMapUrlSigner(signBatch: SignMapResourceBatch | null, optio
     },
   };
 }
+
+/** The department config is fetched again this long before its first signed URL expires. */
+export const CONFIG_SIGNATURE_REFRESH_MARGIN_MS = 30 * 60_000;
+
+/**
+ * When the department config (`Config/GetConfig`) must be fetched again: Core signs its map URLs (`MapLibreStyleUrlDay`
+ * and `Night`, `StaticMapUrlTemplate`, `OfflineManifestUrl`) with the same expiring signature as every map resource
+ * (at least an hour), and an app that stays signed in for days outlives it. Returns the earliest expiry less a margin,
+ * or null when nothing in the config is signed (older servers).
+ */
+export const mapConfigRefreshAt = (config: object | null | undefined): number | null => {
+  if (!config) return null;
+  let earliest: number | null = null;
+  for (const value of Object.values(config)) {
+    if (typeof value !== 'string' || !isSignedMapUrl(value)) continue;
+    const expiry = signatureExpiry(value);
+    if (expiry !== null && (earliest === null || expiry < earliest)) earliest = expiry;
+  }
+  return earliest === null ? null : earliest - CONFIG_SIGNATURE_REFRESH_MARGIN_MS;
+};

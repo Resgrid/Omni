@@ -268,7 +268,7 @@ Contributions are welcome — bug reports, translations, documentation and code.
 - [x] Phase 4 — each app's own modules: BigBoard, IC, Dispatch, Unit, Responder (code complete)
 - [ ] Device verification, upgrade testing from the current store apps, beta and store releases — one app at a time
 - [ ] Phase 5 — MapLibre follow-ons as their server work lands
-- [ ] Phase 6 — store submission automation and hardening
+- [ ] Phase 6 — hardening (Electron auto-update rollout, CI time)
 
 Details and open items: [docs/implementation-status.md](docs/implementation-status.md).
 

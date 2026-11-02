@@ -90,7 +90,8 @@ describe('stageApp', () => {
 describe('stageRuntimeModules', () => {
   let tmp;
   beforeEach(() => {
-    tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'omni-modules-'));
+    // Real path: package folders resolve through symlinks (macOS's tmpdir is /var → /private/var).
+    tmp = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'omni-modules-')));
   });
   afterEach(() => fs.rmSync(tmp, { recursive: true, force: true }));
 

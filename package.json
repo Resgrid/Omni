@@ -28,6 +28,8 @@
     "skills:sync": "node scripts/sync-agent-skills.mjs",
     "prepare": "lefthook install || true",
     "eas:check": "node scripts/generate-eas-json.mjs --check",
+    "ios:adhoc": "node scripts/build-ios-adhoc.mjs",
+    "setup:app-distribution": "node scripts/setup-app-distribution.mjs",
     "e2e:web": "playwright test -c apps/omni/e2e/playwright.config.ts",
     "workflows:check": "node scripts/ci/validate-workflows.mjs"
   },

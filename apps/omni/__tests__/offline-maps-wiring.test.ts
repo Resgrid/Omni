@@ -29,6 +29,7 @@ interface MockCall {
   Geolocation: string;
 }
 interface MockPlan {
+  RoutePlanId?: string;
   MapboxRouteGeometry: string | null;
   Stops: { StopOrder: number; Latitude: number; Longitude: number }[];
 }
@@ -233,6 +234,7 @@ describe('offline maps wiring', () => {
     mockCommand.setState({ activeCallId: '7', boards: { '7': {}, '8': {}, missing: {} } });
     mockRoutes.setState({
       activePlan: {
+        RoutePlanId: 'plan-1',
         MapboxRouteGeometry: JSON.stringify({
           type: 'LineString',
           coordinates: [
@@ -244,6 +246,9 @@ describe('offline maps wiring', () => {
       },
     });
     expect(offlinePackFocus()).toEqual({
+      // Ids match the cells Core lists for them, loaded or not; positions only for older servers.
+      callIds: ['5', '7', '8', 'missing'],
+      routePlanIds: ['plan-1'],
       incidentPoints: [
         [-121.1, 38.4],
         [-121.3, 38.6],

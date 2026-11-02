@@ -24,6 +24,7 @@ import {
   resolveExtraPackPolicy,
 } from '@resgrid/maps';
 
+import { refreshDepartmentConfigNow } from './map-config-refresh';
 import { createPlatformOfflinePackManager, type PlatformPackManagerInput } from './offline-maps-platform';
 
 /** Builds the platform's manager: synchronous on iOS/Android, after opening the OPFS registry on the web. */
@@ -91,9 +92,9 @@ function routeLine(plan: { MapboxRouteGeometry?: string | null; Stops?: { StopOr
 }
 
 /**
- * What this device works on (§19.7): the crew's or member's active call and the incidents it commands (IC boards) as
- * incident points; the unit's current route plan as a corridor line. The manager keeps only the listed incident and
- * corridor cells near these, and only where the variant's policy allows them.
+ * What this device works on (§19.7): the crew's or member's active call and the incidents it commands (IC boards); the
+ * unit's current route plan. The manager keeps only the listed incident and corridor cells Core lists for these ids (near
+ * their positions on older servers), and only where the variant's policy allows them.
  */
 export function offlinePackFocus(): OfflinePackFocus {
   const callIds = new Set<string>();
@@ -109,7 +110,8 @@ export function offlinePackFocus(): OfflinePackFocus {
     .filter((point): point is LngLat => point !== null);
   const plan = useRoutesStore.getState().activePlan;
   const line = plan ? routeLine(plan) : [];
-  return { incidentPoints, corridorLines: line.length > 0 ? [line] : [] };
+  const routePlanId = plan?.RoutePlanId?.trim() ?? '';
+  return { callIds: [...callIds], incidentPoints, routePlanIds: routePlanId ? [routePlanId] : [], corridorLines: line.length > 0 ? [line] : [] };
 }
 
 const focusKey = (focus: OfflinePackFocus): string => JSON.stringify(focus);
@@ -132,6 +134,8 @@ export async function startOfflineMaps(create: PlatformPackManagerFactory = crea
     // Codes, counts and sizes only (the manager never passes URLs with tokens).
     log: (message, context) => logger.info({ message, context }),
     packSelection: { policy, getFocus: offlinePackFocus },
+    // An expired manifest URL: fetch the config again (the shell store hands it to `updateConfig` below).
+    renewConfig: refreshDepartmentConfigNow,
   });
   if (!created) {
     return null;

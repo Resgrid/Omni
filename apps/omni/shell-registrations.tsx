@@ -23,6 +23,7 @@ import { usePathname } from 'expo-router';
 
 import { appUpdatesModule } from './app-updates';
 import { ACTIVE_UNIT_ADAPTER, clearActiveCall, ShellChatIdentityProvider, ShellMapProvider, ShellNavigationHandoffProvider, ShellRouteMapProvider, ShellStatusProvider, storageSyncServices } from './feature-providers';
+import { registerMapConfigRefreshStep } from './map-config-refresh';
 import { registerNavigationSteps } from './navigation-wiring';
 import { registerOfflineMapsSteps } from './offline-maps-wiring';
 import { useCommandRecordsContext } from './records-context';
@@ -98,6 +99,9 @@ registerChecklistRunWriter(createDataChecklistRunWriter());
 // Settings → Offline maps follows the pack manager (shown on iOS/Android when the department offers packs).
 registerOfflineMapsSettings();
 registerOfflineMapsSteps();
+
+// The department config's signed map URLs (style, static map, offline manifest) are fetched again before they expire.
+registerMapConfigRefreshStep();
 
 // In-app turn-by-turn (Unit, `maps.navigationInApp`): routes, prompts, live ETA reports and the navigation location profile.
 registerNavigationSteps();

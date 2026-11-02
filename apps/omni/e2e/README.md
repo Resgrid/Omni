@@ -74,4 +74,12 @@ node apps/omni/e2e/maestro/run-maestro.mjs --variant responder --platform ios --
 - Results: JUnit and screenshots under `e2e/maestro-output/<variant>`.
 - Add a variant-only flow (status change, call detail, offline queue) as `maestro/<variant>/<flow>.yaml`. Shared steps go in `maestro/shared/`. React Native `testID`s are resource ids on Android and accessibility identifiers on iOS, so `id:` selectors work on both.
 
-CI (`nightly.yml`) builds `<variant>-dev-sim` with `eas build --local`, starts Metro (`scripts/ci/start-metro.sh`) and runs `scripts/ci/maestro-android.sh` inside `reactivecircus/android-emulator-runner` (API 35, x86_64). `scripts/ci/maestro-ios.sh` does the same on an iOS simulator when the workflow is dispatched with `ios_e2e`.
+CI (`nightly.yml`) builds `<variant>-dev-sim` with `eas build --local`, starts Metro (`scripts/ci/start-metro.sh`) and runs `scripts/ci/maestro-android.sh` inside `reactivecircus/android-emulator-runner` (API 35, x86_64). CI builds no iOS dev builds; on a Mac, build `<variant>-dev-sim` for iOS, start Metro and run `scripts/ci/maestro-ios.sh` with `APP_TARBALL` pointing at the build. Both scripts need `APP_VARIANT`, the variant the build was made for:
+
+```bash
+# from the repo root; the same variant for the build, Metro and Maestro
+export APP_VARIANT=unit
+(cd apps/omni && APP_ENV=development eas build --local --platform ios --profile unit-dev-sim --output ../../dist/unit-dev-sim-ios.tar.gz)
+bash scripts/ci/start-metro.sh ios /tmp/metro.log
+APP_TARBALL=dist/unit-dev-sim-ios.tar.gz bash scripts/ci/maestro-ios.sh
+```

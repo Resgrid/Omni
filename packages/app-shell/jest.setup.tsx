@@ -49,7 +49,11 @@ jest.mock('@sentry/react-native', () => ({
   addBreadcrumb: jest.fn(),
   captureException: jest.fn(),
   captureMessage: jest.fn(),
+  getGlobalScope: jest.fn(() => ({ setTags: jest.fn() })),
+  logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
   reactNavigationIntegration: jest.fn(() => ({ registerNavigationContainer: jest.fn() })),
+  httpClientIntegration: jest.fn(() => ({ name: 'HttpClient' })),
+  mobileReplayIntegration: jest.fn(() => ({ name: 'MobileReplay' })),
 }));
 
 jest.mock('countly-sdk-react-native-bridge', () => ({ __esModule: true, default: { initWithConfig: jest.fn(), events: { recordEvent: jest.fn() } } }));

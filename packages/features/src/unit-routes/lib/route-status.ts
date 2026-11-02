@@ -44,7 +44,14 @@ export const STOP_PRIORITY_LOOK: Readonly<Record<number, StatusLook>> = {
   3: { labelKey: 'unit_routes.priority_optional', color: '#0ea5e9' },
 };
 
-const DEVIATION_TYPE_KEYS: readonly string[] = ['routes.deviation_type_off_route', 'routes.deviation_type_missed_stop', 'routes.deviation_type_unexpected_stop', 'routes.deviation_type_speed_violation'];
+/** Core `RouteDeviationTypes`: OffRoute 0, MissedStop 1, OutOfOrder 2, LateArrival 3, LongDwell 4 (the legacy apps mislabelled 2 and 3). */
+const DEVIATION_TYPE_KEYS: readonly string[] = [
+  'routes.deviation_type_off_route',
+  'routes.deviation_type_missed_stop',
+  'routes.deviation_type_out_of_order',
+  'routes.deviation_type_late_arrival',
+  'routes.deviation_type_long_dwell',
+];
 
 export const deviationTypeKey = (type: number | null | undefined): string => (typeof type === 'number' ? DEVIATION_TYPE_KEYS[type] : undefined) ?? 'routes.deviation_type_other';
 
@@ -77,9 +84,12 @@ export const canStartPlan = (planUnitId: number | null | undefined, activeUnitId
 
 export type StopActionKind = 'checkIn' | 'checkOut' | 'skip';
 
-/** The actions a stop offers: check in while pending, check out while checked in, skip until it is done. */
-export function stopActions(stop: Pick<RouteStopWithDetailsResultData, 'Status'>): StopActionKind[] {
-  if (stop.Status === RouteStopStatus.Pending) return ['checkIn', 'skip'];
+/**
+ * The actions a stop offers: check in while pending, check out while checked in, skip until it is done. Core refuses a
+ * check-in unless the route is in progress, so a paused route offers only skip on a pending stop.
+ */
+export function stopActions(stop: Pick<RouteStopWithDetailsResultData, 'Status'>, routeInProgress = true): StopActionKind[] {
+  if (stop.Status === RouteStopStatus.Pending) return routeInProgress ? ['checkIn', 'skip'] : ['skip'];
   if (stop.Status === RouteStopStatus.CheckedIn) return ['checkOut', 'skip'];
   return [];
 }

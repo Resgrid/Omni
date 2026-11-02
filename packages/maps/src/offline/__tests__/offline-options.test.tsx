@@ -75,6 +75,41 @@ describe('createOfflineMapOptions', () => {
     expect(createOfflineMapOptions({ installed: installed(), isOnline: true, preferLocal: true })?.mode).toBe('local-preferred');
   });
 
+  it('fills in the server’s raster tiles around the downloaded area in local-preferred mode only, never inside it', () => {
+    const area = { bounds: [-121.5, 38.2, -120.9, 38.7] as [number, number, number, number] };
+    const packs = installed().basemapPacks.map((pack) => ({ ...pack, ...area }));
+    const raster = { kind: 'raster' as const, tileUrl: 'https://tiles.resgrid.test/{z}/{x}/{y}.png', tileSize: 256, attribution: '© OpenStreetMap contributors' };
+    const source = { kind: 'maplibre' as const, url: 'https://api.resgrid.test/style.json', attribution: '' };
+
+    const preferLocal = createOfflineMapOptions({ installed: installed({ basemapPacks: packs }), isOnline: true, preferLocal: true });
+    const state = deriveMapStyleState(source, 'light', null, preferLocal, raster);
+    const style = state.mapStyle as unknown as { sources: Record<string, { type: string; bounds?: number[]; tiles?: string[] }>; layers: { id: string; type: string }[]; metadata: Record<string, unknown> };
+    expect(style.metadata['resgrid:offline-coverage']).toEqual([{ bounds: area.bounds, minZoom: 0, maxZoom: null }]);
+    const remote = Object.entries(style.sources).filter(([id]) => id.startsWith('offline-remote-'));
+    // Four bands around the area; none overlaps it, so no remote tile is requested inside.
+    expect(remote.map(([, band]) => band.bounds)).toEqual([
+      [-180, -85.051129, -121.5, 85.051129],
+      [-120.9, -85.051129, 180, 85.051129],
+      [-121.5, -85.051129, -120.9, 38.2],
+      [-121.5, 38.7, -120.9, 85.051129],
+    ]);
+    expect(remote.every(([, band]) => band.type === 'raster' && band.tiles?.[0] === raster.tileUrl)).toBe(true);
+    // Above the background, under the local layers.
+    expect(style.layers.slice(0, 6).map((layer) => layer.id)).toEqual(['background', 'offline-remote-0', 'offline-remote-1', 'offline-remote-2', 'offline-remote-3', 'earth']);
+    expect(state).toMatchObject({ kind: 'offline', attribution: 'Protomaps © OpenStreetMap · © OpenStreetMap contributors', styleKey: 'offline:light:raster:https://tiles.resgrid.test/{z}/{x}/{y}.png' });
+    // The same inputs hand MapLibre the same object (no restyle).
+    expect(deriveMapStyleState(source, 'light', null, preferLocal, raster).mapStyle).toBe(state.mapStyle);
+
+    // Offline: nothing remote.
+    const offline = createOfflineMapOptions({ installed: installed({ basemapPacks: packs }), isOnline: false, preferLocal: true });
+    const offlineState = deriveMapStyleState(source, 'light', null, offline, raster);
+    expect(JSON.stringify(offlineState.mapStyle)).not.toContain('offline-remote-');
+    expect(offlineState.styleKey).toBe('offline:light');
+    // Packs without bounds (unknown coverage): the local style as is.
+    const unknown = deriveMapStyleState(source, 'light', null, createOfflineMapOptions({ installed: installed(), isOnline: true, preferLocal: true }), raster);
+    expect(JSON.stringify(unknown.mapStyle)).not.toContain('offline-remote-');
+  });
+
   it('hands the composer the local glyphs and the department data, and the badge its stale threshold', () => {
     const departmentData = { stations: { type: 'FeatureCollection' as const, features: [] } };
     const template = { version: 8, glyphs: '{glyphs}/{fontstack}/{range}.pbf', sources: { protomaps: { type: 'vector', url: '{basemap}' } }, layers: [] } as never;

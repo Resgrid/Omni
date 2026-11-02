@@ -1,6 +1,7 @@
 export * from './format';
 export * from './geo';
 export * from './guidance';
+export * from './incidents';
 export * from './maneuver';
 export * from './polyline';
 export * from './progress';

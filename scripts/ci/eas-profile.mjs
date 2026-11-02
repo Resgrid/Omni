@@ -1,23 +1,22 @@
 #!/usr/bin/env node
-// Picks (and if needed derives, in the CI checkout only) the eas.json profiles for release builds and submits.
+// Picks (and if needed derives, in the CI checkout only) the eas.json profiles for release and nightly builds. CI never
+// submits to a store: store uploads are done by hand through the Software Factory (omni-plan §15 #20).
 //
-// release: production channel → `<v>-production-aab` (Android) / `<v>-production` (iOS), unchanged.
-//          internal / staging → `<v>-<channel>-aab` / `<v>-<channel>-store`. The expo-updates channel is baked into
-//          the binary, so a master (internal) build must not reuse the production profile. Until
-//          scripts/generate-eas-json.mjs emits those profiles, both are derived from the production profiles with
-//          `channel` and `env.APP_ENV` replaced and written to the runner's eas.json (never committed).
+// release: production channel → `<v>-production` (Android AAB and App Store IPA) and `<v>-production-apk` (the
+//          sideload APK, a second Android build: signing stays on EAS, so nothing can re-sign the AAB's APKs).
+//          internal / staging → `<v>-<channel>-store` / `<v>-<channel>-apk`. The expo-updates channel is baked into
+//          the binary, so a master (internal) build must not reuse the production profile. When
+//          scripts/generate-eas-json.mjs lacks one, it is derived from the production profile with `channel` and
+//          `env.APP_ENV` replaced and written to the runner's eas.json (never committed).
 //          eas.json is a fingerprint source, so EVERY job that resolves a runtime version for this variant
 //          (fingerprint, android, ios, ota, ota.yml) runs this same command first — the derived file is then
 //          byte-identical everywhere and the fingerprints agree.
 // dev:     nightly developer builds use `<v>-dev-sim`. Its Android debug APK needs no release keystore, so when
 //          the profile lacks `android.withoutCredentials` a `<v>-dev-sim-ci` copy with it set is derived.
-// submit:  adds the non-interactive submit settings (ascAppId, App Store Connect API key, Play service account,
-//          track and release status) from the environment to `submit.<v>-production` in the runner's eas.json.
 //
 // Usage:
-//   node scripts/ci/eas-profile.mjs release --variant unit --channel internal      → android_profile, ios_profile
+//   node scripts/ci/eas-profile.mjs release --variant unit --channel internal      → android_profile, android_apk_profile, ios_profile
 //   node scripts/ci/eas-profile.mjs dev     --variant unit --platform android      → profile
-//   node scripts/ci/eas-profile.mjs submit  --variant unit --platform ios          → profile
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -33,6 +32,13 @@ function save(easJson) {
   fs.writeFileSync(easJsonPath, JSON.stringify(easJson, null, 2) + '\n');
 }
 
+// Output → [production profile, suffix of the other channels' profile]. The AAB and the App Store IPA share one profile.
+const RELEASE_PROFILES = {
+  android_profile: ['production', 'store'],
+  android_apk_profile: ['production-apk', 'apk'],
+  ios_profile: ['production', 'store'],
+};
+
 function release(args) {
   const variant = assertVariant(requireArg(args, 'variant'));
   const channel = requireArg(args, 'channel');
@@ -41,15 +47,15 @@ function release(args) {
   const out = {};
   let changed = false;
 
-  // Fixed order (android, then ios) keeps the derived eas.json identical in every job.
-  for (const platform of PLATFORMS) {
-    const base = platform === 'android' ? `${variant}-production-aab` : `${variant}-production`;
+  // Fixed order keeps the derived eas.json identical in every job.
+  for (const [output, [production, suffix]] of Object.entries(RELEASE_PROFILES)) {
+    const base = `${variant}-${production}`;
     if (!easJson.build?.[base]) throw new Error(`eas.json has no "${base}" profile — run pnpm eas:generate.`);
     if (channel === 'production') {
-      out[`${platform}_profile`] = base;
+      out[output] = base;
       continue;
     }
-    const name = platform === 'android' ? `${variant}-${channel}-aab` : `${variant}-${channel}-store`;
+    const name = `${variant}-${channel}-${suffix}`;
     if (!easJson.build[name]) {
       const profile = structuredClone(easJson.build[base]);
       profile.channel = channel;
@@ -58,7 +64,7 @@ function release(args) {
       changed = true;
       console.error(`::notice::Derived eas.json profile "${name}" from "${base}" (channel ${channel}) in this checkout. Add it to scripts/generate-eas-json.mjs to make it permanent.`);
     }
-    out[`${platform}_profile`] = name;
+    out[output] = name;
   }
   if (changed) save(easJson);
   return out;
@@ -84,41 +90,7 @@ function dev(args) {
   return { profile: name };
 }
 
-function submit(args) {
-  const variant = assertVariant(requireArg(args, 'variant'));
-  const platform = requireArg(args, 'platform');
-  const easJson = load();
-  const name = `${variant}-production`;
-  const env = process.env;
-  const profile = (easJson.submit ??= {})[name] ?? {};
-
-  if (platform === 'ios') {
-    const ios = { ...profile.ios };
-    if (env.ASC_APP_ID) ios.ascAppId = env.ASC_APP_ID;
-    if (env.EXPO_ASC_API_KEY_PATH) ios.ascApiKeyPath = env.EXPO_ASC_API_KEY_PATH;
-    if (env.EXPO_ASC_ISSUER_ID) ios.ascApiKeyIssuerId = env.EXPO_ASC_ISSUER_ID;
-    if (env.EXPO_ASC_KEY_ID) ios.ascApiKeyId = env.EXPO_ASC_KEY_ID;
-    if (env.IOS_APPLE_TEAM_ID) ios.appleTeamId = env.IOS_APPLE_TEAM_ID;
-    if (!ios.ascAppId) throw new Error('ASC_APP_ID is required for a non-interactive App Store submission.');
-    profile.ios = ios;
-  } else if (platform === 'android') {
-    const android = { ...profile.android, track: env.PLAY_TRACK || 'internal' };
-    if (env.PLAY_SERVICE_ACCOUNT_KEY_PATH) android.serviceAccountKeyPath = env.PLAY_SERVICE_ACCOUNT_KEY_PATH;
-    // store-publish.yml: draft for an upload, completed to roll the release out on its track.
-    if (env.PLAY_RELEASE_STATUS) {
-      if (!['completed', 'draft', 'halted', 'inProgress'].includes(env.PLAY_RELEASE_STATUS)) throw new Error(`Unknown PLAY_RELEASE_STATUS "${env.PLAY_RELEASE_STATUS}".`);
-      android.releaseStatus = env.PLAY_RELEASE_STATUS;
-    }
-    profile.android = android;
-  } else {
-    throw new Error(`Unknown platform "${platform}"`);
-  }
-  easJson.submit[name] = profile;
-  save(easJson);
-  return { profile: name };
-}
-
-const commands = { release, dev, submit };
+const commands = { release, dev };
 const args = parseArgs();
 const command = args._[0];
 if (!commands[command]) {

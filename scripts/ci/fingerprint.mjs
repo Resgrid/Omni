@@ -9,14 +9,14 @@
 //   decide  release.yml stage 0 — per variant: fingerprint each platform, compare with the newest release of the
 //           same variant and channel (excluding this run's own tag, so re-runs stay native), write a decision file.
 //   check   ota.yml — refuse (exit 1) unless every requested platform matches the installed runtime.
-//   merge   release.yml stage 0 — fold the per-variant decision files into the build / OTA / submit matrices. With
+//   merge   release.yml stage 0 — fold the per-variant decision files into the build / OTA matrices. With
 //           --publish-ota false (merge builds on master) a JavaScript-only change publishes no update: an update on
 //           the production channel reaches every installed store build, so it is released deliberately (ota.yml).
 //
 // Usage:
 //   node scripts/ci/fingerprint.mjs decide --variant unit --channel internal --platforms android,ios --tag unit-v8.12 [--force-native] --out decision-unit.json
 //   node scripts/ci/fingerprint.mjs check  --variant unit --channel production --platforms android,ios [--run-number 12] [--exclude-tag unit-v8.12]
-//   node scripts/ci/fingerprint.mjs merge  --dir decisions --variants '["unit"]' --platforms android,ios --channel internal [--submit true] [--publish-ota false]
+//   node scripts/ci/fingerprint.mjs merge  --dir decisions --variants '["unit"]' --platforms android,ios [--publish-ota false]
 import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import path from 'node:path';
@@ -132,15 +132,12 @@ function merge(args) {
   const dir = requireArg(args, 'dir');
   const variants = JSON.parse(requireArg(args, 'variants'));
   const platforms = args.platforms ? csv(args.platforms, PLATFORMS) : [];
-  const channel = requireArg(args, 'channel');
-  const submit = (args.submit === true || args.submit === 'true') && channel === 'production';
   const publishOta = args['publish-ota'] !== 'false';
   for (const v of variants) if (!VARIANT_IDS.includes(v)) throw new Error(`Unknown variant "${v}"`);
 
   const android = [];
   const ios = [];
   const ota = [];
-  const submitList = [];
   const table = [];
   for (const variant of variants) {
     const decision = readJsonIfExists(path.join(dir, `decision-${variant}.json`));
@@ -157,21 +154,18 @@ function merge(args) {
     if (nativePlatforms.includes('android')) android.push({ variant });
     if (nativePlatforms.includes('ios')) ios.push({ variant });
     if (otaPlatforms.length) ota.push({ variant, platform: otaPlatforms.length === PLATFORMS.length ? 'all' : otaPlatforms[0] });
-    if (submit) for (const platform of nativePlatforms) submitList.push({ variant, platform });
   }
 
   setOutputs({
     matrix_android: JSON.stringify({ include: android }),
     matrix_ios: JSON.stringify({ include: ios }),
     matrix_ota: JSON.stringify({ include: ota }),
-    matrix_submit: JSON.stringify({ include: submitList }),
     has_android: String(android.length > 0),
     has_ios: String(ios.length > 0),
     has_ota: String(ota.length > 0),
-    has_submit: String(submitList.length > 0),
   });
   if (table.length) appendSummary(['### Release plan — native or OTA', '', '| Variant | Platform | Path | Reason |', '|---|---|---|---|', ...table, ''].join('\n'));
-  console.log(JSON.stringify({ android, ios, ota, submit: submitList }, null, 2));
+  console.log(JSON.stringify({ android, ios, ota }, null, 2));
 }
 
 const commands = { decide, check, merge };

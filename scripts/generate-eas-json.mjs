@@ -16,19 +16,20 @@ const target = path.join(root, 'apps', 'omni', 'eas.json');
 const images = { ios: { image: 'latest' }, android: { image: 'latest' } };
 const withEnv = (appEnv, extra = {}) => ({ EXPO_NO_DOTENV: '1', APP_ENV: appEnv, FLIPPER_DISABLE: '1', ...extra });
 
-// Build types (key → profile body without APP_VARIANT). Channels map to expo-updates (D18).
+// Build types (key → profile body without APP_VARIANT). Channels map to expo-updates (D18). No profile sets
+// credentialsSource: every build signs with the credentials stored on the variant's EAS project (plan §6.6.5).
 const profiles = {
   production: { distribution: 'store', channel: 'production', ...images, envBase: 'production' },
-  'production-aab': { distribution: 'store', channel: 'production', credentialsSource: 'local', ...images, envBase: 'production' },
-  'production-apk': { distribution: 'store', channel: 'production', credentialsSource: 'local', ios: images.ios, android: { buildType: 'apk', image: 'latest' }, envBase: 'production' },
+  'production-apk': { distribution: 'store', channel: 'production', ios: images.ios, android: { buildType: 'apk', image: 'latest' }, envBase: 'production' },
   staging: { channel: 'staging', ios: images.ios, android: { buildType: 'apk', image: 'latest' }, envBase: 'staging' },
   // The channel is baked into the binary, so master (internal) and staging release builds need their own
-  // store/AAB profiles rather than reusing production's (release.yml stage 1).
+  // store/APK profiles rather than reusing production's (release.yml stage 1).
   'staging-store': { distribution: 'store', channel: 'staging', ...images, envBase: 'staging' },
-  'staging-aab': { distribution: 'store', channel: 'staging', credentialsSource: 'local', ...images, envBase: 'staging' },
+  'staging-apk': { distribution: 'store', channel: 'staging', ios: images.ios, android: { buildType: 'apk', image: 'latest' }, envBase: 'staging' },
+  // Also the ad-hoc iOS build (`pnpm ios:adhoc <variant>`, scripts/build-ios-adhoc.mjs).
   internal: { distribution: 'internal', channel: 'internal', ios: images.ios, android: { buildType: 'apk', image: 'latest' }, envBase: 'internal' },
   'internal-store': { distribution: 'store', channel: 'internal', ...images, envBase: 'internal' },
-  'internal-aab': { distribution: 'store', channel: 'internal', credentialsSource: 'local', ...images, envBase: 'internal' },
+  'internal-apk': { distribution: 'store', channel: 'internal', ios: images.ios, android: { buildType: 'apk', image: 'latest' }, envBase: 'internal' },
   development: { developmentClient: true, distribution: 'internal', ios: images.ios, android: { buildType: 'apk', image: 'latest' }, envBase: 'development' },
   'dev-sim': { developmentClient: true, ios: { simulator: true, image: 'latest' }, android: { buildType: 'apk', image: 'latest', withoutCredentials: true }, envBase: 'development' },
   simulator: { ios: { simulator: true, image: 'latest' }, android: { image: 'latest' }, envBase: 'development' },

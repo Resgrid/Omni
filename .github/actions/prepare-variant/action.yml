@@ -24,6 +24,9 @@ outputs:
   android-profile:
     description: eas.json profile for the Android release build (AAB)
     value: ${{ steps.profiles.outputs.android_profile }}
+  android-apk-profile:
+    description: eas.json profile for the Android sideload APK (a second build)
+    value: ${{ steps.profiles.outputs.android_apk_profile }}
   ios-profile:
     description: eas.json profile for the iOS release build (App Store IPA)
     value: ${{ steps.profiles.outputs.ios_profile }}

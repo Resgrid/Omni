@@ -1,3 +1,4 @@
+import { isApiError } from '@resgrid/api';
 import { type RouteDirectionLegData, type RouteIncidentData, UnitNavigationState } from '@resgrid/models';
 import { create } from 'zustand';
 
@@ -33,7 +34,8 @@ export type NavigationDestination =
 export type NavigationStatus = 'idle' | 'loading' | 'navigating' | 'arrived' | 'error';
 
 /** Why a session could not start (shown with an "Open in…" fallback). */
-export type NavigationErrorCode = 'no-position' | 'no-route' | 'unavailable' | 'failed';
+/** `no-destination`: the server knows no place to go (the call is gone, hidden from this user or has no usable location). */
+export type NavigationErrorCode = 'no-position' | 'no-destination' | 'no-route' | 'unavailable' | 'failed';
 
 /** A stop at the end of a leg (route navigation). */
 export interface NavigationLegStop {
@@ -189,7 +191,6 @@ export const useNavigationStore = create<NavigationState>()((set, get) => {
       routeInstanceId: destination.kind === 'route' ? destination.routeInstanceId : null,
       routeInstanceStopId: destination.kind === 'route' ? (legStop?.routeInstanceStopId ?? null) : null,
       state,
-      etaUtc: new Date(now + remaining.seconds * 1000).toISOString(),
       remainingSeconds: Math.round(remaining.seconds),
       remainingMeters: Math.round(remaining.meters),
       isTrafficAware: meta?.isTrafficAware ?? false,
@@ -279,7 +280,9 @@ export const useNavigationStore = create<NavigationState>()((set, get) => {
         result = await fetchRoute(destination, from);
       } catch (error) {
         s.log('warn', 'Navigation route request failed', error);
-        if (generation === runtime.generation) set({ status: 'error', error: 'failed' });
+        // Core answers a bare HTTP 404 for a call (or route) that is gone, not visible to this user, or has no usable location.
+        const code: NavigationErrorCode = isApiError(error) && error.kind === 'http' && error.status === 404 ? 'no-destination' : 'failed';
+        if (generation === runtime.generation) set({ status: 'error', error: code });
         return false;
       }
       if (generation !== runtime.generation) return false;

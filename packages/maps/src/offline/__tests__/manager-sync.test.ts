@@ -8,7 +8,7 @@ import { createOfflineMapsHydrationStep, OfflineMapsHydrationError } from '../hy
 import { createMemoryOfflineMapsKv, createOfflinePackManager, isDeferredOfflineMapsResult, OFFLINE_PENDING_RECHECK_MS, type OfflinePackManagerOptions } from '../manager';
 import type { OfflineNetworkState } from '../network';
 import { createOfflineMapOptions } from '../offline-options';
-import type { OfflinePackFocus } from '../pack-selection';
+import { EMPTY_PACK_FOCUS, type OfflinePackFocus } from '../pack-selection';
 import { OFFLINE_MAP_PACKS_TABLE, offlinePackScopeKey } from '../registry';
 import type { OfflinePackScope, PackBounds } from '../types';
 import { API_BASE, bytesOf, createFakeServer, MANIFEST_URL, packEntry, packUrl, sha } from './helpers';
@@ -17,11 +17,13 @@ const GB = 1024 * 1024 * 1024;
 const SCOPE: OfflinePackScope = { serverUrl: 'https://api.resgrid.test/api/v4', departmentId: '12', userId: 'user-1' };
 const KEY = offlinePackScopeKey(SCOPE);
 const START = Date.UTC(2026, 10, 1, 8, 0, 0);
+/** Signature expiry of the fixture URLs (`e`, unix seconds): a day after the start, as Core signs them. */
+const EXPIRES = Math.floor(START / 1000) + 24 * 60 * 60;
 
 // Core's routes (MappingController): styles and glyphs through GetOfflineAsset, the bundle through GetOfflineDepartmentData.
-const STYLE_URL = 'https://api.resgrid.test/api/v4/Mapping/GetOfflineAsset/day.json?d=12&e=1&sig=a';
-const GLYPHS_URL = 'https://api.resgrid.test/api/v4/Mapping/GetOfflineAsset/glyphs.zip?d=12&e=1&sig=b';
-const DEPT_URL = 'https://api.resgrid.test/api/v4/Mapping/GetOfflineDepartmentData?d=12&e=1&sig=c';
+const STYLE_URL = `https://api.resgrid.test/api/v4/Mapping/GetOfflineAsset/day.json?d=12&e=${EXPIRES}&sig=a`;
+const GLYPHS_URL = `https://api.resgrid.test/api/v4/Mapping/GetOfflineAsset/glyphs.zip?d=12&e=${EXPIRES}&sig=b`;
+const DEPT_URL = `https://api.resgrid.test/api/v4/Mapping/GetOfflineDepartmentData?d=12&e=${EXPIRES}&sig=c`;
 
 const STYLE = strToU8(
   JSON.stringify({
@@ -173,9 +175,85 @@ describe('glyphs and department data', () => {
   });
 });
 
+describe('expired and outdated URLs', () => {
+  it('renews the department config when its signed manifest URL has expired, then reads the new manifest', async () => {
+    const renewedUrl = `${MANIFEST_URL}&renewed=1`;
+    let manager: Awaited<ReturnType<typeof setup>>['manager'] | null = null;
+    const renewConfig = jest.fn(async () => manager?.updateConfig({ OfflineMapsAvailable: true, OfflineManifestUrl: renewedUrl }));
+    const context = await setup({ renewConfig });
+    manager = context.manager;
+    context.server.serveFile(MANIFEST_URL, new Uint8Array(0), { status: 410 });
+    context.server.serveJson(renewedUrl, coreManifest());
+    await expect(context.manager.download()).resolves.toEqual({ ok: true });
+    expect(renewConfig).toHaveBeenCalledTimes(1);
+    expect(await rowIds(context.db)).toContain('pack:area');
+  });
+
+  it('refetches the manifest once when the department data changed since it was listed (same URL, new bytes)', async () => {
+    const { manager, server, db } = await setup();
+    await manager.refreshManifest();
+    // The department edited a layer: Core serves the new bundle at the same URL, the listed hash is the old one.
+    const edited = gzipSync(strToU8(JSON.stringify({ ...BUNDLE, edited: true })));
+    server.serveFile(DEPT_URL, edited);
+    server.serveJson(MANIFEST_URL, coreManifest({ DepartmentData: { Url: DEPT_URL, Version: 'd2', Sha256: sha(edited), SizeBytes: edited.length } }));
+    await expect(manager.download()).resolves.toEqual({ ok: true });
+    expect(await rowIds(db)).toContain('department-data');
+    expect((await db.select(OFFLINE_MAP_PACKS_TABLE)).find((row) => row.packId === 'department-data')?.version).toBe('d2');
+  });
+
+  it('skips a pack that is gone (404) once the fresh manifest lists it as rebuilding', async () => {
+    const { manager, server, db } = await setup();
+    await manager.refreshManifest();
+    server.files.delete(packUrl('far'));
+    server.serveJson(
+      MANIFEST_URL,
+      coreManifest({}, [
+        pack('area', 0, AREA, [-121.9, 38.4, -121.5, 38.8]),
+        pack('near', 1, NEAR, NEAR_CELL),
+        { ...pack('far', 1, FAR, FAR_CELL), Status: 1, DownloadUrl: null, Sha256: null, SizeBytes: null },
+        pack('route', 2, CORRIDOR, ROUTE_CELL),
+      ])
+    );
+    await expect(manager.download()).resolves.toEqual({ ok: true });
+    expect(await rowIds(db)).not.toContain('pack:far');
+    expect(await rowIds(db)).toContain('pack:route');
+  });
+});
+
 describe('incident and corridor packs per device (§19.7)', () => {
-  it('keeps the cells near the active call and along the route, and drops them when the focus changes', async () => {
+  it('keeps the cells Core lists for the device’s calls and route plan, wherever they are, and drops them when the focus changes', async () => {
+    // A shared cell lists every call and plan near it: `far` serves the crew's call 15, `route` its plan and call 14.
+    const listed = [
+      pack('area', 0, AREA, [-121.9, 38.4, -121.5, 38.8]),
+      pack('near', 1, NEAR, NEAR_CELL, { Name: 'Call 26-14', CallIds: [14], RoutePlanIds: [] }),
+      pack('far', 1, FAR, FAR_CELL, { Name: 'Call 26-15', CallIds: [15, 16], RoutePlanIds: [] }),
+      pack('route', 2, CORRIDOR, ROUTE_CELL, { Name: 'Route North', CallIds: [14], RoutePlanIds: ['plan-north'] }),
+    ];
+    // The focus positions point elsewhere: with ids listed, only the ids decide.
+    let current: OfflinePackFocus = { callIds: ['15'], incidentPoints: [[-121.1, 38.4]], routePlanIds: ['plan-north'], corridorLines: [] };
+    const selected = await setup({ packSelection: { policy: { incidents: true, corridors: true }, getFocus: () => current } });
+    selected.server.serveJson(MANIFEST_URL, coreManifest({}, listed));
+
+    await expect(selected.manager.autoSync()).resolves.toEqual({ ok: true });
+    expect(await rowIds(selected.db)).toEqual(['department-data', 'pack:area', 'pack:far', 'pack:route', 'style:day', 'style:glyphs']);
+
+    // A crew without corridors keeps the route cell only for a call it lists.
+    current = { ...EMPTY_PACK_FOCUS, callIds: ['14'] };
+    const incidentsOnly = await setup({ packSelection: { policy: { incidents: true, corridors: false }, getFocus: () => current } });
+    incidentsOnly.server.serveJson(MANIFEST_URL, coreManifest({}, listed));
+    await incidentsOnly.manager.autoSync();
+    expect(await rowIds(incidentsOnly.db)).toEqual(['department-data', 'pack:area', 'pack:near', 'pack:route', 'style:day', 'style:glyphs']);
+
+    // The call closed and the route ended.
+    current = EMPTY_PACK_FOCUS;
+    selected.advance(5 * 60 * 1000);
+    await expect(selected.manager.refreshSelection()).resolves.toEqual({ ok: true });
+    expect(await rowIds(selected.db)).toEqual(['department-data', 'pack:area', 'style:day', 'style:glyphs']);
+  });
+
+  it('keeps the cells near the active call and along the route on servers that list no ids, and drops them when the focus changes', async () => {
     let current: OfflinePackFocus = {
+      ...EMPTY_PACK_FOCUS,
       incidentPoints: [[-121.1, 38.4]],
       corridorLines: [
         [
@@ -192,18 +270,18 @@ describe('incident and corridor packs per device (§19.7)', () => {
     expect(selected.manager.getState().updateAvailable).toBe(false);
 
     // The call closed and the route ended: both go on the next sync (no new download).
-    current = { incidentPoints: [], corridorLines: [] };
+    current = EMPTY_PACK_FOCUS;
     selected.advance(5 * 60 * 1000);
     await expect(selected.manager.refreshSelection()).resolves.toEqual({ ok: true });
     expect(await rowIds(selected.db)).toEqual(['department-data', 'pack:area', 'style:day', 'style:glyphs']);
   });
 
   it('downloads no extra packs where the policy has none (Dispatch, BigBoard) and drops a call the manifest no longer lists', async () => {
-    const none = await setup({ packSelection: { policy: { incidents: false, corridors: false }, getFocus: () => ({ incidentPoints: [[-121.1, 38.4]], corridorLines: [] }) } });
+    const none = await setup({ packSelection: { policy: { incidents: false, corridors: false }, getFocus: () => ({ ...EMPTY_PACK_FOCUS, incidentPoints: [[-121.1, 38.4]] }) } });
     await none.manager.autoSync();
     expect(await rowIds(none.db)).toEqual(['department-data', 'pack:area', 'style:day', 'style:glyphs']);
 
-    const unit = await setup({ packSelection: { policy: { incidents: true, corridors: false }, getFocus: () => ({ incidentPoints: [[-121.1, 38.4]], corridorLines: [] }) } });
+    const unit = await setup({ packSelection: { policy: { incidents: true, corridors: false }, getFocus: () => ({ ...EMPTY_PACK_FOCUS, incidentPoints: [[-121.1, 38.4]] }) } });
     await unit.manager.autoSync();
     expect(await rowIds(unit.db)).toContain('pack:near');
     unit.server.serveJson(MANIFEST_URL, coreManifest({ ManifestVersion: 'v1#def' }, [pack('area', 0, AREA, [-121.9, 38.4, -121.5, 38.8])]));
@@ -266,7 +344,7 @@ describe('automatic sync and hydration', () => {
   });
 
   it('refetches only when stale, sooner while wanted packs build, and rechecks on a timer until they are ready', async () => {
-    const focus: OfflinePackFocus = { incidentPoints: [[-121.1, 38.4]], corridorLines: [] };
+    const focus: OfflinePackFocus = { ...EMPTY_PACK_FOCUS, incidentPoints: [[-121.1, 38.4]] };
     const building = [pack('area', 0, AREA, [-121.9, 38.4, -121.5, 38.8]), { ...pack('near', 1, NEAR, NEAR_CELL), Status: 1, DownloadUrl: null, Sha256: null, SizeBytes: null }];
     const { manager, server, db, timers, advance } = await setup({ packSelection: { policy: { incidents: true, corridors: false }, getFocus: () => focus } });
     server.serveJson(MANIFEST_URL, coreManifest({}, building));

@@ -1,12 +1,14 @@
 import { useTranslation } from '@resgrid/i18n';
 import { Button, ButtonText, NativeModal, Text, View, VStack } from '@resgrid/ui';
 import { useKeepAwake } from 'expo-keep-awake';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { StyleSheet } from 'react-native';
 
 import type { DistanceUnits } from '../engine/format';
+import { placeIncidents } from '../engine/incidents';
 import { useNavigationStore } from '../store/navigation-store';
 import { getNavigationServices } from '../store/services';
+import { IncidentChips } from './incident-chips';
 import { ManeuverBanner } from './maneuver-banner';
 import { type NavigationCameraMode, NavigationMap } from './navigation-map';
 import { TripBar } from './trip-bar';
@@ -36,8 +38,8 @@ const KeepAwake: React.FC = () => {
 };
 
 /**
- * The navigation screen body (MapLibre plan §9): map with the follow camera, maneuver banner, trip bar, reroute and
- * "using last route" notices, provider attribution and vehicle-limit note, the first-use safety notice, and the
+ * The navigation screen body (MapLibre plan §9): map with the follow camera, maneuver banner, incidents ahead, trip bar,
+ * reroute and "using last route" notices, provider attribution and vehicle-limit note, the first-use safety notice, and the
  * caller's arrival panel. The session itself lives in `useNavigationStore`.
  */
 export const NavigationSessionView: React.FC<NavigationSessionViewProps> = ({ units, simulationSpeedMps = null, arrivalPanel, underlay, onOpenExternal, onEnded, testID = 'navigation-session' }) => {
@@ -57,6 +59,7 @@ export const NavigationSessionView: React.FC<NavigationSessionViewProps> = ({ un
   const [cameraMode, setCameraMode] = useState<NavigationCameraMode>('follow');
   const [noticeOpen, setNoticeOpen] = useState(() => !getNavigationServices().preferences.hasAcknowledgedSafetyNotice());
   const lastFix = useNavigationStore((state) => state.lastFix);
+  const placedIncidents = useMemo(() => (route && meta ? placeIncidents(route, meta.incidents) : []), [route, meta]);
 
   useNavigationFixes({ simulationSpeedMps });
 
@@ -82,6 +85,7 @@ export const NavigationSessionView: React.FC<NavigationSessionViewProps> = ({ un
       <NavigationMap route={route} progress={progress} fix={lastFix} activeLegIndex={activeLegIndex} cameraMode={cameraMode} onUserMovedMap={() => setCameraMode('free')} underlay={underlay} />
       <View style={styles.top} pointerEvents="box-none">
         {status === 'arrived' ? null : <ManeuverBanner banner={banner} units={units} rerouting={rerouting} />}
+        {status === 'arrived' ? null : <IncidentChips placed={placedIncidents} distanceAlong={progress?.distanceAlong ?? 0} units={units} testID={`${testID}-incidents`} />}
         {usingLastRoute ? (
           <View style={styles.notice} testID={`${testID}-last-route`} accessibilityLiveRegion="polite">
             <Text className="font-semibold text-white">{t('navigation.using_last_route')}</Text>
