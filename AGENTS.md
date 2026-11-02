@@ -11,7 +11,7 @@ Resgrid Omni is **one Expo (prebuild/CNG) React Native codebase that builds the 
 
 ## Stack
 
-Expo SDK 58 · React Native 0.88 (New Architecture, Hermes) · React 19.3 · TypeScript (strict) · expo-router 58 · zustand + react-native-mmkv · axios · gluestack-ui v5 + NativeWind 5 RC + Tailwind 4 (CSS config) · lucide-react-native · react-hook-form + zod · i18next (10 languages) · @microsoft/signalr · Novu + expo-notifications + notifee · LiveKit · MapLibre (`@maplibre/maplibre-react-native`, `maplibre-gl`) · Sentry · Countly · Jest 29 + jest-expo + @testing-library/react-native · Electron 40 · pnpm workspaces.
+Expo SDK 58 · React Native 0.88 (New Architecture, Hermes) · React 19.3 · TypeScript (strict) · expo-router 58 · zustand + react-native-mmkv · axios · gluestack-ui v5 + NativeWind 5 RC + Tailwind 4 (CSS config) · lucide-react-native · react-hook-form + zod · i18next (10 languages) · @microsoft/signalr · Novu + expo-notifications + notifee · LiveKit · MapLibre (`@maplibre/maplibre-react-native`, `maplibre-gl`) · Sentry · Countly · Jest 30 + jest-expo + @testing-library/react-native 14 · Electron 45 · pnpm workspaces.
 
 ## Layout (target — see plan §5.1)
 
@@ -60,6 +60,7 @@ Never fork code per app. In order of preference: **capability** (`useCapability(
 
 - Every module ships with Jest tests; CI runs Jest, type-check, lint, translation parity, dependency rules, API contract tests and per-variant route contract tests on every PR.
 - `jest.mock()` factories may only reference variables prefixed `mock`. Mocks of the auth store need `getState()`. Keep route files (`variants/*/app/**`) free of tests and logic — test the screens in `@resgrid/features`.
+- RNTL 14: `render`, `renderHook`, `fireEvent`, `act`, `rerender` and `unmount` are async — always `await` them (`react-native-testing` skill, v14 reference).
 - After dependency bumps, suspect stale `node_modules`/Metro cache first.
 - Variant-affecting changes: review the `expo config` snapshot diff for every variant.
 
