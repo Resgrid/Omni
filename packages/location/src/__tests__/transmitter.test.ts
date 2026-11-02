@@ -500,6 +500,51 @@ describe('background task registration', () => {
     expect(getLocationTransmissionStatus()).toMatchObject({ backgroundTaskRegistered: true, mode: 'foreground' });
   });
 
+  it('switches watcher and task to the navigation profile for a turn-by-turn session and back afterwards', async () => {
+    settings.set({ backgroundGeolocation: true });
+    const instance = create('unit');
+    await instance.start();
+    expect(startLocationUpdatesAsync).toHaveBeenCalledTimes(1);
+    expect(watchPositionAsync).toHaveBeenLastCalledWith(expect.objectContaining({ accuracy: 3, timeInterval: 15_000 }), expect.any(Function), expect.any(Function));
+
+    await instance.setNavigationActive(true);
+    expect(instance.profile.id).toBe('navigation');
+    expect(instance.isNavigationActive()).toBe(true);
+    expect(startLocationUpdatesAsync).toHaveBeenLastCalledWith(LOCATION_TASK_NAME, expect.objectContaining({ accuracy: 4, timeInterval: 5_000, activityType: 2 }));
+    expect(watchPositionAsync).toHaveBeenLastCalledWith(expect.objectContaining({ accuracy: 6, timeInterval: 1_000 }), expect.any(Function), expect.any(Function));
+    expect(__activeWatchers()).toBe(1);
+
+    await instance.setNavigationActive(true);
+    expect(startLocationUpdatesAsync).toHaveBeenCalledTimes(2);
+
+    await instance.setNavigationActive(false);
+    expect(instance.profile.id).toBe('automotive');
+    expect(startLocationUpdatesAsync).toHaveBeenLastCalledWith(LOCATION_TASK_NAME, expect.objectContaining({ accuracy: 3, timeInterval: 30_000 }));
+    expect(watchPositionAsync).toHaveBeenLastCalledWith(expect.objectContaining({ accuracy: 3, timeInterval: 15_000 }), expect.any(Function), expect.any(Function));
+    expect(__activeWatchers()).toBe(1);
+  });
+
+  it('shows the navigation text in the foreground-service notification for the session', async () => {
+    settings.set({ backgroundGeolocation: true });
+    const instance = create('unit');
+    await instance.start();
+    await instance.setNavigationActive(true, { notificationBody: 'Navigating to Structure fire' });
+    expect(startLocationUpdatesAsync).toHaveBeenLastCalledWith(LOCATION_TASK_NAME, expect.objectContaining({ foregroundService: expect.objectContaining({ notificationBody: 'Navigating to Structure fire' }) }));
+    await instance.setNavigationActive(false);
+    expect(startLocationUpdatesAsync).toHaveBeenLastCalledWith(
+      LOCATION_TASK_NAME,
+      expect.objectContaining({ foregroundService: expect.objectContaining({ notificationBody: LOCATION_I18N_FALLBACKS['location.tracking_notification_body'] }) })
+    );
+  });
+
+  it('remembers the navigation profile while not tracking and applies it on start', async () => {
+    const instance = create('unit');
+    await instance.setNavigationActive(true);
+    expect(watchPositionAsync).not.toHaveBeenCalled();
+    await instance.start();
+    expect(watchPositionAsync).toHaveBeenLastCalledWith(expect.objectContaining({ accuracy: 6 }), expect.any(Function), expect.any(Function));
+  });
+
   it('runs no watcher alongside the task for the personal profile (Responder)', async () => {
     settings.set({ backgroundGeolocation: true });
     await create('person').start();

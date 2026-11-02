@@ -106,7 +106,8 @@ export const defaultLocationSettings = (capability: LocationCapability): Locatio
 export class LocationTransmitter implements LocationTaskConsumer {
   readonly target: TransmissionTarget;
   readonly capability: LocationCapability;
-  readonly profile: LocationProfile;
+  /** The target's own profile (`personal` / `automotive`); `profile` is the one in effect. */
+  readonly baseProfile: LocationProfile;
 
   private readonly options: LocationTransmitterOptions;
   private readonly foregroundPolicy: ForegroundTransmissionPolicy;
@@ -132,17 +133,24 @@ export class LocationTransmitter implements LocationTaskConsumer {
   private lastAppState: string;
   private disposers: (() => void)[] = [];
   private attached = false;
+  private navigationActive = false;
+  private navigationNotificationBody: string | null = null;
 
   constructor(options: LocationTransmitterOptions) {
     this.options = options;
     this.capability = options.capability;
     this.target = options.capability.transmission;
-    this.profile = LOCATION_PROFILES[options.profile ?? profileForTarget(this.target)];
+    this.baseProfile = LOCATION_PROFILES[options.profile ?? profileForTarget(this.target)];
     this.foregroundPolicy = options.foregroundTransmission ?? (this.target === 'unit' ? 'realtime-setting' : 'always');
     this.maxAccuracyMeters = options.maxAccuracyMeters ?? DEFAULT_MAX_ACCURACY_METERS;
     this.gate = new LocationTransmissionGate(gateOptionsFor(this.target, this.readServerConfig()));
     this.lastAppState = this.appStateNow();
     patchTransmissionStatus({ target: this.target });
+  }
+
+  /** The profile in effect: `navigation` while a turn-by-turn session runs, else the target's own. */
+  get profile(): LocationProfile {
+    return this.navigationActive ? LOCATION_PROFILES.navigation : this.baseProfile;
   }
 
   // ------------------------------------------------------------------ lifecycle
@@ -247,6 +255,29 @@ export class LocationTransmitter implements LocationTaskConsumer {
 
   isTracking(): boolean {
     return this.tracking;
+  }
+
+  /**
+   * Turn-by-turn navigation on or off (MapLibre plan §9.2): the `navigation` profile while on, then back to the target's
+   * own profile. The watcher restarts with the new options and the OS task is re-registered when its stored options
+   * differ; fixes keep going through the gate to AVL as before. Web keeps browser geolocation as it is. Android shows
+   * `notificationBody` (e.g. "Navigating to …") in the foreground-service notification for the session.
+   */
+  setNavigationActive(active: boolean, options: { notificationBody?: string | null } = {}): Promise<void> {
+    const body = active ? (options.notificationBody ?? null) : null;
+    if (this.navigationActive === active && this.navigationNotificationBody === body) return Promise.resolve();
+    this.navigationActive = active;
+    this.navigationNotificationBody = body;
+    getLocationLogger().info({ message: active ? 'Location switched to the navigation profile' : 'Location back to its own profile', context: { profile: this.profile.id } });
+    return this.enqueueOp(async () => {
+      if (!this.tracking || isWebPlatform()) return;
+      this.releaseWatcher();
+      await this.sync(false);
+    });
+  }
+
+  isNavigationActive(): boolean {
+    return this.navigationActive;
   }
 
   // ------------------------------------------------------------------ task batches (LocationTaskConsumer)
@@ -385,7 +416,7 @@ export class LocationTransmitter implements LocationTaskConsumer {
   private async ensureTaskRegistered(active: boolean): Promise<boolean> {
     const options = buildTaskOptions(this.profile.id, Platform.OS, {
       notificationTitle: translateOr(LOCATION_I18N_KEYS.trackingNotificationTitle),
-      notificationBody: translateOr(LOCATION_I18N_KEYS.trackingNotificationBody),
+      notificationBody: this.navigationActive && this.navigationNotificationBody ? this.navigationNotificationBody : translateOr(LOCATION_I18N_KEYS.trackingNotificationBody),
     });
     const registered = await TaskManager.isTaskRegisteredAsync(LOCATION_TASK_NAME).catch(() => false);
     if (registered) {

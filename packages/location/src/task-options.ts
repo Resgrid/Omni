@@ -15,13 +15,19 @@ import type { TransmissionTarget } from './types';
  *   cycle for road travel, and a foreground watcher kept alongside the task for a responsive map (task fixes are ignored
  *   while it runs).
  *
- * Both: `pausesUpdatesAutomatically: false` (iOS would otherwise stop updates for a parked apparatus and only resume on
+ * - `navigation` (in-app turn-by-turn, MapLibre plan §9.2): only while a navigation session runs — the foreground
+ *   watcher at `BestForNavigation` every second (snapping and voice prompts need it) and the OS task at `High` every 5 s
+ *   so guidance keeps up with the screen off; the transmitter returns to the target's own profile when the session ends.
+ *
+ * All: `pausesUpdatesAutomatically: false` (iOS would otherwise stop updates for a parked apparatus and only resume on
  * significant motion — it drops off dispatch's map) and the iOS background indicator stays lit (the user is entitled to
  * see they are tracked).
  */
-export type LocationProfileId = 'personal' | 'automotive';
+export type LocationProfileId = 'personal' | 'automotive' | 'navigation';
 
 const ACCURACY_BALANCED = 3;
+const ACCURACY_HIGH = 4;
+const ACCURACY_BEST_FOR_NAVIGATION = 6;
 const ACTIVITY_OTHER = 1;
 const ACTIVITY_AUTOMOTIVE = 2;
 
@@ -60,6 +66,21 @@ export const LOCATION_PROFILES: Record<LocationProfileId, LocationProfile> = {
       timeInterval: 30_000,
       distanceInterval: 0,
       deferredUpdatesInterval: 25_000,
+      deferredUpdatesDistance: 0,
+      pausesUpdatesAutomatically: false,
+      activityType: ACTIVITY_AUTOMOTIVE,
+      showsBackgroundLocationIndicator: true,
+    }),
+  },
+  navigation: {
+    id: 'navigation',
+    watcherWithTask: true,
+    watcherOptions: { accuracy: ACCURACY_BEST_FOR_NAVIGATION, timeInterval: 1_000, distanceInterval: 0 },
+    taskOptions: () => ({
+      accuracy: ACCURACY_HIGH,
+      timeInterval: 5_000,
+      distanceInterval: 0,
+      deferredUpdatesInterval: 5_000,
       deferredUpdatesDistance: 0,
       pausesUpdatesAutomatically: false,
       activityType: ACTIVITY_AUTOMOTIVE,

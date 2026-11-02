@@ -34,6 +34,11 @@ export function getCurrentLocation(): CurrentLocation | null {
   return currentLocationStore.getState();
 }
 
+/** Every new position (turn-by-turn navigation follows the device fix by fix). Returns the unsubscribe. */
+export function subscribeCurrentLocation(listener: (location: CurrentLocation | null) => void): () => void {
+  return currentLocationStore.subscribe((state) => listener(state));
+}
+
 /** As a fix (heartbeat fallback when the OS has nothing cached). */
 export function currentLocationAsFix(): LocationFix | null {
   const current = currentLocationStore.getState();

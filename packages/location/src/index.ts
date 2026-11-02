@@ -73,7 +73,16 @@ export {
 } from './permissions';
 
 // Stores
-export { type CurrentLocation, getCurrentLocation, getLocationTransmissionStatus, type LocationTransmissionStatus, resetLocationStores, setCurrentLocation, type TransmissionMode } from './location-store';
+export {
+  type CurrentLocation,
+  getCurrentLocation,
+  getLocationTransmissionStatus,
+  type LocationTransmissionStatus,
+  resetLocationStores,
+  setCurrentLocation,
+  subscribeCurrentLocation,
+  type TransmissionMode,
+} from './location-store';
 
 // Live (realtime) locations for maps
 export {
