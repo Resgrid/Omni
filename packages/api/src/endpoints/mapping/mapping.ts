@@ -15,6 +15,8 @@ import type {
   SearchAllMapFeaturesResult,
   SearchCustomMapRegionsResult,
   SearchIndoorLocationsResult,
+  SignMapResourceUrlsInput,
+  SignMapResourceUrlsResult,
 } from '@resgrid/models';
 
 import { type ApiContext, cachedRequest, type CachedRequestOptions, defineEndpoints, request, type RequestOptions, type UnknownV4Result } from '../../core';
@@ -41,6 +43,7 @@ export const mappingEndpoints = defineEndpoints('mapping', {
   searchAllMapFeatures: { method: 'GET', path: '/Mapping/SearchAllMapFeatures', query: ['term', 'type'] },
   searchCustomMapRegions: { method: 'GET', path: '/Mapping/SearchCustomMapRegions', query: ['term', 'layerId'] },
   searchIndoorLocations: { method: 'GET', path: '/Mapping/SearchIndoorLocations', query: ['term', 'mapId'] },
+  signMapResourceUrls: { method: 'POST', path: '/Mapping/SignMapResourceUrls', body: 'json' },
 });
 
 const E = mappingEndpoints;
@@ -114,3 +117,10 @@ export const searchCustomMapRegions = (ctx: ApiContext, params: { term?: string;
 /** Searches for indoor map zones matching the specified term. `GET /Mapping/SearchIndoorLocations` — legacy: IU. */
 export const searchIndoorLocations = (ctx: ApiContext, params: { term?: string; mapId?: string } = {}, options?: RequestOptions): Promise<SearchIndoorLocationsResult> =>
   request<SearchIndoorLocationsResult>(ctx, E.searchIndoorLocations, { params }, options);
+
+/**
+ * Expiring signatures for custom map tile/image and indoor floor image URLs of the caller's department (MapLibre plan D12):
+ * native map sources cannot send a bearer header. `POST /Mapping/SignMapResourceUrls` — new in Omni.
+ */
+export const signMapResourceUrls = (ctx: ApiContext, body: SignMapResourceUrlsInput, options?: RequestOptions): Promise<SignMapResourceUrlsResult> =>
+  request<SignMapResourceUrlsResult>(ctx, E.signMapResourceUrls, { body }, options);

@@ -17,6 +17,7 @@ import type {
   GetScheduledRoutesResult,
   GetStopContactResult,
   PauseRouteInput,
+  RecordRouteDeviationInput,
   ResumeRouteInput,
   SaveRoutePlanResult,
   SkipStopInput,
@@ -24,7 +25,7 @@ import type {
   UpdateStopNotesInput,
 } from '@resgrid/models';
 
-import { type ApiContext, cachedRequest, type CachedRequestOptions, defineEndpoints, request, type RequestOptions } from '../../core';
+import { type ApiContext, cachedRequest, type CachedRequestOptions, defineEndpoints, request, type RequestOptions, type UnknownV4Result } from '../../core';
 
 /** Core v4 endpoints for routes (Routes). The contract test checks every entry against Swagger. */
 export const routesEndpoints = defineEndpoints('routes', {
@@ -34,11 +35,11 @@ export const routesEndpoints = defineEndpoints('routes', {
   checkOutFromStop: { method: 'POST', path: '/Routes/CheckOutFromStop', body: 'json' },
   endRoute: { method: 'POST', path: '/Routes/EndRoute', body: 'json' },
   geofenceCheckIn: { method: 'POST', path: '/Routes/GeofenceCheckIn', body: 'json' },
-  getActiveRouteForUnit: { method: 'GET', path: '/Routes/GetActiveRouteForUnit/{unitId}' },
+  getActiveRouteForUnit: { method: 'GET', path: '/Routes/GetActiveRouteForUnit/{unitId}', query: ['includePaused'] },
   getActiveRouteInstances: { method: 'GET', path: '/Routes/GetActiveRouteInstances' },
   getActiveRoutes: { method: 'GET', path: '/Routes/GetActiveRoutes' },
   getDirections: { method: 'GET', path: '/Routes/GetDirections/{routePlanId}' },
-  getInstanceDirections: { method: 'GET', path: '/Routes/GetInstanceDirections/{instanceId}', query: ['latitude', 'longitude'] },
+  getInstanceDirections: { method: 'GET', path: '/Routes/GetInstanceDirections/{instanceId}', query: ['latitude', 'longitude', 'heading', 'navigation', 'language', 'metric'] },
   getRouteContacts: { method: 'GET', path: '/Routes/GetRouteContacts/{routePlanId}' },
   getRouteHistory: { method: 'GET', path: '/Routes/GetRouteHistory/{routePlanId}' },
   getRoutePlan: { method: 'GET', path: '/Routes/GetRoutePlan/{id}' },
@@ -50,6 +51,7 @@ export const routesEndpoints = defineEndpoints('routes', {
   getStopsForInstance: { method: 'GET', path: '/Routes/GetStopsForInstance/{instanceId}' },
   getUnacknowledgedDeviations: { method: 'GET', path: '/Routes/GetUnacknowledgedDeviations' },
   pauseRoute: { method: 'POST', path: '/Routes/PauseRoute', body: 'json' },
+  recordDeviation: { method: 'POST', path: '/Routes/RecordDeviation', body: 'json' },
   resumeRoute: { method: 'POST', path: '/Routes/ResumeRoute', body: 'json' },
   skipStop: { method: 'POST', path: '/Routes/SkipStop', body: 'json' },
   startRoute: { method: 'POST', path: '/Routes/StartRoute', body: 'json' },
@@ -76,8 +78,11 @@ export const endRoute = (ctx: ApiContext, body: EndRouteInput, options?: Request
 /** Auto check-in from geofence proximity. `POST /Routes/GeofenceCheckIn` — legacy: U. */
 export const geofenceCheckIn = (ctx: ApiContext, body: GeofenceCheckInInput, options?: RequestOptions): Promise<SaveRoutePlanResult> => request<SaveRoutePlanResult>(ctx, E.geofenceCheckIn, { body }, options);
 
-/** Gets the active route instance for a unit. `GET /Routes/GetActiveRouteForUnit/{unitId}` — legacy: U. */
-export const getActiveRouteForUnit = (ctx: ApiContext, params: { unitId: number | string }, options?: RequestOptions): Promise<GetRouteProgressResult> =>
+/**
+ * Gets the active route instance for a unit. `includePaused` (MapLibre plan §10.4, RD8) also returns a paused instance;
+ * without it the server answers as it does for the legacy app. `GET /Routes/GetActiveRouteForUnit/{unitId}` — legacy: U.
+ */
+export const getActiveRouteForUnit = (ctx: ApiContext, params: { unitId: number | string; includePaused?: boolean }, options?: RequestOptions): Promise<GetRouteProgressResult> =>
   request<GetRouteProgressResult>(ctx, E.getActiveRouteForUnit, { params }, options);
 
 /** Gets all active route instances across the department with progress details. `GET /Routes/GetActiveRouteInstances` — legacy: U. */
@@ -90,9 +95,16 @@ export const getActiveRoutes = (ctx: ApiContext, options?: RequestOptions): Prom
 export const getDirections = (ctx: ApiContext, params: { routePlanId: string }, options?: RequestOptions): Promise<GetRouteDirectionsResult> =>
   request<GetRouteDirectionsResult>(ctx, E.getDirections, { params }, options);
 
-/** Gets the route geometry and remaining waypoints for an active route instance. Pass the unit's current latitude and longitude as query parameters to route from the current position rather than the first remaining stop. `GET /Routes/GetInstanceDirections/{instanceId}` — legacy: U. */
-export const getInstanceDirections = (ctx: ApiContext, params: { instanceId: string; latitude?: number | string; longitude?: number | string }, options?: RequestOptions): Promise<GetRouteDirectionsResult> =>
-  request<GetRouteDirectionsResult>(ctx, E.getInstanceDirections, { params }, options);
+/**
+ * Gets the route geometry and remaining waypoints for an active route instance. With `latitude`/`longitude` the server
+ * routes live from that position through the remaining stops (legs, steps, per-stop ETAs); `navigation` adds voice and
+ * banner instructions. `GET /Routes/GetInstanceDirections/{instanceId}` — legacy: U.
+ */
+export const getInstanceDirections = (
+  ctx: ApiContext,
+  params: { instanceId: string; latitude?: number | string; longitude?: number | string; heading?: number; navigation?: boolean; language?: string; metric?: boolean },
+  options?: RequestOptions
+): Promise<GetRouteDirectionsResult> => request<GetRouteDirectionsResult>(ctx, E.getInstanceDirections, { params }, options);
 
 /** Gets all unique contacts attached to stops on a route plan. `GET /Routes/GetRouteContacts/{routePlanId}` — legacy: U. */
 export const getRouteContacts = (ctx: ApiContext, params: { routePlanId: string }, options?: RequestOptions): Promise<GetRouteContactsResult> =>
@@ -131,6 +143,9 @@ export const getUnacknowledgedDeviations = (ctx: ApiContext, options?: RequestOp
 
 /** Pauses a route instance. `POST /Routes/PauseRoute` — legacy: U. */
 export const pauseRoute = (ctx: ApiContext, body: PauseRouteInput, options?: RequestOptions): Promise<GetRouteInstanceResult> => request<GetRouteInstanceResult>(ctx, E.pauseRoute, { body }, options);
+
+/** Records a deviation seen by the app (OffRoute with the distance from the line). `POST /Routes/RecordDeviation` — new in Omni. */
+export const recordDeviation = (ctx: ApiContext, body: RecordRouteDeviationInput, options?: RequestOptions): Promise<UnknownV4Result> => request<UnknownV4Result>(ctx, E.recordDeviation, { body }, options);
 
 /** Resumes a paused route instance. `POST /Routes/ResumeRoute` — legacy: U. */
 export const resumeRoute = (ctx: ApiContext, body: ResumeRouteInput, options?: RequestOptions): Promise<GetRouteInstanceResult> => request<GetRouteInstanceResult>(ctx, E.resumeRoute, { body }, options);

@@ -1,0 +1,75 @@
+{
+  "x-pending": {
+    "source": "Core develop working tree (MapLibre plan v1.7 §23, not yet deployed to QA)",
+    "addedAt": "2026-11-01",
+    "note": "Core v4 routes and parameters Omni calls before they reach the QA Swagger snapshot. The contract test overlays these on swagger-v4.json and fails once the snapshot has an entry, so remove each entry after refreshing the snapshot. Hand-written from Web/Resgrid.Web.Services/Controllers/v4/{RoutingController,RoutesController,MappingController}.cs."
+  },
+  "paths": {
+    "/api/v{VersionId}/Mapping/SignMapResourceUrls": {
+      "post": {
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SignMapResourceUrlsInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/Routes/GetActiveRouteForUnit/{unitId}": {
+      "get": {
+        "parameters": [{ "name": "includePaused", "in": "query", "schema": { "type": "boolean" } }]
+      }
+    },
+    "/api/v{VersionId}/Routes/GetInstanceDirections/{instanceId}": {
+      "get": {
+        "parameters": [
+          { "name": "heading", "in": "query", "schema": { "type": "number", "format": "double" } },
+          { "name": "navigation", "in": "query", "schema": { "type": "boolean" } },
+          { "name": "language", "in": "query", "schema": { "type": "string" } },
+          { "name": "metric", "in": "query", "schema": { "type": "boolean" } }
+        ]
+      }
+    },
+    "/api/v{VersionId}/Routes/RecordDeviation": {
+      "post": {
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RecordRouteDeviationInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/Routing/GetActiveNavigations": {
+      "get": {
+        "parameters": [
+          { "name": "callId", "in": "query", "schema": { "type": "integer", "format": "int32" } },
+          { "name": "unitId", "in": "query", "schema": { "type": "integer", "format": "int32" } },
+          { "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ]
+      }
+    },
+    "/api/v{VersionId}/Routing/GetCallRoute": {
+      "get": {
+        "parameters": [
+          { "name": "callId", "in": "query", "schema": { "type": "integer", "format": "int32" } },
+          { "name": "latitude", "in": "query", "schema": { "type": "number", "format": "double" } },
+          { "name": "longitude", "in": "query", "schema": { "type": "number", "format": "double" } },
+          { "name": "heading", "in": "query", "schema": { "type": "number", "format": "double" } },
+          { "name": "unitId", "in": "query", "schema": { "type": "integer", "format": "int32" } },
+          { "name": "navigation", "in": "query", "schema": { "type": "boolean" } },
+          { "name": "language", "in": "query", "schema": { "type": "string" } },
+          { "name": "metric", "in": "query", "schema": { "type": "boolean" } },
+          { "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ]
+      }
+    },
+    "/api/v{VersionId}/Routing/GetCapabilities": {
+      "get": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }]
+      }
+    },
+    "/api/v{VersionId}/Routing/GetRoute": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GetRouteInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/Routing/ReportNavigationProgress": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReportNavigationProgressInput" } } } }
+      }
+    }
+  }
+}

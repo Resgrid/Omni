@@ -48,6 +48,7 @@ export * from './personnelStatuses';
 export * from './records';
 export * from './roles';
 export * from './routes';
+export * from './routing';
 export * from './runcards';
 export * from './security';
 export * from './shifts';

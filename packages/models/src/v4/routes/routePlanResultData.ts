@@ -12,6 +12,15 @@ export interface RoutePlanResultData {
   EstimatedDurationSeconds: number | null;
   MapboxRouteProfile: string | null;
   AddedOn: string;
+  // MapLibre plan §10.5 (additive; absent on older servers).
+  /** `RoutingProfile`. */
+  RoutingProfile?: number;
+  /** `RouteAvoidOptions` flags. */
+  AvoidOptions?: number;
+  RouteProvider?: string | null;
+  RouteComputedOn?: string | null;
+  /** Stops or options changed since the stored route was generated. */
+  RouteIsStale?: boolean;
 }
 
 export interface RouteStopResultData {
@@ -33,6 +42,13 @@ export interface RouteStopResultData {
   ContactName: string | null;
   ContactNumber: string | null;
   Notes: string | null;
+  // MapLibre plan §10.5 (additive).
+  /** Distance of the leg arriving at this stop. */
+  LegDistanceMeters?: number | null;
+  /** Travel time of the leg arriving at this stop. */
+  LegDurationSeconds?: number | null;
+  /** Seconds from the route start to arrival here, including earlier stops' dwell. */
+  PlannedOffsetSeconds?: number | null;
 }
 
 export interface RouteScheduleResultData {
@@ -70,6 +86,16 @@ export interface RoutePlanDetailResultData {
   AddedOn: string;
   Stops: RouteStopResultData[];
   Schedules: RouteScheduleResultData[];
+  // MapLibre plan §10.5 (additive; absent on older servers).
+  RoutingProfile?: number;
+  AvoidOptions?: number;
+  StartDepartmentGroupId?: number | null;
+  EndDepartmentGroupId?: number | null;
+  RouteProvider?: string | null;
+  RouteComputedOn?: string | null;
+  RouteIsStale?: boolean;
+  /** Travel time plus every stop's estimated dwell. */
+  EstimatedDurationWithDwellSeconds?: number | null;
 }
 
 export interface ScheduledRouteResultData {

@@ -5,8 +5,13 @@
  *
  * Snapshot: packages/api/contract/swagger-v4.json. Refresh with `node packages/api/contract/refresh-swagger.mjs`
  * (public QA API by default, or pass a Core CI artifact / local file) and review the diff.
+ *
+ * Core routes and parameters that are built on Core `develop` but not yet in the QA snapshot live in
+ * packages/api/contract/swagger-v4-pending.json, overlaid below; an entry the snapshot already has fails the test so
+ * the overlay shrinks back to nothing after each refresh.
  */
 import swagger from '../../contract/swagger-v4.json';
+import pending from '../../contract/swagger-v4-pending.json';
 import { type EndpointDefinition, pathParamsOf } from '../core/endpoint';
 import { getAllCallPriorities, getCurrentStaffing, getMapLayers } from '../endpoints';
 import { endpointRegistry } from '../registry';
@@ -22,7 +27,35 @@ interface SwaggerOperation {
   requestBody?: { content: Record<string, unknown>; required?: boolean };
 }
 
-const paths = swagger.paths as unknown as Record<string, Record<string, SwaggerOperation>>;
+type SwaggerPaths = Record<string, Record<string, SwaggerOperation>>;
+
+const snapshotPaths = swagger.paths as unknown as SwaggerPaths;
+const pendingPaths = pending.paths as unknown as SwaggerPaths;
+
+/** Snapshot plus the pending overlay: new operations are added, extra parameters of existing ones merged in. */
+const overlay = (base: SwaggerPaths, extra: SwaggerPaths): SwaggerPaths => {
+  const merged: SwaggerPaths = { ...base };
+  for (const [path, operations] of Object.entries(extra)) {
+    const entry = { ...(merged[path] ?? {}) };
+    for (const [method, operation] of Object.entries(operations)) {
+      const existing = entry[method];
+      if (!existing) {
+        entry[method] = operation;
+        continue;
+      }
+      const names = new Set((existing.parameters ?? []).map((p) => `${p.in}:${p.name}`));
+      entry[method] = {
+        ...existing,
+        parameters: [...(existing.parameters ?? []), ...(operation.parameters ?? []).filter((p) => !names.has(`${p.in}:${p.name}`))],
+        requestBody: existing.requestBody ?? operation.requestBody,
+      };
+    }
+    merged[path] = entry;
+  }
+  return merged;
+};
+
+const paths = overlay(snapshotPaths, pendingPaths);
 const PREFIX = '/api/v{VersionId}';
 const CONTENT_TYPE: Record<string, string> = { json: 'application/json', multipart: 'multipart/form-data', form: 'application/x-www-form-urlencoded' };
 
@@ -73,6 +106,21 @@ const problemsWith = (definition: EndpointDefinition): string[] => {
 describe('endpoint contract vs Core v4 Swagger', () => {
   it('has a usable snapshot', () => {
     expect(Object.keys(paths).length).toBeGreaterThan(500);
+  });
+
+  it('keeps only pending entries the snapshot does not have yet (remove them after a refresh)', () => {
+    const covered: string[] = [];
+    for (const [path, operations] of Object.entries(pendingPaths)) {
+      for (const [method, operation] of Object.entries(operations)) {
+        const existing = snapshotPaths[path]?.[method];
+        if (!existing) continue;
+        const names = new Set((existing.parameters ?? []).map((p) => `${p.in}:${p.name}`));
+        const extraParameters = (operation.parameters ?? []).filter((p) => p.name !== 'VersionId' && !names.has(`${p.in}:${p.name}`));
+        const extraBody = operation.requestBody !== undefined && existing.requestBody === undefined;
+        if (extraParameters.length === 0 && !extraBody) covered.push(`${method.toUpperCase()} ${path}`);
+      }
+    }
+    expect(covered).toEqual([]);
   });
 
   it('gives every definition a unique name', () => {

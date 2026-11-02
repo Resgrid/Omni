@@ -15,6 +15,8 @@ export class WeatherAlertResultData {
   public Instruction: string = '';
   public AreaDescription: string = '';
   public Polygon: string = '';
+  /** The alert area as a GeoJSON geometry string whatever the source's format; null without an area. Absent on older servers. */
+  public GeoJson?: string | null;
   public Geocodes: string = '';
   public CenterGeoLocation: string = '';
   public OnsetUtc: string | null = null;
