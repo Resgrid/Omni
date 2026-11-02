@@ -38,8 +38,6 @@ export interface NavEntry {
   /** Tabs child route name when it differs from the href (`maps/index` for a folder without a layout). */
   routeName?: string;
   testID?: string;
-  /** Tabs: keep the screen mounted (frozen) when another tab is focused (Unit's map). */
-  freezeOnBlur?: boolean;
   /**
    * The entry's route is a nested tab layout (Responder's `/home` with Personnel, Units, Calls): the routes below its href
    * are top-level screens too, so the header shows the menu button there rather than back.

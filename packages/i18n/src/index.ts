@@ -4,8 +4,8 @@
 //   import { unitResources } from '@resgrid/i18n/resources/unit';
 //   initI18n({ language: storedLanguage, variantResources: unitResources });
 export { detectDeviceLanguage, type DeviceLocale, resolveInitialLanguage } from './detect';
-export { changeLanguage, i18n as default, getCurrentLanguage, i18n, initI18n, type InitI18nOptions, isRTL, type LanguageChange, onLanguageChanged, setLanguage, translate } from './i18n';
+export { changeLanguage, i18n as default, getCurrentLanguage, i18n, initI18n, type InitI18nOptions, isRTL, type LanguageChange, loadLanguage, onLanguageChanged, setLanguage, translate } from './i18n';
 export { FALLBACK_LANGUAGE, isRTLLanguage, isSupportedLanguage, type Language, LEGACY_LANGUAGE_STORAGE_KEY, RTL_LANGUAGES, SUPPORTED_LANGUAGES } from './languages';
 export { COMMON_NAMESPACE, type Namespace, NAMESPACES } from './namespaces';
-export type { NamespaceResources, TranslationTree } from './resources/types';
+export type { LoadableLanguage, NamespaceResources, NamespaceTranslations, TranslationLoader, TranslationTree } from './resources/types';
 export { useTranslation } from 'react-i18next';

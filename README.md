@@ -76,7 +76,7 @@ docs/                   architecture, build and subsystem documentation
 - **Capabilities, not copies.** Screens are shared; a variant switches behaviour on or off with capabilities such as `calls.create`, `incidentCommand: 'command'` or `locationTransmission: 'unit'`, then adapts layout by form factor (phone, tablet, desktop, wall).
 - **Layered packages.** Lower layers never import higher ones (`config` → `core` → `api` → `auth` … → `features` → `app-shell` → apps), enforced in CI.
 
-**Tech stack:** Expo SDK 57 (prebuild) · React Native 0.86 · React 19 · TypeScript · Expo Router · Zustand · MMKV + SQLite · Axios · gluestack-ui + NativeWind / Tailwind CSS · MapLibre · SignalR · Novu + Notifee · LiveKit · Sentry · Electron · pnpm workspaces · Jest + Testing Library.
+**Tech stack:** Expo SDK 58 (prebuild) · React Native 0.88 · React 19 · TypeScript · Expo Router · Zustand · MMKV + SQLite · Axios · gluestack-ui + NativeWind / Tailwind CSS · MapLibre · SignalR · Novu + Notifee · LiveKit · Sentry · Electron · pnpm workspaces · Jest + Testing Library.
 
 ## :package: Deployment Options
 

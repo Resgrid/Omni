@@ -48,7 +48,7 @@ describe('HtmlRenderer (native WebView)', () => {
   });
 
   it('loads only its own document and opens http/https/mailto links externally', () => {
-    const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+    const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
     render(<HtmlRenderer html="<p>x</p>" />);
     const shouldStart = webView().props.onShouldStartLoadWithRequest as (request: { url: string }) => boolean;
 
@@ -214,7 +214,7 @@ describe('HtmlRenderer (web iframe)', () => {
     });
 
     it('falls back to opening the link externally', () => {
-      const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+      const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
       renderWithFrame();
 
       post({ type: 'html-renderer-link', url: 'https://resgrid.com' }, fakeFrameWindow);

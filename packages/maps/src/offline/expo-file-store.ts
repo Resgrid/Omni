@@ -6,7 +6,7 @@ import { normalizePackPath, type OfflinePackFileStore } from './file-store';
 export const OFFLINE_PACKS_DIRECTORY = 'resgrid-offline-maps';
 
 /**
- * iOS/Android pack storage on expo-file-system (SDK 57 `File`/`Directory` API) under
+ * iOS/Android pack storage on expo-file-system (SDK 58 `File`/`Directory` API) under
  * `<documents>/resgrid-offline-maps`. Backup exclusion is a build concern (Android backup rules, iOS
  * `NSURLIsExcludedFromBackupKey`) — see the offline module notes.
  */
@@ -42,13 +42,15 @@ export function createExpoPackFileStore(options: { directoryName?: string } = {}
         ensureParent(file);
         file.create({ intermediates: true });
       }
-      file.write(bytes, { append: true });
+      // Async since SDK 58 (writeSync is the blocking form): resolve only once the chunk is on disk.
+      await file.write(bytes, { append: true });
     },
     read: async (relativePath, offset, length) => {
       const handle = fileAt(relativePath).open(FileMode.ReadOnly);
       try {
         handle.offset = offset;
-        return handle.readBytes(length);
+        // readBytes is async: await it so the handle closes after the read, not before.
+        return await handle.readBytes(length);
       } finally {
         handle.close();
       }

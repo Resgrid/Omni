@@ -39,7 +39,7 @@ export type FeatureNavPlacement = NavPlacement | Readonly<Record<string, NavPlac
 export interface FeatureNavOptions {
   /** Sort order for these entries (an entry's own `order` wins). Entries sharing an order keep declaration order. */
   order?: number;
-  /** Per-entry overrides (testID, freezeOnBlur, routeName, order…), by entry id. */
+  /** Per-entry overrides (testID, routeName, order…), by entry id. */
   overrides?: Readonly<Record<string, Partial<Omit<NavEntry, 'id'>>>>;
 }
 

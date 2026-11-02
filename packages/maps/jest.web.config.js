@@ -21,8 +21,9 @@ module.exports = {
   setupFilesAfterEnv: [...rnPreset.setupFilesAfterEnv, '<rootDir>/jest.setup.ts'],
   testMatch: ['<rootDir>/src/**/__tests__/**/*.web.test.[jt]s?(x)'],
   // jest-expo/web's transform passes only a babel `caller`; the repo root has no babel config, so name the preset here.
+  // babel-preset-expo keeps `import()` for Metro; under Jest it becomes a lazy require() (maplibre-gl loads that way).
   transform: {
-    '.[jt]sx?$': ['babel-jest', { presets: ['babel-preset-expo'], babelrc: false, configFile: false, caller: { name: 'metro', bundler: 'jest', platform: 'web' } }],
+    '.[jt]sx?$': ['babel-jest', { presets: ['babel-preset-expo'], plugins: ['@babel/plugin-transform-dynamic-import'], babelrc: false, configFile: false, caller: { name: 'metro', bundler: 'jest', platform: 'web' } }],
   },
   transformIgnorePatterns: rnPreset.transformIgnorePatterns,
   clearMocks: true,

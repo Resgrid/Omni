@@ -24,7 +24,7 @@ const contact = (ContactId: string, extra: Partial<ContactResultData> = {}): Con
   ...extra,
 });
 
-const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
 
 beforeEach(() => {
   openURL.mockClear();

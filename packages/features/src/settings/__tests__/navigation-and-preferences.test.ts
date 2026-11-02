@@ -68,7 +68,7 @@ describe('navigation hand-off', () => {
   });
 
   it('opens the first link that works and falls back to the address', async () => {
-    const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+    const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
     await expect(openMapsWithDirections(0, 0, 'Call', undefined, undefined, '1 Main St')).resolves.toBe(true);
     expect(openURL).toHaveBeenCalledWith(expect.stringContaining('1%20Main%20St'));
     await expect(openMapsWithDirections(null, null)).resolves.toBe(false);

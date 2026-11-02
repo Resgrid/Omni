@@ -15,7 +15,7 @@ import {
 import type { VariantManifest } from '@resgrid/config';
 import { getEnv, initSentry, logger, setSentryUser } from '@resgrid/core';
 import { configureData, refreshDataWorkingSet } from '@resgrid/data';
-import { initI18n, isSupportedLanguage, LEGACY_LANGUAGE_STORAGE_KEY } from '@resgrid/i18n';
+import { getCurrentLanguage, initI18n, isSupportedLanguage, LEGACY_LANGUAGE_STORAGE_KEY, loadLanguage } from '@resgrid/i18n';
 import { configureLocation, type LocationSettings } from '@resgrid/location';
 import { configureNotifications, pushNotificationService, type WebPushFirebaseConfig } from '@resgrid/notifications';
 import { apiCacheTtlFromManifest, CONTRACT_KEYS, createExpoSecureKeyStore, defaultResetRegistry, initOffline, KV_PLATFORM, type OfflineRuntime, readLegacyString } from '@resgrid/offline';
@@ -132,10 +132,12 @@ export function createStartupSteps(config: AppShellConfig): InitStep[] {
     },
     {
       id: 'startup.i18n',
-      run: () => {
+      run: async () => {
         // configureAppShell already initialised translations before the first render (device language); this keeps the
         // step order explicit and idempotent. The stored choice is applied once storage is open (startup.preferences).
         initI18n({ variantResources: config.i18nResources });
+        // Only English is bundled: wait for the device language's strings so the first screens do not flash English.
+        await loadLanguage(getCurrentLanguage());
       },
     },
     {
@@ -158,11 +160,12 @@ export function createStartupSteps(config: AppShellConfig): InitStep[] {
     },
     {
       id: 'startup.preferences',
-      run: () => {
+      run: async () => {
         const main = requireOfflineRuntime().storage.main;
         const language = readLegacyString(main, LEGACY_LANGUAGE_STORAGE_KEY);
         if (language && isSupportedLanguage(language)) {
           initI18n({ language, variantResources: config.i18nResources });
+          await loadLanguage(language);
         }
         const theme = readLegacyString(main, CONTRACT_KEYS.selectedTheme);
         setShellState({ themeMode: isThemeMode(theme) ? theme : 'system', onboardingRequired: readStoredBoolean(main, CONTRACT_KEYS.isFirstTime) !== false });

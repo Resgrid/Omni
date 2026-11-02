@@ -32,10 +32,15 @@ const toState = (appState: AppStateStatus, lastActiveTimestamp: number | null): 
   lastActiveTimestamp,
 });
 
+const APP_STATES: readonly string[] = ['active', 'background', 'inactive', 'extension', 'unknown'] satisfies AppStateStatus[];
+const isAppStateStatus = (value: string): value is AppStateStatus => APP_STATES.includes(value);
+
 const initialAppState = (): AppStateStatus => {
   if (Platform.OS === 'web') return 'active';
   try {
-    return AppState.currentState ?? 'active';
+    // Typed as a plain string since React Native 0.88.
+    const current = AppState.currentState;
+    return current && isAppStateStatus(current) ? current : 'active';
   } catch {
     return 'active';
   }

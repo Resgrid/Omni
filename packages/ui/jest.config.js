@@ -8,8 +8,9 @@ module.exports = {
   ...preset,
   displayName: 'ui',
   rootDir: __dirname,
-  // Reanimated 4 / worklets resolve to their non-native builds under Jest.
-  resolver: 'react-native-worklets/jest/resolver.js',
+  // Reanimated 4.7 / worklets resolve their initialisers to the non-native builds under Jest (Reanimated's resolver wraps
+  // the worklets one).
+  resolver: 'react-native-reanimated/jest/resolver.js',
   transformIgnorePatterns,
   setupFilesAfterEnv: [...preset.setupFilesAfterEnv, '<rootDir>/jest.setup.tsx'],
 };

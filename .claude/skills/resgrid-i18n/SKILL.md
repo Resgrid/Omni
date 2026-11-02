@@ -17,6 +17,7 @@ description: Translation rules for Resgrid Omni — every user-visible string th
 - `common` — strings used by several variants (login, settings, MFA, calls, statuses, errors, buttons).
 - `responder`, `unit`, `ic`, `dispatch`, `bigboard` — strings only one app shows.
 - `fallbackNS: 'common'`, so a flat key such as `t('calls.title')` resolves from the variant namespace first, then `common`.
+- Only English is bundled; the other nine languages load on demand (`resources/<ns>.ts` loaders, a separate chunk per language and namespace in the web export). `initI18n` stays synchronous and shows English until `loadLanguage()` resolves; `setLanguage()` and the shell's startup wait for it. Never import a non-English JSON file statically.
 - Put a new key in `common` unless it is only meaningful in one app's signature module.
 
 ## Reconciling legacy translations

@@ -16,6 +16,7 @@
   "dependencies": {
     "@config-plugins/react-native-callkeep": "catalog:",
     "@config-plugins/react-native-webrtc": "catalog:",
+    "@expo/dom-webview": "catalog:",
     "@expo/html-elements": "catalog:",
     "@expo/metro-runtime": "catalog:",
     "@gluestack-ui/core": "catalog:",
@@ -116,7 +117,6 @@
     "react-native-calendars": "catalog:",
     "react-native-callkeep": "catalog:",
     "react-native-css": "catalog:",
-    "react-native-edge-to-edge": "catalog:",
     "react-native-gesture-handler": "catalog:",
     "react-native-keyboard-controller": "catalog:",
     "react-native-logs": "catalog:",
@@ -140,6 +140,7 @@
   "devDependencies": {
     "@expo/config": "catalog:",
     "@react-native/jest-preset": "catalog:",
+    "@react-native/metro-config": "catalog:",
     "@tailwindcss/postcss": "catalog:",
     "@testing-library/jest-dom": "catalog:",
     "@testing-library/react-native": "catalog:",

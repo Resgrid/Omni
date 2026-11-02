@@ -56,11 +56,13 @@ function createAppConfig({ variant, appEnv, runNumber, projectRoot, env = proces
   const backgroundLocation = caps.location.background && has('background-location');
 
   const plugins = [
-    ['expo-router', { root: `./variants/${variant}/app` }],
+    // Async routes are on for web by default since SDK 58. Off: the screens are reached through feature barrels that the
+    // shell registrations import, so they stay in the startup chunks and the route chunks only add round trips
+    // (implementation-status "Web bundle, next steps").
+    ['expo-router', { root: `./variants/${variant}/app`, asyncRoutes: { web: false } }],
     ['expo-splash-screen', { backgroundColor: identity.splashBackground, image: `${assets}/adaptive-icon.png`, imageWidth: 250 }],
     ['expo-font', { fonts: ['./assets/fonts/Inter.ttf'] }],
     'expo-localization',
-    'react-native-edge-to-edge',
     'expo-web-browser',
     'expo-image',
     'expo-sharing',
@@ -86,13 +88,15 @@ function createAppConfig({ variant, appEnv, runNumber, projectRoot, env = proces
       'expo-build-properties',
       {
         android: {
+          // SDK 58 turns R8 on for release builds. Kept off (the SDK 57 behaviour) until release builds of every variant
+          // have run on devices: notifee, WebRTC, MMKV, CallKeep and MapLibre load classes by reflection.
+          enableMinifyInReleaseBuilds: false,
           extraProguardRules: '-keep class expo.modules.location.** { *; }',
           extraMavenRepos: ['../../../node_modules/@notifee/react-native/android/libs'],
           targetSdkVersion: 36,
         },
         ios: {
           deploymentTarget: '18.1',
-          enableSceneSupport: true,
           ...(native.iosUseStaticFrameworks ? { useFrameworks: 'static' } : {}),
         },
       },
@@ -178,7 +182,6 @@ function createAppConfig({ variant, appEnv, runNumber, projectRoot, env = proces
       blockedPermissions: native.androidBlockedPermissions,
     },
     web: { favicon: `${assets}/favicon.png`, bundler: 'metro', output: 'single' },
-    experiments: { typedRoutes: true },
     plugins,
     extra: {
       variant,

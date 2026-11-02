@@ -1,8 +1,8 @@
 import * as NavigationBar from 'expo-navigation-bar';
 import { useIsFocused } from 'expo-router';
+import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import * as React from 'react';
 import { Platform, StatusBar } from 'react-native';
-import { SystemBars } from 'react-native-edge-to-edge';
 
 import { useResolvedColorScheme } from './theme/color-scheme';
 
@@ -28,11 +28,8 @@ export const FocusAwareStatusBar = ({ hidden = false }: Props) => {
     // Only call platform-specific methods when they are supported
     if (Platform.OS === 'android') {
       try {
-        // Make both status bar and navigation bar transparent
-        StatusBar.setBackgroundColor('transparent');
-        StatusBar.setTranslucent(true);
-
-        // Hide navigation bar only on Android
+        // Edge-to-edge draws the status bar transparent over the app already (React Native 0.88 removed
+        // StatusBar.setBackgroundColor/setTranslucent). Hide navigation bar only on Android
         NavigationBar.setVisibilityAsync('hidden').catch(() => {
           // Silently handle errors if NavigationBar API is not available
         });
@@ -69,6 +66,7 @@ export const FocusAwareStatusBar = ({ hidden = false }: Props) => {
   // Don't render anything on web
   if (Platform.OS === 'web') return null;
 
-  // Only render SystemBars when focused and on supported platforms. Edge-to-edge 'light' means light content.
-  return isFocused && (Platform.OS === 'android' || Platform.OS === 'ios') ? <SystemBars style={wantsLightContent ? 'light' : 'dark'} hidden={{ statusBar: hidden, navigationBar: true }} /> : null;
+  // Only render the status bar when focused and on supported platforms ('light' means light content). Android is always
+  // edge-to-edge; the navigation bar is hidden through expo-navigation-bar above.
+  return isFocused && (Platform.OS === 'android' || Platform.OS === 'ios') ? <ExpoStatusBar style={wantsLightContent ? 'light' : 'dark'} hidden={hidden} /> : null;
 };

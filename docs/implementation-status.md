@@ -13,6 +13,7 @@ Living tracker for executing [`architecture/omni-plan.md`](architecture/omni-pla
 | Variant manifests for all five apps | ✅ | `apps/omni/variants/<id>/variant.json` — identities, storage ids, Omni majors/bases |
 | `@resgrid/config-plugins`: `createAppConfig`, client env (legacy prefixes), versioning, baseline Expo plugins | ✅ | snapshot test per variant |
 | `apps/omni` Expo project, per-variant route roots, assets, Metro per-variant cache, web stubs | ✅ | `expo config` resolves for all five |
+| Expo SDK 58 (React Native 0.88, React 19.3), no experimental features | 🟡 | Catalog on SDK 58's pinned versions (gesture-handler 3, Reanimated 4.7 / Worklets 0.13, webview 14 — its iOS thread-safety patch is upstream); NativeWind 5.0.0-rc.0 + react-native-css 3.1.0-rc.0. Dropped `experiments.typedRoutes` (beta), `ios.enableSceneSupport` (scene lifecycle is the default), the no-op `freezeOnBlur`, and `react-native-edge-to-edge` (unmaintained; `expo-status-bar` + `expo-navigation-bar`). Kept off: web async routes and R8 (`enableMinifyInReleaseBuilds: false`). `expo-doctor` 20/20; Android prebuild (Unit, Responder); Android and web bundles for all five; web `.dark`/`.light` tokens checked in a browser. Pending: iOS prebuild (needs macOS — first look at the generated `SceneDelegate` with the Live Activity, CallKeep and media-button plugins), native builds and device runs of every variant, the Xcode on CI's `macos-26` runners for `eas build --local` (EAS cloud's `latest` image is Xcode 27.1), then R8 with keep rules. Two of ~12 SDK 58 exports hit a Node segfault late in a long export loop; each variant exports cleanly on its own |
 | Spike S1 — expo-router root per variant + Metro monorepo | ✅ | BigBoard web export builds; bundle contains only its own manifest |
 | `eas.json` generation (40 profiles, OTA channels) | ✅ | `pnpm eas:generate` / `eas:check` |
 | Release planning script (versions + build matrix) | ✅ | `scripts/release-plan.mjs` |
@@ -47,9 +48,9 @@ Living tracker for executing [`architecture/omni-plan.md`](architecture/omni-pla
 
 | Item | Status | Notes |
 |---|---|---|
-| Playwright web boot tests per variant | ✅ | `pnpm e2e:web`; all five web exports |
+| Playwright web boot tests per variant | ✅ | `pnpm e2e:web`; all five web exports. `e2e/web/boot.spec.ts` also checks the on-demand chunks on disk for other variants' identity, that maplibre-gl, LiveKit and each language stay chunks of their own, and that a German browser loads German strings on demand |
 | Playwright web sign-in acceptance | ✅ | `e2e/web/sign-in.spec.ts`: the real auth-ui sign-in form renders (not the shell fallback) and an empty form validates without any auth/API request |
-| Playwright routes and maps | ✅ | `e2e/web/routes-and-maps.spec.ts`: signed-out deep links land on sign-in, public `/login`, and the maplibre-gl worker loads under both the nginx and Electron CSPs. 60/60 across all five variants |
+| Playwright routes and maps | ✅ | `e2e/web/routes-and-maps.spec.ts`: signed-out deep links land on sign-in, public `/login`, and the maplibre-gl worker loads under both the nginx and Electron CSPs. Whole web suite 70/70 across all five variants |
 | Playwright Electron smoke | ✅ | 1/1 against the BigBoard Windows build |
 | Maestro native flows per variant | 🟡 | written, dry-run only; run nightly on Android emulator |
 
@@ -91,7 +92,21 @@ Known integration follow-ups:
 - `@resgrid/api` idempotency header option; shared Jest setup for features (folders import their own `test-setup` today); one nav-entry type across features (the shell's `featureNav()` adapts three shapes today); a lower-layer home for `useHref`/shell context so features need not reach upward.
 - Data stores for field policy, templates and dispatch picker lists.
 - `ConfirmDialog` exists in three features — move it to `@resgrid/ui`.
-- Web bundle is 15–16 MB minified per variant — code splitting (lucide, livekit, maplibre-gl, per-route lazy screens) before the web/Electron release.
+- ✅ Web entry bundle cut from 15–16 MB to 9.5–10.2 MB minified (gzip 3.3–3.6 → 2.2–2.4 MB). Measured from the export's source map, the biggest parts were the translations (~3.7 MB: all ten languages bundled, non-Latin text escaped to `\uXXXX`), lucide (1.2 MB, the whole icon set), maplibre-gl (1.1 MB) and livekit-client (0.6 MB). Now: only English is bundled and the other languages load on demand (`loadLanguage`; the shell's startup waits for the device or stored language); a Babel plugin (`apps/omni/babel/lucide-icon-imports.js`) imports one module per icon (lucide 1.2 MB → 59 KB); maplibre-gl loads with the first map (`packages/maps/src/rg/maplibre-loader.web.ts`; worker URL and `pmtiles://` protocol applied when it arrives) and livekit-client with the first voice connection (`packages/voice/src/livekit/livekit-client.ts`). Same build on Docker and Electron: chunks load from `/_expo/static/js/web/` by script tag, allowed by both CSPs. Playwright now checks the on-demand chunks for other variants' identity, that maplibre-gl, LiveKit and each language stay separate chunks, and that a German browser gets German strings.
+
+  | Variant | Entry before (min / gzip) | Entry after (min / gzip) | Change | maplibre-gl chunk | livekit-client chunk | One language (2 chunks) |
+  |---|---|---|---|---|---|---|
+  | Responder | 16.41 / 3.64 MB | 10.20 / 2.40 MB | −38% (gzip −34%) | 1.11 MB | 0.61 MB | 0.20–0.61 MB |
+  | Unit | 15.21 / 3.35 MB | 9.52 / 2.22 MB | −37% (gzip −34%) | 1.11 MB | 0.61 MB | 0.16–0.49 MB |
+  | IC | 15.63 / 3.44 MB | 9.51 / 2.22 MB | −39% (gzip −35%) | 1.11 MB | 0.61 MB | 0.19–0.58 MB |
+  | Dispatch | 15.83 / 3.48 MB | 9.69 / 2.26 MB | −39% (gzip −35%) | 1.11 MB | 0.61 MB | 0.19–0.59 MB |
+  | BigBoard | 15.14 / 3.33 MB | 9.45 / 2.20 MB | −38% (gzip −34%) | 1.11 MB | 0.61 MB | 0.16–0.49 MB |
+
+- Web bundle, next steps (Dispatch's remaining 9.7 MB entry: reanimated 0.73, Sentry 1.5, expo-router 0.43, react-aria/stately 0.46, features 1.4):
+  - Sentry is ~1.5 MB of every entry (`@sentry/core` 0.46, `@sentry/conventions` 0.34, `@sentry/react-native` 0.27, replay/feedback/browser 0.4). Loading the SDK on web only when a DSN is set, or after first render, is an owner call (errors before it loads go unreported).
+  - Expo's tree shaking (`EXPO_UNSTABLE_METRO_OPTIMIZE_GRAPH=1 EXPO_UNSTABLE_TREE_SHAKING=1`) measured Dispatch 9.69 → 6.87 MB on SDK 57; it is still behind `EXPO_UNSTABLE_*` flags in SDK 58, and the owner ruled out experimental features (AGENTS.md).
+  - Route-level splitting does not pay yet, so web async routes are off (`asyncRoutes: { web: false }`; SDK 58 turns them on by default). Measured on SDK 58 for Dispatch: index.html still loads 9.1 MB, then the root layout (416 KB) and the home screen (103 KB) load one after the other; on SDK 57 only ~50 KB left the entry (the route chunks are re-export stubs), because `shell-registrations.tsx`, `feature-providers.tsx` and the variants' `nav.ts` import feature barrels that include the screens. Narrowing those imports to the features' `lib`/`hooks` subpaths makes screens reachable only from routes, and also stops every variant shipping other apps' modules (Dispatch carries dashboard 140 KB, unit-routes 77 KB, unit-status 31 KB).
+  - Smaller: the `date-fns` barrel (163 KB); `sanitize-html` with postcss/htmlparser2/entities (~165 KB) could load with the first server HTML.
 
 ## Phase 4 — variant modules (code complete; device parity and store releases pending)
 

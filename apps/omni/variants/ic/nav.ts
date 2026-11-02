@@ -67,7 +67,7 @@ export const routes = defineRoutes([
 export const nav = defineNav([
   // `/` forwards to the home route: the department map tab (variant.json shell.homeRoute: '/map').
   { id: 'root', href: '/', placement: 'hidden', labelKey: 'tabs.home', defaultLabel: 'Home' },
-  ...featureNav(mapNav, 'tab', { order: 0, overrides: { map: { freezeOnBlur: true } } }),
+  ...featureNav(mapNav, 'tab', { order: 0 }),
   ...featureNav(callsNav, { calls: 'tab', 'call-new': 'hidden' }, { order: 10 }),
   ...featureNav(incidentCommandNav, { command: 'tab', incidents: 'sidebar' }, { order: 20 }),
   ...featureNav(contactsNav, 'sidebar', { order: 30 }),

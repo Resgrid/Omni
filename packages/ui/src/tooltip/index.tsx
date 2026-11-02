@@ -11,7 +11,9 @@ type IMotionViewProps = React.ComponentProps<typeof View> & MotionComponentProps
 
 const MotionView = Motion.View as React.ComponentType<IMotionViewProps>;
 
-const StyledMotionView = styled(MotionView, { className: 'style' });
+// Minimal prop surface: Motion.View's full props exceed TS's union limit in `styled`'s mapping types (TS2590) since
+// NativeWind 5 RC.
+const StyledMotionView = styled(MotionView as unknown as React.ComponentType<Record<'style', unknown>>, { className: 'style' });
 
 export const UITooltip = createTooltip({
   Root: withStyleContext(StyledMotionView),

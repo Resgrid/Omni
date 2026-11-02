@@ -3,7 +3,8 @@ module.exports = function (api) {
   return {
     // NativeWind v5 needs no babel preset: styling is wired through the Metro transform (react-native-css).
     presets: ['babel-preset-expo'],
-    plugins: ['react-native-worklets/plugin'],
+    // One module per lucide icon instead of the whole icon set (babel/lucide-icon-imports.js).
+    plugins: ['./babel/lucide-icon-imports', 'react-native-worklets/plugin'],
     overrides: [
       {
         // maplibre-gl 6 locates its worker through import.meta.url; rewriting it to require('url') breaks the

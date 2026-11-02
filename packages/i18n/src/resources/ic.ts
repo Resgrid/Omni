@@ -1,15 +1,20 @@
-// One module per namespace, so each app bundles only `common` plus its own strings (see initI18n).
+// One module per namespace, so each app bundles only `common` plus its own strings (see initI18n). English is bundled
+// (the default and fallback); every other language is loaded when it is chosen, a separate chunk in the web export.
 // The JSON comes from scripts/merge-legacy-translations.mjs.
-import ar from '../translations/ic/ar.json';
-import de from '../translations/ic/de.json';
-import el from '../translations/ic/el.json';
 import en from '../translations/ic/en.json';
-import es from '../translations/ic/es.json';
-import fr from '../translations/ic/fr.json';
-import it from '../translations/ic/it.json';
-import pl from '../translations/ic/pl.json';
-import sv from '../translations/ic/sv.json';
-import uk from '../translations/ic/uk.json';
 import type { NamespaceResources } from './types';
 
-export const icResources: NamespaceResources = { en, ar, de, el, es, fr, it, pl, sv, uk };
+export const icResources: NamespaceResources = {
+  en,
+  loaders: {
+    ar: () => import('../translations/ic/ar.json'),
+    de: () => import('../translations/ic/de.json'),
+    el: () => import('../translations/ic/el.json'),
+    es: () => import('../translations/ic/es.json'),
+    fr: () => import('../translations/ic/fr.json'),
+    it: () => import('../translations/ic/it.json'),
+    pl: () => import('../translations/ic/pl.json'),
+    sv: () => import('../translations/ic/sv.json'),
+    uk: () => import('../translations/ic/uk.json'),
+  },
+};
