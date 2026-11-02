@@ -30,13 +30,28 @@ const isObject = (value: unknown): value is Record<string, unknown> => typeof va
 
 const isFeature = (value: unknown): value is GeoJSON.Feature => isObject(value) && value.type === 'Feature' && (value.geometry === null || (isObject(value.geometry) && typeof value.geometry.type === 'string'));
 
+/**
+ * Core copies stored region and zone geometry as is, and an editor may have saved a whole Feature there: such a feature's
+ * `geometry` is itself a Feature, which MapLibre rejects. Its inner geometry is used instead.
+ */
+const unwrapNestedFeature = (feature: GeoJSON.Feature): GeoJSON.Feature | null => {
+  const geometry = feature.geometry as unknown;
+  if (!isObject(geometry) || geometry.type !== 'Feature') return feature;
+  const inner = geometry.geometry;
+  return isObject(inner) && typeof inner.type === 'string' && inner.type !== 'Feature' ? { ...feature, geometry: inner as unknown as GeoJSON.Geometry } : null;
+};
+
 /** Validates the parsed JSON: keeps sections that are FeatureCollections, and their well-formed features. */
 export function toOfflineDepartmentData(value: unknown): OfflineDepartmentData | null {
   if (!isObject(value)) return null;
   const data: OfflineDepartmentData = {};
   for (const [section, collection] of Object.entries(value)) {
     if (!SECTION_NAME.test(section) || !isObject(collection) || collection.type !== 'FeatureCollection' || !Array.isArray(collection.features)) continue;
-    data[section] = { type: 'FeatureCollection', features: collection.features.filter(isFeature) };
+    const features = collection.features
+      .filter(isFeature)
+      .map(unwrapNestedFeature)
+      .filter((feature): feature is GeoJSON.Feature => feature !== null);
+    data[section] = { type: 'FeatureCollection', features };
   }
   return Object.keys(data).length > 0 ? data : null;
 }

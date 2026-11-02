@@ -55,6 +55,8 @@ jest.mock('@resgrid/maps', () => {
       ),
     UnitLocationMarker: ({ latitude, longitude }: { latitude: number; longitude: number }) => mockReact.createElement(Text, { testID: 'mock-own-location' }, `${latitude},${longitude}`),
     GeoJsonMapLayer: ({ id }: { id: string }) => mockReact.createElement(View, { testID: `mock-${id}` }),
+    OfflineDepartmentLayers: ({ visibleLayerIds, excludeLayerIds, idPrefix }: { visibleLayerIds?: string[] | null; excludeLayerIds?: string[]; idPrefix?: string }) =>
+      mockReact.createElement(Text, { testID: `mock-${idPrefix ?? 'offline-dept-layers'}` }, JSON.stringify({ visible: visibleLayerIds ?? null, exclude: excludeLayerIds ?? [] })),
     ShapeSource: ({ id, shape, children }: { id: string; shape?: { features?: unknown[] }; children?: unknown }) =>
       mockReact.createElement(View, { testID: `mock-source-${id}`, accessibilityLabel: String(shape?.features?.length ?? 0) }, children),
     CircleLayer: () => null,

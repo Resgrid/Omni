@@ -5,6 +5,7 @@ import { callsNav } from '@resgrid/features/calls/nav';
 import { chatNav } from '@resgrid/features/chat/nav';
 import { checklistsNav } from '@resgrid/features/checklists/nav';
 import { contactsNav } from '@resgrid/features/contacts/nav';
+import { customMapsNav } from '@resgrid/features/custom-maps/nav';
 import { inventoryNav } from '@resgrid/features/inventory/nav';
 import { mapNav } from '@resgrid/features/map/nav';
 import { navigationNav } from '@resgrid/features/navigation/nav';
@@ -31,6 +32,10 @@ import variant from './variant';
 export const routes = defineRoutes([
   'home',
   'map',
+  'maps',
+  'mapsSearch',
+  'customMap',
+  'indoorMap',
   'calls',
   'callDetail',
   'callEdit',
@@ -100,6 +105,7 @@ export const nav = defineNav([
   ...featureNav(chatNav, 'sidebar', { order: 50 }),
   ...featureNav(notificationsNav, 'sidebar', { order: 60 }),
   ...featureNav(settingsNavEntries, variant),
+  ...featureNav(customMapsNav, { maps: 'sidebar', 'maps-search': 'hidden' }, { order: 26 }),
   ...featureNav(offlineMapsNav, 'hidden', { order: 906 }),
   ...featureNav(navigationNav, 'hidden', { order: 907 }),
   ...featureNav(authNavEntries, variant),

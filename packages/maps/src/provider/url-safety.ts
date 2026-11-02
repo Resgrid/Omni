@@ -1,4 +1,4 @@
-import { isDev } from '@resgrid/core';
+import { isDev } from '@resgrid/core/dev';
 
 /**
  * Map resource URLs (styles, tiles, static maps) follow the server URL rule (AGENTS.md): https only, plain http only to

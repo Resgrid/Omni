@@ -21,7 +21,10 @@ Governing plan: `../int-Coordination/docs/architecture/maplibre-mapping-routing-
 
 ## Department map data
 
-Custom maps (server raster tiles from `CustomMapTiles`, `Mapping/GetCustomMapTile/{layerId}/{z}/{x}/{y}`), indoor maps (floor images + zone GeoJSON), map layers/geofences (`GetMapLayerGeoJSON/{layerId}`; list route is the Core typo `GetMayLayers`), custom map regions, POIs and types, hydrants (Records prevention module, gated by flag and rights), unit-type and custom pin icons. Mapping v4 routes take ids **in the path** (`/{id}`), not query strings.
+Custom maps, indoor maps (floor images + zones), map layers/geofences (`GetMapLayerGeoJSON/{layerId}`; list route is the Core typo `GetMayLayers`), custom map regions, POIs and types, hydrants (Records prevention module, gated by flag and rights), unit-type and custom pin icons. Mapping v4 routes take ids **in the path** (`/{id}`), not query strings.
+
+- Custom map layers draw from the signed `MercatorTileUrl` or their image over their bounds (`CustomMapRasterLayer`); a layer or indoor floor with no geographic bounds is pixel-only and draws in `PixelImageMap` (D21: a synthetic local frame; `PixelGeometry` is `[x, y]` in Core's 0–1000 editor square, y up). The browser is `features/custom-maps` (`/maps`, `maps.customIndoor`).
+- Offline, the composed style carries `offline-custom-<layer>` (raster packs), `offline-floor-<id>` (images) and `offline-dept-<section>` (department data) sources: the department layers use them automatically; draw department map layers offline with `OfflineDepartmentLayers`. Never add a text layer to the offline style unless it has glyphs (`styleHasGlyphs`).
 
 ## Offline maps (§19)
 

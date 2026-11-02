@@ -1,5 +1,5 @@
-import { getAllActiveLayers, getCustomMap, getCustomMaps, getIndoorMap, getIndoorMapFloor, getIndoorMaps, getIndoorMapZonesGeoJSON, getMapLayerGeoJSON } from '@resgrid/api';
-import type { ActiveLayerResultData, CustomMapResultData, GetCustomMapResultData, GetIndoorMapResultData, IndoorMapFloorResultData, IndoorMapResultData } from '@resgrid/models';
+import { getAllActiveLayers, getCustomMap, getCustomMaps, getIndoorMap, getIndoorMapFloor, getIndoorMaps, getIndoorMapZonesGeoJSON, getMapLayerGeoJSON, searchAllMapFeatures } from '@resgrid/api';
+import type { ActiveLayerResultData, CustomMapResultData, GetCustomMapResultData, GetIndoorMapResultData, IndoorMapFloorResultData, IndoorMapResultData, MapFeatureResultData } from '@resgrid/models';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
@@ -9,7 +9,10 @@ import { registerDataStoreReset } from '../core/reset';
 import { getDataApiContext } from '../core/runtime';
 import { createSliceRunner, emptySliceMeta, type FetchOptions, type SliceMeta, type SliceRunner } from '../core/slices';
 
-type MapsSlice = 'activeLayers' | 'layerGeoJSON' | 'indoorMaps' | 'indoorMap' | 'floor' | 'zones' | 'customMaps' | 'customMap';
+type MapsSlice = 'activeLayers' | 'layerGeoJSON' | 'indoorMaps' | 'indoorMap' | 'floor' | 'zones' | 'customMaps' | 'customMap' | 'search';
+
+/** `Mapping/SearchAllMapFeatures` scope. */
+export type MapFeatureSearchScope = 'all' | 'indoor' | 'custom';
 
 /**
  * Department map data (IC custom/indoor maps, `maps.customIndoor`). Map rendering, layer toggles and the
@@ -26,6 +29,9 @@ interface CustomMapsData extends SliceMeta<MapsSlice> {
   zonesGeoJSONByFloor: Record<string, unknown>;
   customMaps: CustomMapResultData[];
   customMapById: Record<string, GetCustomMapResultData>;
+  /** The latest map feature search (online only, never persisted). */
+  searchResults: MapFeatureResultData[];
+  searchTerm: string;
 }
 
 export interface CustomMapsState extends CustomMapsData {
@@ -37,6 +43,9 @@ export interface CustomMapsState extends CustomMapsData {
   fetchFloorZones: (floorId: string, options?: FetchOptions) => Promise<unknown>;
   fetchCustomMaps: (type?: number, options?: FetchOptions) => Promise<void>;
   fetchCustomMap: (mapId: string, options?: FetchOptions) => Promise<void>;
+  /** Indoor zones and custom map regions by name (`Mapping/SearchAllMapFeatures`); a blank term clears the results. */
+  searchMapFeatures: (term: string, scope?: MapFeatureSearchScope) => Promise<void>;
+  clearMapSearch: () => void;
 }
 
 const initialData = (): CustomMapsData => ({
@@ -49,6 +58,8 @@ const initialData = (): CustomMapsData => ({
   zonesGeoJSONByFloor: {},
   customMaps: [],
   customMapById: {},
+  searchResults: [],
+  searchTerm: '',
 });
 
 let runner: SliceRunner<MapsSlice, CustomMapsState>;
@@ -134,9 +145,27 @@ export const useCustomMapsStore = create<CustomMapsState>()(
             { flightKey: `customMap:${mapId}` }
           );
         },
+
+        searchMapFeatures: async (term, scope = 'all') => {
+          const trimmed = term.trim();
+          if (!trimmed) {
+            set({ searchResults: [], searchTerm: '' });
+            return;
+          }
+          set({ searchTerm: trimmed });
+          await runner.run(
+            'search',
+            async () => unwrapList(await searchAllMapFeatures(getDataApiContext(), { term: trimmed, type: scope })),
+            // A slower answer for an older term must not replace a newer one.
+            (searchResults, state) => (state.searchTerm === trimmed ? { searchResults } : {}),
+            { flightKey: `search:${scope}:${trimmed}` }
+          );
+        },
+
+        clearMapSearch: () => set({ searchResults: [], searchTerm: '' }),
       };
     },
-    dataPersistOptions<CustomMapsState, Omit<CustomMapsData, 'loading' | 'errors' | 'layerGeoJSON' | 'zonesGeoJSONByFloor'>>({
+    dataPersistOptions<CustomMapsState, Omit<CustomMapsData, 'loading' | 'errors' | 'layerGeoJSON' | 'zonesGeoJSONByFloor' | 'searchResults' | 'searchTerm'>>({
       name: 'omni-custom-maps-storage',
       // GeoJSON can be large; it is re-read online or comes from the DepartmentData offline bundle (MapLibre §19).
       partialize: (state) => ({

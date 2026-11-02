@@ -43,6 +43,35 @@ describe('decodeOfflineDepartmentData', () => {
     expect(data?.pois.features).toHaveLength(1);
   });
 
+  it('uses the inner geometry of a region saved as a whole Feature, and drops one with none', () => {
+    const nested = {
+      type: 'Feature',
+      geometry: {
+        type: 'Polygon',
+        coordinates: [
+          [
+            [0, 0],
+            [1, 0],
+            [1, 1],
+            [0, 0],
+          ],
+        ],
+      },
+      properties: {},
+    };
+    const data = toOfflineDepartmentData({
+      customMapRegions: {
+        type: 'FeatureCollection',
+        features: [
+          { type: 'Feature', geometry: nested, properties: { id: 'r1' } },
+          { type: 'Feature', geometry: { type: 'Feature', geometry: null }, properties: { id: 'r2' } },
+        ],
+      },
+    });
+    expect(data?.customMapRegions.features).toHaveLength(1);
+    expect(data?.customMapRegions.features[0]).toMatchObject({ geometry: { type: 'Polygon' }, properties: { id: 'r1' } });
+  });
+
   it('is null for unreadable, empty or oversized bundles', () => {
     expect(decodeOfflineDepartmentData(strToU8('not json'))).toBeNull();
     expect(decodeOfflineDepartmentData(gzipSync(strToU8('[]')))).toBeNull();

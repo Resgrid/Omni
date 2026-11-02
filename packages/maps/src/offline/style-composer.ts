@@ -22,7 +22,9 @@ export const OFFLINE_FLOOR_PREFIX = 'offline-floor-';
 export const OFFLINE_DEPARTMENT_SOURCE_PREFIX = 'offline-dept-';
 
 const isObject = (value: unknown): value is Json => typeof value === 'object' && value !== null && !Array.isArray(value);
-const safeId = (value: string): string => value.replace(/[^A-Za-z0-9_-]+/g, '_');
+/** The id part the composer uses for offline source and layer ids (custom maps, floors, department sections). */
+export const offlineSafeId = (value: string): string => value.replace(/[^A-Za-z0-9_-]+/g, '_');
+const safeId = offlineSafeId;
 
 /** `pmtiles://` + the local `file://` URI. */
 export const pmtilesUrlFor = (path: string): string => `pmtiles://${path}`;

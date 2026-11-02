@@ -72,8 +72,10 @@ export {
 } from './components/map-controls';
 export { MapLegendSheet, type MapLegendSheetProps, type NormalizedLegend, normalizeMapLegend } from './components/map-legend-sheet';
 export { MapPins, type MapPinsProps } from './components/map-pins';
+export { OFFLINE_LAYERS_SECTION, OfflineDepartmentLayers, type OfflineDepartmentLayersProps, offlineLayersFilter } from './components/offline-department-layers';
 export { PinDetailSheet, type PinDetailSheetProps } from './components/pin-detail-sheet';
 export { PinMarker, PinMarkerIcon, type PinMarkerIconProps, type PinMarkerProps } from './components/pin-marker';
+export { PixelImageMap, type PixelImageMapProps, useImageSize } from './components/pixel-image-map';
 export { PoiFilterSheet, type PoiFilterSheetProps, PoiList, type PoiListProps } from './components/poi-list';
 export { PoiMarkerIcon, PoiMarkers, type PoiMarkersProps } from './components/poi-markers';
 export { StaticMap, type StaticMapProps } from './components/static-map';
@@ -85,8 +87,10 @@ export { type FitOptions, type FollowPosition, useFitBounds, useFollowCamera } f
 export { useSignedMapUrl, useSignedMapUrls } from './hooks/use-signed-map-url';
 export * from './lib/camera';
 export * from './lib/custom-maps';
+export { offlineCustomMapSourceId, offlineDepartmentSourceId, offlineFloorSourceId, styleHasGlyphs, styleHasSource, styleImageSourceUrl } from './lib/offline-style-sources';
 export { buildPinCollection, bundledIconKey, getRemoteIconUrl, type PinCollection, type PinCollectionOptions, type PinFeatureProperties, type PinIcon, resolvePinIcon } from './lib/pin-features';
 export * from './lib/pin-ids';
+export { createPixelFrame, hasGeoBounds, parsePixelRing, PIXEL_EDITOR_EXTENT, type PixelFrame, type PixelRegion, pixelRegionsToFeatureCollection } from './lib/pixel-frame';
 export * from './lib/poi';
 export { fillStaticMapTemplate, type StaticMapRequest } from './lib/static-map';
 

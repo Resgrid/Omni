@@ -21,6 +21,7 @@ import {
   MapRecenterButton,
   MapTrafficButton,
   MapView,
+  OfflineDepartmentLayers,
   TrafficLayer,
   UnitLocationMarker,
   useFollowCamera,
@@ -123,6 +124,10 @@ export default function MapScreen({ links = NO_LINKS, realtime = true }: MapScre
   const hiddenKinds = useMapViewStore((state) => state.hiddenKinds);
   const hiddenPoiTypes = useMapViewStore((state) => state.hiddenPoiTypes);
   const { layers: departmentLayers, toggleLayer } = useDepartmentLayers(mapsCapability.layers);
+  // Offline (§19.2): layers whose GeoJSON was not loaded online draw from the department data bundle. With no layer list
+  // on the device the department's on-by-default layers show.
+  const offlineLayerIds = useMemo(() => (departmentLayers.length > 0 ? departmentLayers.filter((layer) => layer.isOn).map((layer) => layer.id) : null), [departmentLayers]);
+  const onlineLayerIds = useMemo(() => departmentLayers.filter((layer) => layer.isOn && layer.data).map((layer) => layer.id), [departmentLayers]);
   // Unit: the device unit's running route (variants that ship the routes module).
   const hasUnitRoutes = useHasModule('unit-routes');
   const activeRoute = useActiveRouteOverlay(hasUnitRoutes && isUnitDevice, activeUnitId);
@@ -400,6 +405,7 @@ export default function MapScreen({ links = NO_LINKS, realtime = true }: MapScre
         <Camera ref={cameraRef} defaultSettings={initialCamera} />
         <TrafficLayer visible={isTrafficOn} idPrefix="map-screen-traffic" />
         {departmentLayers.map((layer) => (layer.isOn && layer.data ? <GeoJsonMapLayer key={layer.id} id={`map-layer-${layer.id}`} data={layer.data} color={layer.color} showLabels /> : null))}
+        {mapsCapability.layers ? <OfflineDepartmentLayers visibleLayerIds={offlineLayerIds} excludeLayerIds={onlineLayerIds} idPrefix="map-screen-offline-layers" /> : null}
         {activeRoute ? <ActiveRouteOverlay route={activeRoute} /> : null}
         <MapHighlights targets={highlights} colors={highlightColors} />
         <MapPins pins={drawnPins} onPinPress={handlePinPress} selectedPinId={markedPinId} canViewPersonnel={canUserViewPII} idPrefix="map-screen-pins" />

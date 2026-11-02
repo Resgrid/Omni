@@ -98,6 +98,7 @@ export {
   OFFLINE_CUSTOM_MAP_PREFIX,
   OFFLINE_DEPARTMENT_SOURCE_PREFIX,
   OFFLINE_FLOOR_PREFIX,
+  offlineSafeId,
   offlineStyleComposer,
   pmtilesUrlFor,
   SPRITE_PLACEHOLDER,

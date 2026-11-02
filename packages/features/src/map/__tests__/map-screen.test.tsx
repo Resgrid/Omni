@@ -131,6 +131,15 @@ describe('MapScreen pins and live refresh', () => {
     await fireEvent.press(screen.getByTestId('layer-toggle-layer:L1'));
     expect(screen.queryByTestId('mock-map-layer-L1')).toBeNull();
   });
+
+  it('leaves layers whose GeoJSON is not on the device to the offline department data (§19.2)', async () => {
+    await renderMap();
+    // L1 is on and loaded online; L2 is off.
+    expect(JSON.parse(String(screen.getByTestId('mock-map-screen-offline-layers').props.children))).toEqual({ visible: ['L1'], exclude: ['L1'] });
+    await fireEvent.press(screen.getByTestId('map-screen-layers-button'));
+    await fireEvent.press(screen.getByTestId('layer-toggle-layer:L2'));
+    expect(JSON.parse(String(screen.getByTestId('mock-map-screen-offline-layers').props.children))).toEqual({ visible: ['L1', 'L2'], exclude: ['L1'] });
+  });
 });
 
 describe('MapScreen layers sheet and legend', () => {

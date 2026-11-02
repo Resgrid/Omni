@@ -4,6 +4,7 @@ import { authNavEntries } from '@resgrid/features/auth-ui/nav';
 import { callsNav } from '@resgrid/features/calls/nav';
 import { chatNav } from '@resgrid/features/chat/nav';
 import { contactsNav } from '@resgrid/features/contacts/nav';
+import { customMapsNav } from '@resgrid/features/custom-maps/nav';
 import { incidentCommandNav } from '@resgrid/features/incident-command/nav';
 import { mapNav } from '@resgrid/features/map/nav';
 import { notificationsNav } from '@resgrid/features/notifications/nav';
@@ -24,6 +25,10 @@ import variant from './variant';
 export const routes = defineRoutes([
   'home',
   'map',
+  'maps',
+  'mapsSearch',
+  'customMap',
+  'indoorMap',
   'calls',
   'callDetail',
   'callEdit',
@@ -77,6 +82,7 @@ export const nav = defineNav([
   ...featureNav(weatherAlertsNav, { 'weather-alerts': 'sidebar' }, { order: 50 }),
   ...featureNav(notificationsNav, 'sidebar', { order: 60 }),
   ...featureNav(settingsNavEntries, variant),
+  ...featureNav(customMapsNav, { maps: 'sidebar', 'maps-search': 'hidden' }, { order: 26 }),
   ...featureNav(offlineMapsNav, 'hidden', { order: 906 }),
   ...featureNav(authNavEntries, variant),
   detailNav.callDetail,

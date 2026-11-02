@@ -4190,5 +4190,10 @@
     "traffic": "traffic",
     "stale": "no update",
     "stale_hint": "No update for over a minute"
+  },
+  "custom_maps": {
+    "image_not_offline": "This map image is not saved on this device. It shows again when you are back online.",
+    "nothing_to_show": "Nothing to show on this device",
+    "nothing_to_show_detail": "This map has no image or map tiles this app can draw. Open it on the website instead."
   }
 }
