@@ -7,7 +7,7 @@ inheritance: false
 reviews:
   profile: chill
   request_changes_workflow: false
-  high_level_summary: true
+  high_level_summary: false
   high_level_summary_instructions: ''
   high_level_summary_placeholder: '@coderabbitai summary'
   high_level_summary_in_walkthrough: false
