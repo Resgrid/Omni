@@ -1,5 +1,6 @@
-// Offline map packs in the shell (MapLibre plan §19.5–19.9, omni-offline-first). On iOS/Android the pack manager is built
-// after startup has opened storage and restored the session (offline-maps-platform.native.ts; none on the web), hooked
+// Offline map packs in the shell (MapLibre plan §19.5–19.9, omni-offline-first). The pack manager is built after startup
+// has opened storage and restored the session (offline-maps-platform.native.ts on iOS/Android, offline-maps-platform.ts
+// on the web and Electron over OPFS; none where the platform has no pack storage), hooked
 // into @resgrid/offline's wipe/retention/storage registries, handed to Settings → Offline maps, and kept current: the
 // department config when it loads, the scope on sign-in and on a department or server switch, the shift-start hydration
 // step (manifest + downloads under the department's policy), and the same automatic sync on reconnect and on foreground
@@ -23,12 +24,15 @@ import {
   resolveExtraPackPolicy,
 } from '@resgrid/maps';
 
-import { createPlatformOfflinePackManager } from './offline-maps-platform';
+import { createPlatformOfflinePackManager, type PlatformPackManagerInput } from './offline-maps-platform';
+
+/** Builds the platform's manager: synchronous on iOS/Android, after opening the OPFS registry on the web. */
+type PlatformPackManagerFactory = (input: PlatformPackManagerInput) => OfflinePackManager | null | Promise<OfflinePackManager | null>;
 
 let manager: OfflinePackManager | null = null;
 let disposers: (() => void)[] = [];
 
-/** The shell's pack manager (null on the web, before startup, or when packs are unsupported). */
+/** The shell's pack manager (null before startup or where packs are unsupported). */
 export const getShellOfflinePackManager = (): OfflinePackManager | null => manager;
 
 /** The signed-in server/department/user the packs belong to. */
@@ -111,7 +115,7 @@ export function offlinePackFocus(): OfflinePackFocus {
 const focusKey = (focus: OfflinePackFocus): string => JSON.stringify(focus);
 
 /** Builds and wires the manager once (startup step); a no-op without storage or on platforms without packs. */
-export async function startOfflineMaps(create: typeof createPlatformOfflinePackManager = createPlatformOfflinePackManager): Promise<OfflinePackManager | null> {
+export async function startOfflineMaps(create: PlatformPackManagerFactory = createPlatformOfflinePackManager): Promise<OfflinePackManager | null> {
   if (manager) {
     return manager;
   }
@@ -120,7 +124,7 @@ export async function startOfflineMaps(create: typeof createPlatformOfflinePackM
     return null;
   }
   const policy = extraPackPolicy();
-  const created = create({
+  const created = await create({
     db: runtime.db,
     kv: runtime.storage.main,
     getScope: offlinePackScope,

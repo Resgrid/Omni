@@ -267,6 +267,9 @@ catalogs:
     expo-location:
       specifier: ~58.0.20
       version: 58.0.20
+    expo-modules-core:
+      specifier: ~58.0.29
+      version: 58.0.29
     expo-navigation-bar:
       specifier: ~58.0.4
       version: 58.0.4
@@ -1271,6 +1274,9 @@ importers:
       expo-keep-awake:
         specifier: 'catalog:'
         version: 58.0.3(expo@58.0.22)(react@19.3.0)
+      expo-modules-core:
+        specifier: 'catalog:'
+        version: 58.0.29(react-native-worklets@0.13.0(@babel/core@7.29.7)(@react-native/metro-config@0.88.1(@babel/core@7.29.7))(react-native@0.88.1(@babel/core@7.29.7)(@react-native/metro-config@0.88.1(@babel/core@7.29.7))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.7)(@react-native/metro-config@0.88.1(@babel/core@7.29.7))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)
       expo-router:
         specifier: 'catalog:'
         version: 58.0.29(a173c7bd48404ceb43431be03e5c7852)

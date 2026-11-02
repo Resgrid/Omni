@@ -34,7 +34,7 @@ RMS legal transitions (submit for review, approve, finalize/attest, amend, void,
 
 - KV: MMKV with the variant's frozen id/key (never change them — upgrade would sign users out).
 - Queues and large collections: SQLite (`expo-sqlite`, owner decision); web/Electron use the platform adapter (SQLite OPFS or IndexedDB; Electron filesystem). Do not put the outbox in localStorage.
-- Blobs: attachments staging, offline map packs (registry in SQLite, files in the app sandbox, excluded from backups).
+- Blobs: attachments staging, offline map packs (iOS/Android: registry in SQLite, files in the app sandbox, excluded from backups; web/Electron: files and a registry snapshot in OPFS, persistent storage requested).
 
 ## Local data must not grow forever (plan §8.2a)
 

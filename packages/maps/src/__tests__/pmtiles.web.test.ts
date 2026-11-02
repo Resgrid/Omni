@@ -23,8 +23,20 @@ describe('registerPmtilesProtocol (web / Electron)', () => {
     expect(first).toBe(second);
     expect(mockProtocols).toHaveLength(1);
     expect(addProtocol).toHaveBeenCalledTimes(1);
-    expect(addProtocol).toHaveBeenCalledWith('pmtiles', mockProtocols[0].tile);
+    expect(addProtocol).toHaveBeenCalledWith('pmtiles', expect.any(Function));
     expect(isPmtilesProtocolRegistered()).toBe(true);
+  });
+
+  it('answers maplibre-gl’s pmtiles requests through the protocol instance', () => {
+    registerPmtilesProtocol();
+    const handler = addProtocol.mock.calls[0][1] as (params: { url: string }, abortController: AbortController) => unknown;
+    const params = { url: 'pmtiles://https://maps.example.org/area.pmtiles/3/4/5' };
+    const abortController = new AbortController();
+    mockProtocols[0].tile.mockReturnValue('tile-response');
+    expect(handler(params, abortController)).toBe('tile-response');
+    expect(mockProtocols[0].tile).toHaveBeenCalledWith(params, abortController);
+    // Without a local pack reader nothing is added: remote archives load by range requests.
+    expect(mockProtocols[0].add).not.toHaveBeenCalled();
   });
 });
 

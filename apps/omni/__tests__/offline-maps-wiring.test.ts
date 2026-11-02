@@ -104,6 +104,8 @@ jest.mock('@resgrid/maps', () => ({
   resolveExtraPackPolicy: jest.fn(() => mockPolicy),
   NO_EXTRA_PACKS: { incidents: false, corridors: false },
 }));
+// The web platform file (Jest resolves it) opens its own registry DB; the tests pass their own factory.
+jest.mock('@resgrid/offline', () => ({ createMemoryDb: jest.fn() }));
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { configureOfflineMaps } = require('@resgrid/features/offline-maps') as { configureOfflineMaps: jest.Mock };
@@ -159,7 +161,14 @@ describe('offline maps wiring', () => {
     expect(create).toHaveBeenCalledTimes(1);
   });
 
-  it('does nothing where the platform has no packs (web, Electron)', async () => {
+  it('waits for a platform that builds the manager asynchronously (web and Electron open the OPFS registry first)', async () => {
+    const manager = fakeManager();
+    expect(await startOfflineMaps(async () => manager as never)).toBe(manager);
+    expect(manager.init).toHaveBeenCalled();
+    expect(configureOfflineMaps).toHaveBeenCalledWith({ controller: manager });
+  });
+
+  it('does nothing where the platform has no pack storage', async () => {
     expect(await startOfflineMaps(() => null)).toBeNull();
     expect(configureOfflineMaps).not.toHaveBeenCalled();
     expect(mockSync.registerHydrationStep).not.toHaveBeenCalled();

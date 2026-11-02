@@ -8,6 +8,7 @@ export * from './engine';
 
 // Session
 export { configureNavigation, type ConfigureNavigationOptions, NAVIGATION_SAFETY_NOTICE_KEY, NAVIGATION_VOICE_MUTED_KEY } from './configure';
+export { type AudioDucking, createDuckingVoice, type SpeechEngine } from './store/ducking-voice';
 export {
   type NavigationDestination,
   type NavigationErrorCode,

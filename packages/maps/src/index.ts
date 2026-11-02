@@ -84,6 +84,7 @@ export { isOfflineMapStale, offlineBadgeLabel, OfflineMapBadge, type OfflineMapB
 
 // Hooks and pure helpers
 export { type FitOptions, type FollowPosition, useFitBounds, useFollowCamera } from './hooks/use-camera-helpers';
+export { useLocalFileUrl } from './hooks/use-local-file-url';
 export { useSignedMapUrl, useSignedMapUrls } from './hooks/use-signed-map-url';
 export * from './lib/camera';
 export * from './lib/custom-maps';
@@ -96,6 +97,6 @@ export { fillStaticMapTemplate, type StaticMapRequest } from './lib/static-map';
 
 // Offline seams (§19.5) and web/Electron PMTiles protocol
 export * from './offline';
-export { isPmtilesProtocolRegistered, type PmtilesProtocolHandle, registerPmtilesProtocol } from './pmtiles/register-pmtiles';
+export { isPmtilesProtocolRegistered, type LocalPackReader, type PmtilesProtocolHandle, readLocalPackFile, registerPmtilesProtocol, setLocalPackReader } from './pmtiles/register-pmtiles';
 export { configureMapRenderer } from './rg/renderer-setup';
 export * from './types';

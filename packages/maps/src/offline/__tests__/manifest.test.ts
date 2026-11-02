@@ -108,9 +108,48 @@ describe('parseOfflineManifest', () => {
     if (!result.ok) throw new Error(result.code);
     expect(result.manifest.policy).toMatchObject({ wifiOnly: false, manualOnly: true, refreshHours: 12, staleDays: 3, preferLocalInAo: true, maxPackBytes: OFFLINE_PACK_BYTES_CEILING });
     expect(result.manifest.pending).toEqual([{ assetId: 'pack:p1', kind: 'incident', name: 'Call 26-14', sizeBytes: null, state: 'building', bounds: [-121.2890625, 38.27, -120.9375, 38.55] }]);
-    expect(result.manifest.assets.map((asset) => asset.assetId)).toEqual(['department-data']);
-    // A custom map image with no position cannot be placed: skipped.
-    expect(result.manifest.invalidEntries).toBe(1);
+    expect(result.manifest.assets.map((asset) => asset.assetId)).toEqual(['department-data', 'floor:img-1']);
+    // A custom map image with no position (D21) is kept as a pixel-only image: downloaded, drawn in its pixel frame.
+    expect(result.manifest.assets.find((asset) => asset.assetId === 'floor:img-1')).toMatchObject({
+      kind: 'indoor-floor',
+      name: 'Pre-plan',
+      floorId: 'img-1',
+      corners: null,
+      fileExtension: 'png',
+      version: 'abc',
+      sha256: sha(bytesOf(5)),
+      sizeBytes: 5,
+      pinned: false,
+    });
+    expect(result.manifest.invalidEntries).toBe(0);
+  });
+
+  it('keeps floors with corners or pixel-only, and skips floors without an image or with malformed corners', () => {
+    const corners = [
+      [-121.5, 38.5],
+      [-121.4, 38.5],
+      [-121.4, 38.4],
+      [-121.5, 38.4],
+    ];
+    const result = parseOfflineManifest({
+      ManifestVersion: 'v',
+      IndoorFloors: [
+        { FloorId: 'placed', ImageUrl: 'https://api.resgrid.test/placed.jpg?sig=1', Corners: corners, Version: '1' },
+        { FloorId: 'pixel', ImageUrl: 'https://api.resgrid.test/pixel.webp?sig=1', Version: '1' },
+        { FloorId: 'no-image', ImageUrl: null, Corners: corners, Version: '1' },
+        { FloorId: 'no-image-pixel', Corners: null, Version: '1' },
+        { FloorId: 'three-corners', ImageUrl: 'https://api.resgrid.test/three.png?sig=1', Corners: corners.slice(0, 3), Version: '1' },
+        { FloorId: 'out-of-range', ImageUrl: 'https://api.resgrid.test/far.png?sig=1', Corners: corners.map(([lng, lat]) => [lng, lat + 100]), Version: '1' },
+        { ImageUrl: 'https://api.resgrid.test/anonymous.png?sig=1' },
+      ],
+    });
+    if (!result.ok) throw new Error(result.code);
+    expect(result.manifest.assets.map((asset) => [asset.assetId, asset.corners, asset.fileExtension])).toEqual([
+      ['floor:placed', corners, 'jpg'],
+      ['floor:pixel', null, 'webp'],
+    ]);
+    // Corners sent but out of range are an error, never a pixel-only image.
+    expect(result.manifest.invalidEntries).toBe(5);
   });
 
   it('tolerates a minimal manifest from an early server phase', () => {

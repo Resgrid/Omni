@@ -98,7 +98,8 @@ export type OfflineDepartmentData = Record<string, GeoJSON.FeatureCollection>;
 export interface OfflineIndoorFloor {
   floorId: string;
   imagePath: string;
-  corners: FloorCorners;
+  /** Null for a pixel-only image (no bounds): listed in the style metadata, not placed on the map. */
+  corners: FloorCorners | null;
 }
 
 /** Everything the composer needs to build the offline style for one theme. */

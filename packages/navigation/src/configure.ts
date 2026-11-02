@@ -1,4 +1,5 @@
 import { type ApiContext, recordDeviation } from '@resgrid/api';
+import { beginSpeechDucking, endSpeechDucking } from '@resgrid/core/device/native-device';
 import { logger } from '@resgrid/core/logging/logger';
 import { translate } from '@resgrid/i18n';
 import { getCurrentLocation, getLocationTransmitter } from '@resgrid/location';
@@ -7,6 +8,7 @@ import { type DurableKv, type OutboxHandler, readLegacyString, registerOutboxHan
 import * as Speech from 'expo-speech';
 
 import type { NavFix } from './engine/progress';
+import { createDuckingVoice } from './store/ducking-voice';
 import { navigationProgressHandler, submitNavigationProgress } from './store/progress-reports';
 import { createServerRouteSource } from './store/route-sources';
 import { type NavigationPreferences, setNavigationServices } from './store/services';
@@ -56,7 +58,7 @@ let disposeHandler: (() => void) | null = null;
 
 /**
  * Wires the navigation session to the app (MapLibre plan §9): server routes, expo-speech prompts (SpeechSynthesis on
- * web), device preferences, ETA reports through the outbox, OffRoute deviations, the device position and the
+ * web) that lower other audio while they play, device preferences, ETA reports through the outbox, OffRoute deviations, the device position and the
  * `navigation` location profile. Call once at startup for variants with in-app navigation (`maps.navigationInApp`).
  */
 export function configureNavigation(options: ConfigureNavigationOptions): () => void {
@@ -67,15 +69,16 @@ export function configureNavigation(options: ConfigureNavigationOptions): () => 
 
   setNavigationServices({
     routes: createServerRouteSource(options),
-    voice: {
-      speak: (text) => {
-        Speech.stop();
-        Speech.speak(text, { language: options.getLanguage() });
+    // Other apps' audio dips while a prompt plays (never during a call or push-to-talk: the native side refuses).
+    voice: createDuckingVoice(
+      {
+        speak: (text, onFinished) => Speech.speak(text, { language: options.getLanguage(), onDone: onFinished, onStopped: onFinished, onError: onFinished }),
+        stop: () => {
+          void Speech.stop();
+        },
       },
-      stop: () => {
-        Speech.stop();
-      },
-    },
+      { begin: beginSpeechDucking, end: endSpeechDucking }
+    ),
     preferences: kvPreferences(options.storage),
     reportProgress: (report) => {
       submitNavigationProgress(report).catch((error: unknown) => logger.warn({ message: 'Could not queue a navigation ETA report', context: { reason: error instanceof Error ? error.name : typeof error } }));

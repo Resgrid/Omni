@@ -2,6 +2,7 @@ import { isDev } from '@resgrid/core';
 import type { DurableDb } from '@resgrid/offline';
 
 import type { StyleSpecification } from '../types';
+import type { BackgroundTransfer } from './background-transfer';
 import { decodeOfflineDepartmentData } from './department-data';
 import { DEFAULT_CHUNK_BYTES, downloadAsset } from './downloader';
 import { actionFailed, actionOk, errorName, isAbortError, type OfflineMapsActionResult, type OfflineMapsErrorCode } from './errors';
@@ -147,7 +148,7 @@ export interface OfflineInstalledSet {
   indoorFloors: OfflineIndoorFloor[];
   templates: { light: StyleSpecification | null; dark: StyleSpecification | null };
   spritePath: string | null;
-  /** Local glyph directory (`file://…`), for the templates' `{glyphs}` placeholder. */
+  /** Local glyph directory (`file://…` on iOS/Android, `opfs://…` on the web), for the templates' `{glyphs}` placeholder. */
   glyphsPath: string | null;
   departmentDataPath: string | null;
   /** The decoded DepartmentData bundle (GeoJSON by section), cached per installed version. */
@@ -188,8 +189,10 @@ export interface OfflineMapsController {
 export interface OfflinePackManagerOptions {
   /** The offline database (`initOffline().db`). */
   db: DurableDb;
-  /** `createExpoPackFileStore()` on native; null on web/Electron (feature unsupported). */
+  /** `createExpoPackFileStore()` on native, `createOpfsPackFileStore()` on web/Electron; null when unsupported. */
   fileStore: OfflinePackFileStore | null;
+  /** The OS transfer that continues with the app suspended (iOS background URLSession); null downloads in-app only. */
+  backgroundTransfer?: BackgroundTransfer | null;
   /** The signed-in server/department/user, or null. */
   getScope: () => OfflinePackScope | null;
   /** Resgrid API base URL (the manifest must come from this origin). */
@@ -573,9 +576,7 @@ export class OfflinePackManager implements OfflineMapsController {
     const sprite = rows.find((row) => row.packId === 'sprite:sprite.json');
     const departmentData = rows.find((row) => row.assetKind === 'department-data');
     const glyphs = rows.find((row) => row.packId === GLYPHS_ASSET_ID);
-    const floors: OfflineIndoorFloor[] = rows
-      .filter((row) => row.assetKind === 'indoor-floor' && row.floorId && row.corners)
-      .map((row) => ({ floorId: row.floorId as string, imagePath: row.path, corners: row.corners as NonNullable<OfflineMapPackRecord['corners']> }));
+    const floors: OfflineIndoorFloor[] = rows.filter((row) => row.assetKind === 'indoor-floor' && row.floorId).map((row) => ({ floorId: row.floorId as string, imagePath: row.path, corners: row.corners ?? null }));
     const customMapPacks = rows.filter((row) => row.assetKind === 'custom-map');
     const attribution = this.snapshot?.attribution ?? OFFLINE_MAP_ATTRIBUTION;
     const preferLocal = this.snapshot?.policy.preferLocalInAo ?? DEFAULT_OFFLINE_POLICY.preferLocalInAo;
@@ -911,7 +912,7 @@ export class OfflinePackManager implements OfflineMapsController {
       const isGlyphs = asset.kind === 'glyphs';
       const finalPath = asset.kind === 'sprite' ? `${current.key}/files/sprite/${asset.name}` : isGlyphs ? `${current.key}/files/glyphs-${fileBase}` : `${current.key}/files/${fileBase}.${asset.fileExtension}`;
       const result = await downloadAsset(
-        { fileStore: this.fileStore, fetchImpl: this.fetchImpl },
+        { fileStore: this.fileStore, fetchImpl: this.fetchImpl, backgroundTransfer: this.options.backgroundTransfer ?? null },
         {
           url: asset.url,
           partPath,

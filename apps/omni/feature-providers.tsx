@@ -44,7 +44,7 @@ const MAP_WORKER_URL = getMapLibreWorkerUrl();
 
 /**
  * Department map style, attribution, centre, bundled icons, overlays and services for every map (@resgrid/maps), and the
- * offline style switch to installed packs (iOS/Android; the controller is null on the web).
+ * offline style switch to installed packs (the controller is null where the platform has no pack storage).
  */
 export function ShellMapProvider({ children }: ProviderProps) {
   const config = useShellStore((state) => state.departmentConfig);

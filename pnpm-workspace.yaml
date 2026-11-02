@@ -112,6 +112,7 @@ catalog:
   expo-linking: '~58.0.15'
   expo-localization: '~58.0.5'
   expo-location: '~58.0.20'
+  expo-modules-core: '~58.0.29'
   expo-navigation-bar: '~58.0.4'
   expo-notifications: '~58.1.7'
   expo-router: '~58.0.29'

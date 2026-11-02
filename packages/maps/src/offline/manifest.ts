@@ -406,8 +406,10 @@ export function parseOfflineManifest(raw: unknown, options: ParseOptions = {}): 
       continue;
     }
     const floor = result.data;
+    // No corners: a pixel-only image (D21, a custom map without bounds) — kept, and drawn in its pixel frame. Corners that
+    // are sent but out of range are an error, not a pixel-only image.
     const corners = toCorners(floor.Corners);
-    if (!floor.ImageUrl || !corners) {
+    if (!floor.ImageUrl || (floor.Corners && !corners)) {
       invalidEntries += 1;
       continue;
     }

@@ -149,3 +149,101 @@ export const Paths = {
 };
 
 export const FileMode = { ReadOnly: 'r', ReadWrite: 'rw' };
+
+type DownloadTaskState = 'idle' | 'active' | 'paused' | 'completed' | 'cancelled' | 'error';
+
+interface DownloadTaskOptions {
+  sessionType?: 'background' | 'foreground';
+  onProgress?: (data: { bytesWritten: number; totalBytes: number }) => void;
+}
+
+interface DownloadPauseState {
+  url: string;
+  fileUri: string;
+  isDirectory: boolean;
+  resumeData?: string;
+}
+
+/**
+ * Background transfers (`DownloadTask`): every task is recorded in `mockDownloads.tasks`; `mockDownloads.run` decides
+ * what `downloadAsync`/`resumeAsync` do (helpers on the task write the file, report progress or wait for a pause).
+ */
+export const mockDownloads = {
+  tasks: [] as DownloadTask[],
+  restored: [] as DownloadPauseState[],
+  run: null as ((task: DownloadTask, mode: 'download' | 'resume') => Promise<File | null>) | null,
+  reset(): void {
+    this.tasks.length = 0;
+    this.restored.length = 0;
+    this.run = null;
+  },
+};
+
+export class DownloadTask {
+  state: DownloadTaskState = 'idle';
+  calls: string[] = [];
+  released = false;
+  private pauseWaiters: (() => void)[] = [];
+
+  constructor(
+    public url: string,
+    public destination: File,
+    public options: DownloadTaskOptions = {}
+  ) {
+    mockDownloads.tasks.push(this);
+  }
+
+  static fromSavable(state: DownloadPauseState, options?: DownloadTaskOptions): DownloadTask {
+    if (state.resumeData === 'corrupt') throw new Error('Invalid resume data');
+    mockDownloads.restored.push(state);
+    const task = new DownloadTask(state.url, new File(state.fileUri), options);
+    task.state = 'paused';
+    return task;
+  }
+
+  /** Writes the finished file where the OS would move it. */
+  complete(body: Uint8Array): File {
+    mockFs.files.set(this.destination.uri, body);
+    this.state = 'completed';
+    return this.destination;
+  }
+
+  /** Resolves once `pauseAsync` ran (what a pending `downloadAsync` resolves with: null). */
+  untilPaused(): Promise<null> {
+    return new Promise((resolve) => this.pauseWaiters.push(() => resolve(null)));
+  }
+
+  private start(mode: 'download' | 'resume'): Promise<File | null> {
+    this.calls.push(mode);
+    this.state = 'active';
+    if (!mockDownloads.run) return Promise.resolve(this.complete(new Uint8Array(0)));
+    return mockDownloads.run(this, mode).catch((error: unknown) => {
+      this.state = 'error';
+      throw error;
+    });
+  }
+
+  downloadAsync(): Promise<File | null> {
+    return this.start('download');
+  }
+
+  resumeAsync(): Promise<File | null> {
+    return this.start('resume');
+  }
+
+  async pauseAsync(): Promise<void> {
+    this.calls.push('pause');
+    this.state = 'paused';
+    for (const waiter of this.pauseWaiters.splice(0)) waiter();
+  }
+
+  savable(): DownloadPauseState {
+    if (this.state !== 'paused') throw new Error('Only a paused task can be saved');
+    return { url: this.url, fileUri: this.destination.uri, isDirectory: false, resumeData: `resume:${this.url}` };
+  }
+
+  release(): void {
+    this.calls.push('release');
+    this.released = true;
+  }
+}

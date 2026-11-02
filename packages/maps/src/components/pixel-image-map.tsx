@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Image, StyleSheet } from 'react-native';
 
+import { useLocalFileUrl } from '../hooks/use-local-file-url';
 import { useSignedMapUrl } from '../hooks/use-signed-map-url';
 import { createPixelFrame, type PixelRegion, pixelRegionsToFeatureCollection } from '../lib/pixel-frame';
 import { useMapTheme } from '../provider/context';
@@ -57,7 +58,8 @@ const PADDING = { paddingTop: 24, paddingRight: 24, paddingBottom: 24, paddingLe
 export const PixelImageMap: React.FC<PixelImageMapProps> = ({ id, imageUrl, isLocalImage = false, regions, opacity = 1, selectedRegionId = null, onRegionPress, testID = 'pixel-image-map' }) => {
   const { colors } = useMapTheme();
   const signed = useSignedMapUrl(isLocalImage ? null : imageUrl);
-  const url = isLocalImage ? imageUrl : signed;
+  const local = useLocalFileUrl(isLocalImage ? imageUrl : null);
+  const url = isLocalImage ? local : signed;
   const size = useImageSize(url);
   const frame = useMemo(() => createPixelFrame(size?.width, size?.height), [size?.width, size?.height]);
   const shapes = useMemo(() => pixelRegionsToFeatureCollection(regions ?? [], frame), [regions, frame]);

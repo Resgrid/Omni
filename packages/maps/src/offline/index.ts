@@ -1,5 +1,6 @@
 // Offline maps (MapLibre plan §19.5). Platform adapters (expo-file-system, NetInfo, MapLibre ambient cache) live in
-// `@resgrid/maps/offline/native` so this barrel never loads a native module.
+// `@resgrid/maps/offline/native` so this barrel never loads a native module; the web/Electron OPFS store is plain DOM.
+export { type BackgroundTransfer, type BackgroundTransferRequest, type BackgroundTransferResult, isExpiredUrlStatus } from './background-transfer';
 export { decodeOfflineDepartmentData, MAX_DEPARTMENT_DATA_BYTES, OFFLINE_DEPARTMENT_SECTIONS, type OfflineDepartmentSection, toOfflineDepartmentData } from './department-data';
 export { type AssetDownloadRequest, type AssetDownloadResult, DEFAULT_CHUNK_BYTES, downloadAsset, type DownloaderDeps } from './downloader';
 export { actionFailed, actionOk, type OfflineMapsActionResult, type OfflineMapsErrorCode } from './errors';
@@ -63,6 +64,19 @@ export { fetchOfflineManifest, type FetchOfflineManifestOptions, type ManifestFe
 export { OFFLINE_SWITCH_ERROR_THRESHOLD, OFFLINE_SWITCH_ERROR_WINDOW_MS, OFFLINE_SWITCH_MAX_HOLD_MS, OFFLINE_SWITCH_STABLE_MS, OfflineModeSwitch, type OfflineModeSwitchOptions } from './mode-switch';
 export { noopOfflinePackRegistry, noopOfflineStyleComposer, onlineOnlyOfflineOptions } from './noop';
 export { createOfflineMapOptions, type CreateOfflineMapOptionsInput, resolveOfflineMapMode } from './offline-options';
+export {
+  browserOpfsEnvironment,
+  createBrowserNetworkProbe,
+  createOpfsPackFileStore,
+  createOpfsRegistryPersistence,
+  OPFS_PACKS_DIRECTORY,
+  OPFS_REGISTRY_FILE,
+  OPFS_URI_PREFIX,
+  type OpfsDirectoryHandle,
+  type OpfsEnvironment,
+  type OpfsFileHandle,
+  opfsPathOf,
+} from './opfs-file-store';
 export {
   CORRIDOR_FOCUS_KM,
   distanceToBoundsKm,

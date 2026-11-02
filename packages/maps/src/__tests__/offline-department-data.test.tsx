@@ -89,6 +89,25 @@ describe('offline style sources', () => {
     expect(styleImageSourceUrl(style, offlineFloorSourceId('F1'))).toBe('file:///floors/F1.png');
     expect(styleImageSourceUrl(style, offlineCustomMapSourceId('L1'))).toBeNull();
   });
+
+  it('finds pixel-only images (no bounds) in the style metadata, the image source winning', () => {
+    const withPixelImages = (pixelImages: unknown): StyleSpecification =>
+      ({ ...(offlineStyle() as unknown as Record<string, unknown>), metadata: { 'resgrid:offline-pixel-images': pixelImages } }) as unknown as StyleSpecification;
+    const style = withPixelImages({ [offlineFloorSourceId('P1')]: 'opfs://resgrid-offline-maps/scope/files/p1.png', [offlineFloorSourceId('F1')]: 'file:///other/F1.png' });
+    expect(styleImageSourceUrl(style, offlineFloorSourceId('P1'))).toBe('opfs://resgrid-offline-maps/scope/files/p1.png');
+    expect(styleImageSourceUrl(style, offlineFloorSourceId('F1'))).toBe('file:///floors/F1.png');
+    expect(styleImageSourceUrl(style, offlineFloorSourceId('P2'))).toBeNull();
+
+    // Anything but a non-empty string is no file.
+    expect(styleImageSourceUrl(withPixelImages({ [offlineFloorSourceId('P1')]: 42 }), offlineFloorSourceId('P1'))).toBeNull();
+    expect(styleImageSourceUrl(withPixelImages({ [offlineFloorSourceId('P1')]: '' }), offlineFloorSourceId('P1'))).toBeNull();
+    expect(styleImageSourceUrl(withPixelImages({ [offlineFloorSourceId('P1')]: { url: 'file:///p1.png' } }), offlineFloorSourceId('P1'))).toBeNull();
+    expect(styleImageSourceUrl(withPixelImages('file:///p1.png'), offlineFloorSourceId('P1'))).toBeNull();
+    expect(styleImageSourceUrl(withPixelImages(null), offlineFloorSourceId('P1'))).toBeNull();
+    expect(styleImageSourceUrl({ ...(offlineStyle() as unknown as Record<string, unknown>), metadata: 'none' } as unknown as StyleSpecification, offlineFloorSourceId('P1'))).toBeNull();
+    expect(styleImageSourceUrl(null, offlineFloorSourceId('P1'))).toBeNull();
+    expect(styleImageSourceUrl('https://maps.example.org/day.json', offlineFloorSourceId('P1'))).toBeNull();
+  });
 });
 
 describe('custom maps and floors on the offline style', () => {

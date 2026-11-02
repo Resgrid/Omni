@@ -19,6 +19,8 @@ export const GLYPHS_PLACEHOLDER = '{glyphs}';
 export const SPRITE_PLACEHOLDER = '{sprite}';
 export const OFFLINE_CUSTOM_MAP_PREFIX = 'offline-custom-';
 export const OFFLINE_FLOOR_PREFIX = 'offline-floor-';
+/** Style `metadata` key: pixel-only images (no bounds) by their `offline-floor-<id>` name → local file. */
+export const OFFLINE_PIXEL_IMAGES_METADATA = 'resgrid:offline-pixel-images';
 export const OFFLINE_DEPARTMENT_SOURCE_PREFIX = 'offline-dept-';
 
 const isObject = (value: unknown): value is Json => typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -26,7 +28,7 @@ const isObject = (value: unknown): value is Json => typeof value === 'object' &&
 export const offlineSafeId = (value: string): string => value.replace(/[^A-Za-z0-9_-]+/g, '_');
 const safeId = offlineSafeId;
 
-/** `pmtiles://` + the local `file://` URI. */
+/** `pmtiles://` + the local URI (`file://…` on iOS/Android, `opfs://…` on the web and Electron). */
 export const pmtilesUrlFor = (path: string): string => `pmtiles://${path}`;
 
 const PALETTE = {
@@ -145,10 +147,16 @@ export function composeOfflineStyle(input: OfflineStyleInput): StyleSpecificatio
     sources[id] = { type: 'raster', url: pmtilesUrlFor(pack.path), tileSize: 256, attribution };
     layers.push({ id, type: 'raster', source: id, layout: { visibility: 'none' } });
   }
+  const pixelImages: Record<string, string> = {};
   for (const floor of [...input.indoorFloors].sort((a, b) => a.floorId.localeCompare(b.floorId))) {
     const id = `${OFFLINE_FLOOR_PREFIX}${safeId(floor.floorId)}`;
-    sources[id] = { type: 'image', url: floor.imagePath, coordinates: floor.corners };
-    layers.push({ id, type: 'raster', source: id, layout: { visibility: 'none' } });
+    if (floor.corners) {
+      sources[id] = { type: 'image', url: floor.imagePath, coordinates: floor.corners };
+      layers.push({ id, type: 'raster', source: id, layout: { visibility: 'none' } });
+    } else {
+      // Pixel-only (no bounds): an image source needs coordinates, so the file is listed for the pixel-frame viewer.
+      pixelImages[id] = floor.imagePath;
+    }
   }
   for (const [section, data] of Object.entries(input.departmentData ?? {})) {
     sources[`${OFFLINE_DEPARTMENT_SOURCE_PREFIX}${safeId(section)}`] = { type: 'geojson', data, attribution };
@@ -156,6 +164,7 @@ export function composeOfflineStyle(input: OfflineStyleInput): StyleSpecificatio
 
   const { glyphs: _glyphs, sprite: _sprite, ...rest } = template;
   const style: Json = { ...rest, sources, layers };
+  if (Object.keys(pixelImages).length > 0) style.metadata = { ...(isObject(template.metadata) ? template.metadata : {}), [OFFLINE_PIXEL_IMAGES_METADATA]: pixelImages };
   if (resolvedGlyphs !== null) style.glyphs = resolvedGlyphs;
   if (resolvedSprite !== null) style.sprite = resolvedSprite;
   return style as unknown as StyleSpecification;

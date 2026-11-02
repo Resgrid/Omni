@@ -54,6 +54,8 @@ function createAppConfig({ variant, appEnv, runNumber, projectRoot, env = proces
   };
 
   const backgroundLocation = caps.location.background && has('background-location');
+  // The location purpose strings name turn-by-turn navigation where the app has it.
+  const locationUsage = { navigation: caps.maps.navigationInApp };
 
   const plugins = [
     // Async routes are on for web by default since SDK 58. Off: the screens are reached through feature barrels that the
@@ -76,8 +78,8 @@ function createAppConfig({ variant, appEnv, runNumber, projectRoot, env = proces
     [
       'expo-location',
       {
-        locationWhenInUsePermission: usage.locationWhenInUse(name),
-        ...(backgroundLocation ? { locationAlwaysAndWhenInUsePermission: usage.locationAlways(name), locationAlwaysPermission: usage.locationAlways(name) } : {}),
+        locationWhenInUsePermission: usage.locationWhenInUse(name, locationUsage),
+        ...(backgroundLocation ? { locationAlwaysAndWhenInUsePermission: usage.locationAlways(name, locationUsage), locationAlwaysPermission: usage.locationAlways(name, locationUsage) } : {}),
         motionUsagePermission: usage.motion(name),
         isIosBackgroundLocationEnabled: backgroundLocation,
         isAndroidBackgroundLocationEnabled: backgroundLocation,
