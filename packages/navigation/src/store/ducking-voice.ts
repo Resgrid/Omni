@@ -22,7 +22,8 @@ export interface AudioDucking {
 export function createDuckingVoice(engine: SpeechEngine, ducking: AudioDucking): NavigationVoice {
   let utterance = 0;
   let ducked = false;
-  let ducking$: Promise<boolean> | null = null;
+  let stopped = false;
+  let ducking$: Promise<void> | null = null;
 
   const release = (): void => {
     if (!ducked) return;
@@ -30,18 +31,30 @@ export function createDuckingVoice(engine: SpeechEngine, ducking: AudioDucking):
     void ducking.end().catch(() => false);
   };
 
+  // One request for every prompt waiting on it. A stop while it was pending gives the audio straight back: no prompt
+  // that ran before the stop will play, and none after it has asked yet.
+  const lower = (): Promise<void> => {
+    ducking$ =
+      ducking$ ??
+      ducking
+        .begin()
+        .catch(() => false)
+        .then((lowered) => {
+          ducking$ = null;
+          ducked = ducked || lowered;
+          if (stopped) release();
+        });
+    return ducking$;
+  };
+
   return {
     speak: (text) => {
       utterance += 1;
+      stopped = false;
       const id = utterance;
       engine.stop();
       void (async () => {
-        if (!ducked) {
-          ducking$ = ducking$ ?? ducking.begin().catch(() => false);
-          const lowered = await ducking$;
-          ducking$ = null;
-          ducked = ducked || lowered;
-        }
+        if (!ducked) await lower();
         // A newer prompt (or a stop) took over while the audio was being lowered.
         if (id !== utterance) return;
         engine.speak(text, () => {
@@ -51,6 +64,7 @@ export function createDuckingVoice(engine: SpeechEngine, ducking: AudioDucking):
     },
     stop: () => {
       utterance += 1;
+      stopped = true;
       engine.stop();
       release();
     },
