@@ -30,6 +30,9 @@ const ROLE = 'roles/firebaseappdistro.admin';
 const API = 'firebaseappdistribution.googleapis.com';
 const KEY_SECRET = 'FIREBASE_SERVICE_ACCOUNT_JSON_BASE64';
 const APP_ID_SECRET = 'FIREBASE_ANDROID_APP_ID';
+// Keys this run stored in a GitHub environment: variants in one Firebase project share the account, so --delete-old-keys
+// must not revoke the key an earlier variant just stored.
+const storedKeys = new Set();
 
 // ── arguments ──────────────────────────────────────────────────────────────────────────────────────────────────
 const argv = process.argv.slice(2);
@@ -157,13 +160,14 @@ async function setUp(t) {
     gcloud(['iam', 'service-accounts', 'keys', 'create', keyFile, `--iam-account=${email}`, `--project=${t.project}`]);
     const key = fs.readFileSync(keyFile);
     const keyId = JSON.parse(key.toString('utf8')).private_key_id;
+    storedKeys.add(keyId);
     run('gh', ['secret', 'set', KEY_SECRET, '--env', t.variant, '--repo', repo], { input: key.toString('base64') });
     run('gh', ['secret', 'set', APP_ID_SECRET, '--env', t.variant, '--repo', repo, '--body', t.appId]);
     say(`${t.variant}: set ${KEY_SECRET} (key ${keyId.slice(0, 8)}…) and ${APP_ID_SECRET} in environment "${t.variant}"`);
 
     const older = gcloud(['iam', 'service-accounts', 'keys', 'list', `--iam-account=${email}`, `--project=${t.project}`, '--managed-by=user', '--format=value(name.basename())'])
       .out.split('\n')
-      .filter((id) => id && id !== keyId);
+      .filter((id) => id && !storedKeys.has(id));
     if (older.length && opts.deleteOldKeys) {
       for (const id of older) gcloud(['iam', 'service-accounts', 'keys', 'delete', id, `--iam-account=${email}`, `--project=${t.project}`]);
       say(`${t.variant}: deleted ${older.length} older key(s)`);

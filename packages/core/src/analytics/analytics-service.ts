@@ -27,9 +27,12 @@ const errorMessage = (error: unknown): string => (error instanceof Error ? error
 /**
  * Countly analytics (omni-plan §7.1): Unit's service (retry counter resets after a successful event, so isolated
  * failures hours apart never pause analytics) + Responder's initializeWithEnv / setUserProperties / endSession +
- * the Dispatch/BigBoard web sender (countly-client.web.ts). Aptabase is gone.
+ * the Dispatch/BigBoard web sender (countly-client.web.ts). Aptabase is gone. The app shell initialises it at startup,
+ * records a view per route, marks the app loaded and identifies the signed-in user by id.
  *
- * Property keys that look sensitive (tokens, usernames, emails, protected values) are never sent.
+ * Init does not block startup, so the latest view, the app-loaded mark and user properties that arrive before it are
+ * kept and sent once Countly is up. Property keys that look sensitive (tokens, usernames, emails, protected values)
+ * are never sent.
  */
 export class AnalyticsService {
   private retryCount = 0;
@@ -37,6 +40,9 @@ export class AnalyticsService {
   private isInitialized = false;
   private lastErrorTime = 0;
   private reenableTimer: ReturnType<typeof setTimeout> | null = null;
+  private pendingView: { name: string; properties: AnalyticsEventProperties } | null = null;
+  private pendingAppLoaded = false;
+  private pendingUserProperties: AnalyticsEventProperties | null = null;
   private readonly maxRetries: number;
   private readonly enableLogging: boolean;
   private readonly disableTimeoutMs: number;
@@ -59,6 +65,7 @@ export class AnalyticsService {
       await this.client.init(appKey, serverUrl, { loggingEnabled: false });
       this.isInitialized = true;
       if (this.enableLogging) logger.info({ message: 'Analytics initialized' });
+      this.flushPending();
     } catch (error) {
       logger.error({ message: 'Failed to initialize analytics', context: { error: errorMessage(error) } });
       throw error;
@@ -94,9 +101,48 @@ export class AnalyticsService {
     }
   }
 
-  /** Countly custom user properties. Sensitive-looking keys are dropped. */
+  /**
+   * Records a screen view: the route pattern (`/calls/[id]`), never the ids in the URL. Countly stops the previous
+   * view and records its duration. Before init, the latest view is kept and recorded at init.
+   */
+  public trackView(viewName: string, properties: AnalyticsEventProperties = {}): void {
+    if (!this.isInitialized) {
+      this.pendingView = { name: viewName, properties };
+      return;
+    }
+    if (this.isDisabled) return;
+    try {
+      this.client.recordView(viewName, toSegmentation(properties));
+      this.retryCount = 0;
+    } catch (error) {
+      this.handleError(error, `view ${viewName}`);
+    }
+  }
+
+  /** Ends Countly's launch-time measurement (APM app start): call once, when the app is usable. */
+  public appLoaded(): void {
+    if (!this.isInitialized) {
+      this.pendingAppLoaded = true;
+      return;
+    }
+    try {
+      this.client.appLoaded();
+    } catch (error) {
+      logger.warn({ message: 'Failed to record analytics app start', context: { error: errorMessage(error) } });
+    }
+  }
+
+  /** Ties this device's analytics to the signed-in user by opaque id only (never a username or name). */
+  public identifyUser(userId: string | null): void {
+    if (userId) this.setUserProperties({ user_id: userId });
+  }
+
+  /** Countly custom user properties. Sensitive-looking keys are dropped. Before init they are kept and sent at init. */
   public setUserProperties(properties: AnalyticsEventProperties): void {
-    if (!this.isInitialized) return;
+    if (!this.isInitialized) {
+      this.pendingUserProperties = { ...this.pendingUserProperties, ...properties };
+      return;
+    }
     try {
       this.client.setUserData(toSegmentation(properties));
     } catch (error) {
@@ -139,7 +185,22 @@ export class AnalyticsService {
     this.lastErrorTime = 0;
     if (this.reenableTimer) clearTimeout(this.reenableTimer);
     this.reenableTimer = null;
-    if (full) this.isInitialized = false;
+    if (full) {
+      this.isInitialized = false;
+      this.pendingView = null;
+      this.pendingAppLoaded = false;
+      this.pendingUserProperties = null;
+    }
+  }
+
+  private flushPending(): void {
+    const { pendingView, pendingAppLoaded, pendingUserProperties } = this;
+    this.pendingView = null;
+    this.pendingAppLoaded = false;
+    this.pendingUserProperties = null;
+    if (pendingUserProperties) this.setUserProperties(pendingUserProperties);
+    if (pendingView) this.trackView(pendingView.name, pendingView.properties);
+    if (pendingAppLoaded) this.appLoaded();
   }
 
   private handleError(error: unknown, eventName: string): void {

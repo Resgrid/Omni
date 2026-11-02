@@ -10,6 +10,7 @@ export interface MockTabScreen {
 
 export const mockNavigationState = {
   pathname: '/',
+  segments: [] as string[],
   canGoBack: false,
   tabs: null as null | { screens: MockTabScreen[]; screenOptions: unknown; screenListeners?: (props: { route: { name: string } }) => unknown },
 };
@@ -24,6 +25,7 @@ export const router = {
 
 export const useRouter = (): typeof router => router;
 export const usePathname = (): string => mockNavigationState.pathname;
+export const useSegments = (): string[] => mockNavigationState.segments;
 
 const navigationRef = { isReady: jest.fn(() => true), current: null };
 export const useNavigationContainerRef = (): typeof navigationRef => navigationRef;
@@ -78,6 +80,7 @@ export function ErrorBoundary(): null {
 
 export function resetMockNavigation(): void {
   mockNavigationState.pathname = '/';
+  mockNavigationState.segments = [];
   mockNavigationState.canGoBack = false;
   mockNavigationState.tabs = null;
   Object.values(router).forEach((fn) => fn.mockClear());

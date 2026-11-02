@@ -1,6 +1,6 @@
 import { checkSharedSession, getBaseApiUrl, isPersonalLockEnabled, POLL_INTERVAL_MS, securityStore, useAuthStore, useInactivityLock, useSharedSessionStore } from '@resgrid/auth';
 import { useActiveVariant } from '@resgrid/config';
-import { logger } from '@resgrid/core';
+import { analyticsService, logger } from '@resgrid/core';
 import { useClearBadgeOnForeground, usePushNotifications } from '@resgrid/notifications';
 import { useRealtimeLifecycle } from '@resgrid/realtime';
 import { useEffect, useRef, useSyncExternalStore } from 'react';
@@ -22,6 +22,13 @@ export function useInitLifecycle(signedIn: boolean, userId: string | null): void
   useEffect(() => {
     void startupInit.run();
   }, []);
+
+  useEffect(() => {
+    if (startupReady) {
+      // The app is usable (the gate can show sign-in or home): ends Countly's launch-time measurement.
+      analyticsService.appLoaded();
+    }
+  }, [startupReady]);
 
   useEffect(() => {
     if (!startupReady) {

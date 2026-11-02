@@ -22,7 +22,10 @@ export const OFFLINE_FLOOR_PREFIX = 'offline-floor-';
 /** Style `metadata` key: pixel-only images (no bounds) by their `offline-floor-<id>` name → local file. */
 export const OFFLINE_PIXEL_IMAGES_METADATA = 'resgrid:offline-pixel-images';
 export const OFFLINE_DEPARTMENT_SOURCE_PREFIX = 'offline-dept-';
-/** Style `metadata` key: `[west, south, east, north]` around the downloaded response area (base-map cells and overview). */
+/**
+ * Style `metadata` key: where the downloaded response area draws, one `OfflineCoverage` per base-map pack (cells and
+ * overview), so the gaps between cells stay known.
+ */
 export const OFFLINE_COVERAGE_METADATA = 'resgrid:offline-coverage';
 /** Sources and layers of the online fallback around the downloaded area (local-preferred mode). */
 export const OFFLINE_REMOTE_FALLBACK_PREFIX = 'offline-remote-';
@@ -179,10 +182,10 @@ export function composeOfflineStyle(input: OfflineStyleInput): StyleSpecificatio
 
   const { glyphs: _glyphs, sprite: _sprite, ...rest } = template;
   const style: Json = { ...rest, sources, layers };
-  const coverage = coverageOf(input.basemapPacks);
+  const coverage = coverageOf(packs, handOffZoom);
   const metadata: Json = {
     ...(Object.keys(pixelImages).length > 0 ? { [OFFLINE_PIXEL_IMAGES_METADATA]: pixelImages } : {}),
-    ...(coverage ? { [OFFLINE_COVERAGE_METADATA]: coverage } : {}),
+    ...(coverage.length > 0 ? { [OFFLINE_COVERAGE_METADATA]: coverage } : {}),
   };
   if (Object.keys(metadata).length > 0) style.metadata = { ...(isObject(template.metadata) ? template.metadata : {}), ...metadata };
   if (resolvedGlyphs !== null) style.glyphs = resolvedGlyphs;
@@ -196,12 +199,81 @@ export const offlineStyleComposer: OfflineStyleComposer = { compose: composeOffl
 /** Web Mercator's latitude limit (map source bounds must stay inside it). */
 const MERCATOR_MAX_LATITUDE = 85.051129;
 
-/** The box around the response-area base map (incident and corridor cells far away would stretch it, so they are left out). */
-function coverageOf(packs: OfflineMapPackRecord[]): PackBounds | null {
-  const boxes = packs.filter((pack) => pack.kind === OfflineMapPackKind.Basemap && pack.bounds).map((pack) => pack.bounds as PackBounds);
-  if (boxes.length === 0) return null;
-  const box: PackBounds = [Math.min(...boxes.map((b) => b[0])), Math.min(...boxes.map((b) => b[1])), Math.max(...boxes.map((b) => b[2])), Math.max(...boxes.map((b) => b[3]))];
-  return box.every(Number.isFinite) && box[0] < box[2] && box[1] < box[3] ? box : null;
+/** A box and the zooms it applies to: `minZoom` up to, not including, `maxZoom` (null: no upper limit). */
+export interface OfflineCoverage {
+  bounds: PackBounds;
+  minZoom: number;
+  maxZoom: number | null;
+}
+
+/** Bounds inside Web Mercator's world, or null when they are not a usable box. */
+const clampBounds = (bounds: unknown): PackBounds | null => {
+  if (!Array.isArray(bounds) || bounds.length !== 4 || !(bounds as unknown[]).every((value) => typeof value === 'number' && Number.isFinite(value))) return null;
+  const [west, south, east, north] = bounds as PackBounds;
+  const box: PackBounds = [Math.max(west, -180), Math.max(south, -MERCATOR_MAX_LATITUDE), Math.min(east, 180), Math.min(north, MERCATOR_MAX_LATITUDE)];
+  return box[0] < box[2] && box[1] < box[3] ? box : null;
+};
+
+/**
+ * Where the response-area base map draws: each pack's bounds from its first zoom up to the zoom its layers hand off at.
+ * Incident and corridor cells lie outside the area and are left out.
+ */
+function coverageOf(packs: OfflineMapPackRecord[], handOffZoom: (number | null)[]): OfflineCoverage[] {
+  return packs.flatMap((pack, index) => {
+    const bounds = pack.kind === OfflineMapPackKind.Basemap ? clampBounds(pack.bounds) : null;
+    return bounds ? [{ bounds, minZoom: pack.minZoom, maxZoom: handOffZoom[index] }] : [];
+  });
+}
+
+const readCoverage = (value: unknown): OfflineCoverage[] =>
+  Array.isArray(value)
+    ? (value as unknown[]).flatMap((entry) => {
+        if (!isObject(entry)) return [];
+        const bounds = clampBounds(entry.bounds);
+        const { minZoom, maxZoom } = entry;
+        return bounds && typeof minZoom === 'number' && (maxZoom === null || typeof maxZoom === 'number') ? [{ bounds, minZoom, maxZoom }] : [];
+      })
+    : [];
+
+/** Edges are compared at ~1 cm, so cells that share an edge leave no sliver between them. */
+const snap = (value: number): number => Math.round(value * 1e7) / 1e7;
+const sortedEdges = (values: number[]): number[] => [...new Set(values.map(snap))].sort((a, b) => a - b);
+const sameBounds = (a: PackBounds, b: PackBounds): boolean => a.every((value, index) => value === b[index]);
+
+/**
+ * The parts of `frame` no box covers, as few boxes: a sweep over the box edges, column by column (south to north runs),
+ * each run joined to the same run in the column before it.
+ */
+function uncoveredBoxes(boxes: PackBounds[], frame: PackBounds): PackBounds[] {
+  const snapped = boxes.map((box) => box.map(snap) as PackBounds);
+  const xs = sortedEdges([frame[0], frame[2], ...snapped.flatMap((box) => [box[0], box[2]])]);
+  const ys = sortedEdges([frame[1], frame[3], ...snapped.flatMap((box) => [box[1], box[3]])]);
+  const result: PackBounds[] = [];
+  let previous: PackBounds[] = [];
+  for (let i = 0; i + 1 < xs.length; i++) {
+    const [west, east] = [xs[i], xs[i + 1]];
+    const midX = (west + east) / 2;
+    const inColumn = snapped.filter((box) => box[0] <= midX && midX <= box[2]);
+    const runs: [number, number][] = [];
+    for (let j = 0; j + 1 < ys.length; j++) {
+      const midY = (ys[j] + ys[j + 1]) / 2;
+      if (inColumn.some((box) => box[1] <= midY && midY <= box[3])) continue;
+      const last = runs[runs.length - 1];
+      if (last && last[1] === ys[j]) last[1] = ys[j + 1];
+      else runs.push([ys[j], ys[j + 1]]);
+    }
+    previous = runs.map(([south, north]) => {
+      const joined = previous.find((box) => box[1] === south && box[3] === north);
+      if (joined) {
+        joined[2] = east;
+        return joined;
+      }
+      const box: PackBounds = [west, south, east, north];
+      result.push(box);
+      return box;
+    });
+  }
+  return result;
 }
 
 /** The parts of the world outside a box, as up to four boxes (west, east, south, north). */
@@ -216,6 +288,28 @@ const outsideOf = ([west, south, east, north]: PackBounds): PackBounds[] => {
   return candidates.filter(([w, s, e, n]) => w < e && s < n);
 };
 
+/**
+ * Where and at which zooms no installed pack draws: the bands around the area at every zoom, and inside it the gaps
+ * between packs per zoom range (for example between two cells from z10 up, where the z0–9 overview hands off).
+ */
+function remoteGaps(coverage: OfflineCoverage[]): OfflineCoverage[] {
+  const area: PackBounds = [Math.min(...coverage.map((c) => c.bounds[0])), Math.min(...coverage.map((c) => c.bounds[1])), Math.max(...coverage.map((c) => c.bounds[2])), Math.max(...coverage.map((c) => c.bounds[3]))];
+  const gaps: OfflineCoverage[] = outsideOf(area).map((bounds) => ({ bounds, minZoom: 0, maxZoom: null }));
+  const zooms = [...new Set([0, ...coverage.flatMap((c) => (c.maxZoom === null ? [c.minZoom] : [c.minZoom, c.maxZoom]))])].sort((a, b) => a - b);
+  const inside: OfflineCoverage[] = [];
+  zooms.forEach((from, index) => {
+    const to = index + 1 < zooms.length ? zooms[index + 1] : null;
+    const drawn = coverage.filter((c) => c.minZoom <= from && (c.maxZoom === null || (to !== null && c.maxZoom >= to))).map((c) => c.bounds);
+    for (const bounds of uncoveredBoxes(drawn, area)) {
+      // The same gap over the next zoom range extends the previous one.
+      const open = inside.find((gap) => gap.maxZoom === from && sameBounds(gap.bounds, bounds));
+      if (open) open.maxZoom = to;
+      else inside.push({ bounds, minZoom: from, maxZoom: to });
+    }
+  });
+  return [...gaps, ...inside];
+}
+
 /** An online raster tile source (the server's `MapRasterTileUrl`) to fill in around the downloaded area. */
 export interface RemoteFallbackSource {
   tileUrl: string;
@@ -227,25 +321,27 @@ const fallbackCache = new WeakMap<object, Map<string, StyleSpecification>>();
 
 /**
  * Local-preferred mode (D16, online with the department's "use downloaded maps when online"): the local base map inside
- * the response area, the server's raster tiles around it. The raster sources are bounded to the bands outside the area,
- * so MapLibre requests no remote tile inside it (the setting exists to save mobile data); they sit under the local
- * layers, which cover the tiles on the edge. A style without a known coverage is returned as is. Cached per style and
- * URL, so the same input hands MapLibre the same object (no restyle).
+ * the response area, the server's raster tiles where it does not draw. The raster sources are bounded to the bands
+ * outside the area and to the gaps between its packs, each layer limited to the zooms of its gap, so MapLibre requests
+ * no remote tile where the local map draws (the setting exists to save mobile data); they sit under the local layers,
+ * which cover the tiles on the edge. A style without a known coverage is returned as is. Cached per style and URL, so
+ * the same input hands MapLibre the same object (no restyle).
  */
 export function withRemoteFallback(style: StyleSpecification, fallback: RemoteFallbackSource): StyleSpecification {
   const source = style as unknown as Json;
   const metadata = isObject(source.metadata) ? source.metadata : null;
-  const coverage = metadata && Array.isArray(metadata[OFFLINE_COVERAGE_METADATA]) ? (metadata[OFFLINE_COVERAGE_METADATA] as PackBounds) : null;
-  if (!coverage || coverage.length !== 4) return style;
+  const coverage = readCoverage(metadata?.[OFFLINE_COVERAGE_METADATA]);
+  if (coverage.length === 0) return style;
   const cached = fallbackCache.get(style)?.get(fallback.tileUrl);
   if (cached) return cached;
 
-  const bands = outsideOf(coverage);
+  const gaps = remoteGaps(coverage);
+  if (gaps.length === 0) return style;
   const sources: Json = { ...(source.sources as Json) };
-  const added: Json[] = bands.map((bounds, index) => {
+  const added: Json[] = gaps.map((gap, index) => {
     const id = `${OFFLINE_REMOTE_FALLBACK_PREFIX}${index}`;
-    sources[id] = { type: 'raster', tiles: [fallback.tileUrl], tileSize: fallback.tileSize, bounds, attribution: fallback.attribution };
-    return { id, type: 'raster', source: id };
+    sources[id] = { type: 'raster', tiles: [fallback.tileUrl], tileSize: fallback.tileSize, bounds: gap.bounds, attribution: fallback.attribution };
+    return { id, type: 'raster', source: id, ...(gap.minZoom > 0 ? { minzoom: gap.minZoom } : {}), ...(gap.maxZoom !== null ? { maxzoom: gap.maxZoom } : {}) };
   });
   const layers = (source.layers as Json[]) ?? [];
   // Above the background, under everything the local packs draw.

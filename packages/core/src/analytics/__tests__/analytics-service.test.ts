@@ -15,6 +15,8 @@ const makeClient = () => {
   const client = {
     init: jest.fn<Promise<void>, Parameters<CountlyClient['init']>>(() => Promise.resolve()),
     recordEvent: jest.fn<void, Parameters<CountlyClient['recordEvent']>>(),
+    recordView: jest.fn<void, Parameters<CountlyClient['recordView']>>(),
+    appLoaded: jest.fn<void, []>(),
     setUserData: jest.fn<void, Parameters<CountlyClient['setUserData']>>(),
     endSession: jest.fn<void, []>(),
   };
@@ -151,6 +153,65 @@ describe('AnalyticsService', () => {
       jest.advanceTimersByTime(60_000);
       expect(service.isAnalyticsDisabled()).toBe(false);
       expect(service.getStatus().retryCount).toBe(0);
+    });
+  });
+
+  describe('views, app start and user id (app shell)', () => {
+    it('records views with string segmentation and keeps the latest view from before init', async () => {
+      const client = makeClient();
+      const service = new AnalyticsService(client, { enableLogging: false });
+      service.trackView('/login');
+      service.trackView('/calls/[id]', { tab: 'notes', password: 'x' });
+      expect(client.recordView).not.toHaveBeenCalled();
+
+      await service.initialize('k', 'u');
+      expect(client.recordView).toHaveBeenCalledTimes(1);
+      expect(client.recordView).toHaveBeenCalledWith('/calls/[id]', { tab: 'notes' });
+
+      service.trackView('/settings');
+      expect(client.recordView).toHaveBeenLastCalledWith('/settings', {});
+    });
+
+    it('sends the app-loaded mark and the user id that arrived before init, once', async () => {
+      const client = makeClient();
+      const service = new AnalyticsService(client, { enableLogging: false });
+      service.appLoaded();
+      service.identifyUser('user-1');
+      service.identifyUser(null);
+      expect(client.appLoaded).not.toHaveBeenCalled();
+      expect(client.setUserData).not.toHaveBeenCalled();
+
+      await service.initialize('k', 'u');
+      expect(client.appLoaded).toHaveBeenCalledTimes(1);
+      expect(client.setUserData).toHaveBeenCalledWith({ user_id: 'user-1' });
+
+      await service.initialize('k', 'u');
+      expect(client.appLoaded).toHaveBeenCalledTimes(1);
+    });
+
+    it('counts view failures like event failures and skips views while paused', async () => {
+      const { client, service } = await ready({ maxRetries: 2 });
+      client.recordView.mockImplementation(() => {
+        throw new Error('bridge gone');
+      });
+      expect(() => service.trackView('/a')).not.toThrow();
+      service.trackView('/b');
+      expect(service.isAnalyticsDisabled()).toBe(true);
+      client.recordView.mockClear();
+      service.trackView('/c');
+      expect(client.recordView).not.toHaveBeenCalled();
+      service.reset();
+    });
+
+    it('a full reset forgets what was waiting for init', async () => {
+      const client = makeClient();
+      const service = new AnalyticsService(client, { enableLogging: false });
+      service.trackView('/a');
+      service.appLoaded();
+      service.reset(true);
+      await service.initialize('k', 'u');
+      expect(client.recordView).not.toHaveBeenCalled();
+      expect(client.appLoaded).not.toHaveBeenCalled();
     });
   });
 

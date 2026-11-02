@@ -9,6 +9,7 @@ set -euo pipefail
 out="${MAESTRO_OUTPUT:-apps/omni/e2e/maestro-output/${APP_VARIANT}-ios}"
 
 work="$(mktemp -d)"
+trap 'rm -rf "$work"' EXIT
 tar -xzf "$APP_TARBALL" -C "$work"
 app="$(find "$work" -maxdepth 3 -name '*.app' -type d | head -n1)"
 if [ -z "$app" ]; then echo "::error::No .app in $APP_TARBALL"; exit 1; fi

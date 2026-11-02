@@ -84,7 +84,7 @@ describe('createOfflineMapOptions', () => {
     const preferLocal = createOfflineMapOptions({ installed: installed({ basemapPacks: packs }), isOnline: true, preferLocal: true });
     const state = deriveMapStyleState(source, 'light', null, preferLocal, raster);
     const style = state.mapStyle as unknown as { sources: Record<string, { type: string; bounds?: number[]; tiles?: string[] }>; layers: { id: string; type: string }[]; metadata: Record<string, unknown> };
-    expect(style.metadata['resgrid:offline-coverage']).toEqual(area.bounds);
+    expect(style.metadata['resgrid:offline-coverage']).toEqual([{ bounds: area.bounds, minZoom: 0, maxZoom: null }]);
     const remote = Object.entries(style.sources).filter(([id]) => id.startsWith('offline-remote-'));
     // Four bands around the area; none overlaps it, so no remote tile is requested inside.
     expect(remote.map(([, band]) => band.bounds)).toEqual([

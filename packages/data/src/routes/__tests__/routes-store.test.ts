@@ -1,4 +1,4 @@
-import { checkInAtStop, checkOutFromStop, endRoute, getActiveRouteForUnit, getInstanceDirections, getRouteProgress, pauseRoute, resumeRoute, startRoute } from '@resgrid/api';
+import { checkInAtStop, checkOutFromStop, endRoute, getActiveRouteForUnit, getInstanceDirections, getRoutePlans, getRouteProgress, pauseRoute, resumeRoute, startRoute } from '@resgrid/api';
 import type { RouteInstanceResultData, RouteProgressResultData } from '@resgrid/models';
 import { defaultResetRegistry } from '@resgrid/offline';
 
@@ -10,6 +10,7 @@ jest.mock('@resgrid/api', () => ({
   ...jest.requireActual('@resgrid/api'),
   getRouteProgress: jest.fn(),
   getActiveRouteForUnit: jest.fn(),
+  getRoutePlans: jest.fn(),
   pauseRoute: jest.fn(),
   resumeRoute: jest.fn(),
   startRoute: jest.fn(),
@@ -114,6 +115,42 @@ describe('routes store: RD11–RD13 defects fixed', () => {
     jest.mocked(resumeRoute).mockClear();
     await useRoutesStore.getState().endRouteInstance('ri-1');
     expect(resumeRoute).not.toHaveBeenCalled();
+  });
+
+  it('pauses a resumed route again when ending it fails, so it does not run on', async () => {
+    jest.mocked(startRoute).mockResolvedValue(ok(instance) as never);
+    await useRoutesStore.getState().startRouteInstance('rp-1', 10);
+    jest.mocked(pauseRoute).mockResolvedValue(ok(instance) as never);
+    jest.mocked(resumeRoute).mockResolvedValue(ok(instance) as never);
+    jest.mocked(endRoute).mockRejectedValue(httpError(500));
+    await useRoutesStore.getState().pauseRouteInstance('ri-1');
+    jest.mocked(pauseRoute).mockClear();
+
+    expect(await useRoutesStore.getState().endRouteInstance('ri-1')).toBe(false);
+    expect(pauseRoute).toHaveBeenCalledWith(expect.anything(), { RouteInstanceId: 'ri-1' });
+    expect(jest.mocked(endRoute).mock.invocationCallOrder[0]).toBeLessThan(jest.mocked(pauseRoute).mock.invocationCallOrder[0]);
+    expect(useRoutesStore.getState().activeInstance?.Status).toBe(RouteInstanceStatus.Paused);
+    expect(useRoutesStore.getState().isTracking).toBe(false);
+    expect(useRoutesStore.getState().actionError?.status).toBe(500);
+
+    // The pause fails too: the store shows the route running, as Core has it, and the crew sees the end error.
+    jest.mocked(pauseRoute).mockRejectedValue(httpError(503));
+    expect(await useRoutesStore.getState().endRouteInstance('ri-1')).toBe(false);
+    expect(useRoutesStore.getState().activeInstance?.Status).toBe(RouteInstanceStatus.InProgress);
+    expect(useRoutesStore.getState().actionError?.status).toBe(500);
+
+    // A running route that fails to end is not paused.
+    jest.mocked(pauseRoute).mockClear();
+    expect(await useRoutesStore.getState().endRouteInstance('ri-1')).toBe(false);
+    expect(pauseRoute).not.toHaveBeenCalled();
+  });
+
+  it('fetches every plan past the endpoint cache when asked to (pull-to-refresh, shift-start hydration)', async () => {
+    jest.mocked(getRoutePlans).mockResolvedValue(ok([]) as never);
+    await useRoutesStore.getState().fetchAllRoutePlans();
+    expect(getRoutePlans).toHaveBeenLastCalledWith(expect.anything(), { forceRefresh: false });
+    await useRoutesStore.getState().fetchAllRoutePlans({ bypassCache: true });
+    expect(getRoutePlans).toHaveBeenLastCalledWith(expect.anything(), { forceRefresh: true });
   });
 
   it('RD11: directions are requested from the unit position (passed, else the last known fix)', async () => {

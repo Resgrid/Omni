@@ -46,12 +46,12 @@ describe('startup steps', () => {
     getShellRuntime().offline?.dispose();
   });
 
-  it('runs Sentry → i18n → storage → preferences → auth → platform packages, in order', async () => {
+  it('runs Sentry → analytics → i18n → storage → preferences → auth → platform packages, in order', async () => {
     const { init } = startup();
     const status = await init.run();
 
     expect(status.state).toBe('ready');
-    expect(status.completedSteps).toEqual(['startup.sentry', 'startup.i18n', 'startup.offline', 'startup.preferences', 'startup.auth', 'startup.packages']);
+    expect(status.completedSteps).toEqual(['startup.sentry', 'startup.analytics', 'startup.i18n', 'startup.offline', 'startup.preferences', 'startup.auth', 'startup.packages']);
     expect(initI18n).toHaveBeenCalledWith({ variantResources: undefined });
     expect(getShellRuntime().offline).not.toBeNull();
     expect(getShellRuntime().auth).not.toBeNull();

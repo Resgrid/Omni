@@ -115,6 +115,7 @@ export {
   OFFLINE_DEPARTMENT_SOURCE_PREFIX,
   OFFLINE_FLOOR_PREFIX,
   OFFLINE_REMOTE_FALLBACK_PREFIX,
+  type OfflineCoverage,
   offlineSafeId,
   offlineStyleComposer,
   pmtilesUrlFor,
