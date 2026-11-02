@@ -1,14 +1,15 @@
 import './test-setup';
 
 import { buildNewCallInput } from '@resgrid/api';
-import type { SecurityView } from '@resgrid/auth';
+import { featureFlagsStore, type SecurityView } from '@resgrid/auth';
 import { getActiveVariant } from '@resgrid/config';
-import { useCallDetailStore, useCallsStore, useCallVideoFeedsStore, useCheckInTimersStore } from '@resgrid/data';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { useCallDetailStore, useCallsStore, useCallVideoFeedsStore, useCheckInTimersStore, useNavigationEtaStore } from '@resgrid/data';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import React from 'react';
 import { Text } from 'react-native';
 
+import { CallDispatchedPanel } from '../components/detail/call-dispatched-panel';
 import { BUILT_IN_CALL_DETAIL_TABS, registerBuiltInCallDetailTabs } from '../detail-tabs/built-in-tabs';
 import { type CallDetailTabContext, getCallDetailTabs, registerCallDetailTab, resolveCallDetailTabs } from '../detail-tabs/registry';
 import CallDetailScreen from '../screens/call-detail';
@@ -199,5 +200,64 @@ describe('CallDetailScreen', () => {
     jest.mocked(useLocalSearchParams).mockReturnValue({ id: '../x' });
     await render(<CallDetailScreen />);
     expect(screen.getByTestId('call-detail-invalid')).toBeTruthy();
+  });
+});
+
+describe('CallDispatchedPanel live ETAs', () => {
+  const dispatches = [
+    { Id: '7', Type: 'Unit', Name: 'Engine 7' },
+    { Id: 'u-1', Type: 'User', Name: 'Pat Doe' },
+  ] as never;
+  const navigation = (CallId: number) => ({
+    UnitId: 7,
+    CallId,
+    RouteInstanceId: null,
+    RouteInstanceStopId: null,
+    State: 1,
+    EtaUtc: new Date(Date.now() + 6 * 60_000).toISOString(),
+    RemainingSeconds: 360,
+    RemainingMeters: 5000,
+    IsTrafficAware: false,
+    Provider: 'valhalla',
+    ReportedOn: new Date().toISOString(),
+    IsStale: false,
+  });
+  const fetchActiveNavigations = jest.fn(async () => undefined);
+
+  beforeEach(() => {
+    fetchActiveNavigations.mockClear();
+    featureFlagsStore.setState({ flags: { 'Navigation.InApp': { enabled: true } } as never, isLoaded: true });
+    useNavigationEtaStore.setState({ navigations: { '7': navigation(12) }, serverClockOffsetMs: 0, fetchActiveNavigations });
+  });
+
+  // Still mounted here (RNTL unmounts after): reset inside act.
+  afterEach(async () => {
+    await act(() => {
+      featureFlagsStore.setState({ flags: {} });
+      useNavigationEtaStore.setState(useNavigationEtaStore.getInitialState());
+    });
+  });
+
+  it("shows a dispatched unit's ETA to this call where the app shows ETAs (Dispatch)", async () => {
+    activateVariant('dispatch');
+    await render(<CallDispatchedPanel dispatches={dispatches} callId="12" />);
+    expect(fetchActiveNavigations).toHaveBeenCalledWith({ bypassCache: true });
+    expect(screen.getByTestId('call-dispatched-7-eta')).toHaveTextContent('navigation_eta.minutes:6');
+    expect(screen.queryByTestId('call-dispatched-u-1-eta')).toBeNull();
+  });
+
+  it('shows no ETA for a unit navigating to another call', async () => {
+    activateVariant('dispatch');
+    useNavigationEtaStore.setState({ navigations: { '7': navigation(30) } });
+    await render(<CallDispatchedPanel dispatches={dispatches} callId="12" />);
+    expect(screen.queryByTestId('call-dispatched-7-eta')).toBeNull();
+  });
+
+  it('neither loads nor shows ETAs in apps without an ETA module (Responder)', async () => {
+    activateVariant('responder');
+    await render(<CallDispatchedPanel dispatches={dispatches} callId="12" />);
+    expect(fetchActiveNavigations).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('call-dispatched-7-eta')).toBeNull();
+    expect(screen.getByText('Engine 7')).toBeTruthy();
   });
 });

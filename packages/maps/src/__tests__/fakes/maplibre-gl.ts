@@ -67,7 +67,12 @@ export class FakeMap extends Emitter {
   addSource(id: string, spec: any): void {
     if (this.sources.has(id)) throw new Error(`Source ${id} already exists`);
     mockCalls.addSource.push(id);
-    const source = { ...spec, setData: jest.fn(), updateImage: jest.fn() };
+    const source: any = { ...spec, setData: jest.fn(), updateImage: jest.fn() };
+    // Tile sources (raster/vector) replace their tiles in place, like maplibre-gl.
+    source.setTiles = jest.fn((tiles: string[]) => {
+      source.tiles = tiles;
+      return source;
+    });
     this.sources.set(id, source);
   }
   getSource(id: string): any {
@@ -88,7 +93,7 @@ export class FakeMap extends Emitter {
     this.layers = this.layers.filter((layer) => layer.id !== id);
   }
   getStyle(): any {
-    return { layers: this.layers };
+    return { layers: this.layers, sources: Object.fromEntries(this.sources) };
   }
   setPaintProperty = jest.fn();
   setLayoutProperty = jest.fn();

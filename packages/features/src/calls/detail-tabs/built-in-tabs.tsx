@@ -27,7 +27,7 @@ export const CALL_DETAIL_TAB_IDS = {
 export const BUILT_IN_CALL_DETAIL_TABS: readonly CallDetailTabDefinition[] = [
   { id: CALL_DETAIL_TAB_IDS.info, order: 10, title: 'call_detail.tabs.info', render: (context) => <CallInfoPanel call={context.call} /> },
   { id: CALL_DETAIL_TAB_IDS.protocols, order: 20, title: 'call_detail.tabs.protocols', render: (context) => <CallProtocolsPanel protocols={context.extraData?.Protocols ?? []} /> },
-  { id: CALL_DETAIL_TAB_IDS.dispatched, order: 30, title: 'call_detail.tabs.dispatched', render: (context) => <CallDispatchedPanel dispatches={context.extraData?.Dispatches ?? []} /> },
+  { id: CALL_DETAIL_TAB_IDS.dispatched, order: 30, title: 'call_detail.tabs.dispatched', render: (context) => <CallDispatchedPanel dispatches={context.extraData?.Dispatches ?? []} callId={context.callId} /> },
   {
     id: CALL_DETAIL_TAB_IDS.activity,
     order: 40,

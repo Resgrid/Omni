@@ -51,7 +51,7 @@ export interface ContentRow {
 }
 
 const BASE_KINDS = new Set(['basemap']);
-const SUPPORT_KINDS = new Set(['department-data', 'sprite', 'style']);
+const SUPPORT_KINDS = new Set(['department-data', 'sprite', 'style', 'glyphs']);
 
 /** The worst state of a group: what the member needs to know first. */
 const groupState = (packs: OfflinePackSummary[]): OfflinePackState => {
@@ -66,7 +66,7 @@ const sumSizes = (packs: OfflinePackSummary[]): number | null => {
 
 /**
  * Settings list rows: one "Base map" row for all response-area cells, one "Department data and icons" row for the
- * bundle, sprite and styles, then one row per incident/corridor pack, custom map and indoor floor.
+ * bundle, sprite, styles and glyphs, then one row per incident/corridor pack, custom map and indoor floor.
  */
 export function buildContentRows(packs: readonly OfflinePackSummary[]): ContentRow[] {
   const rows: ContentRow[] = [];

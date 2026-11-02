@@ -20,9 +20,12 @@ export {
   GEOLOCATION_CONNECTED_ACK,
   GEOLOCATION_HUB_EVENTS,
   HUB_METHODS,
+  NAVIGATION_ETA_MODULES,
+  NAVIGATION_EVENTING_EVENTS,
   type RealtimeFeatures,
   type RealtimeVariantInput,
   resolveRealtimeFeatures,
+  showsNavigationEtas,
 } from './events';
 
 // Service

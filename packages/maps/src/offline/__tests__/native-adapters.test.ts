@@ -52,6 +52,25 @@ describe('createExpoPackFileStore', () => {
     await expect(store.diskSpace()).resolves.toEqual({ freeBytes: 5_000, totalBytes: 50_000 });
   });
 
+  it('moves a directory tree into place, replacing an older one (extracted glyphs)', async () => {
+    const store = createExpoPackFileStore();
+    if (!store) throw new Error('store expected on native');
+    await store.append('scope/tmp/glyphs-new/Noto Sans Regular/0-255.pbf', new Uint8Array([1, 2]));
+    await store.append('scope/tmp/glyphs-new/Noto Sans Bold/0-255.pbf', new Uint8Array([3]));
+    await store.append('scope/files/glyphs-new/stale.pbf', new Uint8Array([9]));
+
+    await store.move('scope/tmp/glyphs-new', 'scope/files/glyphs-new');
+    await expect(store.read('scope/files/glyphs-new/Noto Sans Regular/0-255.pbf', 0, 2)).resolves.toEqual(new Uint8Array([1, 2]));
+    await expect(store.size('scope/files/glyphs-new/Noto Sans Bold/0-255.pbf')).resolves.toBe(1);
+    await expect(store.size('scope/files/glyphs-new/stale.pbf')).resolves.toBeNull();
+    await expect(store.list('scope/tmp')).resolves.toEqual([]);
+
+    // Into a folder that does not exist yet.
+    await store.append('other/tmp/g/A/0-255.pbf', new Uint8Array([7]));
+    await store.move('other/tmp/g', 'other/files/g');
+    await expect(store.size('other/files/g/A/0-255.pbf')).resolves.toBe(1);
+  });
+
   it('refuses paths that climb out of the root', () => {
     expect(() => normalizePackPath('../secrets')).toThrow();
     expect(normalizePackPath('/a//b/./c')).toBe('a/b/c');

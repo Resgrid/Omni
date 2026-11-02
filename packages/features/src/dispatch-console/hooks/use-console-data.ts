@@ -1,5 +1,6 @@
 import { useCallDetailStore, useCallsStore, useMapMarkersStore, useNotesStore, usePersonnelStore, useUnitsStore, useWeatherAlertsStore } from '@resgrid/data';
 import { CALL_LIST_REFRESH_EVENTS } from '@resgrid/features/calls';
+import { useIsNavigationEtaEnabled, useNavigationEtaSync } from '@resgrid/features/navigation-eta';
 import { useTranslation } from '@resgrid/i18n';
 import { type RealtimeEventName, useRealtimeEvent, useRealtimeRefetch } from '@resgrid/realtime';
 import { useCallback, useEffect } from 'react';
@@ -70,6 +71,8 @@ export function useConsoleData({ realtime = true }: { realtime?: boolean } = {})
   useRealtimeRefetch(CALL_LIST_REFRESH_EVENTS, refreshCalls, realtime);
   useRealtimeRefetch(CONSOLE_UNIT_EVENTS, refreshUnits, realtime);
   useRealtimeRefetch(CONSOLE_PERSONNEL_EVENTS, refreshPersonnel, realtime);
+  // Live ETAs of navigating units for the unit rows, call cards and map labels (Navigation.InApp departments).
+  useNavigationEtaSync(useIsNavigationEtaEnabled());
 
   const logEvent = useCallback(
     (name: RealtimeEventName) => {

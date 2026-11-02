@@ -1,7 +1,9 @@
 import type { StyleSpecification } from '../types';
 import type { OfflineInstalledSet } from './manager';
 import { offlineStyleComposer } from './style-composer';
-import { type MapOfflineOptions, OFFLINE_MAP_ATTRIBUTION, type OfflineMapMode, type OfflineStyleComposer } from './types';
+import { type MapLoadErrorKind, type MapOfflineOptions, OFFLINE_MAP_ATTRIBUTION, type OfflineMapMode, type OfflineStyleComposer } from './types';
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
  * The online/offline style switch (MapLibre plan D16) as a pure function:
@@ -29,13 +31,15 @@ export interface CreateOfflineMapOptionsInput {
    * installed revision hands MapLibre the same style object (no restyle).
    */
   styleCache?: Map<string, StyleSpecification | null>;
+  /** Online style errors from the map wrappers, forwarded to the mode switch (D16). */
+  onMapError?: (kind: MapLoadErrorKind) => void;
 }
 
 /**
  * Builds `MapProvider`'s `offline` option from the installed set. The style is composed lazily per theme and cached,
  * so `getStyle` is cheap and returns the same object until the installed set changes (no restyle churn).
  */
-export function createOfflineMapOptions({ installed, isOnline, preferLocal, composer = offlineStyleComposer, onUse, styleCache = new Map() }: CreateOfflineMapOptionsInput): MapOfflineOptions | null {
+export function createOfflineMapOptions({ installed, isOnline, preferLocal, composer = offlineStyleComposer, onUse, styleCache = new Map(), onMapError }: CreateOfflineMapOptionsInput): MapOfflineOptions | null {
   if (!installed || installed.basemapPacks.length === 0) {
     return null;
   }
@@ -45,6 +49,8 @@ export function createOfflineMapOptions({ installed, isOnline, preferLocal, comp
     mode,
     attribution: installed.attribution || OFFLINE_MAP_ATTRIBUTION,
     updatedAt: installed.updatedAt,
+    staleAfterMs: installed.staleDays > 0 ? installed.staleDays * DAY_MS : null,
+    ...(onMapError ? { reportMapError: onMapError } : {}),
     getStyle: (scheme) => {
       const key = `${installed.revision}:${scheme}`;
       if (!styleCache.has(key)) {
@@ -55,9 +61,9 @@ export function createOfflineMapOptions({ installed, isOnline, preferLocal, comp
             template: scheme === 'dark' ? (installed.templates.dark ?? installed.templates.light) : (installed.templates.light ?? installed.templates.dark),
             basemapPacks: installed.basemapPacks,
             customMapPacks: installed.customMapPacks,
-            glyphsPath: null,
+            glyphsPath: installed.glyphsPath,
             spritePath: installed.spritePath,
-            departmentData: null,
+            departmentData: installed.departmentData,
             indoorFloors: installed.indoorFloors,
             attribution: installed.attribution,
           })

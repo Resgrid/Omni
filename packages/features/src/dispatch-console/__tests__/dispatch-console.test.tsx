@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock factories run lazily, so they require modules inside. */
 import '../../calls/__tests__/test-setup';
 
-import { useCallDetailStore, useCallsStore, useCheckInTimersStore, useMapMarkersStore, useNotesStore, usePersonnelStore, usePoisStore, useUnitsStore, useWeatherAlertsStore } from '@resgrid/data';
+import { featureFlagsStore } from '@resgrid/auth';
+import { useCallDetailStore, useCallsStore, useCheckInTimersStore, useMapMarkersStore, useNavigationEtaStore, useNotesStore, usePersonnelStore, usePoisStore, useUnitsStore, useWeatherAlertsStore } from '@resgrid/data';
 import { emitRealtimeEvent } from '@resgrid/realtime';
 import { useToastStore } from '@resgrid/ui';
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
@@ -21,6 +22,8 @@ jest.mock('@resgrid/maps', () => {
     MapView: ({ children, testID }: { children?: unknown; testID?: string }) => mockReact.createElement(View, { testID }, children),
     Camera: () => null,
     MapPins: ({ pins }: { pins: unknown[] }) => mockReact.createElement(View, { testID: `map-pins-${pins.length}` }),
+    TrafficLayer: ({ visible }: { visible?: boolean }) => mockReact.createElement(View, { testID: `console-traffic-${visible === false ? 'hidden' : 'visible'}` }),
+    MapTrafficButton: ({ onPress, testID }: { onPress: () => void; testID?: string }) => mockReact.createElement(require('react-native').Pressable, { onPress, testID }),
     useMapStyle: () => ({ isAvailable: true, status: 'ready' }),
     useMapCenter: () => ({ latitude: 39, longitude: -105, zoomLevel: 9 }),
   };
@@ -323,5 +326,51 @@ describe('DispatchConsoleScreen realtime, PTT and map', () => {
     expect(screen.getByTestId('map-pins-1')).toBeTruthy();
     await fireEvent.press(screen.getByTestId('map-expand'));
     expect(router.push).toHaveBeenCalledWith('/map');
+  });
+});
+
+describe('DispatchConsoleScreen live ETAs', () => {
+  const navigation = (UnitId: number, CallId: number) => ({
+    UnitId,
+    CallId,
+    RouteInstanceId: null,
+    RouteInstanceStopId: null,
+    State: 1,
+    EtaUtc: new Date(Date.now() + 4 * 60_000).toISOString(),
+    RemainingSeconds: 240,
+    RemainingMeters: 3000,
+    IsTrafficAware: true,
+    Provider: 'valhalla',
+    ReportedOn: new Date().toISOString(),
+    IsStale: false,
+  });
+
+  // Still mounted here (RNTL unmounts after): reset inside act.
+  afterEach(async () => {
+    await act(() => {
+      featureFlagsStore.setState({ flags: {} });
+      useNavigationEtaStore.setState(useNavigationEtaStore.getInitialState());
+    });
+  });
+
+  it('loads the ETAs with Navigation.InApp and shows them on the unit row and the call card', async () => {
+    const fetchActiveNavigations = jest.fn(async () => undefined);
+    featureFlagsStore.setState({ flags: { 'Navigation.InApp': { enabled: true } } as never, isLoaded: true });
+    useNavigationEtaStore.setState({ navigations: { '2': navigation(2, 9) }, serverClockOffsetMs: 0, fetchActiveNavigations });
+    await setWindow(1366, 1024);
+    await renderConsole();
+    expect(fetchActiveNavigations).toHaveBeenCalledWith({ bypassCache: true });
+    expect(screen.getByTestId('console-unit-2-eta')).toHaveTextContent('navigation_eta.minutes:4 · navigation_eta.traffic');
+    expect(screen.queryByTestId('console-unit-1-eta')).toBeNull();
+    expect(within(screen.getByTestId('console-call-9-etas')).getByTestId('navigation-eta-2')).toHaveTextContent('E2 · navigation_eta.minutes:4 · navigation_eta.traffic');
+  });
+
+  it('asks for nothing without the department flag', async () => {
+    const fetchActiveNavigations = jest.fn(async () => undefined);
+    useNavigationEtaStore.setState({ fetchActiveNavigations });
+    await setWindow(1366, 1024);
+    await renderConsole();
+    expect(fetchActiveNavigations).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('console-call-9-etas')).toBeNull();
   });
 });

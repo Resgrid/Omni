@@ -1,14 +1,16 @@
 import type { CustomMapLayerResultData, IndoorMapFloorResultData } from '@resgrid/models';
 import React, { useMemo } from 'react';
 
+import { useSignedMapUrl } from '../hooks/use-signed-map-url';
 import { boundsToImageCoordinates, buildIndoorFloorImageUrl, indoorZonesToFeatureCollection, resolveCustomMapLayerRendering } from '../lib/custom-maps';
 import { useMapServices, useMapTheme } from '../provider/context';
 import { FillLayer, ImageSource, LineLayer, RasterLayer, RasterSource, ShapeSource, SymbolLayer } from '../rg';
 import type { SourcePressEvent } from '../rg/types';
 
 /**
- * Department map data layers: custom map rasters (server tiles, signed), indoor floor images with their zones, and
- * GeoJSON map layers / geofences. URLs come from the provider's `services.getApiBaseUrl()` + `services.signUrl` (D12).
+ * Department map data layers: custom map rasters (Core's Web Mercator tiles, else the layer image — D21), indoor floor
+ * images with their zones, and GeoJSON map layers / geofences. Server-hosted URLs come from `services.getApiBaseUrl()` and
+ * reach a source only once signed (`useSignedMapUrl`, D12); until then, or when signing fails, the raster is not drawn.
  */
 
 export interface CustomMapRasterLayerProps {
@@ -20,7 +22,8 @@ export interface CustomMapRasterLayerProps {
 
 export const CustomMapRasterLayer: React.FC<CustomMapRasterLayerProps> = ({ layer, belowLayerID, showRegions = true }) => {
   const services = useMapServices();
-  const rendering = useMemo(() => resolveCustomMapLayerRendering(layer, services.getApiBaseUrl(), services.signUrl), [layer, services]);
+  const rendering = useMemo(() => resolveCustomMapLayerRendering(layer, services.getApiBaseUrl()), [layer, services]);
+  const signedUrl = useSignedMapUrl(rendering.kind === 'tiles' ? rendering.tileUrlTemplate : rendering.kind === 'image' ? rendering.url : null);
   const regions = useMemo<GeoJSON.FeatureCollection>(() => {
     const features: GeoJSON.Feature[] = [];
     for (const region of layer.Regions ?? []) {
@@ -39,13 +42,13 @@ export const CustomMapRasterLayer: React.FC<CustomMapRasterLayerProps> = ({ laye
 
   return (
     <>
-      {rendering.kind === 'tiles' ? (
-        <RasterSource id={`${id}-tiles`} tileUrlTemplates={[rendering.tileUrlTemplate]} tileSize={256} minZoomLevel={rendering.minZoom} maxZoomLevel={rendering.maxZoom}>
+      {rendering.kind === 'tiles' && signedUrl ? (
+        <RasterSource id={`${id}-tiles`} tileUrlTemplates={[signedUrl]} tileSize={256}>
           <RasterLayer id={`${id}-tiles-layer`} belowLayerID={belowLayerID} style={{ rasterOpacity: rendering.opacity }} />
         </RasterSource>
       ) : null}
-      {rendering.kind === 'image' ? (
-        <ImageSource id={`${id}-image`} url={rendering.url} coordinates={rendering.coordinates}>
+      {rendering.kind === 'image' && signedUrl ? (
+        <ImageSource id={`${id}-image`} url={signedUrl} coordinates={rendering.coordinates}>
           <RasterLayer id={`${id}-image-layer`} belowLayerID={belowLayerID} style={{ rasterOpacity: rendering.opacity }} />
         </ImageSource>
       ) : null}
@@ -70,7 +73,7 @@ export const IndoorMapFloorLayer: React.FC<IndoorMapFloorLayerProps> = ({ floor,
   const services = useMapServices();
   const { colors } = useMapTheme();
   const coordinates = boundsToImageCoordinates(floor);
-  const imageUrl = floor.HasImage ? buildIndoorFloorImageUrl(services.getApiBaseUrl(), floor.IndoorMapFloorId, services.signUrl) : null;
+  const imageUrl = useSignedMapUrl(floor.HasImage ? buildIndoorFloorImageUrl(services.getApiBaseUrl(), floor.IndoorMapFloorId) : null);
   const zones = useMemo(() => indoorZonesToFeatureCollection(floor), [floor]);
   const opacity = Number.isFinite(floor.Opacity) ? Math.min(1, Math.max(0, floor.Opacity)) : 1;
   const id = `indoor-floor-${floor.IndoorMapFloorId}`;

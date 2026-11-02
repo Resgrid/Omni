@@ -1,9 +1,13 @@
+import { UnitNavigationEtaChip } from '@resgrid/features/navigation-eta';
 import { useTranslation } from '@resgrid/i18n';
+import { getPinEntityId } from '@resgrid/maps';
 import type { MapMakerInfoData } from '@resgrid/models';
 import { Badge, BadgeText, Button, ButtonText, CustomBottomSheet, Heading, HStack, Pressable, Text, useThemeColors, VStack } from '@resgrid/ui';
 import { type LucideIcon, MapPin, X } from 'lucide-react-native';
 import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
+
+import { markerKindOf } from '../lib/map-markers';
 
 /** One action under a pin (open the call / unit / member / POI, set as the current call, directions). */
 export interface MapPinAction {
@@ -34,12 +38,14 @@ const Row: React.FC<{ label: string; value: string; testID?: string }> = ({ labe
 
 /**
  * A tapped pin's details and actions (baseline Unit pin-detail-modal, plus open unit / member). Server text is shown as
- * plain text; every action comes from the screen, so navigation, toasts and stores stay out of this component.
+ * plain text; every action comes from the screen, so navigation, toasts and stores stay out of this component. A unit
+ * navigating in the Unit app shows its live ETA (only where the app keeps ETAs live: Dispatch, Big Board).
  */
 export const MapPinDetails: React.FC<MapPinDetailsProps> = ({ pin, kindLabel, badges = [], actions, onClose }) => {
   const { t } = useTranslation();
   const colors = useThemeColors();
   const hasCoordinates = Number.isFinite(pin.Latitude) && Number.isFinite(pin.Longitude);
+  const unitId = markerKindOf(pin) === 'unit' ? getPinEntityId(pin) : null;
 
   return (
     <VStack space="md" testID="map-pin-details">
@@ -58,6 +64,7 @@ export const MapPinDetails: React.FC<MapPinDetailsProps> = ({ pin, kindLabel, ba
           </View>
         </Pressable>
       </HStack>
+      {unitId ? <UnitNavigationEtaChip unitId={unitId} fontSize={12} testID="map-pin-eta" /> : null}
       {badges.length > 0 ? (
         <HStack space="sm" className="flex-wrap">
           {badges.map((badge) => (

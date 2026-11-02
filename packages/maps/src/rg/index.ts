@@ -1,7 +1,24 @@
 export { toNamedAnchor } from './camera-utils';
-export { MapRenderContext, useStyleRevision } from './render-context';
+export { firstSymbolLayerId, MapRenderContext, useBelowLabelsLayerId, useStyleRevision } from './render-context';
 export { type MapRendererSetup } from './renderer-setup';
-export { Camera, CircleLayer, FillLayer, HeatmapLayer, Images, ImageSource, LineLayer, MapView, MarkerView, PointAnnotation, RasterLayer, RasterSource, ShapeSource, SymbolLayer, UserLocation } from './rg-map';
+export {
+  Camera,
+  CircleLayer,
+  FillLayer,
+  HeatmapLayer,
+  Images,
+  ImageSource,
+  LineLayer,
+  MapView,
+  MarkerView,
+  PointAnnotation,
+  RasterLayer,
+  RasterSource,
+  ShapeSource,
+  SymbolLayer,
+  UserLocation,
+  VectorSource,
+} from './rg-map';
 export { camelToKebab, type PaintAndLayout, toPaintAndLayout } from './style-props';
 export type {
   AttributionPosition,
@@ -36,4 +53,5 @@ export type {
   SourcePressEvent,
   SymbolLayerProps,
   UserLocationProps,
+  VectorSourceProps,
 } from './types';

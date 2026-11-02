@@ -148,7 +148,8 @@ describe('OfflinePackManager', () => {
     expect(installed?.basemapPacks.map((pack) => pack.packId).sort()).toEqual(['pack:cell-1', 'pack:cell-2']);
     expect(installed?.customMapPacks.map((pack) => pack.customMapLayerId)).toEqual(['L1']);
     expect(installed?.templates.light).toMatchObject({ version: 8 });
-    expect(installed?.departmentDataPath).toMatch(/^file:\/\/\/memory\/offline-maps\/.+\.json$/);
+    expect(installed?.departmentDataPath).toMatch(/^file:\/\/\/memory\/offline-maps\/.+\.json\.gz$/);
+    expect(installed?.departmentData).toEqual({ pois: { type: 'FeatureCollection', features: [] } });
 
     // A refresh that changes nothing keeps the installed revision (maps do not restyle).
     await manager.refreshManifest();

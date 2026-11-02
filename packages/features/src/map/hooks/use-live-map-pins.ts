@@ -1,4 +1,5 @@
 import { useMapMarkersStore } from '@resgrid/data';
+import { useIsNavigationEtaEnabled, useNavigationEtaSync } from '@resgrid/features/navigation-eta';
 import type { MapMakerInfoData } from '@resgrid/models';
 import { type RealtimeEventName, useMapLiveLocations, useRealtimeRefetch } from '@resgrid/realtime';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -22,7 +23,8 @@ export interface LiveMapPins {
  * The department's pins (`Mapping/GetMapDataAndMarkers` through the persisted map-markers store, so the map shows the
  * last pins offline), refreshed on call/unit/personnel pings, with unit and member positions moved in place by the
  * geolocation hub between refetches. Every snapshot goes through the live-location merge: a position pushed while the
- * request was out is newer than the snapshot it returned.
+ * request was out is newer than the snapshot it returned. Where the app shows live ETAs (Dispatch, Big Board) it also
+ * keeps the navigating units' ETAs live for the pin labels and details (`useNavigationEtaPins` draws them).
  */
 export function useLiveMapPins(realtime: boolean = true): LiveMapPins {
   const markers = useMapMarkersStore((state) => state.markers);
@@ -51,6 +53,7 @@ export function useLiveMapPins(realtime: boolean = true): LiveMapPins {
   }, [refresh]);
 
   useRealtimeRefetch(MAP_REFRESH_EVENTS, refreshBypassingCache, realtime);
+  useNavigationEtaSync(useIsNavigationEtaEnabled());
 
   return { pins, hasLoaded, isLoading, hasError, centerLatitude, centerLongitude, zoomLevel, refresh: refreshBypassingCache };
 }

@@ -7,8 +7,10 @@ export const OFFLINE_PACKS_DIRECTORY = 'resgrid-offline-maps';
 
 /**
  * iOS/Android pack storage on expo-file-system (SDK 58 `File`/`Directory` API) under
- * `<documents>/resgrid-offline-maps`. Backup exclusion is a build concern (Android backup rules, iOS
- * `NSURLIsExcludedFromBackupKey`) — see the offline module notes.
+ * `<documents>/resgrid-offline-maps`. Backups: on Android the documents directory is the `file` domain, which no build
+ * backs up (`allowBackup="false"`, and expo-secure-store's data extraction rules include only shared preferences for
+ * device transfer — guarded by `packages/config-plugins/__tests__/backup-rules.test.js`). On iOS the folder is still
+ * in iCloud backups: expo-file-system (SDK 58) cannot set `NSURLIsExcludedFromBackupKey`, so that needs a native module.
  */
 export function createExpoPackFileStore(options: { directoryName?: string } = {}): OfflinePackFileStore | null {
   const root = new Directory(Paths.document, options.directoryName ?? OFFLINE_PACKS_DIRECTORY);
@@ -57,6 +59,16 @@ export function createExpoPackFileStore(options: { directoryName?: string } = {}
     },
     readText: (relativePath) => fileAt(relativePath).text(),
     move: async (fromRelativePath, toRelativePath) => {
+      const sourceDirectory = directoryAt(fromRelativePath);
+      if (sourceDirectory.exists) {
+        // A directory tree (the extracted glyphs): the destination must not exist, or the source lands inside it.
+        const destination = directoryAt(toRelativePath);
+        if (destination.exists) destination.delete();
+        const parent = destination.parentDirectory;
+        if (!parent.exists) parent.create({ intermediates: true, idempotent: true });
+        await sourceDirectory.move(destination);
+        return;
+      }
       const destination = fileAt(toRelativePath);
       ensureParent(destination);
       if (destination.exists) destination.delete();

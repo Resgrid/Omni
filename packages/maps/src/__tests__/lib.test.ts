@@ -1,7 +1,7 @@
 import type { MapMakerInfoData, PoiResultData } from '@resgrid/models';
 
 import { computeBounds, createCirclePolygon, normalizeHeading, zoomForSpeed } from '../lib/camera';
-import { boundsToImageCoordinates, buildCustomMapTileUrlTemplate, buildIndoorFloorImageUrl, indoorZonesToFeatureCollection, resolveCustomMapLayerRendering } from '../lib/custom-maps';
+import { boundsToImageCoordinates, buildCustomMapLayerImageUrl, buildCustomMapTileUrlTemplate, buildIndoorFloorImageUrl, indoorZonesToFeatureCollection, resolveCustomMapLayerRendering } from '../lib/custom-maps';
 import { buildPinCollection, resolvePinIcon } from '../lib/pin-features';
 import { getPinEntityId, isPersonnelPin, isPinForCall, MapPinType } from '../lib/pin-ids';
 import { filterAndSortPois, groupPoisByType, isPoiMarker, poisToFeatureCollection } from '../lib/poi';
@@ -42,16 +42,16 @@ const poi = (overrides: Partial<PoiResultData>): PoiResultData => ({
   ...overrides,
 });
 
-describe('custom map tiles and indoor images (signed URL builders)', () => {
-  it('builds the custom map tile URL template with the z/x/y placeholders intact', () => {
+describe('custom map tiles and indoor images (URL builders, D21 rendering)', () => {
+  it('builds the bare resource URLs (signing happens in useSignedMapUrl) with the z/x/y placeholders intact', () => {
     expect(buildCustomMapTileUrlTemplate('https://api.resgrid.com/api/v4/', 'layer 1')).toBe('https://api.resgrid.com/api/v4/Mapping/GetCustomMapTile/layer%201/{z}/{x}/{y}');
-    const signed = buildCustomMapTileUrlTemplate('https://api.resgrid.com/api/v4', 'abc', (url) => `${url}?sig=xyz&exp=1`);
-    expect(signed).toBe('https://api.resgrid.com/api/v4/Mapping/GetCustomMapTile/abc/{z}/{x}/{y}?sig=xyz&exp=1');
     expect(buildCustomMapTileUrlTemplate('', 'abc')).toBeNull();
+    expect(buildCustomMapLayerImageUrl('https://api.resgrid.com/api/v4', 'L1')).toBe('https://api.resgrid.com/api/v4/Mapping/GetCustomMapLayerImage/L1');
     expect(buildIndoorFloorImageUrl('https://api.resgrid.com/api/v4', 'f1')).toBe('https://api.resgrid.com/api/v4/Mapping/GetIndoorMapFloorImage/f1');
+    expect(buildIndoorFloorImageUrl('https://api.resgrid.com/api/v4', ' ')).toBeNull();
   });
 
-  it('turns NE/SW bounds into image corners and picks tiles vs image per layer', () => {
+  it('turns NE/SW bounds into image corners and prefers the server Mercator tiles, else the untiled image', () => {
     const bounds = { BoundsNELat: 2, BoundsNELon: 4, BoundsSWLat: 1, BoundsSWLon: 3 };
     expect(boundsToImageCoordinates(bounds)).toEqual([
       [3, 2],
@@ -60,16 +60,23 @@ describe('custom map tiles and indoor images (signed URL builders)', () => {
       [3, 1],
     ]);
     expect(boundsToImageCoordinates({ ...bounds, BoundsNELat: null })).toBeNull();
-    const base = { ...bounds, IndoorMapFloorId: 'L1', HasImage: true, TileMinZoom: 12, TileMaxZoom: 19, Opacity: 0.6 };
-    expect(resolveCustomMapLayerRendering({ ...base, IsTiled: true }, 'https://api.example.org/api/v4')).toEqual({
-      kind: 'tiles',
-      tileUrlTemplate: 'https://api.example.org/api/v4/Mapping/GetCustomMapTile/L1/{z}/{x}/{y}',
-      minZoom: 12,
-      maxZoom: 19,
-      opacity: 0.6,
-    });
-    expect(resolveCustomMapLayerRendering({ ...base, IsTiled: false }, 'https://api.example.org/api/v4')).toMatchObject({ kind: 'image', url: 'https://api.example.org/api/v4/Mapping/GetCustomMapLayerImage/L1' });
-    expect(resolveCustomMapLayerRendering({ ...base, IsTiled: false, HasImage: false }, 'https://api.example.org/api/v4')).toEqual({ kind: 'none' });
+    const base = { ...bounds, IndoorMapFloorId: 'L1', HasImage: true, Opacity: 0.6 };
+    const api = 'https://api.example.org/api/v4';
+    const mercator = 'https://api.example.org/api/v4/Mapping/GetCustomMapMercatorTile/L1/{z}/{x}/{y}?d=1&e=1900000000&sig=abc';
+    // New servers: the signed Web Mercator template for georeferenced layers, tiled or not.
+    expect(resolveCustomMapLayerRendering({ ...base, IsTiled: true, MercatorTileUrl: mercator }, api)).toEqual({ kind: 'tiles', tileUrlTemplate: mercator, opacity: 0.6 });
+    expect(resolveCustomMapLayerRendering({ ...base, IsTiled: false, MercatorTileUrl: ` ${mercator} ` }, api)).toEqual({ kind: 'tiles', tileUrlTemplate: mercator, opacity: 0.6 });
+    // Never the legacy pixel pyramid: a tiled layer without Mercator tiles (older server, pixel-only layer) draws nothing.
+    expect(resolveCustomMapLayerRendering({ ...base, IsTiled: true }, api)).toEqual({ kind: 'none' });
+    expect(resolveCustomMapLayerRendering({ ...base, IsTiled: true, MercatorTileUrl: null }, api)).toEqual({ kind: 'none' });
+    // Unsafe or placeholder-less templates are ignored.
+    expect(resolveCustomMapLayerRendering({ ...base, IsTiled: true, MercatorTileUrl: 'http://evil.example.org/{z}/{x}/{y}' }, api)).toEqual({ kind: 'none' });
+    expect(resolveCustomMapLayerRendering({ ...base, IsTiled: true, MercatorTileUrl: 'https://api.example.org/tile.png' }, api)).toEqual({ kind: 'none' });
+    // Older server, untiled layer: its image over its bounds.
+    expect(resolveCustomMapLayerRendering({ ...base, IsTiled: false }, api)).toMatchObject({ kind: 'image', url: 'https://api.example.org/api/v4/Mapping/GetCustomMapLayerImage/L1', opacity: 0.6 });
+    expect(resolveCustomMapLayerRendering({ ...base, IsTiled: false, HasImage: false }, api)).toEqual({ kind: 'none' });
+    expect(resolveCustomMapLayerRendering({ ...base, IsTiled: false, BoundsNELat: null }, api)).toEqual({ kind: 'none' });
+    expect(resolveCustomMapLayerRendering({ ...base, IsTiled: false, Opacity: 3 }, api)).toMatchObject({ opacity: 1 });
   });
 
   it('parses indoor zones and skips malformed geometry', () => {

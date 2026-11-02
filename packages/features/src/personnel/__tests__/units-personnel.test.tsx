@@ -1,6 +1,7 @@
 import '../../status/__tests__/test-setup';
 
 import { securityStore } from '@resgrid/auth';
+import { parseVariantManifest, resetActiveVariantForTests, setActiveVariant } from '@resgrid/config';
 import { usePersonnelStatusStore, usePersonnelStore, useUnitsStore, useUnitStatusStore } from '@resgrid/data';
 import { ActionBaseTypes, StaffingBaseTypes } from '@resgrid/features/status';
 import { UnitDetailScreen, UnitsListScreen, useUnitsViewStore } from '@resgrid/features/units';
@@ -9,6 +10,7 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 import { router } from 'expo-router';
 import React from 'react';
 
+import dispatchManifest from '../../../../../apps/omni/variants/dispatch/variant.json';
 import { usePersonnelViewStore } from '../hooks/use-personnel-view-store';
 import { filterPersonnel } from '../lib/personnel-filters';
 import PersonnelDetailScreen from '../screens/personnel-detail';
@@ -38,6 +40,9 @@ const person = (UserId: string, FirstName: string, extra: Partial<PersonnelInfoR
 const setRights = (canViewPII: boolean) => securityStore.setState({ rights: { CanViewPII: canViewPII } as DepartmentRightsResultData });
 
 beforeEach(() => {
+  // The units list reads the variant's modules (navigation ETAs show in Dispatch and BigBoard).
+  resetActiveVariantForTests();
+  setActiveVariant(parseVariantManifest(dispatchManifest));
   (router.push as jest.Mock).mockClear();
   useUnitsViewStore.setState({ query: '', selectedFilters: [], availability: 'all' });
   usePersonnelViewStore.setState({ query: '', selectedFilters: [], availability: 'all' });

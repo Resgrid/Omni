@@ -1,4 +1,5 @@
 import { DispatchTicker, readableTextColor, timeAgo } from '@resgrid/features/calls';
+import { CallNavigationEtas } from '@resgrid/features/navigation-eta';
 import { AlarmLevelBadge } from '@resgrid/features/runcards';
 import { useTranslation } from '@resgrid/i18n';
 import type { CallResultData, DispatchedEventResultData } from '@resgrid/models';
@@ -27,8 +28,9 @@ const TIME_AGO_KEYS = { just_now: 'dispatch_console.time_just_now', minutes: 'di
 
 /**
  * A compact call card for the console (Dispatch baseline dashboard card) in the call's priority colour: number and age,
- * type icon and name, address, destination, nature, alarm level and the dispatched-resources ticker (shared calls
- * ticker). Pressing it filters the console to the call; the corner buttons open its detail or add resources.
+ * type icon and name, address, destination, nature, alarm level, the dispatched-resources ticker (shared calls ticker)
+ * and the live ETAs of units navigating to it. Pressing it filters the console to the call; the corner buttons open its
+ * detail or add resources.
  */
 export const ConsoleCallCard: React.FC<ConsoleCallCardProps> = React.memo(({ call, priorityColor, dispatches, overdueNames, isSelected, now, onSelect, onOpenDetails, onAddResources }) => {
   const { t } = useTranslation();
@@ -105,6 +107,7 @@ export const ConsoleCallCard: React.FC<ConsoleCallCardProps> = React.memo(({ cal
           <DispatchTicker dispatches={dispatches} testID={`${testID}-ticker`} />
         </View>
       </HStack>
+      <CallNavigationEtas callId={call.CallId} dispatches={dispatches} testID={`${testID}-etas`} />
       {overdueNames.length > 0 ? (
         <View style={styles.overdue} testID={`${testID}-overdue`}>
           <Text className="text-xs font-bold text-typography-0" numberOfLines={1}>

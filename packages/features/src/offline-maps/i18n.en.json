@@ -10,6 +10,7 @@
   "offline_maps.description": "Download your department's maps so they keep working without a connection.",
   "offline_maps.download": "Download",
   "offline_maps.download_complete": "Offline maps are ready",
+  "offline_maps.error.archive_invalid": "The map labels could not be unpacked. Check for updates and try again.",
   "offline_maps.error.cancelled": "Download stopped. It resumes where it left off.",
   "offline_maps.error.disabled": "Offline maps are not available for your department.",
   "offline_maps.error.download_http_error": "The server could not send a map file.",

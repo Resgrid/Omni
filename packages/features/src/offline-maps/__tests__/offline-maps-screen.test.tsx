@@ -5,7 +5,7 @@ import { isOfflineMapPacksSupported } from '@resgrid/maps/offline';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import React from 'react';
 
-import { buildContentRows, formatBytes, statusKey } from '../lib/present';
+import { buildContentRows, errorKey, formatBytes, statusKey } from '../lib/present';
 import { configureOfflineMaps, resetOfflineMapsRuntimeForTests } from '../runtime';
 import { OfflineMapsScreen } from '../screens/offline-maps-screen';
 import { createFakeController, offlineState } from './fake-controller';
@@ -136,5 +136,24 @@ describe('presentation helpers', () => {
     const rows = buildContentRows(offlineState().packs);
     expect(rows.map((row) => row.id)).toEqual(['basemap', 'department-data', 'pack:m1', 'pack:big']);
     expect(rows[0]).toMatchObject({ detailCount: 2, sizeBytes: 119 * 1024 * 1024, state: 'not-downloaded' });
+  });
+
+  it('counts the glyph archive with the department files and shows incident packs on their own rows', () => {
+    const packs = [
+      ...offlineState().packs,
+      { packId: 'style:glyphs', kind: 'glyphs' as const, name: 'Map labels', sizeBytes: 3_000_000, installedBytes: null, state: 'not-downloaded' as const, code: null, pinned: true },
+      { packId: 'pack:i1', kind: 'incident' as const, name: 'Call 26-14', sizeBytes: 1_000, installedBytes: null, state: 'installed' as const, code: null, pinned: false },
+    ];
+    const rows = buildContentRows(packs);
+    expect(rows.map((row) => row.id)).toEqual(['basemap', 'department-data', 'pack:m1', 'pack:big', 'pack:i1']);
+    expect(rows[1]).toMatchObject({ sizeBytes: 400_000 + 3_000_000 });
+    expect(rows[4]).toMatchObject({ name: 'Call 26-14', detailKey: 'offline_maps.item.incident' });
+    expect(errorKey('archive-invalid')).toBe('offline_maps.error.archive_invalid');
+  });
+
+  it('has an English string for every error code the manager reports', () => {
+    const strings = require('../i18n.en.json') as Record<string, string>;
+    const codes = ['archive-invalid', 'waiting-for-wifi', 'integrity-failed', 'download-url-expired', 'manifest-not-found', 'response-area-too-large', 'storage-error'] as const;
+    for (const code of codes) expect(strings[errorKey(code)]).toEqual(expect.any(String));
   });
 });

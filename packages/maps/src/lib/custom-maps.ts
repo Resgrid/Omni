@@ -1,44 +1,42 @@
 import type { CustomMapLayerResultData, IndoorMapFloorResultData } from '@resgrid/models';
 
+import { isSafeMapUrl } from '../provider/url-safety';
 import type { ImageCoordinates } from '../rg/types';
 
 /**
  * URL builders for department map data served by Core: custom map raster tiles, untiled custom map layer images and
- * indoor floor images. Native sources cannot send auth headers, so every URL passes through `signUrl` (D12 signed
- * URLs) before a source gets it. Ids go in the path (Mapping v4 routes take `/{id}`).
+ * indoor floor images. The builders return the bare resource URLs; map sources get them only after signing
+ * (`useSignedMapUrl`, D12 — native sources cannot send auth headers). Ids go in the path (Mapping v4 routes take `/{id}`).
  */
 
 const joinUrl = (base: string, path: string): string => `${base.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`;
 
-export type SignUrl = (url: string) => string;
-
-const identity: SignUrl = (url) => url;
-
 /**
- * `{base}/Mapping/GetCustomMapTile/{layerId}/{z}/{x}/{y}` with the `{z}/{x}/{y}` placeholders left for MapLibre.
- * Signing runs on the template; a signer must keep the placeholders intact (query-string signatures do).
+ * `{base}/Mapping/GetCustomMapTile/{layerId}/{z}/{x}/{y}`. These legacy tiles are a pixel pyramid (z = image scale,
+ * x/y = image tile index), not Web Mercator (D21): they cannot be drawn as an XYZ source on a geographic map and are kept
+ * for pixel-space viewers only.
  */
-export const buildCustomMapTileUrlTemplate = (apiBaseUrl: string, layerId: string, signUrl: SignUrl = identity): string | null => {
+export const buildCustomMapTileUrlTemplate = (apiBaseUrl: string, layerId: string): string | null => {
   const base = apiBaseUrl.trim();
   const id = layerId.trim();
   if (!base || !id) return null;
-  return signUrl(joinUrl(base, `/Mapping/GetCustomMapTile/${encodeURIComponent(id)}/{z}/{x}/{y}`));
+  return joinUrl(base, `/Mapping/GetCustomMapTile/${encodeURIComponent(id)}/{z}/{x}/{y}`);
 };
 
 /** Image of an untiled custom map layer. */
-export const buildCustomMapLayerImageUrl = (apiBaseUrl: string, layerId: string, signUrl: SignUrl = identity): string | null => {
+export const buildCustomMapLayerImageUrl = (apiBaseUrl: string, layerId: string): string | null => {
   const base = apiBaseUrl.trim();
   const id = layerId.trim();
   if (!base || !id) return null;
-  return signUrl(joinUrl(base, `/Mapping/GetCustomMapLayerImage/${encodeURIComponent(id)}`));
+  return joinUrl(base, `/Mapping/GetCustomMapLayerImage/${encodeURIComponent(id)}`);
 };
 
 /** Indoor floor image. */
-export const buildIndoorFloorImageUrl = (apiBaseUrl: string, floorId: string, signUrl: SignUrl = identity): string | null => {
+export const buildIndoorFloorImageUrl = (apiBaseUrl: string, floorId: string): string | null => {
   const base = apiBaseUrl.trim();
   const id = floorId.trim();
   if (!base || !id) return null;
-  return signUrl(joinUrl(base, `/Mapping/GetIndoorMapFloorImage/${encodeURIComponent(id)}`));
+  return joinUrl(base, `/Mapping/GetIndoorMapFloorImage/${encodeURIComponent(id)}`);
 };
 
 interface BoundsFields {
@@ -67,22 +65,31 @@ export const boundsToImageCoordinates = (bounds: BoundsFields): ImageCoordinates
   ];
 };
 
-export type CustomMapLayerRendering =
-  { kind: 'tiles'; tileUrlTemplate: string; minZoom?: number; maxZoom?: number; opacity: number } | { kind: 'image'; url: string; coordinates: ImageCoordinates; opacity: number } | { kind: 'none' };
+const hasTilePlaceholders = (url: string): boolean => url.includes('{z}') && url.includes('{x}') && url.includes('{y}');
 
-/** How a custom map layer draws: raster tiles when tiled, else its image over its bounds. */
+/**
+ * How a custom map layer draws on a geographic map. `tiles` / `image` URLs still go through `useSignedMapUrl` before a
+ * source gets them (a server-signed `MercatorTileUrl` is used as is while fresh and re-signed after).
+ */
+export type CustomMapLayerRendering = { kind: 'tiles'; tileUrlTemplate: string; opacity: number } | { kind: 'image'; url: string; coordinates: ImageCoordinates; opacity: number } | { kind: 'none' };
+
+/**
+ * D21: a georeferenced layer draws from Core's Web Mercator tiles (`MercatorTileUrl`, a signed `{z}/{x}/{y}` template).
+ * Without one (an older server, or a pixel-only layer) an untiled layer falls back to its image over its bounds; a tiled
+ * layer draws nothing — its `GetCustomMapTile` pixel pyramid cannot be placed on a map and it has no whole image.
+ */
 export const resolveCustomMapLayerRendering = (
-  layer: Pick<CustomMapLayerResultData, keyof BoundsFields | 'IndoorMapFloorId' | 'IsTiled' | 'HasImage' | 'TileMinZoom' | 'TileMaxZoom' | 'Opacity'>,
-  apiBaseUrl: string,
-  signUrl: SignUrl = identity
+  layer: Pick<CustomMapLayerResultData, keyof BoundsFields | 'IndoorMapFloorId' | 'IsTiled' | 'HasImage' | 'Opacity' | 'MercatorTileUrl'>,
+  apiBaseUrl: string
 ): CustomMapLayerRendering => {
   const opacity = finite(layer.Opacity) ? Math.min(1, Math.max(0, layer.Opacity)) : 1;
-  if (layer.IsTiled) {
-    const tileUrlTemplate = buildCustomMapTileUrlTemplate(apiBaseUrl, layer.IndoorMapFloorId, signUrl);
-    return tileUrlTemplate ? { kind: 'tiles', tileUrlTemplate, minZoom: layer.TileMinZoom ?? undefined, maxZoom: layer.TileMaxZoom ?? undefined, opacity } : { kind: 'none' };
+  const mercator = typeof layer.MercatorTileUrl === 'string' ? layer.MercatorTileUrl.trim() : '';
+  if (mercator && isSafeMapUrl(mercator) && hasTilePlaceholders(mercator)) {
+    return { kind: 'tiles', tileUrlTemplate: mercator, opacity };
   }
+  if (layer.IsTiled || !layer.HasImage) return { kind: 'none' };
   const coordinates = boundsToImageCoordinates(layer);
-  const url = layer.HasImage ? buildCustomMapLayerImageUrl(apiBaseUrl, layer.IndoorMapFloorId, signUrl) : null;
+  const url = buildCustomMapLayerImageUrl(apiBaseUrl, layer.IndoorMapFloorId);
   return coordinates && url ? { kind: 'image', url, coordinates, opacity } : { kind: 'none' };
 };
 

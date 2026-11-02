@@ -12,14 +12,17 @@ import type {
   MapStyleImageMissingEvent,
   Marker,
   SourceSpecification,
+  VectorTileSource,
 } from 'maplibre-gl';
 import React, { createContext, forwardRef, type ReactNode, type ReactPortal, useContext, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import { useMapProviderContext } from '../provider/context';
 import { isValidLngLat, type LngLat } from '../types';
 import { isJumpMode, paddingFromArgument, toCameraTarget, toEdgePadding, toInitialView, toNamedAnchor, validBounds } from './camera-utils';
 import { MapPlaceholder } from './map-placeholder';
 import { getLoadedMapLibre, loadMapLibre, type MapLibreModule } from './maplibre-loader.web';
+import { OfflineMapBadge } from './offline-map-badge';
 import { MapRenderContext, useStyleRevision } from './render-context';
 import { styleSignature, toPaintAndLayout } from './style-props';
 import type {
@@ -42,6 +45,7 @@ import type {
   ShapeSourceProps,
   SymbolLayerProps,
   UserLocationProps,
+  VectorSourceProps,
 } from './types';
 import { useViewStyle } from './use-view-style';
 
@@ -115,6 +119,18 @@ const toPressEvent = (event: MapMouseEvent): MapPressEvent => {
 
 const attributionCorner = (position: MapViewProps['attributionPosition']): 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left' => position ?? 'bottom-right';
 
+/** Source ids a style document declares (none known yet for a style URL). */
+const styleSourceIds = (style: unknown): Set<string> => new Set(style && typeof style === 'object' && 'sources' in style && style.sources && typeof style.sources === 'object' ? Object.keys(style.sources) : []);
+
+/** Source ids of the style maplibre-gl just loaded. */
+const loadedStyleSourceIds = (map: GLMap): string[] => {
+  try {
+    return [...styleSourceIds(map.getStyle())];
+  } catch {
+    return [];
+  }
+};
+
 export const MapView = forwardRef<MapViewRef, MapViewProps>(function MapView(props, ref) {
   const {
     children,
@@ -144,6 +160,14 @@ export const MapView = forwardRef<MapViewRef, MapViewProps>(function MapView(pro
   const latestView = useRef(view);
   latestView.current = view;
   const ready = view.status === 'ready' && !!view.mapStyle;
+  const { reportMapError } = useMapProviderContext();
+  // The provider's style (not one passed in): its tile and load errors feed the D16 offline switch, and the badge is its.
+  const usesProviderStyle = !(props.mapStyle ?? props.styleURL);
+  const latestReport = useRef(reportMapError);
+  latestReport.current = usesProviderStyle ? reportMapError : null;
+  // Sources the base style declares: only their tile errors count (a traffic 401/429, a custom map or indoor tile 404, the
+  // route line — sources the app adds — never push the map offline).
+  const baseSources = useRef<Set<string>>(new Set());
 
   useImperativeHandle(
     ref,
@@ -203,12 +227,15 @@ export const MapView = forwardRef<MapViewRef, MapViewProps>(function MapView(pro
     }
     mapRef.current = instance;
     appliedStyleKey.current = styleKey;
+    baseSources.current = styleSourceIds(mapStyle);
     instance.on('load', () => {
       loadedRef.current = true;
       setMap(instance);
       latest.current.onDidFinishLoadingMap?.();
     });
     instance.on('style.load', () => {
+      // The style document's own sources, read before the app's sources are re-added (they mount after this event).
+      baseSources.current = new Set([...baseSources.current, ...loadedStyleSourceIds(instance)]);
       if (loadedRef.current) setInternalRevision((value) => value + 1);
     });
     instance.on('click', (event: MapMouseEvent) => latest.current.onPress?.(toPressEvent(event)));
@@ -229,7 +256,16 @@ export const MapView = forwardRef<MapViewRef, MapViewProps>(function MapView(pro
         properties: { isUserInteraction },
       });
     });
-    instance.on('error', (event: { error?: unknown }) => warn('maplibre-gl error', event.error));
+    instance.on('error', (event: { error?: unknown; sourceId?: string; tile?: unknown }) => {
+      warn('maplibre-gl error', event.error);
+      // A base-style tile or source that failed counts towards the switch; an error before the first load means the style
+      // failed. Errors of sources the app added (traffic, custom maps, indoor floors, routes) are not a network signal.
+      if (event.sourceId !== undefined) {
+        if (baseSources.current.has(event.sourceId)) latestReport.current?.('tile');
+      } else if (!loadedRef.current) {
+        latestReport.current?.('style');
+      }
+    });
     return instance;
   };
 
@@ -291,6 +327,7 @@ export const MapView = forwardRef<MapViewRef, MapViewProps>(function MapView(pro
     const instance = mapRef.current;
     if (!instance || !view.mapStyle || appliedStyleKey.current === view.styleKey) return;
     appliedStyleKey.current = view.styleKey;
+    baseSources.current = styleSourceIds(view.mapStyle);
     try {
       instance.setStyle(view.mapStyle, { diff: false });
     } catch (error) {
@@ -379,6 +416,7 @@ export const MapView = forwardRef<MapViewRef, MapViewProps>(function MapView(pro
           <MapRenderContext.Provider value={renderContext}>{children}</MapRenderContext.Provider>
         </WebMapContext.Provider>
       ) : null}
+      <OfflineMapBadge active={usesProviderStyle} attributionPosition={attributionPosition} />
     </View>
   );
 });
@@ -590,16 +628,45 @@ export function ShapeSource({ id, shape, onPress, cluster, clusterRadius, cluste
   return <SourceContext.Provider value={ready ? id : null}>{children}</SourceContext.Provider>;
 }
 
-export function RasterSource({ id, tileUrlTemplates, tileSize = 256, minZoomLevel, maxZoomLevel, attribution, scheme, children }: RasterSourceProps) {
+/**
+ * New tiles for an existing tile source (a renewed signature, a traffic reload) go through `setTiles`, which reloads the
+ * tiles in place; re-adding the source would not replace it (the old one is removed after the new add).
+ */
+const useWebTiles = (id: string, tileUrlTemplates: string[], ready: boolean): void => {
+  const map = useContext(WebMapContext);
   const tilesKey = tileUrlTemplates.join('|');
-  const ready = useWebSource(id, () => ({ type: 'raster', tiles: tileUrlTemplates, tileSize, minzoom: minZoomLevel, maxzoom: maxZoomLevel, attribution, scheme }), [
-    tilesKey,
+  const tilesRef = useRef(tileUrlTemplates);
+  tilesRef.current = tileUrlTemplates;
+  useEffect(() => {
+    if (!map || !ready) return;
+    try {
+      const source = map.getSource(id) as (Pick<VectorTileSource, 'setTiles'> & { tiles?: string[] }) | undefined;
+      if (source && typeof source.setTiles === 'function' && (source.tiles ?? []).join('|') !== tilesKey) source.setTiles(tilesRef.current);
+    } catch {
+      // Source mid-swap.
+    }
+  }, [map, id, tilesKey, ready]);
+};
+
+export function RasterSource({ id, tileUrlTemplates, tileSize = 256, minZoomLevel, maxZoomLevel, attribution, scheme, children }: RasterSourceProps) {
+  const tilesRef = useRef(tileUrlTemplates);
+  tilesRef.current = tileUrlTemplates;
+  const ready = useWebSource(id, () => ({ type: 'raster', tiles: tilesRef.current, tileSize, minzoom: minZoomLevel, maxzoom: maxZoomLevel, attribution, scheme }), [
     tileSize,
     minZoomLevel,
     maxZoomLevel,
     attribution,
     scheme,
   ]);
+  useWebTiles(id, tileUrlTemplates, ready);
+  return <SourceContext.Provider value={ready ? id : null}>{children}</SourceContext.Provider>;
+}
+
+export function VectorSource({ id, tileUrlTemplates, minZoomLevel, maxZoomLevel, attribution, scheme, children }: VectorSourceProps) {
+  const tilesRef = useRef(tileUrlTemplates);
+  tilesRef.current = tileUrlTemplates;
+  const ready = useWebSource(id, () => ({ type: 'vector', tiles: tilesRef.current, minzoom: minZoomLevel, maxzoom: maxZoomLevel, attribution, scheme }), [minZoomLevel, maxZoomLevel, attribution, scheme]);
+  useWebTiles(id, tileUrlTemplates, ready);
   return <SourceContext.Provider value={ready ? id : null}>{children}</SourceContext.Provider>;
 }
 
@@ -623,14 +690,18 @@ export function ImageSource({ id, url, coordinates, children }: ImageSourceProps
 
 type AnyLayerProps = LineLayerProps | FillLayerProps | SymbolLayerProps | CircleLayerProps | HeatmapLayerProps | RasterLayerProps;
 
-/** maplibre-gl inserts before a layer; "above X" means "before the layer after X". */
-const resolveBeforeId = (map: GLMap, below?: string, above?: string): string | undefined => {
+/**
+ * maplibre-gl inserts before a layer; "above X" means "before the layer after X"; "below labels" means before the first
+ * symbol layer (the base style's labels come before anything added on top).
+ */
+const resolveBeforeId = (map: GLMap, below?: string, above?: string, belowLabels?: boolean): string | undefined => {
   if (below && map.getLayer(below)) return below;
   if (above) {
     const layers = map.getStyle()?.layers ?? [];
     const index = layers.findIndex((layer) => layer.id === above);
     if (index >= 0 && index + 1 < layers.length) return layers[index + 1].id;
   }
+  if (belowLabels && !below) return (map.getStyle()?.layers ?? []).find((layer) => layer.type === 'symbol')?.id;
   return undefined;
 };
 
@@ -657,7 +728,7 @@ const useWebLayer = (type: LayerType, props: AnyLayerProps): null => {
       if (typeof current.props.minZoomLevel === 'number') spec.minzoom = current.props.minZoomLevel;
       if (typeof current.props.maxZoomLevel === 'number') spec.maxzoom = current.props.maxZoomLevel;
       try {
-        map.addLayer(spec as unknown as LayerSpecification, resolveBeforeId(map, current.props.belowLayerID, current.props.aboveLayerID));
+        map.addLayer(spec as unknown as LayerSpecification, resolveBeforeId(map, current.props.belowLayerID, current.props.aboveLayerID, current.props.belowLabels));
       } catch (error) {
         warn(`Failed to add map layer ${props.id}`, error);
       }

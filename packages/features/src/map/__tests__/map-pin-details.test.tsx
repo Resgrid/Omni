@@ -1,6 +1,7 @@
 import './test-setup';
 
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { useNavigationEtaStore } from '@resgrid/data';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { Phone, Route } from 'lucide-react-native';
 import React from 'react';
 
@@ -79,5 +80,42 @@ describe('MapHighlights', () => {
       />
     );
     expect(screen.getByTestId('mock-source-map-screen-highlights-source').props.accessibilityLabel).toBe('2');
+  });
+});
+
+describe('MapPinDetails live ETA', () => {
+  afterEach(async () => {
+    await act(() => {
+      useNavigationEtaStore.setState(useNavigationEtaStore.getInitialState());
+    });
+  });
+
+  it("shows a navigating unit's ETA and nothing on other pins", async () => {
+    useNavigationEtaStore.setState({
+      navigations: {
+        '7': {
+          UnitId: 7,
+          CallId: 12,
+          RouteInstanceId: null,
+          RouteInstanceStopId: null,
+          State: 1,
+          EtaUtc: new Date(Date.now() + 3 * 60_000).toISOString(),
+          RemainingSeconds: 180,
+          RemainingMeters: 2000,
+          IsTrafficAware: true,
+          Provider: 'mapbox',
+          ReportedOn: new Date().toISOString(),
+          IsStale: false,
+        },
+      },
+      serverClockOffsetMs: 0,
+    });
+    const { rerender } = await render(<MapPinDetails pin={pin('u7', 1, { Title: 'Engine 7' })} kindLabel="Unit" actions={[]} onClose={jest.fn()} />);
+    expect(screen.getByTestId('map-pin-eta')).toHaveTextContent('navigation_eta.minutes:3 · navigation_eta.traffic');
+    expect(screen.getByTestId('map-pin-title')).toHaveTextContent('Engine 7');
+    await rerender(<MapPinDetails pin={pin('u8', 1, { Title: 'Engine 8' })} kindLabel="Unit" actions={[]} onClose={jest.fn()} />);
+    expect(screen.queryByTestId('map-pin-eta')).toBeNull();
+    await rerender(<MapPinDetails pin={CALL} kindLabel="Call" actions={[]} onClose={jest.fn()} />);
+    expect(screen.queryByTestId('map-pin-eta')).toBeNull();
   });
 });

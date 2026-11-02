@@ -1,4 +1,4 @@
-// In-memory stand-in for expo-file-system's SDK 57 `File` / `Directory` / `Paths` API (only what the pack store uses).
+// In-memory stand-in for expo-file-system's SDK 58 `File` / `Directory` / `Paths` API (only what the pack store uses).
 export const mockFs = { files: new Map<string, Uint8Array>(), dirs: new Set<string>(), free: 5_000, total: 50_000 };
 
 type Part = string | { uri: string };
@@ -28,6 +28,29 @@ export class Directory {
   }
   get size(): number | null {
     return null;
+  }
+  get parentDirectory(): Directory {
+    return new Directory(parentOf(this.uri));
+  }
+  async move(destination: Directory): Promise<void> {
+    if (!this.exists) throw new Error('Missing');
+    if (mockFs.dirs.has(destination.uri)) throw new Error('Destination exists (the source would move inside it)');
+    if (!mockFs.dirs.has(parentOf(destination.uri))) throw new Error('Parent missing');
+    const from = this.uri;
+    for (const key of [...mockFs.files.keys()]) {
+      if (key.startsWith(`${from}/`)) {
+        const data = mockFs.files.get(key) as Uint8Array;
+        mockFs.files.delete(key);
+        mockFs.files.set(`${destination.uri}${key.slice(from.length)}`, data);
+      }
+    }
+    for (const key of [...mockFs.dirs]) {
+      if (key === from || key.startsWith(`${from}/`)) {
+        mockFs.dirs.delete(key);
+        mockFs.dirs.add(`${destination.uri}${key.slice(from.length)}`);
+      }
+    }
+    this.uri = destination.uri;
   }
   create(options: { intermediates?: boolean } = {}): void {
     if (!options.intermediates && !mockFs.dirs.has(parentOf(this.uri))) throw new Error('Parent missing');

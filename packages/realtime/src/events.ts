@@ -27,7 +27,16 @@ export const DISPATCH_EVENTING_EVENTS = ['unitActiveRolesUpdated', 'checkInUpdat
 /** BigBoard dashboard: unit status alerts. */
 export const DASHBOARD_EVENTING_EVENTS = ['unitStatusAlertUpdated'] as const;
 
-export const ALL_EVENTING_EVENTS = [...COMMON_EVENTING_EVENTS, ...DISPATCH_EVENTING_EVENTS, ...DASHBOARD_EVENTING_EVENTS] as const;
+/** Live ETAs of units navigating in the Unit app (MapLibre plan §9.4): ids and state only (two args), never the ETA. */
+export const NAVIGATION_EVENTING_EVENTS = ['unitNavigationUpdated'] as const;
+
+/** Modules whose screens show navigating units' live ETAs: the dispatch console (Dispatch) and the dashboard (BigBoard). */
+export const NAVIGATION_ETA_MODULES: readonly FeatureModuleId[] = ['dispatch-console', 'dashboard'];
+
+/** Whether an app with these modules shows live ETAs (and so subscribes `unitNavigationUpdated`). */
+export const showsNavigationEtas = (modules: readonly FeatureModuleId[]): boolean => modules.some((module) => NAVIGATION_ETA_MODULES.includes(module));
+
+export const ALL_EVENTING_EVENTS = [...COMMON_EVENTING_EVENTS, ...DISPATCH_EVENTING_EVENTS, ...DASHBOARD_EVENTING_EVENTS, ...NAVIGATION_EVENTING_EVENTS] as const;
 export type EventingEventName = (typeof ALL_EVENTING_EVENTS)[number];
 
 export const CHAT_EVENTS = [
@@ -89,6 +98,7 @@ export interface RealtimeFeatures {
  * - `checkInUpdated` — apps that watch other people's check-ins (`checkIn.others`: Dispatch, IC);
  * - `outstandingRequirementsUpdated` — conditional run cards (`calls.runCards`);
  * - `unitStatusAlertUpdated` — the dashboard module (BigBoard);
+ * - `unitNavigationUpdated` — modules that show live ETAs ({@link NAVIGATION_ETA_MODULES}: Dispatch, BigBoard);
  * - chat events only with `realtime.chatHub`.
  */
 export function resolveRealtimeFeatures(variant: RealtimeVariantInput): RealtimeFeatures {
@@ -98,6 +108,7 @@ export function resolveRealtimeFeatures(variant: RealtimeVariantInput): Realtime
   if (capabilities.checkIn.others) eventingEvents.push('checkInUpdated');
   if (capabilities.calls.runCards) eventingEvents.push('outstandingRequirementsUpdated');
   if (modules.includes('dashboard')) eventingEvents.push('unitStatusAlertUpdated');
+  if (showsNavigationEtas(modules)) eventingEvents.push('unitNavigationUpdated');
 
   return {
     eventingEvents,

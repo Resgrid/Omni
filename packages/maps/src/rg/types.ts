@@ -156,6 +156,17 @@ export interface RasterSourceProps {
   children?: ReactNode;
 }
 
+export interface VectorSourceProps {
+  id: string;
+  /** Mapbox Vector Tile templates (`{z}/{x}/{y}`). Changing them reloads the tiles (web `setTiles`, native re-add). */
+  tileUrlTemplates: string[];
+  minZoomLevel?: number;
+  maxZoomLevel?: number;
+  attribution?: string;
+  scheme?: 'xyz' | 'tms';
+  children?: ReactNode;
+}
+
 /** Image corners: top-left, top-right, bottom-right, bottom-left. */
 export type ImageCoordinates = [LngLat, LngLat, LngLat, LngLat];
 
@@ -179,6 +190,12 @@ interface BaseLayerProps<S> {
   belowLayerID?: string;
   aboveLayerID?: string;
   layerIndex?: number;
+  /**
+   * Without `belowLayerID`: insert under the base style's first label (symbol) layer, so road and place names stay
+   * readable over the layer. Web finds it in the live style; native when the style is a JSON document (a style URL is
+   * opaque to it — the layer then goes on top).
+   */
+  belowLabels?: boolean;
 }
 
 export type LineLayerProps = BaseLayerProps<LineLayerStyle>;

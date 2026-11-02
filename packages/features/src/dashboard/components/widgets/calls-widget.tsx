@@ -1,8 +1,9 @@
 import { selectActiveCalls, useCallsStore } from '@resgrid/data';
 import { CallCard, DispatchTicker } from '@resgrid/features/calls';
+import { CallNavigationEtas } from '@resgrid/features/navigation-eta';
 import { useTranslation } from '@resgrid/i18n';
 import type { CallResultData } from '@resgrid/models';
-import { HStack, ScrollView, TypeIcon, View } from '@resgrid/ui';
+import { HStack, ScrollView, TypeIcon, View, VStack } from '@resgrid/ui';
 import React, { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 
@@ -23,7 +24,8 @@ const COLUMN_FLEX: Readonly<Record<CallsColumnKey, number>> = { id: 0.5, name: 1
 
 /**
  * The department's active calls (pending calls never count): the shared call rows at wall density (`cards`), or the
- * configurable column table BigBoard had (`table`). Dispatch badges come from the calls store's per-call cache.
+ * configurable column table BigBoard had (`table`). Dispatch badges come from the calls store's per-call cache; units
+ * navigating to a call in the Unit app show their live ETAs under it (cards) or under its dispatches (table).
  */
 export const CallsWidget: React.FC<WidgetProps> = ({ isEditMode, onRemove, onConfigure }) => {
   const { t } = useTranslation();
@@ -84,12 +86,17 @@ export const CallsWidget: React.FC<WidgetProps> = ({ isEditMode, onRemove, onCon
       },
       dispatched: (call) => {
         const dispatches = dispatchesByCall[call.CallId] ?? [];
-        return dispatches.length > 0 ? (
-          <DispatchTicker dispatches={dispatches} animate={settings.scrollDispatches} testID={`calls-widget-ticker-${call.CallId}`} />
-        ) : (
-          <CellText fontSize={fontSize} muted>
-            —
-          </CellText>
+        return (
+          <VStack>
+            {dispatches.length > 0 ? (
+              <DispatchTicker dispatches={dispatches} animate={settings.scrollDispatches} testID={`calls-widget-ticker-${call.CallId}`} />
+            ) : (
+              <CellText fontSize={fontSize} muted>
+                —
+              </CellText>
+            )}
+            <CallNavigationEtas callId={call.CallId} dispatches={dispatches} fontSize={Math.max(9, fontSize - 3)} testID={`calls-widget-etas-${call.CallId}`} />
+          </VStack>
         );
       },
     };
@@ -120,6 +127,7 @@ export const CallsWidget: React.FC<WidgetProps> = ({ isEditMode, onRemove, onCon
                 showDispatchTicker={settings.showDispatched}
                 now={now}
               />
+              <CallNavigationEtas callId={call.CallId} dispatches={dispatchesByCall[call.CallId] ?? null} fontSize={Math.max(10, fontSize - 2)} testID={`calls-widget-etas-${call.CallId}`} />
             </View>
           );
         })}

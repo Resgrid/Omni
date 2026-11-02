@@ -1,6 +1,6 @@
 import { HUB_JOIN_MAX_ATTEMPTS, HUB_JOIN_RETRY_MS, reconnectDelayForAttempt } from '../constants';
 import { type HubJoinInfo, onRealtimeEvent } from '../event-bus';
-import { COMMON_EVENTING_EVENTS, resolveRealtimeFeatures } from '../events';
+import { COMMON_EVENTING_EVENTS, NAVIGATION_ETA_MODULES, resolveRealtimeFeatures, showsNavigationEtas } from '../events';
 import { getWantedHubs, teardownRealtime, useRealtimeStore } from '../realtime-store';
 import { signalRService } from '../signalr-service';
 import { type FakeHubConnection, fakeSignalR } from './fakes/signalr';
@@ -32,9 +32,21 @@ describe('resolveRealtimeFeatures (per-variant event sets)', () => {
     expect(responder.eventingEvents).toEqual([...COMMON_EVENTING_EVENTS]);
     expect(unit.eventingEvents).toEqual([...COMMON_EVENTING_EVENTS]);
     expect(ic.eventingEvents).toEqual([...COMMON_EVENTING_EVENTS, 'checkInUpdated']);
-    expect(dispatch.eventingEvents).toEqual([...COMMON_EVENTING_EVENTS, 'unitActiveRolesUpdated', 'checkInUpdated', 'outstandingRequirementsUpdated']);
-    expect(bigboard.eventingEvents).toEqual([...COMMON_EVENTING_EVENTS, 'unitStatusAlertUpdated']);
+    expect(dispatch.eventingEvents).toEqual([...COMMON_EVENTING_EVENTS, 'unitActiveRolesUpdated', 'checkInUpdated', 'outstandingRequirementsUpdated', 'unitNavigationUpdated']);
+    expect(bigboard.eventingEvents).toEqual([...COMMON_EVENTING_EVENTS, 'unitStatusAlertUpdated', 'unitNavigationUpdated']);
     expect(COMMON_EVENTING_EVENTS).toEqual(expect.arrayContaining(['weatherAlertReceived', 'weatherAlertUpdated', 'weatherAlertExpired', 'checklistUpdated', 'departmentUpdated']));
+  });
+
+  it('subscribes live ETAs by module (dispatch console or dashboard), never by app', () => {
+    expect(showsNavigationEtas(['dispatch-console'])).toBe(true);
+    expect(showsNavigationEtas(['dashboard'])).toBe(true);
+    expect(showsNavigationEtas(['unit-status', 'unit-routes'])).toBe(false);
+    expect(NAVIGATION_ETA_MODULES).toEqual(['dispatch-console', 'dashboard']);
+    // Unit reports its ETA; it never shows other units' ETAs.
+    expect(resolveRealtimeFeatures(VARIANTS.unit).eventingEvents).not.toContain('unitNavigationUpdated');
+    expect(resolveRealtimeFeatures(VARIANTS.ic).eventingEvents).not.toContain('unitNavigationUpdated');
+    // A manifest that gains the dashboard module gets the event without any variant check.
+    expect(resolveRealtimeFeatures({ ...VARIANTS.responder, modules: [...VARIANTS.responder.modules, 'dashboard'] }).eventingEvents).toContain('unitNavigationUpdated');
   });
 
   it('enables the chat hub, watchdog, geo default and coalesced board refresh from capabilities', () => {
@@ -67,7 +79,7 @@ describe('realtime store', () => {
       await state().connectEventingHub();
 
       const connection = fakeSignalR.latest(EVENTING);
-      expect([...connection.handlers.keys()]).toEqual(expect.arrayContaining(['unitActiveRolesUpdated', 'checkInUpdated', 'outstandingRequirementsUpdated', 'onConnected']));
+      expect([...connection.handlers.keys()]).toEqual(expect.arrayContaining(['unitActiveRolesUpdated', 'checkInUpdated', 'outstandingRequirementsUpdated', 'unitNavigationUpdated', 'onConnected']));
       expect(connection.handlers.has('unitStatusAlertUpdated')).toBe(false);
       expect(connection.invocationsOf('Connect')).toEqual([[42]]);
       expect(state().hubs.eventing).toMatchObject({ status: 'connected', joined: true });
@@ -193,6 +205,27 @@ describe('realtime store', () => {
       expect(department).toHaveBeenCalledWith();
       expect(alerts).toHaveBeenCalledWith('a-1');
       expect(state().lastEventName).toBe('weatherAlertReceived');
+    });
+
+    it('forwards unitNavigationUpdated with the unit id and the payload (Core Worker sends both)', async () => {
+      setupRealtime(VARIANTS.bigboard);
+      const navigation = jest.fn();
+      onRealtimeEvent('unitNavigationUpdated', navigation);
+      await state().connectEventingHub();
+      const connection = fakeSignalR.latest(EVENTING);
+      expect(connection.handlers.has('unitNavigationUpdated')).toBe(true);
+
+      const payload = '{"unitId":7,"callId":12,"routeInstanceId":null,"state":1}';
+      connection.serverPush('unitNavigationUpdated', 7, payload);
+
+      expect(navigation).toHaveBeenCalledWith('7', payload);
+      expect(state().lastEventName).toBe('unitNavigationUpdated');
+    });
+
+    it('never registers unitNavigationUpdated where no screen shows ETAs (Unit)', async () => {
+      setupRealtime(VARIANTS.unit);
+      await state().connectEventingHub();
+      expect(fakeSignalR.latest(EVENTING).handlers.has('unitNavigationUpdated')).toBe(false);
     });
 
     it('isolates a throwing consumer from the others', async () => {
