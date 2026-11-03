@@ -147,3 +147,5 @@ GitHub Actions never writes to the App Store or Google Play and holds no store c
 ## Fingerprint inputs
 
 The expo config embeds `version` / `buildNumber` (from `RELEASE_RUN_NUMBER`) and `extra.env`, which change on every run without changing native code. `apps/omni/fingerprint.config.js` skips them (`sourceSkips: ['ExpoConfigVersions', 'ExpoConfigExtraSection']`), so the fingerprint only moves when native inputs change and OTA updates can apply. Without that file every release would build native and `ota.yml` would always refuse. Anything new that must force a native build belongs outside `extra`.
+
+The config must never name the checkout path: `eas build --local` resolves the runtime again in its own build directory and fails on any difference, and the iOS binaries (macOS) must match the runtime the fingerprint and OTA jobs resolve (Ubuntu). Our config plugins are therefore referenced as `@resgrid/config-plugins/plugins/<file>`, never as absolute paths; `apps/omni/__tests__/app-config.test.ts` guards it.

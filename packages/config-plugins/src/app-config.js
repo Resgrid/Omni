@@ -9,8 +9,10 @@ const { usage } = require('./usage-strings');
 const { loadVariant } = require('./variants');
 const { computeVariantVersion } = require('./versioning');
 
-const pluginsDir = path.resolve(__dirname, '..', 'plugins');
-const plugin = (file) => path.join(pluginsDir, file);
+// A package specifier, never an absolute path: the expo config is hashed into the fingerprint runtime version, and a path
+// naming the checkout gives every machine and the EAS build directory a different runtime (eas build --local then fails
+// with "Runtime version mismatch"). Expo resolves it from the project root; the fingerprint still hashes the file itself.
+const plugin = (file) => `@resgrid/config-plugins/plugins/${file}`;
 
 const isStoreEnv = (appEnv) => appEnv === 'production' || appEnv === 'internal';
 const withEnvSuffix = (id, appEnv) => (isStoreEnv(appEnv) ? id : `${id}.${appEnv}`);
@@ -32,6 +34,7 @@ function createAppConfig({ variant, appEnv, runNumber, projectRoot, env = proces
   const versionInfo = computeVariantVersion(m, runNumber);
   const assets = `./variants/${variant}/assets`;
   const lowerSchemes = [...new Set(identity.schemes.map((s) => s.toLowerCase()))];
+  const iosBundleIdentifier = withEnvSuffix(identity.ios.bundleIdentifier, appEnv);
 
   const googleServicesFile = env.GOOGLE_SERVICES_FILE || './google-services.json';
   const googleServicesExists = fs.existsSync(path.resolve(projectRoot, googleServicesFile));
@@ -50,8 +53,11 @@ function createAppConfig({ variant, appEnv, runNumber, projectRoot, env = proces
   const entitlements = {
     'aps-environment': 'production',
     ...(isStoreEnv(appEnv) ? { 'com.apple.developer.usernotifications.critical-alerts': true, 'com.apple.developer.usernotifications.time-sensitive': true } : {}),
-    ...(identity.ios.appGroup && has('live-activity') ? { 'com.apple.security.application-groups': [isStoreEnv(appEnv) ? identity.ios.appGroup : `group.${withEnvSuffix(identity.ios.bundleIdentifier, appEnv)}`] } : {}),
+    ...(identity.ios.appGroup && has('live-activity') ? { 'com.apple.security.application-groups': [isStoreEnv(appEnv) ? identity.ios.appGroup : `group.${iosBundleIdentifier}`] } : {}),
   };
+
+  // The App Group the Live Activity widget shares with the app; with-live-activities.js writes it into both targets.
+  const liveActivityAppGroup = entitlements['com.apple.security.application-groups']?.[0] ?? `group.${iosBundleIdentifier}`;
 
   const backgroundLocation = caps.location.background && has('background-location');
   // The location purpose strings name turn-by-turn navigation where the app has it.
@@ -120,10 +126,10 @@ function createAppConfig({ variant, appEnv, runNumber, projectRoot, env = proces
   if (has('video')) plugins.push('expo-video');
   if (caps.voice.ptt) plugins.push(['expo-audio', { microphonePermission: usage.microphone(name) }]);
   if (has('ble-manager')) plugins.push('react-native-ble-manager');
-  if (has('livekit')) {
-    plugins.push('@livekit/react-native-expo-plugin');
-    plugins.push(['@config-plugins/react-native-webrtc', { cameraPermission: usage.camera(name) }]);
-  }
+  // Every app, not only the livekit ones: autolinking adds the LiveKitWebRTC pod to each iOS build, and its current versions
+  // are published only to the livekit/podspecs spec repo. Without options this plugin only adds that Podfile source.
+  plugins.push('@livekit/react-native-expo-plugin');
+  if (has('livekit')) plugins.push(['@config-plugins/react-native-webrtc', { cameraPermission: usage.camera(name) }]);
   if (has('callkeep')) plugins.push('@config-plugins/react-native-callkeep');
 
   plugins.push(plugin('custom-gradle.js'));
@@ -136,7 +142,7 @@ function createAppConfig({ variant, appEnv, runNumber, projectRoot, env = proces
   if (has('notifee')) plugins.push(plugin('withNotificationSounds.js'));
   if (has('media-button')) plugins.push(plugin('withMediaButtonModule.js'));
   if (has('in-call-audio')) plugins.push(plugin('withInCallAudioModule.js'));
-  if (has('live-activity')) plugins.push([plugin('with-live-activities.js'), { appGroupId: entitlements['com.apple.security.application-groups']?.[0] }]);
+  if (has('live-activity')) plugins.push([plugin('with-live-activities.js'), { appGroupId: liveActivityAppGroup }]);
   if (native.iosUseStaticFrameworks && has('livekit')) plugins.push(plugin('withWebRTCFrameworkFix.js'));
   plugins.push(plugin('withResourceBundleDeploymentTarget.js'));
   if (!isStoreEnv(appEnv)) {
@@ -152,7 +158,12 @@ function createAppConfig({ variant, appEnv, runNumber, projectRoot, env = proces
     ]);
   }
 
-  const appExtensions = has('live-activity') ? [{ targetName: 'CheckInTimerWidget', bundleIdentifier: `${withEnvSuffix(identity.ios.bundleIdentifier, appEnv)}.CheckInTimerWidget` }] : [];
+  // EAS learns an extension's capabilities only from these entitlements. Without the App Group it switches App Groups off on
+  // the widget's App ID (Apple rejected that for Responder) or signs the widget with a profile its entitlements file
+  // does not match.
+  const appExtensions = has('live-activity')
+    ? [{ targetName: 'CheckInTimerWidget', bundleIdentifier: `${iosBundleIdentifier}.CheckInTimerWidget`, entitlements: { 'com.apple.security.application-groups': [liveActivityAppGroup] } }]
+    : [];
 
   return {
     ...baseConfig,
@@ -173,7 +184,7 @@ function createAppConfig({ variant, appEnv, runNumber, projectRoot, env = proces
       buildNumber: String(versionInfo.buildNumber),
       supportsTablet: true,
       requireFullScreen: true,
-      bundleIdentifier: withEnvSuffix(identity.ios.bundleIdentifier, appEnv),
+      bundleIdentifier: iosBundleIdentifier,
       ...(env.IOS_APPLE_TEAM_ID ? { appleTeamId: env.IOS_APPLE_TEAM_ID } : {}),
       ...(isStoreEnv(appEnv) && identity.ios.associatedDomains.length ? { associatedDomains: identity.ios.associatedDomains } : {}),
       ...(iosGoogleServicesExists ? { googleServicesFile: iosGoogleServicesFile } : {}),
