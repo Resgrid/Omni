@@ -113,6 +113,6 @@ pass a new option to the shell, change all five root layouts the same way, or be
 - [ ] Checked every app that routes the module and the sibling screens above; behaviour differences come from
       capabilities, form factor or department flags, never from the variant id.
 - [ ] Strings in `common`; no new keys in an app namespace that `common` also has.
-- [ ] Guard test added when the bug was a pattern; `pnpm check-all --quick` passes (it includes `pnpm lint:anti-slop`:
+- [ ] Guard test added when the bug was a pattern; `pnpm check-all` passes (the full run CI makes; it includes `pnpm lint:anti-slop`:
       no new anti-slop finding, and the baseline pruned when findings were removed).
 - [ ] The summary names the apps the change affects ("all five", or which and why).

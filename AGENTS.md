@@ -69,6 +69,7 @@ Tests enforce the last two and the horizontal `ScrollView` rule. Details, layer 
 ## Testing
 
 - Every module ships with Jest tests; CI runs Jest, type-check, lint, anti-slop, translation parity, dependency rules, API contract tests and per-variant route contract tests on every PR. `pnpm check-all` runs all of it locally (`--quick` skips the web exports and Playwright).
+- **Run `pnpm check-all` (the full run, about 4 minutes) after any work that changes files, and fix what fails before you finish**, so the PR's CI passes. In Claude Code a Stop hook (`scripts/ci/check-all-hook.mjs`) runs it when your turn changed the checkout and hands any failure back to you; a complete passing run is recorded, so the hook skips a checkout you already checked. Other agents run it themselves.
 - `jest.mock()` factories may only reference variables prefixed `mock`. Mocks of the auth store need `getState()`. Keep route files (`variants/*/app/**`) free of tests and logic — test the screens in `@resgrid/features`.
 - RNTL 14: `render`, `renderHook`, `fireEvent`, `act`, `rerender` and `unmount` are async — always `await` them (`react-native-testing` skill, v14 reference).
 - After dependency bumps, suspect stale `node_modules`/Metro cache first.

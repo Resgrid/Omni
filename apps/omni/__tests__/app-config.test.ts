@@ -3,6 +3,7 @@ import path from 'node:path';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { createAppConfig, VARIANT_IDS } = require('@resgrid/config-plugins');
+const variantIds: string[] = VARIANT_IDS;
 
 const projectRoot = path.resolve(__dirname, '..');
 const build = (variant: string, appEnv = 'production', runNumber = 7) => createAppConfig({ variant, appEnv, runNumber, projectRoot, env: {} });
@@ -12,7 +13,7 @@ const pluginSpecifiers = (config: { plugins: (string | [string, unknown])[] }) =
 describe('app.config per variant', () => {
   // Snapshot = the reviewable record of identity, permissions and native modules per app. A diff here
   // means a store-visible change (AGENTS.md: review the `expo config` snapshot for every variant).
-  it.each(VARIANT_IDS as string[])('%s production config is stable', (variant) => {
+  it.each(variantIds)('%s production config is stable', (variant) => {
     const config = build(variant);
     expect({
       name: config.name,
@@ -54,7 +55,7 @@ describe('app.config per variant', () => {
 
   it('keeps the iOS dev-client network inspector off', () => {
     // It never completes a forwarded `WWW-Authenticate: Basic` challenge, so the token endpoint's 401 invalid_client hung sign-in.
-    for (const variant of VARIANT_IDS) {
+    for (const variant of variantIds) {
       const buildProperties = build(variant).plugins.find((p: unknown) => Array.isArray(p) && p[0] === 'expo-build-properties')[1];
       expect(buildProperties.ios.networkInspector).toBe(false);
     }
@@ -71,7 +72,7 @@ describe('app.config per variant', () => {
   });
 
   // docs/build/app-icons-and-splash.md: every path the config names exists, and the splash fits Android 12+'s mask.
-  it.each(VARIANT_IDS as string[])('%s uses its generated icon set and splash', (variant) => {
+  it.each(variantIds)('%s uses its generated icon set and splash', (variant) => {
     const config = build(variant);
     const assets = `./variants/${variant}/assets`;
     expect(config.icon).toBe(`${assets}/icon.png`);
@@ -112,7 +113,7 @@ describe('app.config per variant', () => {
 
   // eas build --local resolves the fingerprint runtime in the checkout and again in its build directory, and stops when the
   // two differ; the fingerprint jobs (Ubuntu) must also match the iOS binaries (macOS). So the config names no checkout path.
-  it.each(VARIANT_IDS)('%s config is the same in every checkout', (variant) => {
+  it.each(variantIds)('%s config is the same in every checkout', (variant) => {
     const repoRoot = path.resolve(projectRoot, '..', '..');
 
     for (const appEnv of ['production', 'staging']) {
@@ -126,7 +127,7 @@ describe('app.config per variant', () => {
     }
   });
 
-  it.each(VARIANT_IDS)('%s adds the livekit/podspecs Podfile source for the autolinked LiveKitWebRTC pod', (variant) => {
+  it.each(variantIds)('%s adds the livekit/podspecs Podfile source for the autolinked LiveKitWebRTC pod', (variant) => {
     // LiveKitWebRTC 150.7871.04+ is not on CocoaPods trunk; BigBoard (no livekit module) still links the pod.
     expect(pluginSpecifiers(build(variant))).toContain('@livekit/react-native-expo-plugin');
   });
