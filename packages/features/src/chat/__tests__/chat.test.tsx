@@ -1,8 +1,9 @@
 import '../../status/__tests__/test-setup';
 
+import { type ApiContext } from '@resgrid/api';
 import { featureFlagsStore, securityStore, useAuthStore } from '@resgrid/auth';
-import { useChatStore, usePersonnelStore } from '@resgrid/data';
-import { type ChatChannelResultData, ChatChannelType, type ChatMessageResultData, type DepartmentRightsResultData, type PersonnelInfoResultData } from '@resgrid/models';
+import { setDataApiContext, useChatStore, usePersonnelStore } from '@resgrid/data';
+import { type ChatChannelResultData, ChatChannelType, type ChatMessageResultData, ChatMessageType, type DepartmentRightsResultData, type PersonnelInfoResultData } from '@resgrid/models';
 import { emitRealtimeEvent, signalRService, useRealtimeStore } from '@resgrid/realtime';
 import { GluestackUIProvider, useToastStore } from '@resgrid/ui';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
@@ -13,8 +14,9 @@ import { Text } from 'react-native';
 import { ChatIdentityProvider } from '../chat-identity';
 import { ChatGate } from '../components/chat-gate';
 import { MessageActionsSheet } from '../components/message-actions-sheet';
+import { MessageBubble } from '../components/message-bubble';
 import { NewConversationSheet } from '../components/new-conversation-sheet';
-import { groupChannels, isOwnMessage } from '../lib/chat-format';
+import { buildGifMetadata, groupChannels, isOwnMessage, parseGifMetadata } from '../lib/chat-format';
 import ChatChannelsScreen from '../screens/chat-channels';
 import ChatConversationScreen from '../screens/chat-conversation';
 
@@ -26,8 +28,10 @@ jest.mock('@resgrid/config', () => ({
 }));
 
 const mockStartDirect = jest.fn();
+const mockSearchGifs = jest.fn();
 jest.mock('../lib/chat-actions', () => ({
   startDirectConversation: (id: string) => mockStartDirect(id),
+  searchGifs: (query: string, signal?: AbortSignal) => mockSearchGifs(query, signal),
   startGroupConversation: jest.fn(),
   setMessagePinned: jest.fn(),
   flagMessage: jest.fn(),
@@ -77,8 +81,10 @@ beforeEach(() => {
   (router.push as jest.Mock).mockClear();
   setActiveChatChannel.mockClear();
   sendMessage.mockClear();
+  mockSearchGifs.mockReset();
   useToastStore.getState().clearToasts();
-  useAuthStore.setState({ userId: 'me' });
+  useAuthStore.setState({ userId: 'me', accessToken: 'tok' });
+  setDataApiContext({ http: { getBaseUrl: () => 'https://api.test/api/v4' } } as unknown as ApiContext);
   securityStore.setState({ rights: { IsAdmin: false } as DepartmentRightsResultData });
   useRealtimeStore.setState({ setActiveChatChannel, activeChatChannel: null });
   // Focus = mount, blur = unmount (expo-router's focus effect without a navigator).
@@ -101,6 +107,70 @@ describe('chat format', () => {
     expect(isOwnMessage(message('x', { SenderUserId: 'me' }), 'me', null)).toBe(true);
     expect(isOwnMessage(message('x', { SenderParticipantType: 1, SenderUnitId: 7, SenderUserId: 'me' }), 'me', 7)).toBe(true);
     expect(isOwnMessage(message('x', { SenderParticipantType: 1, SenderUnitId: 8 }), 'me', 7)).toBe(false);
+  });
+
+  it('reads GIF metadata in the nested wire form and the legacy flat form, https only', () => {
+    const built = buildGifMetadata({ GifUrl: 'https://media.giphy.com/a.gif', PreviewUrl: 'https://media.giphy.com/a-s.gif', Width: 480, Height: 270 });
+    expect(JSON.parse(built)).toEqual({ gif: { url: 'https://media.giphy.com/a.gif', previewUrl: 'https://media.giphy.com/a-s.gif', width: 480, height: 270 } });
+    expect(parseGifMetadata(built)).toEqual({ GifUrl: 'https://media.giphy.com/a.gif', PreviewUrl: 'https://media.giphy.com/a-s.gif', Width: 480, Height: 270, Title: undefined });
+    expect(parseGifMetadata(JSON.stringify({ GifUrl: 'https://media.tenor.com/b.gif', Title: 'Hello' }))).toEqual(expect.objectContaining({ GifUrl: 'https://media.tenor.com/b.gif', Title: 'Hello' }));
+    expect(parseGifMetadata(JSON.stringify({ gif: { url: 'http://media.giphy.com/a.gif' } }))).toBeNull();
+    expect(parseGifMetadata(JSON.stringify({ gif: { url: 'javascript:alert(1)' } }))).toBeNull();
+    expect(parseGifMetadata(JSON.stringify({ gif: { url: 'https://media.giphy.com/a.gif', previewUrl: 'http://x/y.gif' } }))?.PreviewUrl).toBeUndefined();
+    expect(parseGifMetadata('not json')).toBeNull();
+    expect(parseGifMetadata(null)).toBeNull();
+  });
+});
+
+describe('MessageBubble', () => {
+  const gifMessage = (extra: Partial<ChatMessageResultData> = {}) =>
+    message('g1', { MessageType: ChatMessageType.Gif, Body: 'Tom Hanks Hello GIF', MetadataJson: JSON.stringify({ gif: { url: 'https://media.giphy.com/hello.gif', width: 400, height: 200 } }), ...extra });
+
+  it('renders a GIF message as the animated image, not its title', async () => {
+    await render(<MessageBubble message={gifMessage()} isOwn={false} showSender />);
+    const image = screen.getByTestId('chat-message-g1-gif');
+    expect(image.props.source).toEqual(expect.objectContaining({ uri: 'https://media.giphy.com/hello.gif' }));
+    expect(image.props.accessibilityLabel).toBe('Tom Hanks Hello GIF');
+    expect(screen.queryByText('Tom Hanks Hello GIF')).toBeNull();
+  });
+
+  it('falls back to the title when the GIF url is missing or unsafe, and shows deleted GIFs as deleted', async () => {
+    const { rerender } = await render(<MessageBubble message={gifMessage({ MetadataJson: JSON.stringify({ gif: { url: 'http://insecure/a.gif' } }) })} isOwn={false} showSender />);
+    expect(screen.queryByTestId('chat-message-g1-gif')).toBeNull();
+    expect(screen.getByText('Tom Hanks Hello GIF')).toBeTruthy();
+
+    await rerender(<MessageBubble message={gifMessage({ DeletedOn: '2026-10-31T11:00:00Z' })} isOwn={false} showSender />);
+    expect(screen.queryByTestId('chat-message-g1-gif')).toBeNull();
+    expect(screen.getByText('chat.message_deleted')).toBeTruthy();
+  });
+
+  const imageMessage = (extra: Partial<ChatMessageResultData> = {}) =>
+    message('p1', { MessageType: ChatMessageType.Image, Body: 'Hydrant is blocked', Attachments: [{ ChatAttachmentId: 'att-1', FileName: 'photo.jpg', ContentType: 'image/jpeg', Size: 1024 }], ...extra });
+
+  it('renders an image message as its authenticated thumbnail with the caption, and opens it on tap', async () => {
+    const onOpenImage = jest.fn();
+    await render(<MessageBubble message={imageMessage()} isOwn={false} showSender onOpenImage={onOpenImage} />);
+    expect(screen.getByTestId('chat-message-p1-image-content').props.source).toEqual(
+      expect.objectContaining({ uri: 'https://api.test/api/v4/Chat/GetAttachmentThumbnail?attachmentId=att-1', headers: { Authorization: 'Bearer tok' } })
+    );
+    expect(screen.getByText('Hydrant is blocked')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('chat-message-p1-image'));
+    expect(onOpenImage).toHaveBeenCalledWith(expect.objectContaining({ ChatMessageId: 'p1' }));
+  });
+
+  it('shows a placeholder while the attachment has not arrived, and when the picture fails to load', async () => {
+    const { rerender } = await render(<MessageBubble message={imageMessage({ Attachments: [], Body: '' })} isOwn={false} showSender />);
+    expect(screen.getByTestId('chat-message-p1-image-unavailable')).toHaveTextContent('chat.image');
+
+    await rerender(<MessageBubble message={imageMessage()} isOwn={false} showSender />);
+    await fireEvent(screen.getByTestId('chat-message-p1-image-content'), 'error', { error: '401' });
+    expect(screen.getByTestId('chat-message-p1-image-unavailable')).toHaveTextContent('chat.image_unavailable');
+
+    // A rotated token is a new source: the picture is retried.
+    await act(() => {
+      useAuthStore.setState({ accessToken: 'tok-2' });
+    });
+    expect(screen.getByTestId('chat-message-p1-image-content').props.source).toEqual(expect.objectContaining({ headers: { Authorization: 'Bearer tok-2' } }));
   });
 });
 
@@ -205,6 +275,58 @@ describe('ChatConversationScreen', () => {
     expect(screen.getByTestId('chat-composer-input').props.value).toBe('');
     expect(useToastStore.getState().toasts).toHaveLength(0);
     expect(useChatStore.getState().markChannelRead).toHaveBeenCalledWith('c1', undefined);
+  });
+
+  it('searches GIFs from the composer and sends the picked one as a GIF message', async () => {
+    mockSearchGifs.mockResolvedValueOnce([
+      { Id: 'gif-1', Title: 'Thumbs up', PreviewUrl: 'https://media.giphy.com/up-s.gif', GifUrl: 'https://media.giphy.com/up.gif', Width: 320, Height: 240 },
+      { Id: 'gif-2', Title: 'Unsafe', PreviewUrl: 'http://evil.example/x.gif', GifUrl: 'http://evil.example/x.gif', Width: 10, Height: 10 },
+    ]);
+    await render(
+      <ChatIdentityProvider asUnitId={7}>
+        <ChatConversationScreen channelId="c1" />
+      </ChatIdentityProvider>
+    );
+    const q = { includeHiddenElements: true } as const;
+
+    await fireEvent.press(screen.getByTestId('chat-composer-gif'));
+    await waitFor(() => expect(screen.getByTestId('gif-picker-item-gif-1', q)).toBeTruthy());
+    expect(mockSearchGifs).toHaveBeenCalledWith('', expect.anything());
+    expect(screen.queryByTestId('gif-picker-item-gif-2', q)).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('gif-picker-item-gif-1', q));
+    await waitFor(() =>
+      expect(sendMessage).toHaveBeenCalledWith({
+        channelId: 'c1',
+        body: 'Thumbs up',
+        messageType: ChatMessageType.Gif,
+        priority: 0,
+        metadataJson: JSON.stringify({ gif: { url: 'https://media.giphy.com/up.gif', previewUrl: 'https://media.giphy.com/up-s.gif', width: 320, height: 240 } }),
+        asUnitId: 7,
+      })
+    );
+  });
+
+  it('opens an image message full screen and closes it', async () => {
+    useChatStore.setState({
+      messagesByChannel: { c1: [message('p1', { MessageType: ChatMessageType.Image, Body: '', Attachments: [{ ChatAttachmentId: 'att-1', FileName: 'photo.jpg', ContentType: 'image/jpeg', Size: 1024 }] })] },
+    });
+    await render(<ChatConversationScreen channelId="c1" />);
+    expect(screen.queryByTestId('chat-image-viewer-image')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('chat-message-p1-image'));
+    expect(screen.getByTestId('chat-image-viewer-image').props.source).toEqual(expect.objectContaining({ uri: 'https://api.test/api/v4/Chat/GetAttachment?attachmentId=att-1', headers: { Authorization: 'Bearer tok' } }));
+
+    await fireEvent.press(screen.getByTestId('chat-image-viewer-close'));
+    expect(screen.queryByTestId('chat-image-viewer-image')).toBeNull();
+  });
+
+  it('shows the empty state when GIF search fails', async () => {
+    mockSearchGifs.mockRejectedValueOnce(new Error('offline'));
+    await render(<ChatConversationScreen channelId="c1" />);
+    await fireEvent.press(screen.getByTestId('chat-composer-gif'));
+    await waitFor(() => expect(screen.getByTestId('gif-picker-empty', { includeHiddenElements: true })).toBeTruthy());
+    expect(sendMessage).not.toHaveBeenCalled();
   });
 
   it('rejects an unsafe channel id', async () => {

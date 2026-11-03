@@ -6,6 +6,7 @@ import { Button, ButtonText, Heading, HStack, Text, VStack } from '@resgrid/ui';
 import React, { useCallback, useEffect, useState } from 'react';
 
 import { AuthLayout } from '../components/auth-layout';
+import { AuthLogo } from '../components/auth-logo';
 import { ConfirmDialog } from '../components/confirm-dialog';
 import { LanguagePicker } from '../components/language-picker';
 import { LoginForm, type LoginFormValues } from '../components/login-form';
@@ -110,6 +111,7 @@ export function LoginScreen({ onSignedIn, initialView = 'form' }: LoginScreenPro
 
   const header = (
     <VStack space="xs" className="mb-6 items-center">
+      <AuthLogo />
       <Heading size="2xl" className="text-center" accessibilityRole="header">
         {t('login.page_title')}
       </Heading>

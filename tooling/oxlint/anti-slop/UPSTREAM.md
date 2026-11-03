@@ -19,14 +19,19 @@
 ## Configuration
 
 - `oxlint` and `@oxlint/plugins` pinned to the same exact version in the `pnpm-workspace.yaml` catalog (1.90.0); upgrade them together.
-- Oxlint's JS plugin API is documented upstream as alpha. Run with `pnpm lint:anti-slop`; it is not part of `pnpm lint`, `check-all`, CI or the git hooks.
+- Oxlint's JS plugin API is documented upstream as alpha. `pnpm lint:anti-slop` (`scripts/ci/anti-slop.mjs`) runs Oxlint and compares the findings per file and rule with `tooling/oxlint/anti-slop-baseline.json`: it fails when a file gains a finding, when the baseline lists findings that are gone (`--prune` lowers it, never raises it), or when Oxlint cannot read or parse a file. It runs in the pre-commit hook (`lefthook.yml`), `pnpm check-all`, CI (`ci.yml`, lint job) and as a Claude Code PostToolUse hook on the edited file (`.claude/settings.json`). It is not part of `pnpm lint`.
+- `--rebaseline` rewrites the baseline from the current findings. Owner only: after enabling a rule or taking an upstream update that finds more, never to make a check pass. A baseline diff in a normal change only lowers or removes counts.
 - `.oxlintrc.json` turns off Oxlint's default `correctness` category (ESLint stays the primary linter) and enables `oxc/no-accumulating-spread` plus every generic anti-slop rule at `error`, except `no-module-mocking`.
 - `no-module-mocking` is off by owner decision (2026-11-02): `jest.mock()` is the repo's documented test seam (`AGENTS.md`, "Testing"). Keep it off on updates unless the owner reverses this.
 
 ## Findings at install (2026-11-02)
 
-16,416 diagnostics in 1,580 of 2,576 files with every rule on; nothing was fixed. `require-readable-spacing` accounts for 11,849 of them (autofixable). Turning off `no-module-mocking` removed its 289. `packages/api/src/index.ts` could not be read because it holds a Windows-1252 byte (not UTF-8).
+16,416 diagnostics in 1,580 of 2,576 files with every rule on; nothing was fixed. `require-readable-spacing` accounts for 11,849 of them (autofixable). Turning off `no-module-mocking` removed its 289. `packages/api/src/index.ts` could not be read because it held Windows-1252 bytes (not UTF-8); converted to UTF-8 when the baseline was created.
+
+## Baseline (2026-11-02)
+
+`tooling/oxlint/anti-slop-baseline.json` was created from the working tree with `--rebaseline`: 16,612 findings in 1,619 files. Findings are fixed as code is touched; the baseline only shrinks.
 
 ## Updating
 
-Follow `.claude/skills/install-anti-slop/references/update.md`: stage the incoming bundle outside this folder, three-way merge against the base above, keep the deviations listed here, and update this file.
+Follow `.claude/skills/install-anti-slop/references/update.md`: stage the incoming bundle outside this folder, three-way merge against the base above, keep the deviations listed here, and update this file. Then run `pnpm lint:anti-slop`; when the update finds more, the owner decides between fixing those findings and `--rebaseline`.

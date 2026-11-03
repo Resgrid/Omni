@@ -46,6 +46,55 @@ describe('merged translations', () => {
     }
   });
 
+  // The variant namespace is read before `common`: an object there at a key that is a string in `common` makes
+  // `t(key)` return "key '…' returned an object instead of string" in that app (Responder's `personnel.status`).
+  it.each(NAMESPACES.filter((ns) => ns !== 'common'))('%s: never shadows a common string with an object', (ns) => {
+    const groupKeys = (tree: TranslationTree, prefix = '', out: string[] = []): string[] => {
+      for (const [k, v] of Object.entries(tree)) {
+        const key = prefix ? `${prefix}.${k}` : k;
+        if (v && typeof v === 'object') {
+          out.push(key);
+          groupKeys(v, key, out);
+        }
+      }
+      return out;
+    };
+    for (const lang of SUPPORTED_LANGUAGES) {
+      const commonStrings = flatten(all.common[lang]);
+      expect(groupKeys(all[ns][lang]).filter((key) => typeof commonStrings[key] === 'string')).toEqual([]);
+    }
+  });
+
+  // A copy of a common string in a variant namespace hides every later fix to the shared string in that one app (a fix
+  // to Responder's copy of certifications or check-in reached no other app, and the others' fixes never reached it). The
+  // keys a variant shares with `common` are only its listed, deliberate wording overrides (review/variant-overrides.json).
+  describe('variant overrides of common strings', () => {
+    const VARIANTS = NAMESPACES.filter((ns) => ns !== 'common');
+    const listed = JSON.parse(fs.readFileSync(path.join(reviewDir, 'variant-overrides.json'), 'utf8')) as Record<string, Record<string, string>>;
+    const PLURAL = /_(zero|one|two|few|many|other)$/;
+    // `appName` is filled for every string (initI18n's default variables); a plural form may leave out its `count`.
+    const placeholders = (key: string, value: unknown) =>
+      [...new Set([...String(value).matchAll(/\{\{\s*([\w.]+)/g)].map((m) => m[1]))].filter((name) => name !== 'appName' && !(PLURAL.test(key) && name === 'count')).sort();
+
+    it.each(VARIANTS)('%s: shares keys with common only as listed overrides', (ns) => {
+      const common = flatten(all.common.en);
+      const shared = Object.keys(flatten(all[ns].en)).filter((key) => typeof common[key] === 'string');
+      expect(shared.sort()).toEqual(Object.keys(listed[ns] ?? {}).sort());
+    });
+
+    it.each(VARIANTS)('%s: every override differs from common in some language', (ns) => {
+      const copies = Object.keys(listed[ns] ?? {}).filter((key) => SUPPORTED_LANGUAGES.every((lang) => flatten(all[ns][lang])[key] === flatten(all.common[lang])[key]));
+      expect(copies).toEqual([]);
+    });
+
+    it.each(VARIANTS)('%s: overrides take the same {{placeholders}} as the shared string', (ns) => {
+      const common = flatten(all.common.en);
+      const own = flatten(all[ns].en);
+      const mismatched = Object.keys(listed[ns] ?? {}).filter((key) => placeholders(key, own[key]).join() !== placeholders(key, common[key]).join());
+      expect(mismatched).toEqual([]);
+    });
+  });
+
   it('has no scaffold leftovers', () => {
     for (const ns of NAMESPACES) {
       for (const lang of SUPPORTED_LANGUAGES) expect(JSON.stringify(all[ns][lang])).not.toMatch(/obytes/i);

@@ -158,6 +158,12 @@ describe('CurrentStatusBadge', () => {
     expect(screen.getByTestId('current-status-badge-availability')).toHaveTextContent('status.availability.committed');
   });
 
+  it('leaves out the availability when the name already says it', async () => {
+    // The test t() returns keys, so a name equal to the key (in any case, with spaces) is the "Unavailable" staffing case.
+    await render(<CurrentStatusBadge text=" Status.Availability.Unavailable" kind="staffing" baseType={StaffingBaseTypes.Unavailable} showAvailability />);
+    expect(screen.queryByTestId('current-status-badge-availability')).toBeNull();
+  });
+
   it('shows a pending marker while a newer status waits to sync', async () => {
     await render(<CurrentStatusBadge text="Available" pendingText="Responding" />);
     expect(screen.getByText('Responding')).toBeTruthy();

@@ -1,6 +1,5 @@
 {
   "calls": {
-    "required_fields_missing": "Ihre Abteilung benötigt diese Felder, bevor der Einsatz gespeichert werden kann: {{fields}}",
     "scheduled_dispatch": "Geplante Alarmierung",
     "scheduled_dispatch_no_clear": "Diese geplante Zeit kann hier geändert, aber nicht entfernt werden.",
     "scheduled_dispatch_too_soon": "Die geplante Alarmierung muss mindestens {{minutes}} Minuten in der Zukunft liegen"
@@ -432,8 +431,7 @@
     "worktime_thresholds_label": "Arbeitszeit-Schwellen"
   },
   "common": {
-    "clear": "Löschen",
-    "no_location": "Keine Standortdaten verfügbar"
+    "clear": "Löschen"
   },
   "incident_assistant": {
     "briefing_accountability": "PERSONALÜBERSICHT",
@@ -613,14 +611,10 @@
   },
   "login": {
     "command_not_authorized": "Sie sind nicht berechtigt, die IC-App zu verwenden. Wenden Sie sich an den Administrator Ihrer Abteilung.",
-    "login_button": "Anmelden",
-    "login_button_loading": "Anmelden...",
-    "otp_body": "Für Ihr Konto ist die Zwei-Faktor-Authentifizierung aktiviert. Geben Sie den aktuellen Code aus Ihrer Authenticator-App ein, um die Anmeldung abzuschließen.",
     "otp_invalid": "Dieser Code ist ungültig oder abgelaufen. Geben Sie den aktuellen Code aus Ihrer Authenticator-App ein.",
     "otp_placeholder": "6-stelliger Code",
     "otp_title": "Zwei-Faktor-Verifizierung",
-    "otp_verify": "Bestätigen",
-    "title": "Anmelden"
+    "otp_verify": "Bestätigen"
   },
   "maps": {
     "legend": {
@@ -630,12 +624,9 @@
         "unknown_priority": "Keine Bedeutung",
         "unknown_status": "Keine Bedeutung oder kein Status"
       }
-    },
-    "map_layers": "Kartenebenen",
-    "no_layers": "Keine Kartenebenen verfügbar"
+    }
   },
   "notifications": {
-    "confirm_delete_message_one": "Möchtest du {{count}} Benachrichtigung wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
     "confirm_delete_message_other": "Möchtest du {{count}} Benachrichtigungen wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
     "delete_one_error": "Benachrichtigung konnte nicht entfernt werden",
     "delete_one_success": "Benachrichtigung entfernt",
@@ -715,16 +706,7 @@
   "operations": {
     "errors": {
       "timereports_status_transition_invalid": "Dieser Bericht wurde bereits geändert, möglicherweise auf einem anderen Gerät. Bitte aktualisieren und erneut versuchen."
-    },
-    "time": {
-      "coveredBy": "Diese Zeit steht an diesem Tag bereits in Bericht #{{number}}.",
-      "crewReport": "Besatzungszeitbericht #{{number}} · {{name}}",
-      "individualReport": "Zeitbericht #{{number}} · {{name}}",
-      "report": "Bericht #{{number}}"
     }
-  },
-  "push_notifications": {
-    "unknown_type_warning": "Dieser Benachrichtigungstyp wird nicht erkannt. Bitte Support kontaktieren, wenn diese Meldung weiterhin angezeigt wird."
   },
   "readiness": {
     "attention": "Prüfen",
@@ -746,16 +728,11 @@
     "attachment_too_large": "Diese Datei ist größer als {{size}} MB, die maximale Größe für einen Anhang."
   },
   "settings": {
-    "audio_device_selection": {
-      "speaker_device": "Lautsprechergerät"
-    },
-    "logout_confirm_message": "Sind Sie sicher, dass Sie sich abmelden möchten? Dadurch werden alle App-Daten, zwischengespeicherten Werte und Einstellungen gelöscht.",
     "sync_section": "Synchronisierung & Offline-Warteschlange",
     "sync_status": "Synchronisierungsstatus",
     "sync_status_failed": "{{count}} fehlgeschlagen",
     "sync_status_ok": "Aktuell",
-    "sync_status_pending": "{{count}} ausstehend",
-    "view_sync_queue": "Warteschlange anzeigen"
+    "sync_status_pending": "{{count}} ausstehend"
   },
   "sidebar": {
     "menu": "Menü"

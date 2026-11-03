@@ -3,9 +3,11 @@ import '../../settings/__tests__/test-setup';
 
 import { unlockPersonalSession } from '@resgrid/auth';
 import { createMemoryKvBackend, DurableKv } from '@resgrid/offline';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { ColorSchemeProvider } from '@resgrid/ui';
+import { fireEvent, isHiddenFromAccessibility, render, screen, waitFor } from '@testing-library/react-native';
 import { router } from 'expo-router';
 import React from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { activateTestVariant } from '../../settings/__tests__/variant';
 import { setDevicePreferencesKv } from '../lib/device-kv';
@@ -22,6 +24,7 @@ jest.mock('@resgrid/core', () => ({
 }));
 
 const mockUnlock = unlockPersonalSession as jest.Mock;
+const mockInsets = useSafeAreaInsets as jest.Mock;
 
 describe('MaintenanceScreen', () => {
   it('explains the downtime and names the build', async () => {
@@ -41,7 +44,10 @@ describe('OnboardingScreen', () => {
     kv = new DurableKv(createMemoryKvBackend('onboarding'));
     setDevicePreferencesKv(kv);
   });
-  afterEach(() => setDevicePreferencesKv(undefined));
+  afterEach(() => {
+    setDevicePreferencesKv(undefined);
+    mockInsets.mockImplementation(() => ({ top: 0, bottom: 0, left: 0, right: 0 }));
+  });
 
   it('shows the variant slides and finishes on the last one', async () => {
     activateTestVariant('unit');
@@ -56,6 +62,33 @@ describe('OnboardingScreen', () => {
     expect(onComplete).toHaveBeenCalled();
     expect(isOnboardingComplete()).toBe(true);
     expect(kv.getBoolean('IS_FIRST_TIME')).toBe(false);
+  });
+
+  it('keeps Skip and Next inside the safe area (clear of the status bar and home indicator)', async () => {
+    activateTestVariant('responder');
+    mockInsets.mockImplementation(() => ({ top: 62, bottom: 34, left: 0, right: 0 }));
+    await render(<OnboardingScreen />);
+    expect(screen.getByTestId('onboarding-screen')).toHaveStyle({ paddingTop: 86, paddingBottom: 58, paddingLeft: 24, paddingRight: 24 });
+  });
+
+  it('shows the Resgrid wordmark on every slide, white on a dark theme, hidden from assistive technology', async () => {
+    activateTestVariant('responder');
+    const { unmount } = await render(<OnboardingScreen />);
+    const light = screen.getByTestId('auth-logo-light');
+    expect(light.props.source.testUri).toMatch(/resgrid-wordmark\.png$/);
+    expect(isHiddenFromAccessibility(light)).toBe(true);
+    await fireEvent.press(screen.getByTestId('onboarding-next'));
+    await fireEvent.press(screen.getByTestId('onboarding-next'));
+    expect(screen.getByTestId('onboarding-finish')).toBeTruthy();
+    expect(screen.getByTestId('auth-logo-light')).toBeTruthy();
+    await unmount();
+
+    await render(
+      <ColorSchemeProvider mode="dark">
+        <OnboardingScreen />
+      </ColorSchemeProvider>
+    );
+    expect(screen.getByTestId('auth-logo-dark').props.source.testUri).toMatch(/resgrid-wordmark-white\.png$/);
   });
 
   it('skips straight to sign-in', async () => {

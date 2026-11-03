@@ -6,7 +6,7 @@ import { useTranslation } from '../utils/i18n';
 import { buildHtmlDocument, type HtmlRendererProps, isSafeLink } from './document';
 
 export type { HtmlRendererProps };
-export { decodeHtmlEntitiesIfEncoded, escapeHtml, htmlToPlainText, isSafeLink, sanitizeDescription, sanitizeHtmlContent } from './html';
+export { decodeHtmlEntities, decodeHtmlEntitiesIfEncoded, escapeHtml, htmlToPlainText, isSafeLink, sanitizeDescription, sanitizeHtmlContent } from './html';
 
 /**
  * The iframe sandbox. `allow-scripts` runs only our link interceptor below (the sanitizer strips every

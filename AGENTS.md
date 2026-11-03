@@ -30,6 +30,15 @@ docs/                      architecture/, build/, subsystems/
 
 Never fork code per app. In order of preference: **capability** (`useCapability()` from the variant manifest) → **form factor** (`useFormFactor()`) → **platform file at a leaf** (`.web.tsx` only for renderers/platform APIs) → **variant-only screen** (only each app's home and signature modules). Per-app facts live only in `apps/omni/variants/<v>/variant.json` (read at build time by `@resgrid/config-plugins` and at runtime through `variant.ts`, validated by the zod schema in `@resgrid/config`). Use the `omni-variants` skill for any change that applies to some apps but not others.
 
+**One fix, every app.** A fix, addition, update or removal made for one app is made for all five, in the lowest shared layer that owns it — never in a variant folder, a route file or one app's translation namespace. Logic, storage, API, device and platform behaviour, validation, errors and offline handling are always shared; only the UX an app is built around may differ (Responder centres on the member, Unit on the unit, IC on command, Dispatch on the desk, BigBoard on the wall), and only through the manifest, `nav.ts`, the home and signature-module screens, form factor and listed wording overrides. Before finishing any change:
+
+- Fix the pattern, not the instance: search `packages/` and `apps/omni/` for the same code shape; when it recurs, fix the primitive or helper (`@resgrid/ui`, a `data` store, a `features/<module>/lib` function), remove the per-screen workarounds and add a test or source rule that keeps it fixed.
+- Check every app that routes the module (`grep -rl "@resgrid/features/<module>" apps/omni/variants/*/app`) and the sibling screens other apps use for the same job; say in the summary which apps the change affects.
+- Strings live in `common`. An app namespace may share a key with `common` only as a deliberate override listed with its reason in `packages/i18n/review/variant-overrides.json`.
+- Files that several `apps/omni/variants/<v>/` folders have stay identical apart from the app id; change all five or move the code into a package.
+
+Tests enforce the last two and the horizontal `ScrollView` rule. Details, layer table and checklist: `omni-shared-first` skill.
+
 **Never change without a migration and an upgrade test:** bundle ids/packages (Responder's `wtdt.resgrid.andriod` typo is permanent), EAS project ids, URL and SSO schemes, associated domains, App Group, **MMKV ids and persisted store names** (encryption keys are per device, plan D8), Electron appIds/protocols, Docker image names, legacy runtime env names, Novu subscriber formats, push `Source`, client ids.
 
 ## Conventions
@@ -46,6 +55,7 @@ Never fork code per app. In order of preference: **capability** (`useCapability(
 - Status logic by **BaseType**, never by status id or text.
 - Never call map/routing/geocoding providers from the app; go through the Resgrid server (`resgrid-maps` skill).
 - Prettier: single quotes, es5 trailing commas, printWidth 220. ESLint must pass with zero warnings in touched files.
+- Anti-slop (Oxlint rules in `.oxlintrc.json`): code you write or change adds no finding. `pnpm lint:anti-slop` fails when a file has more findings than `tooling/oxlint/anti-slop-baseline.json` records; it runs in the pre-commit hook, `check-all`, CI, and in Claude Code after every edit (`.claude/settings.json`). Fix the code, not the check: parse unknown input at the I/O boundary (zod) and pass named domain types, put a `// SAFETY: <checked invariant>` comment before a type assertion you cannot avoid, and run `pnpm exec oxlint --fix <file>` for `require-readable-spacing`. Older findings in code you touch may stay. After removing findings, run `pnpm lint:anti-slop --prune` and keep the lowered baseline in the change. Never raise the baseline, run `--rebaseline`, turn a rule off or add an ignore to pass (owner only). A repo-wide failure in a file you did not touch is another session's work in progress: report it, don't fix it.
 - No experimental or beta platform features (owner decision, SDK 58 upgrade): no `experiments.*` in the app config, no `EXPO_UNSTABLE_*` flags, no `unstable_*`/`experimental_*` APIs or options. Sole exception: EAS `extra.eas.build.experimental.ios.appExtensions`, the only way EAS gives the Live Activity widget its credentials. NativeWind stays on the 5.0 RC until 5.0 ships.
 
 ## Security and privacy
@@ -58,7 +68,7 @@ Never fork code per app. In order of preference: **capability** (`useCapability(
 
 ## Testing
 
-- Every module ships with Jest tests; CI runs Jest, type-check, lint, translation parity, dependency rules, API contract tests and per-variant route contract tests on every PR.
+- Every module ships with Jest tests; CI runs Jest, type-check, lint, anti-slop, translation parity, dependency rules, API contract tests and per-variant route contract tests on every PR. `pnpm check-all` runs all of it locally (`--quick` skips the web exports and Playwright).
 - `jest.mock()` factories may only reference variables prefixed `mock`. Mocks of the auth store need `getState()`. Keep route files (`variants/*/app/**`) free of tests and logic — test the screens in `@resgrid/features`.
 - RNTL 14: `render`, `renderHook`, `fireEvent`, `act`, `rerender` and `unmount` are async — always `await` them (`react-native-testing` skill, v14 reference).
 - After dependency bumps, suspect stale `node_modules`/Metro cache first.
@@ -73,8 +83,8 @@ Never fork code per app. In order of preference: **capability** (`useCapability(
 
 ## Skills (`.claude/skills/`, mirrored to `.agents/skills/` by `node scripts/sync-agent-skills.mjs`)
 
-Resgrid/Omni: `omni-variants`, `omni-offline-first`, `omni-porting-from-legacy`, `omni-platform-builds`, `resgrid-domain`, `resgrid-v4-api`, `resgrid-realtime-push`, `resgrid-auth-security`, `resgrid-i18n`, `resgrid-maps`.
-Third-party (vetted; provenance in each `SOURCE.md`): `expo-upgrade`, `eas-app-stores`, `eas-update`, `expo-router`, `expo-module`, `expo-animation`, `react-native-best-practices`, `react-native-testing`, `nativewind-preview-to-rc`, `install-anti-slop` (vendored Oxlint rules in `tooling/oxlint/anti-slop`, run with `pnpm lint:anti-slop`; advisory, not in CI or hooks yet).
+Resgrid/Omni: `omni-shared-first`, `omni-variants`, `omni-offline-first`, `omni-porting-from-legacy`, `omni-platform-builds`, `resgrid-domain`, `resgrid-v4-api`, `resgrid-realtime-push`, `resgrid-auth-security`, `resgrid-i18n`, `resgrid-maps`.
+Third-party (vetted; provenance in each `SOURCE.md`): `expo-upgrade`, `eas-app-stores`, `eas-update`, `expo-router`, `expo-module`, `expo-animation`, `react-native-best-practices`, `react-native-testing`, `nativewind-preview-to-rc`, `install-anti-slop` (installs and updates the vendored Oxlint rules in `tooling/oxlint/anti-slop`; using them is the anti-slop bullet under Conventions).
 
 Precedence when guidance conflicts: this file and the Omni/Resgrid skills win over third-party skills. Specifically — UI is gluestack + NativeWind (not `@expo/ui` or native-UI-first advice); networking is axios + zustand stores (ignore "avoid axios"); upgrades use `expo-upgrade` (CNG — there are no committed native folders); expo-router guidance written for iOS must also work on web and Electron; never publish an EAS update or submit to a store without the owner asking.
 

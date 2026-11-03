@@ -5,7 +5,9 @@ import { Box, Button, ButtonText, Heading, HStack, Pressable, Text, useThemeColo
 import { Bell, ClipboardList, LayoutDashboard, type LucideIcon, MapPin, Radio, Shield, Users } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
 import { View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AuthLogo } from '../components/auth-logo';
 import { devicePreferencesKv } from '../lib/device-kv';
 import { replaceRoute } from '../lib/navigation';
 import { authRoutes } from '../routes';
@@ -14,6 +16,9 @@ interface Slide {
   key: string;
   icon: LucideIcon;
 }
+
+/** The screen's margin (p-6) inside the safe area. */
+const EDGE = 24;
 
 /** Three slides per variant; text from `onboarding.pages.<variant>.<slide>.title|description` (Responder/Unit content). */
 const SLIDES: Record<VariantId, readonly Slide[]> = {
@@ -56,10 +61,14 @@ export interface OnboardingScreenProps {
   onComplete?: () => void;
 }
 
-/** First-run introduction (Responder/Unit `onboarding`, `capabilities.platform.onboarding`): the variant's slides, skip and get started. */
+/**
+ * First-run introduction (Responder/Unit `onboarding`, `capabilities.platform.onboarding`): the variant's slides under the
+ * sign-in screen's Resgrid wordmark, skip and get started.
+ */
 export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
   const { t } = useTranslation();
   const colors = useThemeColors();
+  const insets = useSafeAreaInsets();
   const variant = useActiveVariant();
   const slides = SLIDES[variant.id];
   const [index, setIndex] = useState(0);
@@ -76,8 +85,12 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
     }
   }, [onComplete]);
 
+  // ShellGate shows this screen without the app header, so it keeps Skip and Next clear of the status bar, notch and home
+  // indicator itself.
+  const padding = { paddingTop: insets.top + EDGE, paddingBottom: insets.bottom + EDGE, paddingLeft: insets.left + EDGE, paddingRight: insets.right + EDGE };
+
   return (
-    <Box className="flex-1 justify-between bg-background-0 p-6" testID="onboarding-screen">
+    <Box className="flex-1 justify-between bg-background-0" style={padding} testID="onboarding-screen">
       <HStack className="justify-end">
         {isLast ? null : (
           <Pressable onPress={finish} accessibilityRole="button" accessibilityLabel={t('onboarding.skip')} testID="onboarding-skip" className="p-2">
@@ -86,6 +99,7 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
         )}
       </HStack>
       <VStack space="lg" className="w-full max-w-lg items-center self-center">
+        <AuthLogo />
         <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
           <Icon size={72} color={colors.primary} />
         </View>

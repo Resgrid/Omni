@@ -7,7 +7,7 @@ import { HeaderBackButton } from '../header-back-button';
 import { CardSkeleton, ListSkeleton, Loading, LoadingSkeleton } from '../loading';
 import { OfflineStatusToast } from '../offline-status-toast';
 import { REALTIME_OUTAGE_GRACE_MS, RealtimeStatusBanner } from '../realtime-status-banner';
-import { ScreenHeader } from '../screen-header';
+import { AppBarBackContext, ScreenHeader } from '../screen-header';
 import { getTypeIconUrl, getTypeMapIcon, TypeIcon, TypeMapIconProvider } from '../type-icon';
 import { ZeroState } from '../zero-state';
 
@@ -89,6 +89,18 @@ describe('ZeroState', () => {
     expect(screen.getByText('Calls will appear here')).toBeTruthy();
     expect(screen.getByText('Retry')).toBeTruthy();
   });
+
+  it('fills the space its column has left, not a full screen height that pushes it below a header or search field', async () => {
+    await render(<ZeroState />);
+
+    expect(screen.root?.props.className).toBe('w-full flex-1 p-6');
+  });
+
+  it('keeps a screen’s own root classes', async () => {
+    await render(<ZeroState viewClassName="p-4" />);
+
+    expect(screen.root?.props.className).toBe('p-4');
+  });
 });
 
 describe('HeaderBackButton and ScreenHeader', () => {
@@ -111,6 +123,18 @@ describe('HeaderBackButton and ScreenHeader', () => {
     expect(screen.getByText('Edit')).toBeTruthy();
     await fireEvent.press(screen.getByTestId('back-button'));
     expect(onBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves its back button to an app bar that already shows one', async () => {
+    await render(
+      <AppBarBackContext.Provider value>
+        <ScreenHeader title="Unit 1" onBack={jest.fn()} right={<Text>Edit</Text>} />
+      </AppBarBackContext.Provider>
+    );
+
+    expect(screen.getByRole('header', { name: 'Unit 1' })).toBeTruthy();
+    expect(screen.getByText('Edit')).toBeTruthy();
+    expect(screen.queryByTestId('back-button')).toBeNull();
   });
 });
 

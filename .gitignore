@@ -51,3 +51,5 @@ junit.xml
 Thumbs.db
 .idea/
 /apps/omni/modules/resgrid-device/android/.gradle
+/android
+/ios

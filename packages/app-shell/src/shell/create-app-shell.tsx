@@ -1,7 +1,7 @@
 import { reportOperatorActivity, updateActivity } from '@resgrid/auth';
 import type { VariantManifest } from '@resgrid/config';
 import { isDev, recordUserActivity } from '@resgrid/core';
-import { useThemeColors } from '@resgrid/ui';
+import { AppBarBackContext, useThemeColors } from '@resgrid/ui';
 import { Slot, Tabs } from 'expo-router';
 import React, { type ComponentType, useCallback, useMemo, useRef } from 'react';
 import { type ColorValue, StyleSheet, View } from 'react-native';
@@ -12,7 +12,7 @@ import { buildTabScreens, findUnregisteredRoutes } from '../nav/filter';
 import { useNavFilterContext, useNavLabel } from '../nav/use-nav-items';
 import { getShellNav } from '../runtime/shell-config';
 import { ShellUpdateNotice } from '../updates/update-notice';
-import { ShellHeader } from './header';
+import { ShellHeader, useHeaderLeading } from './header';
 import { RegisteredBanners, RegisteredOverlays, SessionInitOverlay, ShellOfflineToast, ShellRealtimeBanner } from './overlays';
 import { RegisteredProviders } from './registered-providers';
 import { ShellProvider } from './shell-context';
@@ -100,6 +100,8 @@ export function RegistryTabs({ nav }: { nav: NavRegistry }) {
 function ShellFrame({ variant, nav }: { variant: VariantManifest; nav: NavRegistry }) {
   const colors = useThemeColors();
   const onTouchCapture = useActivityCapture();
+  // The app bar owns back: a detail screen's in-content header drops its own arrow while this one shows.
+  const { leading } = useHeaderLeading(nav);
   return (
     <View style={StyleSheet.flatten([styles.fill, { backgroundColor: colors.background }])} onStartShouldSetResponderCapture={onTouchCapture} testID={`app-shell-${variant.shell.kind}`}>
       <ShellHeader nav={nav} />
@@ -107,7 +109,9 @@ function ShellFrame({ variant, nav }: { variant: VariantManifest; nav: NavRegist
       <RegisteredBanners />
       <View style={styles.body}>
         <InlineSidebar nav={nav} />
-        <View style={styles.content}>{variant.shell.kind === 'tabs' ? <RegistryTabs nav={nav} /> : <Slot />}</View>
+        <View style={styles.content}>
+          <AppBarBackContext.Provider value={leading === 'back'}>{variant.shell.kind === 'tabs' ? <RegistryTabs nav={nav} /> : <Slot />}</AppBarBackContext.Provider>
+        </View>
       </View>
       <DrawerSidebar nav={nav} />
       <ShellOfflineToast />

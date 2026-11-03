@@ -1,8 +1,6 @@
 {
   "app": {
-    "open_menu": "Öppna menyn",
-    "realtime_offline_description": "Återansluter. Nya larm och meddelanden kanske inte visas.",
-    "realtime_offline_title": "Liveuppdateringar är inte tillgängliga"
+    "open_menu": "Öppna menyn"
   },
   "audio_streams": {
     "error_loading_stream": "Det gick inte att läsa in ljudström"
@@ -35,23 +33,6 @@
     "unauthorized_message": "Bluetooth-behörighet nekad. Bevilja Bluetooth-behörigheter i Inställningar."
   },
   "calendar": {
-    "allDay": "Hela dagen",
-    "attendanceUpdated": {
-      "signedUp": "Du har anmält dig till det här evenemanget.",
-      "title": "Närvaro uppdaterad",
-      "unsignedUp": "Du har tagits bort från det här evenemanget."
-    },
-    "attendees": {
-      "title": "Deltagare"
-    },
-    "attendeesCount_one": "{{count}} deltagare",
-    "attendeesCount": "{{count}} deltagare",
-    "confirmSignup": "Bekräfta",
-    "confirmUnsignup": {
-      "message": "Är du säker på att du vill avboka din närvaro för det här evenemanget?",
-      "title": "Bekräfta avbokning"
-    },
-    "createdBy": "Skapad av",
     "daysOfWeek": {
       "fri": "Fre",
       "mon": "Mån",
@@ -60,55 +41,6 @@
       "thu": "Tor",
       "tue": "Tis",
       "wed": "Ons"
-    },
-    "description": "Beskrivning",
-    "error": {
-      "attendanceUpdate": "Det gick inte att uppdatera närvaron. Försök igen.",
-      "title": "Fel"
-    },
-    "eventsCount_one": "{{count}} händelse",
-    "eventsCount": "{{count}} händelser",
-    "loading": {
-      "date": "Läser in händelser för valt datum...",
-      "today": "Läser in dagens händelser...",
-      "upcoming": "Läser in kommande händelser..."
-    },
-    "noEvents": "Inga schemalagda händelser",
-    "optional": "Valfritt",
-    "required": "Obligatoriskt",
-    "selectDate": "Välj ett datum för att visa händelser",
-    "selectedDate": {
-      "empty": "Inga händelser schemalagda för det här datumet.",
-      "title": "Händelser för {{date}}"
-    },
-    "signedUp": "Anmäld",
-    "signup": {
-      "button": "Anmäl dig",
-      "notePlaceholder": "Ange din anteckning här...",
-      "notePrompt": "Lägg till en anteckning (valfritt):",
-      "title": "Evenemangsanmälan"
-    },
-    "signupAvailable": "Anmälan tillgänglig",
-    "tabs": {
-      "calendar": "Kalender",
-      "today": "Idag",
-      "upcoming": "Kommande"
-    },
-    "tapToSignUp": "Tryck för att anmäla dig",
-    "title": "Kalender",
-    "today": {
-      "empty": {
-        "description": "Du har inga schemalagda händelser för idag.",
-        "title": "Inga händelser idag"
-      }
-    },
-    "todayButton": "Idag",
-    "unsignup": "Avboka närvaro",
-    "upcoming": {
-      "empty": {
-        "description": "Du har inga schemalagda händelser de närmaste 7 dagarna.",
-        "title": "Inga kommande händelser"
-      }
     }
   },
   "callImages": {
@@ -136,82 +68,10 @@
     "personnel": "Personal",
     "protocols": "Protokoll",
     "reference_id": "Referens-ID",
-    "required_fields_missing": "Din avdelning kräver dessa fält innan ett larm kan sparas: {{fields}}",
     "search_address": "Sök adress",
     "search_coordinates": "Sök koordinater",
     "search_plus_code": "Sök plus code",
     "search_what3words": "Sök what3words-adress"
-  },
-  "certifications": {
-    "add": "Lägg till",
-    "addHours": "Lägg till timmar",
-    "addHoursWithPhoto": "Lägg till timmar med foto",
-    "areaIs": "Område: {{area}}",
-    "back": "Tillbaka",
-    "cancel": "Avbryt",
-    "category": "Kategori (kurs, övning, konferens)",
-    "certificateAttached": "intyg bifogat",
-    "creditAdded": "Timmar tillagda.",
-    "creditDate": "Datum (idag som standard)",
-    "creditNote": "Vad det var",
-    "credits": "{{hours}} av {{required}} timmar vidareutbildning",
-    "creditsTitle": "{{hours}} timmar vidareutbildning",
-    "dateInvalid": "Ange datum som åååå-mm-dd.",
-    "edit": "Redigera",
-    "errors": {
-      "certifications_file_invalid": "Fotot kunde inte läsas.",
-      "certifications_file_too_large": "Fotot är för stort.",
-      "denied": "Du har inte åtkomst till den här behörigheten.",
-      "locked": "Lås upp skyddade uppgifter för att fortsätta.",
-      "retry": "Kunde inte nå servern. Försök igen.",
-      "validation": "Servern avvisade ändringen."
-    },
-    "expired": "Gick ut {{date}}",
-    "expires": "Går ut {{date}} ({{days}} dagar)",
-    "form": {
-      "area": "Område eller nivå",
-      "choosePhoto": "Välj foto",
-      "expiresOn": "Går ut",
-      "issuedBy": "Utfärdad av",
-      "name": "Namn",
-      "number": "Nummer",
-      "otherType": "Annan (ange namn)",
-      "photoAttached": "Foto bifogat.",
-      "receivedOn": "Erhållen",
-      "save": "Spara",
-      "takePhoto": "Foto av kortet",
-      "type": "Behörighet"
-    },
-    "hasFile": "Ett kort eller intyg finns sparat",
-    "hours": "Timmar",
-    "hoursInvalid": "Ange fler än 0 timmar.",
-    "issuedByIs": "Utfärdad av {{name}}",
-    "nameRequired": "Välj en typ eller ange ett namn.",
-    "newExpiry": "Nytt utgångsdatum",
-    "newNumber": "Nytt nummer (valfritt)",
-    "noExpiry": "Går inte ut",
-    "none": "Du har inte lagt till några behörigheter än.",
-    "notVerified": "Inte verifierad av organisationen än",
-    "numberIs": "Nummer {{number}}",
-    "photoDenied": "Tillåt åtkomst till kamera eller bilder för att bifoga ett foto.",
-    "receivedOn": "Erhållen {{date}}",
-    "remove": "Ta bort",
-    "removeBody": "Den tas bort från ditt register. Er organisation ser fortfarande historiken.",
-    "removeTitle": "Ta bort behörigheten?",
-    "renew": "Förnya",
-    "renewSave": "Spara förnyelse",
-    "renewed": "Förnyelsen sparades.",
-    "status": {
-      "0": "Giltig",
-      "1": "Utgången",
-      "2": "Avstängd",
-      "3": "Återkallad",
-      "4": "Väntar på verifiering",
-      "5": "Under utbildning"
-    },
-    "title": "Mina behörigheter",
-    "untitled": "Behörighet",
-    "verifiedOn": "Verifierad {{date}}"
   },
   "chat": {
     "attach": "Bifoga",
@@ -219,24 +79,12 @@
     "new_conversation": "Ny konversation"
   },
   "check_in": {
-    "add_note": "Lägg till anteckning (Valfritt)",
     "confirm_check_in": "Bekräfta incheckning",
-    "duration": "Varaktighet",
     "gps_coordinates": "GPS: {{latitude}}, {{longitude}}",
-    "history": "Incheckningshistorik",
-    "minutes_ago": "{{count}} min sedan",
-    "no_timers": "Inga incheckningstimer konfigurerade",
     "offline_queued": "Incheckning köad för när du är online",
     "progress": "{{elapsed}} / {{total}} min",
     "timer_interval": "Var {{minutes}} min",
-    "type_hazmat": "Farligt ämne exponering",
-    "type_ic": "Insatsledare",
     "unknown_unit": "Okänd enhet"
-  },
-  "checklists": {
-    "labels": {
-      "AssignmentAutomatic": "Automatisk tilldelning"
-    }
   },
   "common": {
     "active": "Aktiv",
@@ -244,8 +92,6 @@
     "deleting": "Tar bort...",
     "discard": "Kassera",
     "navigation": "Navigering",
-    "noActiveUnit": "Ingen aktiv enhet",
-    "noActiveUnitDescription": "Välj en aktiv enhet för att se tillgängliga statusar",
     "no_data_available": "Ingen data tillgänglig",
     "success": "Lyckades",
     "system": "System"
@@ -258,12 +104,9 @@
   },
   "home": {
     "active_call": {
-      "clear_active": "Rensa aktivt larm",
-      "no_active_call": "Inget aktivt larm valt",
       "select_call": "Välj ett larm att följa",
       "set_active": "Ställ in som aktivt larm",
-      "title": "Aktivt larm",
-      "view_details": "Visa larmdetaljer"
+      "title": "Aktivt larm"
     },
     "error": {
       "no_user_id": "Användar-ID är inte tillgängligt"
@@ -273,24 +116,15 @@
       "ptt": "PTT"
     },
     "staffing": {
-      "add_note": "Lägg till anteckning",
-      "add_note_action": "Lägg till en anteckning",
       "confirm_staffing": "Bekräfta bemanning: {{staffing}}",
       "missing_required_info": "Nödvändig information saknas",
-      "no_options_available": "Inga bemanningsalternativ tillgängliga",
       "no_staffing_options": "Inga bemanningsalternativ tillgängliga",
-      "note": "Anteckning",
-      "note_placeholder": "Ange en anteckning (valfritt)...",
-      "note_required_hint": "Öppnar ett formulär för den obligatoriska anteckningen",
-      "quick_set_hint": "Ställer in din bemanning direkt. Håll ned för att lägga till en anteckning.",
       "review_and_confirm": "Granska och bekräfta",
       "select_staffing_level": "Välj bemanningsnivå",
       "select_staffing_level_description": "Välj din aktuella bemanningsstatus",
       "selected_staffing": "Vald bemanning",
       "set_staffing": "Ange personalens bemanning",
-      "staffing_level": "Bemanningsnivå",
-      "update_failed": "Det gick inte att uppdatera bemanningen",
-      "updated_successfully": "Bemanningen uppdaterades"
+      "staffing_level": "Bemanningsnivå"
     },
     "stats": {
       "open_calls": "Öppna larm",
@@ -298,52 +132,16 @@
       "units_in_service": "Enheter i tjänst"
     },
     "status": {
-      "no_options_available": "Inga statusalternativ tillgängliga",
       "update_failed": "Det gick inte att uppdatera statusen",
       "updated_successfully": "Statusen uppdaterades"
     },
-    "summary": {
-      "active_calls": "Aktiva larm",
-      "active_severe_weather_alerts": "Aktiva allvarliga/nödvädervarningar",
-      "calls_im_on": "Larm jag är på",
-      "pending_missed_checkins": "Väntande/missade incheckningar"
-    },
     "tabs": {
-      "call": "Larm",
       "dashboard": "Instrumentpanel",
-      "map": "Karta",
-      "staffing": "Bemanning",
-      "status": "Status"
-    },
-    "user": {
-      "my_staffing": "Min bemanning",
-      "my_status": "Min status",
-      "staffing_unknown": "Okänd bemanning",
-      "status_unknown": "Okänd status",
-      "updated": "Uppdaterad"
+      "map": "Karta"
     }
   },
   "incident_command": {
-    "assigned_since": "Tilldelad sedan",
     "empty_state": "Ingen insatsledning är aktiv för detta larm",
-    "error_loading": "Det gick inte att läsa in information om insatsledningen",
-    "my_assignment": "Mitt uppdrag",
-    "need_category_equipment": "Utrustning",
-    "need_category_logistics": "Logistik",
-    "need_category_medical": "Sjukvård",
-    "need_category_other": "Övrigt",
-    "need_category_resource": "Resurs",
-    "need_category_staffing": "Bemanning",
-    "need_status_cancelled": "Avbrutet",
-    "need_status_met": "Uppfyllt",
-    "need_status_open": "Öppet",
-    "need_status_partially_met": "Delvis uppfyllt",
-    "objective_status_complete": "Slutfört",
-    "objective_status_in_progress": "Pågår",
-    "objective_status_pending": "Väntande",
-    "objective_type_benchmark": "Delmål",
-    "objective_type_general": "Allmänt",
-    "objective_type_safety": "Säkerhet",
     "percent_complete": "{{percent}}%",
     "quantity": "{{fulfilled}}/{{requested}}"
   },
@@ -371,36 +169,20 @@
     "tracking_notification_body": "Delar din position med din avdelning."
   },
   "login": {
-    "change_server_url": "Ändra server-URL",
     "select_language": "Välj språk",
     "sso": {
       "back": "Tillbaka",
-      "change_department": "Byt användarnamn",
-      "continue_button": "Fortsätt",
       "department_code_label": "Avdelningskod",
       "department_code_placeholder": "Ange avdelningskod",
       "department_code_required": "Avdelningskod krävs",
       "department_description": "Ange din avdelningskod för att logga in",
-      "department_id_invalid": "Avdelnings-ID måste vara ett nummer",
-      "department_id_label": "Avdelnings-ID (valfritt)",
-      "department_id_placeholder": "Ange avdelnings-ID om känt",
       "department_not_found": "Avdelningen hittades inte. Kontrollera koden och försök igen.",
       "login_with_sso_button": "Logga in med SSO",
-      "looking_up": "Söker upp konto...",
-      "lookup_network_error": "Det gick inte att nå servern. Kontrollera din anslutning och försök igen.",
-      "or_sign_in_with_password": "— eller logga in med lösenord —",
       "page_title": "Logga in med SSO",
-      "sign_in_with_sso": "Logga in med SSO",
-      "sso_not_enabled": "SSO är inte aktiverat för detta konto. Använd ditt användarnamn och lösenord.",
-      "user_description": "Ange ditt Resgrid-användarnamn eller e-post för att logga in med SSO",
-      "user_not_found": "Kontot hittades inte. Kontrollera ditt användarnamn och försök igen.",
-      "username_label": "Användarnamn eller e-post",
-      "username_placeholder": "Ange ditt användarnamn eller e-post",
-      "username_required": "Användarnamn krävs"
+      "user_description": "Ange ditt Resgrid-användarnamn eller e-post för att logga in med SSO"
     }
   },
   "map": {
-    "loading_markers": "Laddar kartmarkörer...",
     "openSideMenu": "Öppna sidomenyn",
     "tabs": {
       "map": "Karta",
@@ -411,15 +193,8 @@
     "contact_administrator": "Kontakta din administratör för att konfigurera karttjänster.",
     "failed_to_load": "Det gick inte att läsa in kartan. Kontrollera din internetanslutning.",
     "legend": {
-      "error": "Kartförklaringen kunde inte läsas in.",
-      "loading": "Läser in kartförklaringen...",
-      "no_meaning": "Ingen betydelse",
       "open": "Öppna kartförklaringen",
-      "other": "Övrigt",
-      "statuses": "Statusar",
-      "style": {
-        "unknown": "Ingen betydelse eller ingen status"
-      }
+      "statuses": "Statusar"
     },
     "mapbox_not_configured": "Mapbox är inte konfigurerat. Kontakta din administratör."
   },
@@ -493,35 +268,6 @@
       "subject_required": "Ämne krävs"
     }
   },
-  "mfa": {
-    "approve": {
-      "app": "App: {{app}}",
-      "approve": "Godkänn",
-      "approved": "Godkänt. Du kan gå tillbaka till den andra skärmen.",
-      "denied": "Nekat. Inget godkändes.",
-      "deny": "Neka",
-      "department": "Avdelning: {{department}}",
-      "done": "Klar",
-      "expires": "Går ut {{time}}",
-      "installation": "Enhet: {{label}}",
-      "none": "Inget väntar på ditt godkännande.",
-      "not_me": "Det var inte jag",
-      "number_body": "Ange numret som visas på den andra skärmen och bekräfta med din nyckel. Godkänn bara om du själv startade detta.",
-      "number_mismatch": "Det är inte numret på den andra skärmen. Försök kvar: {{count}}.",
-      "number_placeholder": "Nummer",
-      "origin": "Nära: {{origin}}",
-      "purpose": {
-        "adp": "Någon vill se skyddad information",
-        "department_entry": "Någon byter till en avdelning som du",
-        "login": "Någon loggar in på ditt konto",
-        "step_up": "Någon bekräftar en åtgärd med ditt konto",
-        "unlock": "Någon låser upp en delad enhet som du"
-      },
-      "shared": "På en delad enhet",
-      "title": "Godkänna inloggningen?",
-      "unknown_app": "En annan Resgrid-app"
-    }
-  },
   "not_found": {
     "go_home": "Gå till startskärmen!",
     "message": "Den här skärmen finns inte.",
@@ -565,14 +311,6 @@
       }
     }
   },
-  "operations": {
-    "time": {
-      "coveredBy": "Den här tiden finns redan i rapport #{{number}} för denna dag.",
-      "crewReport": "Besättningens tidrapport #{{number}} · {{name}}",
-      "individualReport": "Tidrapport #{{number}} · {{name}}",
-      "report": "Rapport #{{number}}"
-    }
-  },
   "personnel": {
     "contactInformation": "Kontaktinformation",
     "currentStatus": "Aktuell status",
@@ -583,45 +321,12 @@
       "emptyDescription": "Filteralternativ visas här när de är tillgängliga.",
       "title": "Filtrera personal"
     },
-    "id": "ID",
-    "status": {
-      "add_note": "Lägg till anteckning",
-      "calls_tab": "Larm",
-      "current": "Aktuell",
-      "current_status": "Aktuell status",
-      "destination_required": "En destination krävs för denna status",
-      "general_status": "Allmän statusuppdatering",
-      "gps_required": "GPS-position krävs för denna status",
-      "hold_to_set_hint": "Håll in i 2 sekunder för att sätta statusen",
-      "hold_to_set_instructions": "Håll in en status i 2 sekunder för att sätta den",
-      "hold_to_submit": "Håll in för att skicka",
-      "loading_pois": "Laddar POI:er...",
-      "loading_stations": "Läser in stationer...",
-      "missing_required_info": "Nödvändig information saknas",
-      "no_destination": "Ingen destination",
-      "no_stations_available": "Inga stationer tillgängliga",
-      "note": "Anteckning",
-      "note_placeholder": "Ange en anteckning (valfritt)...",
-      "note_required": "En anteckning krävs för denna status",
-      "pois_tab": "POI",
-      "responding_to_placeholder": "Ange vad du svarar till...",
-      "saved_offline": "Statusen sparades offline och skickas när anslutningen är tillbaka",
-      "select_call_to_respond_to": "Välj larm att svara till",
-      "select_destination": "Välj destination",
-      "select_responding_to": "Ange status: {{status}}",
-      "selected_call": "Valt larm",
-      "set_status": "Ange personalstatus",
-      "show_all_statuses": "Visa alla statusar ({{count}} till)",
-      "show_next_statuses": "Visa bara nästa statusar",
-      "stations_tab": "Stationer",
-      "status": "Status"
-    }
+    "id": "ID"
   },
   "pois": {
     "address_label": "Adress",
     "coordinates_label": "Koordinater",
     "destination_enabled": "Kan användas som destination",
-    "empty_description": "Inga POI:er matchar det aktuella filtret.",
     "empty_title": "Inga POI:er hittades",
     "filter_all_types": "Alla typer",
     "filter_label": "Filter",
@@ -630,7 +335,6 @@
     "invalid_title": "Ogiltig POI",
     "list_description": "Bläddra bland avdelningens POI:er, filtrera efter typ och hoppa tillbaka till kartan.",
     "load_error_title": "Det gick inte att läsa in POI",
-    "not_found": "POI hittades inte",
     "note_label": "Anteckning",
     "reset_filters": "Återställ",
     "results_count_one": "{{count}} POI",
@@ -640,26 +344,10 @@
     "sort_label": "Sortera",
     "sort_name": "Namn",
     "sort_type": "Typ",
-    "title": "POI",
     "type_label": "Typ",
     "view_details": "Visa detaljer",
     "view_on_map": "Visa på karta",
     "view_on_map_hint": "Håll kartan öppen för att se din plats och den valda POI:n tillsammans."
-  },
-  "push_notifications": {
-    "communication_test_confirmed": "Mottagande bekräftat. Tack.",
-    "communication_test_failed": "Kunde inte bekräfta mottagandet. Försök igen.",
-    "communication_test_prompt": "Detta är bara ett test. Bekräfta att du tagit emot det så att din avdelning vet att de kan nå dig.",
-    "confirm_receipt": "Bekräfta mottagande",
-    "confirming_receipt": "Bekräftar...",
-    "types": {
-      "communication_test": "Kommunikationstest",
-      "weather": "Vädervarning",
-      "work_order": "Arbetsorder"
-    },
-    "view_alert": "Visa varning",
-    "view_chat": "Visa chatt",
-    "view_work_order": "Visa arbetsorder"
   },
   "settings": {
     "logout_confirm_cancel": "Avbryt",
@@ -1034,7 +722,6 @@
     "ptt": "Röst"
   },
   "tabs": {
-    "personnel": "Personal",
     "units": "Enheter",
     "weatherAlerts": "Vädervarningar"
   },
@@ -1053,10 +740,7 @@
     "vehicleInfo": "Fordonsinformation"
   },
   "video_feeds": {
-    "add_feed": "Add Video Feed",
     "delete_confirm": "Are you sure you want to delete this video feed?",
-    "delete_feed": "Delete Video Feed",
-    "edit_feed": "Edit Video Feed",
     "form_description": "Description",
     "form_feed_format": "Feed Format",
     "form_feed_type": "Feed Type",
@@ -1065,7 +749,6 @@
     "form_status": "Status",
     "form_url": "URL",
     "format_youtube": "YouTube",
-    "no_feeds": "No video feeds for this call",
     "type_satellite": "Satellite Feed",
     "type_webcam": "Webcam",
     "unsupported_format": "This format is not supported for in-app playback. Copy the URL to open in an external player."
@@ -1099,7 +782,6 @@
       "metadata": "Detaljer",
       "status": "Status"
     },
-    "search": "Sök varningar...",
     "severity": {
       "Extreme": "Extrem",
       "Minor": "Lindrig",
@@ -1155,6 +837,7 @@
     "back": "Tillbaka",
     "cannotReport": "Er organisation kan inte ta emot nya arbetsordrar just nu.",
     "choosePhoto": "Välj foto",
+    "clearFilters": "Rensa filter",
     "commentHint": "Lägg till en kommentar",
     "due": "Förfaller {{date}}",
     "errors": {
@@ -1176,6 +859,8 @@
       "retry": "Kunde inte nå servern. Försök igen."
     },
     "files": "Foton och filer",
+    "filterStatus": "Status",
+    "filterTitle": "Filtrera arbetsordrar",
     "form": {
       "asset": "Utrustning",
       "description": "Detaljer",
@@ -1201,6 +886,7 @@
     "locationIs": "Plats: {{location}}",
     "logHours": "Registrera timmar",
     "more": "Läs in fler",
+    "noMatches": "Inga arbetsordrar matchar din sökning eller dina filter.",
     "none": "Inga arbetsordrar.",
     "noneAssigned": "Inget är tilldelat dig.",
     "photoAdded": "Foto tillagt.",
@@ -1215,6 +901,9 @@
     "resolutionIs": "Åtgärd: {{text}}",
     "safety": "Säkerhetskritiskt eller farligt arbete",
     "saveHours": "Spara timmar",
+    "search": "Sök på titel eller nummer",
+    "searchMore": "Endast inlästa arbetsordrar genomsöks. Läs in fler för att söka bland äldre.",
+    "showing": "{{shown}} av {{total}} inlästa",
     "status": {
       "0": "Begärd",
       "1": "Accepterad",
@@ -1226,6 +915,11 @@
       "7": "Avvisad",
       "8": "Dubblett",
       "9": "Avbruten"
+    },
+    "statusGroup": {
+      "all": "Alla",
+      "finished": "Avslutade",
+      "open": "Öppna"
     },
     "steps": "Steg",
     "takePhoto": "Ta foto",

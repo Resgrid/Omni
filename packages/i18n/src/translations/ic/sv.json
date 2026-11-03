@@ -1,6 +1,5 @@
 {
   "calls": {
-    "required_fields_missing": "Din avdelning kräver dessa fält innan samtalet kan sparas: {{fields}}",
     "scheduled_dispatch": "Schemalagt larm",
     "scheduled_dispatch_no_clear": "Den schemalagda tiden kan ändras här, men inte tas bort.",
     "scheduled_dispatch_too_soon": "Tiden för schemalagt larm måste ligga minst {{minutes}} minuter fram i tiden"
@@ -432,8 +431,7 @@
     "worktime_thresholds_label": "Arbetstidströsklar"
   },
   "common": {
-    "clear": "Rensa",
-    "no_location": "Ingen platsdata tillgänglig"
+    "clear": "Rensa"
   },
   "incident_assistant": {
     "briefing_accountability": "PERSONALKONTROLL",
@@ -613,14 +611,10 @@
   },
   "login": {
     "command_not_authorized": "Du har inte behörighet att använda IC-appen. Kontakta din organisations administratör.",
-    "login_button": "Logga in",
-    "login_button_loading": "Loggar in...",
-    "otp_body": "Ditt konto har tvåfaktorsautentisering aktiverad. Ange den aktuella koden från din autentiseringsapp för att slutföra inloggningen.",
     "otp_invalid": "Koden är ogiltig eller har gått ut. Ange den aktuella koden från din autentiseringsapp.",
     "otp_placeholder": "6-siffrig kod",
     "otp_title": "Tvåstegsverifiering",
-    "otp_verify": "Verifiera",
-    "title": "Logga in"
+    "otp_verify": "Verifiera"
   },
   "maps": {
     "legend": {
@@ -630,12 +624,9 @@
         "unknown_priority": "Ingen betydelse",
         "unknown_status": "Ingen betydelse eller ingen status"
       }
-    },
-    "map_layers": "Kartlager",
-    "no_layers": "Inga kartlager tillgängliga"
+    }
   },
   "notifications": {
-    "confirm_delete_message_one": "Vill du ta bort {{count}} avisering? Detta kan inte ångras.",
     "confirm_delete_message_other": "Vill du ta bort {{count}} aviseringar? Detta kan inte ångras.",
     "delete_one_error": "Det gick inte att ta bort aviseringen",
     "delete_one_success": "Avisering borttagen",
@@ -715,16 +706,7 @@
   "operations": {
     "errors": {
       "timereports_status_transition_invalid": "Rapporten har redan ändrats, kanske på en annan enhet. Uppdatera och försök igen."
-    },
-    "time": {
-      "coveredBy": "Den här tiden finns redan i rapport #{{number}} för denna dag.",
-      "crewReport": "Besättningens tidrapport #{{number}} · {{name}}",
-      "individualReport": "Tidrapport #{{number}} · {{name}}",
-      "report": "Rapport #{{number}}"
     }
-  },
-  "push_notifications": {
-    "unknown_type_warning": "Denna aviseringstyp känns inte igen. Kontakta supporten om du fortsätter att se detta meddelande."
   },
   "readiness": {
     "attention": "Kontrollera",
@@ -746,16 +728,11 @@
     "attachment_too_large": "Filen är större än {{size}} MB, som är den största tillåtna storleken för en bilaga."
   },
   "settings": {
-    "audio_device_selection": {
-      "speaker_device": "Högtalarenhet"
-    },
-    "logout_confirm_message": "Är du säker på att du vill logga ut? Detta rensar all appdata, cachade värden och inställningar.",
     "sync_section": "Synk & offlinekö",
     "sync_status": "Synkstatus",
     "sync_status_failed": "{{count}} misslyckade",
     "sync_status_ok": "Uppdaterad",
-    "sync_status_pending": "{{count}} väntande",
-    "view_sync_queue": "Visa synkkö"
+    "sync_status_pending": "{{count}} väntande"
   },
   "sidebar": {
     "menu": "Meny"

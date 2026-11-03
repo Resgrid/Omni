@@ -4,21 +4,21 @@
 // commit GitHub made when it merged the pull request; a tag or dispatch run builds the commit it points at, which has
 // one when a merge made it. Only merged pull requests count: an open one that contains the commit did not produce it.
 //
-// HTML comments (the template's hints, the markers summary bots wrap their text in) are removed and the headings are
-// stepped down below the section's own ### heading. The file is left empty when no merged pull request is found or
-// GitHub cannot be reached: the notes never stop a release.
+// HTML comments outside fenced code (the template's hints, the markers summary bots wrap their text in) are removed and
+// the headings are stepped down below the section's own ### heading. The file is left empty when no merged pull request
+// is found or GitHub cannot be reached: the notes never stop a release.
 //
 // Usage: node scripts/ci/pr-summary.mjs --commit <sha> --out pr-summary.md     (GITHUB_TOKEN, GITHUB_REPOSITORY)
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { githubClient, parseArgs, requireArg } from './lib.mjs';
+import { fenceAfter, githubClient, parseArgs, requireArg } from './lib.mjs';
 
 // Level of the section heading; the description's headings start one level below it.
 const SECTION_LEVEL = 3;
-const FENCE = /^ {0,3}(`{3,}|~{3,})/;
 const HEADING = /^( {0,3})(#{1,6})(?=[ \t]|$)/;
+const COMMENT = /<!--[\s\S]*?-->/g;
 
 /** The merged pull request that produced `sha`: the one merged as that commit, else the first merged one listing it. */
 export function pickPullRequest(pulls, sha) {
@@ -28,10 +28,11 @@ export function pickPullRequest(pulls, sha) {
 
 /** The description without HTML comments, its shallowest heading at `level + 1`, and runs of blank lines collapsed. */
 export function cleanDescription(body, level = SECTION_LEVEL) {
-  const lines = String(body ?? '')
-    .replace(/\r\n?/g, '\n')
-    .replace(/<!--[\s\S]*?-->/g, '')
-    .split('\n');
+  const lines = withoutComments(
+    String(body ?? '')
+      .replace(/\r\n?/g, '\n')
+      .split('\n')
+  );
   let shallowest = 7;
   outsideFences(lines, (line) => {
     const m = HEADING.exec(line);
@@ -55,14 +56,39 @@ export function formatPullRequest(pr) {
 function outsideFences(lines, fn) {
   let open = null;
   return lines.map((line) => {
-    const m = FENCE.exec(line);
-    if (m) {
-      if (!open) open = m[1];
-      else if (m[1][0] === open[0] && m[1].length >= open.length) open = null;
-      return line;
-    }
-    return open ? line : fn(line);
+    const fenced = open !== null || fenceAfter(null, line) !== null;
+    open = fenceAfter(open, line);
+    return fenced ? line : fn(line);
   });
+}
+
+// Removes HTML comments, keeping fenced code (an HTML or XML example) as written. Read in order, as Markdown does: a
+// comment may span lines, fence markers inside it included; one that never closes stays as text.
+function withoutComments(lines) {
+  const out = [];
+  let open = null;
+  let comment = null; // { before, lines }: the text ahead of a comment still open, and the lines it has taken so far
+  for (const line of lines) {
+    let text = line;
+    if (comment) {
+      const end = line.indexOf('-->');
+      if (end === -1) {
+        comment.lines.push(line);
+        continue;
+      }
+      text = comment.before + line.slice(end + 3);
+      comment = null;
+    } else if (open !== null || fenceAfter(null, line) !== null) {
+      open = fenceAfter(open, line);
+      out.push(line);
+      continue;
+    }
+    text = text.replace(COMMENT, '');
+    const start = text.indexOf('<!--');
+    if (start === -1) out.push(text);
+    else comment = { before: text.slice(0, start), lines: [text.slice(start)] };
+  }
+  return comment ? [...out, comment.before + comment.lines[0], ...comment.lines.slice(1)] : out;
 }
 
 async function main() {

@@ -62,7 +62,7 @@ export default function ContactsListScreen({ onSelectContact }: ContactsListScre
         ) : null}
       </Input>
       {categories.length > 0 ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-2 max-h-10">
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-2" testID="contacts-categories">
           <HStack space="sm">
             {[{ ContactCategoryId: '', Name: t('contacts.all_categories') }, ...categories].map((category) => {
               const selected = (categoryId ?? '') === category.ContactCategoryId;

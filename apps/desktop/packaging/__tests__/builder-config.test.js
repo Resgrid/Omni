@@ -133,15 +133,26 @@ describe('windowsSigning', () => {
     expect(windowsSigning({ WIN_CSC_LINK: 'cert.pfx', WIN_PUBLISHER_NAME: 'Resgrid, LLC' })).toEqual({ mode: 'pfx', options: { signtoolOptions: { publisherName: 'Resgrid, LLC' } } });
     expect(windowsSigning({ CSC_LINK: 'cert.pfx' }).mode).toBe('pfx');
     expect(windowsSigning({ AZURE_TRUSTED_SIGNING_ENDPOINT: 'x' })).toEqual({ mode: 'none', options: {} });
+  });
+
+  it('treats a blank WIN_CSC_LINK as no Windows certificate, as electron-builder does', () => {
+    expect(windowsSigning({ WIN_CSC_LINK: '', CSC_LINK: 'mac.p12' }).mode).toBe('none');
     expect(build('unit').win.azureSignOptions).toBeUndefined();
   });
 });
 
 describe('dropBlankCertificateEnv', () => {
   it('removes the blank certificate variables CI passes for unset secrets and keeps the rest', () => {
-    const env = { CSC_LINK: '', CSC_KEY_PASSWORD: '', WIN_CSC_LINK: '  ', WIN_CSC_KEY_PASSWORD: 'secret', CSC_NAME: 'Resgrid, LLC', APPLE_API_KEY_ID: '', PATH: '/usr/bin' };
-    expect(dropBlankCertificateEnv(env)).toEqual(['CSC_LINK', 'CSC_KEY_PASSWORD', 'WIN_CSC_LINK']);
-    expect(env).toEqual({ WIN_CSC_KEY_PASSWORD: 'secret', CSC_NAME: 'Resgrid, LLC', APPLE_API_KEY_ID: '', PATH: '/usr/bin' });
+    const env = { CSC_LINK: '', CSC_KEY_PASSWORD: '  ', CSC_NAME: 'Resgrid, LLC', APPLE_API_KEY_ID: '', PATH: '/usr/bin' };
+    expect(dropBlankCertificateEnv(env)).toEqual(['CSC_LINK', 'CSC_KEY_PASSWORD']);
+    expect(env).toEqual({ CSC_NAME: 'Resgrid, LLC', APPLE_API_KEY_ID: '', PATH: '/usr/bin' });
+  });
+
+  it('keeps blank Windows overrides, which stop electron-builder falling back to CSC_LINK / CSC_KEY_PASSWORD', () => {
+    const env = { CSC_LINK: 'mac.p12', WIN_CSC_LINK: '', CSC_KEY_PASSWORD: 'mac', WIN_CSC_KEY_PASSWORD: '' };
+    expect(dropBlankCertificateEnv(env)).toEqual([]);
+    expect(env.WIN_CSC_LINK).toBe('');
+    expect(env.WIN_CSC_KEY_PASSWORD).toBe('');
   });
 
   it('covers every certificate variable electron-builder reads without skipping blanks', () => {

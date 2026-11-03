@@ -42,7 +42,8 @@ function artifactNames(manifest, version) {
  * Windows code signing, by preference: Azure Trusted Signing, then a PFX certificate, else unsigned.
  * Azure: AZURE_TRUSTED_SIGNING_ENDPOINT, _ACCOUNT, _PROFILE and WIN_PUBLISHER_NAME here; the signing tool reads the Entra
  * credentials (AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET) itself.
- * PFX: WIN_CSC_LINK (path, https URL or base64) and WIN_CSC_KEY_PASSWORD, read by electron-builder itself.
+ * PFX: WIN_CSC_LINK (path, https URL or base64) and WIN_CSC_KEY_PASSWORD, read by electron-builder itself. Like
+ * electron-builder, a WIN_CSC_LINK that is set, even blank, overrides CSC_LINK.
  */
 function windowsSigning(env) {
   if (has(env, 'AZURE_TRUSTED_SIGNING_ENDPOINT', 'AZURE_TRUSTED_SIGNING_ACCOUNT', 'AZURE_TRUSTED_SIGNING_PROFILE', 'WIN_PUBLISHER_NAME')) {
@@ -58,7 +59,7 @@ function windowsSigning(env) {
       },
     };
   }
-  if (has(env, 'WIN_CSC_LINK') || has(env, 'CSC_LINK')) {
+  if (has(env, typeof env.WIN_CSC_LINK === 'string' ? 'WIN_CSC_LINK' : 'CSC_LINK')) {
     return { mode: 'pfx', options: has(env, 'WIN_PUBLISHER_NAME') ? { signtoolOptions: { publisherName: env.WIN_PUBLISHER_NAME } } : {} };
   }
   return { mode: 'none', options: {} };
@@ -67,7 +68,9 @@ function windowsSigning(env) {
 // Certificate variables electron-builder reads from process.env itself, keeping '' as a value (it only skips null): a
 // blank CSC_LINK is imported as a certificate path, which resolves to the project directory and fails the macOS build
 // ("apps/desktop not a file"). GitHub Actions passes unset secrets as '', so blank ones are removed before building.
-const CERTIFICATE_ENV = ['CSC_LINK', 'CSC_KEY_PASSWORD', 'CSC_NAME', 'CSC_KEYCHAIN', 'CSC_INSTALLER_LINK', 'CSC_INSTALLER_KEY_PASSWORD', 'WIN_CSC_LINK', 'WIN_CSC_KEY_PASSWORD'];
+// WIN_CSC_LINK and WIN_CSC_KEY_PASSWORD stay: electron-builder reads a blank one as "not the CSC_ value" (no Windows
+// certificate; an unencrypted PFX), so removing it would sign Windows with the macOS certificate or password.
+const CERTIFICATE_ENV = ['CSC_LINK', 'CSC_KEY_PASSWORD', 'CSC_NAME', 'CSC_KEYCHAIN', 'CSC_INSTALLER_LINK', 'CSC_INSTALLER_KEY_PASSWORD'];
 
 /** Deletes the blank certificate variables from `env` (in place, so electron-builder sees them as unset); returns their names. */
 function dropBlankCertificateEnv(env = process.env) {

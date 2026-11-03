@@ -288,6 +288,7 @@ Stores call API functions; the API client applies auth, timeouts, the cached-end
 
 - pnpm 10 workspaces, hoisted linker, `catalog:` versions for every shared dependency, `patchedDependencies` (one copy each of the gluestack and webview patches; IC's rnmapbox patch is not needed under D10; drop the mmkv 3.1.0 and app-icon-badge patches after verification).
 - ESLint 8 → flat config in `tooling/eslint-config` with Responder's rule set on Unit/IC's newer plugin versions, Unit's ban on React Native `Modal`, i18n key-order/identity lint, ternary-not-`&&` in JSX, dependency-cruiser layer rules.
+- Anti-slop Oxlint rules (vendored, `tooling/oxlint/anti-slop`) alongside ESLint, enforced as a ratchet: `pnpm lint:anti-slop` fails when a file gains a finding over `tooling/oxlint/anti-slop-baseline.json`, in the pre-commit hook, `check-all`, CI and Claude Code's edit hook. The baseline only shrinks.
 - Prettier unchanged. Git hooks actually installed (lefthook or husky) for lint-staged and commitlint. Commit format: `RO-Txxx Summary` (owner decision); commitlint accepts it, and a missing ticket number is allowed while work is unticketed.
 - Jest preset from Responder's setup + BigBoard's preset merge + IC's gesture-handler setup; coverage only in CI.
 
@@ -369,7 +370,7 @@ Signing follows Responder, IC, Dispatch and BigBoard, not Unit: `eas build --loc
 
 | Workflow | Trigger | Content | Target time |
 |---|---|---|---|
-| `ci.yml` | PR, merge queue | install → in parallel: lint, type-check, translation parity, dependency-cruiser, Jest (4 shards), API contract tests → per variant: `expo config` snapshot, route contract, web export smoke | < 12 min |
+| `ci.yml` | PR, merge queue | install → in parallel: lint (ESLint, anti-slop ratchet), type-check, translation parity, dependency-cruiser, Jest (4 shards), API contract tests → per variant: `expo config` snapshot, route contract, web export smoke | < 12 min |
 | `release.yml` | push to `master` (channel `internal`), tag `<variant>-v*` (channel `production`), manual dispatch (variants, targets, channel, force-native) | Stages below | ≈ 60 min native (two Android builds) / ≈ 10 min JS-only, all five variants |
 | `ota.yml` | manual dispatch | JS-only update for chosen variants/channel; refuses if the fingerprint differs from the installed runtime | ≈ 5 min |
 | `nightly.yml` | schedule + dispatch | Android dev-client builds for all variants, Maestro e2e on an Android emulator, cache warming (iOS dev builds and iOS e2e run on a Mac) | — |
@@ -390,6 +391,7 @@ Stage 2  needs web-<v>
 Stage 3  release per variant (ubuntu, ~3 min)
          GitHub Release <variant>-v<version> (prerelease for internal) with all assets + SHA256SUMS + fingerprints;
            notes: build summary, description of the pull request merged as the commit, commits since the last tag
+           (cut at a whole line to GitHub's and Firebase's size limits, with a link to the full text)
          Firebase App Distribution (APK → Android testers; iOS testers use TestFlight) · Changerawr notes
          Electron update feed: latest*.yml per variant/channel to object storage (generic provider)
 ```
@@ -547,6 +549,7 @@ LiveKit store from U (Android routing via InCallAudioModule, room-switch race fi
 
 - `@resgrid/i18n` with U/I locale detection (all device locales), R's translate-cache clear on change, D's guarded web storage; 10 languages; `ar` RTL.
 - Namespaces: `common` (~1,250 keys present in ≥ 4 apps) + one per variant (`responder`, `unit`, `ic`, `dispatch`, `bigboard`), `fallbackNS: 'common'` so existing flat keys keep working. Product names through `{{appName}}`.
+- A variant namespace is read first, so it never copies a `common` key: that copy hides later fixes to the shared string in that one app. It may share a key with `common` only as a deliberate wording override listed in `packages/i18n/review/variant-overrides.json` with the same placeholders (tests enforce it). The overrides the merge kept for the legacy apps' wording were unified into `common` on 2026-11-02 (owner decision); two deliberate ones remain (Responder's own-location notice, Unit's unit-location warning).
 - Reconciliation: the 71 English conflicts by review (`i18n-conflicts.tsv`); the 2,355 divergent translations resolved per key by git-blame recency into review CSVs; duplicate namespaces merged (`weatherAlerts`/`weather_alerts`, `videoFeeds`/`video_feeds`, `poi`/`pois`); scaffold strings removed ("Welcome to obytes app site").
 - CI: key-set parity per language, unused-key report.
 

@@ -1,6 +1,5 @@
 {
   "calls": {
-    "required_fields_missing": "Twoja jednostka wymaga tych pól przed zapisaniem zgłoszenia: {{fields}}",
     "scheduled_dispatch": "Zaplanowane zadysponowanie",
     "scheduled_dispatch_no_clear": "Ten zaplanowany czas można tutaj zmienić, ale nie można go usunąć.",
     "scheduled_dispatch_too_soon": "Czas zaplanowanego zadysponowania musi przypadać co najmniej {{minutes}} minut od teraz"
@@ -432,8 +431,7 @@
     "worktime_thresholds_label": "Progi Czasu Pracy"
   },
   "common": {
-    "clear": "Wyczyść",
-    "no_location": "Brak danych lokalizacji"
+    "clear": "Wyczyść"
   },
   "incident_assistant": {
     "briefing_accountability": "KONTROLA STANU OSOBOWEGO",
@@ -613,14 +611,10 @@
   },
   "login": {
     "command_not_authorized": "Nie masz uprawnień do korzystania z aplikacji IC. Skontaktuj się z administratorem swojej jednostki.",
-    "login_button": "Zaloguj się",
-    "login_button_loading": "Logowanie...",
-    "otp_body": "Twoje konto ma włączone uwierzytelnianie dwuskładnikowe. Wprowadź aktualny kod z aplikacji uwierzytelniającej, aby dokończyć logowanie.",
     "otp_invalid": "Ten kod jest nieprawidłowy lub wygasł. Wprowadź aktualny kod z aplikacji uwierzytelniającej.",
     "otp_placeholder": "6-cyfrowy kod",
     "otp_title": "Weryfikacja dwuetapowa",
-    "otp_verify": "Zweryfikuj",
-    "title": "Zaloguj się"
+    "otp_verify": "Zweryfikuj"
   },
   "maps": {
     "legend": {
@@ -630,12 +624,9 @@
         "unknown_priority": "Brak znaczenia",
         "unknown_status": "Brak znaczenia lub statusu"
       }
-    },
-    "map_layers": "Warstwy mapy",
-    "no_layers": "Brak dostępnych warstw mapy"
+    }
   },
   "notifications": {
-    "confirm_delete_message_one": "Czy na pewno usunąć {{count}} powiadomienie? Tej operacji nie można cofnąć.",
     "confirm_delete_message_other": "Czy na pewno usunąć {{count}} powiadomienia? Tej operacji nie można cofnąć.",
     "delete_one_error": "Nie udało się usunąć powiadomienia",
     "delete_one_success": "Powiadomienie usunięte",
@@ -715,16 +706,7 @@
   "operations": {
     "errors": {
       "timereports_status_transition_invalid": "Ten raport został już zmieniony, być może na innym urządzeniu. Odśwież i spróbuj ponownie."
-    },
-    "time": {
-      "coveredBy": "Ten czas jest już w raporcie #{{number}} z tego dnia.",
-      "crewReport": "Raport czasu załogi #{{number}} · {{name}}",
-      "individualReport": "Raport czasu #{{number}} · {{name}}",
-      "report": "Raport #{{number}}"
     }
-  },
-  "push_notifications": {
-    "unknown_type_warning": "Ten typ powiadomienia nie jest rozpoznawany. Skontaktuj się z pomocą techniczną, jeśli ten komunikat będzie się powtarzał."
   },
   "readiness": {
     "attention": "Do sprawdzenia",
@@ -746,16 +728,11 @@
     "attachment_too_large": "Ten plik jest większy niż {{size}} MB, czyli maksymalny rozmiar załącznika."
   },
   "settings": {
-    "audio_device_selection": {
-      "speaker_device": "Urządzenie głośnikowe"
-    },
-    "logout_confirm_message": "Czy na pewno chcesz się wylogować? Spowoduje to wyczyszczenie wszystkich danych aplikacji, wartości w pamięci podręcznej i ustawień.",
     "sync_section": "Synchronizacja i kolejka offline",
     "sync_status": "Stan synchronizacji",
     "sync_status_failed": "{{count}} nieudane",
     "sync_status_ok": "Aktualne",
-    "sync_status_pending": "{{count}} oczekujące",
-    "view_sync_queue": "Zobacz kolejkę synchronizacji"
+    "sync_status_pending": "{{count}} oczekujące"
   },
   "sidebar": {
     "menu": "Menu"

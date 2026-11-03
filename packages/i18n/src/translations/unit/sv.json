@@ -3,27 +3,22 @@
     "initialization_failed": "Det gick inte att läsa in appdata. Kontrollera din anslutning och försök igen."
   },
   "callImages": {
-    "not_signed_in": "Du måste vara inloggad för att ladda upp bilder",
-    "upload_error": "Det gick inte att ladda upp bilden"
+    "not_signed_in": "Du måste vara inloggad för att ladda upp bilder"
   },
   "calls": {
     "directions_to_destination": "Vägbeskrivning till destinationen",
-    "dispatch_on": "Utskickstid",
-    "dispatch_on_too_soon": "Utskickstiden måste vara minst {{minutes}} minuter fram i tiden",
     "errors": {
       "load_failed": "Det gick inte att läsa in samtalen"
     },
     "files": {
       "sharing_unavailable": "Delning är inte tillgängligt på den här enheten"
     },
-    "required_fields_missing": "Din avdelning kräver dessa fält innan samtalet kan sparas: {{fields}}",
     "view_on_map": "Visa på kartan"
   },
   "chat": {
     "chatting_as": "Chattar som {{name}}"
   },
   "common": {
-    "no_location": "Ingen platsdata tillgänglig",
     "no_unit": "Ingen enhet",
     "unknown_error": "Ett okänt fel uppstod"
   },
@@ -33,30 +28,11 @@
   },
   "incident_command": {
     "error": "Det gick inte att ladda information om insatsledningen",
-    "need_category": {
-      "equipment": "Utrustning",
-      "logistics": "Logistik",
-      "medical": "Medicinskt",
-      "other": "Övrigt",
-      "resource": "Resurs",
-      "staffing": "Bemanning"
-    },
-    "need_status": {
-      "cancelled": "Avbrutet",
-      "met": "Uppfyllt",
-      "open": "Öppet",
-      "partially_met": "Delvis uppfyllt"
-    },
     "no_active_command": "Ingen insatsledning är aktiv för detta samtal",
     "objective_status": {
       "complete": "Slutfört",
       "in_progress": "Pågår",
       "pending": "Väntande"
-    },
-    "objective_type": {
-      "benchmark": "Milstolpe",
-      "general": "Allmänt",
-      "safety": "Säkerhet"
     },
     "progress": "{{percent}} % slutfört",
     "quantity_fulfilled": "{{fulfilled}} av {{requested}} uppfyllda"
@@ -136,13 +112,6 @@
     "unnamedLocation": "Fack",
     "wholeUnit": "Hela enheten: {{name}}"
   },
-  "login": {
-    "hide_password": "Dölj lösenord",
-    "login_button": "Logga in",
-    "login_button_loading": "Loggar in...",
-    "show_password": "Visa lösenord",
-    "title": "Logga in"
-  },
   "map": {
     "legend": {
       "built_in_unit_statuses": "Inbyggda enhetsstatusar",
@@ -200,14 +169,10 @@
     "removed_one": "Aviseringen har tagits bort",
     "unable_to_load": "Det gick inte att läsa in aviseringarna"
   },
-  "push_notifications": {
-    "unknown_type_warning": "Denna aviseringstyp känns inte igen. Kontakta supporten om du fortsätter att se detta meddelande."
-  },
   "roles": {
     "assignedElsewhere": "I en annan roll",
     "clearAssignment": "Rensa den aktuella tilldelningen",
     "noUsersFound": "Inga användare hittades",
-    "saved_successfully": "Rolltilldelningarna har sparats",
     "searchUsers": "Sök efter namn eller grupp...",
     "selectUserDescription": "Välj en person för den här rollen",
     "selectUserForRole": "Tilldela: {{role}}",
@@ -223,22 +188,10 @@
     "traffic_severe": "Mycket tät trafik"
   },
   "settings": {
-    "audio_device_selection": {
-      "speaker_device": "Högtalarenhet"
-    },
-    "logout_confirm_message": "Är du säker på att du vill logga ut? Detta rensar all appdata, cachade värden och inställningar.",
-    "no_units_available_help": "Inga enheter är tilldelade dig. Be din avdelningsadministratör lägga till dig i en enhets stationsgrupp.",
-    "realtime_geolocation_warning": "Den här funktionen skickar den här enhetens position till din avdelning medan appen är öppen och ansluter till realtidsnavet för att ta emot andra enheters positioner. Det kräver en aktiv nätverksanslutning.",
-    "units_load_failed": "Det gick inte att läsa in enheter. Kontrollera anslutningen och försök igen."
+    "realtime_geolocation_warning": "Den här funktionen skickar den här enhetens position till din avdelning medan appen är öppen och ansluter till realtidsnavet för att ta emot andra enheters positioner. Det kräver en aktiv nätverksanslutning."
   },
   "status": {
-    "current": "Aktuell",
     "current_status": "Aktuell status",
-    "hold_to_set_hint": "Håll in i 2 sekunder för att sätta statusen",
-    "hold_to_set_instructions": "Håll in en status i 2 sekunder för att sätta den",
-    "hold_to_submit": "Håll in för att skicka",
-    "show_all_statuses": "Visa alla statusar ({{count}} till)",
-    "show_next_statuses": "Visa bara nästa statusar",
-    "status_queued": "Status sparad på den här enheten. Den skickas automatiskt."
+    "hold_to_set_instructions": "Håll in en status i 2 sekunder för att sätta den"
   }
 }

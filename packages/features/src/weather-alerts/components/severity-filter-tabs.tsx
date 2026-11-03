@@ -15,7 +15,7 @@ export interface SeverityFilterTabsProps {
 export const SeverityFilterTabs: React.FC<SeverityFilterTabsProps> = ({ value, onChange, counts }) => {
   const { t } = useTranslation();
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-2 max-h-10">
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-2" testID="weather-severity-tabs">
       <HStack space="sm">
         {SEVERITY_TABS.map((tab) => {
           const selected = tab === value;

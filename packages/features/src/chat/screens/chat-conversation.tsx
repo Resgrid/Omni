@@ -2,7 +2,7 @@ import { useAuthStore, useSecurity } from '@resgrid/auth';
 import { isSafeRouteId } from '@resgrid/core/utils/route-ids';
 import { useChatStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
-import { ChatChannelType, ChatMessagePriority, type ChatMessageResultData } from '@resgrid/models';
+import { ChatChannelType, ChatMessagePriority, type ChatMessageResultData, ChatMessageType, type GifResultData } from '@resgrid/models';
 import { BottomAnchoredKeyboardView, FlatList, Loading, ScreenHeader, useToast, View, ZeroState } from '@resgrid/ui';
 import * as Clipboard from 'expo-clipboard';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -11,13 +11,16 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useChatIdentity } from '../chat-identity';
 import { ChatGate } from '../components/chat-gate';
+import { ChatImageViewer } from '../components/chat-image';
+import { GifPickerSheet } from '../components/gif-picker-sheet';
 import { MessageActionsSheet } from '../components/message-actions-sheet';
 import { MessageBubble } from '../components/message-bubble';
 import { MessageComposer } from '../components/message-composer';
 import { useActiveChatChannel } from '../hooks/use-active-chat-channel';
 import { useJoinedChatChannel } from '../hooks/use-joined-chat-channel';
 import { flagMessage, moderatorDeleteMessage, setMessagePinned } from '../lib/chat-actions';
-import { isOwnMessage, orderMessages } from '../lib/chat-format';
+import { buildGifMetadata, isOwnMessage, orderMessages } from '../lib/chat-format';
+import { messageBodyText } from '../lib/message-text';
 
 export interface ChatConversationScreenProps {
   channelId?: string;
@@ -39,6 +42,8 @@ function ChatConversationContent({ channelId, keyboardOffset = 0 }: { channelId:
   const [resolveAttempted, setResolveAttempted] = useState(false);
   const [actionsFor, setActionsFor] = useState<ChatMessageResultData | null>(null);
   const [editing, setEditing] = useState<ChatMessageResultData | null>(null);
+  const [gifPickerOpen, setGifPickerOpen] = useState(false);
+  const [viewingImage, setViewingImage] = useState<ChatMessageResultData | null>(null);
 
   // Deep links can arrive before the channel list: resolve once, then show the generic screen for unknown ids.
   useEffect(() => {
@@ -82,6 +87,22 @@ function ChatConversationContent({ channelId, keyboardOffset = 0 }: { channelId:
     [asUnitId, channelId, editing, t, toast]
   );
 
+  // The title rides along as the body (searchable, and the fallback text if the GIF url is ever dropped).
+  const sendGif = useCallback(
+    async (gif: GifResultData) => {
+      const result = await useChatStore.getState().sendMessage({
+        channelId,
+        body: gif.Title ?? '',
+        messageType: ChatMessageType.Gif,
+        priority: ChatMessagePriority.Normal,
+        metadataJson: buildGifMetadata(gif),
+        ...(asUnitId != null ? { asUnitId } : {}),
+      });
+      if (result.outcome === 'rejected') toast.error(t('chat.send_failed'));
+    },
+    [asUnitId, channelId, t, toast]
+  );
+
   const run = useCallback(
     async (action: () => Promise<unknown>, failureKey: string) => {
       try {
@@ -108,12 +129,12 @@ function ChatConversationContent({ channelId, keyboardOffset = 0 }: { channelId:
         {isLoading && ordered.length === 0 ? (
           <Loading />
         ) : ordered.length === 0 ? (
-          <ZeroState icon={MessagesSquare} heading={t('chat.no_messages')} viewClassName="flex-1 p-6" testID="chat-conversation-empty" />
+          <ZeroState icon={MessagesSquare} heading={t('chat.no_messages')} testID="chat-conversation-empty" />
         ) : (
           <FlatList
             data={ordered}
             keyExtractor={(message) => message.ClientMessageId || message.ChatMessageId}
-            renderItem={({ item }) => <MessageBubble message={item} isOwn={isOwnMessage(item, userId, asUnitId)} showSender={showSender} onLongPress={setActionsFor} />}
+            renderItem={({ item }) => <MessageBubble message={item} isOwn={isOwnMessage(item, userId, asUnitId)} showSender={showSender} onLongPress={setActionsFor} onOpenImage={setViewingImage} />}
             maintainVisibleContentPosition={{ startRenderingFromBottom: true, autoscrollToBottomThreshold: 0.2 }}
             onStartReached={() => void useChatStore.getState().loadOlderMessages(channelId)}
             contentContainerStyle={{ paddingHorizontal: 12, paddingVertical: 8 }}
@@ -128,8 +149,11 @@ function ChatConversationContent({ channelId, keyboardOffset = 0 }: { channelId:
           initialValue={editing?.Body ?? ''}
           allowUrgent={!editing}
           {...(editing ? { onCancelEdit: () => setEditing(null) } : {})}
+          {...(!isChatbot ? { onOpenGif: () => setGifPickerOpen(true) } : {})}
         />
       </BottomAnchoredKeyboardView>
+      <ChatImageViewer message={viewingImage} onClose={() => setViewingImage(null)} />
+      <GifPickerSheet isOpen={gifPickerOpen} onClose={() => setGifPickerOpen(false)} onSelect={(gif) => void sendGif(gif)} />
       <MessageActionsSheet
         message={actionsFor}
         isOpen={!!actionsFor}
@@ -141,7 +165,7 @@ function ChatConversationContent({ channelId, keyboardOffset = 0 }: { channelId:
           const mine = (message.Reactions ?? []).some((reaction) => reaction.Emoji === emoji && (asUnitId != null ? reaction.UnitId === asUnitId : !!userId && reaction.UserId === userId));
           void run(() => (mine ? useChatStore.getState().removeReaction(message.ChatMessageId, emoji) : useChatStore.getState().addReaction(message.ChatMessageId, emoji)), 'chat.reaction_failed');
         }}
-        onCopy={(message) => void Clipboard.setStringAsync(message.Body ?? '').then(() => toast.success(t('chat.copied')))}
+        onCopy={(message) => void Clipboard.setStringAsync(messageBodyText(message)).then(() => toast.success(t('chat.copied')))}
         onEdit={setEditing}
         onDelete={(message) => void run(() => useChatStore.getState().deleteMessage(message.ChatMessageId, channelId), 'chat.delete_failed')}
         onTogglePin={(message, pinned) => void run(() => setMessagePinned(message.ChatMessageId, pinned), 'chat.pin_failed')}

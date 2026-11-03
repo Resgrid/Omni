@@ -1,6 +1,5 @@
 {
   "calls": {
-    "required_fields_missing": "Votre département exige ces champs avant que l'appel puisse être enregistré : {{fields}}",
     "scheduled_dispatch": "Envoi programmé",
     "scheduled_dispatch_no_clear": "Cette heure programmée peut être modifiée ici, mais pas supprimée.",
     "scheduled_dispatch_too_soon": "L'heure de l'envoi programmé doit se situer au moins {{minutes}} minutes plus tard"
@@ -432,8 +431,7 @@
     "worktime_thresholds_label": "Seuils de Temps de Travail"
   },
   "common": {
-    "clear": "Effacer",
-    "no_location": "Aucune donnée de localisation disponible"
+    "clear": "Effacer"
   },
   "incident_assistant": {
     "briefing_accountability": "CONTRÔLE DES EFFECTIFS",
@@ -613,14 +611,10 @@
   },
   "login": {
     "command_not_authorized": "Vous n'êtes pas autorisé à utiliser l'application IC. Contactez l'administrateur de votre service.",
-    "login_button": "Se connecter",
-    "login_button_loading": "Connexion en cours...",
-    "otp_body": "L'authentification à deux facteurs est activée sur votre compte. Saisissez le code actuel de votre application d'authentification pour terminer la connexion.",
     "otp_invalid": "Ce code est invalide ou a expiré. Saisissez le code actuel de votre application d'authentification.",
     "otp_placeholder": "Code à 6 chiffres",
     "otp_title": "Vérification en deux étapes",
-    "otp_verify": "Vérifier",
-    "title": "Connexion"
+    "otp_verify": "Vérifier"
   },
   "maps": {
     "legend": {
@@ -630,12 +624,9 @@
         "unknown_priority": "Sans signification",
         "unknown_status": "Sans signification ou sans statut"
       }
-    },
-    "map_layers": "Couches de carte",
-    "no_layers": "Aucune couche de carte disponible"
+    }
   },
   "notifications": {
-    "confirm_delete_message_one": "Voulez-vous vraiment supprimer {{count}} notification ? Cette action est irréversible.",
     "confirm_delete_message_other": "Voulez-vous vraiment supprimer {{count}} notifications ? Cette action est irréversible.",
     "delete_one_error": "Échec de la suppression de la notification",
     "delete_one_success": "Notification supprimée",
@@ -715,16 +706,7 @@
   "operations": {
     "errors": {
       "timereports_status_transition_invalid": "Ce rapport a déjà été modifié, peut-être depuis un autre appareil. Actualisez et réessayez."
-    },
-    "time": {
-      "coveredBy": "Ce temps figure déjà sur le rapport #{{number}} de ce jour.",
-      "crewReport": "Rapport de temps d'équipage #{{number}} · {{name}}",
-      "individualReport": "Rapport de temps #{{number}} · {{name}}",
-      "report": "Rapport #{{number}}"
     }
-  },
-  "push_notifications": {
-    "unknown_type_warning": "Ce type de notification n'est pas reconnu. Veuillez contacter le support si vous continuez à voir ce message."
   },
   "readiness": {
     "attention": "À vérifier",
@@ -746,16 +728,11 @@
     "attachment_too_large": "Ce fichier dépasse {{size}} Mo, la taille maximale d'une pièce jointe."
   },
   "settings": {
-    "audio_device_selection": {
-      "speaker_device": "Appareil haut-parleur"
-    },
-    "logout_confirm_message": "Êtes-vous sûr de vouloir vous déconnecter ? Cela effacera toutes les données de l'application, les valeurs mises en cache et les paramètres.",
     "sync_section": "Synchronisation et file hors ligne",
     "sync_status": "État de synchronisation",
     "sync_status_failed": "{{count}} en échec",
     "sync_status_ok": "À jour",
-    "sync_status_pending": "{{count}} en attente",
-    "view_sync_queue": "Voir la file de synchronisation"
+    "sync_status_pending": "{{count}} en attente"
   },
   "sidebar": {
     "menu": "Menu"

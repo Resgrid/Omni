@@ -155,7 +155,8 @@ export const useOperationsStore = create<OperationsState>()(
         loadDeployments: async (includeClosed) => {
           await runner.run(
             'deployments',
-            async () => unwrapList(await getDeployments(ctx(), { active: includeClosed ? undefined : true })),
+            // Core reads a missing `active` as open only, so "all" has to say false.
+            async () => unwrapList(await getDeployments(ctx(), { active: !includeClosed })),
             (deployments) => ({ deployments })
           );
         },

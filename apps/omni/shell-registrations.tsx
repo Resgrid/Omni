@@ -19,12 +19,14 @@ import { CALL_RECORDS_TAB, configureRecords, registerRecordsContextHook } from '
 import { registerRunCardCallDetailTab, registerRunCardHookPoints } from '@resgrid/features/runcards';
 import { configureSettings } from '@resgrid/features/settings';
 import { UnitStatusSidebar } from '@resgrid/features/unit-status';
+import { configureNotificationSounds } from '@resgrid/notifications';
 import { usePathname } from 'expo-router';
 
 import { appUpdatesModule } from './app-updates';
 import { ACTIVE_UNIT_ADAPTER, clearActiveCall, ShellChatIdentityProvider, ShellMapProvider, ShellNavigationHandoffProvider, ShellRouteMapProvider, ShellStatusProvider, storageSyncServices } from './feature-providers';
 import { registerMapConfigRefreshStep } from './map-config-refresh';
 import { registerNavigationSteps } from './navigation-wiring';
+import { NOTIFICATION_SOUNDS } from './notification-sounds';
 import { registerOfflineMapsSteps } from './offline-maps-wiring';
 import { useCommandRecordsContext } from './records-context';
 
@@ -110,6 +112,10 @@ registerNavigationSteps();
 // module (app-updates.native.ts); web, Electron and development builds hand over nothing, so updates stay off there. The
 // shell's init steps check after sign-in and on foreground; Settings → App updates checks on demand.
 configureAppUpdates({ module: appUpdatesModule });
+
+// In-app notification sounds (foreground web/desktop pushes and desktop notices, the Settings sound tests): web and
+// Electron load the bundled files, iOS/Android play the copies in the native project (notification-sounds.native.ts).
+configureNotificationSounds(NOTIFICATION_SOUNDS);
 
 // Once storage is open, before any screen mounts: Storage & sync (and Unit's unit choice), the Records outbox controls
 // and BigBoard's dashboard storage read the offline runtime; a variant that commands incidents authors records against

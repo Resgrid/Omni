@@ -1,9 +1,13 @@
 import { safeFormatDate } from '@resgrid/core/utils/dates';
 import { useTranslation } from '@resgrid/i18n';
 import { ChatMessagePriority, type ChatMessageResultData, ChatMessageType } from '@resgrid/models';
-import { HStack, Pressable, Text, View, VStack } from '@resgrid/ui';
+import { HStack, Image, Pressable, Text, View, VStack } from '@resgrid/ui';
 import { AlertTriangle, Clock, MapPin, Pin } from 'lucide-react-native';
-import React from 'react';
+import React, { useMemo } from 'react';
+
+import { parseGifMetadata } from '../lib/chat-format';
+import { messageBodyText } from '../lib/message-text';
+import { ChatImageThumbnail } from './chat-image';
 
 export interface MessageBubbleProps {
   message: ChatMessageResultData;
@@ -12,19 +16,37 @@ export interface MessageBubbleProps {
   onLongPress?: (message: ChatMessageResultData) => void;
   /** Makes a failed send tappable ("tap to retry") — the assistant, whose sends are online only. */
   onRetry?: (message: ChatMessageResultData) => void;
+  /** Opens an image message full screen; without it the picture is not tappable. */
+  onOpenImage?: (message: ChatMessageResultData) => void;
 }
 
-/** One message (Responder bubble): sender in group channels, body, urgency, edited/deleted/pinned markers and send state. */
-export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({ message, isOwn, showSender, onLongPress, onRetry }) => {
+const GIF_MAX_WIDTH = 200;
+const GIF_DEFAULT_HEIGHT = 160;
+
+/** Bubble size for a GIF: the provider's aspect ratio at most 200dp wide, height kept between 80 and 240dp. */
+const gifSize = (width?: number, height?: number): { width: number; height: number } => {
+  if (!width || !height) return { width: GIF_MAX_WIDTH, height: GIF_DEFAULT_HEIGHT };
+  const scaledHeight = Math.round((GIF_MAX_WIDTH * height) / width);
+  return { width: GIF_MAX_WIDTH, height: Math.min(240, Math.max(80, scaledHeight)) };
+};
+
+/** One message (Responder bubble): sender in group channels, body, GIF or picture, urgency, edited/deleted/pinned markers and send state. */
+export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({ message, isOwn, showSender, onLongPress, onRetry, onOpenImage }) => {
   const { t } = useTranslation();
   const isDeleted = !!message.DeletedOn;
   const isUrgent = message.Priority === ChatMessagePriority.Urgent;
   const status = message._localStatus;
-  const body = isDeleted ? t('chat.message_deleted') : message.MessageType === ChatMessageType.Location ? t('chat.shared_location') : (message.Body ?? '');
+  const isGif = message.MessageType === ChatMessageType.Gif;
+  const isImage = message.MessageType === ChatMessageType.Image && !isDeleted;
+  const gif = useMemo(() => (isGif ? parseGifMetadata(message.MetadataJson) : null), [isGif, message.MetadataJson]);
+  const testID = `chat-message-${message.ClientMessageId || message.ChatMessageId}`;
+  const textClassName = `text-base ${isOwn ? 'text-typography-0' : 'text-typography-900'} ${isDeleted ? 'italic opacity-70' : ''}`;
+  // A GIF whose metadata cannot be read falls back to its body (the title), else the word "GIF".
+  const body = isDeleted ? t('chat.message_deleted') : message.MessageType === ChatMessageType.Location ? t('chat.shared_location') : isGif && !message.Body ? t('chat.gif') : messageBodyText(message);
 
   return (
     <Pressable
-      testID={`chat-message-${message.ClientMessageId || message.ChatMessageId}`}
+      testID={testID}
       onLongPress={onLongPress && !isDeleted ? () => onLongPress(message) : undefined}
       delayLongPress={350}
       accessibilityRole="text"
@@ -39,10 +61,19 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({ message
             <Text className={`text-xs font-bold ${isOwn ? 'text-typography-0' : 'text-error-600'}`}>{t('chat.urgent')}</Text>
           </HStack>
         ) : null}
-        <HStack space="xs" className="items-center">
-          {message.MessageType === ChatMessageType.Location ? <MapPin size={14} color={isOwn ? '#ffffff' : '#374151'} /> : null}
-          <Text className={`text-base ${isOwn ? 'text-typography-0' : 'text-typography-900'} ${isDeleted ? 'italic opacity-70' : ''}`}>{body}</Text>
-        </HStack>
+        {isImage ? (
+          <VStack space="xs">
+            <ChatImageThumbnail message={message} isOwn={isOwn} {...(onOpenImage ? { onOpen: onOpenImage } : {})} {...(onLongPress ? { onLongPress } : {})} testID={testID} />
+            {message.Body ? <Text className={textClassName}>{body}</Text> : null}
+          </VStack>
+        ) : gif && !isDeleted ? (
+          <Image source={{ uri: gif.GifUrl }} style={{ ...gifSize(gif.Width, gif.Height), borderRadius: 10 }} contentFit="contain" accessibilityLabel={message.Body || t('chat.gif')} testID={`${testID}-gif`} />
+        ) : (
+          <HStack space="xs" className="items-center">
+            {message.MessageType === ChatMessageType.Location ? <MapPin size={14} color={isOwn ? '#ffffff' : '#374151'} /> : null}
+            <Text className={textClassName}>{body}</Text>
+          </HStack>
+        )}
         <HStack space="xs" className="mt-0.5 items-center justify-end">
           {message.PinnedOn ? <Pin size={10} color={isOwn ? '#ffffff' : '#6b7280'} /> : null}
           {message.EditedOn && !isDeleted ? <Text className={`text-[10px] ${isOwn ? 'text-typography-0' : 'text-typography-500'}`}>{t('chat.edited')}</Text> : null}
@@ -52,17 +83,11 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({ message
       </VStack>
       {status === 'failed' ? (
         onRetry ? (
-          <Pressable
-            className="mt-0.5 self-end"
-            onPress={() => onRetry(message)}
-            accessibilityRole="button"
-            accessibilityLabel={t('chat.failed_tap_retry')}
-            testID={`chat-message-${message.ClientMessageId || message.ChatMessageId}-retry`}
-          >
+          <Pressable className="mt-0.5 self-end" onPress={() => onRetry(message)} accessibilityRole="button" accessibilityLabel={t('chat.failed_tap_retry')} testID={`${testID}-retry`}>
             <Text className="text-xs text-error-600">{t('chat.failed_tap_retry')}</Text>
           </Pressable>
         ) : (
-          <View className="mt-0.5 self-end" testID={`chat-message-${message.ClientMessageId || message.ChatMessageId}-failed`}>
+          <View className="mt-0.5 self-end" testID={`${testID}-failed`}>
             <Text className="text-xs text-error-600">{t('chat.send_failed')}</Text>
           </View>
         )

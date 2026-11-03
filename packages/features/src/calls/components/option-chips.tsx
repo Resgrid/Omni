@@ -1,6 +1,6 @@
-import { Pressable, Text } from '@resgrid/ui';
+import { Pressable, ScrollView, Text } from '@resgrid/ui';
 import React from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 export interface ChipOption<V extends string | number> {
   value: V;

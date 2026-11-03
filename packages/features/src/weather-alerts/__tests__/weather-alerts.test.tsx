@@ -6,7 +6,7 @@ import { emitRealtimeEvent } from '@resgrid/realtime';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { router } from 'expo-router';
 import React from 'react';
-import { Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 
 import { weatherAlertsRoutes } from '../routes';
 import WeatherAlertDetailScreen from '../screens/weather-alert-detail';
@@ -72,6 +72,20 @@ describe('WeatherAlertsListScreen', () => {
 
     await fireEvent.press(screen.getByTestId('weather-alert-card-a1'));
     expect(router.push).toHaveBeenCalledWith('/weather-alerts/a1');
+  });
+
+  it('keeps the severity tabs on screen when a tab has no alerts so the user can switch back', async () => {
+    await render(<WeatherAlertsListScreen />);
+    // The empty state fills the screen; a shrinkable tab bar would be squeezed to zero height above it.
+    expect(StyleSheet.flatten(screen.getByTestId('weather-severity-tabs').props.style)).toMatchObject({ flexGrow: 0, flexShrink: 0 });
+
+    await fireEvent.press(screen.getByTestId('weather-severity-tab-1'));
+    expect(screen.getByTestId('weather-alerts-empty')).toBeTruthy();
+    expect(screen.queryByTestId('weather-alerts-list')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('weather-severity-tab-all'));
+    expect(screen.queryByTestId('weather-alerts-empty')).toBeNull();
+    expect(screen.getByTestId('weather-alert-card-a2')).toBeTruthy();
   });
 
   it('hides the settings entry without the admin capability and shows it with it', async () => {

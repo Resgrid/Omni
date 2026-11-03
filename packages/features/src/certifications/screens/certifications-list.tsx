@@ -1,14 +1,14 @@
 import { useCertificationsStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import type { Certification } from '@resgrid/models';
-import { Button, ButtonText, FlatList, HStack, Loading, Pressable, RefreshControl, Text, View, VStack, ZeroState } from '@resgrid/ui';
+import { Button, ButtonText, Fab, FabIcon, FlatList, HStack, Loading, RefreshControl, Text, View, VStack, ZeroState } from '@resgrid/ui';
 import { router } from 'expo-router';
 import { Award, Plus } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet } from 'react-native';
 
-import { useExpiryText } from '../hooks/use-expiry-text';
-import { certificationErrorKey, certificationName, expiryTone, sortCertifications } from '../lib/certification-format';
+import { CertificationCard } from '../components/certification-card';
+import { certificationErrorKey, sortCertifications, summarize } from '../lib/certification-format';
 import { certificationsRoutes } from '../routes';
 
 export interface CertificationsListScreenProps {
@@ -27,8 +27,8 @@ export default function CertificationsListScreen({ onOpenCertification }: Certif
   const isLoading = useCertificationsStore((state) => state.loading.mine === true);
   const error = useCertificationsStore((state) => state.errors.mine ?? null);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const expiryText = useExpiryText();
   const items = useMemo(() => sortCertifications(certifications), [certifications]);
+  const summary = useMemo(() => summarize(items), [items]);
 
   const load = useCallback(async (bypassCache: boolean) => {
     const store = useCertificationsStore.getState();
@@ -49,72 +49,74 @@ export default function CertificationsListScreen({ onOpenCertification }: Certif
   }, [load]);
 
   const open = useCallback((id: number) => (onOpenCertification ? onOpenCertification(id) : router.push(certificationsRoutes.detail(id))), [onOpenCertification]);
+  const add = useCallback(() => router.push(certificationsRoutes.edit()), []);
 
-  const renderItem = useCallback(
-    ({ item }: { item: Certification }) => (
-      <Pressable
-        onPress={() => open(item.Id)}
-        accessibilityRole="button"
-        accessibilityLabel={certificationName(item, t('certifications.untitled'))}
-        className="mb-3 rounded-lg border border-outline-200 bg-background-0 p-3"
-        testID={`certification-${item.Id}`}
-      >
-        <HStack className="items-center justify-between" space="sm">
-          <Text className="flex-1 font-semibold text-typography-900">{certificationName(item, t('certifications.untitled'))}</Text>
-          <Text className="text-typography-500" testID={`certification-${item.Id}-status`}>
-            {t(`certifications.status.${item.Status}`)}
-          </Text>
-        </HStack>
-        {item.Number ? <Text className="text-typography-500">{t('certifications.numberIs', { number: item.Number })}</Text> : null}
-        <Text className={expiryTone(item.DaysUntilExpiry, item.Status)} testID={`certification-${item.Id}-expiry`}>
-          {expiryText(item)}
-        </Text>
-        {item.CreditHoursRequired ? <Text className="text-typography-500">{t('certifications.credits', { hours: item.CreditHours, required: item.CreditHoursRequired })}</Text> : null}
-      </Pressable>
-    ),
-    [expiryText, open, t]
-  );
+  const renderItem = useCallback(({ item }: { item: Certification }) => <CertificationCard certification={item} onPress={open} />, [open]);
+
+  const header =
+    items.length > 0 ? (
+      <HStack space="sm" className="mb-3" testID="certifications-summary">
+        <SummaryTile value={summary.total} label={t('certifications.summary.total')} tone="neutral" testID="certifications-summary-total" />
+        <SummaryTile value={summary.soon} label={t('certifications.summary.soon')} tone={summary.soon > 0 ? 'warning' : 'neutral'} testID="certifications-summary-soon" />
+        <SummaryTile value={summary.expired} label={t('certifications.summary.expired')} tone={summary.expired > 0 ? 'error' : 'neutral'} testID="certifications-summary-expired" />
+      </HStack>
+    ) : null;
 
   return (
     <View className="flex-1 bg-background-50" testID="certifications-screen">
-      <HStack className="items-center justify-between px-4 pt-4">
-        <Text className="text-xl font-bold text-typography-900" accessibilityRole="header">
-          {t('certifications.title')}
-        </Text>
-        <Button size="sm" onPress={() => router.push(certificationsRoutes.edit())} accessibilityLabel={t('certifications.add')} testID="certifications-add">
-          <View style={styles.icon}>
-            <Plus size={16} color="#ffffff" />
-          </View>
-          <ButtonText>{t('certifications.add')}</ButtonText>
-        </Button>
-      </HStack>
-      <VStack style={styles.flex} className="px-4 pt-3">
-        {isLoading && !isRefreshing && items.length === 0 ? (
-          <Loading />
-        ) : error && items.length === 0 ? (
-          <ZeroState isError heading={t('common.error')} description={t(certificationErrorKey(error))} testID="certifications-error">
-            <Button className="mt-4" onPress={() => void handleRefresh()} testID="certifications-retry">
-              <ButtonText>{t('common.retry')}</ButtonText>
-            </Button>
-          </ZeroState>
-        ) : (
-          <FlatList
-            data={items}
-            keyExtractor={(item) => String(item.Id)}
-            renderItem={renderItem}
-            refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => void handleRefresh()} />}
-            ListEmptyComponent={<ZeroState icon={Award} heading={t('certifications.none')} testID="certifications-empty" />}
-            contentContainerStyle={styles.list}
-            testID="certifications-list"
-          />
-        )}
-      </VStack>
+      {isLoading && !isRefreshing && items.length === 0 ? (
+        <Loading />
+      ) : error && items.length === 0 ? (
+        <ZeroState isError heading={t('certifications.loadFailed')} description={t(certificationErrorKey(error))} testID="certifications-error">
+          <Button className="mt-4" onPress={() => void handleRefresh()} testID="certifications-retry">
+            <ButtonText>{t('common.retry')}</ButtonText>
+          </Button>
+        </ZeroState>
+      ) : (
+        <FlatList
+          data={items}
+          keyExtractor={(item) => String(item.Id)}
+          renderItem={renderItem}
+          refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => void handleRefresh()} />}
+          ListHeaderComponent={header}
+          ListEmptyComponent={
+            <ZeroState icon={Award} heading={t('certifications.none')} description={t('certifications.noneHint')} testID="certifications-empty">
+              <Button className="mt-4" onPress={add} testID="certifications-empty-add">
+                <ButtonText>{t('certifications.add')}</ButtonText>
+              </Button>
+            </ZeroState>
+          }
+          contentContainerStyle={items.length === 0 ? styles.emptyList : styles.list}
+          testID="certifications-list"
+        />
+      )}
+      {items.length > 0 ? (
+        <Fab size="lg" placement="bottom right" onPress={add} accessibilityLabel={t('certifications.add')} testID="certifications-add">
+          <FabIcon as={Plus} />
+        </Fab>
+      ) : null}
     </View>
   );
 }
 
+const TILE_BOX = {
+  neutral: 'flex-1 rounded-xl border border-outline-200 bg-background-0 px-3 py-2',
+  warning: 'flex-1 rounded-xl border border-warning-300 bg-background-warning px-3 py-2',
+  error: 'flex-1 rounded-xl border border-error-300 bg-background-error px-3 py-2',
+} as const;
+
+const TILE_VALUE = { neutral: 'text-typography-900', warning: 'text-warning-700', error: 'text-error-700' } as const;
+
+const SummaryTile: React.FC<{ value: number; label: string; tone: keyof typeof TILE_BOX; testID: string }> = ({ value, label, tone, testID }) => (
+  <VStack className={TILE_BOX[tone]} accessible accessibilityLabel={`${label}: ${value}`} testID={testID}>
+    <Text className={`text-xl font-bold ${TILE_VALUE[tone]}`}>{String(value)}</Text>
+    <Text size="xs" className="text-typography-600" numberOfLines={1}>
+      {label}
+    </Text>
+  </VStack>
+);
+
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  list: { paddingBottom: 32 },
-  icon: { marginRight: 4 },
+  list: { padding: 16, paddingBottom: 96 },
+  emptyList: { flexGrow: 1, padding: 16 },
 });

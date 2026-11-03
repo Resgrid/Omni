@@ -55,6 +55,9 @@ export const CurrentStatusBadge: React.FC<CurrentStatusBadgeProps> = ({
   const display = pendingText || text || t('common.unknown');
   const { backgroundColor, textColor } = readableColors(color, '#9ca3af');
   const availability = availabilityOf(kind, baseType);
+  const availabilityLabel = showAvailability && availability !== 'unknown' ? t(AVAILABILITY_KEYS[availability]) : null;
+  // A name that already says it ("Unavailable" staffing) needs no second "Unavailable" beside it.
+  const showAvailabilityLabel = !!availabilityLabel && availabilityLabel.trim().toLocaleLowerCase() !== display.trim().toLocaleLowerCase();
   const showPending = isPending || !!pendingText;
 
   return (
@@ -64,9 +67,9 @@ export const CurrentStatusBadge: React.FC<CurrentStatusBadgeProps> = ({
           {display}
         </Text>
       </View>
-      {showAvailability && availability !== 'unknown' ? (
+      {showAvailabilityLabel ? (
         <Text className="text-xs text-typography-500" testID={`${testID}-availability`}>
-          {t(AVAILABILITY_KEYS[availability])}
+          {availabilityLabel}
         </Text>
       ) : null}
       {showPending ? (

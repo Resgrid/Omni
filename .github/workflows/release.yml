@@ -894,7 +894,8 @@ jobs:
           ls -lh release
 
       # The build summary, the description of the pull request whose merge triggered this build (none for a commit no
-      # merged pull request produced), then the commits since the variant's previous release.
+      # merged pull request produced), then the commits since the variant's previous release. GitHub Releases (125,000
+      # characters) and Firebase App Distribution (65,536 bytes) each get a copy cut to their own limit at a whole line.
       - name: Release notes
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -917,6 +918,10 @@ jobs:
               git log --no-merges --pretty='- %s (%h)' -n 50 "$GITHUB_SHA"
             fi
           } > RELEASE_NOTES.md
+          if [ -s pr-summary.md ]; then full='the pull request linked above has the full description'; else full="all commits: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}"; fi
+          node scripts/ci/fit-notes.mjs --in RELEASE_NOTES.md --out RELEASE_NOTES.github.md --max-bytes 125000 --note "_Shortened to fit GitHub's release notes limit; ${full}._"
+          node scripts/ci/fit-notes.mjs --in RELEASE_NOTES.md --out RELEASE_NOTES.firebase.md --max-bytes 65536 \
+            --note "Shortened to fit Firebase App Distribution's limit. Full release notes: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/tag/${TAG}"
           cat release-summary.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: GitHub Release
@@ -926,7 +931,7 @@ jobs:
           tag: ${{ env.TAG }}
           commit: ${{ github.sha }}
           name: ${{ env.PRODUCT_NAME }} ${{ env.VERSION }}
-          bodyFile: RELEASE_NOTES.md
+          bodyFile: RELEASE_NOTES.github.md
           artifacts: release/*
           prerelease: ${{ needs.plan.outputs.channel != 'production' }}
           makeLatest: false
@@ -951,7 +956,7 @@ jobs:
           elif [ -z "$FIREBASE_TOKEN" ]; then
             echo "::notice::Firebase credentials not configured; skipping App Distribution."; exit 0
           fi
-          distribute() { bash scripts/ci/retry.sh 3 20 npx --yes "firebase-tools@${FIREBASE_TOOLS_VERSION}" appdistribution:distribute "$1" --app "$2" --groups "$GROUPS" --release-notes-file RELEASE_NOTES.md; }
+          distribute() { bash scripts/ci/retry.sh 3 20 npx --yes "firebase-tools@${FIREBASE_TOOLS_VERSION}" appdistribution:distribute "$1" --app "$2" --groups "$GROUPS" --release-notes-file RELEASE_NOTES.firebase.md; }
           # Android testers only: iOS testers get the App Store build through TestFlight.
           if [ -n "$APK" ] && [ -n "$FIREBASE_ANDROID_APP_ID" ]; then distribute "$APK" "$FIREBASE_ANDROID_APP_ID"; fi
 

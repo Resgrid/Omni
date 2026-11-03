@@ -1,10 +1,10 @@
-import { createAdHocChatChannel, createDirectMessageChannel, flagChatMessage, moderatorDeleteChatMessage, pinChatMessage, unpinChatMessage } from '@resgrid/api';
-import { assertV4Success, getDataApiContext, unwrapItem, useChatStore } from '@resgrid/data';
-import { type ChatChannelResultData } from '@resgrid/models';
+import { createAdHocChatChannel, createDirectMessageChannel, flagChatMessage, moderatorDeleteChatMessage, pinChatMessage, searchChatGifs, unpinChatMessage } from '@resgrid/api';
+import { assertV4Success, getDataApiContext, unwrapItem, unwrapList, useChatStore } from '@resgrid/data';
+import { type ChatChannelResultData, type GifResultData } from '@resgrid/models';
 
 /**
  * Chat writes the data store does not expose yet (online only): starting conversations (Dispatch new-conversation
- * sheet) and moderation (IC message actions). TODO(omni): move into `useChatStore` (`createConversation`,
+ * sheet), moderation (IC message actions) and GIF search. TODO(omni): move into `useChatStore` (`createConversation`,
  * `pinMessage`, `flagMessage`, `moderatorDelete`) so features stop calling endpoints directly.
  */
 export async function startDirectConversation(targetUserId: string): Promise<ChatChannelResultData | null> {
@@ -29,4 +29,10 @@ export async function flagMessage(messageId: string, reason: number): Promise<vo
 
 export async function moderatorDeleteMessage(messageId: string): Promise<void> {
   assertV4Success(await moderatorDeleteChatMessage(getDataApiContext(), { messageId }));
+}
+
+/** GIF provider search through Core (`Chat/SearchGifs`); an empty query returns trending GIFs, an unconfigured provider none. */
+export async function searchGifs(query: string, signal?: AbortSignal): Promise<GifResultData[]> {
+  const trimmed = query.trim();
+  return unwrapList(await searchChatGifs(getDataApiContext(), { ...(trimmed ? { q: trimmed } : {}), limit: 24 }, signal ? { signal } : undefined));
 }

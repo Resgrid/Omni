@@ -8,6 +8,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import React from 'react';
 
+import { activeWorkOrderFilterCount, EMPTY_WORK_ORDER_FILTERS, filterWorkOrders } from '../lib/work-order-filters';
 import { formatDueDate, missingField, parseHours, transitionNeeds, workOrderErrorCode, workOrderErrorKey } from '../lib/work-order-rules';
 import { workOrderRoutes } from '../routes';
 import WorkOrderDetailScreen from '../screens/work-order-detail';
@@ -66,6 +67,8 @@ const detail = (order: WorkOrderSummary, overrides: Partial<WorkOrderDetail> = {
     Files: [{ Id: 'f1', Name: 'leak.jpg', ContentType: 'image/jpeg', Size: 10 }],
     ...overrides,
   }) as WorkOrderDetail;
+
+const hidden = { includeHiddenElements: true } as const;
 
 let store: Record<string, jest.Mock>;
 
@@ -136,6 +139,30 @@ describe('work order rules', () => {
   });
 });
 
+describe('work order filters', () => {
+  const items = [
+    summary('1', { Title: 'Pump leak', Number: 'WO-0042', Status: WorkOrderStatus.InProgress, Priority: 3 }),
+    summary('2', { Title: 'Ladder rung bent', Number: 'WO-0043', Status: WorkOrderStatus.Closed, Priority: 1 }),
+    summary('3', { Title: 'Pump packing', Number: 'WO-0101', Status: WorkOrderStatus.Requested, Priority: 0 }),
+  ];
+  const ids = (filters: Partial<typeof EMPTY_WORK_ORDER_FILTERS>) => filterWorkOrders(items, { ...EMPTY_WORK_ORDER_FILTERS, ...filters }).map((order) => order.Id);
+
+  it('searches every word in the title or number', () => {
+    expect(ids({})).toEqual(['1', '2', '3']);
+    expect(ids({ query: 'PUMP' })).toEqual(['1', '3']);
+    expect(ids({ query: 'pump 0101' })).toEqual(['3']);
+    expect(ids({ query: 'tyre' })).toEqual([]);
+  });
+
+  it('filters by open or finished status and by any of the chosen priorities', () => {
+    expect(ids({ status: 'open' })).toEqual(['1', '3']);
+    expect(ids({ status: 'finished' })).toEqual(['2']);
+    expect(ids({ priorities: [3, 1] })).toEqual(['1', '2']);
+    expect(ids({ status: 'open', priorities: [0], query: 'pump' })).toEqual(['3']);
+    expect(activeWorkOrderFilterCount({ query: 'x', status: 'open', priorities: [1, 2] })).toBe(3);
+  });
+});
+
 describe('WorkOrdersGate', () => {
   it('waits for flags, then sends a disabled module home', async () => {
     featureFlagsStore.setState({ flags: {}, isLoaded: false } as never);
@@ -165,6 +192,39 @@ describe('WorkOrdersScreen', () => {
     expect(router.push).toHaveBeenCalledWith('/work-orders/1');
     await fireEvent.press(screen.getByTestId('work-orders-report'));
     expect(router.push).toHaveBeenLastCalledWith('/work-orders/new');
+  });
+
+  it('searches and filters the loaded orders', async () => {
+    useWorkOrdersStore.setState({
+      list: {
+        assignedToMe: true,
+        items: [summary('1', { Title: 'Pump leak', Priority: 3 }), summary('2', { Title: 'Ladder rung', Status: WorkOrderStatus.Closed }), summary('3', { Title: 'Pump packing', Priority: 0 })],
+        page: 0,
+        hasMore: true,
+        canWrite: true,
+        loaded: true,
+      },
+    });
+    await render(<WorkOrdersScreen />);
+    await fireEvent.changeText(screen.getByTestId('work-orders-search'), 'pump');
+    expect(screen.queryByTestId('work-order-2')).toBeNull();
+    expect(screen.getByTestId('work-order-1')).toBeTruthy();
+    expect(screen.getByTestId('work-orders-filter-summary')).toHaveTextContent('workOrders.showing:2,3');
+
+    await fireEvent.press(screen.getByTestId('work-orders-filter-button'));
+    await fireEvent.press(screen.getByTestId('work-orders-filter-sheet-priority-0', hidden));
+    expect(screen.queryByTestId('work-order-1')).toBeNull();
+    expect(screen.getByTestId('work-order-3')).toBeTruthy();
+    expect(screen.getByTestId('work-orders-filter-count')).toHaveTextContent('1');
+
+    await fireEvent.press(screen.getByTestId('work-orders-filter-sheet-status-finished', hidden));
+    expect(screen.getByTestId('work-orders-no-matches')).toBeTruthy();
+    expect(screen.getByTestId('work-orders-more')).toBeTruthy();
+
+    await fireEvent.press(screen.getByTestId('work-orders-filter-reset'));
+    expect(screen.getByTestId('work-order-2')).toBeTruthy();
+    expect(screen.getByTestId('work-orders-search')).toHaveProp('value', '');
+    expect(screen.queryByTestId('work-orders-filter-count')).toBeNull();
   });
 
   it('is read-only without Readiness Pro and shows reports still waiting to send', async () => {

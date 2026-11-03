@@ -1,6 +1,6 @@
 import { useTranslation } from '@resgrid/i18n';
 import { HStack, Pressable, Text, Textarea, TextareaInput, View, VStack } from '@resgrid/ui';
-import { AlertTriangle, Send } from 'lucide-react-native';
+import { AlertTriangle, ImagePlay, Send } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
 
 export interface MessageComposerProps {
@@ -13,15 +13,17 @@ export interface MessageComposerProps {
   /** Hides the urgent toggle (assistant, edits). */
   allowUrgent?: boolean;
   onCancelEdit?: () => void;
+  /** Opens the GIF picker; omit where GIFs cannot be sent (assistant). Hidden while editing. */
+  onOpenGif?: () => void;
   maxLength?: number;
 }
 
 /**
- * The message composer (Responder baseline): multi-line input, urgent toggle, send. Sending clears the draft at once —
+ * The message composer (Responder baseline): multi-line input, urgent toggle, GIF picker, send. Sending clears the draft at once —
  * the message is queued through the outbox, so it shows as pending and is delivered when the connection allows.
  * Mounted inside a BottomAnchoredKeyboardView by the conversation screen.
  */
-export const MessageComposer: React.FC<MessageComposerProps> = ({ onSend, disabled = false, placeholder, initialValue = '', allowUrgent = true, onCancelEdit, maxLength = 4000 }) => {
+export const MessageComposer: React.FC<MessageComposerProps> = ({ onSend, disabled = false, placeholder, initialValue = '', allowUrgent = true, onCancelEdit, onOpenGif, maxLength = 4000 }) => {
   const { t } = useTranslation();
   const [text, setText] = useState(initialValue);
   const [urgent, setUrgent] = useState(false);
@@ -57,6 +59,19 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({ onSend, disabl
             className={`mb-1 size-9 items-center justify-center rounded-full ${urgent ? 'bg-error-500' : 'bg-background-100'}`}
           >
             <AlertTriangle size={16} color={urgent ? '#ffffff' : '#6b7280'} />
+          </Pressable>
+        ) : null}
+        {onOpenGif && !onCancelEdit ? (
+          <Pressable
+            testID="chat-composer-gif"
+            onPress={onOpenGif}
+            disabled={disabled}
+            accessibilityRole="button"
+            accessibilityState={{ disabled }}
+            accessibilityLabel={t('chat.add_gif')}
+            className="mb-1 size-9 items-center justify-center rounded-full bg-background-100"
+          >
+            <ImagePlay size={16} color="#6b7280" />
           </Pressable>
         ) : null}
         <View className="flex-1">

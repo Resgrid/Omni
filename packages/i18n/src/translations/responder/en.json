@@ -1,8 +1,6 @@
 {
   "app": {
-    "open_menu": "Open menu",
-    "realtime_offline_description": "Reconnecting. New calls and messages may not appear.",
-    "realtime_offline_title": "Live updates unavailable"
+    "open_menu": "Open menu"
   },
   "audio_streams": {
     "error_loading_stream": "Failed to load audio stream"
@@ -35,23 +33,6 @@
     "unauthorized_message": "Bluetooth permission denied. Please grant Bluetooth permissions in Settings."
   },
   "calendar": {
-    "allDay": "All Day",
-    "attendanceUpdated": {
-      "signedUp": "You have successfully signed up for this event.",
-      "title": "Attendance Updated",
-      "unsignedUp": "You have been removed from this event."
-    },
-    "attendees": {
-      "title": "Attendees"
-    },
-    "attendeesCount_one": "{{count}} attendee",
-    "attendeesCount": "{{count}} attendees",
-    "confirmSignup": "Confirm",
-    "confirmUnsignup": {
-      "message": "Are you sure you want to cancel your attendance for this event?",
-      "title": "Confirm Cancellation"
-    },
-    "createdBy": "Created by",
     "daysOfWeek": {
       "fri": "Fri",
       "mon": "Mon",
@@ -60,55 +41,6 @@
       "thu": "Thu",
       "tue": "Tue",
       "wed": "Wed"
-    },
-    "description": "Description",
-    "error": {
-      "attendanceUpdate": "Failed to update attendance. Please try again.",
-      "title": "Error"
-    },
-    "eventsCount_one": "{{count}} event",
-    "eventsCount": "{{count}} events",
-    "loading": {
-      "date": "Loading events for selected date...",
-      "today": "Loading today's events...",
-      "upcoming": "Loading upcoming events..."
-    },
-    "noEvents": "No events scheduled",
-    "optional": "Optional",
-    "required": "Required",
-    "selectDate": "Select a date to view events",
-    "selectedDate": {
-      "empty": "No events scheduled for this date.",
-      "title": "Events for {{date}}"
-    },
-    "signedUp": "Signed Up",
-    "signup": {
-      "button": "Sign Up",
-      "notePlaceholder": "Enter your note here...",
-      "notePrompt": "Add a note (optional):",
-      "title": "Event Sign-up"
-    },
-    "signupAvailable": "Sign-up available",
-    "tabs": {
-      "calendar": "Calendar",
-      "today": "Today",
-      "upcoming": "Upcoming"
-    },
-    "tapToSignUp": "Tap to sign up",
-    "title": "Calendar",
-    "today": {
-      "empty": {
-        "description": "You have no scheduled events for today.",
-        "title": "No Events Today"
-      }
-    },
-    "todayButton": "Today",
-    "unsignup": "Cancel Attendance",
-    "upcoming": {
-      "empty": {
-        "description": "You have no scheduled events in the next 7 days.",
-        "title": "No Upcoming Events"
-      }
     }
   },
   "callImages": {
@@ -136,82 +68,10 @@
     "personnel": "People",
     "protocols": "Protocols",
     "reference_id": "Reference ID",
-    "required_fields_missing": "Your department requires these fields before a call can be saved: {{fields}}",
     "search_address": "Search address",
     "search_coordinates": "Search coordinates",
     "search_plus_code": "Search plus code",
     "search_what3words": "Search what3words address"
-  },
-  "certifications": {
-    "add": "Add",
-    "addHours": "Add hours",
-    "addHoursWithPhoto": "Add hours with a photo",
-    "areaIs": "Area: {{area}}",
-    "back": "Back",
-    "cancel": "Cancel",
-    "category": "Category (course, drill, conference)",
-    "certificateAttached": "certificate attached",
-    "creditAdded": "Hours added.",
-    "creditDate": "Date (defaults to today)",
-    "creditNote": "What it was",
-    "credits": "{{hours}} of {{required}} continuing-education hours",
-    "creditsTitle": "{{hours}} continuing-education hours",
-    "dateInvalid": "Enter dates as yyyy-mm-dd.",
-    "edit": "Edit",
-    "errors": {
-      "certifications_file_invalid": "The photo could not be read.",
-      "certifications_file_too_large": "The photo is too large.",
-      "denied": "You do not have access to this certification.",
-      "locked": "Unlock protected data to continue.",
-      "retry": "Could not reach the server. Try again.",
-      "validation": "The server rejected the change."
-    },
-    "expired": "Expired {{date}}",
-    "expires": "Expires {{date}} ({{days}} days)",
-    "form": {
-      "area": "Area or level",
-      "choosePhoto": "Choose photo",
-      "expiresOn": "Expires on",
-      "issuedBy": "Issued by",
-      "name": "Name",
-      "number": "Number",
-      "otherType": "Other (enter a name)",
-      "photoAttached": "Photo attached.",
-      "receivedOn": "Issued on",
-      "save": "Save",
-      "takePhoto": "Photo of card",
-      "type": "Certification"
-    },
-    "hasFile": "A card or certificate is on file",
-    "hours": "Hours",
-    "hoursInvalid": "Enter a number of hours greater than 0.",
-    "issuedByIs": "Issued by {{name}}",
-    "nameRequired": "Pick a type or enter a name.",
-    "newExpiry": "New expiry date",
-    "newNumber": "New number (optional)",
-    "noExpiry": "Does not expire",
-    "none": "You have not added any certifications yet.",
-    "notVerified": "Not verified by the department yet",
-    "numberIs": "Number {{number}}",
-    "photoDenied": "Allow camera or photo access to attach a photo.",
-    "receivedOn": "Received {{date}}",
-    "remove": "Remove",
-    "removeBody": "This removes it from your record. Your department can still see the history.",
-    "removeTitle": "Remove certification?",
-    "renew": "Renew",
-    "renewSave": "Save renewal",
-    "renewed": "Renewal saved.",
-    "status": {
-      "0": "Active",
-      "1": "Expired",
-      "2": "Suspended",
-      "3": "Revoked",
-      "4": "Awaiting verification",
-      "5": "Trainee"
-    },
-    "title": "My certifications",
-    "untitled": "Certification",
-    "verifiedOn": "Verified {{date}}"
   },
   "chat": {
     "attach": "Attach",
@@ -219,24 +79,12 @@
     "new_conversation": "New conversation"
   },
   "check_in": {
-    "add_note": "Add Note (Optional)",
     "confirm_check_in": "Confirm Check-In",
-    "duration": "Duration",
     "gps_coordinates": "GPS: {{latitude}}, {{longitude}}",
-    "history": "Check-In History",
-    "minutes_ago": "{{count}} min ago",
-    "no_timers": "No check-in timers configured",
     "offline_queued": "Check-in queued for when online",
     "progress": "{{elapsed}} / {{total}} min",
     "timer_interval": "Every {{minutes}} min",
-    "type_hazmat": "Hazmat Exposure",
-    "type_ic": "Incident Commander",
     "unknown_unit": "Unknown Unit"
-  },
-  "checklists": {
-    "labels": {
-      "AssignmentAutomatic": "Automatic routing"
-    }
   },
   "common": {
     "active": "Active",
@@ -244,8 +92,6 @@
     "deleting": "Deleting...",
     "discard": "Discard",
     "navigation": "Navigation",
-    "noActiveUnit": "No Active Unit",
-    "noActiveUnitDescription": "Please select an active unit to see available statuses",
     "no_data_available": "No data available",
     "success": "Success",
     "system": "System"
@@ -258,12 +104,9 @@
   },
   "home": {
     "active_call": {
-      "clear_active": "Clear Active Call",
-      "no_active_call": "No active call selected",
       "select_call": "Select a call to track",
       "set_active": "Set as Active Call",
-      "title": "Active Call",
-      "view_details": "View Call Details"
+      "title": "Active Call"
     },
     "error": {
       "no_user_id": "User ID not available"
@@ -273,24 +116,15 @@
       "ptt": "PTT"
     },
     "staffing": {
-      "add_note": "Add Note",
-      "add_note_action": "Add a note",
       "confirm_staffing": "Confirm Staffing: {{staffing}}",
       "missing_required_info": "Missing required information",
-      "no_options_available": "No staffing options available",
       "no_staffing_options": "No staffing options available",
-      "note": "Note",
-      "note_placeholder": "Enter a note (optional)...",
-      "note_required_hint": "Opens a form to add the required note",
-      "quick_set_hint": "Sets your staffing now. Long press to add a note.",
       "review_and_confirm": "Review and Confirm",
       "select_staffing_level": "Select Staffing Level",
       "select_staffing_level_description": "Choose your current staffing status",
       "selected_staffing": "Selected Staffing",
       "set_staffing": "Set Personnel Staffing",
-      "staffing_level": "Staffing Level",
-      "update_failed": "Failed to update staffing",
-      "updated_successfully": "Staffing updated successfully"
+      "staffing_level": "Staffing Level"
     },
     "stats": {
       "open_calls": "Open Calls",
@@ -298,52 +132,16 @@
       "units_in_service": "Units In Service"
     },
     "status": {
-      "no_options_available": "No status options available",
       "update_failed": "Failed to update status",
       "updated_successfully": "Status updated successfully"
     },
-    "summary": {
-      "active_calls": "Active Calls",
-      "active_severe_weather_alerts": "Weather Alerts",
-      "calls_im_on": "Calls I'm On",
-      "pending_missed_checkins": "Check-Ins"
-    },
     "tabs": {
-      "call": "Call",
       "dashboard": "Dashboard",
-      "map": "Map",
-      "staffing": "Staffing",
-      "status": "Status"
-    },
-    "user": {
-      "my_staffing": "My Staffing",
-      "my_status": "My Status",
-      "staffing_unknown": "Unknown Staffing",
-      "status_unknown": "Unknown Status",
-      "updated": "Updated"
+      "map": "Map"
     }
   },
   "incident_command": {
-    "assigned_since": "Assigned Since",
     "empty_state": "No incident command is active for this call",
-    "error_loading": "Failed to load incident command information",
-    "my_assignment": "My Assignment",
-    "need_category_equipment": "Equipment",
-    "need_category_logistics": "Logistics",
-    "need_category_medical": "Medical",
-    "need_category_other": "Other",
-    "need_category_resource": "Resource",
-    "need_category_staffing": "Staffing",
-    "need_status_cancelled": "Cancelled",
-    "need_status_met": "Met",
-    "need_status_open": "Open",
-    "need_status_partially_met": "Partially Met",
-    "objective_status_complete": "Complete",
-    "objective_status_in_progress": "In Progress",
-    "objective_status_pending": "Pending",
-    "objective_type_benchmark": "Benchmark",
-    "objective_type_general": "General",
-    "objective_type_safety": "Safety",
     "percent_complete": "{{percent}}%",
     "quantity": "{{fulfilled}}/{{requested}}"
   },
@@ -371,36 +169,20 @@
     "tracking_notification_body": "Sharing your location with your department."
   },
   "login": {
-    "change_server_url": "Change Server URL",
     "select_language": "Language",
     "sso": {
       "back": "Back",
-      "change_department": "Change username",
-      "continue_button": "Continue",
       "department_code_label": "Department Code",
       "department_code_placeholder": "Enter department code",
       "department_code_required": "Department code is required",
       "department_description": "Enter your department code to sign in",
-      "department_id_invalid": "Department ID must be a number",
-      "department_id_label": "Department ID (optional)",
-      "department_id_placeholder": "Enter department ID if known",
       "department_not_found": "Department not found. Please check the code and try again.",
       "login_with_sso_button": "Login with SSO",
-      "looking_up": "Looking up account...",
-      "lookup_network_error": "Could not reach the server. Please check your connection and try again.",
-      "or_sign_in_with_password": "— or sign in with password —",
       "page_title": "Login with SSO",
-      "sign_in_with_sso": "Sign in with SSO",
-      "sso_not_enabled": "SSO is not enabled for this account. Please use your username and password.",
-      "user_description": "Enter your Resgrid username or email to sign in with SSO",
-      "user_not_found": "Account not found. Please check your username and try again.",
-      "username_label": "Username or Email",
-      "username_placeholder": "Enter your username or email",
-      "username_required": "Username is required"
+      "user_description": "Enter your Resgrid username or email to sign in with SSO"
     }
   },
   "map": {
-    "loading_markers": "Loading map markers...",
     "openSideMenu": "Open side menu",
     "tabs": {
       "map": "Map",
@@ -411,15 +193,8 @@
     "contact_administrator": "Please contact your administrator to configure mapping services.",
     "failed_to_load": "Failed to load map. Please check your internet connection.",
     "legend": {
-      "error": "The map legend could not be loaded.",
-      "loading": "Loading map legend...",
-      "no_meaning": "No meaning",
       "open": "Open map legend",
-      "other": "Other",
-      "statuses": "Statuses",
-      "style": {
-        "unknown": "No meaning or no status"
-      }
+      "statuses": "Statuses"
     },
     "mapbox_not_configured": "Mapbox is not configured. Please contact your administrator."
   },
@@ -493,35 +268,6 @@
       "subject_required": "Subject is required"
     }
   },
-  "mfa": {
-    "approve": {
-      "app": "App: {{app}}",
-      "approve": "Approve",
-      "approved": "Approved. You can return to the other screen.",
-      "denied": "Denied. Nothing was approved.",
-      "deny": "Deny",
-      "department": "Department: {{department}}",
-      "done": "Done",
-      "expires": "Expires at {{time}}",
-      "installation": "Device: {{label}}",
-      "none": "Nothing is waiting for your approval.",
-      "not_me": "This wasn't me",
-      "number_body": "Enter the number shown on the other screen, then confirm with your passkey. Only approve if you started this yourself.",
-      "number_mismatch": "That is not the number on the other screen. Attempts left: {{count}}.",
-      "number_placeholder": "Number",
-      "origin": "Near: {{origin}}",
-      "purpose": {
-        "adp": "Someone wants to view protected information",
-        "department_entry": "Someone is switching to a department as you",
-        "login": "Someone is signing in to your account",
-        "step_up": "Someone is confirming an action with your account",
-        "unlock": "Someone is unlocking a shared device as you"
-      },
-      "shared": "On a shared device",
-      "title": "Approve sign-in?",
-      "unknown_app": "Another Resgrid app"
-    }
-  },
   "not_found": {
     "go_home": "Go to home screen!",
     "message": "This screen doesn't exist.",
@@ -565,14 +311,6 @@
       }
     }
   },
-  "operations": {
-    "time": {
-      "coveredBy": "This time is already on report #{{number}} for this day.",
-      "crewReport": "Crew time report #{{number}} · {{name}}",
-      "individualReport": "Time report #{{number}} · {{name}}",
-      "report": "Report #{{number}}"
-    }
-  },
   "personnel": {
     "contactInformation": "Contact Information",
     "currentStatus": "Current Status",
@@ -583,45 +321,12 @@
       "emptyDescription": "Filter options will appear here when available.",
       "title": "Filter Personnel"
     },
-    "id": "ID",
-    "status": {
-      "add_note": "Add Note",
-      "calls_tab": "Calls",
-      "current": "Current",
-      "current_status": "Current status",
-      "destination_required": "A destination is required for this status",
-      "general_status": "General status update",
-      "gps_required": "GPS location is required for this status",
-      "hold_to_set_hint": "Press and hold for 2 seconds to set the status",
-      "hold_to_set_instructions": "Press and hold a status for 2 seconds to set it",
-      "hold_to_submit": "Hold to submit",
-      "loading_pois": "Loading POIs...",
-      "loading_stations": "Loading stations...",
-      "missing_required_info": "Missing required information",
-      "no_destination": "No Destination",
-      "no_stations_available": "No stations available",
-      "note": "Note",
-      "note_placeholder": "Enter a note (optional)...",
-      "note_required": "A note is required for this status",
-      "pois_tab": "POI",
-      "responding_to_placeholder": "Enter what you're responding to...",
-      "saved_offline": "Status saved offline and will be submitted when connection is restored",
-      "select_call_to_respond_to": "Select Call to Respond To",
-      "select_destination": "Select Destination",
-      "select_responding_to": "Set Status: {{status}}",
-      "selected_call": "Selected Call",
-      "set_status": "Set Personnel Status",
-      "show_all_statuses": "Show all statuses ({{count}} more)",
-      "show_next_statuses": "Show next statuses only",
-      "stations_tab": "Stations",
-      "status": "Status"
-    }
+    "id": "ID"
   },
   "pois": {
     "address_label": "Address",
     "coordinates_label": "Coordinates",
     "destination_enabled": "Destination enabled",
-    "empty_description": "No POIs match the current filter.",
     "empty_title": "No POIs found",
     "filter_all_types": "All types",
     "filter_label": "Filter",
@@ -630,7 +335,6 @@
     "invalid_title": "Invalid POI",
     "list_description": "Browse department POIs, filter by type, and jump back to the map.",
     "load_error_title": "Unable to load POI",
-    "not_found": "POI not found",
     "note_label": "Note",
     "reset_filters": "Reset",
     "results_count_one": "{{count}} POI",
@@ -640,26 +344,10 @@
     "sort_label": "Sort",
     "sort_name": "Name",
     "sort_type": "Type",
-    "title": "POI",
     "type_label": "Type",
     "view_details": "View Details",
     "view_on_map": "View on Map",
     "view_on_map_hint": "Keep the map open to see your location and the selected POI together."
-  },
-  "push_notifications": {
-    "communication_test_confirmed": "Receipt confirmed. Thank you.",
-    "communication_test_failed": "Couldn't confirm receipt. Please try again.",
-    "communication_test_prompt": "This is only a test. Confirm you received it so your department knows it can reach you.",
-    "confirm_receipt": "Confirm Receipt",
-    "confirming_receipt": "Confirming...",
-    "types": {
-      "communication_test": "Communication Test",
-      "weather": "Weather Alert",
-      "work_order": "Work Order"
-    },
-    "view_alert": "View Alert",
-    "view_chat": "View Chat",
-    "view_work_order": "View Work Order"
   },
   "settings": {
     "logout_confirm_cancel": "Cancel",
@@ -1034,7 +722,6 @@
     "ptt": "Voice"
   },
   "tabs": {
-    "personnel": "People",
     "units": "Units",
     "weatherAlerts": "Weather Alerts"
   },
@@ -1053,10 +740,7 @@
     "vehicleInfo": "Vehicle Information"
   },
   "video_feeds": {
-    "add_feed": "Add Video Feed",
     "delete_confirm": "Are you sure you want to delete this video feed?",
-    "delete_feed": "Delete Video Feed",
-    "edit_feed": "Edit Video Feed",
     "form_description": "Description",
     "form_feed_format": "Feed Format",
     "form_feed_type": "Feed Type",
@@ -1065,7 +749,6 @@
     "form_status": "Status",
     "form_url": "URL",
     "format_youtube": "YouTube",
-    "no_feeds": "No video feeds for this call",
     "type_satellite": "Satellite Feed",
     "type_webcam": "Webcam",
     "unsupported_format": "This format is not supported for in-app playback. Copy the URL to open in an external player."
@@ -1099,7 +782,6 @@
       "metadata": "Details",
       "status": "Status"
     },
-    "search": "Search alerts...",
     "severity": {
       "Extreme": "Extreme",
       "Minor": "Minor",
@@ -1155,6 +837,7 @@
     "back": "Back",
     "cannotReport": "Your department cannot take new work orders right now.",
     "choosePhoto": "Choose photo",
+    "clearFilters": "Clear filters",
     "commentHint": "Add a comment",
     "due": "Due {{date}}",
     "errors": {
@@ -1176,6 +859,8 @@
       "retry": "Could not reach the server. Try again."
     },
     "files": "Photos and files",
+    "filterStatus": "Status",
+    "filterTitle": "Filter work orders",
     "form": {
       "asset": "Equipment",
       "description": "Details",
@@ -1201,6 +886,7 @@
     "locationIs": "Location: {{location}}",
     "logHours": "Log hours",
     "more": "Load more",
+    "noMatches": "No work orders match your search or filters.",
     "none": "No work orders.",
     "noneAssigned": "Nothing is assigned to you.",
     "photoAdded": "Photo added.",
@@ -1215,6 +901,9 @@
     "resolutionIs": "Resolution: {{text}}",
     "safety": "Safety-critical or hazardous work",
     "saveHours": "Save hours",
+    "search": "Search by title or number",
+    "searchMore": "Only loaded work orders are searched. Load more to search older ones.",
+    "showing": "Showing {{shown}} of {{total}} loaded",
     "status": {
       "0": "Requested",
       "1": "Accepted",
@@ -1226,6 +915,11 @@
       "7": "Rejected",
       "8": "Duplicate",
       "9": "Cancelled"
+    },
+    "statusGroup": {
+      "all": "All",
+      "finished": "Finished",
+      "open": "Open"
     },
     "steps": "Steps",
     "takePhoto": "Take photo",

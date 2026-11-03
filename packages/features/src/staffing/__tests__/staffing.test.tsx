@@ -71,6 +71,14 @@ describe('StaffingButtons', () => {
     await waitFor(() => expect(useToastStore.getState().toasts[0]).toEqual(expect.objectContaining({ type: 'success', message: 'home.staffing.updated_successfully' })));
   });
 
+  it('draws each label in the text colour that reads on its level colour', async () => {
+    usePersonnelStore.setState({ staffingOptions: [option(0, 'Available', { BColor: '#2563eb' }), option(5, 'Off Duty', { BColor: '#d1d5db' })] });
+    await render(<StaffingButtons />);
+    expect(screen.getByTestId('staffing-button-text-0')).toHaveTextContent('Available');
+    expect(screen.getByTestId('staffing-button-text-0')).toHaveStyle({ color: '#FFFFFF', textAlign: 'center' });
+    expect(screen.getByTestId('staffing-button-text-5')).toHaveStyle({ color: '#000000' });
+  });
+
   it('opens the note sheet for a level whose note is required and saves it with the note', async () => {
     await render(<StaffingButtons />);
     await fireEvent.press(screen.getByTestId('staffing-button-7'));

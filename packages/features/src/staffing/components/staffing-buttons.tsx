@@ -2,7 +2,7 @@ import { usePersonnelStore } from '@resgrid/data';
 import { isNoteRequired, readableColors, type StatusOption, toOptionId } from '@resgrid/features/status';
 import { useTranslation } from '@resgrid/i18n';
 import { type StatusesResultData } from '@resgrid/models';
-import { Button, ButtonSpinner, ButtonText, Loading, Text, VStack } from '@resgrid/ui';
+import { Button, ButtonSpinner, Loading, Text, VStack } from '@resgrid/ui';
 import React, { useCallback, useState } from 'react';
 import { type AccessibilityActionEvent, StyleSheet, View } from 'react-native';
 
@@ -57,7 +57,10 @@ const StaffingButton: React.FC<StaffingButtonProps> = React.memo(({ staffing, is
         testID={`staffing-button-${id}`}
       >
         {isSubmitting ? <ButtonSpinner color={textColor} testID={`staffing-button-spinner-${id}`} /> : null}
-        <ButtonText style={{ color: textColor }}>{staffing.Text}</ButtonText>
+        {/* The same label as the home Status buttons, so the two tabs read alike. */}
+        <Text className="text-lg font-semibold" style={StyleSheet.flatten([styles.label, { color: textColor }])} testID={`staffing-button-text-${id}`}>
+          {staffing.Text}
+        </Text>
       </Button>
     </View>
   );
@@ -117,5 +120,6 @@ export const StaffingButtons: React.FC<StaffingButtonsProps> = ({ testID = 'staf
 const RING_OUTSET = 4;
 
 const styles = StyleSheet.create({
+  label: { flexShrink: 1, textAlign: 'center' },
   currentRing: { position: 'absolute', top: -RING_OUTSET, right: -RING_OUTSET, bottom: -RING_OUTSET, left: -RING_OUTSET, borderWidth: 2, borderRadius: 4 + RING_OUTSET },
 });

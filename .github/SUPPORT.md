@@ -4,7 +4,7 @@ This repository builds the five Resgrid apps — **Responder**, **Unit**, **IC**
 
 | You need                                              | Go to                                                                                                                |
 | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| Every app stopped working or cannot connect           | [Resgrid system status](https://resgrid.freshstatus.io)                                                              |
+| Every app stopped working or cannot connect           | [Resgrid system status](https://oneuptime.resgrid.net/status-page/09d6b850-e50e-42e2-8497-9ab55e5be465)              |
 | Help with your account, billing or department setup   | [Resgrid Help Center](https://resgrid.zohodesk.com/portal/en/home) or [contact Resgrid](https://resgrid.com/contact) |
 | Something in one of the apps is broken                | [Bug report](https://github.com/Resgrid/Omni/issues/new?template=1-bug-report.yml)                                   |
 | A new feature or a change to an app                   | [Feature request](https://github.com/Resgrid/Omni/issues/new?template=2-feature-request.yml)                         |

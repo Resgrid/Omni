@@ -3,27 +3,22 @@
     "initialization_failed": "Unable to load app data. Please check your connection and try again."
   },
   "callImages": {
-    "not_signed_in": "You must be signed in to upload images",
-    "upload_error": "Error uploading image"
+    "not_signed_in": "You must be signed in to upload images"
   },
   "calls": {
     "directions_to_destination": "Directions to destination",
-    "dispatch_on": "Dispatch Time",
-    "dispatch_on_too_soon": "The dispatch time must be at least {{minutes}} minutes in the future",
     "errors": {
       "load_failed": "Failed to load calls"
     },
     "files": {
       "sharing_unavailable": "Sharing is not available on this device"
     },
-    "required_fields_missing": "Your department requires these fields before the call can be saved: {{fields}}",
     "view_on_map": "View on map"
   },
   "chat": {
     "chatting_as": "Chatting as {{name}}"
   },
   "common": {
-    "no_location": "No location data available",
     "no_unit": "No Unit",
     "unknown_error": "Unknown error occurred"
   },
@@ -33,30 +28,11 @@
   },
   "incident_command": {
     "error": "Failed to load incident command information",
-    "need_category": {
-      "equipment": "Equipment",
-      "logistics": "Logistics",
-      "medical": "Medical",
-      "other": "Other",
-      "resource": "Resource",
-      "staffing": "Staffing"
-    },
-    "need_status": {
-      "cancelled": "Cancelled",
-      "met": "Met",
-      "open": "Open",
-      "partially_met": "Partially Met"
-    },
     "no_active_command": "No incident command is active for this call",
     "objective_status": {
       "complete": "Complete",
       "in_progress": "In Progress",
       "pending": "Pending"
-    },
-    "objective_type": {
-      "benchmark": "Benchmark",
-      "general": "General",
-      "safety": "Safety"
     },
     "progress": "{{percent}}% complete",
     "quantity_fulfilled": "{{fulfilled}} of {{requested}} fulfilled"
@@ -136,13 +112,6 @@
     "unnamedLocation": "Compartment",
     "wholeUnit": "Whole unit: {{name}}"
   },
-  "login": {
-    "hide_password": "Hide password",
-    "login_button": "Sign In",
-    "login_button_loading": "Signing in...",
-    "show_password": "Show password",
-    "title": "Sign In"
-  },
   "map": {
     "legend": {
       "built_in_unit_statuses": "Built-in unit statuses",
@@ -200,14 +169,10 @@
     "removed_one": "Notification removed",
     "unable_to_load": "Unable to load notifications"
   },
-  "push_notifications": {
-    "unknown_type_warning": "This notification type is not recognized. Please contact support if you continue to see this message."
-  },
   "roles": {
     "assignedElsewhere": "In another role",
     "clearAssignment": "Clear the current assignment",
     "noUsersFound": "No users found",
-    "saved_successfully": "Role assignments saved successfully",
     "searchUsers": "Search by name or group...",
     "selectUserDescription": "Choose a person to fill this role",
     "selectUserForRole": "Assign: {{role}}",
@@ -223,22 +188,10 @@
     "traffic_severe": "Severe traffic"
   },
   "settings": {
-    "audio_device_selection": {
-      "speaker_device": "Speaker Device"
-    },
-    "logout_confirm_message": "Are you sure you want to logout? This will clear all app data, cached values, and settings.",
-    "no_units_available_help": "No units are assigned to you. Ask your department administrator to add you to a unit's station group.",
-    "realtime_geolocation_warning": "This feature sends this unit's location to your department while the app is open, and connects to the real-time location hub to receive other units' positions. It requires an active network connection.",
-    "units_load_failed": "Couldn't load units. Check your connection and try again."
+    "realtime_geolocation_warning": "This feature sends this unit's location to your department while the app is open, and connects to the real-time location hub to receive other units' positions. It requires an active network connection."
   },
   "status": {
-    "current": "Current",
     "current_status": "Current status",
-    "hold_to_set_hint": "Press and hold for 2 seconds to set the status",
-    "hold_to_set_instructions": "Press and hold a status for 2 seconds to set it",
-    "hold_to_submit": "Hold to submit",
-    "show_all_statuses": "Show all statuses ({{count}} more)",
-    "show_next_statuses": "Show next statuses only",
-    "status_queued": "Status saved on this device. It will be sent automatically."
+    "hold_to_set_instructions": "Press and hold a status for 2 seconds to set it"
   }
 }

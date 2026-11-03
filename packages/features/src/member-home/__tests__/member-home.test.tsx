@@ -118,10 +118,18 @@ describe('MemberHomeScreen', () => {
     expect(screen.queryByTestId('home-due-checks')).toBeNull();
   });
 
-  it('opens the status sheet on the pressed status', async () => {
+  it('opens the status sheet past the list on the pressed status', async () => {
     await render(<MemberHomeScreen />);
     await fireEvent.press(screen.getByTestId('status-button-2'));
-    expect(screen.getByTestId('status-option-2', q)).toHaveProp('accessibilityState', expect.objectContaining({ selected: true }));
+    expect(screen.queryByTestId('status-option-2', q)).toBeNull();
+    expect(screen.getByTestId('personnel-status-sheet-summary', q)).toHaveTextContent('status.selected_status: Responding', { exact: false });
+    expect(screen.getByTestId('personnel-status-sheet-submit', q)).toBeTruthy();
+  });
+
+  it('opens the status sheet on the list from the status card', async () => {
+    await render(<MemberHomeScreen />);
+    await fireEvent.press(screen.getByTestId('user-status-card-press'));
+    expect(screen.getByTestId('status-option-2', q)).toBeTruthy();
   });
 
   it('opens the sheet on the staffing tab from the staffing card', async () => {

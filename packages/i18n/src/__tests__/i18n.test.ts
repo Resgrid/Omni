@@ -51,8 +51,8 @@ describe('@resgrid/i18n', () => {
       const i18n = i18nModule.initI18n({ variantResources: resourcesFor('unit') });
       expect(i18n.options.defaultNS).toBe('unit');
       expect([i18n.options.fallbackNS].flat()).toEqual(['common']);
-      // Unit keeps its own wording (variant override) ...
-      expect(i18n.t('login.login_button')).toBe('Sign In');
+      // Unit keeps its own wording (a listed variant override) ...
+      expect(i18n.t('settings.realtime_geolocation_warning')).toMatch(/^This feature sends this unit's location/);
       // ... and falls back to common for shared keys.
       expect(i18n.t('common.ok')).toBe('OK');
     });
@@ -144,7 +144,7 @@ describe('@resgrid/i18n', () => {
       expect(i18n.hasResourceBundle('de', 'unit')).toBe(true);
       // The translate cache is cleared when the strings are added.
       expect(i18nModule.translate('common.cancel')).toBe('Abbrechen');
-      expect(i18n.t('login.login_button')).toBe('Anmelden');
+      expect(i18n.t('settings.realtime_geolocation_warning')).toMatch(/^Diese Funktion sendet den Standort dieser Einheit/);
     });
 
     it('stays on English when a language fails to load and tries again on the next call', async () => {
@@ -216,7 +216,7 @@ describe('@resgrid/i18n', () => {
       i18nModule.initI18n({ language: 'de', variantResources: resourcesFor('unit') });
       await i18nModule.loadLanguage('de');
       expect(i18n.hasResourceBundle('de', 'unit')).toBe(true);
-      expect(i18n.t('login.login_button')).toBe('Anmelden');
+      expect(i18n.t('settings.realtime_geolocation_warning')).toMatch(/^Diese Funktion sendet den Standort dieser Einheit/);
       warn.mockRestore();
     });
 

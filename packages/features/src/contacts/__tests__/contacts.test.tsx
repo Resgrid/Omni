@@ -6,7 +6,7 @@ import { type ContactResultData, ContactType } from '@resgrid/models';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import React from 'react';
-import { Linking } from 'react-native';
+import { Linking, StyleSheet } from 'react-native';
 
 import { ContactField } from '../components/contact-field';
 import { contactActionUrl, contactDisplayName, htmlToText, parseCoordinates } from '../lib/contact-format';
@@ -107,6 +107,24 @@ describe('ContactsListScreen', () => {
     expect(screen.queryByTestId('contact-card-a')).toBeNull();
     await fireEvent.press(screen.getByTestId('contact-card-b'));
     expect(router.push).toHaveBeenCalledWith('/contacts/b');
+  });
+
+  it('keeps the category chips on screen when a category is empty so the user can switch back', async () => {
+    useContactsStore.setState({
+      contacts: [contact('a', { FirstName: 'Alex', ContactCategoryId: 'c1' })],
+      categories: [{ ContactCategoryId: 'c1', Name: 'Vendors' } as never, { ContactCategoryId: 'c3', Name: 'Utilities' } as never],
+    });
+    await render(<ContactsListScreen />);
+    // The empty state fills the screen; a shrinkable chip bar would be squeezed to zero height above it.
+    expect(StyleSheet.flatten(screen.getByTestId('contacts-categories').props.style)).toMatchObject({ flexGrow: 0, flexShrink: 0 });
+
+    await fireEvent.press(screen.getByTestId('contacts-category-c3'));
+    expect(screen.getByTestId('contacts-empty')).toBeTruthy();
+    expect(screen.queryByTestId('contacts-list')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('contacts-category-all'));
+    expect(screen.queryByTestId('contacts-empty')).toBeNull();
+    expect(screen.getByTestId('contact-card-a')).toBeTruthy();
   });
 });
 

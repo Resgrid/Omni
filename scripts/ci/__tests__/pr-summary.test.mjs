@@ -48,6 +48,21 @@ describe('cleanDescription', () => {
     assert.equal(cleanDescription(body), '#### Summary\n\n```sh\n# a shell comment\n```\n\n~~~\n## not a heading\n~~~\n\n#123 fixed');
   });
 
+  it('keeps HTML comments inside fenced code', () => {
+    const body = '## Example\n\n```html\n<!-- the header -->\n<header></header>\n```\n<!-- hint -->\nDone.';
+    assert.equal(cleanDescription(body), '#### Example\n\n```html\n<!-- the header -->\n<header></header>\n```\n\nDone.');
+    assert.equal(cleanDescription('~~~xml\n<!-- a\nb -->\n~~~'), '~~~xml\n<!-- a\nb -->\n~~~');
+  });
+
+  it('removes a comment that hides a fenced example, and joins the text around a multi-line comment', () => {
+    assert.equal(cleanDescription('Text\n\n<!--\n```sh\n# example\n```\n-->\n\nMore'), 'Text\n\nMore');
+    assert.equal(cleanDescription('One <!-- a\nb --> two <!-- c --> three'), 'One  two  three');
+  });
+
+  it('leaves a comment that never closes as text', () => {
+    assert.equal(cleanDescription('Keep <!-- open\nrest'), 'Keep <!-- open\nrest');
+  });
+
   it('collapses the blank lines removed comments leave behind', () => {
     assert.equal(cleanDescription('One\n\n<!-- a -->\n\n<!-- b -->\n\nTwo'), 'One\n\nTwo');
   });

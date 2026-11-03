@@ -121,7 +121,8 @@ export const DateTimeField = ({ value, onChange, label, mode = 'date', disabled 
         className="min-h-11 justify-center rounded border border-outline-300 bg-background-0 px-3 py-2"
       >
         {value ? <Text className="text-xs text-typography-500">{label}</Text> : null}
-        <Text className={disabled ? 'text-typography-500' : 'text-typography-900'}>{display}</Text>
+        {/* Empty, the label stands in as a placeholder, so it must not read as a value. */}
+        <Text className={disabled || !value ? 'text-typography-500' : 'text-typography-900'}>{display}</Text>
       </Pressable>
       {open && !disabled ? (
         <NativeModal visible transparent animationType="fade" onRequestClose={() => setOpen(false)}>

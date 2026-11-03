@@ -1,5 +1,5 @@
 import { parseUtcMs } from '@resgrid/core/utils/dates';
-import { type ChatChannelResultData, ChatChannelType, type ChatMessageResultData, ChatParticipantType } from '@resgrid/models';
+import { type ChatAttachmentResultData, type ChatChannelResultData, ChatChannelType, type ChatGifMetadata, type ChatMessageResultData, ChatParticipantType, type GifResultData } from '@resgrid/models';
 
 export type ChatSection = 'direct' | 'channels' | 'incidents' | 'assistant';
 
@@ -41,3 +41,46 @@ export const isOwnMessage = (message: Pick<ChatMessageResultData, 'SenderPartici
 
 /** Oldest first; the conversation renders newest at the bottom. */
 export const orderMessages = (messages: readonly ChatMessageResultData[]): ChatMessageResultData[] => [...messages].sort((a, b) => a.MessageSeq - b.MessageSeq);
+
+const readString = (value: unknown): string | undefined => (typeof value === 'string' && value.length > 0 ? value : undefined);
+const readNumber = (value: unknown): number | undefined => (typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : undefined);
+
+/** True for an absolute https url — the only kind of remote image (GIF) chat renders. */
+export const isHttpsUrl = (value: unknown): value is string => typeof value === 'string' && /^https:\/\/\S+$/i.test(value);
+const readHttpsUrl = (value: unknown): string | undefined => (isHttpsUrl(value) ? value : undefined);
+
+/**
+ * MetadataJson of a GIF message. The wire contract (shared with the web client, validated by Core) is the nested camelCase
+ * envelope `{ gif: { url, previewUrl, width, height } }`; older mobile builds wrote a flat PascalCase object, still read for
+ * history. Only https urls are accepted — Core already limits them to known GIF CDNs; this is the render-side re-check.
+ */
+export const parseGifMetadata = (metadataJson?: string | null): ChatGifMetadata | null => {
+  if (!metadataJson) return null;
+  let raw: unknown;
+  try {
+    raw = JSON.parse(metadataJson);
+  } catch {
+    return null;
+  }
+  if (!raw || typeof raw !== 'object') return null;
+  const root = raw as Record<string, unknown>;
+  const nested = root.gif ?? root.Gif;
+  const source = nested && typeof nested === 'object' ? (nested as Record<string, unknown>) : root;
+  const url = readHttpsUrl(source.url ?? source.Url ?? source.gifUrl ?? source.GifUrl);
+  if (!url) return null;
+  return {
+    GifUrl: url,
+    PreviewUrl: readHttpsUrl(source.previewUrl ?? source.PreviewUrl),
+    Width: readNumber(source.width ?? source.Width),
+    Height: readNumber(source.height ?? source.Height),
+    Title: readString(source.title ?? source.Title),
+  };
+};
+
+/** MetadataJson for sending a picked GIF (nested wire form only). */
+export const buildGifMetadata = (gif: Pick<GifResultData, 'GifUrl' | 'PreviewUrl' | 'Width' | 'Height'>): string =>
+  JSON.stringify({ gif: { url: gif.GifUrl, previewUrl: gif.PreviewUrl, width: gif.Width, height: gif.Height } });
+
+/** The picture of an image message: its first image attachment (a missing content type counts as an image). */
+export const imageAttachmentOf = (message: Pick<ChatMessageResultData, 'Attachments'>): ChatAttachmentResultData | undefined =>
+  (message.Attachments ?? []).find((attachment) => !!attachment.ChatAttachmentId && (!attachment.ContentType || attachment.ContentType.toLowerCase().startsWith('image/')));

@@ -61,7 +61,7 @@ export {
 
 // Shell
 export { createAppShell, type CreateAppShellOptions, RegistryTabs } from './shell/create-app-shell';
-export { findNavEntryForPath, type HeaderLeading, isTopLevelScreen, resolveHeaderLeading, ShellHeader } from './shell/header';
+export { findNavEntryForPath, type HeaderLeading, isTopLevelScreen, resolveHeaderLeading, ShellHeader, useHeaderLeading } from './shell/header';
 export { RegisteredProviders } from './shell/registered-providers';
 export { type ShellContextValue, ShellProvider, useHeaderActions, useOptionalShell, useShell } from './shell/shell-context';
 export { ShellStack } from './shell/shell-stack';

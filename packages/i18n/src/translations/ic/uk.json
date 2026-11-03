@@ -1,6 +1,5 @@
 {
   "calls": {
-    "required_fields_missing": "Ваш відділ вимагає ці поля перед збереженням виклику: {{fields}}",
     "scheduled_dispatch": "Заплановане висилання",
     "scheduled_dispatch_no_clear": "Цей запланований час можна змінити тут, але не видалити.",
     "scheduled_dispatch_too_soon": "Час запланованого висилання має бути щонайменше через {{minutes}} хвилин від цього моменту"
@@ -432,8 +431,7 @@
     "worktime_thresholds_label": "Пороги Робочого Часу"
   },
   "common": {
-    "clear": "Очистити",
-    "no_location": "Немає даних про місцезнаходження"
+    "clear": "Очистити"
   },
   "incident_assistant": {
     "briefing_accountability": "ОБЛІК ПЕРСОНАЛУ",
@@ -613,14 +611,10 @@
   },
   "login": {
     "command_not_authorized": "Ви не маєте доступу до додатка IC. Зверніться до адміністратора свого підрозділу.",
-    "login_button": "Увійти",
-    "login_button_loading": "Вхід...",
-    "otp_body": "Для вашого облікового запису ввімкнено двофакторну автентифікацію. Введіть поточний код із застосунку автентифікації, щоб завершити вхід.",
     "otp_invalid": "Цей код недійсний або прострочений. Введіть поточний код із застосунку автентифікації.",
     "otp_placeholder": "6-значний код",
     "otp_title": "Двофакторна перевірка",
-    "otp_verify": "Підтвердити",
-    "title": "Увійти"
+    "otp_verify": "Підтвердити"
   },
   "maps": {
     "legend": {
@@ -630,12 +624,9 @@
         "unknown_priority": "Без значення",
         "unknown_status": "Без значення або без статусу"
       }
-    },
-    "map_layers": "Шари карти",
-    "no_layers": "Немає доступних шарів карти"
+    }
   },
   "notifications": {
-    "confirm_delete_message_one": "Видалити {{count}} сповіщення? Цю дію неможливо скасувати.",
     "confirm_delete_message_other": "Видалити {{count}} сповіщення? Цю дію неможливо скасувати.",
     "delete_one_error": "Не вдалося видалити сповіщення",
     "delete_one_success": "Сповіщення видалено",
@@ -715,16 +706,7 @@
   "operations": {
     "errors": {
       "timereports_status_transition_invalid": "Цей звіт уже змінено, можливо, на іншому пристрої. Оновіть і спробуйте ще раз."
-    },
-    "time": {
-      "coveredBy": "Цей час уже є у звіті #{{number}} за цей день.",
-      "crewReport": "Звіт про час екіпажу #{{number}} · {{name}}",
-      "individualReport": "Звіт про час #{{number}} · {{name}}",
-      "report": "Звіт #{{number}}"
     }
-  },
-  "push_notifications": {
-    "unknown_type_warning": "Цей тип сповіщення не розпізнано. Зверніться до служби підтримки, якщо повідомлення продовжує з'являтися."
   },
   "readiness": {
     "attention": "Перевірити",
@@ -746,16 +728,11 @@
     "attachment_too_large": "Файл перевищує {{size}} МБ — максимальний розмір вкладення."
   },
   "settings": {
-    "audio_device_selection": {
-      "speaker_device": "Пристрій динаміка"
-    },
-    "logout_confirm_message": "Ви впевнені, що хочете вийти? Це очистить усі дані додатку, кешовані значення та налаштування.",
     "sync_section": "Синхронізація та офлайн-черга",
     "sync_status": "Стан синхронізації",
     "sync_status_failed": "{{count}} невдалих",
     "sync_status_ok": "Актуально",
-    "sync_status_pending": "{{count}} в очікуванні",
-    "view_sync_queue": "Переглянути чергу синхронізації"
+    "sync_status_pending": "{{count}} в очікуванні"
   },
   "sidebar": {
     "menu": "Меню"

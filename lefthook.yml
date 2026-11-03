@@ -9,6 +9,10 @@ pre-commit:
     lint:
       glob: '*.{ts,tsx,js,mjs,cjs}'
       run: node_modules/.bin/eslint . --max-warnings 0 --cache --cache-location node_modules/.cache/eslint
+    # Oxlint anti-slop rules against tooling/oxlint/anti-slop-baseline.json: no file may gain a finding (about 2 s).
+    anti-slop:
+      glob: '*.{ts,tsx,js,mjs,cjs}'
+      run: node scripts/ci/anti-slop.mjs
     format:
       glob: '*.{ts,tsx,js,mjs,cjs,json,yml,yaml,css}'
       run: node_modules/.bin/prettier --check --cache "**/*.{ts,tsx,js,mjs,cjs,json,yml,yaml,css}"

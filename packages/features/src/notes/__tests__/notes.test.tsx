@@ -43,6 +43,11 @@ describe('NoteListScreen', () => {
     await fireEvent.changeText(screen.getByTestId('note-search'), '');
     await fireEvent.press(screen.getByLabelText('Access'));
     expect(screen.queryByText('Hydrant out')).toBeNull();
+    await fireEvent.press(screen.getByLabelText('Water'));
+    expect(screen.queryByText('Note 1')).toBeNull();
+    await fireEvent.press(screen.getByLabelText('notes.all_categories'));
+    expect(screen.getByText('Note 1')).toBeTruthy();
+    expect(screen.getByText('Hydrant out')).toBeTruthy();
   });
 
   it('opens a note in a sheet and renders its body only through HtmlRenderer, sanitized', async () => {
