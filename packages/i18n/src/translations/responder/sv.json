@@ -68,10 +68,7 @@
     "personnel": "Personal",
     "protocols": "Protokoll",
     "reference_id": "Referens-ID",
-    "search_address": "Sök adress",
-    "search_coordinates": "Sök koordinater",
-    "search_plus_code": "Sök plus code",
-    "search_what3words": "Sök what3words-adress"
+    "search_coordinates": "Sök koordinater"
   },
   "chat": {
     "attach": "Bifoga",

@@ -26,12 +26,18 @@ export interface DispatchTypeStyle {
 
 const normalize = (value: unknown): string => (value === null || value === undefined ? '' : String(value).trim().toLowerCase());
 
+/** Core sends "User"/"Personnel", "Group"/"Station", "Role" and "Unit", or the single-letter P/G/R/U codes. */
 export const dispatchKind = (type: string): DispatchKind => {
   const normalized = normalize(type);
-  if (normalized.includes('user') || normalized.includes('personnel')) return 'personnel';
-  if (normalized.includes('unit')) return 'unit';
-  if (normalized.includes('group') || normalized.includes('station')) return 'group';
-  if (normalized.includes('role')) return 'role';
+
+  if (normalized === 'p' || normalized.includes('user') || normalized.includes('personnel')) return 'personnel';
+
+  if (normalized === 'u' || normalized.includes('unit')) return 'unit';
+
+  if (normalized === 'g' || normalized.includes('group') || normalized.includes('station')) return 'group';
+
+  if (normalized === 'r' || normalized.includes('role')) return 'role';
+
   return 'other';
 };
 
@@ -45,6 +51,7 @@ const STYLES: Record<DispatchKind, Omit<DispatchTypeStyle, 'kind'>> = {
 
 export const getDispatchTypeStyle = (type: string): DispatchTypeStyle => {
   const kind = dispatchKind(type);
+
   return { kind, ...STYLES[kind] };
 };
 
@@ -53,14 +60,18 @@ export const isUnitDispatchType = (type: string): boolean => dispatchKind(type) 
 /** One row per entity: the same dispatch can arrive twice (by id and by name). */
 export const getUniqueDispatches = (dispatches: readonly DispatchedEventResultData[]): DispatchedEventResultData[] => {
   const seen = new Set<string>();
+
   return dispatches.filter((dispatch) => {
     const type = normalize(dispatch.Type);
     const nameKey = `name:${type}:${normalize(dispatch.Name)}`;
     const id = normalize(dispatch.Id);
     const idKey = id.length > 0 ? `id:${type}:${id}` : null;
+
     if (seen.has(nameKey) || (idKey !== null && seen.has(idKey))) return false;
     seen.add(nameKey);
+
     if (idKey !== null) seen.add(idKey);
+
     return true;
   });
 };
@@ -91,5 +102,6 @@ export const isDispatchAssignedToUser = (dispatch: DispatchedEventResultData, co
 
 export const isCurrentUserOnCall = (extra: Pick<CallExtraDataResultData, 'Dispatches'> | null | undefined, context: CallAssignmentContext | null | undefined): boolean => {
   if (!extra || !context || extra.Dispatches.length === 0) return false;
+
   return extra.Dispatches.some((dispatch) => isDispatchAssignedToUser(dispatch, context));
 };

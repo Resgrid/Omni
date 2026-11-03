@@ -1,4 +1,5 @@
 import { type ApiCache, type ApiCachePolicy, type ApiContext, type AuthRejection, createApiContext, createHttpClient, DEFAULT_TIMEOUT_MS, type HttpClient } from '@resgrid/api';
+import { toDevProxyUrl } from '@resgrid/core/env/dev-proxy';
 
 import { readProtectedGrantHeaders } from '../data-protection/grant-provider';
 import { setAuthApiContext } from '../runtime/api-context';
@@ -42,8 +43,8 @@ export const handleAuthRejection = (rejection: AuthRejection): void => {
  * Wires `@resgrid/api`'s HTTP client to this package (omni-plan §7.2: Dispatch's client structure + 15 s timeout + client
  * and data-protection headers + shared-session 401 handling): the base URL from the stored server, the access token from
  * the auth store, refreshes through the one refresh engine (logout only on a 400/401 `invalid_grant` from the token
- * endpoint), requests skipped while there is no session, and a refresh before sending when the token is known to have
- * expired.
+ * endpoint), requests skipped while there is no session, a refresh before sending when the token is known to have
+ * expired, and web development builds sent through the dev server's proxy (the servers' CORS allowlists leave localhost out).
  */
 export function createAuthenticatedApiContext(options: AuthenticatedApiContextOptions = {}): AuthenticatedApiContext {
   const http = createHttpClient({
@@ -59,6 +60,7 @@ export function createAuthenticatedApiContext(options: AuthenticatedApiContextOp
     isAccessTokenExpired: () => isAccessTokenExpired() && !!useAuthStore.getState().refreshToken,
     timeoutMs: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
     logger: { warn: (message, context) => authLogger.warn({ message, context }) },
+    transformUrl: toDevProxyUrl,
   });
   const context = createApiContext({ http, cache: options.cache, cachePolicy: options.cachePolicy });
   if (options.register !== false) {

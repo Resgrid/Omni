@@ -68,10 +68,7 @@
     "personnel": "Osoby",
     "protocols": "Protokoły",
     "reference_id": "Identyfikator referencyjny",
-    "search_address": "Szukaj adresu",
-    "search_coordinates": "Szukaj współrzędnych",
-    "search_plus_code": "Szukaj plus code",
-    "search_what3words": "Szukaj adresu what3words"
+    "search_coordinates": "Szukaj współrzędnych"
   },
   "chat": {
     "attach": "Załącz",

@@ -1,6 +1,8 @@
 import './maplibre-css.web';
 
+import { isSameOrigin } from '@resgrid/api';
 import { logger } from '@resgrid/core';
+import { toDevProxyUrl } from '@resgrid/core/env/dev-proxy';
 import { Asset } from 'expo-asset';
 import type {
   FilterSpecification,
@@ -160,7 +162,9 @@ export const MapView = forwardRef<MapViewRef, MapViewProps>(function MapView(pro
   const latestView = useRef(view);
   latestView.current = view;
   const ready = view.status === 'ready' && !!view.mapStyle;
-  const { reportMapError } = useMapProviderContext();
+  const { reportMapError, services } = useMapProviderContext();
+  const latestServices = useRef(services);
+  latestServices.current = services;
   // The provider's style (not one passed in): its tile and load errors feed the D16 offline switch, and the badge is its.
   const usesProviderStyle = !(props.mapStyle ?? props.styleURL);
   const latestReport = useRef(reportMapError);
@@ -219,6 +223,8 @@ export const MapView = forwardRef<MapViewRef, MapViewProps>(function MapView(pro
         attributionControl: false,
         maplibreLogo: false,
         interactive: true,
+        // Department map tiles and images come from the Resgrid server: through the dev server's proxy in a web development build.
+        transformRequest: (url: string) => ({ url: isSameOrigin(url, latestServices.current.getApiBaseUrl()) ? toDevProxyUrl(url) : url }),
       });
     } catch (error) {
       warn('Failed to initialize maplibre-gl', error);

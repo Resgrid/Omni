@@ -18,6 +18,7 @@ export class MapMakerInfoData {
   public InfoWindowContent: string = '';
   public Color: string = '';
   public Type: number = 0;
+  public IsLinkedCall?: boolean;
   public Marker?: string = '';
   public PoiImage: string = '';
   public PoiTypeId?: number | null = null;

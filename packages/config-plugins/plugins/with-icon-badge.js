@@ -102,7 +102,9 @@ function renderBadges(projectRoot, targets, badges) {
     const finalPath = path.resolve(projectRoot, target.output);
     return {
       icon: path.resolve(projectRoot, target.source),
-      dstPath: finalPath.replace(/\.png$/, '.partial.png'),
+      // Per process: Xcode's "Generate app.config" phase, prebuild and parallel checks can evaluate the config at once;
+      // a shared temp name lets one rename another's file away (ENOENT). The rename into place is atomic either way.
+      dstPath: finalPath.replace(/\.png$/, `.${process.pid}.partial.png`),
       finalPath,
       badges,
       isAdaptiveIcon: target.isAdaptiveIcon,

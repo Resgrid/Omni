@@ -48,30 +48,10 @@
       "auto_linked": "automatisch verknüpft",
       "auto_linked_hint": "Ohne Einsatz gesendet; Resgrid hat den Status anhand des vorherigen Status oder der Disposition verknüpft."
     },
-    "audio": "Audio",
-    "delete_call": "Einsatz löschen",
-    "delete_call_confirm": "Diesen Einsatz löschen? Dies kann nicht rückgängig gemacht werden.",
-    "delete_call_error": "Einsatz konnte nicht gelöscht werden",
-    "delete_call_success": "Einsatz gelöscht",
     "destination_address": "Zieladresse",
-    "destination_type": "Zieltyp",
-    "dispatch_more": "Zusätzliche Ressourcen alarmieren",
     "dispatch_more_error": "Ressourcen konnten nicht alarmiert werden",
     "dispatch_more_success": "Ressourcen alarmiert und benachrichtigt",
-    "map_call": "Einsatz",
-    "map_destination": "Ziel",
-    "missing_call_id": "Einsatz-ID fehlt",
-    "pending_banner_description": "Dieser Einsatz ist gespeichert, aber niemand wurde benachrichtigt. Wählen Sie die Empfänger und disponieren Sie ihn, wenn er bereit ist.",
-    "pending_banner_title": "Ausstehend — noch nicht disponiert",
-    "reschedule": "Neu planen",
-    "reschedule_datetime": "Alarmierungsdatum und -uhrzeit",
-    "reschedule_error": "Einsatz konnte nicht neu geplant werden",
-    "reschedule_in_1_day": "In 1 Tag",
-    "reschedule_in_1_hour": "In 1 Stunde",
-    "reschedule_invalid": "Geben Sie ein gültiges Datum und eine gültige Uhrzeit ein (JJJJ-MM-TT HH:mm)",
-    "reschedule_success": "Alarmierungszeit aktualisiert",
-    "reschedule_tomorrow_morning": "Morgen um 8 Uhr",
-    "scheduled_on": "Geplantes Alarmierungsdatum und -uhrzeit"
+    "missing_call_id": "Einsatz-ID fehlt"
   },
   "calls": {
     "audio": {
@@ -84,7 +64,6 @@
     "contact_information": "Kontaktinformationen",
     "contact_picker": {
       "none": "Keine Kontakte verfügbar",
-      "search_placeholder": "Kontakte durchsuchen...",
       "title": "Kontakt auswählen"
     },
     "coordinates_incomplete": "Geben Sie Breiten- und Längengrad ein",
@@ -119,19 +98,16 @@
     "dispatch_recipients_empty": "Für Sie sind keine Personen, Gruppen, Rollen oder Einheiten sichtbar. Prüfen Sie die Berechtigungen Ihrer Abteilung oder alarmieren Sie Alle.",
     "dispatch_recipients_partial_load": "Einige Empfänger konnten nicht geladen werden. Die Listen unten sind möglicherweise unvollständig.",
     "edit_call_web_hint": "Aktualisieren Sie die Einsatzdetails unten. Drücken Sie Strg+S zum Speichern.",
-    "edit_keyboard_shortcuts": "Tipp: Strg+S zum Speichern, Escape zum Abbrechen",
     "expand_map": "Karte vergrößern",
     "form": {
       "no_form": "Kein Einsatzformular konfiguriert",
       "title": "Einsatzformular"
     },
-    "keyboard_shortcuts": "Tipp: Strg+Eingabe zum Erstellen, Escape zum Abbrechen",
     "latitude": "Breitengrad",
     "latitude_invalid": "Geben Sie einen Breitengrad in Dezimalgrad zwischen -90 und 90 ein",
     "latitude_placeholder": "z. B. 39.122639",
     "linked_calls": {
       "change": "Verknüpften Einsatz ändern",
-      "edit_hint": "Bestehende Verknüpfungen dieses Einsatzes bleiben erhalten; wählen Sie einen Einsatz, um eine weitere hinzuzufügen.",
       "linked": "Verknüpft",
       "none": "Keine aktiven Einsätze verfügbar",
       "search_placeholder": "Einsätze durchsuchen...",
@@ -141,29 +117,19 @@
     "longitude": "Längengrad",
     "longitude_invalid": "Geben Sie einen Längengrad in Dezimalgrad zwischen -180 und 180 ein",
     "longitude_placeholder": "z. B. -119.758773",
-    "looking_up_address": "Adresse für diese Koordinaten wird gesucht...",
     "new_call_web_hint": "Füllen Sie die Einsatzdetails unten aus. Drücken Sie Strg+Eingabe zum Erstellen.",
     "no_destination": "Kein Ziel",
-    "notify_cancelled_entities": "Abgemeldete Einheiten benachrichtigen",
-    "notify_cancelled_entities_description": "Personal und Einheiten benachrichtigen, die aus der Alarmierungsliste entfernt wurden.",
-    "pending_saved": "Einsatz als ausstehend gespeichert",
     "protocols": {
-      "add": "Protokolle hinzufügen",
-      "attached": "Bereits zugeordnet: {{names}}",
       "collapse": "Einklappen",
       "expand_questions": "Fragen anzeigen",
       "none": "Keine Protokolle verfügbar",
       "title": "Protokolle"
     },
-    "required_fields_missing_edit": "Ihre Abteilung benötigt diese Felder, bevor ein Einsatz gespeichert werden kann: {{fields}}",
     "save_as_pending": "Als ausstehend speichern (noch nicht disponieren)",
     "save_as_pending_description": "Der Einsatz wird gespeichert und nummeriert, aber niemand wird benachrichtigt und die Einsatz-Apps sehen ihn nicht. Ausgewählte Empfänger bleiben als vorgeschlagene Disposition erhalten; disponieren Sie ihn später unter „Ausstehende Einsätze“.",
-    "save_pending_call": "Ausstehenden Einsatz speichern",
     "schedule_dispatch": "Disposition planen",
     "schedule_dispatch_description": "Legen Sie ein zukünftiges Datum und eine Uhrzeit fest, um diesen Einsatz später zu disponieren",
     "scheduled_on": "Geplantes Datum & Uhrzeit",
-    "scheduled_on_edit_hint": "Wählen Sie einen Zeitpunkt, um die Disposition zu planen oder zu verschieben. Leer gelassen bleibt die aktuelle Planung des Einsatzes erhalten.",
-    "scheduled_on_helper": "Leer lassen für sofortige Disposition",
     "scheduled_on_past_error": "Der geplante Zeitpunkt muss in der Zukunft liegen",
     "scheduled_on_too_soon": "Der geplante Dispositionszeitpunkt muss mindestens 15 Minuten in der Zukunft liegen",
     "templates": {
@@ -244,7 +210,6 @@
     "note_save_error": "Notiz konnte nicht gespeichert werden: {{error}}",
     "note_title_label": "Titel",
     "note_title_placeholder": "Notiztitel eingeben...",
-    "on_call": "Im Einsatz",
     "pending_calls": "Ausstehend",
     "personnel_actions": {
       "destination": "Ziel",
@@ -281,7 +246,6 @@
     "station": "Wache",
     "stations": "Wachen",
     "system_update": "Systemaktualisierung",
-    "unassigned": "Nicht zugewiesen",
     "unit_actions": "Einheitenaktionen",
     "unit_actions_panel": {
       "call_destination": "Einsatzziel",
@@ -513,9 +477,6 @@
     "type": "Typ",
     "unknown_type": "Unbekannter Typ",
     "unnamed": "Unbenannter POI"
-  },
-  "scheduled_calls": {
-    "scheduled_for": "Geplant für"
   },
   "settings": {
     "select_server": "Server auswählen"

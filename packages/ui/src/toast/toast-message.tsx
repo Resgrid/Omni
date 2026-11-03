@@ -1,5 +1,5 @@
 import React from 'react';
-import { type GestureResponderEvent, Pressable } from 'react-native';
+import { Pressable } from 'react-native';
 
 import { HStack } from '../hstack';
 import { X } from '../lucide-icons';
@@ -24,25 +24,31 @@ export const ToastMessage: React.FC<ToastItem> = ({ id, type, title, message, on
     removeToast(id);
   };
 
-  const handleDismiss = (event?: GestureResponderEvent) => {
-    event?.stopPropagation?.();
-    removeToast(id);
-  };
+  const handleDismiss = () => removeToast(id);
 
+  // The dismiss button sits beside the toast's own button, not inside it: on the web a button inside a button is invalid
+  // markup. The toast's padding moves onto the two of them, so its whole surface stays pressable.
+  // typography-0 flips against the toast backgrounds (dark in light mode, pastel in dark mode); a fixed white vanishes in dark mode.
   return (
-    // typography-0 flips against the toast backgrounds (dark in light mode, pastel in dark mode); a fixed white vanishes in dark mode.
-    <Pressable accessibilityRole={onPress ? 'button' : 'alert'} accessibilityLiveRegion="polite" className="w-full" onPress={onPress ? handlePress : undefined} disabled={!onPress} testID={`toast-message-${id}`}>
-      <Toast className="w-full rounded-lg border" action={type}>
-        <HStack className="items-start justify-between" space="md">
-          <VStack className="min-w-0 flex-1" space="xs">
+    <Toast className="w-full rounded-lg border p-0" action={type}>
+      <HStack className="items-start justify-between" space="md">
+        <Pressable
+          accessibilityRole={onPress ? 'button' : 'alert'}
+          accessibilityLiveRegion="polite"
+          className="min-w-0 flex-1 py-4 pl-4"
+          onPress={onPress ? handlePress : undefined}
+          disabled={!onPress}
+          testID={`toast-message-${id}`}
+        >
+          <VStack space="xs">
             {title ? <ToastTitle className="font-medium">{title}</ToastTitle> : null}
             <ToastDescription className="text-typography-0">{message}</ToastDescription>
           </VStack>
-          <Pressable accessibilityLabel={t('common.dismiss', { defaultValue: 'Dismiss' })} accessibilityRole="button" className="p-1" hitSlop={8} onPress={handleDismiss} testID={`toast-dismiss-${id}`}>
-            <X className="text-typography-0" size={18} />
-          </Pressable>
-        </HStack>
-      </Toast>
-    </Pressable>
+        </Pressable>
+        <Pressable accessibilityLabel={t('common.dismiss', { defaultValue: 'Dismiss' })} accessibilityRole="button" className="mr-4 mt-4 p-1" hitSlop={8} onPress={handleDismiss} testID={`toast-dismiss-${id}`}>
+          <X className="text-typography-0" size={18} />
+        </Pressable>
+      </HStack>
+    </Toast>
   );
 };

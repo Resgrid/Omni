@@ -2,18 +2,19 @@ import { FeatureFlagKeys } from '@resgrid/auth';
 import { registerCallDetailTab, registerCallFormHookPoints } from '@resgrid/features/calls';
 import React from 'react';
 
+import { AddResourcesRecommendation } from './components/add-resources-recommendation';
 import { RunCardCallSection } from './components/run-card-call-section';
 import { RunCardRecommendation } from './components/run-card-recommendation';
 
 export const RUN_CARD_CALL_DETAIL_TAB_ID = 'run-card';
 
 /**
- * Plugs run cards into the call create form (the `RunCardRecommendation` hook point). Call once at app start in variants
- * with the `runcards` module; the form still shows it only with `capabilities.calls.runCards` + Dispatch.RunCards.
- * Returns a function that removes the registration again.
+ * Plugs run cards into the call create form and "Dispatch more" (the `RunCardRecommendation` and
+ * `AddResourcesRecommendation` hook points). Call once at app start; both still show only with
+ * `capabilities.calls.runCards` + Dispatch.RunCards. Returns a function that removes the registration again.
  */
 export function registerRunCardHookPoints(): () => void {
-  return registerCallFormHookPoints({ RunCardRecommendation });
+  return registerCallFormHookPoints({ RunCardRecommendation, AddResourcesRecommendation });
 }
 
 /**

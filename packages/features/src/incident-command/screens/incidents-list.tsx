@@ -80,7 +80,7 @@ export default function IncidentsListScreen() {
       className={`rounded-full px-4 py-2 ${includeClosed === value ? 'bg-primary-500' : 'bg-background-200'}`}
       testID={testID}
     >
-      <Text className={`text-sm font-semibold ${includeClosed === value ? 'text-white' : 'text-typography-700'}`}>{label}</Text>
+      <Text className={`text-sm font-semibold ${includeClosed === value ? 'text-typography-0' : 'text-typography-700'}`}>{label}</Text>
     </Pressable>
   );
 

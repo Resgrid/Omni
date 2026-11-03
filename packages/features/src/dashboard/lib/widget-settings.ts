@@ -5,7 +5,7 @@
  *   widgets read while the configure screen wrote the MMKV copy, so most toggles never reached the board. One store now.
  * - Text-matched personnel options (`respondingText`, `notRespondingText`, `unavailableText`) became meaning-based
  *   (status/staffing BaseType); never decide what a status means from its name.
- * - Settings no widget ever read (`showUser`, `showLinkedCalls`, `showEta`, `sortOrders`) are dropped.
+ * - Settings no widget ever read (`showUser`, `showEta`, `sortOrders`) are dropped.
  */
 
 export const FONT_SIZE_MIN = 8;
@@ -72,6 +72,7 @@ export interface MapWidgetSettings {
   showAllMarkers: boolean;
   hideLabels: boolean;
   showCalls: boolean;
+  showLinkedCalls: boolean;
   showStations: boolean;
   showUnits: boolean;
   showPersonnel: boolean;
@@ -212,7 +213,7 @@ export const DEFAULT_WIDGET_SETTINGS: Readonly<WidgetSettings> = {
     fontSize: 14,
     columnOrder: [...CALLS_COLUMNS],
   },
-  map: { zoomLevel: 12, showAllMarkers: true, hideLabels: false, showCalls: true, showStations: true, showUnits: true, showPersonnel: true, latitude: 0, longitude: 0 },
+  map: { zoomLevel: 12, showAllMarkers: true, hideLabels: false, showCalls: true, showLinkedCalls: true, showStations: true, showUnits: true, showPersonnel: true, latitude: 0, longitude: 0 },
   weather: { units: 'imperial', latitude: 0, longitude: 0 },
   notes: { category: '', includeUncategorized: true },
   time: { format24Hour: false, showSeconds: true },
@@ -324,7 +325,10 @@ export function normalizeWidgetSettings(raw: unknown): WidgetSettings {
   calls.fontSize = fontSize(calls.fontSize, d.calls.fontSize);
   calls.columnOrder = normalizeColumnOrder(section('calls').columnOrder, CALLS_COLUMNS);
 
-  const map = mergeScalars(d.map, section('map'));
+  const mapRaw = section('map');
+  const map = mergeScalars(d.map, mapRaw);
+  // Older Omni boards used one toggle for both call types.
+  map.showLinkedCalls = mapRaw.showLinkedCalls === true || (mapRaw.showLinkedCalls !== false && map.showCalls);
   map.zoomLevel = clampNumber(map.zoomLevel, 1, 20, d.map.zoomLevel);
   map.latitude = coordinate(section('map').latitude, 90);
   map.longitude = coordinate(section('map').longitude, 180);

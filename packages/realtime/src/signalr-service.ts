@@ -1,4 +1,5 @@
-import { type HubConnection, HubConnectionBuilder, HubConnectionState, LogLevel } from '@microsoft/signalr';
+import { HttpTransportType, type HubConnection, HubConnectionBuilder, HubConnectionState, type IHttpConnectionOptions, LogLevel } from '@microsoft/signalr';
+import { isDevProxyActive, toDevProxyUrl } from '@resgrid/core/env/dev-proxy';
 import { logger } from '@resgrid/core/logging/logger';
 import { isElectron, isWeb } from '@resgrid/core/platform/platform';
 import type { ConnectivitySource } from '@resgrid/offline';
@@ -199,11 +200,16 @@ export class SignalRService {
 
       if (abortController.signal.aborted) throw new CancelledError();
 
+      const connectionOptions: IHttpConnectionOptions = {
+        // Read at call time: the client calls this on every transport connect, including automatic reconnects.
+        accessTokenFactory: () => this.currentToken() ?? '',
+      };
+
+      // The dev server's proxy (web development builds) carries HTTP only: no WebSocket attempt that is bound to fail.
+      if (isDevProxyActive()) connectionOptions.transport = HttpTransportType.ServerSentEvents | HttpTransportType.LongPolling;
+
       const connection = new HubConnectionBuilder()
-        .withUrl(fullUrl, {
-          // Read at call time: the client calls this on every transport connect, including automatic reconnects.
-          accessTokenFactory: () => this.currentToken() ?? '',
-        })
+        .withUrl(toDevProxyUrl(fullUrl), connectionOptions)
         .withAutomaticReconnect([...SIGNALR_AUTOMATIC_RECONNECT_DELAYS_MS])
         .withServerTimeout(SIGNALR_SERVER_TIMEOUT_MS)
         .configureLogging(LogLevel.Warning)

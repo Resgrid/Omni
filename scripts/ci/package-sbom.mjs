@@ -15,6 +15,7 @@ import { spawnSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -177,16 +178,38 @@ export function findDirectory(root, files, maxDepth = 6) {
   return null;
 }
 
+/**
+ * Writes the signing stub Gradle needs to configure the kept EAS project and returns the environment that points at it.
+ * EAS applies eas-build-inject-android-credentials.gradle to :app, which reads <EAS_BUILD_WORKINGDIR>/credentials.json
+ * while Gradle configures the project, and only EAS's own build sets that variable. Listing dependencies signs nothing,
+ * so the stub names a keystore that does not exist and the build's real keystore is never read.
+ */
+export function writeSigningStub(dir) {
+  const keystore = { keystorePath: path.join(dir, 'no-keystore.jks'), keystorePassword: 'unused', keyAlias: 'unused' };
+  fs.writeFileSync(path.join(dir, 'credentials.json'), JSON.stringify({ android: { keystore } }));
+
+  return { EAS_BUILD_WORKINGDIR: dir };
+}
+
 function androidArtifacts(buildDir) {
   const project = findDirectory(buildDir, [['settings.gradle', 'settings.gradle.kts'], 'gradlew', 'app']);
   if (!project) throw new Error(`No Android project (settings.gradle, gradlew, app/) under ${buildDir}; was the EAS build directory kept?`);
   console.log(`Gradle project: ${project}`);
-  const result = spawnSync(path.join(project, 'gradlew'), [':app:dependencies', '--configuration', 'releaseRuntimeClasspath', '--console=plain', '-q'], {
-    cwd: project,
-    encoding: 'utf8',
-    maxBuffer: 256 * 1024 * 1024,
-    timeout: 15 * 60 * 1000,
-  });
+  const stubDir = fs.mkdtempSync(path.join(os.tmpdir(), 'package-sbom-signing-'));
+  let result;
+
+  try {
+    result = spawnSync(path.join(project, 'gradlew'), [':app:dependencies', '--configuration', 'releaseRuntimeClasspath', '--console=plain', '-q'], {
+      cwd: project,
+      env: { ...process.env, ...writeSigningStub(stubDir) },
+      encoding: 'utf8',
+      maxBuffer: 256 * 1024 * 1024,
+      timeout: 15 * 60 * 1000,
+    });
+  } finally {
+    fs.rmSync(stubDir, { recursive: true, force: true });
+  }
+
   if (result.status !== 0) throw new Error(`gradlew :app:dependencies failed (${result.error?.message ?? `exit ${result.status}`}): ${String(result.stderr).slice(-2000)}`);
   const artifacts = gradleArtifacts(result.stdout);
   if (!artifacts.length) throw new Error('Gradle listed no runtime dependencies for :app.');

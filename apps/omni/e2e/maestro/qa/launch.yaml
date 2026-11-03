@@ -1,0 +1,20 @@
+# Launches the app under test from a clean state with every permission granted, so no system prompt (notifications,
+# location, microphone) covers the screens the QA flows check. For a development client, run-maestro.mjs passes the
+# dev-client deep link and the Metro bundle is opened through it (as shared/launch.yaml does for the smoke flows).
+# Variables: APP_ID, DEV_CLIENT_URL ('none' for builds with an embedded bundle), DEV_CLIENT_LINK.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+    permissions:
+      all: allow
+- runFlow:
+    when:
+      true: ${DEV_CLIENT_URL != 'none'}
+    commands:
+      - openLink: ${DEV_CLIENT_LINK}
+      - runFlow: accept-open-prompt.yaml
+      # The first dev-client launch shows the developer-menu onboarding sheet.
+      - tapOn:
+          text: 'Continue'
+          optional: true

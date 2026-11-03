@@ -126,6 +126,16 @@ export function resolveRuntimeVersion(variant, appEnv, platform, env = process.e
   return { runtimeVersion: String(json.runtimeVersion), sources: json.fingerprintSources?.length ?? 0 };
 }
 
+/** The eas-cli version CI pins (`EAS_CLI_VERSION` in release.yml), so local EAS commands run the same CLI. */
+export function easCliVersion() {
+  const workflow = fs.readFileSync(path.join(repoRoot, '.github', 'workflows', 'release.yml'), 'utf8');
+  const version = /EAS_CLI_VERSION: '([^']+)'/.exec(workflow)?.[1];
+
+  if (!version) throw new Error('EAS_CLI_VERSION not found in .github/workflows/release.yml.');
+
+  return version;
+}
+
 export function readJsonIfExists(file) {
   try {
     return JSON.parse(fs.readFileSync(file, 'utf8'));

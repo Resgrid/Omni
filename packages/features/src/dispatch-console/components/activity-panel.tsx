@@ -5,7 +5,7 @@ import { ResponseCodeChip } from '@resgrid/features/runcards';
 import { WeatherAlertCard, weatherAlertsRoutes } from '@resgrid/features/weather-alerts';
 import { useTranslation } from '@resgrid/i18n';
 import type { CallResultData, CheckInTimerStatusResultData, DispatchedEventResultData, WeatherAlertResultData } from '@resgrid/models';
-import { FlatList, HStack, Pressable, Text, VStack } from '@resgrid/ui';
+import { FlatList, HStack, Pressable, Text, useReadableColor, useThemeColors, VStack } from '@resgrid/ui';
 import { type Href, useRouter } from 'expo-router';
 import type { LucideIcon } from 'lucide-react-native';
 import { AlertTriangle, CloudLightning, Info, Mic, Radio, ShieldCheck, Truck, User, Zap } from 'lucide-react-native';
@@ -38,6 +38,7 @@ const formatDuration = (seconds: number | null): string => (seconds === null ? '
 
 const ActivityRow: React.FC<{ entry: ActivityLogEntry }> = React.memo(({ entry }) => {
   const { icon: Icon, color } = TYPE_STYLES[entry.type];
+
   return (
     <HStack space="sm" className="mb-2 items-start border-b border-outline-100 pb-2">
       <View style={StyleSheet.flatten([styles.icon, { backgroundColor: `${color}22` }])}>
@@ -45,7 +46,7 @@ const ActivityRow: React.FC<{ entry: ActivityLogEntry }> = React.memo(({ entry }
       </View>
       <VStack className="flex-1">
         <HStack className="items-center justify-between">
-          <Text className="flex-1 text-xs font-semibold" numberOfLines={1}>
+          <Text className="flex-1 text-xs font-semibold text-typography-800" numberOfLines={1}>
             {entry.action}
           </Text>
           <Text className="text-xs text-typography-400">{formatClock(entry.timestamp)}</Text>
@@ -60,33 +61,40 @@ const ActivityRow: React.FC<{ entry: ActivityLogEntry }> = React.memo(({ entry }
 
 ActivityRow.displayName = 'ActivityRow';
 
-const CallActivityRow: React.FC<{ event: DispatchedEventResultData }> = React.memo(({ event }) => (
-  <View style={StyleSheet.flatten([styles.timelineRow, { borderLeftColor: event.StatusColor || '#3b82f6' }])}>
-    <HStack space="xs" className="items-center">
-      <Text className="flex-1 text-xs font-semibold" style={event.StatusColor ? { color: event.StatusColor } : undefined} numberOfLines={1}>
-        {event.StatusText}
+const CallActivityRow: React.FC<{ event: DispatchedEventResultData }> = React.memo(({ event }) => {
+  const readable = useReadableColor();
+
+  return (
+    <View style={StyleSheet.flatten([styles.timelineRow, { borderLeftColor: readable.mark(event.StatusColor, '#3b82f6') }])}>
+      <HStack space="xs" className="items-center">
+        <Text className="flex-1 text-xs font-semibold text-typography-800" style={event.StatusColor ? { color: readable.text(event.StatusColor) } : undefined} numberOfLines={1}>
+          {event.StatusText}
+        </Text>
+        <ResponseCodeChip code={event.ResponseCode} name={event.ResponseCodeName} color={event.ResponseCodeColor} />
+      </HStack>
+      <Text className="text-xs text-typography-600" numberOfLines={1}>
+        {[event.Name, event.Group].filter(Boolean).join(' — ')}
       </Text>
-      <ResponseCodeChip code={event.ResponseCode} name={event.ResponseCodeName} color={event.ResponseCodeColor} />
-    </HStack>
-    <Text className="text-xs text-typography-600" numberOfLines={1}>
-      {[event.Name, event.Group].filter(Boolean).join(' — ')}
-    </Text>
-    <Text className="text-xs text-typography-400">{formatUtcInDepartmentTime(event.Timestamp, null, undefined, undefined, event.Timestamp)}</Text>
-    {event.Note ? <Text className="text-xs text-typography-600">{event.Note}</Text> : null}
-  </View>
-));
+      <Text className="text-xs text-typography-400">{formatUtcInDepartmentTime(event.Timestamp, null, undefined, undefined, event.Timestamp)}</Text>
+      {event.Note ? <Text className="text-xs text-typography-600">{event.Note}</Text> : null}
+    </View>
+  );
+});
 
 CallActivityRow.displayName = 'CallActivityRow';
 
 const RadioRow: React.FC<{ entry: RadioLogEntry }> = React.memo(({ entry }) => {
   const { t } = useTranslation();
+  const colors = useThemeColors();
+  const color = entry.isActive ? '#dc2626' : colors.token('typography-500');
+
   return (
     <HStack space="sm" className="mb-2 items-center border-b border-outline-100 pb-2" testID={`radio-entry-${entry.id}`}>
       <View style={StyleSheet.flatten([styles.icon, { backgroundColor: entry.isActive ? '#dc262622' : '#6b728022' }])}>
-        <Mic size={12} color={entry.isActive ? '#dc2626' : '#6b7280'} />
+        <Mic size={12} color={color} />
       </View>
       <VStack className="flex-1">
-        <Text className="text-xs font-semibold" numberOfLines={1}>
+        <Text className="text-xs font-semibold text-typography-800" numberOfLines={1}>
           {entry.participantName}
         </Text>
         <Text className="text-xs text-typography-500">{entry.isActive ? t('dispatch.transmitting') : formatDuration(entry.duration)}</Text>
@@ -98,14 +106,18 @@ const RadioRow: React.FC<{ entry: RadioLogEntry }> = React.memo(({ entry }) => {
 
 RadioRow.displayName = 'RadioRow';
 
-const EmptyState: React.FC<{ icon: LucideIcon; text: string }> = ({ icon: Icon, text }) => (
-  <View style={styles.empty}>
-    <View>
-      <Icon size={28} color="#d1d5db" />
+const EmptyState: React.FC<{ icon: LucideIcon; text: string }> = ({ icon: Icon, text }) => {
+  const colors = useThemeColors();
+
+  return (
+    <View style={styles.empty}>
+      <View>
+        <Icon size={28} color={colors.token('typography-300')} />
+      </View>
+      <Text className="mt-2 text-center text-sm text-typography-500">{text}</Text>
     </View>
-    <Text className="mt-2 text-center text-sm text-typography-500">{text}</Text>
-  </View>
-);
+  );
+};
 
 const NO_TIMERS: CheckInTimerStatusResultData[] = [];
 
@@ -117,6 +129,7 @@ const NO_TIMERS: CheckInTimerStatusResultData[] = [];
 export const ActivityPanel: React.FC<ActivityPanelProps> = ({ selectedCall, callActivity, flex, maxHeight, ...handlers }) => {
   const { t } = useTranslation();
   const router = useRouter();
+  const colors = useThemeColors();
   const activeTab = useConsoleStore((state) => state.activeTab);
   const activityLog = useConsoleStore((state) => state.activityLog);
   const radioLog = useConsoleStore((state) => state.radioLog);
@@ -125,6 +138,7 @@ export const ActivityPanel: React.FC<ActivityPanelProps> = ({ selectedCall, call
   const callId = selectedCall?.CallId ?? null;
 
   const callTimers = callId ? (statusesByCall[callId] ?? NO_TIMERS) : NO_TIMERS;
+
   const overdueTimers = useMemo(
     () =>
       Object.values(statusesByCall)
@@ -132,15 +146,17 @@ export const ActivityPanel: React.FC<ActivityPanelProps> = ({ selectedCall, call
         .filter((timer) => checkInSeverity(timer.Status) === 'critical'),
     [statusesByCall]
   );
+
   const urgentCount = callId ? callTimers.filter((timer) => checkInSeverity(timer.Status) === 'critical').length : overdueTimers.length;
   const filteredLog = useMemo(() => (callId ? activityLog.filter((entry) => entry.metadata?.callId === callId || entry.type === 'system') : activityLog), [activityLog, callId]);
   const activeTransmissions = radioLog.filter((entry) => entry.isActive).length;
 
-  const tabs: { key: ConsoleTab; icon: LucideIcon; label: string; badge?: number }[] = [
-    { key: 'activity', icon: Zap, label: t('dispatch.activity') },
-    { key: 'radio', icon: Radio, label: t('dispatch.radio_log'), badge: activeTransmissions || undefined },
+  // Dispatch's tab counts; an overdue check-in or a live transmission is urgent and stays red whichever tab is open.
+  const tabs: { key: ConsoleTab; icon: LucideIcon; label: string; badge?: number; urgent?: boolean }[] = [
+    { key: 'activity', icon: Zap, label: t('dispatch.activity'), badge: filteredLog.length || undefined },
+    { key: 'radio', icon: Radio, label: t('dispatch.radio_log'), badge: activeTransmissions || undefined, urgent: true },
     { key: 'actions', icon: Info, label: t('dispatch.actions') },
-    { key: 'checkins', icon: ShieldCheck, label: t('dispatch.check_ins'), badge: urgentCount || undefined },
+    { key: 'checkins', icon: ShieldCheck, label: t('dispatch.check_ins'), badge: urgentCount || undefined, urgent: true },
     { key: 'weather', icon: CloudLightning, label: t('dispatch_console.weather_alerts'), badge: weatherAlerts.length || undefined },
   ];
 
@@ -161,6 +177,7 @@ export const ActivityPanel: React.FC<ActivityPanelProps> = ({ selectedCall, call
         return <ActionsPanel selectedCall={selectedCall} {...handlers} />;
       case 'checkins':
         if (selectedCall) return <CheckInTab callId={selectedCall.CallId} timersEnabled={selectedCall.CheckInTimersEnabled} pollMs={30000} />;
+
         return overdueTimers.length === 0 ? (
           <EmptyState icon={ShieldCheck} text={t('dispatch_console.no_overdue_check_ins')} />
         ) : (
@@ -190,6 +207,7 @@ export const ActivityPanel: React.FC<ActivityPanelProps> = ({ selectedCall, call
             />
           );
         }
+
         return filteredLog.length === 0 ? (
           <EmptyState icon={Info} text={callId ? t('dispatch.no_call_activity') : t('dispatch.no_activity')} />
         ) : (
@@ -200,10 +218,12 @@ export const ActivityPanel: React.FC<ActivityPanelProps> = ({ selectedCall, call
 
   return (
     <PanelFrame title={callId ? t('dispatch.call_activity') : t('dispatch.activity_log')} icon={Zap} iconColor="#f97316" cardKey="activity-log" flex={flex} maxHeight={maxHeight} testID="activity-panel">
-      <HStack className="flex-wrap border-b border-outline-200 px-1" testID="activity-tabs">
+      <HStack className="flex-wrap border-b border-outline-200 px-2" testID="activity-tabs">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.key;
           const Icon = tab.icon;
+          const badgeColor = tab.urgent ? '#ef4444' : isActive ? '#6366f1' : null;
+
           return (
             <Pressable
               key={tab.key}
@@ -211,16 +231,18 @@ export const ActivityPanel: React.FC<ActivityPanelProps> = ({ selectedCall, call
               accessibilityRole="tab"
               accessibilityState={{ selected: isActive }}
               accessibilityLabel={tab.label}
-              className={`mr-1 flex-row items-center px-2 py-2 ${isActive ? 'border-b-2 border-primary-500' : ''}`}
+              style={StyleSheet.flatten([styles.tab, isActive ? styles.tabActive : null])}
               testID={`activity-tab-${tab.key}`}
             >
               <View>
-                <Icon size={14} color={isActive ? '#4f46e5' : '#6b7280'} />
+                <Icon size={14} color={isActive ? colors.primaryStrong : colors.token('typography-500')} />
               </View>
-              <Text className={`ml-1 text-xs ${isActive ? 'font-semibold text-primary-600' : 'text-typography-600'}`}>{tab.label}</Text>
+              <Text className={`ml-1 text-xs font-medium ${isActive ? 'text-primary-600' : 'text-typography-500'}`}>{tab.label}</Text>
               {tab.badge ? (
-                <View className="ml-1 rounded-full bg-error-500 px-1.5" testID={`activity-tab-${tab.key}-badge`}>
-                  <Text className="text-xs font-bold text-typography-0">{tab.badge}</Text>
+                <View style={StyleSheet.flatten([styles.badge, badgeColor ? { backgroundColor: badgeColor } : null])} testID={`activity-tab-${tab.key}-badge`}>
+                  <Text className={`text-xs font-bold ${badgeColor ? '' : 'text-typography-600'}`} style={badgeColor ? styles.onFill : undefined}>
+                    {tab.badge > 99 ? '99+' : tab.badge}
+                  </Text>
                 </View>
               ) : null}
             </Pressable>
@@ -236,6 +258,11 @@ const styles = StyleSheet.create({
   icon: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   timelineRow: { borderLeftWidth: 3, paddingLeft: 8, marginBottom: 8 },
   list: { padding: 8 },
+  // Dispatch's tabs: an indigo underline, and a grey count that turns indigo on the open tab.
+  tab: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 10, borderBottomWidth: 2, borderBottomColor: 'transparent' },
+  tabActive: { borderBottomColor: '#6366f1' },
+  badge: { minWidth: 18, height: 18, borderRadius: 9, marginLeft: 4, paddingHorizontal: 4, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(107, 114, 128, 0.2)' },
+  onFill: { color: '#ffffff' },
   empty: { padding: 24, alignItems: 'center' },
   body: { flex: 1, minHeight: 160 },
 });

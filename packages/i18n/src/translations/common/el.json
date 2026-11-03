@@ -231,7 +231,33 @@
     "info": {
       "dispatched_on": "Dispatched",
       "logged_on": "Logged"
-    }
+    },
+    "delete_call": "Διαγραφή Κλήσης",
+    "delete_call_confirm": "Διαγραφή αυτής της κλήσης; Η ενέργεια δεν μπορεί να αναιρεθεί.",
+    "delete_call_success": "Η κλήση διαγράφηκε",
+    "delete_call_error": "Αποτυχία διαγραφής κλήσης",
+    "reschedule": "Επαναπρογραμματισμός",
+    "reschedule_success": "Η ώρα αποστολής ενημερώθηκε",
+    "reschedule_error": "Αποτυχία επαναπρογραμματισμού κλήσης",
+    "reschedule_invalid": "Choose a valid dispatch date and time",
+    "reschedule_in_1_hour": "Σε 1 ώρα",
+    "reschedule_in_1_day": "Σε 1 ημέρα",
+    "reschedule_tomorrow_morning": "Αύριο 8 π.μ.",
+    "reschedule_datetime": "Ημερομηνία και ώρα αποστολής",
+    "dispatch_more": "Αποστολή πρόσθετων πόρων",
+    "pending_banner_title": "Εκκρεμής — δεν έχει σταλεί ακόμη",
+    "pending_banner_description": "Αυτή η κλήση έχει αποθηκευτεί αλλά κανείς δεν έχει ειδοποιηθεί. Επιλέξτε ποιους θα στείλετε και αποστείλετέ την όταν είναι έτοιμη.",
+    "dispatch_call": "Αποστολή",
+    "map_call": "Κλήση",
+    "map_destination": "Προορισμός",
+    "audio": "Ήχος",
+    "audio_empty": "Δεν υπάρχουν ηχογραφήσεις",
+    "audio_play": "Play {{name}}",
+    "audio_stop": "Stop {{name}}",
+    "audio_play_error": "Could not play this recording",
+    "scheduled_on": "Προγραμματισμένη Ημερομηνία και Ώρα Αποστολής",
+    "destination_type": "Τύπος Προορισμού",
+    "keyboard_shortcuts": "Tip: Press 1-9 to switch tabs, Ctrl+E to edit, Escape to go back"
   },
   "calls": {
     "address": "Διεύθυνση",
@@ -253,7 +279,9 @@
     "contact_phone_placeholder": "Εισαγάγετε το τηλέφωνο της επαφής",
     "contact_picker": {
       "linked": "Συνδεδεμένη επαφή: {{name}}",
-      "select": "Select Contact"
+      "select": "Select Contact",
+      "search_placeholder": "Αναζήτηση επαφών...",
+      "empty": "Δεν υπάρχουν διαθέσιμες επαφές"
     },
     "coordinates": "Συντεταγμένες GPS",
     "coordinates_found": "Οι συντεταγμένες βρέθηκαν και η διεύθυνση ενημερώθηκε",
@@ -398,7 +426,9 @@
     },
     "protocols": {
       "select": "Επιλογή Πρωτοκόλλων",
-      "selected_count": "{{count}} selected"
+      "selected_count": "{{count}} selected",
+      "attached": "Ήδη συνδεδεμένα: {{names}}",
+      "add": "Προσθήκη Πρωτοκόλλων"
     },
     "queued": {
       "badge": "Queued — not dispatched yet",
@@ -447,8 +477,25 @@
       "name_required": "Enter a name for the call",
       "nature_required": "Enter the nature of the call",
       "required": "Required by your department",
-      "udf_required": "Fill in the required custom fields"
-    }
+      "udf_required": "Fill in the required custom fields",
+      "type_required": "Choose a call type"
+    },
+    "pending_saved": "Η κλήση αποθηκεύτηκε ως εκκρεμής",
+    "required_fields_missing_edit": "Το τμήμα σας απαιτεί αυτά τα πεδία πριν αποθηκευτεί η κλήση: {{fields}}",
+    "search_address": "Αναζήτηση διεύθυνσης",
+    "search_what3words": "Αναζήτηση διεύθυνσης what3words",
+    "search_plus_code": "Αναζήτηση plus code",
+    "looking_up_address": "Αναζήτηση διεύθυνσης για αυτές τις συντεταγμένες...",
+    "notify_cancelled_entities": "Ειδοποίηση ακυρωμένων οντοτήτων",
+    "notify_cancelled_entities_description": "Αποστολή μηνύματος στο προσωπικό/στις μονάδες που αφαιρέθηκαν από τη λίστα αποστολής.",
+    "linked_calls": {
+      "edit_hint": "Οι υπάρχουσες συνδέσεις αυτής της κλήσης διατηρούνται· επιλέξτε μια κλήση για να προσθέσετε άλλη."
+    },
+    "scheduled_on_edit_hint": "Επιλέξτε ώρα για να προγραμματίσετε ή να αλλάξετε την αποστολή. Αν μείνει κενό, διατηρείται ο τρέχων προγραμματισμός της κλήσης.",
+    "scheduled_on_helper": "Αφήστε το κενό για άμεση αποστολή",
+    "save_pending_call": "Αποθήκευση Εκκρεμούς Κλήσης",
+    "keyboard_shortcuts": "Συμβουλή: Πατήστε Ctrl+Enter για δημιουργία, Escape για ακύρωση",
+    "edit_keyboard_shortcuts": "Συμβουλή: Πατήστε Ctrl+S για αποθήκευση, Escape για ακύρωση"
   },
   "chat": {
     "ack_pending_count": "Έχετε {{count}} επείγοντα μηνύματα προς επιβεβαίωση",
@@ -3443,7 +3490,8 @@
     "table_priority": "Προτεραιότητα",
     "table_scheduled": "Προγραμματισμένη Για",
     "table_type": "Τύπος",
-    "title": "Προγραμματισμένες Κλήσεις"
+    "title": "Προγραμματισμένες Κλήσεις",
+    "scheduled_for": "Προγραμματισμένη για"
   },
   "certifications": {
     "add": "Προσθήκη πιστοποίησης",
@@ -3608,6 +3656,7 @@
     "severity_levels": "Επίπεδα Σοβαρότητας",
     "show_area": "Εμφάνιση Περιοχής",
     "show_calls": "Εμφάνιση Κλήσεων",
+    "show_linked_calls": "Εμφάνιση Συνδεδεμένων Κλήσεων",
     "show_expiry": "Εμφάνιση Ώρας Λήξης",
     "show_headline": "Εμφάνιση Τίτλου",
     "show_personnel": "Εμφάνιση Προσωπικού",
@@ -3788,6 +3837,7 @@
     "check_in": "Check in",
     "clear_search": "Clear search",
     "expand_map": "Open the full map",
+    "gps": "GPS",
     "map_unavailable": "No map is configured for this department.",
     "no_overdue_check_ins": "No overdue check-ins",
     "no_resources": "No units or personnel to show",
@@ -3811,11 +3861,14 @@
     "ptt_error_permission": "Microphone access is needed to talk.",
     "ptt_hotkey_hint": "Hold {{hotkey}} to talk",
     "ptt_no_channels": "No voice channels",
+    "ptt_off": "OFF",
     "ptt_ready": "Ready",
     "ptt_receiving": "Receiving",
     "ptt_reconnecting": "Reconnecting…",
+    "ptt_rx": "RX",
     "ptt_stop": "Stop talking",
     "ptt_talk": "Talk",
+    "ptt_tx": "TX",
     "resources": "Resources",
     "resources_on_call": "Resources on call",
     "search_notes": "Search notes",
@@ -3877,6 +3930,7 @@
     "note_added_to_console": "Μια νέα σημείωση προστέθηκε στην κονσόλα",
     "note_created": "Η Σημείωση Δημιουργήθηκε",
     "notes": "Σημειώσεις",
+    "on_call": "Στην Κλήση",
     "personnel": "Προσωπικό",
     "personnel_deselected": "Αποεπιλέχθηκε Προσωπικό",
     "personnel_on_call": "Προσωπικό στην Κλήση",
@@ -3897,6 +3951,7 @@
     "transmission_ended": "Η εκπομπή τερματίστηκε",
     "transmitting": "Transmitting",
     "transmitting_on": "Εκπομπή στο {{channel}}",
+    "unassigned": "Χωρίς ανάθεση",
     "unit_deselected": "Αποεπιλέχθηκε Μονάδα",
     "unit_selected": "Επιλέχθηκε Μονάδα",
     "unit_status_updated": "Η κατάσταση μονάδας ενημερώθηκε",

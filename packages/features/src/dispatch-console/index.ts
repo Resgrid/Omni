@@ -24,7 +24,7 @@ export { ConsolePersonnelRow, ConsoleUnitRow, UnitCrewLine } from './components/
 export { ResourcesPanel, type ResourcesPanelProps } from './components/resources-panel';
 export { StatsHeader, type StatsHeaderProps } from './components/stats-header';
 export { UnitsPanel, type UnitsPanelProps } from './components/units-panel';
-export { ViewToggles } from './components/view-toggles';
+export { ViewToggles, type ViewTogglesProps } from './components/view-toggles';
 
 // View state and hooks
 export { CONSOLE_PERSONNEL_EVENTS, CONSOLE_UNIT_EVENTS, refreshSelectedCall, useConsoleData } from './hooks/use-console-data';

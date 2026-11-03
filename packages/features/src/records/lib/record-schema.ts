@@ -7,6 +7,7 @@ import {
   type RecordSectionSchema,
   type RecordValueCellData,
   type RecordValueInput,
+  type RecordValuesData,
   RmsFieldClassification,
   RmsFieldType,
   RmsRuleEffect,
@@ -56,12 +57,26 @@ export type ValueMap = Record<string, RecordValueInput>;
 export const cellKey = (sectionKey: string, fieldKey: string, rowKey?: string | null): string => `${sectionKey}::${rowKey ?? ''}::${fieldKey}`;
 
 /** A cell the server withheld (ADP sealed or Restricted without the right): shown as protected, never posted back. */
-export const isWithheldCell = (cell: Pick<RecordValueCellData, 'IsWithheld' | 'Value'>): boolean => cell.IsWithheld === true || cell.Value === REDACTION_VALUE;
+export const isWithheldCell = (cell: Pick<RecordValueCellData, 'Withheld' | 'IsWithheld' | 'Value'>): boolean => cell.Withheld === true || cell.IsWithheld === true || cell.Value === REDACTION_VALUE;
 
-export const toValueMap = (cells: RecordValueCellData[] | null | undefined): ValueMap => {
+type RecordCells = RecordValuesData | RecordValueCellData[] | null | undefined;
+
+function recordCells(data: RecordCells): RecordValueCellData[] {
+  if (Array.isArray(data)) return data;
+
+  if (!data?.Sections) return data?.Cells ?? [];
+
+  return data.Sections.flatMap((section) => (section.Rows ?? []).flatMap((row) => (row.Cells ?? []).map((cell) => ({ ...cell, SectionKey: section.SectionKey, RowKey: row.RowKey, Ordinal: row.Ordinal }))));
+}
+
+const withheldFields = (data: RecordCells): Set<string> => new Set(Array.isArray(data) ? [] : (data?.WithheldFieldKeys ?? []));
+
+export const toValueMap = (data: RecordCells): ValueMap => {
   const map: ValueMap = {};
-  for (const cell of cells ?? []) {
-    if (!cell?.FieldKey || !cell?.SectionKey || isWithheldCell(cell)) continue;
+  const withheld = withheldFields(data);
+
+  for (const cell of recordCells(data)) {
+    if (!cell?.FieldKey || !cell?.SectionKey || isWithheldCell(cell) || withheld.has(cell.FieldKey)) continue;
     map[cellKey(cell.SectionKey, cell.FieldKey, cell.RowKey)] = {
       SectionKey: cell.SectionKey,
       FieldKey: cell.FieldKey,
@@ -72,8 +87,11 @@ export const toValueMap = (cells: RecordValueCellData[] | null | undefined): Val
       ReferenceType: cell.ReferenceType ?? null,
       ReferenceId: cell.ReferenceId ?? null,
       UnitCode: cell.UnitCode ?? null,
+      CurrencyCode: cell.CurrencyCode ?? null,
+      OffsetMinutes: cell.OffsetMinutes ?? null,
     };
   }
+
   return map;
 };
 
@@ -82,18 +100,26 @@ export const toValueMap = (cells: RecordValueCellData[] | null | undefined): Val
  * editor could not reveal posts nothing back"), so these cells are rendered disabled and left out of every save —
  * posting the sentinel would overwrite the protected value with the word "REDACTED".
  */
-export const withheldCellKeys = (cells: RecordValueCellData[] | null | undefined): Set<string> => {
+export const withheldCellKeys = (data: RecordCells): Set<string> => {
   const keys = new Set<string>();
-  for (const cell of cells ?? []) {
-    if (cell?.FieldKey && cell.SectionKey && isWithheldCell(cell)) keys.add(cellKey(cell.SectionKey, cell.FieldKey, cell.RowKey));
+  const withheld = withheldFields(data);
+
+  for (const cell of recordCells(data)) {
+    if (cell?.FieldKey && cell.SectionKey && (isWithheldCell(cell) || withheld.has(cell.FieldKey))) {
+      keys.add(cellKey(cell.SectionKey, cell.FieldKey, cell.RowKey));
+    }
   }
+
   return keys;
 };
 
 export const isBlank = (value: RecordValueInput | undefined | null): boolean => {
   if (!value) return true;
+
   if (value.Values && value.Values.length > 0) return false;
+
   if (value.ReferenceId && value.ReferenceId.length > 0) return false;
+
   return value.Value === null || value.Value === undefined || value.Value.trim().length === 0;
 };
 
@@ -106,16 +132,21 @@ export const toValueList = (values: ValueMap, withheld: ReadonlySet<string> = ne
 /** Row keys present for a repeating section, in stored order. */
 export const rowKeysFor = (values: ValueMap, sectionKey: string): string[] => {
   const seen = new Map<string, number>();
+
   for (const value of Object.values(values)) {
     if (value.SectionKey !== sectionKey || !value.RowKey) continue;
+
     if (!seen.has(value.RowKey)) seen.set(value.RowKey, value.Ordinal ?? seen.size);
   }
+
   return [...seen.entries()].sort((a, b) => a[1] - b[1] || a[0].localeCompare(b[0])).map(([key]) => key);
 };
 
 const scalarText = (value: RecordValueInput | undefined): string => {
   if (!value) return '';
+
   if (value.Values && value.Values.length > 0) return value.Values.join(',');
+
   return value.ReferenceId ?? value.Value ?? '';
 };
 
@@ -124,13 +155,17 @@ const resolve = (values: ValueMap, schema: RecordDefinitionSchema, fieldKey: str
   // matching the server's Evaluate(condition, schema, values, depth, row).
   if (rowKey) {
     const own = values[cellKey(sectionKey, fieldKey, rowKey)];
+
     if (own) return own;
   }
+
   for (const section of schema.Sections ?? []) {
     if (section.Repeating) continue;
     const candidate = values[cellKey(section.Key, fieldKey, null)];
+
     if (candidate) return candidate;
   }
+
   return undefined;
 };
 
@@ -143,7 +178,9 @@ export const evaluateCondition = (condition: RecordConditionSchema | null | unde
 
   if (condition.Operator === RmsRuleOperator.And || condition.Operator === RmsRuleOperator.Or) {
     const children = condition.Conditions ?? [];
+
     if (children.length === 0) return true;
+
     return condition.Operator === RmsRuleOperator.And
       ? children.every((child) => evaluateCondition(child, schema, values, sectionKey, rowKey, depth + 1))
       : children.some((child) => evaluateCondition(child, schema, values, sectionKey, rowKey, depth + 1));
@@ -170,11 +207,16 @@ export const evaluateCondition = (condition: RecordConditionSchema | null | unde
       return !blank;
     case RmsRuleOperator.InRange: {
       const numeric = Number.parseFloat(text);
+
       if (Number.isNaN(numeric)) return false;
+
       if (condition.Min !== null && condition.Min !== undefined && numeric < condition.Min) return false;
+
       if (condition.Max !== null && condition.Max !== undefined && numeric > condition.Max) return false;
+
       return true;
     }
+
     default:
       return true;
   }
@@ -190,7 +232,9 @@ const evaluateFieldRules = (field: RecordFieldSchema, schema: RecordDefinitionSc
   for (const rule of field.Rules ?? []) {
     const met = evaluateCondition(rule.Condition, schema, values, sectionKey, rowKey);
     const key = cellKey(sectionKey, field.Key, rowKey);
+
     if (rule.Effect === RmsRuleEffect.Show && !met) state.hiddenFieldKeys.add(key);
+
     if (rule.Effect === RmsRuleEffect.Require && met) state.requiredFieldKeys.add(key);
   }
 };
@@ -198,22 +242,27 @@ const evaluateFieldRules = (field: RecordFieldSchema, schema: RecordDefinitionSc
 /** Which fields are shown and which are required right now. Repeating sections evaluate per row, as the server does. */
 export const evaluateRules = (schema: RecordDefinitionSchema | null | undefined, values: ValueMap): RuleState => {
   const state: RuleState = { hiddenFieldKeys: new Set(), requiredFieldKeys: new Set(), hiddenSectionKeys: new Set() };
+
   if (!schema) return state;
 
   for (const section of schema.Sections ?? []) {
     for (const rule of section.Rules ?? []) {
       if (rule.Effect === RmsRuleEffect.Show && !evaluateCondition(rule.Condition, schema, values, section.Key, null)) state.hiddenSectionKeys.add(section.Key);
     }
+
     if (state.hiddenSectionKeys.has(section.Key)) continue;
 
     if (section.Repeating) {
       for (const rowKey of rowKeysFor(values, section.Key)) {
         for (const field of section.Fields ?? []) evaluateFieldRules(field, schema, values, section.Key, rowKey, state);
       }
+
       continue;
     }
+
     for (const field of section.Fields ?? []) evaluateFieldRules(field, schema, values, section.Key, null, state);
   }
+
   return state;
 };
 
@@ -221,7 +270,9 @@ export const isFieldHidden = (state: RuleState, sectionKey: string, fieldKey: st
 
 export const isFieldRequired = (state: RuleState, field: RecordFieldSchema, sectionKey: string, rowKey?: string | null, forFinalize = false): boolean => {
   if (field.Required) return true;
+
   if (forFinalize && field.RequiredToFinalize) return true;
+
   return state.requiredFieldKeys.has(cellKey(sectionKey, field.Key, rowKey ?? null));
 };
 
@@ -241,36 +292,47 @@ const NUMERIC_TYPES: ReadonlySet<RmsFieldType> = new Set([RmsFieldType.Integer, 
  */
 export const validate = (schema: RecordDefinitionSchema | null | undefined, values: ValueMap, forFinalize: boolean, withheld: ReadonlySet<string> = new Set()): ValidationIssue[] => {
   const issues: ValidationIssue[] = [];
+
   if (!schema) return issues;
   const state = evaluateRules(schema, values);
 
   const checkField = (section: RecordSectionSchema, field: RecordFieldSchema, rowKey: string | null): void => {
     const key = cellKey(section.Key, field.Key, rowKey);
+
     if (isFieldHidden(state, section.Key, field.Key, rowKey) || withheld.has(key)) return;
     const value = values[key];
+
     if (isBlank(value)) {
       if (isFieldRequired(state, field, section.Key, rowKey, forFinalize)) issues.push({ sectionKey: section.Key, fieldKey: field.Key, rowKey, label: field.Label, code: 'required' });
+
       return;
     }
+
     if (NUMERIC_TYPES.has(field.Type)) {
       const numeric = Number.parseFloat(value?.Value ?? '');
+
       if (Number.isNaN(numeric) || (field.Min !== null && field.Min !== undefined && numeric < field.Min) || (field.Max !== null && field.Max !== undefined && numeric > field.Max)) {
         issues.push({ sectionKey: section.Key, fieldKey: field.Key, rowKey, label: field.Label, code: 'range' });
       }
     }
+
     if (field.MaxLength && (value?.Value?.length ?? 0) > field.MaxLength) issues.push({ sectionKey: section.Key, fieldKey: field.Key, rowKey, label: field.Label, code: 'length' });
   };
 
   for (const section of schema.Sections ?? []) {
     if (state.hiddenSectionKeys.has(section.Key)) continue;
+
     if (section.Repeating) {
       for (const rowKey of rowKeysFor(values, section.Key)) {
         for (const field of section.Fields ?? []) checkField(section, field, rowKey);
       }
+
       continue;
     }
+
     for (const field of section.Fields ?? []) checkField(section, field, null);
   }
+
   return issues;
 };
 
@@ -283,6 +345,7 @@ export const canAuthorOffline = (entry: FieldRecordCatalogEntry | null | undefin
 /** Values prefilled by the server, keyed for the form. */
 export const prefillToValueMap = (prefilled: { SectionKey?: string | null; FieldKey: string; Value?: string | null; ReferenceType?: string | null; ReferenceId?: string | null }[]): ValueMap => {
   const map: ValueMap = {};
+
   for (const value of prefilled) {
     if (!value.SectionKey) continue;
     map[cellKey(value.SectionKey, value.FieldKey, null)] = {
@@ -294,12 +357,15 @@ export const prefillToValueMap = (prefilled: { SectionKey?: string | null; Field
       ReferenceId: value.ReferenceId ?? null,
     };
   }
+
   return map;
 };
 
 /** A staged draft's values keyed for the form. */
 export const valueListToMap = (values: RecordValueInput[]): ValueMap => {
   const map: ValueMap = {};
+
   for (const value of values) map[cellKey(value.SectionKey, value.FieldKey, value.RowKey ?? null)] = value;
+
   return map;
 };

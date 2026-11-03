@@ -20,11 +20,14 @@ interface WebTestFixtures {
  */
 export const test = variantTest.extend<WebTestFixtures, WebWorkerFixtures>({
   webServer: [
-    async ({ variantId }, provide) => {
+    async ({ variantId }, provide, workerInfo) => {
       if (!hasWebExport(variantId)) {
         throw new Error(`No web export in ${webExportDir(variantId)}. Run: APP_VARIANT=${variantId} pnpm --filter @resgrid/omni web:export`);
       }
-      const server = await startStaticServer(webExportDir(variantId));
+      // A real server only answers origins on its CORS list, so suites that call one (e2e/qa) serve from a known port:
+      // E2E_WEB_PORT + the worker's parallel index. Otherwise any free port.
+      const basePort = Number(process.env.E2E_WEB_PORT ?? 0);
+      const server = await startStaticServer(webExportDir(variantId), basePort ? basePort + workerInfo.parallelIndex : 0);
       await provide(server);
       await server.close();
     },

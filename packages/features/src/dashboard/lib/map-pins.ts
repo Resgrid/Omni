@@ -6,12 +6,12 @@ import type { MapWidgetSettings } from './widget-settings';
 export const PIN_TYPE = { Call: 0, Unit: 1, Station: 2, Personnel: 3 } as const;
 
 /** The pins the map widget draws: the pin kinds the board turned off are dropped (BigBoard ignored these settings). */
-export function filterMapPins(pins: readonly MapMakerInfoData[], settings: Pick<MapWidgetSettings, 'showCalls' | 'showUnits' | 'showStations' | 'showPersonnel'>): MapMakerInfoData[] {
+export function filterMapPins(pins: readonly MapMakerInfoData[], settings: Pick<MapWidgetSettings, 'showCalls' | 'showLinkedCalls' | 'showUnits' | 'showStations' | 'showPersonnel'>): MapMakerInfoData[] {
   return pins.filter((pin) => {
     if (!Number.isFinite(pin.Latitude) || !Number.isFinite(pin.Longitude) || (pin.Latitude === 0 && pin.Longitude === 0)) return false;
     switch (pin.Type) {
       case PIN_TYPE.Call:
-        return settings.showCalls;
+        return pin.IsLinkedCall === true ? settings.showLinkedCalls : settings.showCalls;
       case PIN_TYPE.Unit:
         return settings.showUnits;
       case PIN_TYPE.Station:

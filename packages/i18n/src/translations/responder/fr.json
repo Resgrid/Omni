@@ -68,10 +68,7 @@
     "personnel": "Personnel",
     "protocols": "Protocoles",
     "reference_id": "ID de référence",
-    "search_address": "Rechercher l'adresse",
-    "search_coordinates": "Rechercher les coordonnées",
-    "search_plus_code": "Rechercher le plus code",
-    "search_what3words": "Rechercher l'adresse what3words"
+    "search_coordinates": "Rechercher les coordonnées"
   },
   "chat": {
     "attach": "Joindre",

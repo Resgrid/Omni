@@ -43,6 +43,8 @@ export interface DispatchConsoleScreenProps {
   mapSlot?: React.ReactNode;
   /** The stats bar clock (default true). */
   showClock?: boolean;
+  /** "Available only" / "Single list" under the stats bar (default true); the app puts them in the app bar instead. */
+  showViewToggles?: boolean;
   /** Clock for stats and ages (tests). */
   now?: () => number;
 }
@@ -61,7 +63,7 @@ type StatusTarget = { kind: 'unit'; unitId: string } | { kind: 'personnel'; user
  * to it; units support multi-select for one status change. Writes in Dispatch's offline scope (statuses on behalf, call
  * notes, check-ins) go through the outbox; dispatching, closing and department notes are online.
  */
-export default function DispatchConsoleScreen({ realtime = true, mapHref = '/map', mapSlot, showClock = true, now = Date.now }: DispatchConsoleScreenProps) {
+export default function DispatchConsoleScreen({ realtime = true, mapHref = '/map', mapSlot, showClock = true, showViewToggles = true, now = Date.now }: DispatchConsoleScreenProps) {
   const { t } = useTranslation();
   const router = useRouter();
   const formFactor = useFormFactor();
@@ -149,16 +151,24 @@ export default function DispatchConsoleScreen({ realtime = true, mapHref = '/map
     />
   );
   const unitsPanel = (sizing: { flex?: number; maxHeight?: number }) => (
-    <UnitsPanel callFilter={callFilter} onSelectUnit={handleSelectUnit} onSetStatusForCall={(unitId) => setStatusTarget({ kind: 'unit', unitId })} {...sizing} />
+    <UnitsPanel callFilter={callFilter} onSelectUnit={handleSelectUnit} onOpenUnit={handlers.onViewUnit} onSetStatusForCall={(unitId) => setStatusTarget({ kind: 'unit', unitId })} {...sizing} />
   );
   const personnelPanel = (sizing: { flex?: number; maxHeight?: number }) => (
-    <PersonnelPanel callFilter={callFilter} onSelectPersonnel={handleSelectPersonnel} onSetStatusForCall={(userId) => setStatusTarget({ kind: 'personnel', userId })} {...sizing} />
+    <PersonnelPanel
+      callFilter={callFilter}
+      onSelectPersonnel={handleSelectPersonnel}
+      onOpenPersonnel={handlers.onViewPersonnel}
+      onSetStatusForCall={(userId) => setStatusTarget({ kind: 'personnel', userId })}
+      {...sizing}
+    />
   );
   const resourcesPanel = (sizing: { flex?: number; maxHeight?: number }) => (
     <ResourcesPanel
       callFilter={callFilter}
       onSelectUnit={handleSelectUnit}
       onSelectPersonnel={handleSelectPersonnel}
+      onOpenUnit={handlers.onViewUnit}
+      onOpenPersonnel={handlers.onViewPersonnel}
       onSetUnitStatusForCall={(unitId) => setStatusTarget({ kind: 'unit', unitId })}
       onSetPersonnelStatusForCall={(userId) => setStatusTarget({ kind: 'personnel', userId })}
       {...sizing}
@@ -220,7 +230,7 @@ export default function DispatchConsoleScreen({ realtime = true, mapHref = '/map
   };
 
   return (
-    <View style={styles.screen} className="bg-background-100" testID="dispatch-console">
+    <View style={styles.screen} className="bg-background-canvas" testID="dispatch-console">
       <StatsHeader
         stats={stats}
         pendingCalls={pendingCount}
@@ -231,7 +241,7 @@ export default function DispatchConsoleScreen({ realtime = true, mapHref = '/map
         onWeatherAlertsPress={() => router.push(weatherAlertsRoutes.list() as Href)}
         showClock={showClock}
       />
-      <ViewToggles />
+      {showViewToggles ? <ViewToggles /> : null}
       {filteredCall ? <ActiveCallFilterBanner call={filteredCall} onClearFilter={handleClearFilter} /> : null}
       <View style={styles.body}>{renderLayout()}</View>
 

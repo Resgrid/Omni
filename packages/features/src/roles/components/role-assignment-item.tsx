@@ -1,6 +1,6 @@
 import { useTranslation } from '@resgrid/i18n';
 import { type PersonnelInfoResultData, type UnitRoleResultData } from '@resgrid/models';
-import { HStack, Pressable, Text, View, VStack } from '@resgrid/ui';
+import { HStack, Pressable, Text, useThemeColors, View, VStack } from '@resgrid/ui';
 import { ChevronRightIcon, UserIcon, UserXIcon } from 'lucide-react-native';
 import React, { useState } from 'react';
 
@@ -18,6 +18,7 @@ export interface RoleAssignmentItemProps {
 /** One crew seat: who sits in it (with their status and staffing) and a tap to change it. */
 export const RoleAssignmentItem: React.FC<RoleAssignmentItemProps> = ({ seat, assignedUser, users, onAssignUser, currentAssignments }) => {
   const { t } = useTranslation();
+  const colors = useThemeColors();
   const [isOpen, setIsOpen] = useState(false);
   const name = assignedUser ? `${assignedUser.FirstName ?? ''} ${assignedUser.LastName ?? ''}`.trim() : '';
 
@@ -32,7 +33,7 @@ export const RoleAssignmentItem: React.FC<RoleAssignmentItemProps> = ({ seat, as
       >
         <HStack space="md" className="items-center">
           <View className={`size-10 items-center justify-center rounded-full ${assignedUser ? 'bg-primary-500' : 'bg-background-100'}`}>
-            {assignedUser ? <UserIcon size={18} color="#ffffff" /> : <UserXIcon size={18} color="#737373" />}
+            {assignedUser ? <UserIcon size={18} color={colors.textInverse} /> : <UserXIcon size={18} color={colors.token('typography-500')} />}
           </View>
           <VStack className="flex-1">
             <Text className="text-sm font-semibold text-typography-500">{seat.Name}</Text>

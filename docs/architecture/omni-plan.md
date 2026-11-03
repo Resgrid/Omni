@@ -147,7 +147,7 @@ Omni/
       babel.config.js  tsconfig.json  global.css  global.web.css
       react-native.config.js       # per-variant autolinking exclusions (generated from the manifest)
       variants/
-        responder/  variant.json  variant.ts  app/ (route tree)  assets/  theme.css
+        responder/  variant.json  variant.ts  app/ (route tree)  assets/
         unit/  ic/  dispatch/  bigboard/
     desktop/                       # Electron shell; packages apps/omni web export per variant
       src/main/  src/preload/  push-receiver.ts  updater.ts  electron-builder.config.ts
@@ -508,7 +508,8 @@ LiveKit store from U (Android routing via InCallAudioModule, room-switch race fi
 | Barrel | One `@resgrid/ui` export surface with R semantics (today the same import is gluestack `Pressable` in R and RN `Pressable` elsewhere). |
 | HtmlRenderer | U's (`.web` iframe without `allow-same-origin`, http/https/mailto links only) everywhere — replaces R/D/B inline WebViews and IC's unsafe web version. `sanitize-html` stays pinned at exactly 2.17.0. |
 | Toast | I store API + U modal hosts + I toast UI. |
-| Theme helpers | `useThemeColors()` for maps/SVG/WebView/navigation; per-variant accent via `variants/<v>/theme.css`. |
+| Design system | **One for all five apps, taken from Dispatch** (owner decision 21): the token ramps in `apps/omni/theme-tokens.css` are Tailwind cool gray for surfaces, borders and text and indigo for primary, plus `background-canvas` for the page behind panels; no per-variant accent or theme file. Shell app bar and sidebar, console panels, rows, stats tiles and note cards follow Dispatch's look. See `docs/subsystems/design-system.md`. |
+| Theme helpers | `useThemeColors()` (with `canvas`) for maps/SVG/WebView/navigation; `useReadableColor()` (Dispatch `readable-color`) for department status, staffing and priority colours drawn on the theme surface. |
 | `tailwind-variants` | ^3.1 + tailwind-merge ^3 (do not force gluestack's nested copies). |
 
 ### 7.10 Shared features
@@ -516,9 +517,9 @@ LiveKit store from U (Android routing via InCallAudioModule, room-switch race fi
 | Feature | Baseline |
 |---|---|
 | Call card / list | R (dispatch ticker, assignment context) + U/I timer props; `density` prop (`compact`/`comfortable`/`wall`) so BigBoard widgets reuse rows. |
-| Call create/edit | D superset (templates, contact picker, linked calls, protocol selector, UDF, run-card recommendation, server geocoding, coordinate entry, scheduling) + U location fields, destination POI selector, location search; `calls.create` quick/full. |
-| Call detail | Tab registry: shared tabs (Info, Protocols, Dispatched, Activity, Location history, Check-in, Video feeds, Incident command, Records, Site info, protected reveal) + IC unit readiness/command sheets + D alarm level, escalate, response code, outstanding requirements + U status-for-call. |
-| Close call / menus / modals | R + D; notes/images/files modals R UI + U NativeModal. |
+| Call create/edit | D superset for every app (2026-11-03: templates, built-in contact picker, linked calls, protocol selector, UDF loader with defaults and stored values, run-card recommendation, server geocoding of address / what3words / plus code, coordinate entry with reverse-geocoded blank address, map picker, scheduling with the 15-minute lead, save waits for the field policy, a type when the department has types, D's create and edit required-field rules, server-named missing fields on edit, pending → pending queue; edit adds protocols/links only, resends only a new dispatch time, notifies removed resources, leaves policy-hidden fields as stored) + U location fields, destination POI selector, location search; `calls.create` quick/full. Maps and clip playback reach the calls cluster through hook points the app layer registers. |
+| Call detail | Tab registry: shared tabs (Info, Protocols, Dispatched, Activity, Location history, Check-in, Video feeds, Incident command, Records, Site info, protected reveal) + IC unit readiness/command sheets + D alarm level, escalate, response code, outstanding requirements + U status-for-call. D actions for every app (2026-11-03): map of the call / destination, Route via the navigation hand-off, audio, dispatch more (run cards via hook point), pending/scheduled banners with dispatch now, reschedule, delete with confirm, web shortcuts. |
+| Close call / menus / modals | R + D (no close on a closed call; a 408/429 is not a refusal); notes/images/files/audio modals R UI + U NativeModal. |
 | Contacts | U/I (tap-to-act, coordinates → directions) + R additions + D files/preplan panels. |
 | Chat | R composer + I message actions + D new-conversation sheet. |
 | Notes, protocols | U/I (HtmlRenderer) + R extras. |
@@ -818,6 +819,7 @@ Omni builds against Core `develop` only (D16). Features whose server side exists
 | 18 | Offline map area | Departments define a **maximum response area**, enforced by the download size a mobile user would accept; fallback **40 km radius** around the map centre, else the department address, else a station address (MapLibre plan §19.3) |
 | 19 | Native signing and iOS CI builds (2026-11-02) | **Credentials stay on EAS** for every app (no keystore, certificate or profile in GitHub). CI builds the AAB and the sideload APK for Android and only the App Store IPA for iOS (TestFlight, then the App Store); no iOS dev or ad-hoc builds in CI. Ad-hoc IPAs: `pnpm ios:adhoc <variant>` on a Mac |
 | 20 | Store publishing (2026-11-02) | **Never from GitHub Actions**: no store credentials, no App Store Connect API key for the mobile builds, no `eas submit`, no store-publish workflow in Omni (expired iOS certificates or profiles are renewed on a Mac with `eas credentials`). TestFlight and Google Play uploads are done by hand through the Software Factory (`int-RASF`), which reads each GitHub release. CI may still send the sideload APK to Firebase App Distribution testers |
+| 21 | Design system (2026-11-03) | **One design system for every app: Dispatch's** — its palette (cool-gray surfaces, indigo accent), app bar, panel, row and badge language, in light and dark mode (§7.9, `docs/subsystems/design-system.md`) |
 
 Still open (technical, answered by spikes or device tests, not by the owner): S1–S7 results; push channel/category behaviour on devices; BigBoard and Dispatch store listings' current marketing versions (both apps had pre-React-Native versions — confirm in App Store Connect / Play Console before the first Omni upload, Appendix B).
 

@@ -13,7 +13,8 @@ import {
   type RealtimeAuth,
   SignalRService,
 } from '../signalr-service';
-import { fakeSignalR, HubConnectionState, LogLevel } from './fakes/signalr';
+import { Platform } from './fakes/react-native';
+import { fakeSignalR, HttpTransportType, HubConnectionState, LogLevel } from './fakes/signalr';
 import { createTestConnectivity, flush } from './helpers/realtime-test-env';
 
 const EVENTING = 'eventingHub';
@@ -75,6 +76,35 @@ describe('SignalRService', () => {
       expect(connection.url).not.toContain('access_token');
       expect(buildHubUrl('https://events.example.com', 'eventingHub')).toBe('https://events.example.com/eventingHub');
       expect(buildHubUrl('https://events.example.com/', 'eventingHub')).toBe('https://events.example.com/eventingHub');
+    });
+
+    it('lets SignalR pick its transport (WebSockets first) outside a web development build', async () => {
+      await service.connectToHubWithEventingUrl(config(EVENTING));
+      expect(fakeSignalR.latest(EVENTING).options.transport).toBeUndefined();
+    });
+
+    describe('in a web development build on localhost', () => {
+      const setGlobal = (name: '__DEV__' | 'window', value: boolean | { location: { origin: string; hostname: string } } | undefined) =>
+        Object.defineProperty(globalThis, name, { value, writable: true, configurable: true });
+
+      beforeEach(() => {
+        Platform.OS = 'web';
+        setGlobal('__DEV__', true);
+        setGlobal('window', { location: { origin: 'http://localhost:8081', hostname: 'localhost' } });
+      });
+      afterEach(() => {
+        Platform.OS = 'ios';
+        setGlobal('__DEV__', undefined);
+        setGlobal('window', undefined);
+      });
+
+      it('connects through the dev server over Server-Sent Events or long polling (its proxy carries no WebSockets)', async () => {
+        await service.connectToHubWithEventingUrl(config(GEO));
+        const connection = fakeSignalR.latest(GEO);
+
+        expect(connection.url).toBe('http://localhost:8081/__resgrid-dev-proxy/https/events.example.com/realtime/geolocationHub?region=us');
+        expect(connection.options.transport).toBe(HttpTransportType.ServerSentEvents | HttpTransportType.LongPolling);
+      });
     });
 
     it('authenticates every hub (geolocation included) through accessTokenFactory', async () => {

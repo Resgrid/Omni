@@ -1,6 +1,6 @@
 import { useTranslation } from '@resgrid/i18n';
 import { type FilterResultData } from '@resgrid/models';
-import { Button, ButtonText, CustomBottomSheet, HStack, Pressable, ScrollView, Text, View, VStack } from '@resgrid/ui';
+import { Button, ButtonText, CustomBottomSheet, HStack, Pressable, ScrollView, Text, useThemeColors, View, VStack } from '@resgrid/ui';
 import { Check } from 'lucide-react-native';
 import React, { useMemo } from 'react';
 
@@ -19,6 +19,7 @@ export interface FilterOptionsSheetProps {
 /** The server's filter options (groups, unit types, roles…) grouped by type, multi-select (Responder units/personnel sheets). */
 export const FilterOptionsSheet: React.FC<FilterOptionsSheetProps> = ({ isOpen, onClose, title, options, selected, onToggle, onClear, isLoading = false, testID = 'filter-options-sheet' }) => {
   const { t } = useTranslation();
+  const colors = useThemeColors();
   const groups = useMemo(() => {
     const byType = new Map<string, FilterResultData[]>();
     options.forEach((option) => byType.set(option.Type || '', [...(byType.get(option.Type || '') ?? []), option]));
@@ -56,7 +57,7 @@ export const FilterOptionsSheet: React.FC<FilterOptionsSheetProps> = ({ isOpen, 
                   >
                     <HStack space="sm" className="items-center">
                       <View className={`size-5 items-center justify-center rounded border-2 ${isSelected ? 'border-primary-500 bg-primary-500' : 'border-outline-300'}`}>
-                        {isSelected ? <Check size={12} color="#ffffff" /> : null}
+                        {isSelected ? <Check size={12} color={colors.textInverse} /> : null}
                       </View>
                       <Text className="flex-1 text-typography-900">{item.Name}</Text>
                     </HStack>

@@ -1,10 +1,12 @@
 // Metro for the one Omni Expo project (omni-plan §6.2). Expo auto-configures workspace resolution
-// (SDK 52+); this file adds the per-variant cache, web stubs for native-only modules and NativeWind.
+// (SDK 52+); this file adds the per-variant cache, web stubs for native-only modules, NativeWind and the dev server's
+// proxy to Resgrid servers (metro/dev-api-proxy.js).
 const path = require('path');
 const { FileStore } = require('metro-cache');
 const { getSentryExpoConfig } = require('@sentry/react-native/metro');
 const { withNativewind } = require('nativewind/metro');
 
+const { withDevApiProxy } = require('./metro/dev-api-proxy');
 const { syncMapLibreWorker } = require('./metro/maplibre-worker');
 
 const projectRoot = __dirname;
@@ -59,4 +61,5 @@ config.resolver.blockList = [/apps[\\/]desktop[\\/].*/];
 // expo export copies, that folder (map-worker.web.ts points maplibre-gl at it).
 syncMapLibreWorker(projectRoot);
 
-module.exports = withNativewind(config, { inlineRem: 16 });
+// Web development builds reach Resgrid servers through the dev server, which no server's CORS allowlist has to name.
+module.exports = withDevApiProxy(withNativewind(config, { inlineRem: 16 }));

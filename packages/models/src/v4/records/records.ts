@@ -18,10 +18,15 @@ export enum RmsRecordState {
   Draft = 1,
   ReadyForReview = 2,
   Returned = 3,
-  Finalized = 4,
-  Amended = 5,
-  Voided = 6,
-  Cancelled = 7,
+  Approved = 4,
+  Finalized = 5,
+  Amended = 6,
+  Voided = 7,
+  Cancelled = 8,
+  Submitted = 9,
+  Accepted = 10,
+  Rejected = 11,
+  Corrected = 12,
 }
 
 /** Resgrid.Model.RmsFieldType. A control this client cannot render fails closed for authoring. */
@@ -52,9 +57,9 @@ export enum RmsFieldType {
 
 /** Resgrid.Model.RmsFieldClassification. */
 export enum RmsFieldClassification {
-  Standard = 1,
-  Restricted = 2,
-  Protected = 3,
+  Standard = 0,
+  Restricted = 1,
+  Protected = 2,
 }
 
 /** Resgrid.Model.RmsRuleEffect. */
@@ -363,6 +368,8 @@ export interface RecordValueInput {
   ReferenceType?: string | null;
   ReferenceId?: string | null;
   UnitCode?: string | null;
+  CurrencyCode?: string | null;
+  OffsetMinutes?: number | null;
 }
 
 export interface RecordCreateDraftInput {
@@ -415,7 +422,7 @@ export interface RecordData {
 }
 
 export interface RecordValueCellData {
-  SectionKey: string;
+  SectionKey?: string;
   FieldKey: string;
   RowKey?: string | null;
   Ordinal?: number;
@@ -424,12 +431,30 @@ export interface RecordValueCellData {
   ReferenceType?: string | null;
   ReferenceId?: string | null;
   UnitCode?: string | null;
+  CurrencyCode?: string | null;
+  OffsetMinutes?: number | null;
+  Withheld?: boolean;
   IsWithheld?: boolean;
 }
 
 export interface RecordValuesData {
   DefinitionKey?: string | null;
+  DefinitionVersion?: number;
+  Sections?: RecordValueSectionData[] | null;
+  WithheldFieldKeys?: string[] | null;
+  /** Older clients and cached values may still contain a flat cell list. */
   Version?: number;
+  Cells?: RecordValueCellData[] | null;
+}
+
+export interface RecordValueSectionData {
+  SectionKey: string;
+  Rows: RecordValueRowData[];
+}
+
+export interface RecordValueRowData {
+  RowKey?: string | null;
+  Ordinal?: number;
   Cells: RecordValueCellData[];
 }
 

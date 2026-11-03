@@ -6,7 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { describe, it } from 'node:test';
 
-import { cocoaPods, cycloneDx, findDirectory, gradleArtifacts, pnpmProductionPackages } from '../package-sbom.mjs';
+import { cocoaPods, cycloneDx, findDirectory, gradleArtifacts, pnpmProductionPackages, writeSigningStub } from '../package-sbom.mjs';
 
 const require = createRequire(import.meta.url);
 const yaml = require('yaml');
@@ -203,6 +203,28 @@ describe('findDirectory', () => {
       assert.equal(findDirectory(root, ['missing.file']), null);
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('writeSigningStub', () => {
+  it('gives eas-build-inject-android-credentials.gradle a credentials.json without the real keystore', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'package-sbom-'));
+
+    try {
+      const env = writeSigningStub(dir);
+
+      assert.deepEqual(env, { EAS_BUILD_WORKINGDIR: dir });
+
+      // The fields the Gradle script reads: keystorePath, keystorePassword, keyAlias and, when present, keyPassword.
+      const { keystore } = JSON.parse(fs.readFileSync(path.join(env.EAS_BUILD_WORKINGDIR, 'credentials.json'), 'utf8')).android;
+
+      assert.equal(path.dirname(keystore.keystorePath), dir);
+      assert.equal(fs.existsSync(keystore.keystorePath), false);
+      assert.equal(keystore.keystorePassword, 'unused');
+      assert.equal(keystore.keyAlias, 'unused');
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
     }
   });
 });

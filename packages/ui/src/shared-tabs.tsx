@@ -169,7 +169,7 @@ export const SharedTabs: React.FC<SharedTabsProps> = ({
     const isActive = index === currentIndex;
     const weight = isActive ? 'font-semibold' : 'font-medium';
     if (variant === 'segmented' || variant === 'pills') {
-      return `${getTitleFontSize()} ${weight} ${isActive ? 'text-white' : 'text-typography-600'}`;
+      return `${getTitleFontSize()} ${weight} ${isActive ? 'text-typography-0' : 'text-typography-600'}`;
     }
     return `${getTitleFontSize()} ${weight} ${isActive ? 'text-primary-600' : 'text-typography-500'}`;
   };
@@ -177,7 +177,7 @@ export const SharedTabs: React.FC<SharedTabsProps> = ({
   // Tab icons are usually raw lucide icons, whose default stroke is black; give them the label colour unless the caller chose one.
   const renderIcon = (icon: React.ReactNode, index: number) => {
     if (!React.isValidElement<{ color?: string }>(icon) || icon.props.color !== undefined) return icon;
-    const color = isFilledActive(index) ? '#ffffff' : index === currentIndex ? colors.primaryStrong : colors.textMuted;
+    const color = isFilledActive(index) ? colors.textInverse : index === currentIndex ? colors.primaryStrong : colors.textMuted;
     return React.cloneElement(icon, { color });
   };
 
@@ -191,9 +191,9 @@ export const SharedTabs: React.FC<SharedTabsProps> = ({
     }[size];
     const variantStyles = {
       default: isActive ? 'border-b-2 border-primary-600' : 'border-b-2 border-transparent',
-      pills: isActive ? 'bg-primary-500 rounded-full' : 'bg-transparent',
+      pills: isActive ? 'bg-primary-600 rounded-full' : 'bg-transparent',
       underlined: isActive ? 'border-b-2 border-primary-600' : 'border-b-2 border-transparent',
-      segmented: isActive ? 'bg-primary-600 rounded-xl shadow-sm dark:bg-primary-500' : 'bg-transparent rounded-xl',
+      segmented: isActive ? 'bg-primary-600 rounded-xl shadow-sm' : 'bg-transparent rounded-xl',
     }[variant];
 
     return `${baseStyles} ${sizeStyles} ${variantStyles} ${tabClassName}`;

@@ -46,6 +46,11 @@ export interface HttpClientOptions {
   isAccessTokenExpired?: () => boolean;
   timeoutMs?: number;
   logger?: ApiLogger;
+  /**
+   * The URL a request is sent to, given the server URL it is for (base URL, or an absolute request URL). The auth layer
+   * routes web development builds through the dev server's proxy here; `getBaseUrl()` keeps returning the server URL.
+   */
+  transformUrl?: (url: string) => string;
 }
 
 /** Per-request flags carried on the axios config. */
@@ -88,6 +93,7 @@ const metaOf = (config: AxiosRequestConfig): ResgridRequestMeta => {
  */
 export const createHttpClient = (options: HttpClientOptions): HttpClient => {
   const { getBaseUrl, getAccessToken, refreshAccessToken, onAuthRejected, getHeaders, isAccessTokenExpired, logger } = options;
+  const transformUrl = options.transformUrl ?? ((url: string) => url);
   const isSessionActive = options.isSessionActive ?? (() => Boolean(getAccessToken()));
 
   const instance = createAxios({
@@ -110,7 +116,12 @@ export const createHttpClient = (options: HttpClientOptions): HttpClient => {
   };
 
   instance.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
-    config.baseURL = getBaseUrl();
+    config.baseURL = transformUrl(getBaseUrl());
+
+    if (config.url && /^https?:\/\//i.test(config.url)) {
+      config.url = transformUrl(config.url);
+    }
+
     const meta = metaOf(config);
     const anonymous = meta.anonymous === true;
 

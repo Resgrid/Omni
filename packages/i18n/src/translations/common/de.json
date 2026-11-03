@@ -231,7 +231,33 @@
     "info": {
       "dispatched_on": "Dispatched",
       "logged_on": "Logged"
-    }
+    },
+    "delete_call": "Einsatz löschen",
+    "delete_call_confirm": "Diesen Einsatz löschen? Dies kann nicht rückgängig gemacht werden.",
+    "delete_call_success": "Einsatz gelöscht",
+    "delete_call_error": "Einsatz konnte nicht gelöscht werden",
+    "reschedule": "Neu planen",
+    "reschedule_success": "Alarmierungszeit aktualisiert",
+    "reschedule_error": "Einsatz konnte nicht neu geplant werden",
+    "reschedule_invalid": "Choose a valid dispatch date and time",
+    "reschedule_in_1_hour": "In 1 Stunde",
+    "reschedule_in_1_day": "In 1 Tag",
+    "reschedule_tomorrow_morning": "Morgen um 8 Uhr",
+    "reschedule_datetime": "Alarmierungsdatum und -uhrzeit",
+    "dispatch_more": "Zusätzliche Ressourcen alarmieren",
+    "pending_banner_title": "Ausstehend — noch nicht disponiert",
+    "pending_banner_description": "Dieser Einsatz ist gespeichert, aber niemand wurde benachrichtigt. Wählen Sie die Empfänger und disponieren Sie ihn, wenn er bereit ist.",
+    "dispatch_call": "Disponieren",
+    "map_call": "Einsatz",
+    "map_destination": "Ziel",
+    "audio": "Audio",
+    "audio_empty": "Keine Audioaufnahmen",
+    "audio_play": "Play {{name}}",
+    "audio_stop": "Stop {{name}}",
+    "audio_play_error": "Could not play this recording",
+    "scheduled_on": "Geplantes Alarmierungsdatum und -uhrzeit",
+    "destination_type": "Zieltyp",
+    "keyboard_shortcuts": "Tip: Press 1-9 to switch tabs, Ctrl+E to edit, Escape to go back"
   },
   "calls": {
     "address": "Adresse",
@@ -253,7 +279,9 @@
     "contact_phone_placeholder": "Telefonnummer des Kontakts eingeben",
     "contact_picker": {
       "linked": "Verknüpfter Kontakt: {{name}}",
-      "select": "Select Contact"
+      "select": "Select Contact",
+      "search_placeholder": "Kontakte durchsuchen...",
+      "empty": "Keine Kontakte verfügbar"
     },
     "coordinates": "GPS-Koordinaten",
     "coordinates_found": "Koordinaten gefunden und Adresse aktualisiert",
@@ -398,7 +426,9 @@
     },
     "protocols": {
       "select": "Protokolle auswählen",
-      "selected_count": "{{count}} selected"
+      "selected_count": "{{count}} selected",
+      "attached": "Bereits zugeordnet: {{names}}",
+      "add": "Protokolle hinzufügen"
     },
     "queued": {
       "badge": "Queued — not dispatched yet",
@@ -447,8 +477,25 @@
       "name_required": "Enter a name for the call",
       "nature_required": "Enter the nature of the call",
       "required": "Required by your department",
-      "udf_required": "Fill in the required custom fields"
-    }
+      "udf_required": "Fill in the required custom fields",
+      "type_required": "Choose a call type"
+    },
+    "pending_saved": "Einsatz als ausstehend gespeichert",
+    "required_fields_missing_edit": "Ihre Abteilung benötigt diese Felder, bevor ein Einsatz gespeichert werden kann: {{fields}}",
+    "search_address": "Adresse suchen",
+    "search_what3words": "what3words-Adresse suchen",
+    "search_plus_code": "Plus Code suchen",
+    "looking_up_address": "Adresse für diese Koordinaten wird gesucht...",
+    "notify_cancelled_entities": "Abgemeldete Einheiten benachrichtigen",
+    "notify_cancelled_entities_description": "Personal und Einheiten benachrichtigen, die aus der Alarmierungsliste entfernt wurden.",
+    "linked_calls": {
+      "edit_hint": "Bestehende Verknüpfungen dieses Einsatzes bleiben erhalten; wählen Sie einen Einsatz, um eine weitere hinzuzufügen."
+    },
+    "scheduled_on_edit_hint": "Wählen Sie einen Zeitpunkt, um die Disposition zu planen oder zu verschieben. Leer gelassen bleibt die aktuelle Planung des Einsatzes erhalten.",
+    "scheduled_on_helper": "Leer lassen für sofortige Disposition",
+    "save_pending_call": "Ausstehenden Einsatz speichern",
+    "keyboard_shortcuts": "Tipp: Strg+Eingabe zum Erstellen, Escape zum Abbrechen",
+    "edit_keyboard_shortcuts": "Tipp: Strg+S zum Speichern, Escape zum Abbrechen"
   },
   "chat": {
     "ack_pending_count": "Du hast {{count}} dringende Nachrichten zu bestätigen",
@@ -3443,7 +3490,8 @@
     "table_priority": "Priorität",
     "table_scheduled": "Geplant für",
     "table_type": "Typ",
-    "title": "Geplante Einsätze"
+    "title": "Geplante Einsätze",
+    "scheduled_for": "Geplant für"
   },
   "certifications": {
     "add": "Qualifikation hinzufügen",
@@ -3608,6 +3656,7 @@
     "severity_levels": "Schweregrade",
     "show_area": "Gebiet anzeigen",
     "show_calls": "Einsätze anzeigen",
+    "show_linked_calls": "Verknüpfte Einsätze anzeigen",
     "show_expiry": "Ablaufzeit anzeigen",
     "show_headline": "Überschrift anzeigen",
     "show_personnel": "Personal anzeigen",
@@ -3788,6 +3837,7 @@
     "check_in": "Check in",
     "clear_search": "Clear search",
     "expand_map": "Open the full map",
+    "gps": "GPS",
     "map_unavailable": "No map is configured for this department.",
     "no_overdue_check_ins": "No overdue check-ins",
     "no_resources": "No units or personnel to show",
@@ -3811,11 +3861,14 @@
     "ptt_error_permission": "Microphone access is needed to talk.",
     "ptt_hotkey_hint": "Hold {{hotkey}} to talk",
     "ptt_no_channels": "No voice channels",
+    "ptt_off": "OFF",
     "ptt_ready": "Ready",
     "ptt_receiving": "Receiving",
     "ptt_reconnecting": "Reconnecting…",
+    "ptt_rx": "RX",
     "ptt_stop": "Stop talking",
     "ptt_talk": "Talk",
+    "ptt_tx": "TX",
     "resources": "Resources",
     "resources_on_call": "Resources on call",
     "search_notes": "Search notes",
@@ -3877,6 +3930,7 @@
     "note_added_to_console": "Eine neue Notiz wurde zur Konsole hinzugefügt",
     "note_created": "Notiz erstellt",
     "notes": "Notizen",
+    "on_call": "Im Einsatz",
     "personnel": "Personal",
     "personnel_deselected": "Personal abgewählt",
     "personnel_on_call": "Personal im Einsatz",
@@ -3897,6 +3951,7 @@
     "transmission_ended": "Übertragung beendet",
     "transmitting": "Transmitting",
     "transmitting_on": "Senden auf {{channel}}",
+    "unassigned": "Nicht zugewiesen",
     "unit_deselected": "Einheit abgewählt",
     "unit_selected": "Einheit ausgewählt",
     "unit_status_updated": "Einheitenstatus aktualisiert",

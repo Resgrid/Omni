@@ -77,7 +77,7 @@ export const AssistantSheet: React.FC<AssistantSheetProps> = ({ isOpen, onClose,
           {messages.map((message) =>
             message.role === 'user' ? (
               <View key={message.id} className="self-end rounded-2xl bg-primary-600 px-3 py-2">
-                <Text className="text-sm text-white">{message.text}</Text>
+                <Text className="text-sm text-typography-0">{message.text}</Text>
               </View>
             ) : (
               <View key={message.id} className={`self-start rounded-2xl px-3 py-2 ${message.unanswered ? 'bg-error-50' : 'bg-background-100'}`} testID={`assistant-sheet-answer-${message.id}`}>

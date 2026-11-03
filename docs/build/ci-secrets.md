@@ -8,7 +8,7 @@ The checklist for the current workflows. Secret names are identical in every var
 
 ### Outside GitHub
 
-- [ ] Each app's EAS project holds its signing credentials (`APP_VARIANT=<v> eas credentials`): the Android upload keystore, and the iOS distribution certificate and App Store provisioning profile, plus the `CheckInTimerWidget` extension profile for Responder and Unit. The keystore SHA-1 must match Play Console → App integrity → Upload key certificate. Check Unit first: legacy Unit signed its Android builds with a local keystore.
+- [ ] Each app's EAS project holds its signing credentials (`pnpm credentials:android <v>`, `pnpm credentials:ios <v>`; see "Managing credentials"): the Android upload keystore, and the iOS distribution certificate and App Store provisioning profile, plus the `CheckInTimerWidget` extension profile for Responder and Unit. The keystore SHA-1 must match Play Console → App integrity → Upload key certificate. Check Unit first: legacy Unit signed its Android builds with a local keystore.
 - [ ] Each EAS project has the update channels `production`, `staging` and `internal` (D18).
 
 ### GitHub settings
@@ -93,7 +93,22 @@ Every job that resolves a runtime version reads them. `IOS_APPLE_TEAM_ID` (`ios.
 
 Every native build signs with the credentials stored on the variant's EAS project, as legacy Responder, IC, Dispatch and BigBoard did. No eas.json profile sets `credentialsSource`, and `eas build --local` downloads the Android upload keystore or the iOS distribution certificate and provisioning profiles with `EXPO_TOKEN`. There is no keystore, `credentials.json`, `.p12` or `.mobileprovision` secret. eas-cli cannot export stored credentials without prompting, so every artifact is its own EAS build: the Android job builds the AAB and then the sideload APK, and the iOS job builds only the App Store IPA (TestFlight, then the App Store). An ad-hoc IPA is a local build on a Mac: `pnpm ios:adhoc <variant>` (`scripts/build-ios-adhoc.mjs`).
 
-Without an App Store Connect key, iOS builds use the stored certificate and profiles as they are and cannot repair them. When one expires or needs a new capability, the iOS build stops with a credentials error: renew it on a Mac with `APP_VARIANT=<v> eas credentials -p ios` (signed in to Apple there), then re-run the job.
+CI holds no App Store Connect key. Where a variant's EAS project stores one, `eas build` uses it to register a new App ID (such as the Live Activity widget's) and sync its capabilities; App Store Connect rejects the capability requests of eas-cli before 27.3.0, which is why the workflows pin 27.3.0 or later. Without one, iOS builds use the stored certificate and profiles as they are and cannot repair them. When one expires or needs a capability the build cannot add, the iOS build stops with a credentials error: renew it on a Mac with `pnpm credentials:ios <v> --setup` (signed in to Apple there), then re-run the job.
+
+#### Managing credentials
+
+One command per native emit opens `eas credentials` for an app, with the eas-cli version CI pins and the app's EAS project (`scripts/eas-credentials.mjs`). Each one prints the app's identity and the build profile to choose when eas-cli asks for one: every app's profiles share one `eas.json`, and that choice decides which app the credentials belong to.
+
+| Command | Emit | Profile (production) |
+|---|---|---|
+| `pnpm credentials:android <v>` | Google Play AAB and sideload APK (one upload keystore) | `<v>-production` |
+| `pnpm credentials:ios <v>` | App Store IPA (App Store provisioning, plus `CheckInTimerWidget` for Responder and Unit) | `<v>-production` |
+| `pnpm credentials:ios-adhoc <v>` | Ad-hoc IPA (`pnpm ios:adhoc`; ad hoc provisioning for registered devices) | `<v>-internal` |
+
+- Without options it opens eas-cli's interactive manager (view, add, replace, remove, download). `--setup` runs `eas credentials:configure-build` for exactly that profile instead: it keeps valid credentials and creates what is missing or expired, the step an interactive `eas build` runs.
+- Production and internal builds share an app's bundle id and package. Staging and development builds have their own (`<id>.staging`, `<id>.development`) and so their own credentials: add `--env staging` or `--env development` (development iOS builds are ad hoc: `credentials:ios-adhoc`).
+- Several apps run one after another: `pnpm credentials:ios responder unit --setup`.
+- When eas-cli offers to generate a keystore for an app already on Google Play, upload that app's existing upload keystore instead.
 
 | Secret              | Purpose                                                                                                  |
 | ------------------- | -------------------------------------------------------------------------------------------------------- |

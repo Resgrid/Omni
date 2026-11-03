@@ -231,7 +231,33 @@
     "info": {
       "dispatched_on": "Dispatched",
       "logged_on": "Logged"
-    }
+    },
+    "delete_call": "Supprimer l'appel",
+    "delete_call_confirm": "Supprimer cet appel ? Cette action est irréversible.",
+    "delete_call_success": "Appel supprimé",
+    "delete_call_error": "Échec de la suppression de l'appel",
+    "reschedule": "Reprogrammer",
+    "reschedule_success": "Heure de répartition mise à jour",
+    "reschedule_error": "Échec de la reprogrammation de l'appel",
+    "reschedule_invalid": "Choose a valid dispatch date and time",
+    "reschedule_in_1_hour": "Dans 1 heure",
+    "reschedule_in_1_day": "Dans 1 jour",
+    "reschedule_tomorrow_morning": "Demain à 8 h",
+    "reschedule_datetime": "Date et heure de répartition",
+    "dispatch_more": "Répartir des ressources supplémentaires",
+    "pending_banner_title": "En attente — pas encore dépêchée",
+    "pending_banner_description": "Cette intervention est enregistrée mais personne n’a été prévenu. Choisissez qui envoyer et dépêchez-la quand elle est prête.",
+    "dispatch_call": "Dispatch",
+    "map_call": "Appel",
+    "map_destination": "Destination",
+    "audio": "Audio",
+    "audio_empty": "Aucun enregistrement audio",
+    "audio_play": "Play {{name}}",
+    "audio_stop": "Stop {{name}}",
+    "audio_play_error": "Could not play this recording",
+    "scheduled_on": "Date et heure prévues de répartition",
+    "destination_type": "Type de destination",
+    "keyboard_shortcuts": "Tip: Press 1-9 to switch tabs, Ctrl+E to edit, Escape to go back"
   },
   "calls": {
     "address": "Adresse",
@@ -253,7 +279,9 @@
     "contact_phone_placeholder": "Saisir le téléphone du contact",
     "contact_picker": {
       "linked": "Contact lié : {{name}}",
-      "select": "Select Contact"
+      "select": "Select Contact",
+      "search_placeholder": "Rechercher des contacts...",
+      "empty": "Aucun contact disponible"
     },
     "coordinates": "Coordonnées GPS",
     "coordinates_found": "Coordonnées trouvées et adresse mise à jour",
@@ -398,7 +426,9 @@
     },
     "protocols": {
       "select": "Sélectionner les protocoles",
-      "selected_count": "{{count}} selected"
+      "selected_count": "{{count}} selected",
+      "attached": "Déjà associés : {{names}}",
+      "add": "Ajouter des protocoles"
     },
     "queued": {
       "badge": "Queued — not dispatched yet",
@@ -447,8 +477,25 @@
       "name_required": "Enter a name for the call",
       "nature_required": "Enter the nature of the call",
       "required": "Required by your department",
-      "udf_required": "Fill in the required custom fields"
-    }
+      "udf_required": "Fill in the required custom fields",
+      "type_required": "Choose a call type"
+    },
+    "pending_saved": "Intervention enregistrée en attente",
+    "required_fields_missing_edit": "Votre service exige ces champs avant qu'un appel puisse être enregistré : {{fields}}",
+    "search_address": "Rechercher l'adresse",
+    "search_what3words": "Rechercher l'adresse what3words",
+    "search_plus_code": "Rechercher le plus code",
+    "looking_up_address": "Recherche de l'adresse pour ces coordonnées...",
+    "notify_cancelled_entities": "Avertir les entités annulées",
+    "notify_cancelled_entities_description": "Envoyer un message au personnel et aux unités retirés de la liste de répartition.",
+    "linked_calls": {
+      "edit_hint": "Les liens déjà présents sur cet appel sont conservés ; choisissez un appel pour en ajouter un autre."
+    },
+    "scheduled_on_edit_hint": "Choisissez une heure pour planifier ou replanifier le dispatch. Laisser vide conserve la planification actuelle de l'appel.",
+    "scheduled_on_helper": "Laisser vide pour dispatcher immédiatement",
+    "save_pending_call": "Enregistrer l’intervention en attente",
+    "keyboard_shortcuts": "Astuce : Appuyez sur Ctrl+Entrée pour créer, Échap pour annuler",
+    "edit_keyboard_shortcuts": "Astuce : Appuyez sur Ctrl+S pour sauvegarder, Échap pour annuler"
   },
   "chat": {
     "ack_pending_count": "Vous avez {{count}} messages urgents à accuser réception",
@@ -3443,7 +3490,8 @@
     "table_priority": "Priorité",
     "table_scheduled": "Planifiée pour",
     "table_type": "Type",
-    "title": "Interventions planifiées"
+    "title": "Interventions planifiées",
+    "scheduled_for": "Planifiée pour"
   },
   "certifications": {
     "add": "Ajouter une certification",
@@ -3608,6 +3656,7 @@
     "severity_levels": "Niveaux de gravité",
     "show_area": "Afficher la zone",
     "show_calls": "Afficher les appels",
+    "show_linked_calls": "Afficher les appels liés",
     "show_expiry": "Afficher l'heure d'expiration",
     "show_headline": "Afficher le titre",
     "show_personnel": "Afficher le personnel",
@@ -3788,6 +3837,7 @@
     "check_in": "Check in",
     "clear_search": "Clear search",
     "expand_map": "Open the full map",
+    "gps": "GPS",
     "map_unavailable": "No map is configured for this department.",
     "no_overdue_check_ins": "No overdue check-ins",
     "no_resources": "No units or personnel to show",
@@ -3811,11 +3861,14 @@
     "ptt_error_permission": "Microphone access is needed to talk.",
     "ptt_hotkey_hint": "Hold {{hotkey}} to talk",
     "ptt_no_channels": "No voice channels",
+    "ptt_off": "OFF",
     "ptt_ready": "Ready",
     "ptt_receiving": "Receiving",
     "ptt_reconnecting": "Reconnecting…",
+    "ptt_rx": "RX",
     "ptt_stop": "Stop talking",
     "ptt_talk": "Talk",
+    "ptt_tx": "TX",
     "resources": "Resources",
     "resources_on_call": "Resources on call",
     "search_notes": "Search notes",
@@ -3877,6 +3930,7 @@
     "note_added_to_console": "Une nouvelle note a été ajoutée à la console",
     "note_created": "Note créée",
     "notes": "Notes",
+    "on_call": "En intervention",
     "personnel": "Personnel",
     "personnel_deselected": "Personnel désélectionné",
     "personnel_on_call": "Personnel en intervention",
@@ -3897,6 +3951,7 @@
     "transmission_ended": "Transmission terminée",
     "transmitting": "Transmitting",
     "transmitting_on": "Transmission sur {{channel}}",
+    "unassigned": "Non affecté",
     "unit_deselected": "Unité désélectionnée",
     "unit_selected": "Unité sélectionnée",
     "unit_status_updated": "Statut de l'unité mis à jour",

@@ -1,9 +1,9 @@
 import './test-setup';
 
 import { useNetInfo } from '@react-native-community/netinfo';
-import { buildNewCallInput, type CreateCallRequest } from '@resgrid/api';
+import { ApiError, buildNewCallInput, type CreateCallRequest } from '@resgrid/api';
 import { featureFlagsStore } from '@resgrid/auth';
-import { useCallDetailStore, useCallsStore } from '@resgrid/data';
+import { useCallDetailStore, useCallsStore, useContactsStore } from '@resgrid/data';
 import type { NewCallFieldRuleData } from '@resgrid/models';
 import { useToastStore } from '@resgrid/ui';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
@@ -17,13 +17,26 @@ import CallFormScreen from '../screens/call-form';
 import { activateVariant, hidden, makeCall, setRights } from './test-utils';
 
 let mockRules: NewCallFieldRuleData[] = [];
+let mockPolicyLoaded = true;
+
 jest.mock('../hooks/use-call-form-data', () => ({
-  useNewCallFieldPolicy: () => mockCreatePolicy(mockRules),
+  useNewCallFieldPolicy: () => mockCreatePolicy(mockRules, mockPolicyLoaded),
   useCallTemplates: () => ({ templates: mockTemplates, isLoading: false }),
   useDispatchRecipients: () => ({ recipients: mockRecipients, isLoading: false }),
 }));
-const mockCreatePolicy = (rules: NewCallFieldRuleData[]) => createFieldPolicy(rules);
+
+const mockCreatePolicy = (rules: NewCallFieldRuleData[], isLoaded: boolean) => createFieldPolicy(rules, isLoaded);
+const mockLookupAddress = jest.fn();
+const mockLookupAddressAt = jest.fn();
+
+jest.mock('../lib/call-geocoding', () => ({
+  ...jest.requireActual('../lib/call-geocoding'),
+  lookupAddress: (address: string) => mockLookupAddress(address),
+  lookupAddressAt: (latitude: number, longitude: number) => mockLookupAddressAt(latitude, longitude),
+}));
+
 const mockTemplates = [{ Id: 't1', IsDisabled: false, Name: 'Structure fire', CallName: 'Structure Fire', CallNature: 'Reported structure fire', CallType: 'Fire', CallPriority: 3, CreatedByUserId: '', CreatedOn: '' }];
+
 const mockRecipients = {
   personnel: [{ UserId: 'u1', FirstName: 'Pat', LastName: 'Smith', GroupName: 'Station 1' }],
   groups: [{ GroupId: 'g1', Name: 'Station 1' }],
@@ -38,10 +51,12 @@ const mockUpdateCall = jest.fn();
 const fillBasics = async () => {
   await fireEvent.changeText(screen.getByTestId('call-form-name'), 'Kitchen fire');
   await fireEvent.changeText(screen.getByTestId('call-form-nature'), 'Smoke from kitchen');
+  await fireEvent.press(screen.getByTestId('call-form-type-Fire'));
 };
 
 const lastToast = () => {
   const toasts = useToastStore.getState().toasts;
+
   return toasts[toasts.length - 1];
 };
 
@@ -52,6 +67,11 @@ afterEach(() => {
 
 beforeEach(() => {
   mockRules = [];
+  mockPolicyLoaded = true;
+  mockLookupAddress.mockReset();
+  mockLookupAddressAt.mockReset().mockResolvedValue(null);
+  jest.mocked(router.replace).mockClear();
+  jest.mocked(router.back).mockClear();
   resetCallFormHookPointsForTests();
   useToastStore.getState().clearToasts();
   jest.mocked(useNetInfo).mockReturnValue({ isConnected: true, isInternetReachable: true } as never);
@@ -126,7 +146,9 @@ describe('CallFormScreen: create', () => {
     await fireEvent.press(screen.getByTestId('dispatch-option-units-7', hidden));
     await fireEvent.press(screen.getByTestId('dispatch-selection-confirm', hidden));
     await act(async () => fireEvent.press(screen.getByTestId('call-form-submit')));
-    expect(mockCreateCall).toHaveBeenCalledWith(expect.objectContaining({ name: 'Kitchen fire', nature: 'Smoke from kitchen', priority: 0, latitude: 39.74, longitude: -104.99, dispatchUnits: ['7'], protocolIds: [] }));
+    expect(mockCreateCall).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'Kitchen fire', nature: 'Smoke from kitchen', priority: 0, type: 'Fire', latitude: 39.74, longitude: -104.99, dispatchUnits: ['7'], protocolIds: [] })
+    );
     expect(lastToast().message).toBe('calls.create_success');
     expect(router.back).toHaveBeenCalled();
   });
@@ -149,6 +171,7 @@ describe('CallFormScreen: create', () => {
     const request: CreateCallRequest = { name: 'Kitchen fire', nature: 'Smoke from kitchen', priority: 0 };
     mockCreateCall.mockImplementation(async () => {
       useCallsStore.setState({ queuedCalls: { 'local-r': { localId: 'local-r', request, input: buildNewCallInput(request), createdAt: 1, state: 'rejected' } } });
+
       return { outcome: 'rejected', id: 'local-r' };
     });
     await render(<CallFormScreen mode="create" />);
@@ -164,7 +187,7 @@ describe('CallFormScreen: create', () => {
 
   it('corrects a rejected queued call opened from Pending sync', async () => {
     activateVariant('unit');
-    const request: CreateCallRequest = { name: 'Offline call', nature: 'Downed lines', priority: 0, address: 'Wrong St' };
+    const request: CreateCallRequest = { name: 'Offline call', nature: 'Downed lines', priority: 0, type: 'Fire', address: 'Wrong St' };
     useCallsStore.setState({ queuedCalls: { 'local-7': { localId: 'local-7', request, input: buildNewCallInput(request), createdAt: 1, state: 'rejected' } } });
     await render(<CallFormScreen mode="create" correctLocalId="local-7" />);
     expect(screen.getByText('calls.queued.rejected_badge')).toBeTruthy();
@@ -184,16 +207,130 @@ describe('CallFormScreen: create', () => {
     expect(screen.getByTestId('call-form-priority-3').props.accessibilityState).toEqual({ selected: true });
   });
 
-  it('offers pending/scheduling with calls.queues and drops "Everyone" for a pending call', async () => {
+  it('offers pending/scheduling with calls.queues, drops "Everyone" for a pending call and then shows the pending queue', async () => {
+    // A pending call is not dispatched or scheduled yet, so neither requirement applies to it (Dispatch).
+    mockRules = [
+      { Key: 'dispatchList', Visible: true, Required: true },
+      { Key: 'dispatchOn', Visible: true, Required: true },
+    ];
     activateVariant('dispatch');
     await render(<CallFormScreen mode="create" />);
     await fireEvent(screen.getByTestId('call-form-pending'), 'valueChange', true);
+    expect(screen.getByTestId('call-form-submit').props.accessibilityLabel).toBe('calls.save_pending_call');
     await fireEvent.press(screen.getByTestId('call-form-dispatch'));
     expect(screen.queryByTestId('dispatch-selection-everyone', hidden)).toBeNull();
     await fireEvent.press(screen.getByTestId('dispatch-selection-confirm', hidden));
     await fillBasics();
     await act(async () => fireEvent.press(screen.getByTestId('call-form-submit')));
     expect(mockCreateCall).toHaveBeenCalledWith(expect.objectContaining({ isPending: true }));
+    expect(lastToast().message).toBe('calls.pending_saved');
+    expect(router.replace).toHaveBeenCalledWith('/pending-calls');
+  });
+
+  it('holds the save back until the field policy has loaded', async () => {
+    mockPolicyLoaded = false;
+    activateVariant('responder');
+    await render(<CallFormScreen mode="create" />);
+    await fillBasics();
+    expect(screen.getByTestId('call-form-submit').props.accessibilityState).toMatchObject({ disabled: true });
+    expect(mockCreateCall).not.toHaveBeenCalled();
+  });
+
+  it('needs a type when the department has types', async () => {
+    activateVariant('responder');
+    await render(<CallFormScreen mode="create" />);
+    await fireEvent.changeText(screen.getByTestId('call-form-name'), 'Kitchen fire');
+    await fireEvent.changeText(screen.getByTestId('call-form-nature'), 'Smoke from kitchen');
+    await act(async () => fireEvent.press(screen.getByTestId('call-form-submit')));
+    expect(mockCreateCall).not.toHaveBeenCalled();
+    expect(screen.getByTestId('call-form-type-error')).toBeTruthy();
+  });
+
+  it('refuses a scheduled dispatch less than 15 minutes ahead', async () => {
+    activateVariant('dispatch');
+    await render(<CallFormScreen mode="create" />);
+    await fillBasics();
+    await fireEvent(screen.getByTestId('call-form-dispatch-on'), 'change', new Date(Date.now() + 5 * 60 * 1000).toISOString());
+    await act(async () => fireEvent.press(screen.getByTestId('call-form-submit')));
+    expect(mockCreateCall).not.toHaveBeenCalled();
+    expect(lastToast().message).toBe('calls.dispatch_on_too_soon:15');
+  });
+
+  it('never blocks a call on indoor location, which the form cannot pick', async () => {
+    mockRules = [{ Key: 'indoorLocation', Visible: true, Required: true }];
+    activateVariant('responder');
+    await render(<CallFormScreen mode="create" />);
+    await fillBasics();
+    await act(async () => fireEvent.press(screen.getByTestId('call-form-submit')));
+    expect(mockCreateCall).toHaveBeenCalled();
+  });
+
+  it('looks an address up on the server and fills a blank address for typed coordinates', async () => {
+    mockLookupAddress.mockResolvedValue({ succeeded: true, place: { latitude: 39.7, longitude: -104.9, address: '1 Main St, Denver' } });
+    activateVariant('dispatch');
+    await render(<CallFormScreen mode="create" />);
+    await fireEvent.changeText(screen.getByTestId('call-form-address'), '1 main');
+    await act(async () => fireEvent.press(screen.getByTestId('call-form-address-search')));
+    expect(mockLookupAddress).toHaveBeenCalledWith('1 main');
+    expect(screen.getByTestId('call-form-coordinates').props.value).toBe('39.7, -104.9');
+    expect(screen.getByTestId('call-form-address').props.value).toBe('1 Main St, Denver');
+    expect(lastToast().message).toBe('calls.address_found');
+
+    mockLookupAddress.mockResolvedValue({ succeeded: true, place: null });
+    await act(async () => fireEvent.press(screen.getByTestId('call-form-address-search')));
+    expect(lastToast().message).toBe('calls.address_not_found');
+
+    await fireEvent.changeText(screen.getByTestId('call-form-address'), '');
+    mockLookupAddressAt.mockResolvedValue('5 Elm St');
+    await fireEvent.changeText(screen.getByTestId('call-form-coordinates'), '39.8, -105');
+    await act(async () => fireEvent(screen.getByTestId('call-form-coordinates'), 'blur'));
+    expect(mockLookupAddressAt).toHaveBeenCalledWith(39.8, -105);
+    expect(screen.getByTestId('call-form-address').props.value).toBe('5 Elm St');
+  });
+
+  it('picks the call contact from the department contacts (built-in picker)', async () => {
+    useContactsStore.setState({
+      // SAFETY: the picker reads only these fields of a contact record.
+      contacts: [{ ContactId: 'c9', CompanyName: 'Acme Corp', Email: 'ops@acme.test', ContactType: 1 } as never],
+      fetchContacts: jest.fn(async () => undefined),
+    });
+    activateVariant('responder');
+    await render(<CallFormScreen mode="create" />);
+    await fireEvent.press(screen.getByTestId('call-form-contact-picker'));
+    await fireEvent.press(screen.getByTestId('call-contact-c9', hidden));
+    expect(screen.getByTestId('call-form-contact-name').props.value).toBe('Acme Corp');
+    expect(screen.getByTestId('call-form-contact-info').props.value).toBe('ops@acme.test');
+    await fillBasics();
+    await act(async () => fireEvent.press(screen.getByTestId('call-form-submit')));
+    expect(mockCreateCall).toHaveBeenCalledWith(expect.objectContaining({ contactId: 'c9', contactName: 'Acme Corp' }));
+  });
+
+  it('starts custom fields at their defaults, sends them and requires the required ones', async () => {
+    registerCallFormHookPoints({
+      loadUdfFields: async () => [
+        // SAFETY: the form reads only these definition fields.
+        { UdfFieldId: 'f1', Name: 'Hazmat', Label: 'Hazmat class', IsEnabled: true, IsVisibleOnMobile: true, IsRequired: true, IsReadOnly: false, SortOrder: 1, FieldDataType: 0, DefaultValue: '' } as never,
+        // SAFETY: as above.
+        { UdfFieldId: 'f2', Name: 'Sector', Label: '', IsEnabled: true, IsVisibleOnMobile: true, IsRequired: false, IsReadOnly: false, SortOrder: 2, FieldDataType: 0, DefaultValue: 'North' } as never,
+      ],
+    });
+    activateVariant('dispatch');
+    await render(<CallFormScreen mode="create" />);
+    await waitFor(() => expect(screen.getByTestId('call-form-udf')).toBeTruthy());
+    await fillBasics();
+    await act(async () => fireEvent.press(screen.getByTestId('call-form-submit')));
+    expect(mockCreateCall).not.toHaveBeenCalled();
+    expect(lastToast().message).toBe('calls.required_fields_missing:Hazmat class');
+    await fireEvent.changeText(screen.getByTestId('udf-input-f1'), '3');
+    await act(async () => fireEvent.press(screen.getByTestId('call-form-submit')));
+    expect(mockCreateCall).toHaveBeenCalledWith(
+      expect.objectContaining({
+        udfValues: expect.arrayContaining([
+          { UdfFieldId: 'f1', Value: '3' },
+          { UdfFieldId: 'f2', Value: 'North' },
+        ]),
+      })
+    );
   });
 
   it('renders hook points: run-card recommendation only with calls.runCards and the Dispatch.RunCards flag, plus contact picker', async () => {
@@ -250,15 +387,35 @@ describe('CallFormScreen: edit', () => {
     });
   });
 
-  it('starts from the call and resends fields the policy hides', async () => {
+  it('starts from the call and leaves fields the policy hides as the call stores them', async () => {
     mockRules = [{ Key: 'contactName', Visible: false, Required: false }];
     activateVariant('responder');
     await render(<CallFormScreen mode="edit" callId="42" />);
     await waitFor(() => expect(screen.getByTestId('call-form-name').props.value).toBe('Edit me'));
     expect(screen.queryByTestId('call-form-contact-name')).toBeNull();
     await act(async () => fireEvent.press(screen.getByTestId('call-form-submit')));
-    expect(mockUpdateCall).toHaveBeenCalledWith(expect.objectContaining({ callId: '42', name: 'Edit me', contactName: 'Hidden contact', latitude: 39.1, longitude: -104.8 }));
+    // A hidden text field goes up blank, which EditCall reads as "keep the stored value" (Dispatch).
+    expect(mockUpdateCall).toHaveBeenCalledWith(expect.objectContaining({ callId: '42', name: 'Edit me', type: 'Fire', contactName: '', latitude: 39.1, longitude: -104.8, notifyCancelledEntities: false }));
     expect(lastToast().message).toBe('call_detail.update_call_success');
+  });
+
+  it('adds protocols to the ones attached, can notify removed resources and names fields the server refused', async () => {
+    useCallDetailStore.setState({
+      details: {
+        // SAFETY: the edit reads only the protocols' names and count from the extra data.
+        '42': { call: makeCall('42', { Name: 'Edit me' }), extraData: { Protocols: [{ Name: 'Cardiac' }], Dispatches: [] } as never, notes: [], images: null, files: null, audio: null, fetchedAt: 1 },
+      },
+    });
+    activateVariant('dispatch');
+    await render(<CallFormScreen mode="edit" callId="42" />);
+    await waitFor(() => expect(screen.getByTestId('call-form-protocols-attached')).toBeTruthy());
+    expect(screen.getByText('calls.protocols.attached:Cardiac')).toBeTruthy();
+    expect(screen.getByText('calls.linked_calls.edit_hint')).toBeTruthy();
+    await fireEvent(screen.getByTestId('call-form-notify-cancelled'), 'valueChange', true);
+    mockUpdateCall.mockRejectedValueOnce(new ApiError({ kind: 'http', status: 400, data: 'Required call fields are missing: address' }));
+    await act(async () => fireEvent.press(screen.getByTestId('call-form-submit')));
+    expect(mockUpdateCall).toHaveBeenCalledWith(expect.objectContaining({ notifyCancelledEntities: true, protocolIds: [] }));
+    expect(lastToast().message).toBe('calls.required_fields_missing_edit:calls.address');
   });
 
   it('does not save an edit offline', async () => {

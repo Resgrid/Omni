@@ -48,30 +48,10 @@
       "auto_linked": "autolänkad",
       "auto_linked_hint": "Skickad utan ärende; Resgrid länkade den från föregående status eller utlarmningen."
     },
-    "audio": "Ljud",
-    "delete_call": "Ta bort larm",
-    "delete_call_confirm": "Ta bort det här larmet? Åtgärden kan inte ångras.",
-    "delete_call_error": "Det gick inte att ta bort larmet",
-    "delete_call_success": "Larmet har tagits bort",
     "destination_address": "Destinationsadress",
-    "destination_type": "Destinationstyp",
-    "dispatch_more": "Skicka ytterligare resurser",
     "dispatch_more_error": "Det gick inte att skicka resurserna",
     "dispatch_more_success": "Resurserna har skickats och meddelats",
-    "map_call": "Larm",
-    "map_destination": "Destination",
-    "missing_call_id": "Ärende-ID saknas",
-    "pending_banner_description": "Ärendet är sparat men ingen har meddelats. Välj vilka som ska skickas och larma ut det när det är klart.",
-    "pending_banner_title": "Väntande — inte utlarmat än",
-    "reschedule": "Schemalägg om",
-    "reschedule_datetime": "Utlarmningsdatum och -tid",
-    "reschedule_error": "Det gick inte att schemalägga om larmet",
-    "reschedule_in_1_day": "Om 1 dag",
-    "reschedule_in_1_hour": "Om 1 timme",
-    "reschedule_invalid": "Ange ett giltigt datum och en giltig tid (ÅÅÅÅ-MM-DD HH:mm)",
-    "reschedule_success": "Utlarmningstiden har uppdaterats",
-    "reschedule_tomorrow_morning": "I morgon kl. 08.00",
-    "scheduled_on": "Schemalagt datum och tid för utlarmning"
+    "missing_call_id": "Ärende-ID saknas"
   },
   "calls": {
     "audio": {
@@ -84,7 +64,6 @@
     "contact_information": "Kontaktinformation",
     "contact_picker": {
       "none": "Inga kontakter tillgängliga",
-      "search_placeholder": "Sök kontakter...",
       "title": "Välj kontakt"
     },
     "coordinates_incomplete": "Ange både latitud och longitud",
@@ -119,19 +98,16 @@
     "dispatch_recipients_empty": "Ingen personal, inga grupper, roller eller enheter är synliga för dig. Kontrollera avdelningens behörigheter eller larma Alla.",
     "dispatch_recipients_partial_load": "Vissa mottagare kunde inte läsas in. Listorna nedan kan vara ofullständiga.",
     "edit_call_web_hint": "Uppdatera ärendeuppgifterna nedan. Tryck Ctrl+S för att spara.",
-    "edit_keyboard_shortcuts": "Tips: Tryck Ctrl+S för att spara, Escape för att avbryta",
     "expand_map": "Förstora karta",
     "form": {
       "no_form": "Inget ärendeformulär konfigurerat",
       "title": "Ärendeformulär"
     },
-    "keyboard_shortcuts": "Tips: Tryck Ctrl+Enter för att skapa, Escape för att avbryta",
     "latitude": "Latitud",
     "latitude_invalid": "Ange en latitud i decimalgrader, mellan -90 och 90",
     "latitude_placeholder": "t.ex. 39.122639",
     "linked_calls": {
       "change": "Ändra länkat ärende",
-      "edit_hint": "Befintliga kopplingar på det här ärendet behålls; välj ett ärende för att lägga till ytterligare en.",
       "linked": "Länkat",
       "none": "Inga aktiva ärenden tillgängliga",
       "search_placeholder": "Sök ärenden...",
@@ -141,29 +117,19 @@
     "longitude": "Longitud",
     "longitude_invalid": "Ange en longitud i decimalgrader, mellan -180 och 180",
     "longitude_placeholder": "t.ex. -119.758773",
-    "looking_up_address": "Söker adress för koordinaterna...",
     "new_call_web_hint": "Fyll i ärendeuppgifterna nedan. Tryck Ctrl+Enter för att skapa.",
     "no_destination": "Ingen destination",
-    "notify_cancelled_entities": "Meddela avanmälda enheter",
-    "notify_cancelled_entities_description": "Skicka ett meddelande till personal och enheter som tagits bort från utlarmningslistan.",
-    "pending_saved": "Ärendet sparat som väntande",
     "protocols": {
-      "add": "Lägg till protokoll",
-      "attached": "Redan kopplade: {{names}}",
       "collapse": "Dölj",
       "expand_questions": "Visa frågor",
       "none": "Inga protokoll tillgängliga",
       "title": "Protokoll"
     },
-    "required_fields_missing_edit": "Din avdelning kräver dessa fält innan ett ärende kan sparas: {{fields}}",
     "save_as_pending": "Spara som väntande (larma inte ut ännu)",
     "save_as_pending_description": "Ärendet sparas och numreras, men ingen meddelas och fältapparna ser det inte. Mottagarna du väljer sparas som föreslagen utlarmning; larma ut det senare från Väntande larm.",
-    "save_pending_call": "Spara väntande larm",
     "schedule_dispatch": "Schemalägg utlarmning",
     "schedule_dispatch_description": "Ange ett framtida datum och tid för att schemalägga detta ärende för senare utlarmning",
     "scheduled_on": "Schemalagt datum och tid",
-    "scheduled_on_edit_hint": "Välj en tid för att schemalägga eller flytta utlarmningen. Lämnas fältet tomt behålls ärendets nuvarande schema.",
-    "scheduled_on_helper": "Lämna tomt för att larma omedelbart",
     "scheduled_on_past_error": "Schemalagd tid måste vara i framtiden",
     "scheduled_on_too_soon": "Den schemalagda utlarmningstiden måste vara minst 15 minuter från nu",
     "templates": {
@@ -244,7 +210,6 @@
     "note_save_error": "Kunde inte spara anteckning: {{error}}",
     "note_title_label": "Rubrik",
     "note_title_placeholder": "Ange anteckningsrubrik...",
-    "on_call": "På ärende",
     "pending_calls": "Väntande",
     "personnel_actions": {
       "destination": "Destination",
@@ -281,7 +246,6 @@
     "station": "Station",
     "stations": "Stationer",
     "system_update": "Systemuppdatering",
-    "unassigned": "Ej tilldelad",
     "unit_actions": "Enhetsåtgärder",
     "unit_actions_panel": {
       "call_destination": "Larmets destination",
@@ -513,9 +477,6 @@
     "type": "Typ",
     "unknown_type": "Okänd typ",
     "unnamed": "Namnlös POI"
-  },
-  "scheduled_calls": {
-    "scheduled_for": "Schemalagt till"
   },
   "settings": {
     "select_server": "Välj en server"

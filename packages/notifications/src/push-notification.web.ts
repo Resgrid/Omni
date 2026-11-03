@@ -18,6 +18,7 @@
  */
 import { IC_PUSH_SOURCE, type PushSubject, registerPushDevice, unregisterPushToken } from '@resgrid/api';
 import { isElectron, logger } from '@resgrid/core';
+import { toDevProxyUrl } from '@resgrid/core/env/dev-proxy';
 import { getApps, initializeApp } from 'firebase/app';
 import { deleteToken, getMessaging, getToken, isSupported, type Messaging } from 'firebase/messaging';
 import { useEffect, useState } from 'react';
@@ -437,7 +438,7 @@ async function unregisterAtServer(registration: StoredRegistration, accessToken:
   const subject = subjectOfStored(registration);
   try {
     await withPushTimeout('unregister at sign-out', (signal) =>
-      fetch(`${apiUrl.replace(/\/+$/, '')}/Devices/UnRegisterWebPush`, {
+      fetch(toDevProxyUrl(`${apiUrl.replace(/\/+$/, '')}/Devices/UnRegisterWebPush`), {
         method: 'POST',
         headers: { ...headers, 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
         body: JSON.stringify({

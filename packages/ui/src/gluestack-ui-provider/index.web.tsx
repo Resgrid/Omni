@@ -37,19 +37,14 @@ export function GluestackUIProvider({ mode = 'light', ...props }: { mode?: ModeT
     return () => media.removeEventListener('change', handleMediaQuery);
   }, [handleMediaQuery, mode]);
 
+  // No inline <script> here (the gluestack template has one for server rendering): the web export is a client-only
+  // SPA (`web.output: 'single'`), where React never runs a rendered script and warns about it. The layout effect
+  // above sets the class before the first paint.
   return (
-    <>
-      <script
-        suppressHydrationWarning
-        dangerouslySetInnerHTML={{
-          __html: `(${script.toString()})('${mode}')`,
-        }}
-      />
-      <OverlayProvider>
-        <ToastProvider>
-          <ColorSchemeProvider mode={mode}>{props.children}</ColorSchemeProvider>
-        </ToastProvider>
-      </OverlayProvider>
-    </>
+    <OverlayProvider>
+      <ToastProvider>
+        <ColorSchemeProvider mode={mode}>{props.children}</ColorSchemeProvider>
+      </ToastProvider>
+    </OverlayProvider>
   );
 }

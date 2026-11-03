@@ -88,8 +88,9 @@ function changedSettings(served, wanted) {
   return [...names].filter((name) => served?.[name] !== wanted?.[name]).sort();
 }
 
+// --no-bundler builds and installs only: expo run then neither starts nor reuses a dev server, so there is none to check.
 const port = portFrom(runArgs);
-const running = await appOnPort(port);
+const running = runArgs.includes('--no-bundler') ? null : await appOnPort(port);
 const otherPort = `pnpm ${platform}:${variant} --port ${port + 1}`;
 if (running && (running.variant !== variant || running.appEnv !== appEnv)) {
   fail(`Metro on port ${port} is serving ${running.variant} (${running.appEnv}), and expo run would reuse it for ${target}.\n` + `Stop that dev server, or use another port: ${otherPort}`);

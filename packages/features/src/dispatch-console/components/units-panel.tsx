@@ -22,6 +22,8 @@ export interface UnitsPanelProps {
   onSelectUnit: (unitId: string) => void;
   /** "+" on a unit while filtered to a call. */
   onSetStatusForCall?: (unitId: string) => void;
+  /** The row's details button: opens the unit's screen. */
+  onOpenUnit?: (unitId: string) => void;
   flex?: number;
   maxHeight?: number;
 }
@@ -54,7 +56,7 @@ const SelectionBar: React.FC<{ count: number; onSelectAll: () => void }> = ({ co
  * filtered, crew seats and status. Multi-select (header toggle, long press, Ctrl/Cmd-click on web) builds a group for
  * one status change (an ambulance and the MUG following it, all apparatus returning).
  */
-export const UnitsPanel: React.FC<UnitsPanelProps> = ({ callFilter, onSelectUnit, onSetStatusForCall, flex, maxHeight }) => {
+export const UnitsPanel: React.FC<UnitsPanelProps> = ({ callFilter, onSelectUnit, onSetStatusForCall, onOpenUnit, flex, maxHeight }) => {
   const { t } = useTranslation();
   const title = useTerm('module.units', t('dispatch.units'));
   const units = useUnitsStore((state) => state.unitInfos);
@@ -96,10 +98,11 @@ export const UnitsPanel: React.FC<UnitsPanelProps> = ({ callFilter, onSelectUnit
         hasPendingStatus={pendingUnitIds.has(item.UnitId)}
         onPress={handlePress}
         onLongPress={handleLongPress}
+        onOpen={isSelectionMode ? undefined : onOpenUnit}
         onSetStatusForCall={callFilter && !isSelectionMode ? onSetStatusForCall : undefined}
       />
     ),
-    [callFilter, handleLongPress, handlePress, isSelectionMode, onSetStatusForCall, pendingUnitIds, selectedSet, selectedUnitId]
+    [callFilter, handleLongPress, handlePress, isSelectionMode, onOpenUnit, onSetStatusForCall, pendingUnitIds, selectedSet, selectedUnitId]
   );
 
   return (

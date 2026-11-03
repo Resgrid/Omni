@@ -231,7 +231,33 @@
     "info": {
       "dispatched_on": "Dispatched",
       "logged_on": "Logged"
-    }
+    },
+    "delete_call": "Ta bort larm",
+    "delete_call_confirm": "Ta bort det här larmet? Åtgärden kan inte ångras.",
+    "delete_call_success": "Larmet har tagits bort",
+    "delete_call_error": "Det gick inte att ta bort larmet",
+    "reschedule": "Schemalägg om",
+    "reschedule_success": "Utlarmningstiden har uppdaterats",
+    "reschedule_error": "Det gick inte att schemalägga om larmet",
+    "reschedule_invalid": "Choose a valid dispatch date and time",
+    "reschedule_in_1_hour": "Om 1 timme",
+    "reschedule_in_1_day": "Om 1 dag",
+    "reschedule_tomorrow_morning": "I morgon kl. 08.00",
+    "reschedule_datetime": "Utlarmningsdatum och -tid",
+    "dispatch_more": "Skicka ytterligare resurser",
+    "pending_banner_title": "Väntande — inte utlarmat än",
+    "pending_banner_description": "Ärendet är sparat men ingen har meddelats. Välj vilka som ska skickas och larma ut det när det är klart.",
+    "dispatch_call": "Larma",
+    "map_call": "Larm",
+    "map_destination": "Destination",
+    "audio": "Ljud",
+    "audio_empty": "Inga ljudinspelningar",
+    "audio_play": "Play {{name}}",
+    "audio_stop": "Stop {{name}}",
+    "audio_play_error": "Could not play this recording",
+    "scheduled_on": "Schemalagt datum och tid för utlarmning",
+    "destination_type": "Destinationstyp",
+    "keyboard_shortcuts": "Tip: Press 1-9 to switch tabs, Ctrl+E to edit, Escape to go back"
   },
   "calls": {
     "address": "Adress",
@@ -253,7 +279,9 @@
     "contact_phone_placeholder": "Ange kontaktens telefon",
     "contact_picker": {
       "linked": "Kopplad kontakt: {{name}}",
-      "select": "Select Contact"
+      "select": "Select Contact",
+      "search_placeholder": "Sök kontakter...",
+      "empty": "Inga kontakter tillgängliga"
     },
     "coordinates": "GPS-koordinater",
     "coordinates_found": "Koordinater hittades och adressen uppdaterades",
@@ -398,7 +426,9 @@
     },
     "protocols": {
       "select": "Välj protokoll",
-      "selected_count": "{{count}} selected"
+      "selected_count": "{{count}} selected",
+      "attached": "Redan kopplade: {{names}}",
+      "add": "Lägg till protokoll"
     },
     "queued": {
       "badge": "Queued — not dispatched yet",
@@ -447,8 +477,25 @@
       "name_required": "Enter a name for the call",
       "nature_required": "Enter the nature of the call",
       "required": "Required by your department",
-      "udf_required": "Fill in the required custom fields"
-    }
+      "udf_required": "Fill in the required custom fields",
+      "type_required": "Choose a call type"
+    },
+    "pending_saved": "Ärendet sparat som väntande",
+    "required_fields_missing_edit": "Din avdelning kräver dessa fält innan ett ärende kan sparas: {{fields}}",
+    "search_address": "Sök adress",
+    "search_what3words": "Sök what3words-adress",
+    "search_plus_code": "Sök plus code",
+    "looking_up_address": "Söker adress för koordinaterna...",
+    "notify_cancelled_entities": "Meddela avanmälda enheter",
+    "notify_cancelled_entities_description": "Skicka ett meddelande till personal och enheter som tagits bort från utlarmningslistan.",
+    "linked_calls": {
+      "edit_hint": "Befintliga kopplingar på det här ärendet behålls; välj ett ärende för att lägga till ytterligare en."
+    },
+    "scheduled_on_edit_hint": "Välj en tid för att schemalägga eller flytta utlarmningen. Lämnas fältet tomt behålls ärendets nuvarande schema.",
+    "scheduled_on_helper": "Lämna tomt för att larma omedelbart",
+    "save_pending_call": "Spara väntande larm",
+    "keyboard_shortcuts": "Tips: Tryck Ctrl+Enter för att skapa, Escape för att avbryta",
+    "edit_keyboard_shortcuts": "Tips: Tryck Ctrl+S för att spara, Escape för att avbryta"
   },
   "chat": {
     "ack_pending_count": "Du har {{count}} brådskande meddelanden att bekräfta",
@@ -3443,7 +3490,8 @@
     "table_priority": "Prioritet",
     "table_scheduled": "Schemalagt till",
     "table_type": "Typ",
-    "title": "Schemalagda larm"
+    "title": "Schemalagda larm",
+    "scheduled_for": "Schemalagt till"
   },
   "certifications": {
     "add": "Lägg till behörighet",
@@ -3608,6 +3656,7 @@
     "severity_levels": "Allvarlighetsnivåer",
     "show_area": "Visa område",
     "show_calls": "Visa larm",
+    "show_linked_calls": "Visa kopplade larm",
     "show_expiry": "Visa utgångstid",
     "show_headline": "Visa rubrik",
     "show_personnel": "Visa personal",
@@ -3788,6 +3837,7 @@
     "check_in": "Check in",
     "clear_search": "Clear search",
     "expand_map": "Open the full map",
+    "gps": "GPS",
     "map_unavailable": "No map is configured for this department.",
     "no_overdue_check_ins": "No overdue check-ins",
     "no_resources": "No units or personnel to show",
@@ -3811,11 +3861,14 @@
     "ptt_error_permission": "Microphone access is needed to talk.",
     "ptt_hotkey_hint": "Hold {{hotkey}} to talk",
     "ptt_no_channels": "No voice channels",
+    "ptt_off": "OFF",
     "ptt_ready": "Ready",
     "ptt_receiving": "Receiving",
     "ptt_reconnecting": "Reconnecting…",
+    "ptt_rx": "RX",
     "ptt_stop": "Stop talking",
     "ptt_talk": "Talk",
+    "ptt_tx": "TX",
     "resources": "Resources",
     "resources_on_call": "Resources on call",
     "search_notes": "Search notes",
@@ -3877,6 +3930,7 @@
     "note_added_to_console": "En ny anteckning har lagts till i konsolen",
     "note_created": "Anteckning skapad",
     "notes": "Anteckningar",
+    "on_call": "På ärende",
     "personnel": "Personal",
     "personnel_deselected": "Personal avmarkerad",
     "personnel_on_call": "Personal på ärende",
@@ -3897,6 +3951,7 @@
     "transmission_ended": "Sändning avslutad",
     "transmitting": "Transmitting",
     "transmitting_on": "Sänder på {{channel}}",
+    "unassigned": "Ej tilldelad",
     "unit_deselected": "Enhet avmarkerad",
     "unit_selected": "Enhet vald",
     "unit_status_updated": "Enhetsstatus uppdaterad",

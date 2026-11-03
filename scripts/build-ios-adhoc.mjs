@@ -17,6 +17,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseEnv } from 'node:util';
 
+import { easCliVersion } from './ci/lib.mjs';
+
 const require = createRequire(import.meta.url);
 const { VARIANT_IDS, CLIENT_ENV_DEFAULTS, buildClientEnv, computeVariantVersion, loadVariant, runNumberFromEnv } = require('@resgrid/config-plugins');
 
@@ -74,9 +76,12 @@ const output = path.join(root, 'dist', 'ios-adhoc', `${manifest.identity.name.re
 fs.mkdirSync(path.dirname(output), { recursive: true });
 
 // The same eas-cli as CI.
-const workflow = fs.readFileSync(path.join(root, '.github', 'workflows', 'release.yml'), 'utf8');
-const easVersion = /EAS_CLI_VERSION: '([^']+)'/.exec(workflow)?.[1];
-if (!easVersion) fail('EAS_CLI_VERSION not found in .github/workflows/release.yml.');
+let easVersion;
+try {
+  easVersion = easCliVersion();
+} catch (error) {
+  fail(error.message);
+}
 
 const profile = `${variant}-${APP_ENV}`;
 console.log(`eas-cli ${easVersion}: build --local --platform ios --profile ${profile} → ${path.relative(root, output)}`);

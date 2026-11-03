@@ -7,5 +7,5 @@ export const matchesQueueQuery = (call: CallResultData, query: string): boolean 
   return !needle || call.CallId.toLowerCase().includes(needle) || matchesCallQuery(call, query);
 };
 
-/** When a scheduled call goes out (UTC wire value): Core reports it as DispatchedOn; ScheduledOn only on newer servers. */
-export const scheduledDispatchUtc = (call: Pick<CallResultData, 'ScheduledOnUtc' | 'DispatchedOnUtc'>): string => call.ScheduledOnUtc || call.DispatchedOnUtc || '';
+/** When a scheduled call goes out (UTC wire value): the calls module owns the rule; re-exported for the queue screens. */
+export { scheduledDispatchUtc } from '@resgrid/features/calls';

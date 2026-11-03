@@ -3,3 +3,5 @@ test-results/
 playwright-report/
 results/
 maestro-output/
+# QA regression runs (qa-regression.ts): exports, reports, screenshots, generated Maestro flows
+qa-output/

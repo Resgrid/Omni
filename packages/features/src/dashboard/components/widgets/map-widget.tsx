@@ -81,7 +81,7 @@ const DepartmentMap: React.FC<{ isEditMode: boolean }> = ({ isEditMode }) => {
 
   // Fit once per load and whenever the pin kinds change — never on every live position update (that would yank the
   // camera, and any pan, around all day).
-  const fitKey = `${hasLoaded}|${settings.showAllMarkers}|${settings.showCalls}|${settings.showUnits}|${settings.showStations}|${settings.showPersonnel}`;
+  const fitKey = `${hasLoaded}|${settings.showAllMarkers}|${settings.showCalls}|${settings.showLinkedCalls}|${settings.showUnits}|${settings.showStations}|${settings.showPersonnel}`;
   const fittedKeyRef = useRef('');
   useEffect(() => {
     if (!hasLoaded || !settings.showAllMarkers || fittedKeyRef.current === fitKey || visiblePins.length === 0) return;

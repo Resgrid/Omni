@@ -231,7 +231,33 @@
     "info": {
       "dispatched_on": "Dispatched",
       "logged_on": "Logged"
-    }
+    },
+    "delete_call": "Eliminar llamada",
+    "delete_call_confirm": "¿Eliminar esta llamada? Esta acción no se puede deshacer.",
+    "delete_call_success": "Llamada eliminada",
+    "delete_call_error": "No se pudo eliminar la llamada",
+    "reschedule": "Reprogramar",
+    "reschedule_success": "Hora de despacho actualizada",
+    "reschedule_error": "No se pudo reprogramar la llamada",
+    "reschedule_invalid": "Choose a valid dispatch date and time",
+    "reschedule_in_1_hour": "En 1 hora",
+    "reschedule_in_1_day": "En 1 día",
+    "reschedule_tomorrow_morning": "Mañana a las 8 a. m.",
+    "reschedule_datetime": "Fecha y hora de despacho",
+    "dispatch_more": "Despachar recursos adicionales",
+    "pending_banner_title": "Pendiente — aún no despachada",
+    "pending_banner_description": "Esta llamada está guardada pero no se ha notificado a nadie. Elija a quién enviar y despáchela cuando esté lista.",
+    "dispatch_call": "Despachar",
+    "map_call": "Llamada",
+    "map_destination": "Destino",
+    "audio": "Audio",
+    "audio_empty": "No hay grabaciones de audio",
+    "audio_play": "Play {{name}}",
+    "audio_stop": "Stop {{name}}",
+    "audio_play_error": "Could not play this recording",
+    "scheduled_on": "Fecha y hora de despacho programado",
+    "destination_type": "Tipo de destino",
+    "keyboard_shortcuts": "Tip: Press 1-9 to switch tabs, Ctrl+E to edit, Escape to go back"
   },
   "calls": {
     "address": "Dirección",
@@ -253,7 +279,9 @@
     "contact_phone_placeholder": "Introduce el teléfono del contacto",
     "contact_picker": {
       "linked": "Contacto vinculado: {{name}}",
-      "select": "Select Contact"
+      "select": "Select Contact",
+      "search_placeholder": "Buscar contactos...",
+      "empty": "No hay contactos disponibles"
     },
     "coordinates": "Coordenadas GPS",
     "coordinates_found": "Coordenadas encontradas y dirección actualizada",
@@ -398,7 +426,9 @@
     },
     "protocols": {
       "select": "Seleccionar Protocolos",
-      "selected_count": "{{count}} selected"
+      "selected_count": "{{count}} selected",
+      "attached": "Ya adjuntos: {{names}}",
+      "add": "Añadir protocolos"
     },
     "queued": {
       "badge": "Queued — not dispatched yet",
@@ -447,8 +477,25 @@
       "name_required": "Enter a name for the call",
       "nature_required": "Enter the nature of the call",
       "required": "Required by your department",
-      "udf_required": "Fill in the required custom fields"
-    }
+      "udf_required": "Fill in the required custom fields",
+      "type_required": "Choose a call type"
+    },
+    "pending_saved": "Llamada guardada como pendiente",
+    "required_fields_missing_edit": "Tu departamento exige estos campos antes de poder guardar una llamada: {{fields}}",
+    "search_address": "Buscar dirección",
+    "search_what3words": "Buscar dirección what3words",
+    "search_plus_code": "Buscar plus code",
+    "looking_up_address": "Buscando la dirección de estas coordenadas...",
+    "notify_cancelled_entities": "Notificar entidades canceladas",
+    "notify_cancelled_entities_description": "Enviar un mensaje al personal y las unidades eliminados de la lista de despacho.",
+    "linked_calls": {
+      "edit_hint": "Los vínculos que ya tiene esta llamada se conservan; elige una llamada para añadir otro."
+    },
+    "scheduled_on_edit_hint": "Elige una hora para programar o reprogramar el despacho. Si lo dejas vacío, se mantiene la programación actual de la llamada.",
+    "scheduled_on_helper": "Deje vacío para despachar inmediatamente",
+    "save_pending_call": "Guardar llamada pendiente",
+    "keyboard_shortcuts": "Consejo: Presione Ctrl+Enter para crear, Escape para cancelar",
+    "edit_keyboard_shortcuts": "Consejo: Presione Ctrl+S para guardar, Escape para cancelar"
   },
   "chat": {
     "ack_pending_count": "Tienes {{count}} mensajes urgentes por confirmar",
@@ -3443,7 +3490,8 @@
     "table_priority": "Prioridad",
     "table_scheduled": "Programada para",
     "table_type": "Tipo",
-    "title": "Llamadas Programadas"
+    "title": "Llamadas Programadas",
+    "scheduled_for": "Programada para"
   },
   "certifications": {
     "add": "Añadir certificación",
@@ -3608,6 +3656,7 @@
     "severity_levels": "Niveles de gravedad",
     "show_area": "Mostrar área",
     "show_calls": "Mostrar llamadas",
+    "show_linked_calls": "Mostrar llamadas vinculadas",
     "show_expiry": "Mostrar hora de expiración",
     "show_headline": "Mostrar titular",
     "show_personnel": "Mostrar personal",
@@ -3788,6 +3837,7 @@
     "check_in": "Check in",
     "clear_search": "Clear search",
     "expand_map": "Open the full map",
+    "gps": "GPS",
     "map_unavailable": "No map is configured for this department.",
     "no_overdue_check_ins": "No overdue check-ins",
     "no_resources": "No units or personnel to show",
@@ -3811,11 +3861,14 @@
     "ptt_error_permission": "Microphone access is needed to talk.",
     "ptt_hotkey_hint": "Hold {{hotkey}} to talk",
     "ptt_no_channels": "No voice channels",
+    "ptt_off": "OFF",
     "ptt_ready": "Ready",
     "ptt_receiving": "Receiving",
     "ptt_reconnecting": "Reconnecting…",
+    "ptt_rx": "RX",
     "ptt_stop": "Stop talking",
     "ptt_talk": "Talk",
+    "ptt_tx": "TX",
     "resources": "Resources",
     "resources_on_call": "Resources on call",
     "search_notes": "Search notes",
@@ -3877,6 +3930,7 @@
     "note_added_to_console": "Se ha añadido una nueva nota a la consola",
     "note_created": "Nota Creada",
     "notes": "Notas",
+    "on_call": "En Llamada",
     "personnel": "Personal",
     "personnel_deselected": "Personal Deseleccionado",
     "personnel_on_call": "Personal en Llamada",
@@ -3897,6 +3951,7 @@
     "transmission_ended": "Transmisión finalizada",
     "transmitting": "Transmitting",
     "transmitting_on": "Transmitiendo en {{channel}}",
+    "unassigned": "Sin Asignar",
     "unit_deselected": "Unidad Deseleccionada",
     "unit_selected": "Unidad Seleccionada",
     "unit_status_updated": "Estado de unidad actualizado",

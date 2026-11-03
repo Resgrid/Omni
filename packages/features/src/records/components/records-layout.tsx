@@ -1,4 +1,4 @@
-import { Divider, Heading, Pressable, Text, useFormFactor } from '@resgrid/ui';
+import { Divider, Heading, Pressable, Text, useFormFactor, useThemeColors } from '@resgrid/ui';
 import { Check } from 'lucide-react-native';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -62,24 +62,28 @@ export interface CheckRowProps {
 }
 
 /** A web/Electron-safe checkbox row (checkbox role, no portal). */
-export const CheckRow: React.FC<CheckRowProps> = ({ label, checked, onChange, disabled = false, testID }) => (
-  <Pressable
-    onPress={() => (disabled ? undefined : onChange(!checked))}
-    accessibilityRole="checkbox"
-    accessibilityState={{ checked, disabled }}
-    accessibilityLabel={label}
-    disabled={disabled}
-    testID={testID}
-    className={`flex-row items-center py-2 ${disabled ? 'opacity-50' : ''}`}
-  >
-    <View className={`mr-2 items-center justify-center rounded border ${checked ? 'border-primary-600 bg-primary-600' : 'border-outline-400 bg-background-0'}`} style={styles.box}>
-      {checked ? <Check size={14} color="#FFFFFF" /> : null}
-    </View>
-    <Text size="sm" className="flex-1 text-typography-800">
-      {label}
-    </Text>
-  </Pressable>
-);
+export const CheckRow: React.FC<CheckRowProps> = ({ label, checked, onChange, disabled = false, testID }) => {
+  const colors = useThemeColors();
+
+  return (
+    <Pressable
+      onPress={() => (disabled ? undefined : onChange(!checked))}
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked, disabled }}
+      accessibilityLabel={label}
+      disabled={disabled}
+      testID={testID}
+      className={`flex-row items-center py-2 ${disabled ? 'opacity-50' : ''}`}
+    >
+      <View className={`mr-2 items-center justify-center rounded border ${checked ? 'border-primary-600 bg-primary-600' : 'border-outline-400 bg-background-0'}`} style={styles.box}>
+        {checked ? <Check size={14} color={colors.textInverse} /> : null}
+      </View>
+      <Text size="sm" className="flex-1 text-typography-800">
+        {label}
+      </Text>
+    </Pressable>
+  );
+};
 
 const styles = StyleSheet.create({
   full: { width: '100%' },

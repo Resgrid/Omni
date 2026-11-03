@@ -1,6 +1,6 @@
 import { useTranslation } from '@resgrid/i18n';
 import { type PersonnelInfoResultData, type UnitRoleResultData } from '@resgrid/models';
-import { Button, ButtonText, HStack, Input, InputField, Modal, ModalBackdrop, ModalBody, ModalContent, ModalFooter, ModalHeader, Pressable, Text, View, VStack } from '@resgrid/ui';
+import { Button, ButtonText, HStack, Input, InputField, Modal, ModalBackdrop, ModalBody, ModalContent, ModalFooter, ModalHeader, Pressable, Text, useThemeColors, View, VStack } from '@resgrid/ui';
 import { CheckIcon, UserIcon, UserXIcon } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -24,6 +24,7 @@ const fullName = (user: Pick<PersonnelInfoResultData, 'FirstName' | 'LastName'>)
  */
 export const RoleUserSelectionModal: React.FC<RoleUserSelectionModalProps> = ({ isOpen, onClose, seat, selectedUserId, users, onSelectUser, currentAssignments }) => {
   const { t } = useTranslation();
+  const colors = useThemeColors();
   const [query, setQuery] = useState('');
 
   useEffect(() => {
@@ -79,7 +80,7 @@ export const RoleUserSelectionModal: React.FC<RoleUserSelectionModalProps> = ({ 
                 >
                   <HStack space="md" className="items-center">
                     <View className={`size-9 items-center justify-center rounded-full ${isSelected ? 'bg-primary-500' : 'bg-background-100'}`}>
-                      {isSelected ? <CheckIcon size={16} color="#ffffff" /> : <UserIcon size={16} color="#737373" />}
+                      {isSelected ? <CheckIcon size={16} color={colors.textInverse} /> : <UserIcon size={16} color={colors.token('typography-500')} />}
                     </View>
                     <VStack className="flex-1">
                       <Text className="text-base font-medium text-typography-900">{fullName(user)}</Text>

@@ -157,8 +157,9 @@ describe('notes and map pins', () => {
 
   it('drops the pin kinds the board turned off and pins without a position', () => {
     const pin = (Id: string, Type: number, Latitude = 1, Longitude = 1): MapMakerInfoData => ({ Id, Type, Latitude, Longitude }) as MapMakerInfoData;
-    const pins = [pin('c1', 0), pin('u1', 1), pin('s1', 2), pin('p1', 3), pin('poi', 4), pin('nowhere', 0, 0, 0)];
-    expect(filterMapPins(pins, { showCalls: true, showUnits: false, showStations: true, showPersonnel: false }).map((entry) => entry.Id)).toEqual(['c1', 's1', 'poi']);
+    const pins = [pin('c1', 0), { ...pin('linked', 0), IsLinkedCall: true }, pin('u1', 1), pin('s1', 2), pin('p1', 3), pin('poi', 4), pin('nowhere', 0, 0, 0)];
+    expect(filterMapPins(pins, { showCalls: true, showLinkedCalls: false, showUnits: false, showStations: true, showPersonnel: false }).map((entry) => entry.Id)).toEqual(['c1', 's1', 'poi']);
+    expect(filterMapPins(pins, { showCalls: false, showLinkedCalls: true, showUnits: false, showStations: true, showPersonnel: false }).map((entry) => entry.Id)).toEqual(['linked', 's1', 'poi']);
   });
 
   it('centres on the widget, else the department, else nothing', () => {

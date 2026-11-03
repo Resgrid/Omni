@@ -193,7 +193,8 @@ describe('DispatchConsoleScreen layout', () => {
     expect(screen.getByTestId('stat-scheduled-calls-value')).toHaveTextContent('1');
     expect(screen.getByTestId('stat-pending-calls-value')).toHaveTextContent('2');
     expect(screen.getByTestId('stat-units-available-value')).toHaveTextContent('2');
-    expect(screen.getByTestId('stat-weather-alerts-value')).toHaveTextContent('1');
+    // Extreme / severe, as on Dispatch's stats bar.
+    expect(screen.getByTestId('stat-weather-alerts-value')).toHaveTextContent('1 / 0');
     await fireEvent.press(screen.getByTestId('stat-pending-calls'));
     expect(router.push).toHaveBeenCalledWith('/pending-calls');
     await fireEvent.press(screen.getByTestId('stat-scheduled-calls'));
@@ -216,6 +217,19 @@ describe('DispatchConsoleScreen layout', () => {
     await renderConsole();
     await fireEvent.press(screen.getByTestId('notes-panel-header'));
     expect(screen.queryByTestId('notes-list')).toBeNull();
+    expect(useDashboardViewStore.getState().collapsedCards.notes).toBe(true);
+  });
+
+  // On the web the header toggle is a <button>; its actions inside it would be a button inside a button.
+  it('keeps the header actions beside the collapse toggle, not inside it', async () => {
+    await setWindow(1366, 1024);
+    await renderConsole();
+    expect(within(screen.getByTestId('notes-panel-header')).queryByTestId('notes-refresh')).toBeNull();
+    await fireEvent.press(screen.getByTestId('notes-refresh'));
+    expect(useDashboardViewStore.getState().collapsedCards.notes).toBeUndefined();
+    // The chevron repeats the toggle for pointer users only; assistive tech gets the one header button.
+    expect(screen.queryByTestId('notes-panel-chevron')).toBeNull();
+    await fireEvent.press(screen.getByTestId('notes-panel-chevron', hidden));
     expect(useDashboardViewStore.getState().collapsedCards.notes).toBe(true);
   });
 });

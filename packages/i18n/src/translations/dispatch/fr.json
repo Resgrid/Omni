@@ -48,30 +48,10 @@
       "auto_linked": "lié automatiquement",
       "auto_linked_hint": "Envoyé sans appel ; Resgrid l'a lié à partir du statut précédent ou de la répartition."
     },
-    "audio": "Audio",
-    "delete_call": "Supprimer l'appel",
-    "delete_call_confirm": "Supprimer cet appel ? Cette action est irréversible.",
-    "delete_call_error": "Échec de la suppression de l'appel",
-    "delete_call_success": "Appel supprimé",
     "destination_address": "Adresse de destination",
-    "destination_type": "Type de destination",
-    "dispatch_more": "Répartir des ressources supplémentaires",
     "dispatch_more_error": "Échec de la répartition des ressources",
     "dispatch_more_success": "Ressources réparties et notifiées",
-    "map_call": "Appel",
-    "map_destination": "Destination",
-    "missing_call_id": "L'identifiant de l'appel est manquant",
-    "pending_banner_description": "Cette intervention est enregistrée mais personne n’a été prévenu. Choisissez qui envoyer et dépêchez-la quand elle est prête.",
-    "pending_banner_title": "En attente — pas encore dépêchée",
-    "reschedule": "Reprogrammer",
-    "reschedule_datetime": "Date et heure de répartition",
-    "reschedule_error": "Échec de la reprogrammation de l'appel",
-    "reschedule_in_1_day": "Dans 1 jour",
-    "reschedule_in_1_hour": "Dans 1 heure",
-    "reschedule_invalid": "Saisissez une date et une heure valides (AAAA-MM-JJ HH:mm)",
-    "reschedule_success": "Heure de répartition mise à jour",
-    "reschedule_tomorrow_morning": "Demain à 8 h",
-    "scheduled_on": "Date et heure prévues de répartition"
+    "missing_call_id": "L'identifiant de l'appel est manquant"
   },
   "calls": {
     "audio": {
@@ -84,7 +64,6 @@
     "contact_information": "Coordonnées du contact",
     "contact_picker": {
       "none": "Aucun contact disponible",
-      "search_placeholder": "Rechercher des contacts...",
       "title": "Sélectionner un contact"
     },
     "coordinates_incomplete": "Saisissez la latitude et la longitude",
@@ -119,19 +98,16 @@
     "dispatch_recipients_empty": "Aucun personnel, groupe, rôle ou unité ne vous est visible. Vérifiez les autorisations de votre service ou envoyez à Tout le monde.",
     "dispatch_recipients_partial_load": "Certains destinataires n'ont pas pu être chargés. Les listes ci-dessous peuvent être incomplètes.",
     "edit_call_web_hint": "Mettez à jour les détails de l'appel ci-dessous. Appuyez sur Ctrl+S pour sauvegarder.",
-    "edit_keyboard_shortcuts": "Astuce : Appuyez sur Ctrl+S pour sauvegarder, Échap pour annuler",
     "expand_map": "Agrandir la carte",
     "form": {
       "no_form": "Aucun formulaire d'appel configuré",
       "title": "Formulaire d'appel"
     },
-    "keyboard_shortcuts": "Astuce : Appuyez sur Ctrl+Entrée pour créer, Échap pour annuler",
     "latitude": "Latitude",
     "latitude_invalid": "Saisissez une latitude en degrés décimaux, entre -90 et 90",
     "latitude_placeholder": "ex. 39.122639",
     "linked_calls": {
       "change": "Changer l'appel lié",
-      "edit_hint": "Les liens déjà présents sur cet appel sont conservés ; choisissez un appel pour en ajouter un autre.",
       "linked": "Lié",
       "none": "Aucun appel actif disponible",
       "search_placeholder": "Rechercher des appels...",
@@ -141,29 +117,19 @@
     "longitude": "Longitude",
     "longitude_invalid": "Saisissez une longitude en degrés décimaux, entre -180 et 180",
     "longitude_placeholder": "ex. -119.758773",
-    "looking_up_address": "Recherche de l'adresse pour ces coordonnées...",
     "new_call_web_hint": "Remplissez les détails de l'appel ci-dessous. Appuyez sur Ctrl+Entrée pour créer.",
     "no_destination": "Aucune destination",
-    "notify_cancelled_entities": "Avertir les entités annulées",
-    "notify_cancelled_entities_description": "Envoyer un message au personnel et aux unités retirés de la liste de répartition.",
-    "pending_saved": "Intervention enregistrée en attente",
     "protocols": {
-      "add": "Ajouter des protocoles",
-      "attached": "Déjà associés : {{names}}",
       "collapse": "Réduire",
       "expand_questions": "Voir les questions",
       "none": "Aucun protocole disponible",
       "title": "Protocoles"
     },
-    "required_fields_missing_edit": "Votre service exige ces champs avant qu'un appel puisse être enregistré : {{fields}}",
     "save_as_pending": "Enregistrer en attente (ne pas dépêcher maintenant)",
     "save_as_pending_description": "L’intervention est enregistrée et numérotée, mais personne n’est prévenu et les applications terrain ne la voient pas. Les destinataires choisis sont conservés comme dispatch proposé ; dépêchez-la plus tard depuis Interventions en attente.",
-    "save_pending_call": "Enregistrer l’intervention en attente",
     "schedule_dispatch": "Planifier le dispatch",
     "schedule_dispatch_description": "Définir une date et une heure futures pour planifier cet appel pour un dispatch ultérieur",
     "scheduled_on": "Date et heure prévues",
-    "scheduled_on_edit_hint": "Choisissez une heure pour planifier ou replanifier le dispatch. Laisser vide conserve la planification actuelle de l'appel.",
-    "scheduled_on_helper": "Laisser vide pour dispatcher immédiatement",
     "scheduled_on_past_error": "L'heure planifiée doit être dans le futur",
     "scheduled_on_too_soon": "L'heure de dispatch planifiée doit être au moins 15 minutes après maintenant",
     "templates": {
@@ -244,7 +210,6 @@
     "note_save_error": "Échec de la sauvegarde de la note : {{error}}",
     "note_title_label": "Titre",
     "note_title_placeholder": "Saisissez le titre de la note...",
-    "on_call": "En intervention",
     "pending_calls": "En attente",
     "personnel_actions": {
       "destination": "Destination",
@@ -281,7 +246,6 @@
     "station": "Caserne",
     "stations": "Casernes",
     "system_update": "Mise à jour système",
-    "unassigned": "Non affecté",
     "unit_actions": "Actions de l'unité",
     "unit_actions_panel": {
       "call_destination": "Destination de l'appel",
@@ -513,9 +477,6 @@
     "type": "Type",
     "unknown_type": "Type inconnu",
     "unnamed": "POI sans nom"
-  },
-  "scheduled_calls": {
-    "scheduled_for": "Planifiée pour"
   },
   "settings": {
     "select_server": "Sélectionner un serveur"

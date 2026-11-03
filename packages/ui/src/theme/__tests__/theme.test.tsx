@@ -76,19 +76,24 @@ describe('theme tokens', () => {
     const open = source.indexOf('{', start);
     let depth = 1;
     let index = open + 1;
+
     while (depth > 0) {
       if (source[index] === '{') depth += 1;
+
       if (source[index] === '}') depth -= 1;
       index += 1;
     }
+
     return source.slice(open + 1, index - 1);
   };
 
   const parse = (source: string): Record<string, string> => {
     const out: Record<string, string> = {};
+
     for (const match of source.matchAll(/--color-([a-z0-9-]+):\s*(\d+) (\d+) (\d+);/g)) {
       out[match[1]] = `#${[match[2], match[3], match[4]].map((n) => Number(n).toString(16).padStart(2, '0')).join('')}`;
     }
+
     return out;
   };
 
@@ -119,5 +124,28 @@ describe('theme tokens', () => {
     steps.forEach((step, index) => {
       expect(darkTokens[`primary-${step}` as keyof typeof darkTokens]).toBe(lightTokens[`primary-${steps[steps.length - 1 - index]}` as keyof typeof lightTokens]);
     });
+  });
+});
+
+// In dark mode a token fill (bg-primary-600, bg-error-500…) is the light end of its reversed ramp, so white on it is
+// unreadable; text and icons on a token fill use text-typography-0 / colors.textInverse. White stays fine on fixed fills.
+describe('token fill source rule', () => {
+  const ROOTS = [path.resolve(__dirname, '../../../..'), path.resolve(__dirname, '../../../../../apps/omni')];
+  const SKIP = new Set(['node_modules', '__tests__', 'dist', 'ios', 'android', 'e2e']);
+
+  const walk = (dir: string): string[] =>
+    fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => (entry.isDirectory() ? (SKIP.has(entry.name) ? [] : walk(path.join(dir, entry.name))) : /\.tsx$/.test(entry.name) ? [path.join(dir, entry.name)] : []));
+
+  const TOKEN_FILL = /\bbg-(primary|secondary|tertiary|error|success|warning|info)-(500|600|700|800|900|950)\b/;
+  const WHITE = /\btext-white\b|["'](#ffffff|#fff)["']/i;
+
+  it('draws no white text or icons in a file that fills with a theme token', () => {
+    const offenders = ROOTS.flatMap(walk).filter((file) => {
+      const text = fs.readFileSync(file, 'utf8');
+
+      return TOKEN_FILL.test(text) && WHITE.test(text);
+    });
+
+    expect(offenders.map((file) => path.relative(path.resolve(__dirname, '../../../../..'), file))).toEqual([]);
   });
 });

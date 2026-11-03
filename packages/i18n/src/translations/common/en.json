@@ -231,7 +231,33 @@
     "info": {
       "dispatched_on": "Dispatched",
       "logged_on": "Logged"
-    }
+    },
+    "delete_call": "Delete Call",
+    "delete_call_confirm": "Delete this call? This cannot be undone.",
+    "delete_call_success": "Call deleted",
+    "delete_call_error": "Failed to delete call",
+    "reschedule": "Reschedule",
+    "reschedule_success": "Dispatch time updated",
+    "reschedule_error": "Failed to reschedule call",
+    "reschedule_invalid": "Choose a valid dispatch date and time",
+    "reschedule_in_1_hour": "In 1 hour",
+    "reschedule_in_1_day": "In 1 day",
+    "reschedule_tomorrow_morning": "Tomorrow 8 AM",
+    "reschedule_datetime": "Dispatch date & time",
+    "dispatch_more": "Dispatch additional resources",
+    "pending_banner_title": "Pending — not yet dispatched",
+    "pending_banner_description": "This call is saved but nobody has been notified. Choose who to send and dispatch it when ready.",
+    "dispatch_call": "Dispatch",
+    "map_call": "Call",
+    "map_destination": "Destination",
+    "audio": "Audio",
+    "audio_empty": "No audio recordings",
+    "audio_play": "Play {{name}}",
+    "audio_stop": "Stop {{name}}",
+    "audio_play_error": "Could not play this recording",
+    "scheduled_on": "Scheduled Dispatch Date & Time",
+    "destination_type": "Destination Type",
+    "keyboard_shortcuts": "Tip: Press 1-9 to switch tabs, Ctrl+E to edit, Escape to go back"
   },
   "calls": {
     "address": "Address",
@@ -253,7 +279,9 @@
     "contact_phone_placeholder": "Enter the phone of the contact",
     "contact_picker": {
       "linked": "Linked contact: {{name}}",
-      "select": "Select Contact"
+      "select": "Select Contact",
+      "search_placeholder": "Search contacts...",
+      "empty": "No contacts available"
     },
     "coordinates": "GPS Coordinates",
     "coordinates_found": "Coordinates found and address updated",
@@ -398,7 +426,9 @@
     },
     "protocols": {
       "select": "Select Protocols",
-      "selected_count": "{{count}} selected"
+      "selected_count": "{{count}} selected",
+      "attached": "Already attached: {{names}}",
+      "add": "Add Protocols"
     },
     "queued": {
       "badge": "Queued — not dispatched yet",
@@ -447,8 +477,25 @@
       "name_required": "Enter a name for the call",
       "nature_required": "Enter the nature of the call",
       "required": "Required by your department",
-      "udf_required": "Fill in the required custom fields"
-    }
+      "udf_required": "Fill in the required custom fields",
+      "type_required": "Choose a call type"
+    },
+    "pending_saved": "Call saved as pending",
+    "required_fields_missing_edit": "Your department requires these fields before a call can be saved: {{fields}}",
+    "search_address": "Search address",
+    "search_what3words": "Search what3words address",
+    "search_plus_code": "Search plus code",
+    "looking_up_address": "Looking up the address for these coordinates...",
+    "notify_cancelled_entities": "Notify cancelled entities",
+    "notify_cancelled_entities_description": "Message personnel/units removed from the dispatch list.",
+    "linked_calls": {
+      "edit_hint": "Links already on this call are kept; pick a call to add another."
+    },
+    "scheduled_on_edit_hint": "Pick a time to schedule or reschedule the dispatch. Leaving it empty keeps the call's current schedule.",
+    "scheduled_on_helper": "Leave empty to dispatch immediately",
+    "save_pending_call": "Save Pending Call",
+    "keyboard_shortcuts": "Tip: Press Ctrl+Enter to create, Escape to cancel",
+    "edit_keyboard_shortcuts": "Tip: Press Ctrl+S to save, Escape to cancel"
   },
   "chat": {
     "ack_pending_count": "You have {{count}} urgent messages to acknowledge",
@@ -3443,7 +3490,8 @@
     "table_priority": "Priority",
     "table_scheduled": "Scheduled For",
     "table_type": "Type",
-    "title": "Scheduled Calls"
+    "title": "Scheduled Calls",
+    "scheduled_for": "Scheduled for"
   },
   "certifications": {
     "add": "Add certification",
@@ -3608,6 +3656,7 @@
     "severity_levels": "Severity Levels",
     "show_area": "Show Area",
     "show_calls": "Show Calls",
+    "show_linked_calls": "Show Linked Calls",
     "show_expiry": "Show Expiry Time",
     "show_headline": "Show Headline",
     "show_personnel": "Show Personnel",
@@ -3788,6 +3837,7 @@
     "check_in": "Check in",
     "clear_search": "Clear search",
     "expand_map": "Open the full map",
+    "gps": "GPS",
     "map_unavailable": "No map is configured for this department.",
     "no_overdue_check_ins": "No overdue check-ins",
     "no_resources": "No units or personnel to show",
@@ -3811,11 +3861,14 @@
     "ptt_error_permission": "Microphone access is needed to talk.",
     "ptt_hotkey_hint": "Hold {{hotkey}} to talk",
     "ptt_no_channels": "No voice channels",
+    "ptt_off": "OFF",
     "ptt_ready": "Ready",
     "ptt_receiving": "Receiving",
     "ptt_reconnecting": "Reconnecting…",
+    "ptt_rx": "RX",
     "ptt_stop": "Stop talking",
     "ptt_talk": "Talk",
+    "ptt_tx": "TX",
     "resources": "Resources",
     "resources_on_call": "Resources on call",
     "search_notes": "Search notes",
@@ -3877,6 +3930,7 @@
     "note_added_to_console": "A new note has been added to the console",
     "note_created": "Note Created",
     "notes": "Notes",
+    "on_call": "On Call",
     "personnel": "Personnel",
     "personnel_deselected": "Personnel Deselected",
     "personnel_on_call": "Personnel on Call",
@@ -3897,6 +3951,7 @@
     "transmission_ended": "Transmission ended",
     "transmitting": "Transmitting",
     "transmitting_on": "Transmitting on {{channel}}",
+    "unassigned": "Unassigned",
     "unit_deselected": "Unit Deselected",
     "unit_selected": "Unit Selected",
     "unit_status_updated": "Unit status updated",

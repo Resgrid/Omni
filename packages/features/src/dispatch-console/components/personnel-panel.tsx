@@ -20,12 +20,14 @@ export interface PersonnelPanelProps {
   callFilter: ConsoleCallFilter | null;
   onSelectPersonnel: (userId: string) => void;
   onSetStatusForCall?: (userId: string) => void;
+  /** The row's details button: opens the member's screen. */
+  onOpenPersonnel?: (userId: string) => void;
   flex?: number;
   maxHeight?: number;
 }
 
 /** The console's personnel (Dispatch baseline): search, "available only", filtered to the call while filtering. */
-export const PersonnelPanel: React.FC<PersonnelPanelProps> = ({ callFilter, onSelectPersonnel, onSetStatusForCall, flex, maxHeight }) => {
+export const PersonnelPanel: React.FC<PersonnelPanelProps> = ({ callFilter, onSelectPersonnel, onSetStatusForCall, onOpenPersonnel, flex, maxHeight }) => {
   const { t } = useTranslation();
   const title = useTerm('module.personnel', t('dispatch.personnel'));
   const personnel = usePersonnelStore((state) => state.personnel);
@@ -46,10 +48,11 @@ export const PersonnelPanel: React.FC<PersonnelPanelProps> = ({ callFilter, onSe
         isOnCall={isPersonOnCall(item, callFilter)}
         hasPendingStatus={pendingIds.has(item.UserId)}
         onPress={onSelectPersonnel}
+        onOpen={onOpenPersonnel}
         onSetStatusForCall={callFilter ? onSetStatusForCall : undefined}
       />
     ),
-    [callFilter, onSelectPersonnel, onSetStatusForCall, pendingIds, selectedPersonnelId]
+    [callFilter, onOpenPersonnel, onSelectPersonnel, onSetStatusForCall, pendingIds, selectedPersonnelId]
   );
 
   return (

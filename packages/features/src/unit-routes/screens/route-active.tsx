@@ -3,7 +3,7 @@ import { useInAppNavigationAvailable } from '@resgrid/features/navigation/hooks/
 import { navigationRoutes } from '@resgrid/features/navigation/routes';
 import { useTranslation } from '@resgrid/i18n';
 import type { RouteStopWithDetailsResultData } from '@resgrid/models';
-import { Button, ButtonText, HStack, Loading, Pressable, ScreenHeader, ScrollView, Text, useFormFactor, useToast, View, VStack, ZeroState } from '@resgrid/ui';
+import { Button, ButtonText, HStack, Loading, Pressable, ScreenHeader, ScrollView, Text, useFormFactor, useThemeColors, useToast, View, VStack, ZeroState } from '@resgrid/ui';
 import { router, useLocalSearchParams } from 'expo-router';
 import { LogOut, Navigation, Pause, Play, Route } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -38,6 +38,7 @@ type ConfirmKind = 'end' | 'cancel' | null;
  */
 export default function RouteActiveScreen({ instanceId: instanceIdProp, renderMap, pollMs = ACTIVE_ROUTE_POLL_MS }: RouteActiveScreenProps) {
   const { t } = useTranslation();
+  const colors = useThemeColors();
   const toast = useToast();
   const { isElectron, isDesktop } = useFormFactor();
   const actionHeight = isElectron || isDesktop ? 64 : 48;
@@ -204,7 +205,7 @@ export default function RouteActiveScreen({ instanceId: instanceIdProp, renderMa
           <View className="px-4 pb-3">
             <Button onPress={() => router.push(navigationRoutes.toRouteStops(instance.RouteInstanceId))} testID="route-active-navigate" style={{ minHeight: actionHeight }}>
               <View style={styles.buttonIcon}>
-                <Navigation size={16} color="#ffffff" />
+                <Navigation size={16} color={colors.textInverse} />
               </View>
               <ButtonText>{t('navigation.navigate')}</ButtonText>
             </Button>
@@ -257,7 +258,7 @@ export default function RouteActiveScreen({ instanceId: instanceIdProp, renderMa
         <VStack space="sm" className="mx-4 mt-4">
           <Button action="negative" onPress={() => setConfirm('end')} isDisabled={isBusy} testID="route-active-end" style={{ minHeight: actionHeight }}>
             <View style={styles.buttonIcon}>
-              <LogOut size={16} color="#ffffff" />
+              <LogOut size={16} color={colors.textInverse} />
             </View>
             <ButtonText>{t('routes.end_route')}</ButtonText>
           </Button>

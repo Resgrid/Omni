@@ -145,32 +145,33 @@ pnpm install
 
 One project builds all five apps. The `APP_VARIANT` environment variable chooses which one: `responder`, `unit`, `ic`, `dispatch` or `bigboard`.
 
-The quickest way to see an app is the web version — no Xcode or Android Studio needed. It opens at http://localhost:8081:
+Each app has one command per platform. The quickest way to see an app is the web version — no Xcode or Android Studio needed. It starts the dev server and opens the app at http://localhost:8081:
 
 ```bash
-APP_VARIANT=dispatch pnpm --filter @resgrid/omni web
+pnpm web:dispatch
 ```
 
-On iOS or Android, one command per app builds a development build, installs it on a simulator, emulator or connected device, and starts the dev server:
+On iOS or Android, the command builds a development build, installs it on a simulator, emulator or connected device, and starts the dev server:
 
-| App | iOS | Android |
-|---|---|---|
-| Responder | `pnpm ios:responder` | `pnpm android:responder` |
-| Unit | `pnpm ios:unit` | `pnpm android:unit` |
-| IC | `pnpm ios:ic` | `pnpm android:ic` |
-| Dispatch | `pnpm ios:dispatch` | `pnpm android:dispatch` |
-| BigBoard | `pnpm ios:bigboard` | `pnpm android:bigboard` |
+| App | Web | iOS | Android |
+|---|---|---|---|
+| Responder | `pnpm web:responder` | `pnpm ios:responder` | `pnpm android:responder` |
+| Unit | `pnpm web:unit` | `pnpm ios:unit` | `pnpm android:unit` |
+| IC | `pnpm web:ic` | `pnpm ios:ic` | `pnpm android:ic` |
+| Dispatch | `pnpm web:dispatch` | `pnpm ios:dispatch` | `pnpm android:dispatch` |
+| BigBoard | `pnpm web:bigboard` | `pnpm ios:bigboard` | `pnpm android:bigboard` |
 
 ```bash
 pnpm ios:responder --device
 ```
 
 - `--device` lets you pick the simulator, emulator or connected phone; any other [`expo run`](https://docs.expo.dev/more/expo-cli/#compiling) option works too. With npm, put `--` first: `npm run ios:responder -- --device`.
+- The web commands take any [`expo start`](https://docs.expo.dev/more/expo-cli/#develop) option, such as `--port 8082` or `--clear`.
 - The five apps share one generated `apps/omni/ios` and `apps/omni/android` folder. When it holds another app, or the app config changed, the command prebuilds it again first (a few minutes on iOS). `--clean` forces that.
-- One dev server serves one app. If another app's dev server is running, stop it or add `--port 8082`.
+- One dev server serves one app. On iOS or Android, if another app's dev server is running, stop it or add `--port 8082`. On the web, Expo offers the next free port, so several apps can run side by side.
 - On a physical iPhone, set `IOS_APPLE_TEAM_ID` to your Apple developer team ID so the build can be signed.
 
-As a desktop app (start the web version first, then in a second terminal):
+As a desktop app (start the web version first with `pnpm web:bigboard`, then in a second terminal):
 
 ```bash
 APP_VARIANT=bigboard pnpm --filter @resgrid/desktop dev
@@ -186,8 +187,10 @@ APP_VARIANT=bigboard pnpm --filter @resgrid/desktop dev
 Development builds connect to Resgrid's QA server by default. To sign in with your account on the hosted service or on your own server, set `BASE_API_URL` before starting the app, or use **Change Server URL** on the sign-in screen:
 
 ```bash
-BASE_API_URL=https://api.resgrid.com APP_VARIANT=unit pnpm --filter @resgrid/omni web
+BASE_API_URL=https://api.resgrid.com pnpm web:unit
 ```
+
+On the web, the dev server passes the app's server requests on for it (`apps/omni/metro/dev-api-proxy.js`): a page on `http://localhost:8081` is on no Resgrid server's CORS allowlist, so the browser would refuse the responses. Any server works without changing its CORS settings. Live updates (SignalR) use Server-Sent Events there, because the dev server carries no WebSockets. Web exports and the desktop app call the servers directly.
 
 `.env` files are not read; set variables in your shell. The full list of settings (API paths, hub names, Sentry, Countly) is in [docker/README.md](docker/README.md#runtime-configuration) — each one also works as an environment variable at development time.
 
@@ -225,14 +228,20 @@ cd apps/omni && APP_VARIANT=unit APP_ENV=production pnpm web:export
 The output in `apps/omni/dist/unit` can be served by any web server or CDN that falls back to `index.html` for unknown routes.
 
 #### 🖥️ Desktop installers (Electron)
-Build the web export above, then package it — Windows (NSIS installer and portable exe), macOS (DMG and ZIP, x64 and arm64) or Linux (AppImage, deb and rpm):
+One command per operating system builds the app's web export and packages it. Run each on that operating system, as the release builds do (macOS installers need a Mac):
 
 ```bash
-pnpm --filter @resgrid/desktop build --variant unit --mac
+APP_ENV=production pnpm desktop:mac unit      # DMG and ZIP, x64 and arm64
+APP_ENV=production pnpm desktop:windows unit  # NSIS installer and portable exe
+APP_ENV=production pnpm desktop:linux unit    # AppImage, deb and rpm
 ```
+
+The installers land in `apps/desktop/release/unit`. Name several apps to build them in turn (`pnpm desktop:mac unit dispatch`); `--dir` writes only the unpacked app, for a quick check. To package a web export you already have, without building it again: `pnpm --filter @resgrid/desktop build --variant unit --mac`.
 
 #### 📱 iOS and Android
 Store builds use [EAS Build](https://docs.expo.dev/build/introduction/) with one profile per app and environment (for example `unit-production`). To publish your own copy you need your own app identity — see the [FAQ](#grey_question-faq).
+
+Signing credentials stay on each app's EAS project. `pnpm credentials:android unit`, `pnpm credentials:ios unit` and `pnpm credentials:ios-adhoc unit` open `eas credentials` for one app's Android keystore, App Store or ad-hoc signing; `--setup` creates whatever is missing or expired. Details: [docs/build/ci-secrets.md](docs/build/ci-secrets.md#managing-credentials).
 
 Official releases are built by GitHub Actions: each app gets its own [GitHub Release](https://github.com/Resgrid/Omni/releases) (tags such as `unit-v8.12`) with every file and a `SHA256SUMS`. Build and release details: [omni-plan §6](docs/architecture/omni-plan.md).
 

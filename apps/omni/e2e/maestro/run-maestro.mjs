@@ -7,7 +7,8 @@
 // Usage:
 //   node apps/omni/e2e/maestro/run-maestro.mjs --variant unit --platform android [--app-env development]
 //        [--dev-client-url http://localhost:8081] [--device emulator-5554] [--output apps/omni/e2e/maestro-output/unit]
-//        [--dry-run] [-- <extra maestro test args>]
+//        [--flows <flow file or folder>] [--dry-run] [-- <extra maestro test args>]
+// --flows runs other flows than the variant's folder (the QA regression run passes the flows it generated).
 // With --dev-client-url the flows open the Metro bundle through the dev-client deep link (exp+<slug>://…).
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -43,7 +44,7 @@ const manifest = JSON.parse(fs.readFileSync(path.join(omniRoot, 'variants', vari
 const baseId = platform === 'ios' ? manifest.identity.ios.bundleIdentifier : manifest.identity.android.package;
 const appId = STORE_ENVS.includes(appEnv) ? baseId : `${baseId}.${appEnv}`;
 const devClientLink = devClientUrl ? `exp+${manifest.identity.slug}://expo-development-client/?url=${encodeURIComponent(devClientUrl)}` : 'none';
-const flowsDir = path.join(here, variant);
+const flowsDir = path.resolve(opt('flows', path.join(here, variant)));
 
 const env = { APP_ID: appId, APP_NAME: manifest.identity.name, APP_VARIANT: variant, DEV_CLIENT_URL: devClientUrl || 'none', DEV_CLIENT_LINK: devClientLink };
 const args = ['test', flowsDir, ...Object.entries(env).flatMap(([k, v]) => ['-e', `${k}=${v}`]), '--format', 'junit', '--output', path.join(output, 'junit.xml'), ...(device ? ['--device', device] : []), ...extra];

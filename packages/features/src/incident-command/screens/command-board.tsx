@@ -25,7 +25,7 @@ const BoardTab: React.FC<{ callId: string; isActive: boolean; onPress: (callId: 
       className={`mr-2 rounded-full px-4 py-2 ${isActive ? 'bg-primary-500' : 'bg-background-200'}`}
       testID={`command-board-tab-${callId}`}
     >
-      <Text className={`text-sm font-semibold ${isActive ? 'text-white' : 'text-typography-700'}`}>{t('incident_command.call_number', { number: number || callId })}</Text>
+      <Text className={`text-sm font-semibold ${isActive ? 'text-typography-0' : 'text-typography-700'}`}>{t('incident_command.call_number', { number: number || callId })}</Text>
     </Pressable>
   );
 };
