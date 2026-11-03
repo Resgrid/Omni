@@ -3,27 +3,22 @@
     "initialization_failed": "تعذر تحميل بيانات التطبيق. يرجى التحقق من اتصالك والمحاولة مرة أخرى."
   },
   "callImages": {
-    "not_signed_in": "يجب تسجيل الدخول لرفع الصور",
-    "upload_error": "خطأ في رفع الصورة"
+    "not_signed_in": "يجب تسجيل الدخول لرفع الصور"
   },
   "calls": {
     "directions_to_destination": "الاتجاهات إلى الوجهة",
-    "dispatch_on": "وقت الإرسال",
-    "dispatch_on_too_soon": "يجب أن يكون وقت الإرسال بعد {{minutes}} دقيقة على الأقل من الآن",
     "errors": {
       "load_failed": "فشل تحميل المكالمات"
     },
     "files": {
       "sharing_unavailable": "المشاركة غير متاحة على هذا الجهاز"
     },
-    "required_fields_missing": "يطلب قسمك هذه الحقول قبل حفظ البلاغ: {{fields}}",
     "view_on_map": "عرض على الخريطة"
   },
   "chat": {
     "chatting_as": "الدردشة باسم {{name}}"
   },
   "common": {
-    "no_location": "لا توجد بيانات موقع متاحة",
     "no_unit": "لا توجد وحدة",
     "unknown_error": "حدث خطأ غير معروف"
   },
@@ -33,30 +28,11 @@
   },
   "incident_command": {
     "error": "فشل في تحميل معلومات قيادة الحادث",
-    "need_category": {
-      "equipment": "معدات",
-      "logistics": "لوجستيات",
-      "medical": "طبي",
-      "other": "أخرى",
-      "resource": "موارد",
-      "staffing": "طاقم عمل"
-    },
-    "need_status": {
-      "cancelled": "ملغي",
-      "met": "ملبى",
-      "open": "مفتوح",
-      "partially_met": "ملبى جزئيًا"
-    },
     "no_active_command": "لا توجد قيادة حادث نشطة لهذه المكالمة",
     "objective_status": {
       "complete": "مكتمل",
       "in_progress": "قيد التنفيذ",
       "pending": "قيد الانتظار"
-    },
-    "objective_type": {
-      "benchmark": "نقطة مرجعية",
-      "general": "عام",
-      "safety": "السلامة"
     },
     "progress": "اكتمل {{percent}}%",
     "quantity_fulfilled": "تم تلبية {{fulfilled}} من {{requested}}"
@@ -136,13 +112,6 @@
     "unnamedLocation": "حجرة",
     "wholeUnit": "الوحدة بالكامل: {{name}}"
   },
-  "login": {
-    "hide_password": "إخفاء كلمة المرور",
-    "login_button": "تسجيل الدخول",
-    "login_button_loading": "تسجيل الدخول...",
-    "show_password": "إظهار كلمة المرور",
-    "title": "تسجيل الدخول"
-  },
   "map": {
     "legend": {
       "built_in_unit_statuses": "حالات الوحدات المدمجة",
@@ -200,14 +169,10 @@
     "removed_one": "تم حذف الإشعار",
     "unable_to_load": "تعذر تحميل الإشعارات"
   },
-  "push_notifications": {
-    "unknown_type_warning": "نوع هذا الإشعار غير معروف. يرجى الاتصال بالدعم إذا استمر ظهور هذه الرسالة."
-  },
   "roles": {
     "assignedElsewhere": "في دور آخر",
     "clearAssignment": "مسح الإسناد الحالي",
     "noUsersFound": "لم يتم العثور على مستخدمين",
-    "saved_successfully": "تم حفظ إسناد الأدوار بنجاح",
     "searchUsers": "ابحث بالاسم أو المجموعة...",
     "selectUserDescription": "اختر شخصًا لهذا الدور",
     "selectUserForRole": "إسناد: {{role}}",
@@ -223,22 +188,10 @@
     "traffic_severe": "ازدحام شديد"
   },
   "settings": {
-    "audio_device_selection": {
-      "speaker_device": "جهاز مكبر صوت"
-    },
-    "logout_confirm_message": "هل أنت متأكد من رغبتك في تسجيل الخروج؟ سيؤدي هذا إلى مسح جميع بيانات التطبيق والقيم المخزنة مؤقتاً والإعدادات.",
-    "no_units_available_help": "لم يتم تعيين أي وحدات لك. اطلب من مسؤول القسم إضافتك إلى مجموعة محطة إحدى الوحدات.",
-    "realtime_geolocation_warning": "ترسل هذه الميزة موقع هذه الوحدة إلى إدارتك أثناء فتح التطبيق، وتتصل بمركز الموقع في الوقت الفعلي لاستقبال مواقع الوحدات الأخرى. وهي تتطلب اتصال شبكة نشطًا.",
-    "units_load_failed": "تعذر تحميل الوحدات. تحقق من اتصالك وحاول مرة أخرى."
+    "realtime_geolocation_warning": "ترسل هذه الميزة موقع هذه الوحدة إلى إدارتك أثناء فتح التطبيق، وتتصل بمركز الموقع في الوقت الفعلي لاستقبال مواقع الوحدات الأخرى. وهي تتطلب اتصال شبكة نشطًا."
   },
   "status": {
-    "current": "الحالية",
     "current_status": "الحالة الحالية",
-    "hold_to_set_hint": "اضغط مطولاً لمدة ثانيتين لتعيين الحالة",
-    "hold_to_set_instructions": "اضغط مطولاً على حالة لمدة ثانيتين لتعيينها",
-    "hold_to_submit": "اضغط مطولاً للإرسال",
-    "show_all_statuses": "إظهار كل الحالات ({{count}} أخرى)",
-    "show_next_statuses": "إظهار الحالات التالية فقط",
-    "status_queued": "تم حفظ الحالة على هذا الجهاز وسيتم إرسالها تلقائيًا."
+    "hold_to_set_instructions": "اضغط مطولاً على حالة لمدة ثانيتين لتعيينها"
   }
 }

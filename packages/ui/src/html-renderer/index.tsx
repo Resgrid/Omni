@@ -6,7 +6,7 @@ import { useThemeColors } from '../theme/use-theme-colors';
 import { buildHtmlDocument, type HtmlRendererProps, isSafeLink } from './document';
 
 export type { HtmlRendererProps };
-export { decodeHtmlEntitiesIfEncoded, escapeHtml, htmlToPlainText, isSafeLink, sanitizeDescription, sanitizeHtmlContent } from './html';
+export { decodeHtmlEntities, decodeHtmlEntitiesIfEncoded, escapeHtml, htmlToPlainText, isSafeLink, sanitizeDescription, sanitizeHtmlContent } from './html';
 
 /**
  * The WebView may only ever show our own inline document (about:blank). react-native-webview hands a URL

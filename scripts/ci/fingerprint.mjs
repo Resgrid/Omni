@@ -17,30 +17,9 @@
 //   node scripts/ci/fingerprint.mjs decide --variant unit --channel internal --platforms android,ios --tag unit-v8.12 [--force-native] --out decision-unit.json
 //   node scripts/ci/fingerprint.mjs check  --variant unit --channel production --platforms android,ios [--run-number 12] [--exclude-tag unit-v8.12]
 //   node scripts/ci/fingerprint.mjs merge  --dir decisions --variants '["unit"]' --platforms android,ios [--publish-ota false]
-import { spawnSync } from 'node:child_process';
-import { createRequire } from 'node:module';
 import path from 'node:path';
 
-import { appendSummary, appEnvForChannel, csv, findPreviousRelease, omniRoot, parseArgs, PLATFORMS, readJsonIfExists, requireArg, setOutputs, VARIANT_IDS, writeJson } from './lib.mjs';
-
-const require = createRequire(import.meta.url);
-
-/** Runtime version (= fingerprint hash) of one variant × env × platform. */
-function resolveRuntimeVersion(variant, appEnv, platform) {
-  const cli = require.resolve('expo-updates/bin/cli.js', { paths: [omniRoot] });
-  const result = spawnSync(process.execPath, [cli, 'runtimeversion:resolve', '--platform', platform, '--workflow', 'managed'], {
-    cwd: omniRoot,
-    env: { ...process.env, APP_VARIANT: variant, APP_ENV: appEnv, EXPO_NO_DOTENV: '1' },
-    encoding: 'utf8',
-    maxBuffer: 256 * 1024 * 1024,
-  });
-  if (result.status !== 0) {
-    throw new Error(`runtimeversion:resolve failed for ${variant}/${platform} (exit ${result.status}):\n${result.stderr || result.stdout}`);
-  }
-  const json = JSON.parse(result.stdout.slice(result.stdout.indexOf('{')));
-  if (!json.runtimeVersion) throw new Error(`No runtimeVersion for ${variant}/${platform}; is runtimeVersion.policy "fingerprint"?`);
-  return { runtimeVersion: String(json.runtimeVersion), sources: json.fingerprintSources?.length ?? 0 };
-}
+import { appendSummary, appEnvForChannel, csv, findPreviousRelease, parseArgs, PLATFORMS, readJsonIfExists, requireArg, resolveRuntimeVersion, setOutputs, VARIANT_IDS, writeJson } from './lib.mjs';
 
 function decidePlatform({ fingerprint, previous, force }) {
   if (force) return { native: true, reason: 'force_native requested' };

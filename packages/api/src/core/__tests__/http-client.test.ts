@@ -231,6 +231,25 @@ describe('createHttpClient', () => {
       expect(isRetryableError(refusal)).toBe(false);
     });
 
+    it('takes the problem type from the X-Resgrid-Reason header of a v4 refusal, ignoring anything that is not a reason code', async () => {
+      const { http, adapter } = createTestClient();
+      adapter.mockImplementationOnce(async (config) => {
+        throw httpError(config, 400, { Status: 'failure' }, { 'X-Resgrid-Reason': 'certifications_file_too_large' });
+      });
+      await expect(http.axios.post('/Certifications/SaveCertification', {})).rejects.toMatchObject({ kind: 'http', status: 400, problemType: 'certifications_file_too_large' });
+
+      adapter.mockImplementationOnce(async (config) => {
+        throw httpError(config, 400, { type: 'records_module_disabled' }, { 'x-resgrid-reason': 'certifications_type_scope' });
+      });
+      await expect(http.axios.post('/Certifications/SaveCertification', {})).rejects.toMatchObject({ problemType: 'records_module_disabled' });
+
+      adapter.mockImplementationOnce(async (config) => {
+        throw httpError(config, 400, { Status: 'failure' }, { 'x-resgrid-reason': 'Protected write blocked (no key)' });
+      });
+      const unsafe = (await http.axios.post('/Certifications/SaveCertification', {}).catch((e: unknown) => e)) as ApiError;
+      expect(unsafe.problemType).toBeUndefined();
+    });
+
     it('never carries the request body or headers in a serialized error', async () => {
       const { http, adapter } = createTestClient();
       adapter.mockImplementation(async (config) => {

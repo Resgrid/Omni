@@ -10,7 +10,7 @@ body:
       value: |
         Thanks for helping make the Resgrid apps better. Before you start:
 
-        - **Is every app down at once?** Check [Resgrid system status](https://resgrid.freshstatus.io) first.
+        - **Is every app down at once?** Check [Resgrid system status](https://oneuptime.resgrid.net/status-page/09d6b850-e50e-42e2-8497-9ab55e5be465) first.
         - **Account, billing or department setup?** The [Resgrid Help Center](https://resgrid.zohodesk.com/portal/en/home) can help faster.
         - **Problem on the resgrid.com website or the API itself?** Report it in [Resgrid Core](https://github.com/Resgrid/Core/issues).
         - **Security problem?** Do not open an issue; follow the [security policy](https://github.com/Resgrid/Omni/security/policy).

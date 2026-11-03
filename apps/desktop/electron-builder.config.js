@@ -7,12 +7,14 @@
 
 const { loadVariant, runNumberFromEnv } = require('@resgrid/config-plugins');
 
-const { createBuilderConfig } = require('./packaging/builder-config');
+const { createBuilderConfig, dropBlankCertificateEnv } = require('./packaging/builder-config');
 const { resolveUpdateChannel } = require('./src/core/update-feed');
 
 if (!process.env.APP_VARIANT) {
   throw new Error('APP_VARIANT is required (responder, unit, ic, dispatch or bigboard).');
 }
+
+dropBlankCertificateEnv(process.env);
 
 module.exports = createBuilderConfig({
   manifest: loadVariant(process.env.APP_VARIANT),

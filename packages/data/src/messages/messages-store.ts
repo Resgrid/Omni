@@ -64,7 +64,10 @@ const initialData = (): MessagesData => ({
   writeError: null,
 });
 
-/** Newest first, within the retention window, capped. */
+/**
+ * What is kept on the device: newest first, within the retention window, capped. Applied when persisting only — the
+ * live lists hold everything the server returns (a member whose messages are all older than the window still sees them).
+ */
 export const retainMessages = (messages: MessageResultData[], now = dataNow()): MessageResultData[] =>
   [...messages]
     .map((message) => ({ message, at: parseUtcMs(message.SentOnUtc) ?? 0 }))
@@ -85,7 +88,7 @@ export const useMessagesStore = create<MessagesState>()(
         fetchInboxMessages: async (options) => {
           await runner.run(
             'inbox',
-            async () => retainMessages(unwrapList(await getInboxMessages(getDataApiContext()))),
+            async () => unwrapList(await getInboxMessages(getDataApiContext())),
             (inboxMessages) => ({ inboxMessages }),
             { trailing: options?.bypassCache === true }
           );
@@ -94,7 +97,7 @@ export const useMessagesStore = create<MessagesState>()(
         fetchSentMessages: async (options) => {
           await runner.run(
             'sent',
-            async () => retainMessages(unwrapList(await getOutboxMessages(getDataApiContext()))),
+            async () => unwrapList(await getOutboxMessages(getDataApiContext())),
             (sentMessages) => ({ sentMessages }),
             { trailing: options?.bypassCache === true }
           );
@@ -165,8 +168,8 @@ export const useMessagesStore = create<MessagesState>()(
     dataPersistOptions<MessagesState, Pick<MessagesData, 'inboxMessages' | 'sentMessages' | 'recipients' | 'readMessageIds' | 'queuedMessages' | 'fetchedAt'>>({
       name: 'omni-messages-storage',
       partialize: (state) => ({
-        inboxMessages: state.inboxMessages,
-        sentMessages: state.sentMessages,
+        inboxMessages: retainMessages(state.inboxMessages),
+        sentMessages: retainMessages(state.sentMessages),
         recipients: state.recipients,
         readMessageIds: state.readMessageIds,
         queuedMessages: state.queuedMessages,

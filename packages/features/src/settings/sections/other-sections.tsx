@@ -30,7 +30,7 @@ export const AdvancedSection: React.FC = () => {
 const SUPPORT_LINKS: readonly { key: string; url: string }[] = [
   { key: 'settings.help_center', url: 'https://resgrid.zohodesk.com/portal/en/home' },
   { key: 'settings.contact_us', url: 'https://resgrid.com/contact' },
-  { key: 'settings.status_page', url: 'https://resgrid.freshstatus.io' },
+  { key: 'settings.status_page', url: 'https://oneuptime.resgrid.net/status-page/09d6b850-e50e-42e2-8497-9ab55e5be465' },
   { key: 'settings.privacy_policy', url: 'https://resgrid.com/privacy' },
   { key: 'settings.terms', url: 'https://resgrid.com/terms' },
 ];

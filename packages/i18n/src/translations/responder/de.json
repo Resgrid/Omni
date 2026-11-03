@@ -1,8 +1,6 @@
 {
   "app": {
-    "open_menu": "Menü öffnen",
-    "realtime_offline_description": "Verbindung wird wiederhergestellt. Neue Einsätze und Nachrichten werden möglicherweise nicht angezeigt.",
-    "realtime_offline_title": "Live-Updates nicht verfügbar"
+    "open_menu": "Menü öffnen"
   },
   "audio_streams": {
     "error_loading_stream": "Audiostream konnte nicht geladen werden"
@@ -35,23 +33,6 @@
     "unauthorized_message": "Bluetooth-Berechtigung verweigert. Bitte erteilen Sie die Bluetooth-Berechtigung in den Einstellungen."
   },
   "calendar": {
-    "allDay": "Ganztägig",
-    "attendanceUpdated": {
-      "signedUp": "Sie haben sich erfolgreich für diese Veranstaltung angemeldet.",
-      "title": "Teilnahme aktualisiert",
-      "unsignedUp": "Sie wurden von dieser Veranstaltung abgemeldet."
-    },
-    "attendees": {
-      "title": "Teilnehmer"
-    },
-    "attendeesCount_one": "{{count}} Teilnehmer",
-    "attendeesCount": "{{count}} Teilnehmer",
-    "confirmSignup": "Bestätigen",
-    "confirmUnsignup": {
-      "message": "Sind Sie sicher, dass Sie Ihre Teilnahme an dieser Veranstaltung absagen möchten?",
-      "title": "Absage bestätigen"
-    },
-    "createdBy": "Erstellt von",
     "daysOfWeek": {
       "fri": "Fr",
       "mon": "Mo",
@@ -60,55 +41,6 @@
       "thu": "Do",
       "tue": "Di",
       "wed": "Mi"
-    },
-    "description": "Beschreibung",
-    "error": {
-      "attendanceUpdate": "Teilnahme konnte nicht aktualisiert werden. Bitte versuchen Sie es erneut.",
-      "title": "Fehler"
-    },
-    "eventsCount_one": "{{count}} Ereignis",
-    "eventsCount": "{{count}} Ereignisse",
-    "loading": {
-      "date": "Ereignisse für das ausgewählte Datum werden geladen...",
-      "today": "Heutige Ereignisse werden geladen...",
-      "upcoming": "Kommende Ereignisse werden geladen..."
-    },
-    "noEvents": "Keine geplanten Ereignisse",
-    "optional": "Optional",
-    "required": "Erforderlich",
-    "selectDate": "Wählen Sie ein Datum, um Ereignisse anzuzeigen",
-    "selectedDate": {
-      "empty": "Keine Ereignisse für dieses Datum geplant.",
-      "title": "Ereignisse für {{date}}"
-    },
-    "signedUp": "Angemeldet",
-    "signup": {
-      "button": "Anmelden",
-      "notePlaceholder": "Geben Sie hier Ihre Notiz ein...",
-      "notePrompt": "Notiz hinzufügen (optional):",
-      "title": "Veranstaltungsanmeldung"
-    },
-    "signupAvailable": "Anmeldung verfügbar",
-    "tabs": {
-      "calendar": "Kalender",
-      "today": "Heute",
-      "upcoming": "Bevorstehend"
-    },
-    "tapToSignUp": "Tippen zum Anmelden",
-    "title": "Kalender",
-    "today": {
-      "empty": {
-        "description": "Sie haben heute keine geplanten Ereignisse.",
-        "title": "Keine heutigen Ereignisse"
-      }
-    },
-    "todayButton": "Heute",
-    "unsignup": "Teilnahme absagen",
-    "upcoming": {
-      "empty": {
-        "description": "Sie haben in den nächsten 7 Tagen keine geplanten Ereignisse.",
-        "title": "Keine bevorstehenden Ereignisse"
-      }
     }
   },
   "callImages": {
@@ -136,82 +68,10 @@
     "personnel": "Personal",
     "protocols": "Protokolle",
     "reference_id": "Referenz-ID",
-    "required_fields_missing": "Ihre Abteilung benötigt diese Felder, bevor ein Einsatz gespeichert werden kann: {{fields}}",
     "search_address": "Adresse suchen",
     "search_coordinates": "Koordinaten suchen",
     "search_plus_code": "Plus Code suchen",
     "search_what3words": "what3words-Adresse suchen"
-  },
-  "certifications": {
-    "add": "Hinzufügen",
-    "addHours": "Stunden hinzufügen",
-    "addHoursWithPhoto": "Stunden mit Foto hinzufügen",
-    "areaIs": "Bereich: {{area}}",
-    "back": "Zurück",
-    "cancel": "Abbrechen",
-    "category": "Kategorie (Lehrgang, Übung, Tagung)",
-    "certificateAttached": "Zertifikat angehängt",
-    "creditAdded": "Stunden hinzugefügt.",
-    "creditDate": "Datum (standardmäßig heute)",
-    "creditNote": "Was es war",
-    "credits": "{{hours}} von {{required}} Fortbildungsstunden",
-    "creditsTitle": "{{hours}} Fortbildungsstunden",
-    "dateInvalid": "Geben Sie Daten als jjjj-mm-tt ein.",
-    "edit": "Bearbeiten",
-    "errors": {
-      "certifications_file_invalid": "Das Foto konnte nicht gelesen werden.",
-      "certifications_file_too_large": "Das Foto ist zu groß.",
-      "denied": "Sie haben keinen Zugriff auf diese Qualifikation.",
-      "locked": "Entsperren Sie geschützte Daten, um fortzufahren.",
-      "retry": "Server nicht erreichbar. Versuchen Sie es erneut.",
-      "validation": "Der Server hat die Änderung abgelehnt."
-    },
-    "expired": "Abgelaufen {{date}}",
-    "expires": "Läuft ab {{date}} ({{days}} Tage)",
-    "form": {
-      "area": "Bereich oder Stufe",
-      "choosePhoto": "Foto auswählen",
-      "expiresOn": "Läuft ab",
-      "issuedBy": "Ausgestellt von",
-      "name": "Name",
-      "number": "Nummer",
-      "otherType": "Andere (Namen eingeben)",
-      "photoAttached": "Foto angehängt.",
-      "receivedOn": "Erworben",
-      "save": "Speichern",
-      "takePhoto": "Foto des Ausweises",
-      "type": "Qualifikation"
-    },
-    "hasFile": "Ausweis oder Zertifikat ist hinterlegt",
-    "hours": "Stunden",
-    "hoursInvalid": "Geben Sie mehr als 0 Stunden ein.",
-    "issuedByIs": "Ausgestellt von {{name}}",
-    "nameRequired": "Wählen Sie einen Typ oder geben Sie einen Namen ein.",
-    "newExpiry": "Neues Ablaufdatum",
-    "newNumber": "Neue Nummer (optional)",
-    "noExpiry": "Läuft nicht ab",
-    "none": "Sie haben noch keine Qualifikationen hinzugefügt.",
-    "notVerified": "Noch nicht von der Organisation geprüft",
-    "numberIs": "Nummer {{number}}",
-    "photoDenied": "Erlauben Sie den Zugriff auf Kamera oder Fotos, um ein Foto anzuhängen.",
-    "receivedOn": "Erworben {{date}}",
-    "remove": "Entfernen",
-    "removeBody": "Sie wird aus Ihrem Nachweis entfernt. Ihre Organisation sieht den Verlauf weiterhin.",
-    "removeTitle": "Qualifikation entfernen?",
-    "renew": "Verlängern",
-    "renewSave": "Verlängerung speichern",
-    "renewed": "Verlängerung gespeichert.",
-    "status": {
-      "0": "Gültig",
-      "1": "Abgelaufen",
-      "2": "Ausgesetzt",
-      "3": "Widerrufen",
-      "4": "Wartet auf Prüfung",
-      "5": "In Ausbildung"
-    },
-    "title": "Meine Qualifikationen",
-    "untitled": "Qualifikation",
-    "verifiedOn": "Geprüft {{date}}"
   },
   "chat": {
     "attach": "Anhängen",
@@ -219,24 +79,12 @@
     "new_conversation": "Neue Unterhaltung"
   },
   "check_in": {
-    "add_note": "Notiz hinzufügen (Optional)",
     "confirm_check_in": "Check-In bestätigen",
-    "duration": "Dauer",
     "gps_coordinates": "GPS: {{latitude}}, {{longitude}}",
-    "history": "Check-In Verlauf",
-    "minutes_ago": "vor {{count}} Min",
-    "no_timers": "Keine Check-In Timer konfiguriert",
     "offline_queued": "Check-In in Warteschlange für Online-Verbindung",
     "progress": "{{elapsed}} / {{total}} Min",
     "timer_interval": "Alle {{minutes}} Min",
-    "type_hazmat": "Gefahrstoff-Exposition",
-    "type_ic": "Einsatzleiter",
     "unknown_unit": "Unbekannte Einheit"
-  },
-  "checklists": {
-    "labels": {
-      "AssignmentAutomatic": "Automatische Zuordnung"
-    }
   },
   "common": {
     "active": "Aktiv",
@@ -244,8 +92,6 @@
     "deleting": "Wird gelöscht...",
     "discard": "Verwerfen",
     "navigation": "Navigation",
-    "noActiveUnit": "Keine aktive Einheit",
-    "noActiveUnitDescription": "Bitte wählen Sie eine aktive Einheit aus, um verfügbare Status anzuzeigen",
     "no_data_available": "Keine Daten verfügbar",
     "success": "Erfolgreich",
     "system": "System"
@@ -258,12 +104,9 @@
   },
   "home": {
     "active_call": {
-      "clear_active": "Aktiven Einsatz löschen",
-      "no_active_call": "Kein aktiver Einsatz ausgewählt",
       "select_call": "Einsatz zum Verfolgen auswählen",
       "set_active": "Als aktiven Einsatz setzen",
-      "title": "Aktiver Einsatz",
-      "view_details": "Einsatzdetails anzeigen"
+      "title": "Aktiver Einsatz"
     },
     "error": {
       "no_user_id": "Benutzer-ID nicht verfügbar"
@@ -273,24 +116,15 @@
       "ptt": "PTT"
     },
     "staffing": {
-      "add_note": "Notiz hinzufügen",
-      "add_note_action": "Notiz hinzufügen",
       "confirm_staffing": "Besetzung bestätigen: {{staffing}}",
       "missing_required_info": "Erforderliche Informationen fehlen",
-      "no_options_available": "Keine Besetzungsoptionen verfügbar",
       "no_staffing_options": "Keine Besetzungsoptionen verfügbar",
-      "note": "Notiz",
-      "note_placeholder": "Notiz eingeben (optional)...",
-      "note_required_hint": "Öffnet ein Formular für die erforderliche Notiz",
-      "quick_set_hint": "Setzt Ihre Besetzung sofort. Lange drücken, um eine Notiz hinzuzufügen.",
       "review_and_confirm": "Überprüfen und bestätigen",
       "select_staffing_level": "Besetzungsstufe auswählen",
       "select_staffing_level_description": "Aktuellen Besetzungsstatus auswählen",
       "selected_staffing": "Ausgewählte Besetzung",
       "set_staffing": "Personalbesetzung festlegen",
-      "staffing_level": "Besetzungsstufe",
-      "update_failed": "Besetzung konnte nicht aktualisiert werden",
-      "updated_successfully": "Besetzung erfolgreich aktualisiert"
+      "staffing_level": "Besetzungsstufe"
     },
     "stats": {
       "open_calls": "Offene Einsätze",
@@ -298,52 +132,16 @@
       "units_in_service": "Einheiten im Dienst"
     },
     "status": {
-      "no_options_available": "Keine Statusoptionen verfügbar",
       "update_failed": "Status konnte nicht aktualisiert werden",
       "updated_successfully": "Status erfolgreich aktualisiert"
     },
-    "summary": {
-      "active_calls": "Aktive Einsätze",
-      "active_severe_weather_alerts": "Aktive Unwetter-/Notfallwarnungen",
-      "calls_im_on": "Einsätze, auf denen ich bin",
-      "pending_missed_checkins": "Ausstehende/verpasste Check-ins"
-    },
     "tabs": {
-      "call": "Einsatz",
       "dashboard": "Dashboard",
-      "map": "Karte",
-      "staffing": "Besetzung",
-      "status": "Status"
-    },
-    "user": {
-      "my_staffing": "Meine Besetzung",
-      "my_status": "Mein Status",
-      "staffing_unknown": "Unbekannte Besetzung",
-      "status_unknown": "Unbekannter Status",
-      "updated": "Aktualisiert"
+      "map": "Karte"
     }
   },
   "incident_command": {
-    "assigned_since": "Zugewiesen seit",
     "empty_state": "Für diesen Einsatz ist keine Einsatzleitung aktiv",
-    "error_loading": "Einsatzleitungsinformationen konnten nicht geladen werden",
-    "my_assignment": "Meine Zuweisung",
-    "need_category_equipment": "Ausrüstung",
-    "need_category_logistics": "Logistik",
-    "need_category_medical": "Medizinisch",
-    "need_category_other": "Sonstiges",
-    "need_category_resource": "Ressource",
-    "need_category_staffing": "Personal",
-    "need_status_cancelled": "Abgebrochen",
-    "need_status_met": "Erfüllt",
-    "need_status_open": "Offen",
-    "need_status_partially_met": "Teilweise erfüllt",
-    "objective_status_complete": "Abgeschlossen",
-    "objective_status_in_progress": "In Bearbeitung",
-    "objective_status_pending": "Ausstehend",
-    "objective_type_benchmark": "Zwischenziel",
-    "objective_type_general": "Allgemein",
-    "objective_type_safety": "Sicherheit",
     "percent_complete": "{{percent}}%",
     "quantity": "{{fulfilled}}/{{requested}}"
   },
@@ -371,36 +169,20 @@
     "tracking_notification_body": "Ihr Standort wird mit Ihrer Abteilung geteilt."
   },
   "login": {
-    "change_server_url": "Server-URL ändern",
     "select_language": "Sprache wählen",
     "sso": {
       "back": "Zurück",
-      "change_department": "Benutzernamen ändern",
-      "continue_button": "Weiter",
       "department_code_label": "Abteilungscode",
       "department_code_placeholder": "Abteilungscode eingeben",
       "department_code_required": "Abteilungscode ist erforderlich",
       "department_description": "Geben Sie Ihren Abteilungscode ein, um sich anzumelden",
-      "department_id_invalid": "Abteilungs-ID muss eine Zahl sein",
-      "department_id_label": "Abteilungs-ID (optional)",
-      "department_id_placeholder": "Abteilungs-ID eingeben, falls bekannt",
       "department_not_found": "Abteilung nicht gefunden. Bitte überprüfen Sie den Code und versuchen Sie es erneut.",
       "login_with_sso_button": "Mit SSO anmelden",
-      "looking_up": "Konto wird gesucht...",
-      "lookup_network_error": "Server konnte nicht erreicht werden. Bitte überprüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
-      "or_sign_in_with_password": "— oder mit Passwort anmelden —",
       "page_title": "Mit SSO anmelden",
-      "sign_in_with_sso": "Mit SSO anmelden",
-      "sso_not_enabled": "SSO ist für dieses Konto nicht aktiviert. Bitte verwenden Sie Ihren Benutzernamen und Ihr Passwort.",
-      "user_description": "Geben Sie Ihren Resgrid-Benutzernamen oder Ihre E-Mail-Adresse ein, um sich mit SSO anzumelden",
-      "user_not_found": "Konto nicht gefunden. Bitte überprüfen Sie Ihren Benutzernamen und versuchen Sie es erneut.",
-      "username_label": "Benutzername oder E-Mail",
-      "username_placeholder": "Benutzernamen oder E-Mail eingeben",
-      "username_required": "Benutzername ist erforderlich"
+      "user_description": "Geben Sie Ihren Resgrid-Benutzernamen oder Ihre E-Mail-Adresse ein, um sich mit SSO anzumelden"
     }
   },
   "map": {
-    "loading_markers": "Lade Kartenmarkierungen...",
     "openSideMenu": "Seitenmenü öffnen",
     "tabs": {
       "map": "Karte",
@@ -411,15 +193,8 @@
     "contact_administrator": "Bitte kontaktieren Sie Ihren Administrator, um Kartendienste zu konfigurieren.",
     "failed_to_load": "Karte konnte nicht geladen werden. Bitte überprüfen Sie Ihre Internetverbindung.",
     "legend": {
-      "error": "Die Kartenlegende konnte nicht geladen werden.",
-      "loading": "Kartenlegende wird geladen...",
-      "no_meaning": "Keine Bedeutung",
       "open": "Kartenlegende öffnen",
-      "other": "Sonstiges",
-      "statuses": "Status",
-      "style": {
-        "unknown": "Keine Bedeutung oder kein Status"
-      }
+      "statuses": "Status"
     },
     "mapbox_not_configured": "Mapbox ist nicht konfiguriert. Bitte kontaktieren Sie Ihren Administrator."
   },
@@ -493,35 +268,6 @@
       "subject_required": "Betreff ist erforderlich"
     }
   },
-  "mfa": {
-    "approve": {
-      "app": "App: {{app}}",
-      "approve": "Bestätigen",
-      "approved": "Bestätigt. Sie können zum anderen Bildschirm zurückkehren.",
-      "denied": "Abgelehnt. Es wurde nichts bestätigt.",
-      "deny": "Ablehnen",
-      "department": "Abteilung: {{department}}",
-      "done": "Fertig",
-      "expires": "Läuft ab um {{time}}",
-      "installation": "Gerät: {{label}}",
-      "none": "Nichts wartet auf Ihre Bestätigung.",
-      "not_me": "Das war ich nicht",
-      "number_body": "Geben Sie die Zahl vom anderen Bildschirm ein und bestätigen Sie mit Ihrem Passkey. Bestätigen Sie nur, wenn Sie dies selbst begonnen haben.",
-      "number_mismatch": "Das ist nicht die Zahl vom anderen Bildschirm. Verbleibende Versuche: {{count}}.",
-      "number_placeholder": "Zahl",
-      "origin": "In der Nähe von: {{origin}}",
-      "purpose": {
-        "adp": "Jemand möchte geschützte Informationen ansehen",
-        "department_entry": "Jemand wechselt als Sie in eine Abteilung",
-        "login": "Jemand meldet sich bei Ihrem Konto an",
-        "step_up": "Jemand bestätigt eine Aktion mit Ihrem Konto",
-        "unlock": "Jemand entsperrt ein gemeinsames Gerät als Sie"
-      },
-      "shared": "Auf einem gemeinsamen Gerät",
-      "title": "Anmeldung bestätigen?",
-      "unknown_app": "Eine andere Resgrid-App"
-    }
-  },
   "not_found": {
     "go_home": "Zur Startseite!",
     "message": "Diese Seite existiert nicht.",
@@ -565,14 +311,6 @@
       }
     }
   },
-  "operations": {
-    "time": {
-      "coveredBy": "Diese Zeit steht an diesem Tag bereits in Bericht #{{number}}.",
-      "crewReport": "Besatzungszeitbericht #{{number}} · {{name}}",
-      "individualReport": "Zeitbericht #{{number}} · {{name}}",
-      "report": "Bericht #{{number}}"
-    }
-  },
   "personnel": {
     "contactInformation": "Kontaktinformationen",
     "currentStatus": "Aktueller Status",
@@ -583,45 +321,12 @@
       "emptyDescription": "Filteroptionen werden hier angezeigt, wenn sie verfügbar sind.",
       "title": "Personal filtern"
     },
-    "id": "ID",
-    "status": {
-      "add_note": "Notiz hinzufügen",
-      "calls_tab": "Einsätze",
-      "current": "Aktuell",
-      "current_status": "Aktueller Status",
-      "destination_required": "Für diesen Status ist ein Ziel erforderlich",
-      "general_status": "Allgemeine Statusaktualisierung",
-      "gps_required": "Für diesen Status ist ein GPS-Standort erforderlich",
-      "hold_to_set_hint": "Zwei Sekunden gedrückt halten, um den Status zu setzen",
-      "hold_to_set_instructions": "Einen Status zwei Sekunden gedrückt halten, um ihn zu setzen",
-      "hold_to_submit": "Zum Senden gedrückt halten",
-      "loading_pois": "Lade POIs...",
-      "loading_stations": "Stationen werden geladen...",
-      "missing_required_info": "Erforderliche Informationen fehlen",
-      "no_destination": "Kein Ziel",
-      "no_stations_available": "Keine Stationen verfügbar",
-      "note": "Notiz",
-      "note_placeholder": "Notiz eingeben (optional)...",
-      "note_required": "Für diesen Status ist eine Notiz erforderlich",
-      "pois_tab": "POIs",
-      "responding_to_placeholder": "Eingeben, worauf Sie reagieren...",
-      "saved_offline": "Status wurde offline gespeichert und wird nach Wiederherstellung der Verbindung gesendet",
-      "select_call_to_respond_to": "Einsatz zum Reagieren auswählen",
-      "select_destination": "Ziel auswählen",
-      "select_responding_to": "Status festlegen: {{status}}",
-      "selected_call": "Ausgewählter Einsatz",
-      "set_status": "Personalstatus festlegen",
-      "show_all_statuses": "Alle Status anzeigen ({{count}} weitere)",
-      "show_next_statuses": "Nur nächste Status anzeigen",
-      "stations_tab": "Stationen",
-      "status": "Status"
-    }
+    "id": "ID"
   },
   "pois": {
     "address_label": "Adresse",
     "coordinates_label": "Koordinaten",
     "destination_enabled": "Als Ziel verfügbar",
-    "empty_description": "Keine POIs entsprechen dem aktuellen Filter.",
     "empty_title": "Keine POIs gefunden",
     "filter_all_types": "Alle Typen",
     "filter_label": "Filter",
@@ -630,7 +335,6 @@
     "invalid_title": "Ungültiger POI",
     "list_description": "Durchsuchen Sie die Abteilungs-POIs, filtern Sie nach Typ und kehren Sie zur Karte zurück.",
     "load_error_title": "POI konnte nicht geladen werden",
-    "not_found": "POI nicht gefunden",
     "note_label": "Hinweis",
     "reset_filters": "Zurücksetzen",
     "results_count_one": "{{count}} POI",
@@ -640,26 +344,10 @@
     "sort_label": "Sortieren",
     "sort_name": "Name",
     "sort_type": "Typ",
-    "title": "POI",
     "type_label": "Typ",
     "view_details": "Details anzeigen",
     "view_on_map": "Auf Karte anzeigen",
     "view_on_map_hint": "Lassen Sie die Karte geöffnet, um Ihren Standort und den ausgewählten POI zusammen zu sehen."
-  },
-  "push_notifications": {
-    "communication_test_confirmed": "Empfang bestätigt. Vielen Dank.",
-    "communication_test_failed": "Empfang konnte nicht bestätigt werden. Bitte erneut versuchen.",
-    "communication_test_prompt": "Dies ist nur ein Test. Bestätigen Sie den Empfang, damit Ihre Abteilung weiß, dass sie Sie erreichen kann.",
-    "confirm_receipt": "Empfang bestätigen",
-    "confirming_receipt": "Wird bestätigt...",
-    "types": {
-      "communication_test": "Kommunikationstest",
-      "weather": "Wetterwarnung",
-      "work_order": "Arbeitsauftrag"
-    },
-    "view_alert": "Warnung anzeigen",
-    "view_chat": "Chat anzeigen",
-    "view_work_order": "Arbeitsauftrag anzeigen"
   },
   "settings": {
     "logout_confirm_cancel": "Abbrechen",
@@ -1034,7 +722,6 @@
     "ptt": "Sprache"
   },
   "tabs": {
-    "personnel": "Personal",
     "units": "Einheiten",
     "weatherAlerts": "Wetterwarnungen"
   },
@@ -1053,10 +740,7 @@
     "vehicleInfo": "Fahrzeuginformationen"
   },
   "video_feeds": {
-    "add_feed": "Add Video Feed",
     "delete_confirm": "Are you sure you want to delete this video feed?",
-    "delete_feed": "Delete Video Feed",
-    "edit_feed": "Edit Video Feed",
     "form_description": "Description",
     "form_feed_format": "Feed Format",
     "form_feed_type": "Feed Type",
@@ -1065,7 +749,6 @@
     "form_status": "Status",
     "form_url": "URL",
     "format_youtube": "YouTube",
-    "no_feeds": "No video feeds for this call",
     "type_satellite": "Satellite Feed",
     "type_webcam": "Webcam",
     "unsupported_format": "This format is not supported for in-app playback. Copy the URL to open in an external player."
@@ -1099,7 +782,6 @@
       "metadata": "Details",
       "status": "Status"
     },
-    "search": "Warnungen suchen...",
     "severity": {
       "Extreme": "Extrem",
       "Minor": "Gering",
@@ -1155,6 +837,7 @@
     "back": "Zurück",
     "cannotReport": "Ihre Organisation kann derzeit keine neuen Arbeitsaufträge annehmen.",
     "choosePhoto": "Foto auswählen",
+    "clearFilters": "Filter zurücksetzen",
     "commentHint": "Kommentar hinzufügen",
     "due": "Fällig {{date}}",
     "errors": {
@@ -1176,6 +859,8 @@
       "retry": "Server nicht erreichbar. Versuchen Sie es erneut."
     },
     "files": "Fotos und Dateien",
+    "filterStatus": "Status",
+    "filterTitle": "Arbeitsaufträge filtern",
     "form": {
       "asset": "Ausrüstung",
       "description": "Details",
@@ -1201,6 +886,7 @@
     "locationIs": "Ort: {{location}}",
     "logHours": "Stunden erfassen",
     "more": "Mehr laden",
+    "noMatches": "Keine Arbeitsaufträge entsprechen Ihrer Suche oder Ihren Filtern.",
     "none": "Keine Arbeitsaufträge.",
     "noneAssigned": "Ihnen ist nichts zugewiesen.",
     "photoAdded": "Foto hinzugefügt.",
@@ -1215,6 +901,9 @@
     "resolutionIs": "Lösung: {{text}}",
     "safety": "Sicherheitskritische oder gefährliche Arbeit",
     "saveHours": "Stunden speichern",
+    "search": "Nach Titel oder Nummer suchen",
+    "searchMore": "Durchsucht werden nur geladene Arbeitsaufträge. Laden Sie mehr, um ältere zu durchsuchen.",
+    "showing": "{{shown}} von {{total}} geladenen",
     "status": {
       "0": "Gemeldet",
       "1": "Angenommen",
@@ -1226,6 +915,11 @@
       "7": "Abgelehnt",
       "8": "Duplikat",
       "9": "Storniert"
+    },
+    "statusGroup": {
+      "all": "Alle",
+      "finished": "Abgeschlossen",
+      "open": "Offen"
     },
     "steps": "Schritte",
     "takePhoto": "Foto aufnehmen",

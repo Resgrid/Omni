@@ -1,7 +1,7 @@
 import { useTranslation } from '@resgrid/i18n';
-import { Box, Pressable, Text } from '@resgrid/ui';
+import { Box, Pressable, ScrollView, Text } from '@resgrid/ui';
 import React from 'react';
-import { ScrollView, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 import type { ShiftView } from '../lib/shift-loaders';
 

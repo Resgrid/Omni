@@ -5,16 +5,7 @@ export { HOLD_TAP_THRESHOLD_MS, HoldToConfirmButton, type HoldToConfirmButtonPro
 export { PersonnelStatusSheet, type PersonnelStatusSheetProps } from './components/personnel-status-sheet';
 export { StatusDestinationList, type StatusDestinationListProps } from './components/status-destination-list';
 export { StatusOptionRow, type StatusOptionRowProps } from './components/status-option';
-export {
-  type StaffingSelection,
-  StatusPicker,
-  type StatusPickerProps,
-  type StatusPickerStep,
-  type StatusPickerSubject,
-  type StatusPickerTab,
-  type StatusSelection,
-  type StatusSubmitOutcome,
-} from './components/status-picker';
+export { type StaffingSelection, StatusPicker, type StatusPickerProps, type StatusPickerSubject, type StatusPickerTab, type StatusSelection, type StatusSubmitOutcome } from './components/status-picker';
 export { StatusSheet, type StatusSheetProps } from './components/status-sheet';
 export { UnitStatusSheet, type UnitStatusSheetProps } from './components/unit-status-sheet';
 export * from './lib/base-types';

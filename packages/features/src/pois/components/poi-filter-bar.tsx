@@ -27,7 +27,7 @@ export const PoiFilterBar: React.FC<PoiFilterBarProps> = ({ filter, onChange, po
 
   return (
     <>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-2 max-h-10">
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-2" testID="poi-type-chips">
         <HStack space="sm">
           <Chip label={t('pois.all_types')} selected={!filter.poiTypeId} onPress={() => onChange({ ...filter, poiTypeId: null })} testID="poi-type-all" />
           {poiTypes.map((type) => (
@@ -37,7 +37,7 @@ export const PoiFilterBar: React.FC<PoiFilterBarProps> = ({ filter, onChange, po
         </HStack>
       </ScrollView>
       {capabilities.length > 0 ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-2 max-h-10">
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-2" testID="poi-capability-chips">
           <HStack space="sm">
             {capabilities.map((capability) => (
               <Chip key={capability} label={capability} selected={filter.capabilities.includes(capability)} onPress={() => toggleCapability(capability)} testID={`poi-capability-${capability}`} />

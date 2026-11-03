@@ -49,7 +49,10 @@ export class ApiError extends Error {
   public readonly kind: ApiErrorKind;
   /** HTTP status when the server answered. */
   public readonly status?: number;
-  /** RFC 7807 problem `type` from the response body (e.g. `records_module_disabled`). */
+  /**
+   * RFC 7807 problem `type` from the response body (e.g. `records_module_disabled`), else the reason code a v4 refusal
+   * sends in the `X-Resgrid-Reason` header (e.g. `certifications_file_too_large`).
+   */
   public readonly problemType?: string;
   /** Response body `error` code (e.g. `shared_session_locked`), else the transport code (`ERR_NETWORK`, `ECONNABORTED`). */
   public readonly code?: string;
@@ -126,6 +129,25 @@ const bodyString = (data: unknown, key: string): string | undefined => {
 /** The RFC 7807 problem `type` of a response body, when it has one. */
 export const problemTypeOf = (data: unknown): string | undefined => bodyString(data, 'type');
 
+/** A machine reason code (`certifications_file_too_large`); anything else in the header is ignored. */
+const REASON_CODE = /^[a-z][a-z0-9_]{0,79}$/;
+
+/**
+ * The reason code Core's v4 controllers put in `X-Resgrid-Reason` when they answer 400 with a plain `failure` envelope.
+ * Browsers only see it when Core lists it in `Access-Control-Expose-Headers`.
+ */
+export const reasonHeaderOf = (headers: unknown): string | undefined => {
+  if (typeof headers !== 'object' || headers === null) {
+    return undefined;
+  }
+  const read = (headers as { get?: unknown }).get;
+  const value =
+    typeof read === 'function'
+      ? (read as (name: string) => unknown).call(headers, 'x-resgrid-reason')
+      : Object.entries(headers as Record<string, unknown>).find(([name]) => name.toLowerCase() === 'x-resgrid-reason')?.[1];
+  return typeof value === 'string' && REASON_CODE.test(value.trim()) ? value.trim() : undefined;
+};
+
 const TIMEOUT_CODES = new Set(['ECONNABORTED', 'ETIMEDOUT']);
 
 /** Converts anything thrown by axios (or an interceptor) into an {@link ApiError}. Never copies request data. */
@@ -144,7 +166,7 @@ export const toApiError = (error: unknown): ApiError => {
       return new ApiError({
         kind: 'http',
         status: error.response.status,
-        problemType: problemTypeOf(data),
+        problemType: problemTypeOf(data) ?? reasonHeaderOf(error.response.headers),
         code: bodyString(data, 'error') ?? error.code,
         method,
         path,

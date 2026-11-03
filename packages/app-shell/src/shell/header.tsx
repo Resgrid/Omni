@@ -61,6 +61,19 @@ export function isTopLevelScreen(match: { entry: NavEntry; exact: boolean } | nu
   return match !== null && match.entry.placement !== 'hidden' && (match.exact || match.entry.nestedTabs === true);
 }
 
+/**
+ * The header's leading control for the current route and the nav entry it matched. The shell frame reads it too, to
+ * tell in-content headers (`AppBarBackContext`) when the app bar already shows back.
+ */
+export function useHeaderLeading(nav: NavRegistry): { leading: HeaderLeading; match: { entry: NavEntry; exact: boolean } | null } {
+  const shell = useShell();
+  const pathname = usePathname();
+  const router = useRouter();
+  const match = findNavEntryForPath(nav, pathname);
+  const leading = resolveHeaderLeading({ isTopLevel: isTopLevelScreen(match, pathname), canGoBack: router.canGoBack(), sidebarMode: shell.sidebarMode });
+  return { leading, match };
+}
+
 function PendingChangesIndicator() {
   const unsent = useShellStore((state) => state.unsentChanges);
   const href = useHref();
@@ -101,7 +114,6 @@ export interface ShellHeaderProps {
 
 export function ShellHeader({ nav }: ShellHeaderProps) {
   const shell = useShell();
-  const pathname = usePathname();
   const router = useRouter();
   const href = useHref();
   const insets = useSafeAreaInsets();
@@ -110,9 +122,7 @@ export function ShellHeader({ nav }: ShellHeaderProps) {
   const label = useNavLabel();
   const actions = useHeaderActionsNode();
 
-  const match = findNavEntryForPath(nav, pathname);
-  const isTopLevel = isTopLevelScreen(match, pathname);
-  const leading = resolveHeaderLeading({ isTopLevel, canGoBack: router.canGoBack(), sidebarMode: shell.sidebarMode });
+  const { leading, match } = useHeaderLeading(nav);
   const title = match ? label(match.entry) : tk('app.title', shell.variant.identity.name, { appName: shell.variant.identity.name });
 
   const goBack = useCallback(() => {

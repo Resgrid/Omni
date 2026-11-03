@@ -24,6 +24,12 @@ export interface CustomBottomSheetProps {
   testID?: string;
 }
 
+/**
+ * The most a sheet with this first snap point (percent of the window height) grows to: clamped to 300 px … window − 20.
+ * The sheet itself is content-sized up to this height; content taller than it has to scroll.
+ */
+export const getBottomSheetHeight = (windowHeight: number, snapPoint = 67): number => Math.max(300, Math.min(Math.round(snapPoint * windowHeight * 0.01), windowHeight - 20));
+
 /** Backdrop taps are ignored for this long after opening (see below). */
 export const BOTTOM_SHEET_BACKDROP_ARM_DELAY_MS = 300;
 const OPEN_DURATION_MS = 250;
@@ -69,9 +75,7 @@ export function CustomBottomSheet({ children, isOpen, onClose, isLoading = false
 
   // Compute sheet height from first snap point (percentage of screen height).
   // Clamp between 300px and the screen height to remain usable in all orientations.
-  const firstSnapPoint = snapPoints.length > 0 ? snapPoints[0] : 67;
-  const rawSheetHeight = Math.round(firstSnapPoint * windowHeight * 0.01);
-  const sheetHeight = Math.max(300, Math.min(rawSheetHeight, windowHeight - 20));
+  const sheetHeight = getBottomSheetHeight(windowHeight, snapPoints.length > 0 ? snapPoints[0] : 67);
 
   useEffect(() => {
     if (isOpen) {

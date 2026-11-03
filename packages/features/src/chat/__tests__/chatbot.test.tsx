@@ -252,4 +252,15 @@ describe('ChatbotScreen', () => {
     await fireEvent.press(screen.getByTestId('message-action-pin', q));
     await waitFor(() => expect(mockPin).toHaveBeenCalledWith('r1', true));
   });
+
+  it('shows and copies a reply that quotes a call nature as text, never as markup', async () => {
+    useChatStore.setState({ messagesByChannel: { [BOT]: [message('q1', { Body: 'Use <div> here' }), reply('r1', { Body: 'Call TEST 10-7-2026\n<div dir="ltr">JUST A TEST!</div>\n' })] } });
+    await render(<ChatbotScreen />, { wrapper });
+    expect(screen.getByText('Call TEST 10-7-2026\nJUST A TEST!')).toBeOnTheScreen();
+    expect(screen.getByText('Use <div> here')).toBeOnTheScreen();
+
+    await fireEvent(screen.getByTestId('chat-message-r1'), 'longPress');
+    await fireEvent.press(screen.getByTestId('message-action-copy', q));
+    await waitFor(() => expect(mockSetString).toHaveBeenCalledWith('Call TEST 10-7-2026\nJUST A TEST!'));
+  });
 });

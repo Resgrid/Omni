@@ -49,6 +49,8 @@ catalog:
   '@microsoft/signalr': '10.0.11'
   '@notifee/react-native': '9.1.8'
   '@novu/react-native': '3.19.0'
+  # Always the same exact version as oxlint (anti-slop plugin API; tooling/oxlint/anti-slop/UPSTREAM.md).
+  '@oxlint/plugins': '1.90.0'
   '@react-native-community/netinfo': '12.0.1'
   '@react-native/jest-preset': '~0.88.1'
   '@react-native/metro-config': '~0.88.1'
@@ -144,6 +146,7 @@ catalog:
   lucide-react-native: '1.66.0'
   moti: '0.30.0'
   nativewind: '5.0.0-rc.0'
+  oxlint: '1.90.0'
   prettier: '3.9.10'
   react: '19.3.0'
   react-dom: '19.3.0'

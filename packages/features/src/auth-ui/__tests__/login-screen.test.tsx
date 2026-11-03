@@ -2,7 +2,8 @@
 import '../../settings/__tests__/test-setup';
 
 import { createMemoryKvBackend, DurableKv } from '@resgrid/offline';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { ColorSchemeProvider } from '@resgrid/ui';
+import { act, fireEvent, isHiddenFromAccessibility, render, screen, waitFor } from '@testing-library/react-native';
 import { router } from 'expo-router';
 import React from 'react';
 
@@ -39,6 +40,21 @@ describe('LoginScreen', () => {
     expect(screen.getByLabelText('login.password')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'login.login_button' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'login.show_password' })).toBeTruthy();
+  });
+
+  it('shows the Resgrid wordmark above the title, white on a dark theme, hidden from assistive technology', async () => {
+    const { unmount } = await render(<LoginScreen />);
+    const light = screen.getByTestId('auth-logo-light');
+    expect(light.props.source.testUri).toMatch(/resgrid-wordmark\.png$/);
+    expect(isHiddenFromAccessibility(light)).toBe(true);
+    await unmount();
+
+    await render(
+      <ColorSchemeProvider mode="dark">
+        <LoginScreen />
+      </ColorSchemeProvider>
+    );
+    expect(screen.getByTestId('auth-logo-dark').props.source.testUri).toMatch(/resgrid-wordmark-white\.png$/);
   });
 
   it('signs in with the trimmed credentials and replaces the navigation with the home route (never push)', async () => {

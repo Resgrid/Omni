@@ -3,7 +3,7 @@ import { type CallResultData } from '@resgrid/models';
 import { ActionBaseTypes, isStaffingOnDuty, isStatusAvailable, isStatusResponding, StaffingBaseTypes, statusAvailability } from '../lib/base-types';
 import { readableColors } from '../lib/readable-colors';
 import { getCurrentStatusCallId, getDestinationTabs, resolveDefaultStatusCall, resolveEffectiveDestination } from '../lib/status-destination';
-import { canSubmitStatusWithoutInput, getOfferedStatuses, resolveCurrentStatusId } from '../lib/status-flow';
+import { canSubmitStatusWithoutInput, getOfferedStatuses, getStatusPickerSteps, resolveCurrentStatusId } from '../lib/status-flow';
 import { getUnitStatusOptions } from '../lib/unit-status-set';
 
 const call = (CallId: string): CallResultData => ({ CallId, Name: `Call ${CallId}` }) as CallResultData;
@@ -55,6 +55,17 @@ describe('status flow', () => {
     expect(canSubmitStatusWithoutInput({ Detail: 0, Note: 2 }, { allowsCalls: false, hasDefaultCall: false })).toBe(false);
     expect(canSubmitStatusWithoutInput({ Detail: 2, Note: 0 }, { allowsCalls: true, hasDefaultCall: true })).toBe(true);
     expect(canSubmitStatusWithoutInput({ Detail: 1, Note: 0 }, { allowsCalls: false, hasDefaultCall: true })).toBe(false);
+  });
+
+  it('skips the list for a status chosen before the sheet opened, ending on a confirm step when nothing else is needed', () => {
+    const steps = (isStaffing: boolean, hasPresetStatus: boolean, hasDestinationStep: boolean, hasNoteStep: boolean) => getStatusPickerSteps({ isStaffing, hasPresetStatus, hasDestinationStep, hasNoteStep });
+    expect(steps(false, false, true, true)).toEqual(['select', 'destination', 'note']);
+    expect(steps(false, false, false, false)).toEqual(['select']);
+    expect(steps(false, true, true, true)).toEqual(['destination', 'note']);
+    expect(steps(false, true, false, true)).toEqual(['note']);
+    expect(steps(false, true, false, false)).toEqual(['confirm']);
+    expect(steps(true, true, true, true)).toEqual(['select', 'note']);
+    expect(steps(true, false, false, false)).toEqual(['select']);
   });
 });
 

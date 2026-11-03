@@ -1,6 +1,5 @@
 {
   "calls": {
-    "required_fields_missing": "Tu departamento exige estos campos antes de poder guardar el aviso: {{fields}}",
     "scheduled_dispatch": "Despacho programado",
     "scheduled_dispatch_no_clear": "Esta hora programada se puede cambiar aquí, pero no eliminar.",
     "scheduled_dispatch_too_soon": "La hora del despacho programado debe ser al menos {{minutes}} minutos a partir de ahora"
@@ -432,8 +431,7 @@
     "worktime_thresholds_label": "Umbrales de Tiempo de Trabajo"
   },
   "common": {
-    "clear": "Limpiar",
-    "no_location": "No hay datos de ubicación disponibles"
+    "clear": "Limpiar"
   },
   "incident_assistant": {
     "briefing_accountability": "RENDICIÓN DE CUENTAS",
@@ -613,14 +611,10 @@
   },
   "login": {
     "command_not_authorized": "No tienes autorización para usar la app IC. Contacta con el administrador de tu departamento.",
-    "login_button": "Iniciar sesión",
-    "login_button_loading": "Iniciando sesión...",
-    "otp_body": "Tu cuenta tiene activada la autenticación en dos pasos. Introduce el código actual de tu aplicación de autenticación para terminar de iniciar sesión.",
     "otp_invalid": "Ese código no es válido o ha caducado. Introduce el código actual de tu aplicación de autenticación.",
     "otp_placeholder": "Código de 6 dígitos",
     "otp_title": "Verificación en dos pasos",
-    "otp_verify": "Verificar",
-    "title": "Iniciar sesión"
+    "otp_verify": "Verificar"
   },
   "maps": {
     "legend": {
@@ -630,12 +624,9 @@
         "unknown_priority": "Sin significado",
         "unknown_status": "Sin significado o sin estado"
       }
-    },
-    "map_layers": "Capas del mapa",
-    "no_layers": "No hay capas de mapa disponibles"
+    }
   },
   "notifications": {
-    "confirm_delete_message_one": "¿Seguro que quieres eliminar {{count}} notificación? Esta acción no se puede deshacer.",
     "confirm_delete_message_other": "¿Seguro que quieres eliminar {{count}} notificaciones? Esta acción no se puede deshacer.",
     "delete_one_error": "No se pudo eliminar la notificación",
     "delete_one_success": "Notificación eliminada",
@@ -715,16 +706,7 @@
   "operations": {
     "errors": {
       "timereports_status_transition_invalid": "Este parte ya se modificó, posiblemente desde otro dispositivo. Actualice e inténtelo de nuevo."
-    },
-    "time": {
-      "coveredBy": "Estas horas ya están en el parte #{{number}} de este día.",
-      "crewReport": "Parte de horas de tripulación #{{number}} · {{name}}",
-      "individualReport": "Parte de horas #{{number}} · {{name}}",
-      "report": "Parte #{{number}}"
     }
-  },
-  "push_notifications": {
-    "unknown_type_warning": "Este tipo de notificación no se reconoce. Por favor, contacte con soporte si continúa viendo este mensaje."
   },
   "readiness": {
     "attention": "Revisar",
@@ -746,16 +728,11 @@
     "attachment_too_large": "Ese archivo supera los {{size}} MB, el máximo para un adjunto."
   },
   "settings": {
-    "audio_device_selection": {
-      "speaker_device": "Dispositivo de altavoz"
-    },
-    "logout_confirm_message": "¿Está seguro de que desea cerrar sesión? Esto borrará todos los datos de la aplicación, valores en caché y configuraciones.",
     "sync_section": "Sincronización y cola sin conexión",
     "sync_status": "Estado de sincronización",
     "sync_status_failed": "{{count}} con error",
     "sync_status_ok": "Actualizado",
-    "sync_status_pending": "{{count}} pendiente(s)",
-    "view_sync_queue": "Ver cola de sincronización"
+    "sync_status_pending": "{{count}} pendiente(s)"
   },
   "sidebar": {
     "menu": "Menú"

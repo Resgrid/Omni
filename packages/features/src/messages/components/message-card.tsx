@@ -39,7 +39,7 @@ export const MessageCard: React.FC<MessageCardProps> = React.memo(({ item, isRea
       accessibilityLabel={[sender, subjectWithheld ? t('data_protection.protected_value') : message.Subject || t('messages.no_subject'), unread ? t('messages.unread') : ''].filter((part) => !!part).join(', ')}
       accessibilityHint={selectionMode ? undefined : t('messages.open_hint')}
       testID={`message-card-${message.MessageId}`}
-      className={`mx-4 mb-2 rounded-lg border bg-background-0 p-4 ${isSelected ? 'border-primary-500 bg-primary-50' : 'border-outline-200'} ${expired ? 'opacity-60' : ''}`}
+      className={`mx-4 mb-2 rounded-lg border bg-background-0 p-4 ${isSelected ? 'border-primary-500 bg-primary-50' : 'border-outline-200'}`}
     >
       <VStack space="sm">
         <HStack space="sm" className="items-center justify-between">

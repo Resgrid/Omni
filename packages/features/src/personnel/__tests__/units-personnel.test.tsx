@@ -9,6 +9,7 @@ import { type DepartmentRightsResultData, type PersonnelInfoResultData, type Uni
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { router } from 'expo-router';
 import React from 'react';
+import { StyleSheet } from 'react-native';
 
 import dispatchManifest from '../../../../../apps/omni/variants/dispatch/variant.json';
 import { usePersonnelViewStore } from '../hooks/use-personnel-view-store';
@@ -79,6 +80,11 @@ describe('UnitsListScreen', () => {
     expect(screen.queryByTestId('unit-card-u2')).toBeNull();
     await fireEvent.press(screen.getByTestId('unit-card-u1'));
     expect(router.push).toHaveBeenCalledWith('/units/u1');
+  });
+
+  it('keeps the availability chips to their own height instead of sharing the screen with the list', async () => {
+    await render(<UnitsListScreen />);
+    expect(StyleSheet.flatten(screen.getByTestId('units-availability').props.style)).toMatchObject({ flexGrow: 0 });
   });
 
   it('applies a server filter option through activeFilter', async () => {

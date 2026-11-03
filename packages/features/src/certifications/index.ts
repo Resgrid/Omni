@@ -3,7 +3,22 @@
 // `export { default } from '@resgrid/features/certifications/screens/certification-detail';`.
 export { useExpiryText } from './hooks/use-expiry-text';
 export { type CapturedPhoto, capturePhoto, PhotoPermissionError } from './lib/capture-photo';
-export { certificationErrorKey, certificationName, dayOf, expiryTone, hoursOf, isDateKey, optionalDate, sortCertifications } from './lib/certification-format';
+export {
+  addMonths,
+  certificationErrorKey,
+  certificationName,
+  dayOf,
+  expiryState,
+  expiryTextClass,
+  formatDay,
+  hoursOf,
+  isDateKey,
+  optionalDate,
+  sortCertifications,
+  statusAction,
+  summarize,
+  validateCertificationForm,
+} from './lib/certification-format';
 export { certificationsNav, type FeatureNavEntry } from './nav';
 export { CERTIFICATIONS_ROUTE_PATTERNS, certificationsRoutes, parseCertificationId } from './routes';
 export { default as CertificationDetailScreen, type CertificationDetailScreenProps } from './screens/certification-detail';

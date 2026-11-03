@@ -76,7 +76,7 @@ How-to guides for every part of Resgrid are in the [Resgrid documentation](https
 
 | You need help with… | Go to |
 |---|---|
-| Every app stopped working or cannot connect | [Resgrid system status](https://resgrid.freshstatus.io) |
+| Every app stopped working or cannot connect | [Resgrid system status](https://oneuptime.resgrid.net/status-page/09d6b850-e50e-42e2-8497-9ab55e5be465) |
 | Your account, billing, subscription or department setup | [Resgrid Help Center](https://resgrid.zohodesk.com/portal/en/home) or [contact Resgrid](https://resgrid.com/contact) |
 | Something in an app is broken | [Report a bug](https://github.com/Resgrid/Omni/issues/new?template=1-bug-report.yml) |
 | An idea for a new feature or a change | [Request a feature](https://github.com/Resgrid/Omni/issues/new?template=2-feature-request.yml) |
@@ -151,15 +151,24 @@ The quickest way to see an app is the web version — no Xcode or Android Studio
 APP_VARIANT=dispatch pnpm --filter @resgrid/omni web
 ```
 
-On iOS or Android (builds and installs a development build on a simulator, emulator or connected device):
+On iOS or Android, one command per app builds a development build, installs it on a simulator, emulator or connected device, and starts the dev server:
+
+| App | iOS | Android |
+|---|---|---|
+| Responder | `pnpm ios:responder` | `pnpm android:responder` |
+| Unit | `pnpm ios:unit` | `pnpm android:unit` |
+| IC | `pnpm ios:ic` | `pnpm android:ic` |
+| Dispatch | `pnpm ios:dispatch` | `pnpm android:dispatch` |
+| BigBoard | `pnpm ios:bigboard` | `pnpm android:bigboard` |
 
 ```bash
-APP_VARIANT=responder pnpm --filter @resgrid/omni ios
+pnpm ios:responder --device
 ```
 
-```bash
-APP_VARIANT=unit pnpm --filter @resgrid/omni android
-```
+- `--device` lets you pick the simulator, emulator or connected phone; any other [`expo run`](https://docs.expo.dev/more/expo-cli/#compiling) option works too. With npm, put `--` first: `npm run ios:responder -- --device`.
+- The five apps share one generated `apps/omni/ios` and `apps/omni/android` folder. When it holds another app, or the app config changed, the command prebuilds it again first (a few minutes on iOS). `--clean` forces that.
+- One dev server serves one app. If another app's dev server is running, stop it or add `--port 8082`.
+- On a physical iPhone, set `IOS_APPLE_TEAM_ID` to your Apple developer team ID so the build can be signed.
 
 As a desktop app (start the web version first, then in a second terminal):
 
@@ -189,11 +198,14 @@ Push notifications on iOS and Android need the app's Firebase files (`google-ser
 ```bash
 pnpm test          # Jest unit and component tests
 pnpm lint          # ESLint (zero warnings)
+pnpm lint:anti-slop # Oxlint anti-slop rules: no file may gain a finding over tooling/oxlint/anti-slop-baseline.json (--prune after fixing some)
 pnpm type-check    # TypeScript
 pnpm i18n:check    # translation keys match across all ten languages
-pnpm check-all     # everything CI checks except tests
 pnpm e2e:web       # Playwright tests against the web builds
+pnpm check-all     # every check CI and the pre-commit hook run, with a pass/fail summary at the end
 ```
+
+`pnpm check-all` also builds each variant's web export and runs Playwright against it, which is the slow part. `--quick` skips those steps, `--variants unit,ic` limits the per-variant steps, `--skip jest,e2e` leaves steps out, `--bail` stops at the first failure and `--list` shows the step ids.
 
 ## :package: Self-Hosting and Deployment
 

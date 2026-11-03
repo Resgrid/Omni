@@ -3,7 +3,7 @@ import '../../calls/__tests__/test-setup';
 import { featureFlagsStore, useAuthStore } from '@resgrid/auth';
 import { useChecklistsStore } from '@resgrid/data';
 import { StatusProvider } from '@resgrid/features/status';
-import type { ChecklistDefinition, ChecklistDuePage, ChecklistForm, ChecklistItem, ChecklistRun } from '@resgrid/models';
+import type { ChecklistDefinition, ChecklistDuePage, ChecklistForm, ChecklistHistory, ChecklistItem, ChecklistRun } from '@resgrid/models';
 import { emitRealtimeEvent } from '@resgrid/realtime';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -11,15 +11,18 @@ import React from 'react';
 
 import { activateVariant, hidden } from '../../calls/__tests__/test-utils';
 import { DueChecksCard } from '../components/due-checks-card';
+import { mergeDuePages } from '../hooks/use-checklists';
+import { dueFilterCounts, filterDefinitions, filterDueChecks, filterHistory, historyOutcome, matchesQuery } from '../lib/checklist-filters';
 import { applyAnswer, checklistErrorKey, checklistFailed, missingAnswers, visibleChecklistItems } from '../lib/checklist-form';
 import { registerChecklistRunWriter, resetChecklistRunWriterForTests } from '../runtime';
 import ChecklistsScreen from '../screens/checklists';
 
 const mockFetchDue = jest.fn();
 const mockPreview = jest.fn();
+const mockFetchHistory = jest.fn();
 jest.mock('../lib/checklists-api', () => ({
   fetchDueChecklists: (page: number, unitId?: string | null) => mockFetchDue(page, unitId),
-  fetchChecklistHistory: jest.fn(async () => ({ rows: [{ Id: 'h1', TargetName: 'Engine 41', UpdatedOn: '2026-10-30T10:00:00Z' }], hasMore: false })),
+  fetchChecklistHistory: (page: number, unitId?: string | null) => mockFetchHistory(page, unitId),
   previewChecklistOccurrence: (id: string) => mockPreview(id),
   fetchChecklistEvidence: jest.fn(async () => 'data:image/png;base64,AAA'),
   fetchChecklistCalendar: jest.fn(async () => []),
@@ -109,6 +112,76 @@ const duePage = (count = 1): ChecklistDuePage => ({
   HasMoreDefinitions: false,
 });
 
+const historyRow = (Id: string, extra: Partial<ChecklistHistory> = {}): ChecklistHistory => ({
+  Id,
+  DefinitionId: 'def1',
+  VersionId: 'v1',
+  TargetType: 1,
+  TargetId: '41',
+  TargetName: 'Engine 41',
+  CreatedBy: 'u2',
+  State: 2,
+  Revision: 1,
+  IsProtected: false,
+  UpdatedOn: '2026-10-30T10:00:00Z',
+  SubmittedOn: '2026-10-30T10:00:00Z',
+  Score: 100,
+  Passed: true,
+  ...extra,
+});
+
+const due = (Id: string, State: number, Name = 'Daily rig check', target = 'Engine 41'): ChecklistDuePage['Occurrences'][number] => ({
+  ...duePage().Occurrences[0],
+  Id,
+  State,
+  Name,
+  Target: { Type: 1, Id: target, Name: target },
+});
+
+describe('checklist search and filters', () => {
+  it('matches every word against any field, ignoring case', () => {
+    expect(matchesQuery('', ['x'])).toBe(true);
+    expect(matchesQuery('engine DAILY', ['Daily rig check', 'Engine 41'])).toBe(true);
+    expect(matchesQuery('engine 42', ['Daily rig check', 'Engine 41'])).toBe(false);
+    expect(matchesQuery('rig', [null, undefined])).toBe(false);
+  });
+
+  it('filters due checks by state and query, and counts each state', () => {
+    const rows = [due('a', 4), due('b', 0), due('c', 1, 'SCBA check'), due('d', 3, 'Daily rig check', 'Ladder 2')];
+    expect(dueFilterCounts(rows)).toEqual({ all: 4, missed: 1, inProgress: 2, scheduled: 1 });
+    expect(filterDueChecks(rows, '', 'inProgress').map((row) => row.Id)).toEqual(['b', 'c']);
+    expect(filterDueChecks(rows, 'ladder', 'all').map((row) => row.Id)).toEqual(['d']);
+    expect(filterDueChecks(rows, 'scba', 'missed')).toEqual([]);
+  });
+
+  it('keeps every target when the checklist name matches, otherwise only matching targets', () => {
+    const two = { ...definition, Targets: [...definition.Targets, { Type: 1, Id: '7', Name: 'Ladder 7' }] };
+    expect(filterDefinitions([two], 'daily')[0].targets).toHaveLength(2);
+    expect(filterDefinitions([two], 'ladder')[0].targets.map((target) => target.Id)).toEqual(['7']);
+    expect(filterDefinitions([two], 'tanker')).toEqual([]);
+  });
+
+  it('reads a run outcome and filters history by outcome and checklist name', () => {
+    expect(historyOutcome({ State: 0, Passed: null })).toBe('inProgress');
+    expect(historyOutcome({ State: 1, Passed: null })).toBe('awaitingWitness');
+    expect(historyOutcome({ State: 2, Passed: false })).toBe('failed');
+    expect(historyOutcome({ State: 2, Passed: null })).toBe('submitted');
+    const rows = [historyRow('h1'), historyRow('h2', { Passed: false, DefinitionId: 'def2' })];
+    const names = new Map([['def2', 'Pump test']]);
+    expect(filterHistory(rows, '', 'failed', names).map((row) => row.Id)).toEqual(['h2']);
+    expect(filterHistory(rows, 'pump', 'all', names).map((row) => row.Id)).toEqual(['h2']);
+  });
+
+  it('merges loaded due pages without duplicates, taking "has more" from the last page', () => {
+    const first = { ...duePage(2), HasMoreOccurrences: true };
+    const second = { ...duePage(3), HasMoreOccurrences: false };
+    const merged = mergeDuePages([first, second]);
+    expect(merged.Occurrences.map((row) => row.Id)).toEqual(['occ1', 'occ2', 'occ3']);
+    expect(merged.Definitions).toHaveLength(1);
+    expect(merged.HasMoreOccurrences).toBe(false);
+  });
+});
+
 describe('checklist form', () => {
   it('shows a conditional item only on its branch and drops hidden answers', () => {
     expect(visibleChecklistItems(form, []).map((entry) => entry.Id)).toEqual(['lights', 'tires']);
@@ -146,6 +219,7 @@ describe('checklists screen', () => {
     (useLocalSearchParams as jest.Mock).mockReturnValue({});
     mockFetchDue.mockReset().mockResolvedValue(duePage());
     mockPreview.mockReset().mockResolvedValue(run());
+    mockFetchHistory.mockReset().mockResolvedValue({ rows: [historyRow('h1', { State: 1, Passed: null, Score: null })], hasMore: false });
     resetChecklistRunWriterForTests();
     useChecklistsStore.setState({
       access: { DepartmentId: 1, UserId: 'u1', Enabled: true, CanManage: false, IsProtected: false },
@@ -220,18 +294,78 @@ describe('checklists screen', () => {
 
   it('starts an on-demand form locally and lets a different member witness a run from history', async () => {
     await render(<ChecklistsScreen />);
+    await waitFor(() => expect(screen.getByTestId('checklist-due-occ1')).toBeTruthy());
+    await fireEvent.press(screen.getByTestId('shared-tab-start'));
     await waitFor(() => expect(screen.getByTestId('checklist-start-def2-41')).toBeTruthy());
     await fireEvent.press(screen.getByTestId('checklist-start-def2-41'));
     await waitFor(() => expect(screen.getByTestId('checklist-item-lights', hidden)).toBeTruthy());
     await fireEvent.press(screen.getByTestId('checklist-run-close', hidden));
 
-    await fireEvent.press(screen.getByTestId('checklists-history-toggle'));
+    expect(mockFetchHistory).not.toHaveBeenCalled();
+    await fireEvent.press(screen.getByTestId('shared-tab-history'));
     await waitFor(() => expect(screen.getByTestId('checklist-history-h1')).toBeTruthy());
+    expect(mockFetchHistory).toHaveBeenCalledWith(0, null);
+    expect(screen.getByTestId('checklist-history-h1')).toHaveTextContent(/Daily rig check/);
+    expect(screen.getByTestId('checklist-history-outcome-h1')).toHaveTextContent('checklists.labels.AwaitingWitness');
     await fireEvent.press(screen.getByTestId('checklist-history-h1'));
     await waitFor(() => expect(screen.getByTestId('checklist-witness', hidden)).toBeTruthy());
     await fireEvent.changeText(screen.getByTestId('checklist-attestation', hidden), 'Verified on scene');
     await fireEvent.press(screen.getByTestId('checklist-attest', hidden));
     await waitFor(() => expect(useChecklistsStore.getState().attestRun).toHaveBeenCalledWith({ Id: 'h1', SubmissionHash: 'hash', Attestation: 'Verified on scene' }));
+  });
+
+  it('shows one tab at a time, with the due count on the Due tab', async () => {
+    await render(<ChecklistsScreen />);
+    await waitFor(() => expect(screen.getByTestId('checklist-due-occ1')).toBeTruthy());
+    expect(screen.getByTestId('shared-tab-due')).toBeSelected();
+    expect(screen.getByTestId('shared-tab-due-badge')).toHaveTextContent('1');
+    await fireEvent.press(screen.getByTestId('shared-tab-calendar'));
+    expect(screen.getByTestId('shared-tab-calendar')).toBeSelected();
+    expect(screen.getByTestId('shared-tab-due')).not.toBeSelected();
+    expect(screen.queryByTestId('checklist-due-occ1')).toBeNull();
+    await waitFor(() => expect(screen.getByTestId('checklist-calendar-empty')).toHaveTextContent('checklists.ui.noCalendar'));
+  });
+
+  it('searches and filters the due list, keeping the query across tabs', async () => {
+    mockFetchDue.mockResolvedValue({ ...duePage(), Occurrences: [due('a', 4), due('b', 3, 'SCBA check', 'Ladder 2')] });
+    await render(<ChecklistsScreen />);
+    await waitFor(() => expect(screen.getByTestId('checklist-due-a')).toBeTruthy());
+    expect(screen.getByTestId('checklist-due-state-a')).toHaveTextContent('checklists.labels.Missed');
+    expect(screen.getByTestId('shared-tab-due-badge')).toHaveTextContent('2');
+
+    await fireEvent.press(screen.getByTestId('checklists-due-filter-missed'));
+    expect(screen.queryByTestId('checklist-due-b')).toBeNull();
+    await fireEvent.press(screen.getByTestId('checklists-due-filter-all'));
+    await fireEvent.changeText(screen.getByTestId('checklists-due-search'), 'ladder');
+    expect(screen.queryByTestId('checklist-due-a')).toBeNull();
+    expect(screen.getByTestId('checklist-due-b')).toBeTruthy();
+    await fireEvent.changeText(screen.getByTestId('checklists-due-search'), 'tanker');
+    expect(screen.getByTestId('checklists-due-list-empty')).toHaveTextContent('checklists.ui.noMatches');
+
+    await fireEvent.press(screen.getByTestId('shared-tab-start'));
+    expect(screen.getByTestId('checklists-start-search')).toHaveProp('value', 'tanker');
+    expect(screen.queryByTestId('checklist-definition-def2')).toBeNull();
+    await fireEvent.press(screen.getByTestId('checklists-start-search-clear'));
+    expect(screen.getByTestId('checklist-definition-def2')).toBeTruthy();
+  });
+
+  it('loads more due checks and history on demand', async () => {
+    mockFetchDue.mockImplementation(async (page: number) => (page === 0 ? { ...duePage(1), HasMoreOccurrences: true } : { ...duePage(2), HasMoreOccurrences: false }));
+    mockFetchHistory.mockImplementation(async (page: number) => ({ rows: [historyRow(`h${page + 1}`)], hasMore: page === 0 }));
+    await render(<ChecklistsScreen />);
+    await waitFor(() => expect(screen.getByTestId('checklists-due-list-more')).toBeTruthy());
+    await fireEvent.press(screen.getByTestId('checklists-due-list-more'));
+    await waitFor(() => expect(screen.getByTestId('checklist-due-occ2')).toBeTruthy());
+    expect(mockFetchDue).toHaveBeenLastCalledWith(1, null);
+    expect(screen.queryByTestId('checklists-due-list-more')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('shared-tab-history'));
+    await waitFor(() => expect(screen.getByTestId('checklists-history-list-more')).toBeTruthy());
+    await fireEvent.press(screen.getByTestId('checklists-history-list-more'));
+    await waitFor(() => expect(screen.getByTestId('checklist-history-h2')).toBeTruthy());
+    expect(screen.getByTestId('checklist-history-h1')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('checklists-history-filter-failed'));
+    expect(screen.getByTestId('checklists-history-list-empty')).toHaveTextContent('checklists.ui.noMatches');
   });
 
   it('opens the occurrence named in the route', async () => {

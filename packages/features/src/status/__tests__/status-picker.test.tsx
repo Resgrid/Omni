@@ -1,9 +1,10 @@
 import './test-setup';
 
 import { type CallResultData, type GroupResultData } from '@resgrid/models';
-import { useToastStore } from '@resgrid/ui';
+import { getBottomSheetHeight, useToastStore } from '@resgrid/ui';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import React from 'react';
+import { Dimensions, StyleSheet } from 'react-native';
 
 import { HoldToConfirmButton } from '../components/hold-to-confirm-button';
 import { StatusPicker, type StatusPickerProps } from '../components/status-picker';
@@ -147,6 +148,128 @@ describe('StatusPicker', () => {
 
     await waitFor(() => expect(screen.getByTestId('status-picker-note-input', q)).toBeTruthy());
     expect(onSubmitStatus).not.toHaveBeenCalled();
+  });
+
+  describe('a status chosen before the sheet opened (status buttons)', () => {
+    it('opens on its destinations with Cancel, not on the list, and submits from there', async () => {
+      const calls = [call('100', 'Structure Fire')];
+      const { onSubmitStatus } = await renderPicker({ initialStatusId: 11, destinations: { calls, stations: [], pois: [] }, defaultCall: calls[0] });
+
+      expect(screen.queryByTestId('status-option-11', q)).toBeNull();
+      expect(screen.getByText('status.select_destination:Responding', q)).toBeTruthy();
+      expect(screen.getByTestId('status-destination-call-100', q).props.accessibilityState).toEqual({ selected: true });
+      expect(screen.getByTestId('status-picker-cancel', q)).toBeTruthy();
+      expect(screen.queryByTestId('status-picker-back', q)).toBeNull();
+
+      await fireEvent.press(screen.getByTestId('status-picker-submit', q));
+      await waitFor(() => expect(onSubmitStatus).toHaveBeenCalledWith(expect.objectContaining({ status: RESPONDING, respondingTo: '100', respondingToType: 2 })));
+    });
+
+    it('goes on to the note step and back to the destinations, never to the list', async () => {
+      const respondingWithNote = status(13, 'Responding', { Detail: 1, Note: 1 });
+      await renderPicker({ statuses: [...STATUSES, respondingWithNote], initialStatusId: 13 });
+
+      await fireEvent.press(screen.getByTestId('status-picker-next', q));
+      expect(screen.getByTestId('status-picker-note-input', q)).toBeTruthy();
+      await fireEvent.press(screen.getByTestId('status-picker-back', q));
+      expect(screen.getByTestId('status-destination-none', q)).toBeTruthy();
+      expect(screen.getByTestId('status-picker-cancel', q)).toBeTruthy();
+    });
+
+    it('opens on a confirm step when the status needs nothing more, and saves only when asked', async () => {
+      const { onSubmitStatus } = await renderPicker({ initialStatusId: 10 });
+
+      expect(screen.queryByTestId('status-option-10', q)).toBeNull();
+      expect(screen.getByRole('header', q)).toHaveTextContent('status.set_status');
+      expect(screen.getByTestId('status-picker-summary', q)).toHaveTextContent('status.selected_status: In Quarters', { exact: false });
+      expect(onSubmitStatus).not.toHaveBeenCalled();
+
+      await fireEvent.press(screen.getByTestId('status-picker-submit', q));
+      await waitFor(() => expect(onSubmitStatus).toHaveBeenCalledWith(expect.objectContaining({ status: AVAILABLE })));
+    });
+
+    it('opens on the note step when that is all the status asks for', async () => {
+      await renderPicker({ initialStatusId: 12 });
+      expect(screen.getByTestId('status-picker-note-input', q)).toBeTruthy();
+      expect(screen.getByTestId('status-picker-cancel', q)).toBeTruthy();
+    });
+
+    it('scrolls a long destination list inside the sheet, keeping the buttons on it', async () => {
+      const calls = Array.from({ length: 40 }, (_, index) => call(String(200 + index), `Call ${index}`));
+      await renderPicker({ initialStatusId: 11, destinations: { calls, stations: [], pois: [] } });
+
+      const { height } = StyleSheet.flatten(screen.getByTestId('status-picker-scroll', q).props.style);
+      expect(height).toBeGreaterThan(0);
+      expect(height).toBeLessThan(getBottomSheetHeight(Dimensions.get('window').height, 80));
+      expect(screen.getByTestId('status-picker-submit', q)).toBeTruthy();
+    });
+
+    it('keeps the sheet one height when switching destination tabs, and sizes the note step to its content', async () => {
+      const respondingWithNote = status(13, 'Responding', { Detail: 3, Note: 1 });
+      const calls = Array.from({ length: 12 }, (_, index) => call(String(200 + index), `Call ${index}`));
+      await renderPicker({ statuses: [...STATUSES, respondingWithNote], initialStatusId: 13, destinations: { calls, stations: [station('7', 'Station 7')], pois: [] }, lenientDestinations: true });
+      const listStyle = () => StyleSheet.flatten(screen.getByTestId('status-picker-scroll', q).props.style);
+
+      const onCalls = listStyle();
+      await fireEvent.press(screen.getByTestId('status-destination-tab-station', q));
+      expect(screen.getByTestId('status-destination-station-7', q)).toBeTruthy();
+      expect(listStyle()).toEqual(onCalls);
+      expect(onCalls.height).toBeGreaterThan(0);
+
+      await fireEvent.press(screen.getByTestId('status-picker-next', q));
+      expect(listStyle()).toEqual({ maxHeight: onCalls.height });
+    });
+
+    it('moves past the list once the status options arrive', async () => {
+      const onSubmitStatus = jest.fn(async () => 'sent' as const);
+      const { rerender } = await renderPicker({ statuses: [], initialStatusId: 11, onSubmitStatus });
+      expect(screen.getByText('status.no_statuses_available', q)).toBeTruthy();
+
+      await rerender(<StatusPicker isOpen onClose={jest.fn()} subject="unit" statuses={STATUSES} initialStatusId={11} onSubmitStatus={onSubmitStatus} />);
+      expect(screen.getByTestId('status-destination-none', q)).toBeTruthy();
+    });
+
+    it('in hold mode, saves only on a hold of the save button: a tap explains instead', async () => {
+      const { onSubmitStatus } = await renderPicker({ holdToConfirm: true, initialStatusId: 10 });
+
+      expect(screen.queryByTestId('status-hold-10', q)).toBeNull();
+      expect(screen.queryByTestId('status-picker-submit', q)).toBeNull();
+      const holdSubmit = screen.getByTestId('status-picker-hold-submit', q);
+      expect(holdSubmit).toHaveProp('accessibilityLabel', 'status.hold_to_submit');
+
+      await fireEvent(holdSubmit, 'pressIn');
+      await fireEvent(holdSubmit, 'pressOut');
+      expect(screen.getByTestId('status-picker-hold-hint', q)).toHaveTextContent('status.hold_to_set_hint');
+      expect(onSubmitStatus).not.toHaveBeenCalled();
+
+      await fireEvent(holdSubmit, 'accessibilityAction', { nativeEvent: { actionName: 'activate' } });
+      await waitFor(() => expect(onSubmitStatus).toHaveBeenCalledWith(expect.objectContaining({ status: AVAILABLE })));
+    });
+
+    it('in hold mode, saves a held status at once when nothing more is needed', async () => {
+      const { onSubmitStatus } = await renderPicker({ holdToConfirm: true, initialStatusId: 10, initialHoldConfirmed: true });
+      await waitFor(() => expect(onSubmitStatus).toHaveBeenCalledWith(expect.objectContaining({ status: AVAILABLE })));
+    });
+
+    it('in hold mode, opens a held status on the step it still needs, saved with another hold', async () => {
+      const { onSubmitStatus } = await renderPicker({ holdToConfirm: true, initialStatusId: 12, initialHoldConfirmed: true });
+      await waitFor(() => expect(screen.getByTestId('status-picker-note-input', q)).toBeTruthy());
+      expect(screen.getByTestId('status-picker-cancel', q)).toBeTruthy();
+      expect(onSubmitStatus).not.toHaveBeenCalled();
+
+      await fireEvent.changeText(screen.getByTestId('status-picker-note-input', q), 'Command established');
+      await fireEvent(screen.getByTestId('status-picker-hold-submit', q), 'accessibilityAction', { nativeEvent: { actionName: 'activate' } });
+      await waitFor(() => expect(onSubmitStatus).toHaveBeenCalledWith(expect.objectContaining({ status: ON_SCENE, note: 'Command established' })));
+    });
+
+    it('in hold mode, keeps a plain Next on steps that do not save', async () => {
+      const respondingWithNote = status(13, 'Responding', { Detail: 1, Note: 1 });
+      await renderPicker({ holdToConfirm: true, statuses: [...STATUSES, respondingWithNote], initialStatusId: 13 });
+
+      expect(screen.queryByTestId('status-picker-hold-submit', q)).toBeNull();
+      await fireEvent.press(screen.getByTestId('status-picker-next', q));
+      expect(screen.getByTestId('status-picker-hold-submit', q)).toBeTruthy();
+    });
   });
 
   it('shows the staffing tab and submits staffing separately', async () => {

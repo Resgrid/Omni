@@ -7,6 +7,7 @@
   "status.availability.unknown": "Unknown",
   "status.current": "Current",
   "status.hold_to_set_hint": "Press and hold a status to set it",
+  "status.hold_to_submit": "Hold to submit",
   "status.no_calls_available": "No calls available",
   "status.no_staffing_available": "No staffing levels available",
   "status.on_behalf_of": "For {{name}}",

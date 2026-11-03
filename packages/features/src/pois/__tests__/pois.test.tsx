@@ -6,7 +6,7 @@ import { type PoiResultData, type PoiTypeResultData } from '@resgrid/models';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import React from 'react';
-import { Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 
 import { parsePoiId } from '../lib/poi-filters';
 import { poisRoutes } from '../routes';
@@ -69,6 +69,22 @@ describe('PoisListScreen', () => {
 
     await fireEvent.press(screen.getByTestId('poi-card-1'));
     expect(router.push).toHaveBeenCalledWith('/poi/1');
+  });
+
+  it('keeps the filter chips on screen when nothing matches so the user can clear the filter', async () => {
+    await render(<PoisListScreen />);
+    // The empty state fills the screen; a shrinkable chip bar would be squeezed to zero height above it.
+    expect(StyleSheet.flatten(screen.getByTestId('poi-type-chips').props.style)).toMatchObject({ flexGrow: 0, flexShrink: 0 });
+    expect(StyleSheet.flatten(screen.getByTestId('poi-capability-chips').props.style)).toMatchObject({ flexGrow: 0, flexShrink: 0 });
+
+    await fireEvent.press(screen.getByTestId('poi-type-2'));
+    await fireEvent.press(screen.getByTestId('poi-destination-only'));
+    expect(screen.getByTestId('pois-empty')).toBeTruthy();
+    expect(screen.queryByTestId('pois-list')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('poi-type-all'));
+    expect(screen.queryByTestId('pois-empty')).toBeNull();
+    expect(screen.getByTestId('poi-card-1')).toBeTruthy();
   });
 });
 

@@ -19,6 +19,7 @@ description: Translation rules for Resgrid Omni — every user-visible string th
 - `fallbackNS: 'common'`, so a flat key such as `t('calls.title')` resolves from the variant namespace first, then `common`.
 - Only English is bundled; the other nine languages load on demand (`resources/<ns>.ts` loaders, a separate chunk per language and namespace in the web export). `initI18n` stays synchronous and shows English until `loadLanguage()` resolves; `setLanguage()` and the shell's startup wait for it. Never import a non-English JSON file statically.
 - Put a new key in `common` unless it is only meaningful in one app's signature module.
+- Never copy a `common` key into an app namespace: the copy hides every later fix to the shared string in that app. An app namespace may share a key with `common` only as a deliberate wording override listed with its reason in `packages/i18n/review/variant-overrides.json`, taking the same `{{placeholders}}` (`translations.test.ts` enforces all three). When you change a shared string, look its key up there and update or remove any override in the same change. The legacy apps' wording differences were unified into `common` on 2026-11-02; better wording for one app is better wording for all, so change `common`.
 
 ## Reconciling legacy translations
 

@@ -1,6 +1,7 @@
-import { featureFlagsStore, terminologyStore, useAuthStore } from '@resgrid/auth';
+import { featureFlagsStore, securityStore, terminologyStore, useAuthStore } from '@resgrid/auth';
 import type { VariantId } from '@resgrid/config';
-import { computeFormFactor, type FormFactorInfo, useFormFactor } from '@resgrid/ui';
+import type { DepartmentRightsResultData } from '@resgrid/models';
+import { computeFormFactor, type FormFactorInfo, ScreenHeader, useFormFactor } from '@resgrid/ui';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { MapIcon, MessageCircleIcon, SettingsIcon } from 'lucide-react-native';
 import React from 'react';
@@ -156,6 +157,34 @@ describe('createAppShell', () => {
     expect(router.navigate).toHaveBeenCalledWith('/settings');
   });
 
+  it('the menu opens with who is signed in: avatar, name and department', async () => {
+    securityStore.setState({ rights: { FullName: ' Jane Doe ', DepartmentName: 'Station 9 Fire' } as unknown as DepartmentRightsResultData });
+    setFormFactor('tabletLandscape');
+    await renderShell('responder');
+    expect(screen.getByTestId('shell-nav-profile-name')).toHaveTextContent('Jane Doe');
+    expect(screen.getByTestId('shell-nav-profile-department')).toHaveTextContent('Station 9 Fire');
+    expect(screen.getByText('JD')).toBeTruthy();
+    expect(screen.getByTestId('shell-nav-profile-avatar').props.source).toEqual({ uri: expect.stringMatching(/\/api\/v4\/Avatars\/Get\?id=user-1$/) });
+  });
+
+  it('the drawer menu shows the profile header too', async () => {
+    securityStore.setState({ rights: { FullName: 'Jane Doe', DepartmentName: 'Station 9 Fire' } as unknown as DepartmentRightsResultData });
+    await renderShell('responder');
+    await fireEvent.press(screen.getByTestId('shell-menu-button'));
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 320));
+    });
+    expect(screen.getByTestId('shell-nav-profile-name', { includeHiddenElements: true })).toHaveTextContent('Jane Doe');
+  });
+
+  it('no profile header until the rights load', async () => {
+    securityStore.setState({ rights: null });
+    setFormFactor('tabletLandscape');
+    await renderShell('responder');
+    expect(screen.getByTestId('shell-nav-menu')).toBeTruthy();
+    expect(screen.queryByTestId('shell-nav-profile')).toBeNull();
+  });
+
   it("Unit's sidebar shows the registered unit-status content instead of the menu", async () => {
     function UnitStatus(_props: SidebarContentProps) {
       return <Text testID="unit-status">status</Text>;
@@ -195,6 +224,19 @@ describe('createAppShell', () => {
     await renderShell('dispatch');
     await fireEvent.press(screen.getByTestId('shell-back-button'));
     expect(router.back).toHaveBeenCalled();
+  });
+
+  it.each<[string, boolean]>([
+    ['the app bar shows back: the detail header leaves its own out', true],
+    ['no history: the detail header keeps its back button', false],
+  ])('one back button on a detail screen — %s', async (_case, canGoBack) => {
+    mockNavigationState.pathname = '/settings/account-security';
+    mockNavigationState.canGoBack = canGoBack;
+    mockNavigationState.slot = <ScreenHeader title="Account security" onBack={jest.fn()} />;
+    await renderShell('dispatch');
+    expect(screen.queryByTestId('shell-back-button')).toEqual(canGoBack ? expect.anything() : null);
+    expect(screen.queryByTestId('back-button')).toEqual(canGoBack ? null : expect.anything());
+    expect(screen.getByRole('header', { name: 'Account security' })).toBeTruthy();
   });
 });
 

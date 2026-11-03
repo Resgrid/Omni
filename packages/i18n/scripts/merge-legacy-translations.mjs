@@ -22,6 +22,8 @@
 //     Apps whose wording really differs keep it as an override in their own namespace (the variant namespace
 //     is read before `common`), so no shipped screen changes wording; every conflict is listed in
 //     review/en-conflicts.csv for a human decision. Keys in FORCE_UNIFY always adopt the common value.
+//     Decided 2026-11-02: every kept override was unified into `common`, except the deliberate per-app wording in
+//     review/variant-overrides.json, which translations.test.ts now enforces; a re-run's overrides fail that test.
 //  6. Non-English values for a shared key come from the apps whose English equals the chosen English.
 //     When those apps disagree: prefer a value whose {{placeholders}} match the English, then a value that is
 //     actually translated (differs from English), then the most recently changed line (git blame per key,

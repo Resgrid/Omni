@@ -1,8 +1,6 @@
 {
   "app": {
-    "open_menu": "Відкрити меню",
-    "realtime_offline_description": "Повторне підключення. Нові виклики та повідомлення можуть не з’являтися.",
-    "realtime_offline_title": "Оновлення в реальному часі недоступні"
+    "open_menu": "Відкрити меню"
   },
   "audio_streams": {
     "error_loading_stream": "Не вдалося завантажити аудіопотік"
@@ -35,23 +33,6 @@
     "unauthorized_message": "Дозвіл на Bluetooth відхилено. Надайте дозволи Bluetooth у Налаштуваннях."
   },
   "calendar": {
-    "allDay": "Весь день",
-    "attendanceUpdated": {
-      "signedUp": "Вас успішно зареєстровано на цю подію.",
-      "title": "Відвідуваність оновлено",
-      "unsignedUp": "Вас видалено з цієї події."
-    },
-    "attendees": {
-      "title": "Учасники"
-    },
-    "attendeesCount_one": "{{count}} учасник",
-    "attendeesCount": "{{count}} учасників",
-    "confirmSignup": "Підтвердити",
-    "confirmUnsignup": {
-      "message": "Ви впевнені, що хочете скасувати свою участь у цій події?",
-      "title": "Підтвердити скасування"
-    },
-    "createdBy": "Створено",
     "daysOfWeek": {
       "fri": "Пт",
       "mon": "Пн",
@@ -60,55 +41,6 @@
       "thu": "Чт",
       "tue": "Вт",
       "wed": "Ср"
-    },
-    "description": "Опис",
-    "error": {
-      "attendanceUpdate": "Не вдалося оновити відвідуваність. Будь ласка, спробуйте ще раз.",
-      "title": "Помилка"
-    },
-    "eventsCount_one": "{{count}} подія",
-    "eventsCount": "{{count}} подій",
-    "loading": {
-      "date": "Завантаження подій для вибраної дати...",
-      "today": "Завантаження сьогоднішніх подій...",
-      "upcoming": "Завантаження майбутніх подій..."
-    },
-    "noEvents": "Заплановані події відсутні",
-    "optional": "Необов'язково",
-    "required": "Обов'язково",
-    "selectDate": "Виберіть дату для перегляду подій",
-    "selectedDate": {
-      "empty": "На цю дату події не заплановано.",
-      "title": "Події на {{date}}"
-    },
-    "signedUp": "Зареєстровано",
-    "signup": {
-      "button": "Зареєструватися",
-      "notePlaceholder": "Введіть примітку тут...",
-      "notePrompt": "Додати примітку (необов'язково):",
-      "title": "Реєстрація на подію"
-    },
-    "signupAvailable": "Реєстрація доступна",
-    "tabs": {
-      "calendar": "Календар",
-      "today": "Сьогодні",
-      "upcoming": "Майбутні"
-    },
-    "tapToSignUp": "Натисніть, щоб зареєструватися",
-    "title": "Календар",
-    "today": {
-      "empty": {
-        "description": "У вас немає запланованих подій на сьогодні.",
-        "title": "Сьогодні подій немає"
-      }
-    },
-    "todayButton": "Сьогодні",
-    "unsignup": "Скасувати участь",
-    "upcoming": {
-      "empty": {
-        "description": "У вас немає запланованих подій протягом наступних 7 днів.",
-        "title": "Майбутніх подій немає"
-      }
     }
   },
   "callImages": {
@@ -136,82 +68,10 @@
     "personnel": "Особи",
     "protocols": "Протоколи",
     "reference_id": "Ідентифікатор посилання",
-    "required_fields_missing": "Ваш відділ вимагає ці поля перед збереженням виклику: {{fields}}",
     "search_address": "Пошук адреси",
     "search_coordinates": "Пошук координат",
     "search_plus_code": "Пошук plus code",
     "search_what3words": "Пошук адреси what3words"
-  },
-  "certifications": {
-    "add": "Додати",
-    "addHours": "Додати години",
-    "addHoursWithPhoto": "Додати години з фото",
-    "areaIs": "Напрям: {{area}}",
-    "back": "Назад",
-    "cancel": "Скасувати",
-    "category": "Категорія (курс, навчання, конференція)",
-    "certificateAttached": "сертифікат додано",
-    "creditAdded": "Години додано.",
-    "creditDate": "Дата (за замовчуванням сьогодні)",
-    "creditNote": "Що це було",
-    "credits": "{{hours}} з {{required}} годин підвищення кваліфікації",
-    "creditsTitle": "{{hours}} годин підвищення кваліфікації",
-    "dateInvalid": "Вводьте дати у форматі рррр-мм-дд.",
-    "edit": "Редагувати",
-    "errors": {
-      "certifications_file_invalid": "Не вдалося прочитати фото.",
-      "certifications_file_too_large": "Фото завелике.",
-      "denied": "Ви не маєте доступу до цього посвідчення.",
-      "locked": "Розблокуйте захищені дані, щоб продовжити.",
-      "retry": "Не вдалося зв'язатися із сервером. Спробуйте ще раз.",
-      "validation": "Сервер відхилив зміну."
-    },
-    "expired": "Закінчилося {{date}}",
-    "expires": "Закінчується {{date}} ({{days}} дн.)",
-    "form": {
-      "area": "Напрям або рівень",
-      "choosePhoto": "Вибрати фото",
-      "expiresOn": "Закінчується",
-      "issuedBy": "Ким видано",
-      "name": "Назва",
-      "number": "Номер",
-      "otherType": "Інше (введіть назву)",
-      "photoAttached": "Фото додано.",
-      "receivedOn": "Отримано",
-      "save": "Зберегти",
-      "takePhoto": "Фото картки",
-      "type": "Посвідчення"
-    },
-    "hasFile": "У справі є картка або сертифікат",
-    "hours": "Години",
-    "hoursInvalid": "Введіть кількість годин більше 0.",
-    "issuedByIs": "Видано: {{name}}",
-    "nameRequired": "Виберіть тип або введіть назву.",
-    "newExpiry": "Нова дата закінчення",
-    "newNumber": "Новий номер (необов'язково)",
-    "noExpiry": "Безстрокове",
-    "none": "Ви ще не додали жодних посвідчень.",
-    "notVerified": "Організація ще не перевірила",
-    "numberIs": "Номер {{number}}",
-    "photoDenied": "Дозвольте доступ до камери або фото, щоб додати фото.",
-    "receivedOn": "Отримано {{date}}",
-    "remove": "Видалити",
-    "removeBody": "Його буде видалено з вашого запису. Організація й надалі бачить історію.",
-    "removeTitle": "Видалити посвідчення?",
-    "renew": "Поновити",
-    "renewSave": "Зберегти поновлення",
-    "renewed": "Поновлення збережено.",
-    "status": {
-      "0": "Чинне",
-      "1": "Прострочене",
-      "2": "Призупинене",
-      "3": "Відкликане",
-      "4": "Очікує перевірки",
-      "5": "Стажист"
-    },
-    "title": "Мої посвідчення",
-    "untitled": "Посвідчення",
-    "verifiedOn": "Перевірено {{date}}"
   },
   "chat": {
     "attach": "Прикріпити",
@@ -219,24 +79,12 @@
     "new_conversation": "Нова розмова"
   },
   "check_in": {
-    "add_note": "Додати Примітку (Необов'язково)",
     "confirm_check_in": "Підтвердити Реєстрацію",
-    "duration": "Тривалість",
     "gps_coordinates": "GPS: {{latitude}}, {{longitude}}",
-    "history": "Історія Реєстрацій",
-    "minutes_ago": "{{count}} хв тому",
-    "no_timers": "Таймери реєстрації не налаштовані",
     "offline_queued": "Реєстрацію поставлено в чергу для онлайн",
     "progress": "{{elapsed}} / {{total}} хв",
     "timer_interval": "Кожні {{minutes}} хв",
-    "type_hazmat": "Небезпечні Речовини",
-    "type_ic": "Командир Інциденту",
     "unknown_unit": "Невідомий підрозділ"
-  },
-  "checklists": {
-    "labels": {
-      "AssignmentAutomatic": "Автоматичне призначення"
-    }
   },
   "common": {
     "active": "Активний",
@@ -244,8 +92,6 @@
     "deleting": "Видалення...",
     "discard": "Відхилити",
     "navigation": "Навігація",
-    "noActiveUnit": "Активний підрозділ відсутній",
-    "noActiveUnitDescription": "Будь ласка, виберіть активний підрозділ, щоб побачити доступні статуси",
     "no_data_available": "Дані недоступні",
     "success": "Успіх",
     "system": "Система"
@@ -258,12 +104,9 @@
   },
   "home": {
     "active_call": {
-      "clear_active": "Очистити Активний Виклик",
-      "no_active_call": "Активний виклик не вибрано",
       "select_call": "Виберіть виклик для відстеження",
       "set_active": "Встановити як Активний Виклик",
-      "title": "Активний Виклик",
-      "view_details": "Переглянути Деталі Виклику"
+      "title": "Активний Виклик"
     },
     "error": {
       "no_user_id": "Ідентифікатор користувача недоступний"
@@ -273,24 +116,15 @@
       "ptt": "PTT"
     },
     "staffing": {
-      "add_note": "Додати примітку",
-      "add_note_action": "Додати примітку",
       "confirm_staffing": "Підтвердити укомплектування: {{staffing}}",
       "missing_required_info": "Бракує обов’язкової інформації",
-      "no_options_available": "Параметри укомплектування недоступні",
       "no_staffing_options": "Параметри укомплектування недоступні",
-      "note": "Примітка",
-      "note_placeholder": "Введіть примітку (необов'язково)...",
-      "note_required_hint": "Відкриває форму для обов'язкової примітки",
-      "quick_set_hint": "Одразу встановлює ваше укомплектування. Утримуйте, щоб додати примітку.",
       "review_and_confirm": "Перегляньте та підтвердіть",
       "select_staffing_level": "Вибрати рівень укомплектування",
       "select_staffing_level_description": "Виберіть свій поточний статус укомплектування",
       "selected_staffing": "Вибране укомплектування",
       "set_staffing": "Встановити укомплектування персоналу",
-      "staffing_level": "Рівень укомплектування",
-      "update_failed": "Не вдалося оновити укомплектування",
-      "updated_successfully": "Укомплектування успішно оновлено"
+      "staffing_level": "Рівень укомплектування"
     },
     "stats": {
       "open_calls": "Відкриті виклики",
@@ -298,52 +132,16 @@
       "units_in_service": "Підрозділи на службі"
     },
     "status": {
-      "no_options_available": "Параметри статусу недоступні",
       "update_failed": "Не вдалося оновити статус",
       "updated_successfully": "Статус успішно оновлено"
     },
-    "summary": {
-      "active_calls": "Активні виклики",
-      "active_severe_weather_alerts": "Активні серйозні/аварійні погодні попередження",
-      "calls_im_on": "Виклики, у яких я беру участь",
-      "pending_missed_checkins": "Очікуючі/пропущені check-in"
-    },
     "tabs": {
-      "call": "Виклик",
       "dashboard": "Панель",
-      "map": "Карта",
-      "staffing": "Укомплектування",
-      "status": "Статус"
-    },
-    "user": {
-      "my_staffing": "Моє укомплектування",
-      "my_status": "Мій статус",
-      "staffing_unknown": "Укомплектування невідоме",
-      "status_unknown": "Статус невідомий",
-      "updated": "Оновлено"
+      "map": "Карта"
     }
   },
   "incident_command": {
-    "assigned_since": "Призначено з",
     "empty_state": "Для цього виклику немає активного командування інцидентом",
-    "error_loading": "Не вдалося завантажити інформацію про командування інцидентом",
-    "my_assignment": "Моє призначення",
-    "need_category_equipment": "Обладнання",
-    "need_category_logistics": "Логістика",
-    "need_category_medical": "Медична",
-    "need_category_other": "Інша",
-    "need_category_resource": "Ресурс",
-    "need_category_staffing": "Персонал",
-    "need_status_cancelled": "Скасовано",
-    "need_status_met": "Задоволено",
-    "need_status_open": "Відкрито",
-    "need_status_partially_met": "Частково задоволено",
-    "objective_status_complete": "Виконано",
-    "objective_status_in_progress": "Виконується",
-    "objective_status_pending": "Очікує",
-    "objective_type_benchmark": "Контрольна точка",
-    "objective_type_general": "Загальна",
-    "objective_type_safety": "Безпека",
     "percent_complete": "{{percent}}%",
     "quantity": "{{fulfilled}}/{{requested}}"
   },
@@ -371,36 +169,20 @@
     "tracking_notification_body": "Ваше місцезнаходження надається вашому підрозділу."
   },
   "login": {
-    "change_server_url": "Змінити URL сервера",
     "select_language": "Вибрати мову",
     "sso": {
       "back": "Назад",
-      "change_department": "Змінити ім'я користувача",
-      "continue_button": "Продовжити",
       "department_code_label": "Код підрозділу",
       "department_code_placeholder": "Введіть код підрозділу",
       "department_code_required": "Код підрозділу є обов'язковим",
       "department_description": "Введіть код підрозділу для входу",
-      "department_id_invalid": "Ідентифікатор підрозділу має бути числом",
-      "department_id_label": "Ідентифікатор підрозділу (необов'язково)",
-      "department_id_placeholder": "Введіть ідентифікатор підрозділу, якщо відомо",
       "department_not_found": "Підрозділ не знайдено. Будь ласка, перевірте код і спробуйте ще раз.",
       "login_with_sso_button": "Увійти через SSO",
-      "looking_up": "Пошук облікового запису...",
-      "lookup_network_error": "Не вдалося зв'язатися з сервером. Будь ласка, перевірте підключення та спробуйте ще раз.",
-      "or_sign_in_with_password": "— або увійдіть з паролем —",
       "page_title": "Вхід через SSO",
-      "sign_in_with_sso": "Увійти через SSO",
-      "sso_not_enabled": "SSO не увімкнено для цього облікового запису. Будь ласка, використовуйте ім'я користувача та пароль.",
-      "user_description": "Введіть ім'я користувача або електронну адресу Resgrid для входу через SSO",
-      "user_not_found": "Обліковий запис не знайдено. Будь ласка, перевірте ім'я користувача та спробуйте ще раз.",
-      "username_label": "Ім'я користувача або електронна пошта",
-      "username_placeholder": "Введіть ім'я користувача або електронну пошту",
-      "username_required": "Ім'я користувача є обов'язковим"
+      "user_description": "Введіть ім'я користувача або електронну адресу Resgrid для входу через SSO"
     }
   },
   "map": {
-    "loading_markers": "Завантаження маркерів карти...",
     "openSideMenu": "Відкрити бічне меню",
     "tabs": {
       "map": "Карта",
@@ -411,15 +193,8 @@
     "contact_administrator": "Будь ласка, зверніться до адміністратора для налаштування картографічних служб.",
     "failed_to_load": "Не вдалося завантажити карту. Будь ласка, перевірте підключення до Інтернету.",
     "legend": {
-      "error": "Не вдалося завантажити легенду карти.",
-      "loading": "Завантаження легенди карти...",
-      "no_meaning": "Без значення",
       "open": "Відкрити легенду карти",
-      "other": "Інше",
-      "statuses": "Статуси",
-      "style": {
-        "unknown": "Без значення або без статусу"
-      }
+      "statuses": "Статуси"
     },
     "mapbox_not_configured": "Mapbox не налаштовано. Будь ласка, зверніться до адміністратора."
   },
@@ -493,35 +268,6 @@
       "subject_required": "Тема є обов'язковою"
     }
   },
-  "mfa": {
-    "approve": {
-      "app": "Застосунок: {{app}}",
-      "approve": "Підтвердити",
-      "approved": "Підтверджено. Можете повернутися до іншого екрана.",
-      "denied": "Відхилено. Нічого не підтверджено.",
-      "deny": "Відхилити",
-      "department": "Підрозділ: {{department}}",
-      "done": "Готово",
-      "expires": "Діє до {{time}}",
-      "installation": "Пристрій: {{label}}",
-      "none": "Нічого не очікує вашого підтвердження.",
-      "not_me": "Це був не я",
-      "number_body": "Введіть число з іншого екрана та підтвердьте ключем доступу. Підтверджуйте, лише якщо ви це почали самі.",
-      "number_mismatch": "Це не число з іншого екрана. Залишилося спроб: {{count}}.",
-      "number_placeholder": "Число",
-      "origin": "Поблизу: {{origin}}",
-      "purpose": {
-        "adp": "Хтось хоче переглянути захищену інформацію",
-        "department_entry": "Хтось переходить до підрозділу від вашого імені",
-        "login": "Хтось входить у ваш обліковий запис",
-        "step_up": "Хтось підтверджує дію вашим обліковим записом",
-        "unlock": "Хтось розблоковує спільний пристрій від вашого імені"
-      },
-      "shared": "На спільному пристрої",
-      "title": "Підтвердити вхід?",
-      "unknown_app": "Інший застосунок Resgrid"
-    }
-  },
   "not_found": {
     "go_home": "Перейти на головний екран!",
     "message": "Цей екран не існує.",
@@ -565,14 +311,6 @@
       }
     }
   },
-  "operations": {
-    "time": {
-      "coveredBy": "Цей час уже є у звіті #{{number}} за цей день.",
-      "crewReport": "Звіт про час екіпажу #{{number}} · {{name}}",
-      "individualReport": "Звіт про час #{{number}} · {{name}}",
-      "report": "Звіт #{{number}}"
-    }
-  },
   "personnel": {
     "contactInformation": "Контактна інформація",
     "currentStatus": "Поточний статус",
@@ -583,45 +321,12 @@
       "emptyDescription": "Параметри фільтрування з'являться тут, коли будуть доступні.",
       "title": "Фільтрувати персонал"
     },
-    "id": "Ідентифікатор",
-    "status": {
-      "add_note": "Додати примітку",
-      "calls_tab": "Виклики",
-      "current": "Поточний",
-      "current_status": "Поточний статус",
-      "destination_required": "Для цього статусу потрібен пункт призначення",
-      "general_status": "Загальне оновлення статусу",
-      "gps_required": "Для цього статусу потрібне GPS-місцезнаходження",
-      "hold_to_set_hint": "Утримуйте 2 секунди, щоб встановити статус",
-      "hold_to_set_instructions": "Утримуйте статус 2 секунди, щоб встановити його",
-      "hold_to_submit": "Утримуйте, щоб надіслати",
-      "loading_pois": "Завантаження POI...",
-      "loading_stations": "Завантаження станцій...",
-      "missing_required_info": "Бракує обов’язкової інформації",
-      "no_destination": "Пункт призначення відсутній",
-      "no_stations_available": "Станції недоступні",
-      "note": "Примітка",
-      "note_placeholder": "Введіть примітку (необов'язково)...",
-      "note_required": "Для цього статусу потрібна примітка",
-      "pois_tab": "POI",
-      "responding_to_placeholder": "Введіть, на що ви реагуєте...",
-      "saved_offline": "Статус збережено офлайн і буде надіслано після відновлення з’єднання",
-      "select_call_to_respond_to": "Вибрати виклик для реагування",
-      "select_destination": "Вибрати пункт призначення",
-      "select_responding_to": "Встановити статус: {{status}}",
-      "selected_call": "Вибраний виклик",
-      "set_status": "Встановити статус персоналу",
-      "show_all_statuses": "Показати всі статуси (ще {{count}})",
-      "show_next_statuses": "Показати лише наступні статуси",
-      "stations_tab": "Станції",
-      "status": "Статус"
-    }
+    "id": "Ідентифікатор"
   },
   "pois": {
     "address_label": "Адреса",
     "coordinates_label": "Координати",
     "destination_enabled": "Доступно як пункт призначення",
-    "empty_description": "Жоден POI не відповідає поточному фільтру.",
     "empty_title": "POI не знайдено",
     "filter_all_types": "Усі типи",
     "filter_label": "Фільтр",
@@ -630,7 +335,6 @@
     "invalid_title": "Недійсний POI",
     "list_description": "Переглядайте POI підрозділу, фільтруйте за типом і повертайтеся до карти.",
     "load_error_title": "Не вдалося завантажити POI",
-    "not_found": "POI не знайдено",
     "note_label": "Примітка",
     "reset_filters": "Скинути",
     "results_count_one": "{{count}} POI",
@@ -640,26 +344,10 @@
     "sort_label": "Сортувати",
     "sort_name": "Назва",
     "sort_type": "Тип",
-    "title": "POI",
     "type_label": "Тип",
     "view_details": "Переглянути деталі",
     "view_on_map": "Показати на карті",
     "view_on_map_hint": "Залишайте карту відкритою, щоб одночасно бачити своє місцезнаходження і вибраний POI."
-  },
-  "push_notifications": {
-    "communication_test_confirmed": "Отримання підтверджено. Дякуємо.",
-    "communication_test_failed": "Не вдалося підтвердити отримання. Спробуйте ще раз.",
-    "communication_test_prompt": "Це лише тест. Підтвердьте отримання, щоб ваш підрозділ знав, що може з вами зв’язатися.",
-    "confirm_receipt": "Підтвердити отримання",
-    "confirming_receipt": "Підтвердження...",
-    "types": {
-      "communication_test": "Тест зв’язку",
-      "weather": "Погодне попередження",
-      "work_order": "Наряд на роботу"
-    },
-    "view_alert": "Переглянути попередження",
-    "view_chat": "Переглянути чат",
-    "view_work_order": "Переглянути наряд"
   },
   "settings": {
     "logout_confirm_cancel": "Скасувати",
@@ -1034,7 +722,6 @@
     "ptt": "Голос"
   },
   "tabs": {
-    "personnel": "Люди",
     "units": "Підрозділи",
     "weatherAlerts": "Погодні Сповіщення"
   },
@@ -1053,10 +740,7 @@
     "vehicleInfo": "Інформація про транспортний засіб"
   },
   "video_feeds": {
-    "add_feed": "Додати відеотрансляцію",
     "delete_confirm": "Ви впевнені, що хочете видалити цю відеотрансляцію?",
-    "delete_feed": "Видалити відеотрансляцію",
-    "edit_feed": "Редагувати відеотрансляцію",
     "form_description": "Опис",
     "form_feed_format": "Формат трансляції",
     "form_feed_type": "Тип трансляції",
@@ -1065,7 +749,6 @@
     "form_status": "Статус",
     "form_url": "URL",
     "format_youtube": "YouTube",
-    "no_feeds": "Немає відеотрансляцій для цього виклику",
     "type_satellite": "Супутникова трансляція",
     "type_webcam": "Вебкамера",
     "unsupported_format": "Цей формат не підтримується для відтворення в додатку. Скопіюйте URL, щоб відкрити у зовнішньому програвачі."
@@ -1099,7 +782,6 @@
       "metadata": "Деталі",
       "status": "Статус"
     },
-    "search": "Пошук сповіщень...",
     "severity": {
       "Extreme": "Екстремальний",
       "Minor": "Незначний",
@@ -1155,6 +837,7 @@
     "back": "Назад",
     "cannotReport": "Ваша організація зараз не може приймати нові наряди.",
     "choosePhoto": "Вибрати фото",
+    "clearFilters": "Очистити фільтри",
     "commentHint": "Додайте коментар",
     "due": "Термін {{date}}",
     "errors": {
@@ -1176,6 +859,8 @@
       "retry": "Не вдалося зв'язатися із сервером. Спробуйте ще раз."
     },
     "files": "Фото та файли",
+    "filterStatus": "Статус",
+    "filterTitle": "Фільтрувати наряди на роботу",
     "form": {
       "asset": "Обладнання",
       "description": "Подробиці",
@@ -1201,6 +886,7 @@
     "locationIs": "Місце: {{location}}",
     "logHours": "Записати години",
     "more": "Завантажити ще",
+    "noMatches": "Жоден наряд на роботу не відповідає вашому пошуку або фільтрам.",
     "none": "Немає нарядів.",
     "noneAssigned": "Вам нічого не призначено.",
     "photoAdded": "Фото додано.",
@@ -1215,6 +901,9 @@
     "resolutionIs": "Рішення: {{text}}",
     "safety": "Робота, критична для безпеки, або небезпечна",
     "saveHours": "Зберегти години",
+    "search": "Пошук за назвою або номером",
+    "searchMore": "Пошук виконується лише серед завантажених нарядів. Завантажте ще, щоб шукати старіші.",
+    "showing": "{{shown}} з {{total}} завантажених",
     "status": {
       "0": "Запитано",
       "1": "Прийнято",
@@ -1226,6 +915,11 @@
       "7": "Відхилено",
       "8": "Дублікат",
       "9": "Скасовано"
+    },
+    "statusGroup": {
+      "all": "Усі",
+      "finished": "Завершені",
+      "open": "Відкриті"
     },
     "steps": "Кроки",
     "takePhoto": "Зробити фото",

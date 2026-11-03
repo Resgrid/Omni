@@ -91,6 +91,23 @@ export const getOfferedStatuses = <T extends StatusOption>(statuses: readonly T[
   return { offered, isRestricted: true, hiddenCount: all.length - offered.length };
 };
 
+/** The StatusPicker's steps; `confirm` restates a status chosen before the sheet opened that needs nothing more. */
+export type StatusPickerStep = 'select' | 'destination' | 'note' | 'confirm';
+
+/**
+ * The picker's steps in order (the last one submits). A status chosen before the sheet opened — a home or sidebar
+ * status button — skips the list, as in Responder and Unit: it opens on its destinations, else its note, else a
+ * confirm step, so a single tap never saves on its own. A status picked from the list submits from the list when it
+ * needs nothing more. Staffing is the list, then the note when the level takes one.
+ */
+export const getStatusPickerSteps = (options: { isStaffing: boolean; hasPresetStatus: boolean; hasDestinationStep: boolean; hasNoteStep: boolean }): StatusPickerStep[] => {
+  if (options.isStaffing) return options.hasNoteStep ? ['select', 'note'] : ['select'];
+  const steps: StatusPickerStep[] = options.hasPresetStatus ? [] : ['select'];
+  if (options.hasDestinationStep) steps.push('destination');
+  if (options.hasNoteStep) steps.push('note');
+  return steps.length > 0 ? steps : ['confirm'];
+};
+
 /**
  * Whether a status can be saved the moment it is held: no required note, and either no destination step or a
  * destination step whose call the picker can fill from the active / dispatched call.

@@ -33,17 +33,18 @@ reviews:
   poem: false
   enable_prompt_for_ai_agents: true
   path_filters:
-    - "!**/*.resx"
-    - "!**/*.json"
-    - "!**/*.yaml"
-    - "!**/*.yml"
-    - "!**/.claude/**"
-    - "!**/.agent/**"
-    - "!**/.agents/**"
-    - "!**/*.md"
-    - "!**/*.test.js"
-    - "!**/*.test.ts"
-    - "!**/*.test.tsx"
+    - '!**/*.resx'
+    - '!**/*.json'
+    - '!**/*.yaml'
+    - '!**/*.yml'
+    - '!**/.claude/**'
+    - '!**/.agent/**'
+    - '!**/.agents/**'
+    - '!**/*.md'
+    - '!**/*.test.js'
+    - '!**/*.test.ts'
+    - '!**/*.test.tsx'
+    - '!**/tooling/**'
   path_instructions: []
   abort_on_close: true
   disable_cache: false

@@ -165,18 +165,65 @@ describe('operations screens', () => {
   });
 
   it('lists deployments, switches to all and opens one', async () => {
+    useOperationsStore.setState({ deployments: [deployment({ RequestNumber: 'R-7', StartOn: '2026-10-30T08:00:00', EndOn: '2026-11-04T00:00:00' })] });
     await render(<OperationsListScreen />);
     await waitFor(() => expect(useOperationsStore.getState().loadDeployments).toHaveBeenCalledWith(false));
+    const card = screen.getByTestId('operations-deployment-d1');
+    expect(card).toHaveTextContent(/Ridge Fire strike team/);
+    expect(card).toHaveTextContent(/CA-1 · R-7/);
+    expect(card).toHaveTextContent(/Oct 30, 2026 – Nov 4, 2026/);
+    expect(screen.getByTestId('operations-deployment-status-d1')).toHaveTextContent('operations.status.2');
     await fireEvent.press(screen.getByTestId('operations-filter-all'));
     await waitFor(() => expect(useOperationsStore.getState().loadDeployments).toHaveBeenLastCalledWith(true));
-    await fireEvent.press(screen.getByTestId('operations-deployment-d1'));
+    await fireEvent.press(card);
     expect(router.push).toHaveBeenCalledWith('/operations/d1');
+  });
+
+  it('explains an empty open list and switches to all from it', async () => {
+    useOperationsStore.setState({ deployments: [] });
+    await render(<OperationsListScreen />);
+    expect(await screen.findByTestId('operations-empty')).toHaveTextContent(/operations\.empty\.openTitle/);
+    expect(screen.getByTestId('operations-empty')).toHaveTextContent(/operations\.empty\.openDescription/);
+    await fireEvent.press(screen.getByTestId('operations-empty-show-all'));
+    await waitFor(() => expect(useOperationsStore.getState().loadDeployments).toHaveBeenLastCalledWith(true));
+    expect(await screen.findByText('operations.empty.allTitle')).toBeTruthy();
+    expect(screen.getByText('operations.empty.allDescription')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('operations-empty-refresh'));
+    await waitFor(() => expect(useOperationsStore.getState().loadDeployments).toHaveBeenCalledTimes(3));
+  });
+
+  it('tells a manager what lands in an empty department list', async () => {
+    useOperationsStore.setState({ deployments: [], access: { Enabled: true, CanManage: true, CanApproveTimeReports: true, ContractorBilling: false } });
+    await render(<OperationsListScreen />);
+    await fireEvent.press(screen.getByTestId('operations-filter-all'));
+    expect(await screen.findByText('operations.empty.allDescriptionManager')).toBeTruthy();
+  });
+
+  it('offers a retry when the first load fails, and keeps a cached list under an inline error', async () => {
+    useOperationsStore.setState({ deployments: [], errors: { deployments: { code: 'network', messageKey: 'errors.data.network' } } });
+    await render(<OperationsListScreen />);
+    expect(screen.getByTestId('operations-error')).toHaveTextContent(/operations\.loadFailed/);
+    expect(screen.getByTestId('operations-error')).toHaveTextContent(/operations\.errors\.retry/);
+    await fireEvent.press(screen.getByTestId('operations-retry'));
+    await waitFor(() => expect(useOperationsStore.getState().loadDeployments).toHaveBeenCalledTimes(2));
+
+    await act(() => useOperationsStore.setState({ deployments: [deployment()] }));
+    expect(screen.queryByTestId('operations-error')).toBeNull();
+    expect(screen.getByTestId('operations-error-inline')).toHaveTextContent('operations.errors.retry');
+    expect(screen.getByTestId('operations-deployment-d1')).toBeTruthy();
   });
 
   it('shows the disabled state when the department has deployments off', async () => {
     featureFlagsStore.setState({ flags: { 'Operations.Deployments': { enabled: false } }, isLoaded: true });
     await render(<OperationsListScreen />);
     expect(screen.getByTestId('operations-disabled')).toBeTruthy();
+  });
+
+  it('shows the disabled state when the server answers that deployments are off', async () => {
+    useOperationsStore.setState({ access: { Enabled: false, CanManage: false, CanApproveTimeReports: false, ContractorBilling: false } });
+    await render(<OperationsListScreen />);
+    expect(screen.getByTestId('operations-access-disabled')).toBeTruthy();
+    expect(screen.queryByTestId('operations-filter-open')).toBeNull();
   });
 
   it('opens the crew report for the day, edits it and saves through the outbox', async () => {

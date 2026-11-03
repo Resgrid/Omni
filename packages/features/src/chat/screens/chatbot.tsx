@@ -18,6 +18,7 @@ import { useActiveChatChannel } from '../hooks/use-active-chat-channel';
 import { useJoinedChatChannel } from '../hooks/use-joined-chat-channel';
 import { flagMessage, setMessagePinned } from '../lib/chat-actions';
 import { isOwnMessage, orderMessages } from '../lib/chat-format';
+import { messageBodyText } from '../lib/message-text';
 
 export interface ChatbotScreenProps {
   /** Chrome below the screen the keyboard already covers (a bottom tab bar), in dp. */
@@ -173,7 +174,7 @@ function ChatbotContent({ keyboardOffset = 0 }: ChatbotScreenProps) {
         {isLoadingMessages && ordered.length === 0 ? (
           <Loading />
         ) : ordered.length === 0 ? (
-          <ZeroState icon={Sparkles} iconSize={48} iconColor="#a78bfa" heading={t('chatbot.title')} description={t('chatbot.empty')} viewClassName="flex-1 p-6" testID="chatbot-empty" />
+          <ZeroState icon={Sparkles} iconSize={48} iconColor="#a78bfa" heading={t('chatbot.title')} description={t('chatbot.empty')} testID="chatbot-empty" />
         ) : (
           <FlatList
             data={ordered}
@@ -205,7 +206,7 @@ function ChatbotContent({ keyboardOffset = 0 }: ChatbotScreenProps) {
         isOwn={actionsFor ? isOwnMessage(actionsFor, userId, NO_UNIT) : false}
         isModerator={canModerate}
         onCopy={(message) =>
-          void Clipboard.setStringAsync(message.Body ?? '').then(
+          void Clipboard.setStringAsync(messageBodyText(message)).then(
             () => toast.success(t('chat.copied')),
             () => toast.info(t('chat.copy_unavailable'))
           )

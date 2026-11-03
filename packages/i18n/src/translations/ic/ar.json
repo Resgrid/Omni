@@ -1,6 +1,5 @@
 {
   "calls": {
-    "required_fields_missing": "يطلب قسمك هذه الحقول قبل حفظ البلاغ: {{fields}}",
     "scheduled_dispatch": "إرسال مجدول",
     "scheduled_dispatch_no_clear": "يمكن تغيير هذا الوقت المجدول هنا، ولكن لا يمكن إزالته.",
     "scheduled_dispatch_too_soon": "يجب أن يكون وقت الإرسال المجدول بعد {{minutes}} دقيقة على الأقل من الآن"
@@ -432,8 +431,7 @@
     "worktime_thresholds_label": "عتبات وقت العمل"
   },
   "common": {
-    "clear": "مسح",
-    "no_location": "لا توجد بيانات موقع متاحة"
+    "clear": "مسح"
   },
   "incident_assistant": {
     "briefing_accountability": "المساءلة",
@@ -613,14 +611,10 @@
   },
   "login": {
     "command_not_authorized": "غير مصرّح لك باستخدام تطبيق IC. تواصل مع مسؤول قسمك.",
-    "login_button": "تسجيل الدخول",
-    "login_button_loading": "تسجيل الدخول...",
-    "otp_body": "تم تفعيل المصادقة الثنائية لحسابك. أدخل الرمز الحالي من تطبيق المصادقة لإكمال تسجيل الدخول.",
     "otp_invalid": "هذا الرمز غير صالح أو انتهت صلاحيته. أدخل الرمز الحالي من تطبيق المصادقة.",
     "otp_placeholder": "رمز من 6 أرقام",
     "otp_title": "التحقق بخطوتين",
-    "otp_verify": "تحقق",
-    "title": "تسجيل الدخول"
+    "otp_verify": "تحقق"
   },
   "maps": {
     "legend": {
@@ -630,12 +624,9 @@
         "unknown_priority": "بلا معنى",
         "unknown_status": "بلا معنى أو بلا حالة"
       }
-    },
-    "map_layers": "طبقات الخريطة",
-    "no_layers": "لا توجد طبقات خريطة متاحة"
+    }
   },
   "notifications": {
-    "confirm_delete_message_one": "هل أنت متأكد من حذف {{count}} إشعار؟ لا يمكن التراجع عن هذا الإجراء.",
     "confirm_delete_message_other": "هل أنت متأكد من حذف {{count}} إشعارات؟ لا يمكن التراجع عن هذا الإجراء.",
     "delete_one_error": "فشل حذف الإشعار",
     "delete_one_success": "تم حذف الإشعار",
@@ -715,16 +706,7 @@
   "operations": {
     "errors": {
       "timereports_status_transition_invalid": "تم تغيير هذا التقرير بالفعل، ربما من جهاز آخر. حدّث الصفحة وحاول مرة أخرى."
-    },
-    "time": {
-      "coveredBy": "هذا الوقت مسجل بالفعل في التقرير #{{number}} لهذا اليوم.",
-      "crewReport": "تقرير وقت الطاقم #{{number}} · {{name}}",
-      "individualReport": "تقرير الوقت #{{number}} · {{name}}",
-      "report": "التقرير #{{number}}"
     }
-  },
-  "push_notifications": {
-    "unknown_type_warning": "نوع هذا الإشعار غير معروف. يرجى الاتصال بالدعم إذا استمر ظهور هذه الرسالة."
   },
   "readiness": {
     "attention": "تحقق",
@@ -746,16 +728,11 @@
     "attachment_too_large": "هذا الملف أكبر من {{size}} ميغابايت، وهو الحد الأقصى لحجم المرفق."
   },
   "settings": {
-    "audio_device_selection": {
-      "speaker_device": "جهاز مكبر صوت"
-    },
-    "logout_confirm_message": "هل أنت متأكد من رغبتك في تسجيل الخروج؟ سيؤدي هذا إلى مسح جميع بيانات التطبيق والقيم المخزنة مؤقتاً والإعدادات.",
     "sync_section": "المزامنة وقائمة الانتظار دون اتصال",
     "sync_status": "حالة المزامنة",
     "sync_status_failed": "{{count}} فشلت",
     "sync_status_ok": "محدّث",
-    "sync_status_pending": "{{count}} قيد الانتظار",
-    "view_sync_queue": "عرض قائمة المزامنة"
+    "sync_status_pending": "{{count}} قيد الانتظار"
   },
   "sidebar": {
     "menu": "القائمة"

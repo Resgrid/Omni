@@ -7,7 +7,7 @@ Living tracker for executing [`architecture/omni-plan.md`](architecture/omni-pla
 | Item | Status | Notes |
 |---|---|---|
 | pnpm workspace, catalog (one version per dependency), hoisted linker | ✅ | `pnpm-workspace.yaml`, `.npmrc`; catalog bootstrapped from legacy Unit pins minus React Query, rnmapbox, mapbox-gl, gorhom, flash-message (`scripts/bootstrap/`) |
-| Root tooling: TypeScript 6 paths, ESLint 10 flat config (eslint-config-expo with import-x and @eslint/compat), Prettier, lefthook, commitlint (`RO-Txxx`), dependency-cruiser layer rules | ✅ | `pnpm check-all` |
+| Root tooling: TypeScript 6 paths, ESLint 10 flat config (eslint-config-expo with import-x and @eslint/compat), Prettier, lefthook, commitlint (`RO-Txxx`), dependency-cruiser layer rules, anti-slop Oxlint ratchet (`pnpm lint:anti-slop`, `tooling/oxlint/anti-slop/UPSTREAM.md`) | ✅ | `pnpm check-all` |
 | Jest presets (node / react-native) and root multi-project config | ✅ | `tooling/jest-preset` |
 | `@resgrid/config`: manifest schema (zod), capabilities, runtime accessors, versioning | ✅ | tests: manifests, runtime |
 | Variant manifests for all five apps | ✅ | `apps/omni/variants/<id>/variant.json` — identities, storage ids, Omni majors/bases |
@@ -38,9 +38,9 @@ Living tracker for executing [`architecture/omni-plan.md`](architecture/omni-pla
 | `@resgrid/ui` | ✅ | 172 tests. HtmlRenderer hardened (native origin whitelist, web sandbox); gluestack/webview patches via pnpm |
 | `@resgrid/auth` | ✅ | 246 tests. Legacy session blobs restore for every variant; logout only on token-endpoint invalid_grant; client_id retry fallback until Core registers the apps |
 | `@resgrid/realtime` | ✅ | 90 tests. Fresh token per reconnect, exhausted-hub recovery, re-join after reconnect, capability-driven event sets, watchdog |
-| `@resgrid/notifications` | ✅ | 290 tests. Every server channel id created with a modern sound; all iOS categories; event-code parser; Novu per-variant subscribers |
+| `@resgrid/notifications` | ✅ | 290 tests. Every server channel id created with a modern sound; all iOS categories; event-code parser; Novu per-variant subscribers. In-app sounds (`apps/omni/notification-sounds.ts`): web and Electron load the bundled files, iOS/Android play the copies in the native project. Not done: hearing the Settings sound tests on iOS and Android devices |
 | `@resgrid/location` | ✅ | 163 tests. Task defined at entry for background variants; coalesced offline fixes |
-| `@resgrid/voice` | ✅ | 191 tests. LiveKit with room-switch race fix, CallKeep/BT/headset/desktop PTT gated by capability |
+| `@resgrid/voice` | ✅ | 191 tests. LiveKit with room-switch race fix, CallKeep/BT/headset/desktop PTT gated by capability. PTT and room sounds passed from `apps/omni/voice-sounds.ts` by every root layout. Not done: hearing them on an iOS device |
 
 | `@resgrid/data` | ✅ | 149 tests. Domain stores with per-variant hydration; offline writes incl. offline call creation and all 26 IC event types; routes RD10–RD13 fixed |
 

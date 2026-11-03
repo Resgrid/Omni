@@ -101,11 +101,16 @@ function createAppConfig({ variant, appEnv, runNumber, projectRoot, env = proces
         },
         ios: {
           deploymentTarget: '18.1',
+          // Off: the dev-client network inspector (debug builds only) forwards HTTP auth challenges and never completes
+          // them, so a 401 with `WWW-Authenticate: Basic` — the token endpoint's `invalid_client` — hangs until the
+          // timeout and sign-in reports the server as unreachable. Re-enable once expo-modules-core handles it.
+          networkInspector: false,
           ...(native.iosUseStaticFrameworks ? { useFrameworks: 'static' } : {}),
         },
       },
     ],
-    ['expo-asset', { assets: ['./assets/audio'] }],
+    // No expo-asset plugin: it rejects .wav and skips folders, so it embedded nothing. Sounds reach the native projects
+    // through withNotificationSounds and withInCallAudioModule; JS loads bundled files with require().
     ['@sentry/react-native/expo', { organization: 'sentry', project: identity.sentryProject, url: 'https://sentry.resgrid.net/' }],
   ];
 

@@ -48,7 +48,6 @@ export default [
       '**/.metro-cache/**',
       'apps/omni/ios/**',
       'apps/omni/android/**',
-      'apps/omni/expo-env.d.ts',
       'apps/omni/*-env.d.ts',
       // Copied from maplibre-gl by metro.config.js on every Metro start (git-ignored).
       'apps/omni/public/maplibre-gl-worker.js',
@@ -57,6 +56,8 @@ export default [
       '.claude/**',
       '.agents/**',
       'packages/config-plugins/plugins/live-activities/**',
+      // Vendored anti-slop Oxlint plugin: upstream formatting kept so updates diff cleanly (UPSTREAM.md there).
+      'tooling/oxlint/anti-slop/**',
     ],
   },
   ...expoConfig,

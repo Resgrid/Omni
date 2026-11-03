@@ -2,10 +2,10 @@ import { useTerm } from '@resgrid/auth';
 import { searchNotes, useNotesStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import type { NoteResultData } from '@resgrid/models';
-import { FlatList, Input, InputField, Loading, Pressable, RefreshControl, Text, ZeroState } from '@resgrid/ui';
+import { FlatList, Input, InputField, Loading, Pressable, RefreshControl, ScrollView, Text, ZeroState } from '@resgrid/ui';
 import { StickyNote } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { NoteCard } from '../components/note-card';
 import { NoteDetailsSheet } from '../components/note-details-sheet';

@@ -1,6 +1,5 @@
 {
   "calls": {
-    "required_fields_missing": "Your department requires these fields before the call can be saved: {{fields}}",
     "scheduled_dispatch": "Scheduled Dispatch",
     "scheduled_dispatch_no_clear": "This scheduled time can be changed here, but not removed.",
     "scheduled_dispatch_too_soon": "The scheduled dispatch time must be at least {{minutes}} minutes from now"
@@ -432,8 +431,7 @@
     "worktime_thresholds_label": "Work-Time Thresholds"
   },
   "common": {
-    "clear": "Clear",
-    "no_location": "No location data available"
+    "clear": "Clear"
   },
   "incident_assistant": {
     "briefing_accountability": "ACCOUNTABILITY",
@@ -613,14 +611,10 @@
   },
   "login": {
     "command_not_authorized": "You are not authorized to use the IC app. Contact your department administrator.",
-    "login_button": "Sign In",
-    "login_button_loading": "Signing in...",
-    "otp_body": "Your account has two-factor authentication enabled. Enter the current code from your authenticator app to finish signing in.",
     "otp_invalid": "That code is invalid or has expired. Enter the current code from your authenticator app.",
     "otp_placeholder": "6-digit code",
     "otp_title": "Two-factor verification",
-    "otp_verify": "Verify",
-    "title": "Sign In"
+    "otp_verify": "Verify"
   },
   "maps": {
     "legend": {
@@ -630,12 +624,9 @@
         "unknown_priority": "No meaning",
         "unknown_status": "No meaning or no status"
       }
-    },
-    "map_layers": "Map Layers",
-    "no_layers": "No map layers available"
+    }
   },
   "notifications": {
-    "confirm_delete_message_one": "Are you sure you want to delete {{count}} notification? This action cannot be undone.",
     "confirm_delete_message_other": "Are you sure you want to delete {{count}} notifications? This action cannot be undone.",
     "delete_one_error": "Failed to remove notification",
     "delete_one_success": "Notification removed",
@@ -715,16 +706,7 @@
   "operations": {
     "errors": {
       "timereports_status_transition_invalid": "This report was already changed, possibly on another device. Refresh and try again."
-    },
-    "time": {
-      "coveredBy": "This time is already on report #{{number}} for this day.",
-      "crewReport": "Crew time report #{{number}} · {{name}}",
-      "individualReport": "Time report #{{number}} · {{name}}",
-      "report": "Report #{{number}}"
     }
-  },
-  "push_notifications": {
-    "unknown_type_warning": "This notification type is not recognized. Please contact support if you continue to see this message."
   },
   "readiness": {
     "attention": "Check",
@@ -746,16 +728,11 @@
     "attachment_too_large": "That file is larger than {{size}} MB, the most an attachment can be."
   },
   "settings": {
-    "audio_device_selection": {
-      "speaker_device": "Speaker Device"
-    },
-    "logout_confirm_message": "Are you sure you want to logout? This will clear all app data, cached values, and settings.",
     "sync_section": "Sync & Offline Queue",
     "sync_status": "Sync Status",
     "sync_status_failed": "{{count}} failed",
     "sync_status_ok": "Up to date",
-    "sync_status_pending": "{{count}} pending",
-    "view_sync_queue": "View Sync Queue"
+    "sync_status_pending": "{{count}} pending"
   },
   "sidebar": {
     "menu": "Menu"

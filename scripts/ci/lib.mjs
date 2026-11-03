@@ -1,6 +1,8 @@
 // Shared helpers for the CI scripts in scripts/ci. Node built-ins only: these scripts also run in jobs
 // that skip the workspace install (release, electron), so they must not import workspace packages.
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -91,6 +93,39 @@ export function writeJson(file, data) {
   fs.writeFileSync(file, JSON.stringify(data, null, 2) + '\n');
 }
 
+// Markdown code fence: up to three spaces, then three or more backticks or tildes.
+const FENCE = /^ {0,3}(`{3,}|~{3,})/;
+
+/** The code fence open after `line` (its marker, e.g. "```"), given the one open before it; null outside fenced code. */
+export function fenceAfter(open, line) {
+  const m = FENCE.exec(line);
+  if (!m) return open;
+  if (!open) return m[1];
+  return m[1][0] === open[0] && m[1].length >= open.length ? null : open;
+}
+
+/**
+ * Runtime version (= Expo fingerprint of the native inputs) of one variant × env × platform, resolved exactly as eas
+ * build / eas update resolve it: `expo-updates runtimeversion:resolve` in apps/omni. The managed workflow ignores the
+ * generated ios/ and android/ folders, so the result is the same before and after a prebuild.
+ */
+export function resolveRuntimeVersion(variant, appEnv, platform, env = process.env) {
+  const require = createRequire(import.meta.url);
+  const cli = require.resolve('expo-updates/bin/cli.js', { paths: [omniRoot] });
+  const result = spawnSync(process.execPath, [cli, 'runtimeversion:resolve', '--platform', platform, '--workflow', 'managed'], {
+    cwd: omniRoot,
+    env: { ...env, APP_VARIANT: variant, APP_ENV: appEnv, EXPO_NO_DOTENV: '1' },
+    encoding: 'utf8',
+    maxBuffer: 256 * 1024 * 1024,
+  });
+  if (result.status !== 0) {
+    throw new Error(`runtimeversion:resolve failed for ${variant}/${platform} (exit ${result.status}):\n${result.stderr || result.stdout}`);
+  }
+  const json = JSON.parse(result.stdout.slice(result.stdout.indexOf('{')));
+  if (!json.runtimeVersion) throw new Error(`No runtimeVersion for ${variant}/${platform}; is runtimeVersion.policy "fingerprint"?`);
+  return { runtimeVersion: String(json.runtimeVersion), sources: json.fingerprintSources?.length ?? 0 };
+}
+
 export function readJsonIfExists(file) {
   try {
     return JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -129,9 +164,9 @@ export function githubClient(env = process.env) {
   if (!token || !repo) return null;
   const api = (env.GITHUB_API_URL || 'https://api.github.com').replace(/\/$/, '');
   const headers = { Authorization: `Bearer ${token}`, 'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'resgrid-omni-ci' };
-  const request = async (pathname, { accept = 'application/vnd.github+json' } = {}) => {
+  const request = async (pathname, { accept = 'application/vnd.github+json', signal } = {}) => {
     for (let attempt = 1; ; attempt++) {
-      const res = await fetch(`${api}${pathname}`, { headers: { ...headers, Accept: accept }, redirect: 'follow' });
+      const res = await fetch(`${api}${pathname}`, { headers: { ...headers, Accept: accept }, redirect: 'follow', signal });
       if (res.ok) return res;
       if (attempt >= 3 || (res.status < 500 && res.status !== 429)) throw new Error(`GitHub API ${pathname} → HTTP ${res.status}`);
       await new Promise((r) => setTimeout(r, 2000 * attempt));
@@ -153,6 +188,15 @@ export function githubClient(env = process.env) {
     async assetText(assetId) {
       const res = await request(`/repos/${repo}/releases/assets/${assetId}`, { accept: 'application/octet-stream' });
       return res.text();
+    },
+    /**
+     * Pull requests GitHub associates with a commit (for a commit on the default branch: the merged one that brought it in).
+     * One deadline covers the retries and the body, so a stalled lookup cannot hold up the release job.
+     */
+    async pullsForCommit(sha, { timeoutMs = 30000 } = {}) {
+      const signal = AbortSignal.timeout(timeoutMs);
+      const res = await request(`/repos/${repo}/commits/${sha}/pulls?per_page=100`, { signal });
+      return res.json();
     },
   };
 }

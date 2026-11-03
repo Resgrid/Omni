@@ -1,5 +1,8 @@
 {
   "chat.conversation_not_found": "Conversation not found",
+  "chat.gif": "GIF",
+  "chat.image": "Image",
+  "chat.image_unavailable": "Image unavailable",
   "chat.message_actions_hint": "Long press for message actions",
   "chat.no_messages": "No messages yet",
   "chat.read_only": "This conversation is read-only",

@@ -3,27 +3,22 @@
     "initialization_failed": "No se pudieron cargar los datos de la aplicación. Comprueba tu conexión e inténtalo de nuevo."
   },
   "callImages": {
-    "not_signed_in": "Debes iniciar sesión para subir imágenes",
-    "upload_error": "Error al subir la imagen"
+    "not_signed_in": "Debes iniciar sesión para subir imágenes"
   },
   "calls": {
     "directions_to_destination": "Indicaciones al destino",
-    "dispatch_on": "Hora de despacho",
-    "dispatch_on_too_soon": "La hora de despacho debe ser al menos {{minutes}} minutos en el futuro",
     "errors": {
       "load_failed": "Error al cargar las llamadas"
     },
     "files": {
       "sharing_unavailable": "Compartir no está disponible en este dispositivo"
     },
-    "required_fields_missing": "Tu departamento exige estos campos antes de poder guardar el aviso: {{fields}}",
     "view_on_map": "Ver en el mapa"
   },
   "chat": {
     "chatting_as": "Chateando como {{name}}"
   },
   "common": {
-    "no_location": "No hay datos de ubicación disponibles",
     "no_unit": "Sin unidad",
     "unknown_error": "Se produjo un error desconocido"
   },
@@ -33,30 +28,11 @@
   },
   "incident_command": {
     "error": "Error al cargar la información del comando del incidente",
-    "need_category": {
-      "equipment": "Equipamiento",
-      "logistics": "Logística",
-      "medical": "Médico",
-      "other": "Otro",
-      "resource": "Recurso",
-      "staffing": "Personal"
-    },
-    "need_status": {
-      "cancelled": "Cancelada",
-      "met": "Satisfecha",
-      "open": "Abierta",
-      "partially_met": "Parcialmente satisfecha"
-    },
     "no_active_command": "No hay un comando de incidente activo para esta llamada",
     "objective_status": {
       "complete": "Completado",
       "in_progress": "En progreso",
       "pending": "Pendiente"
-    },
-    "objective_type": {
-      "benchmark": "Hito",
-      "general": "General",
-      "safety": "Seguridad"
     },
     "progress": "{{percent}}% completado",
     "quantity_fulfilled": "{{fulfilled}} de {{requested}} completados"
@@ -136,13 +112,6 @@
     "unnamedLocation": "Compartimento",
     "wholeUnit": "Unidad completa: {{name}}"
   },
-  "login": {
-    "hide_password": "Ocultar contraseña",
-    "login_button": "Iniciar sesión",
-    "login_button_loading": "Iniciando sesión...",
-    "show_password": "Mostrar contraseña",
-    "title": "Iniciar sesión"
-  },
   "map": {
     "legend": {
       "built_in_unit_statuses": "Estados de unidad integrados",
@@ -200,14 +169,10 @@
     "removed_one": "Notificación eliminada",
     "unable_to_load": "No se pudieron cargar las notificaciones"
   },
-  "push_notifications": {
-    "unknown_type_warning": "Este tipo de notificación no se reconoce. Por favor, contacte con soporte si continúa viendo este mensaje."
-  },
   "roles": {
     "assignedElsewhere": "En otra función",
     "clearAssignment": "Borrar la asignación actual",
     "noUsersFound": "No se encontraron usuarios",
-    "saved_successfully": "Asignaciones de funciones guardadas correctamente",
     "searchUsers": "Buscar por nombre o grupo...",
     "selectUserDescription": "Elige a una persona para esta función",
     "selectUserForRole": "Asignar: {{role}}",
@@ -223,22 +188,10 @@
     "traffic_severe": "Tráfico muy denso"
   },
   "settings": {
-    "audio_device_selection": {
-      "speaker_device": "Dispositivo de altavoz"
-    },
-    "logout_confirm_message": "¿Está seguro de que desea cerrar sesión? Esto borrará todos los datos de la aplicación, valores en caché y configuraciones.",
-    "no_units_available_help": "No tienes unidades asignadas. Pide al administrador de tu departamento que te añada al grupo de estación de una unidad.",
-    "realtime_geolocation_warning": "Esta función envía la ubicación de esta unidad a su departamento mientras la aplicación está abierta y se conecta al centro de ubicación en tiempo real para recibir las posiciones de otras unidades. Requiere una conexión de red activa.",
-    "units_load_failed": "No se pudieron cargar las unidades. Comprueba tu conexión e inténtalo de nuevo."
+    "realtime_geolocation_warning": "Esta función envía la ubicación de esta unidad a su departamento mientras la aplicación está abierta y se conecta al centro de ubicación en tiempo real para recibir las posiciones de otras unidades. Requiere una conexión de red activa."
   },
   "status": {
-    "current": "Actual",
     "current_status": "Estado actual",
-    "hold_to_set_hint": "Mantenga pulsado 2 segundos para establecer el estado",
-    "hold_to_set_instructions": "Mantenga pulsado un estado 2 segundos para establecerlo",
-    "hold_to_submit": "Mantener para enviar",
-    "show_all_statuses": "Mostrar todos los estados ({{count}} más)",
-    "show_next_statuses": "Mostrar solo los estados siguientes",
-    "status_queued": "Estado guardado en este dispositivo. Se enviará automáticamente."
+    "hold_to_set_instructions": "Mantenga pulsado un estado 2 segundos para establecerlo"
   }
 }

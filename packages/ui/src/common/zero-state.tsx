@@ -25,7 +25,11 @@ export interface ZeroStateProps {
   isError?: boolean;
   /** Extra classes for the Center. */
   className?: string;
-  /** Root View classes (default "size-full p-6"). */
+  /**
+   * Root View classes (default "w-full flex-1 p-6": the space its column has left, so under a header, search field or chip
+   * row it fills the rest instead of a full screen height that pushes it past the bottom; in a parent that sizes to its
+   * content, such as a list's empty slot or a card, it takes its content's height).
+   */
   viewClassName?: string;
   /** Center classes (default "flex-1 p-6"). */
   centerClassName?: string;
@@ -42,7 +46,7 @@ export const ZeroState: React.FC<ZeroStateProps> = ({
   children,
   isError = false,
   className = '',
-  viewClassName = 'size-full p-6',
+  viewClassName = 'w-full flex-1 p-6',
   centerClassName = 'flex-1 p-6',
   testID = 'zero-state',
 }) => {

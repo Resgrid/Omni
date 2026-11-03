@@ -51,6 +51,14 @@ describe('app.config per variant', () => {
     }
   });
 
+  it('keeps the iOS dev-client network inspector off', () => {
+    // It never completes a forwarded `WWW-Authenticate: Basic` challenge, so the token endpoint's 401 invalid_client hung sign-in.
+    for (const variant of VARIANT_IDS) {
+      const buildProperties = build(variant).plugins.find((p: unknown) => Array.isArray(p) && p[0] === 'expo-build-properties')[1];
+      expect(buildProperties.ios.networkInspector).toBe(false);
+    }
+  });
+
   it('links native modules only where the variant needs them', () => {
     expect(pluginNames(build('bigboard'))).not.toContain('react-native-callkeep');
     expect(pluginNames(build('bigboard'))).not.toContain('expo-audio');

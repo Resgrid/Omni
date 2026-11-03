@@ -3,27 +3,22 @@
     "initialization_failed": "Impossible de charger les données de l'application. Vérifiez votre connexion et réessayez."
   },
   "callImages": {
-    "not_signed_in": "Vous devez être connecté pour envoyer des images",
-    "upload_error": "Erreur lors de l'envoi de l'image"
+    "not_signed_in": "Vous devez être connecté pour envoyer des images"
   },
   "calls": {
     "directions_to_destination": "Itinéraire vers la destination",
-    "dispatch_on": "Heure d'envoi",
-    "dispatch_on_too_soon": "L'heure d'envoi doit être au moins {{minutes}} minutes dans le futur",
     "errors": {
       "load_failed": "Échec du chargement des appels"
     },
     "files": {
       "sharing_unavailable": "Le partage n'est pas disponible sur cet appareil"
     },
-    "required_fields_missing": "Votre département exige ces champs avant que l'appel puisse être enregistré : {{fields}}",
     "view_on_map": "Voir sur la carte"
   },
   "chat": {
     "chatting_as": "Discussion en tant que {{name}}"
   },
   "common": {
-    "no_location": "Aucune donnée de localisation disponible",
     "no_unit": "Aucune unité",
     "unknown_error": "Une erreur inconnue s'est produite"
   },
@@ -33,30 +28,11 @@
   },
   "incident_command": {
     "error": "Échec du chargement des informations du commandement de l'incident",
-    "need_category": {
-      "equipment": "Équipement",
-      "logistics": "Logistique",
-      "medical": "Médical",
-      "other": "Autre",
-      "resource": "Ressource",
-      "staffing": "Personnel"
-    },
-    "need_status": {
-      "cancelled": "Annulé",
-      "met": "Satisfait",
-      "open": "Ouvert",
-      "partially_met": "Partiellement satisfait"
-    },
     "no_active_command": "Aucun commandement d'incident n'est actif pour cet appel",
     "objective_status": {
       "complete": "Terminé",
       "in_progress": "En cours",
       "pending": "En attente"
-    },
-    "objective_type": {
-      "benchmark": "Jalon",
-      "general": "Général",
-      "safety": "Sécurité"
     },
     "progress": "{{percent}} % terminé",
     "quantity_fulfilled": "{{fulfilled}} sur {{requested}} satisfaits"
@@ -136,13 +112,6 @@
     "unnamedLocation": "Coffre",
     "wholeUnit": "Véhicule entier : {{name}}"
   },
-  "login": {
-    "hide_password": "Masquer le mot de passe",
-    "login_button": "Se connecter",
-    "login_button_loading": "Connexion en cours...",
-    "show_password": "Afficher le mot de passe",
-    "title": "Connexion"
-  },
   "map": {
     "legend": {
       "built_in_unit_statuses": "Statuts d'unité intégrés",
@@ -200,14 +169,10 @@
     "removed_one": "Notification supprimée",
     "unable_to_load": "Impossible de charger les notifications"
   },
-  "push_notifications": {
-    "unknown_type_warning": "Ce type de notification n'est pas reconnu. Veuillez contacter le support si vous continuez à voir ce message."
-  },
   "roles": {
     "assignedElsewhere": "Dans un autre rôle",
     "clearAssignment": "Effacer l'attribution actuelle",
     "noUsersFound": "Aucun utilisateur trouvé",
-    "saved_successfully": "Attributions de rôles enregistrées",
     "searchUsers": "Rechercher par nom ou groupe...",
     "selectUserDescription": "Choisissez une personne pour ce rôle",
     "selectUserForRole": "Attribuer : {{role}}",
@@ -223,22 +188,10 @@
     "traffic_severe": "Trafic très dense"
   },
   "settings": {
-    "audio_device_selection": {
-      "speaker_device": "Appareil haut-parleur"
-    },
-    "logout_confirm_message": "Êtes-vous sûr de vouloir vous déconnecter ? Cela effacera toutes les données de l'application, les valeurs mises en cache et les paramètres.",
-    "no_units_available_help": "Aucune unité ne vous est attribuée. Demandez à votre administrateur de service de vous ajouter au groupe de caserne d'une unité.",
-    "realtime_geolocation_warning": "Cette fonction envoie la position de cette unité à votre département lorsque l'application est ouverte et se connecte au hub de localisation en temps réel pour recevoir la position des autres unités. Une connexion réseau active est requise.",
-    "units_load_failed": "Impossible de charger les unités. Vérifiez votre connexion et réessayez."
+    "realtime_geolocation_warning": "Cette fonction envoie la position de cette unité à votre département lorsque l'application est ouverte et se connecte au hub de localisation en temps réel pour recevoir la position des autres unités. Une connexion réseau active est requise."
   },
   "status": {
-    "current": "Actuel",
     "current_status": "Statut actuel",
-    "hold_to_set_hint": "Maintenez appuyé 2 secondes pour définir le statut",
-    "hold_to_set_instructions": "Maintenez un statut appuyé 2 secondes pour le définir",
-    "hold_to_submit": "Maintenir pour envoyer",
-    "show_all_statuses": "Afficher tous les statuts ({{count}} de plus)",
-    "show_next_statuses": "Afficher uniquement les statuts suivants",
-    "status_queued": "Statut enregistré sur cet appareil. Il sera envoyé automatiquement."
+    "hold_to_set_instructions": "Maintenez un statut appuyé 2 secondes pour le définir"
   }
 }

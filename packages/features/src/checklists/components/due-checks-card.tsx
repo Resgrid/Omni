@@ -28,7 +28,7 @@ export const DueChecksCard: React.FC<DueChecksCardProps> = ({ onPress, testID = 
   const flagStatus = useChecklistsFlagStatus();
   const unitId = useChecklistUnitId();
   const enabled = flagStatus === 'enabled';
-  const { due, reload } = useDueChecklists(enabled, 0, unitId);
+  const { due, reload } = useDueChecklists(enabled, unitId);
   const [concealed, setConcealed] = useState(false);
 
   useEffect(() => {

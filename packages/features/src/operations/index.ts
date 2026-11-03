@@ -9,6 +9,7 @@ export { default as OperationsDeploymentScreen, type OperationsDeploymentScreenP
 export { default as OperationsListScreen } from './screens/operations-list';
 
 // Components
+export { DeploymentCard, type DeploymentCardProps, deploymentStatusTone, formatDeploymentDay } from './components/deployment-card';
 export { type ExpenseAddOutcome, ExpensesPanel, type ExpensesPanelProps } from './components/expenses-panel';
 export { MarsPanel, type MarsPanelProps } from './components/mars-panel';
 export { OperationsFrame, type SegmentOption, Segments } from './components/operations-layout';

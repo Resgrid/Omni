@@ -22,8 +22,8 @@ export const ok = (config: InternalAxiosRequestConfig, data: unknown = { Status:
   config,
 });
 
-export const httpError = (config: InternalAxiosRequestConfig, status: number, data?: unknown): AxiosError =>
-  new AxiosError(`Request failed with status code ${status}`, status >= 500 ? 'ERR_BAD_RESPONSE' : 'ERR_BAD_REQUEST', config, undefined, { status, statusText: '', data, headers: {}, config } as AxiosResponse);
+export const httpError = (config: InternalAxiosRequestConfig, status: number, data?: unknown, headers: Record<string, string> = {}): AxiosError =>
+  new AxiosError(`Request failed with status code ${status}`, status >= 500 ? 'ERR_BAD_RESPONSE' : 'ERR_BAD_REQUEST', config, undefined, { status, statusText: '', data, headers, config } as AxiosResponse);
 
 export const networkError = (config: InternalAxiosRequestConfig): AxiosError => new AxiosError('Network Error', 'ERR_NETWORK', config);
 

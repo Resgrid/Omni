@@ -3,27 +3,22 @@
     "initialization_failed": "Nie można załadować danych aplikacji. Sprawdź połączenie i spróbuj ponownie."
   },
   "callImages": {
-    "not_signed_in": "Aby przesyłać obrazy, musisz się zalogować",
-    "upload_error": "Błąd podczas przesyłania obrazu"
+    "not_signed_in": "Aby przesyłać obrazy, musisz się zalogować"
   },
   "calls": {
     "directions_to_destination": "Trasa do celu",
-    "dispatch_on": "Czas wysłania",
-    "dispatch_on_too_soon": "Czas wysłania musi przypadać co najmniej {{minutes}} minut w przyszłości",
     "errors": {
       "load_failed": "Nie udało się załadować zgłoszeń"
     },
     "files": {
       "sharing_unavailable": "Udostępnianie nie jest dostępne na tym urządzeniu"
     },
-    "required_fields_missing": "Twoja jednostka wymaga tych pól przed zapisaniem zgłoszenia: {{fields}}",
     "view_on_map": "Pokaż na mapie"
   },
   "chat": {
     "chatting_as": "Czatujesz jako {{name}}"
   },
   "common": {
-    "no_location": "Brak danych lokalizacji",
     "no_unit": "Brak jednostki",
     "unknown_error": "Wystąpił nieznany błąd"
   },
@@ -33,30 +28,11 @@
   },
   "incident_command": {
     "error": "Nie udało się załadować informacji o dowodzeniu incydentem",
-    "need_category": {
-      "equipment": "Sprzęt",
-      "logistics": "Logistyka",
-      "medical": "Medyczne",
-      "other": "Inne",
-      "resource": "Zasób",
-      "staffing": "Personel"
-    },
-    "need_status": {
-      "cancelled": "Anulowana",
-      "met": "Zaspokojona",
-      "open": "Otwarta",
-      "partially_met": "Częściowo zaspokojona"
-    },
     "no_active_command": "Brak aktywnego dowodzenia incydentem dla tego zgłoszenia",
     "objective_status": {
       "complete": "Zakończony",
       "in_progress": "W trakcie",
       "pending": "Oczekujący"
-    },
-    "objective_type": {
-      "benchmark": "Kamień milowy",
-      "general": "Ogólny",
-      "safety": "Bezpieczeństwo"
     },
     "progress": "Ukończono {{percent}}%",
     "quantity_fulfilled": "Zaspokojono {{fulfilled}} z {{requested}}"
@@ -136,13 +112,6 @@
     "unnamedLocation": "Skrytka",
     "wholeUnit": "Cały pojazd: {{name}}"
   },
-  "login": {
-    "hide_password": "Ukryj hasło",
-    "login_button": "Zaloguj się",
-    "login_button_loading": "Logowanie...",
-    "show_password": "Pokaż hasło",
-    "title": "Zaloguj się"
-  },
   "map": {
     "legend": {
       "built_in_unit_statuses": "Wbudowane statusy jednostek",
@@ -200,14 +169,10 @@
     "removed_one": "Powiadomienie usunięte",
     "unable_to_load": "Nie można załadować powiadomień"
   },
-  "push_notifications": {
-    "unknown_type_warning": "Ten typ powiadomienia nie jest rozpoznawany. Skontaktuj się z pomocą techniczną, jeśli ten komunikat będzie się powtarzał."
-  },
   "roles": {
     "assignedElsewhere": "W innej funkcji",
     "clearAssignment": "Wyczyść bieżący przydział",
     "noUsersFound": "Nie znaleziono użytkowników",
-    "saved_successfully": "Zapisano przydział funkcji",
     "searchUsers": "Szukaj według nazwiska lub grupy...",
     "selectUserDescription": "Wybierz osobę do tej funkcji",
     "selectUserForRole": "Przypisz: {{role}}",
@@ -223,22 +188,10 @@
     "traffic_severe": "Bardzo duży ruch"
   },
   "settings": {
-    "audio_device_selection": {
-      "speaker_device": "Urządzenie głośnikowe"
-    },
-    "logout_confirm_message": "Czy na pewno chcesz się wylogować? Spowoduje to wyczyszczenie wszystkich danych aplikacji, wartości w pamięci podręcznej i ustawień.",
-    "no_units_available_help": "Nie przypisano Ci żadnych jednostek. Poproś administratora jednostki o dodanie Cię do grupy stacji.",
-    "realtime_geolocation_warning": "Ta funkcja wysyła lokalizację tej jednostki do Twojej jednostki organizacyjnej, gdy aplikacja jest otwarta, i łączy się z centrum lokalizacji w czasie rzeczywistym, aby odbierać pozycje innych jednostek. Wymaga aktywnego połączenia sieciowego.",
-    "units_load_failed": "Nie udało się wczytać jednostek. Sprawdź połączenie i spróbuj ponownie."
+    "realtime_geolocation_warning": "Ta funkcja wysyła lokalizację tej jednostki do Twojej jednostki organizacyjnej, gdy aplikacja jest otwarta, i łączy się z centrum lokalizacji w czasie rzeczywistym, aby odbierać pozycje innych jednostek. Wymaga aktywnego połączenia sieciowego."
   },
   "status": {
-    "current": "Bieżący",
     "current_status": "Bieżący status",
-    "hold_to_set_hint": "Przytrzymaj przez 2 sekundy, aby ustawić status",
-    "hold_to_set_instructions": "Przytrzymaj status przez 2 sekundy, aby go ustawić",
-    "hold_to_submit": "Przytrzymaj, aby wysłać",
-    "show_all_statuses": "Pokaż wszystkie statusy (jeszcze {{count}})",
-    "show_next_statuses": "Pokaż tylko następne statusy",
-    "status_queued": "Status zapisany na tym urządzeniu. Zostanie wysłany automatycznie."
+    "hold_to_set_instructions": "Przytrzymaj status przez 2 sekundy, aby go ustawić"
   }
 }

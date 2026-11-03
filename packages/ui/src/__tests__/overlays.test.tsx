@@ -3,7 +3,7 @@ import React from 'react';
 import { Animated, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { BOTTOM_SHEET_BACKDROP_ARM_DELAY_MS, CustomBottomSheet } from '../bottom-sheet';
+import { BOTTOM_SHEET_BACKDROP_ARM_DELAY_MS, CustomBottomSheet, getBottomSheetHeight } from '../bottom-sheet';
 import { ALL_ORIENTATIONS, NativeModal } from '../native-modal';
 import { SIDE_DRAWER_BACKDROP_ARM_DELAY_MS, SideDrawer } from '../side-drawer';
 import { useToastStore } from '../toast/store';
@@ -124,6 +124,13 @@ describe('CustomBottomSheet (Unit + IC)', () => {
     await renderSheet();
 
     expect(screen.getByTestId('bottom-sheet-content', query).props.style).toMatchObject({ backgroundColor: '#ffffff' });
+  });
+
+  it('caps the sheet at its snap height, clamped to 300 px and the window less 20', () => {
+    expect(getBottomSheetHeight(1000, 80)).toBe(800);
+    expect(getBottomSheetHeight(1000)).toBe(670);
+    expect(getBottomSheetHeight(320, 50)).toBe(300);
+    expect(getBottomSheetHeight(1000, 100)).toBe(980);
   });
 
   describe('close animation interruption (IC fix)', () => {

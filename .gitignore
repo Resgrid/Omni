@@ -13,6 +13,12 @@ web-build/
 /apps/omni/ios/
 /apps/omni/android/
 
+# Local Expo module build output (Gradle sync / IDE); module source stays tracked
+/apps/omni/modules/*/android/.gradle/
+/apps/omni/modules/*/android/build/
+/apps/omni/modules/*/android/.cxx/
+/apps/omni/modules/*/android/local.properties
+
 # Electron output
 /apps/desktop/out/
 /apps/desktop/release/
@@ -44,3 +50,6 @@ junit.xml
 .DS_Store
 Thumbs.db
 .idea/
+/apps/omni/modules/resgrid-device/android/.gradle
+/android
+/ios

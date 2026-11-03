@@ -1,5 +1,5 @@
-// @resgrid/api — Resgrid Core v4 HTTP client, cached endpoints and endpoint functions (layer L2).
-// Auth, base URL and storage are injected; nothing here imports a store or UI (omni-plan ง5.2, ง7.2).
+// @resgrid/api โ€” Resgrid Core v4 HTTP client, cached endpoints and endpoint functions (layer L2).
+// Auth, base URL and storage are injected; nothing here imports a store or UI (omni-plan ยง5.2, ยง7.2).
 export * from './core';
 export * from './endpoints';
 export { endpointDomains, endpointRegistry } from './registry';

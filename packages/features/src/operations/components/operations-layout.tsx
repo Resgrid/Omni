@@ -1,6 +1,6 @@
-import { Pressable, Text, useFormFactor } from '@resgrid/ui';
+import { Pressable, ScrollView, Text, useFormFactor } from '@resgrid/ui';
 import React from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 /** Centres a screen's content and caps its width on tablets, desktop/Electron windows and wall boards. */
 export const OperationsFrame: React.FC<{ children: React.ReactNode; maxWidth?: number }> = ({ children, maxWidth = 1024 }) => {

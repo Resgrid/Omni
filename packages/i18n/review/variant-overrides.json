@@ -1,0 +1,19 @@
+{
+  "_about": [
+    "The keys each app namespace may share with `common`. A variant namespace is read before `common`, so any copy of a common",
+    "string there hides later fixes to the shared string in that one app (translations.test.ts enforces this list).",
+    "Add a key only for wording that is deliberately different in that app (its UX: e.g. Responder is about the member, Unit about",
+    "the unit), with the reason. The wording overrides the legacy-app merge kept (review/en-conflicts.csv) were unified into",
+    "`common` on 2026-11-02 (owner decision); only these deliberate ones remain.",
+    "A fix to a shared string goes in `common` and the feature's i18n.en.json, never in one app's namespace."
+  ],
+  "responder": {
+    "location.tracking_notification_body": "Responder shares the member's own location, not a unit's"
+  },
+  "unit": {
+    "settings.realtime_geolocation_warning": "Unit sends the unit's location as well as receiving others'"
+  },
+  "ic": {},
+  "dispatch": {},
+  "bigboard": {}
+}

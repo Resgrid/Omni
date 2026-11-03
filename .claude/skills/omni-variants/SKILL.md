@@ -26,6 +26,8 @@ Status: target design from `docs/architecture/omni-plan.md` (v1.1, 2026-10-31) Â
 
 Department feature flags (`Chat.System`, `Records.Field.*`, `Checklists.System`, `Maintenance.WorkOrders`, `Dispatch.RunCards*`, `Navigation.InApp`, `Maps.Offline`) gate at runtime **on top of** capabilities, via the feature-flag store. Unknown flags are disabled.
 
+Everything outside that list is shared by all five apps: a fix or addition made for one app is made for all of them in the owning package (`omni-shared-first` skill). Files that several variant folders have stay identical apart from the app id (`apps/omni/__tests__/variant-uniformity.test.ts`).
+
 ## Adding a feature to some apps
 
 1. Build it in the right package (`@resgrid/features/<domain>` for screens; data in `@resgrid/data`; never in a variant folder).
@@ -46,6 +48,7 @@ Bundle ids / packages (Responder is `com.wavetech.Resgrid` / `wtdt.resgrid.andri
 
 ```bash
 APP_VARIANT=unit APP_ENV=development npx expo start --clear
+pnpm ios:unit   # or android:<variant>: re-prebuilds apps/omni/<platform> when it holds another variant/env/config, then expo run
 APP_VARIANT=dispatch npx expo export -p web --output-dir dist/dispatch
 APP_VARIANT=ic npx eas-cli build --profile ic-production --platform android --local
 ```

@@ -59,7 +59,8 @@ export interface CertificationCredit {
 }
 
 export interface SaveCertificationInput {
-  Id?: number | null;
+  /** 0 (or omitted) adds a record. Core binds a non-nullable int: `null` fails model binding with a bare 400. */
+  Id?: number;
   TypeId?: number | null;
   Name?: string | null;
   Number?: string | null;

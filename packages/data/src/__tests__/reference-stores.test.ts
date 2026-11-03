@@ -242,6 +242,25 @@ describe.each(cases)('$name store', (testCase) => {
   });
 });
 
+describe('messages retention', () => {
+  it('shows every message the server returns but persists only the 30-day window', async () => {
+    const recent = { MessageId: 'm1', SentOnUtc: '2026-10-31T11:00:00Z' };
+    const old = { MessageId: 'm2', SentOnUtc: '2024-10-10T04:17:13Z' };
+    jest.mocked(api.getInboxMessages).mockResolvedValue(ok([old, recent]) as never);
+    await useMessagesStore.getState().fetchInboxMessages();
+    expect(useMessagesStore.getState().inboxMessages).toEqual([old, recent]);
+    expect(persisted(runtime.kv, 'omni-messages-storage')?.state.inboxMessages).toEqual([recent]);
+  });
+
+  it('keeps an inbox of only old messages visible', async () => {
+    const old = { MessageId: 'm2', SentOnUtc: '2024-10-10T04:17:13Z' };
+    jest.mocked(api.getInboxMessages).mockResolvedValue(ok([old]) as never);
+    await useMessagesStore.getState().fetchInboxMessages();
+    expect(useMessagesStore.getState().inboxMessages).toEqual([old]);
+    expect(persisted(runtime.kv, 'omni-messages-storage')?.state.inboxMessages).toEqual([]);
+  });
+});
+
 describe('custom maps feature search', () => {
   const search = (): jest.Mock => jest.requireMock<Record<string, jest.Mock>>('@resgrid/api').searchAllMapFeatures;
 
@@ -263,6 +282,16 @@ describe('custom maps feature search', () => {
 
     await useCustomMapsStore.getState().searchMapFeatures('   ');
     expect(useCustomMapsStore.getState().searchResults).toEqual([]);
+  });
+});
+
+describe('operations deployments list', () => {
+  it('asks Core for open deployments, and for every one with active=false (a missing flag reads as open only)', async () => {
+    jest.mocked(api.getDeployments).mockResolvedValue(ok([{ Id: 'd1' }]) as never);
+    await useOperationsStore.getState().loadDeployments();
+    expect(api.getDeployments).toHaveBeenLastCalledWith(expect.anything(), { active: true });
+    await useOperationsStore.getState().loadDeployments(true);
+    expect(api.getDeployments).toHaveBeenLastCalledWith(expect.anything(), { active: false });
   });
 });
 

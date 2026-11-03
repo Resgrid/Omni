@@ -1,17 +1,30 @@
 import { useTranslation } from '@resgrid/i18n';
 import { type CallResultData } from '@resgrid/models';
-import { Button, ButtonText, CustomBottomSheet, HStack, Pressable, ScrollView, Spinner, Text, Textarea, TextareaInput, useToast, VStack } from '@resgrid/ui';
+import { Button, ButtonText, CustomBottomSheet, getBottomSheetHeight, HStack, Pressable, ScrollView, Spinner, Text, Textarea, TextareaInput, useThemeColors, useToast, VStack } from '@resgrid/ui';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { StyleSheet, useWindowDimensions } from 'react-native';
 
 import { destinationLabel, type DestinationLists, type DestinationTab, getDestinationTabs, NO_DESTINATION, resolveEffectiveDestination, type StatusDestination, toRespondingTo } from '../lib/status-destination';
-import { canSubmitStatusWithoutInput, type CurrentStatusRef, getOfferedStatuses, hasNoteStep, isNoteRequired, resolveCurrentStatusId, statusDetailType, type StatusOption, toOptionId } from '../lib/status-flow';
+import {
+  canSubmitStatusWithoutInput,
+  type CurrentStatusRef,
+  getOfferedStatuses,
+  getStatusPickerSteps,
+  hasNoteStep,
+  isNoteRequired,
+  resolveCurrentStatusId,
+  statusDetailType,
+  type StatusOption,
+  type StatusPickerStep,
+  toOptionId,
+} from '../lib/status-flow';
 import { StatusSubmitError } from '../lib/status-submit-error';
+import { HoldToConfirmButton } from './hold-to-confirm-button';
 import { StatusDestinationList } from './status-destination-list';
 import { StatusOptionRow } from './status-option';
 
 export type StatusPickerSubject = 'unit' | 'personnel';
 export type StatusPickerTab = 'status' | 'staffing';
-export type StatusPickerStep = 'select' | 'destination' | 'note';
 /** The data layer's write outcome: sent now, queued for reconnect, or refused by the server. */
 export type StatusSubmitOutcome = 'sent' | 'queued' | 'rejected';
 
@@ -42,7 +55,7 @@ export interface StatusPickerProps {
   /** Shows the staffing tab (capabilities.status.staffing, personnel subject). */
   showStaffing?: boolean;
   initialTab?: StatusPickerTab;
-  /** Opens with this status selected (sidebar buttons that open the sheet on a chosen status). */
+  /** A status chosen before the sheet opened (home and sidebar status buttons): the sheet skips the list and opens on its next step. */
   initialStatusId?: number | string | null;
   /** When true with `initialStatusId`, acts as if that status had just been held (sidebar hold-to-confirm buttons). */
   initialHoldConfirmed?: boolean;
@@ -54,7 +67,7 @@ export interface StatusPickerProps {
   hasPotentialDefaultCall?: boolean;
   /** Unit's rule: older call-only Detail values also offer stations and POIs. */
   lenientDestinations?: boolean;
-  /** Department "Hold to set status" (config StatusHoldToConfirm). */
+  /** Department "Hold to set status" (config StatusHoldToConfirm): statuses are held on the list, and the last step saves on a hold. */
   holdToConfirm?: boolean;
   onSubmitStatus: (selection: StatusSelection) => Promise<StatusSubmitOutcome>;
   onSubmitStaffing?: (selection: StaffingSelection) => Promise<StatusSubmitOutcome>;
@@ -62,6 +75,10 @@ export interface StatusPickerProps {
 }
 
 const EMPTY_LISTS: DestinationLists = { calls: [], stations: [], pois: [] };
+const SHEET_SNAP_POINT = 80;
+/** Room the list leaves in the sheet for the title, tabs, summary, hint and buttons (a two-line title included). */
+const SHEET_CHROME_HEIGHT = 300;
+const LIST_MIN_HEIGHT = 120;
 
 /**
  * The one status picker for all five apps (omni-plan §7.10): Unit's status sheet (destinations, status flow,
@@ -69,8 +86,10 @@ const EMPTY_LISTS: DestinationLists = { calls: [], stations: [], pois: [] };
  * presentational: callers pass the options, destinations and a submit handler (see UnitStatusSheet and
  * PersonnelStatusSheet, which bind it to the data stores and the outbox).
  *
- * Steps: select → destination (when the status Detail offers any) → note (when its Note type asks for one); the last
- * step submits. Meaning is read from BaseType and Detail/Note — never from a status id or its text.
+ * Steps (getStatusPickerSteps): select → destination (when the status Detail offers any) → note (when its Note type
+ * asks for one); the last step submits. A status passed in as `initialStatusId` skips the list and opens on its
+ * destination, else its note, else a confirm step. In the department's hold mode the last step saves on a hold, not a
+ * tap (Responder and Unit). Meaning is read from BaseType and Detail/Note — never from a status id or its text.
  */
 export const StatusPicker: React.FC<StatusPickerProps> = ({
   isOpen,
@@ -98,9 +117,15 @@ export const StatusPicker: React.FC<StatusPickerProps> = ({
 }) => {
   const { t } = useTranslation();
   const toast = useToast();
+  const colors = useThemeColors();
+  const { height: windowHeight } = useWindowDimensions();
+  // The list scrolls within what the sheet has left once everything else is laid out. Uncapped, a long list (a busy day's
+  // calls) grows past the sheet and pushes the buttons off its bottom, and it takes the drag that would scroll the sheet.
+  const listMaxHeight = Math.max(LIST_MIN_HEIGHT, getBottomSheetHeight(windowHeight, SHEET_SNAP_POINT) - SHEET_CHROME_HEIGHT);
 
   const [tab, setTab] = useState<StatusPickerTab>(initialTab);
-  const [step, setStep] = useState<StatusPickerStep>('select');
+  // null = the first step, which a preset status only knows once its option has loaded.
+  const [step, setStep] = useState<StatusPickerStep | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedStaffingId, setSelectedStaffingId] = useState<string | null>(null);
   const [selection, setSelection] = useState<StatusDestination>(NO_DESTINATION);
@@ -120,7 +145,7 @@ export const StatusPicker: React.FC<StatusPickerProps> = ({
   useEffect(() => {
     pendingRef.current = null;
     setTab(showStaffing ? initialTab : 'status');
-    setStep('select');
+    setStep(null);
     setSelectedId(isOpen && initialStatusId != null ? toOptionId(initialStatusId) : null);
     setSelectedStaffingId(null);
     setSelection(NO_DESTINATION);
@@ -151,6 +176,20 @@ export const StatusPicker: React.FC<StatusPickerProps> = ({
     [defaultCall, detail, hasExplicitChoice, lenientDestinations, selectedStatus, selection]
   );
   const isAwaitingDestinations = isLoadingDestinations && (hasDestinationStep || hasPotentialDefaultCall);
+
+  const noteRequired = isStaffingTab ? isNoteRequired(selectedStaffing) : isNoteRequired(selectedStatus);
+  const optionHasNoteStep = isStaffingTab ? hasNoteStep(selectedStaffing) : hasNoteStep(selectedStatus);
+  // The status passed in skips the list once its option has loaded (were it missing, the list lets the user pick another).
+  const hasPresetStatus = initialStatusId != null && selectedStatus !== null && selectedId === toOptionId(initialStatusId);
+  const steps = useMemo(
+    () => getStatusPickerSteps({ isStaffing: isStaffingTab, hasPresetStatus, hasDestinationStep, hasNoteStep: optionHasNoteStep }),
+    [hasDestinationStep, hasPresetStatus, isStaffingTab, optionHasNoteStep]
+  );
+  // A step the selection no longer has (its options changed under the open sheet) falls back to the first.
+  const currentStep = step !== null && steps.includes(step) ? step : steps[0];
+  const stepIndex = steps.indexOf(currentStep);
+  const isFirstStep = stepIndex === 0;
+  const isLastStep = stepIndex === steps.length - 1;
 
   // The destination tab follows the selected status: the tab holding the default/selected destination, else the first.
   useEffect(() => {
@@ -217,12 +256,13 @@ export const StatusPicker: React.FC<StatusPickerProps> = ({
   useEffect(() => {
     if (!isOpen || !holdPending || !selectedStatus || isSubmitting || isAwaitingDestinations) return;
     setHoldPending(false);
-    if (canSubmitStatusWithoutInput(selectedStatus, { allowsCalls, hasDefaultCall: !!defaultCall })) {
+    const nextStep = steps.find((value) => value !== 'select');
+    if (!nextStep || canSubmitStatusWithoutInput(selectedStatus, { allowsCalls, hasDefaultCall: !!defaultCall })) {
       submitStatus();
       return;
     }
-    setStep(hasDestinationStep ? 'destination' : 'note');
-  }, [allowsCalls, defaultCall, hasDestinationStep, holdPending, isAwaitingDestinations, isOpen, isSubmitting, selectedStatus, submitStatus]);
+    setStep(nextStep);
+  }, [allowsCalls, defaultCall, holdPending, isAwaitingDestinations, isOpen, isSubmitting, selectedStatus, steps, submitStatus]);
 
   const handleSelectStatus = useCallback((option: StatusOption) => {
     setSelectedId(toOptionId(option.Id));
@@ -257,45 +297,42 @@ export const StatusPicker: React.FC<StatusPickerProps> = ({
     onClose();
   }, [onClose]);
 
-  const noteRequired = isStaffingTab ? isNoteRequired(selectedStaffing) : isNoteRequired(selectedStatus);
-  const optionHasNoteStep = isStaffingTab ? hasNoteStep(selectedStaffing) : hasNoteStep(selectedStatus);
-  const isLastStep = step === 'note' || (step === 'destination' && !optionHasNoteStep) || (step === 'select' && (isStaffingTab ? !optionHasNoteStep : !hasDestinationStep && !optionHasNoteStep));
   const hasSelection = isStaffingTab ? !!selectedStaffing : !!selectedStatus;
-  const canProceed = hasSelection && !isSubmitting && (step !== 'note' || !noteRequired || note.trim().length > 0) && (isStaffingTab || !isLastStep || !isAwaitingDestinations);
+  const canProceed = hasSelection && !isSubmitting && (currentStep !== 'note' || !noteRequired || note.trim().length > 0) && (isStaffingTab || !isLastStep || !isAwaitingDestinations);
 
   const handleNext = useCallback(() => {
     if (!canProceed) return;
-    if (isStaffingTab) {
-      if (step === 'select' && optionHasNoteStep) setStep('note');
-      else submitStaffing();
-      return;
-    }
-    if (step === 'select' && hasDestinationStep) setStep('destination');
-    else if (step !== 'note' && optionHasNoteStep) setStep('note');
+    if (!isLastStep) setStep(steps[stepIndex + 1]);
+    else if (isStaffingTab) submitStaffing();
     else submitStatus();
-  }, [canProceed, hasDestinationStep, isStaffingTab, optionHasNoteStep, step, submitStaffing, submitStatus]);
+  }, [canProceed, isLastStep, isStaffingTab, stepIndex, steps, submitStaffing, submitStatus]);
 
   const handleBack = useCallback(() => {
-    if (step === 'note' && !isStaffingTab && hasDestinationStep) setStep('destination');
-    else setStep('select');
-  }, [hasDestinationStep, isStaffingTab, step]);
+    if (stepIndex > 0) setStep(steps[stepIndex - 1]);
+  }, [stepIndex, steps]);
 
   const title =
-    step === 'destination'
+    currentStep === 'destination'
       ? t('status.select_destination', { status: selectedStatus?.Text ?? '' })
-      : step === 'note'
+      : currentStep === 'note'
         ? t('status.add_note')
-        : isStaffingTab
-          ? t('status.select_staffing')
-          : subject === 'unit'
-            ? t('status.select_unit_status')
-            : t('status.select_status');
+        : currentStep === 'confirm'
+          ? t('status.set_status')
+          : isStaffingTab
+            ? t('status.select_staffing')
+            : subject === 'unit'
+              ? t('status.select_unit_status')
+              : t('status.select_status');
 
   const isHoldMode = holdToConfirm && !isStaffingTab;
+  // Steps with tabs (status / staffing, calls / stations / POIs) hold the list at its full height, so switching tabs —
+  // or the calls arriving — leaves the sheet where it is. The other steps size to what they show.
+  const hasTabbedList = currentStep === 'destination' || (currentStep === 'select' && showStaffing);
+  const listStyle = useMemo(() => (hasTabbedList ? { height: listMaxHeight } : { maxHeight: listMaxHeight }), [hasTabbedList, listMaxHeight]);
 
   return (
-    <CustomBottomSheet isOpen={isOpen} onClose={handleClose} snapPoints={[80]} testID={testID}>
-      <VStack space="md" className="w-full flex-1">
+    <CustomBottomSheet isOpen={isOpen} onClose={handleClose} snapPoints={[SHEET_SNAP_POINT]} testID={testID}>
+      <VStack space="md" className="w-full">
         <VStack space="xs">
           <Text className="text-xl font-bold text-typography-900" accessibilityRole="header">
             {title}
@@ -307,7 +344,7 @@ export const StatusPicker: React.FC<StatusPickerProps> = ({
           ) : null}
         </VStack>
 
-        {showStaffing && step === 'select' ? (
+        {showStaffing && currentStep === 'select' ? (
           <HStack space="sm">
             {(['status', 'staffing'] as const).map((value) => (
               <Pressable
@@ -324,8 +361,8 @@ export const StatusPicker: React.FC<StatusPickerProps> = ({
           </HStack>
         ) : null}
 
-        <ScrollView className="flex-1" keyboardShouldPersistTaps="handled" testID={`${testID}-scroll`}>
-          {step === 'select' ? (
+        <ScrollView style={listStyle} nestedScrollEnabled keyboardShouldPersistTaps="handled" testID={`${testID}-scroll`}>
+          {currentStep === 'select' ? (
             <VStack>
               {isStaffingTab ? (
                 staffingOptions.length === 0 ? (
@@ -371,15 +408,10 @@ export const StatusPicker: React.FC<StatusPickerProps> = ({
                   <ButtonText>{t('status.show_next_statuses')}</ButtonText>
                 </Button>
               ) : null}
-              {isHoldMode && isHoldHintVisible ? (
-                <Text className="text-center text-sm text-typography-600" testID={`${testID}-hold-hint`} accessibilityLiveRegion="polite">
-                  {t('status.hold_to_set_hint')}
-                </Text>
-              ) : null}
             </VStack>
           ) : null}
 
-          {step === 'destination' && selectedStatus ? (
+          {currentStep === 'destination' && selectedStatus ? (
             <StatusDestinationList
               tabs={destinationTabs}
               activeTab={destinationTab}
@@ -391,7 +423,7 @@ export const StatusPicker: React.FC<StatusPickerProps> = ({
             />
           ) : null}
 
-          {step === 'note' ? (
+          {currentStep === 'note' ? (
             <VStack space="sm">
               <Text className="text-sm text-typography-600">{noteRequired ? t('status.note_required') : t('status.note_optional')}</Text>
               <Textarea size="md" className="min-h-[100px]">
@@ -401,11 +433,18 @@ export const StatusPicker: React.FC<StatusPickerProps> = ({
           ) : null}
         </ScrollView>
 
-        {step !== 'select' && !isStaffingTab && selectedStatus ? (
+        {currentStep !== 'select' && !isStaffingTab && selectedStatus ? (
           <VStack className="rounded-lg bg-background-50 p-3" testID={`${testID}-summary`}>
             <Text className="text-sm text-typography-700">{`${t('status.selected_status')}: ${selectedStatus.Text}`}</Text>
             <Text className="text-sm text-typography-700">{`${t('status.selected_destination')}: ${effectiveDestination.type === 'none' ? t('status.no_destination') : destinationLabel(effectiveDestination)}`}</Text>
           </VStack>
+        ) : null}
+
+        {/* A tap on a hold button (a status on the list, or the save) explains itself here. */}
+        {isHoldMode && isHoldHintVisible ? (
+          <Text className="text-center text-sm text-typography-600" testID={`${testID}-hold-hint`} accessibilityLiveRegion="polite">
+            {t('status.hold_to_set_hint')}
+          </Text>
         ) : null}
 
         {error ? (
@@ -414,9 +453,9 @@ export const StatusPicker: React.FC<StatusPickerProps> = ({
           </Text>
         ) : null}
 
-        {isHoldMode && step === 'select' ? null : (
+        {isHoldMode && currentStep === 'select' ? null : (
           <HStack space="md">
-            {step === 'select' ? (
+            {isFirstStep ? (
               <Button variant="outline" action="secondary" className="flex-1" onPress={handleClose} isDisabled={isSubmitting} testID={`${testID}-cancel`}>
                 <ButtonText>{t('common.cancel')}</ButtonText>
               </Button>
@@ -425,12 +464,38 @@ export const StatusPicker: React.FC<StatusPickerProps> = ({
                 <ButtonText>{t('common.back')}</ButtonText>
               </Button>
             )}
-            <Button className="flex-1" onPress={handleNext} isDisabled={!canProceed} testID={isLastStep ? `${testID}-submit` : `${testID}-next`}>
-              {isSubmitting ? <Spinner size="small" /> : <ButtonText>{isLastStep ? t('status.set_status') : t('common.next')}</ButtonText>}
-            </Button>
+            {isHoldMode && isLastStep ? (
+              <HoldToConfirmButton
+                testID={`${testID}-hold-submit`}
+                onConfirm={handleNext}
+                onTap={() => setIsHoldHintVisible(true)}
+                disabled={!canProceed}
+                backgroundColor={colors.primary}
+                foregroundColor={colors.textInverse}
+                style={styles.holdSubmit}
+                accessibilityLabel={t('status.hold_to_submit')}
+                accessibilityHint={t('status.hold_to_set_hint')}
+              >
+                {isSubmitting ? (
+                  <Spinner size="small" color={colors.textInverse} />
+                ) : (
+                  <Text className="text-center font-semibold" style={{ color: colors.textInverse }}>
+                    {t('status.hold_to_submit')}
+                  </Text>
+                )}
+              </HoldToConfirmButton>
+            ) : (
+              <Button className="flex-1" onPress={handleNext} isDisabled={!canProceed} testID={isLastStep ? `${testID}-submit` : `${testID}-next`}>
+                {isSubmitting ? <Spinner size="small" /> : <ButtonText>{isLastStep ? t('status.set_status') : t('common.next')}</ButtonText>}
+              </Button>
+            )}
           </HStack>
         )}
       </VStack>
     </CustomBottomSheet>
   );
 };
+
+const styles = StyleSheet.create({
+  holdSubmit: { flex: 1 },
+});

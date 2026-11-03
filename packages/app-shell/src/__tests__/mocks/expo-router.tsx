@@ -12,6 +12,8 @@ export const mockNavigationState = {
   pathname: '/',
   segments: [] as string[],
   canGoBack: false,
+  /** What the Slot renders (the current route's screen). */
+  slot: null as ReactNode,
   tabs: null as null | { screens: MockTabScreen[]; screenOptions: unknown; screenListeners?: (props: { route: { name: string } }) => unknown },
 };
 
@@ -39,7 +41,7 @@ export function Redirect({ href }: { href: string }): ReactElement {
 }
 
 export function Slot(): ReactElement {
-  return <View testID="mock-slot" />;
+  return <View testID="mock-slot">{mockNavigationState.slot}</View>;
 }
 
 function TabsScreen(): null {
@@ -82,6 +84,7 @@ export function resetMockNavigation(): void {
   mockNavigationState.pathname = '/';
   mockNavigationState.segments = [];
   mockNavigationState.canGoBack = false;
+  mockNavigationState.slot = null;
   mockNavigationState.tabs = null;
   Object.values(router).forEach((fn) => fn.mockClear());
 }

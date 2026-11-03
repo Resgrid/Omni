@@ -3,27 +3,22 @@
     "initialization_failed": "App-Daten konnten nicht geladen werden. Bitte prüfen Sie Ihre Verbindung und versuchen Sie es erneut."
   },
   "callImages": {
-    "not_signed_in": "Sie müssen angemeldet sein, um Bilder hochzuladen",
-    "upload_error": "Fehler beim Hochladen des Bildes"
+    "not_signed_in": "Sie müssen angemeldet sein, um Bilder hochzuladen"
   },
   "calls": {
     "directions_to_destination": "Route zum Ziel",
-    "dispatch_on": "Alarmierungszeit",
-    "dispatch_on_too_soon": "Die Alarmierungszeit muss mindestens {{minutes}} Minuten in der Zukunft liegen",
     "errors": {
       "load_failed": "Anrufe konnten nicht geladen werden"
     },
     "files": {
       "sharing_unavailable": "Teilen ist auf diesem Gerät nicht verfügbar"
     },
-    "required_fields_missing": "Ihre Abteilung benötigt diese Felder, bevor der Einsatz gespeichert werden kann: {{fields}}",
     "view_on_map": "Auf Karte anzeigen"
   },
   "chat": {
     "chatting_as": "Chatten als {{name}}"
   },
   "common": {
-    "no_location": "Keine Standortdaten verfügbar",
     "no_unit": "Keine Einheit",
     "unknown_error": "Ein unbekannter Fehler ist aufgetreten"
   },
@@ -33,30 +28,11 @@
   },
   "incident_command": {
     "error": "Informationen zur Einsatzleitung konnten nicht geladen werden",
-    "need_category": {
-      "equipment": "Ausrüstung",
-      "logistics": "Logistik",
-      "medical": "Medizinisch",
-      "other": "Sonstiges",
-      "resource": "Ressource",
-      "staffing": "Personal"
-    },
-    "need_status": {
-      "cancelled": "Abgebrochen",
-      "met": "Erfüllt",
-      "open": "Offen",
-      "partially_met": "Teilweise erfüllt"
-    },
     "no_active_command": "Für diesen Anruf ist keine Einsatzleitung aktiv",
     "objective_status": {
       "complete": "Abgeschlossen",
       "in_progress": "In Bearbeitung",
       "pending": "Ausstehend"
-    },
-    "objective_type": {
-      "benchmark": "Meilenstein",
-      "general": "Allgemein",
-      "safety": "Sicherheit"
     },
     "progress": "{{percent}} % abgeschlossen",
     "quantity_fulfilled": "{{fulfilled}} von {{requested}} erfüllt"
@@ -136,13 +112,6 @@
     "unnamedLocation": "Geräteraum",
     "wholeUnit": "Ganzes Fahrzeug: {{name}}"
   },
-  "login": {
-    "hide_password": "Passwort verbergen",
-    "login_button": "Anmelden",
-    "login_button_loading": "Anmelden...",
-    "show_password": "Passwort anzeigen",
-    "title": "Anmelden"
-  },
   "map": {
     "legend": {
       "built_in_unit_statuses": "Eingebaute Einheitenstatus",
@@ -200,14 +169,10 @@
     "removed_one": "Benachrichtigung gelöscht",
     "unable_to_load": "Benachrichtigungen konnten nicht geladen werden"
   },
-  "push_notifications": {
-    "unknown_type_warning": "Dieser Benachrichtigungstyp wird nicht erkannt. Bitte Support kontaktieren, wenn diese Meldung weiterhin angezeigt wird."
-  },
   "roles": {
     "assignedElsewhere": "In einer anderen Rolle",
     "clearAssignment": "Aktuelle Zuweisung entfernen",
     "noUsersFound": "Keine Benutzer gefunden",
-    "saved_successfully": "Rollenzuweisungen gespeichert",
     "searchUsers": "Nach Name oder Gruppe suchen...",
     "selectUserDescription": "Wählen Sie eine Person für diese Rolle",
     "selectUserForRole": "Zuweisen: {{role}}",
@@ -223,22 +188,10 @@
     "traffic_severe": "Sehr dichter Verkehr"
   },
   "settings": {
-    "audio_device_selection": {
-      "speaker_device": "Lautsprechergerät"
-    },
-    "logout_confirm_message": "Sind Sie sicher, dass Sie sich abmelden möchten? Dadurch werden alle App-Daten, zwischengespeicherten Werte und Einstellungen gelöscht.",
-    "no_units_available_help": "Ihnen sind keine Einheiten zugewiesen. Bitten Sie Ihren Abteilungsadministrator, Sie der Stationsgruppe einer Einheit hinzuzufügen.",
-    "realtime_geolocation_warning": "Diese Funktion sendet den Standort dieser Einheit an Ihre Abteilung, während die App geöffnet ist, und verbindet sich mit dem Echtzeit-Standort-Hub, um die Positionen anderer Einheiten zu empfangen. Eine aktive Netzwerkverbindung ist erforderlich.",
-    "units_load_failed": "Einheiten konnten nicht geladen werden. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut."
+    "realtime_geolocation_warning": "Diese Funktion sendet den Standort dieser Einheit an Ihre Abteilung, während die App geöffnet ist, und verbindet sich mit dem Echtzeit-Standort-Hub, um die Positionen anderer Einheiten zu empfangen. Eine aktive Netzwerkverbindung ist erforderlich."
   },
   "status": {
-    "current": "Aktuell",
     "current_status": "Aktueller Status",
-    "hold_to_set_hint": "Zwei Sekunden gedrückt halten, um den Status zu setzen",
-    "hold_to_set_instructions": "Einen Status zwei Sekunden gedrückt halten, um ihn zu setzen",
-    "hold_to_submit": "Zum Senden gedrückt halten",
-    "show_all_statuses": "Alle Status anzeigen ({{count}} weitere)",
-    "show_next_statuses": "Nur nächste Status anzeigen",
-    "status_queued": "Status auf diesem Gerät gespeichert. Er wird automatisch gesendet."
+    "hold_to_set_instructions": "Einen Status zwei Sekunden gedrückt halten, um ihn zu setzen"
   }
 }
