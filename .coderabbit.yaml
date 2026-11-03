@@ -39,6 +39,7 @@ reviews:
     - "!**/*.yml"
     - "!**/.claude/**"
     - "!**/.agent/**"
+    - "!**/.agents/**"
     - "!**/*.md"
     - "!**/*.test.js"
     - "!**/*.test.ts"
