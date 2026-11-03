@@ -1,7 +1,8 @@
 import { UnitNavigationEtaChip, useIsNavigationEtaEnabled, useNavigationEtaSync } from '@resgrid/features/navigation-eta';
 import { useTranslation } from '@resgrid/i18n';
 import type { DispatchedEventResultData } from '@resgrid/models';
-import { Text, TypeIcon } from '@resgrid/ui';
+import { Button, ButtonText, Text, TypeIcon, useThemeColors } from '@resgrid/ui';
+import { UserPlus } from 'lucide-react-native';
 import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -11,29 +12,46 @@ export interface CallDispatchedPanelProps {
   dispatches: readonly DispatchedEventResultData[];
   /** The call shown: dispatched units navigating to it get their live ETA (apps that show ETAs). */
   callId?: string | null;
+  /** "Dispatch more" (Dispatch): shown for a call already out to users who may dispatch. */
+  onDispatchMore?: () => void;
 }
 
 /**
  * Who the call was dispatched to (personnel, groups, roles, units), with response codes when the department shows them
  * and, where the app shows live ETAs (Dispatch, Big Board), each unit's ETA while it navigates to this call.
  */
-export const CallDispatchedPanel: React.FC<CallDispatchedPanelProps> = ({ dispatches, callId = null }) => {
+export const CallDispatchedPanel: React.FC<CallDispatchedPanelProps> = ({ dispatches, callId = null, onDispatchMore }) => {
   const { t } = useTranslation();
+  const colors = useThemeColors();
   const unique = useMemo(() => getUniqueDispatches(dispatches), [dispatches]);
   const showEtas = useIsNavigationEtaEnabled() && !!callId;
   useNavigationEtaSync(showEtas);
+
+  const dispatchMore = onDispatchMore ? (
+    <Button size="sm" className="mb-3 self-start" onPress={onDispatchMore} accessibilityLabel={t('call_detail.dispatch_more')} testID="call-dispatched-dispatch-more">
+      <View style={styles.buttonIcon}>
+        <UserPlus size={16} color={colors.textInverse} />
+      </View>
+      <ButtonText>{t('call_detail.dispatch_more')}</ButtonText>
+    </Button>
+  ) : null;
+
   if (unique.length === 0) {
     return (
       <View style={styles.panel} testID="call-dispatched-panel">
+        {dispatchMore}
         <Text className="text-typography-600">{t('call_detail.no_dispatched')}</Text>
       </View>
     );
   }
+
   return (
     <View style={styles.panel} testID="call-dispatched-panel">
+      {dispatchMore}
       {unique.map((dispatch, index) => {
         const style = getDispatchTypeStyle(dispatch.Type);
         const isUnit = isUnitDispatchType(dispatch.Type);
+
         return (
           <View key={`${dispatch.Id || index}-${dispatch.Type}`} style={styles.row} className="bg-background-50" testID={`call-dispatched-${dispatch.Id || index}`}>
             <View style={StyleSheet.flatten([styles.badge, { backgroundColor: style.backgroundColor }])}>
@@ -65,6 +83,7 @@ export const CallDispatchedPanel: React.FC<CallDispatchedPanelProps> = ({ dispat
 
 const styles = StyleSheet.create({
   panel: { padding: 16 },
+  buttonIcon: { marginRight: 6 },
   row: { flexDirection: 'row', alignItems: 'center', borderRadius: 8, padding: 10, marginBottom: 8 },
   badge: { width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', marginRight: 8 },
   badgeText: { fontSize: 11, fontWeight: '700' },

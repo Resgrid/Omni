@@ -24,6 +24,19 @@ describe('createHttpClient', () => {
     expect(adapter.mock.calls[1][0].baseURL).toBe('https://other.example.com/api/v4');
   });
 
+  it('sends requests to the transformed URL (the dev proxy) while getBaseUrl() keeps the server URL', async () => {
+    const proxy = (url: string) => url.replace('https://', 'http://localhost:8081/__resgrid-dev-proxy/https/');
+    const { http, adapter } = createTestClient({ transformUrl: proxy });
+
+    await http.axios.get('/Calls/GetActiveCalls');
+    await http.axios.get('https://api.example.com/files/1', { responseType: 'blob' });
+
+    expect(adapter.mock.calls[0][0].baseURL).toBe(proxy(BASE_URL));
+    expect(adapter.mock.calls[0][0].url).toBe('/Calls/GetActiveCalls');
+    expect(adapter.mock.calls[1][0].url).toBe('http://localhost:8081/__resgrid-dev-proxy/https/api.example.com/files/1');
+    expect(http.getBaseUrl()).toBe(BASE_URL);
+  });
+
   it('sends the bearer token and the injected client headers, skipping empty values', async () => {
     const { http, adapter } = createTestClient();
     await http.axios.get('/Calls/GetActiveCalls');

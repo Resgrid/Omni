@@ -231,7 +231,33 @@
     "info": {
       "dispatched_on": "Dispatched",
       "logged_on": "Logged"
-    }
+    },
+    "delete_call": "حذف البلاغ",
+    "delete_call_confirm": "هل تريد حذف هذا البلاغ؟ لا يمكن التراجع عن هذا الإجراء.",
+    "delete_call_success": "تم حذف البلاغ",
+    "delete_call_error": "تعذر حذف البلاغ",
+    "reschedule": "إعادة الجدولة",
+    "reschedule_success": "تم تحديث وقت الإرسال",
+    "reschedule_error": "تعذرت إعادة جدولة البلاغ",
+    "reschedule_invalid": "Choose a valid dispatch date and time",
+    "reschedule_in_1_hour": "خلال ساعة",
+    "reschedule_in_1_day": "خلال يوم",
+    "reschedule_tomorrow_morning": "غدًا الساعة 8 صباحًا",
+    "reschedule_datetime": "تاريخ ووقت الإرسال",
+    "dispatch_more": "إرسال موارد إضافية",
+    "pending_banner_title": "معلقة — لم يتم إرسالها بعد",
+    "pending_banner_description": "تم حفظ هذه المكالمة لكن لم يتم إشعار أي شخص. اختر من سترسل وأرسلها عندما تكون جاهزة.",
+    "dispatch_call": "إرسال",
+    "map_call": "البلاغ",
+    "map_destination": "الوجهة",
+    "audio": "الصوت",
+    "audio_empty": "لا توجد تسجيلات صوتية",
+    "audio_play": "Play {{name}}",
+    "audio_stop": "Stop {{name}}",
+    "audio_play_error": "Could not play this recording",
+    "scheduled_on": "تاريخ ووقت الإرسال المجدول",
+    "destination_type": "نوع الوجهة",
+    "keyboard_shortcuts": "Tip: Press 1-9 to switch tabs, Ctrl+E to edit, Escape to go back"
   },
   "calls": {
     "address": "العنوان",
@@ -253,7 +279,9 @@
     "contact_phone_placeholder": "أدخل هاتف جهة الاتصال",
     "contact_picker": {
       "linked": "جهة الاتصال المرتبطة: {{name}}",
-      "select": "Select Contact"
+      "select": "Select Contact",
+      "search_placeholder": "البحث في جهات الاتصال...",
+      "empty": "لا توجد جهات اتصال متاحة"
     },
     "coordinates": "إحداثيات GPS",
     "coordinates_found": "تم العثور على الإحداثيات وتحديث العنوان",
@@ -398,7 +426,9 @@
     },
     "protocols": {
       "select": "اختر البروتوكولات",
-      "selected_count": "{{count}} selected"
+      "selected_count": "{{count}} selected",
+      "attached": "مرفقة بالفعل: {{names}}",
+      "add": "إضافة بروتوكولات"
     },
     "queued": {
       "badge": "Queued — not dispatched yet",
@@ -447,8 +477,25 @@
       "name_required": "Enter a name for the call",
       "nature_required": "Enter the nature of the call",
       "required": "Required by your department",
-      "udf_required": "Fill in the required custom fields"
-    }
+      "udf_required": "Fill in the required custom fields",
+      "type_required": "Choose a call type"
+    },
+    "pending_saved": "تم حفظ المكالمة كمعلقة",
+    "required_fields_missing_edit": "يطلب قسمك هذه الحقول قبل حفظ البلاغ: {{fields}}",
+    "search_address": "البحث عن العنوان",
+    "search_what3words": "البحث عن عنوان what3words",
+    "search_plus_code": "البحث عن Plus Code",
+    "looking_up_address": "جارٍ البحث عن العنوان لهذه الإحداثيات...",
+    "notify_cancelled_entities": "إشعار الجهات الملغاة",
+    "notify_cancelled_entities_description": "إرسال رسالة إلى الأفراد والوحدات التي تمت إزالتها من قائمة الإرسال.",
+    "linked_calls": {
+      "edit_hint": "يتم الاحتفاظ بالروابط الموجودة على هذا البلاغ؛ اختر بلاغًا لإضافة رابط آخر."
+    },
+    "scheduled_on_edit_hint": "اختر وقتاً لجدولة الإرسال أو إعادة جدولته. تركه فارغاً يُبقي الجدولة الحالية للبلاغ.",
+    "scheduled_on_helper": "اتركه فارغاً للإرسال الفوري",
+    "save_pending_call": "حفظ المكالمة المعلقة",
+    "keyboard_shortcuts": "نصيحة: اضغط Ctrl+Enter للإنشاء، Escape للإلغاء",
+    "edit_keyboard_shortcuts": "نصيحة: اضغط Ctrl+S للحفظ، Escape للإلغاء"
   },
   "chat": {
     "ack_pending_count": "لديك {{count}} رسائل عاجلة بحاجة إلى إقرار",
@@ -3443,7 +3490,8 @@
     "table_priority": "الأولوية",
     "table_scheduled": "مجدول في",
     "table_type": "النوع",
-    "title": "المكالمات المجدولة"
+    "title": "المكالمات المجدولة",
+    "scheduled_for": "مجدولة ل"
   },
   "certifications": {
     "add": "إضافة شهادة",
@@ -3608,6 +3656,7 @@
     "severity_levels": "مستويات الخطورة",
     "show_area": "عرض المنطقة",
     "show_calls": "عرض المكالمات",
+    "show_linked_calls": "عرض المكالمات المرتبطة",
     "show_expiry": "عرض وقت الانتهاء",
     "show_headline": "عرض العنوان",
     "show_personnel": "عرض الأفراد",
@@ -3788,6 +3837,7 @@
     "check_in": "Check in",
     "clear_search": "Clear search",
     "expand_map": "Open the full map",
+    "gps": "GPS",
     "map_unavailable": "No map is configured for this department.",
     "no_overdue_check_ins": "No overdue check-ins",
     "no_resources": "No units or personnel to show",
@@ -3811,11 +3861,14 @@
     "ptt_error_permission": "Microphone access is needed to talk.",
     "ptt_hotkey_hint": "Hold {{hotkey}} to talk",
     "ptt_no_channels": "No voice channels",
+    "ptt_off": "OFF",
     "ptt_ready": "Ready",
     "ptt_receiving": "Receiving",
     "ptt_reconnecting": "Reconnecting…",
+    "ptt_rx": "RX",
     "ptt_stop": "Stop talking",
     "ptt_talk": "Talk",
+    "ptt_tx": "TX",
     "resources": "Resources",
     "resources_on_call": "Resources on call",
     "search_notes": "Search notes",
@@ -3877,6 +3930,7 @@
     "note_added_to_console": "تمت إضافة ملاحظة جديدة إلى وحدة التحكم",
     "note_created": "تم إنشاء الملاحظة",
     "notes": "الملاحظات",
+    "on_call": "في مكالمة",
     "personnel": "الموظفين",
     "personnel_deselected": "تم إلغاء تحديد الموظف",
     "personnel_on_call": "الموظفين في المكالمة",
@@ -3897,6 +3951,7 @@
     "transmission_ended": "انتهى الإرسال",
     "transmitting": "Transmitting",
     "transmitting_on": "جاري الإرسال على {{channel}}",
+    "unassigned": "غير مخصص",
     "unit_deselected": "تم إلغاء تحديد الوحدة",
     "unit_selected": "تم تحديد الوحدة",
     "unit_status_updated": "تم تحديث حالة الوحدة",

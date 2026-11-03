@@ -4,11 +4,25 @@ import type { CallPriorityResultData, DispatchedEventResultData, NewCallFieldRul
 import { readableColors, readableTextColor } from '../lib/call-colors';
 import { getDispatchTypeStyle, getUniqueDispatches, isCurrentUserOnCall } from '../lib/call-dispatch';
 import { EMPTY_CALL_FILTERS, filterCalls } from '../lib/call-filters';
-import { callToFormValues, createRequestToFormValues, dispatchSelectionFromDispatches, emptyCallFormValues, parseCoordinates, toCreateCallRequest, toUpdateCallRequest, validateCallForm } from '../lib/call-form';
+import {
+  callToFormValues,
+  createRequestToFormValues,
+  dispatchSelectionFromDispatches,
+  emptyCallFormValues,
+  isUdfFieldShown,
+  missingPolicyFields,
+  parseCoordinates,
+  toCreateCallRequest,
+  toUpdateCallRequest,
+  validateCallForm,
+} from '../lib/call-form';
 import { defaultPriorityId, priorityOptions, resolvePriority } from '../lib/call-priority';
-import { isScheduledCall, timeAgo } from '../lib/call-time';
+import { getScheduledDispatchPrefill, isDispatchTimeTooSoon } from '../lib/call-schedule';
+import { isClosedCall, isScheduledCall, timeAgo } from '../lib/call-time';
 import { getCallCloseErrorMessage, isActiveCommandFor } from '../lib/close-call';
-import { createFieldPolicy } from '../lib/field-policy';
+import { buildAddResourcesRequest, dispatchesToSelection, mergeDispatchSelections } from '../lib/dispatch-selection';
+import { createFieldPolicy, describeCallFields } from '../lib/field-policy';
+import { getMissingCallFieldsFromRefusal } from '../lib/server-refusal';
 import { callCorrect, callDetail, callEdit, callNew } from '../routes';
 import { makeCall } from './test-utils';
 
@@ -27,11 +41,13 @@ describe('call colours and priorities', () => {
 
   it('uses department priorities when the department has any, the built-ins otherwise', () => {
     expect(priorityOptions([]).map((option) => option.label)).toEqual(['calls.priorities.low', 'calls.priorities.medium', 'calls.priorities.high', 'calls.priorities.emergency']);
+
     const department = [
       { Id: 7, Name: 'Code 3', Color: '#ff0000', Sort: 2, IsDeleted: false, IsDefault: false },
       { Id: 5, Name: 'Routine', Color: '#00ff00', Sort: 1, IsDeleted: false, IsDefault: true },
       { Id: 9, Name: 'Old', Color: '', Sort: 0, IsDeleted: true, IsDefault: false },
     ] as CallPriorityResultData[];
+
     expect(priorityOptions(department).map((option) => option.label)).toEqual(['Routine', 'Code 3']);
     expect(defaultPriorityId(department)).toBe(5);
     expect(resolvePriority(department, 7)?.color).toBe('#ff0000');
@@ -47,9 +63,26 @@ describe('dispatch helpers', () => {
       dispatch({ Id: '', Type: 'User', Name: 'Pat' }),
       dispatch({ Id: '', Type: 'User', Name: 'Pat' }),
     ];
+
     expect(getUniqueDispatches(list)).toHaveLength(2);
     expect(getDispatchTypeStyle('Personnel').label).toBe('P');
     expect(getDispatchTypeStyle('Station Group').label).toBe('G');
+  });
+
+  it('reads a call’s dispatches as a selection (names or P/G/R/U codes) and only ever adds to it', () => {
+    const current = dispatchesToSelection([
+      dispatch({ Id: 'u1', Type: 'p' }),
+      dispatch({ Id: 'g1', Type: 'Groups' }),
+      dispatch({ Id: '7', Type: 'Unit' }),
+      dispatch({ Id: '7', Type: 'U' }),
+      dispatch({ Id: '', Type: 'User' }),
+    ]);
+    expect(current).toEqual({ everyone: false, users: ['u1'], groups: ['g1'], roles: [], units: ['7'] });
+    expect(mergeDispatchSelections(current, { everyone: false, users: [], groups: [], roles: ['r1'], units: ['7', '8'] })).toEqual({ everyone: false, users: ['u1'], groups: ['g1'], roles: ['r1'], units: ['7', '8'] });
+    const request = buildAddResourcesRequest(makeCall('5', { Geolocation: '39.1,-104.2' }), current, { everyone: false, users: [], groups: [], roles: [], units: ['8'] }, { callFormData: '{"a":1}' });
+    expect(request).toMatchObject({ callId: '5', latitude: 39.1, longitude: -104.2, callFormData: '{"a":1}', dispatchUnits: ['7', '8'], dispatchUsers: ['u1'] });
+    expect(request).not.toHaveProperty('protocolIds');
+    expect(request).not.toHaveProperty('linkedCallId');
   });
 
   it('knows when the user is on the call by person, group, role or unit seat', () => {
@@ -77,6 +110,12 @@ describe('time and state', () => {
     expect(isScheduledCall(makeCall('1', { DispatchedOnUtc: '2026-11-01T12:00:00Z' }), now)).toBe(true);
     expect(isScheduledCall(makeCall('1', { DispatchedOnUtc: '2026-10-30T12:00:00Z' }), now)).toBe(false);
     expect(isScheduledCall(makeCall('1', { State: 8, DispatchedOnUtc: '2026-11-01T12:00:00Z' }), now)).toBe(false);
+    // The schedule wins over the dispatch time where a newer server sends both (Dispatch).
+    expect(isScheduledCall(makeCall('1', { ScheduledOnUtc: '2026-11-01T12:00:00', DispatchedOnUtc: '2026-10-30T12:00:00Z' }), now)).toBe(true);
+  });
+
+  it('knows a closed call under any close type', () => {
+    expect([0, 1, 2, 7, 8].map((State) => isClosedCall(makeCall('1', { State })))).toEqual([false, true, true, true, false]);
   });
 });
 
@@ -138,11 +177,103 @@ describe('call form', () => {
     expect(full).not.toHaveProperty('dispatchOnUtc');
   });
 
-  it('starts an edit from the call, hidden fields included, and resends them', () => {
-    const call = makeCall('9', { ContactName: 'Hidden Contact', ExternalId: 'EXT-1', Latitude: '39.5', Longitude: '-105.1' });
-    const values = callToFormValues(call, [dispatch({ Id: 'u1', Type: 'User' }), dispatch({ Id: '4', Type: 'Unit' })]);
-    expect(values).toMatchObject({ contactName: 'Hidden Contact', externalId: 'EXT-1', coordinates: '39.5, -105.1', dispatch: { users: ['u1'], units: ['4'] } });
-    expect(toUpdateCallRequest('9', values, { protocols: false, linkedCall: false, udf: false, contact: false })).toMatchObject({ callId: '9', contactName: 'Hidden Contact', externalId: 'EXT-1' });
+  it('starts an edit from the call and leaves fields the policy hides as stored (Dispatch keepHiddenEditFieldsUnchanged)', () => {
+    // SAFETY: the form reads only the protocol count from Protocols; a partial entry stands in for the server's record.
+    const call = makeCall('9', { ContactName: 'Hidden Contact', ExternalId: 'EXT-1', Latitude: '39.5', Longitude: '-105.1', DestinationPoiId: 12, Protocols: [{ Id: 4 }] as never });
+    const values = callToFormValues(call, [dispatch({ Id: 'u1', Type: 'User' }), dispatch({ Id: '4', Type: 'U' })], { types: [{ Id: 'x', Name: 'Fire' }] });
+    expect(values).toMatchObject({ contactName: 'Hidden Contact', externalId: 'EXT-1', coordinates: '39.5, -105.1', type: 'Fire', protocolIds: [], dispatch: { users: ['u1'], units: ['4'] } });
+    const hidden = createFieldPolicy([rule('contactName', false, false), rule('destinationPoi', false, false), rule('protocols', false, false), rule('geolocation', false, false)]);
+    const edit = { call, storedProtocolCount: 1, initialDispatchOnUtc: '' };
+    const request = toUpdateCallRequest(
+      '9',
+      { ...values, destinationPoiId: null, notifyCancelledEntities: true },
+      { protocols: true, linkedCall: true, udf: false, contact: false },
+      { edit, isVisible: hidden.isVisible }
+    );
+    // Blank text = keep the stored value; the destination goes up as stored; protocols are left out; no point is posted.
+    expect(request).toMatchObject({ callId: '9', contactName: '', externalId: 'EXT-1', destinationPoiId: 12, linkedCallId: '', notifyCancelledEntities: true, rebroadcastCall: false });
+    expect(request).not.toHaveProperty('dispatchOnUtc');
+    expect(request.protocolIds).toBeUndefined();
+    expect(request.latitude).toBeUndefined();
+  });
+
+  it('sends an edit only the protocols it adds, a newly picked dispatch time and a changed contact', () => {
+    const now = Date.parse('2026-11-03T10:00:00Z');
+    // SAFETY: the edit reads only ContactId from the call's contacts; a partial entry stands in for the server's record.
+    const call = makeCall('9', { DispatchedOnUtc: '2026-11-03T12:00:00', Contacts: [{ ContactId: 'c1' }] as never });
+    const values = callToFormValues(call, [], { now });
+    expect(values.dispatchOnUtc).toBe('2026-11-03T12:00:00.000Z');
+    const policy = createFieldPolicy(null);
+    const edit = { call, storedProtocolCount: 0, initialDispatchOnUtc: values.dispatchOnUtc };
+    const pickers = { protocols: true, linkedCall: false, udf: false, contact: true };
+    const unchanged = toUpdateCallRequest('9', { ...values, protocolIds: [7] }, pickers, { edit, isVisible: policy.isVisible });
+    expect(unchanged).toMatchObject({ protocolIds: [7] });
+    expect(unchanged).not.toHaveProperty('dispatchOnUtc');
+    expect(unchanged).not.toHaveProperty('contactId');
+    const moved = toUpdateCallRequest('9', { ...values, dispatchOnUtc: '2026-11-03T14:00:00.000Z', contactId: 'c2' }, pickers, { edit, isVisible: policy.isVisible });
+    expect(moved).toMatchObject({ dispatchOnUtc: '2026-11-03T14:00:00.000Z', contactId: 'c2' });
+    // A call already out has nothing to reschedule.
+    expect(callToFormValues(makeCall('9', { DispatchedOnUtc: '2026-11-03T08:00:00Z' }), [], { now }).dispatchOnUtc).toBe('');
+  });
+
+  it('applies the edit rules for required fields (Dispatch getEditCallMissingFields)', () => {
+    const policy = createFieldPolicy([
+      rule('note', true, true),
+      rule('dispatchOn', true, true),
+      rule('linkedCall', true, true),
+      rule('protocols', true, true),
+      rule('dispatchList', true, true),
+      rule('indoorLocation', true, true),
+    ]);
+    const call = makeCall('9', { Note: 'Stored note' });
+    const base = { ...emptyCallFormValues(1), name: 'A', nature: 'B', type: 'Fire' };
+    // A blank note keeps the stored one; the dispatch time and linked call are never required on an edit; protocols are not
+    // judged when the attached ones could not be read; indoor location is never enforced.
+    expect(missingPolicyFields(base, policy, { call, storedProtocolCount: null, initialDispatchOnUtc: '' })).toEqual(['dispatchList']);
+    expect(missingPolicyFields(base, policy, { call, storedProtocolCount: 0, initialDispatchOnUtc: '' })).toEqual(['protocols', 'dispatchList']);
+    // A pending call's recipients are decided when it is dispatched.
+    expect(missingPolicyFields(base, policy, { call: makeCall('9', { Note: 'n', State: 8 }), storedProtocolCount: 2, initialDispatchOnUtc: '' })).toEqual([]);
+  });
+
+  it('applies the create rules: a pending call needs no dispatch list or time, indoor location is never enforced', () => {
+    const policy = createFieldPolicy([rule('dispatchOn', true, true), rule('dispatchList', true, true), rule('indoorLocation', true, true)]);
+    const base = { ...emptyCallFormValues(1), name: 'A', nature: 'B' };
+    expect(missingPolicyFields(base, policy)).toEqual(['dispatchOn', 'dispatchList']);
+    expect(missingPolicyFields({ ...base, isPending: true }, policy)).toEqual([]);
+  });
+
+  it('requires a type when the department has types, and a scheduled dispatch at least 15 minutes ahead', () => {
+    const now = Date.parse('2026-11-03T10:00:00Z');
+    const base = { ...emptyCallFormValues(1), name: 'A', nature: 'B' };
+    const policy = createFieldPolicy(null);
+    expect(validateCallForm(base, { policy, validPriorityIds: [1], validTypeNames: ['Fire'], now }).errors.type).toBe('calls.validation.type_required');
+    expect(validateCallForm({ ...base, type: 'Gone' }, { policy, validPriorityIds: [1], validTypeNames: ['Fire'], now }).errors.type).toBe('calls.invalid_type');
+    expect(validateCallForm(base, { policy, validPriorityIds: [1], validTypeNames: [], now }).isValid).toBe(true);
+    const soon = validateCallForm({ ...base, dispatchOnUtc: '2026-11-03T10:05:00Z' }, { policy, validPriorityIds: [1], now });
+    expect(soon).toMatchObject({ isValid: false, dispatchTooSoon: true, errors: { dispatchOnUtc: 'calls.dispatch_on_too_soon' } });
+    expect(validateCallForm({ ...base, dispatchOnUtc: '2026-11-03T10:05:00Z', isPending: true }, { policy, validPriorityIds: [1], now }).isValid).toBe(true);
+    expect(isDispatchTimeTooSoon('2026-11-03T10:20:00Z', now)).toBe(false);
+    // An edit checks only a time it changes.
+    const call = makeCall('9');
+    expect(
+      validateCallForm({ ...base, dispatchOnUtc: '2026-11-03T10:05:00.000Z' }, { policy, validPriorityIds: [1], now, edit: { call, storedProtocolCount: 0, initialDispatchOnUtc: '2026-11-03T10:05:00.000Z' } }).isValid
+    ).toBe(true);
+    expect(getScheduledDispatchPrefill('2026-11-03T09:00:00', now)).toBe('');
+  });
+
+  it('shows custom fields that are on mobile or required (Dispatch isUdfFieldShown)', () => {
+    expect(isUdfFieldShown({ IsEnabled: true, IsVisibleOnMobile: false, IsRequired: true })).toBe(true);
+    expect(isUdfFieldShown({ IsEnabled: true, IsVisibleOnMobile: false, IsRequired: false })).toBe(false);
+    expect(isUdfFieldShown({ IsEnabled: false, IsVisibleOnMobile: true, IsRequired: true })).toBe(false);
+  });
+
+  it('reads the fields a save was refused for and names them the way the form does', () => {
+    const refusal = new ApiError({ kind: 'http', status: 400, data: '"Required call fields are missing: address, contactInfo, somethingNew"' });
+    const keys = getMissingCallFieldsFromRefusal(refusal);
+    expect(keys).toEqual(['address', 'contactInfo', 'somethingNew']);
+    expect(describeCallFields(keys ?? [], (key) => `t:${key}`)).toBe('t:calls.address, t:calls.contact_info, somethingNew');
+    expect(getMissingCallFieldsFromRefusal(new ApiError({ kind: 'http', status: 400, data: { Message: 'Other problem' } }))).toBeNull();
+    expect(getMissingCallFieldsFromRefusal(new ApiError({ kind: 'http', status: 500, data: 'Required call fields are missing: address' }))).toBeNull();
   });
 
   it('round-trips a refused request into the correction form', () => {
@@ -150,6 +281,7 @@ describe('call form', () => {
       { ...emptyCallFormValues(1), name: 'A', nature: 'B', dispatch: { everyone: false, users: ['u1'], groups: [], roles: [], units: [] } },
       { protocols: false, linkedCall: false, udf: false, contact: false }
     );
+
     expect(createRequestToFormValues(request)).toMatchObject({ name: 'A', nature: 'B', priority: 1, dispatch: { users: ['u1'] } });
     expect(dispatchSelectionFromDispatches([dispatch({ Id: 'g', Type: 'Group' }), dispatch({ Id: 'r', Type: 'Role' })])).toMatchObject({ groups: ['g'], roles: ['r'] });
   });
@@ -170,6 +302,9 @@ describe('close call', () => {
     expect(getCallCloseErrorMessage(new ApiError({ kind: 'http', status: 500, data: 'boom' }))).toBeNull();
     expect(getCallCloseErrorMessage(new ApiError({ kind: 'http', status: 400, data: '<html></html>' }))).toBeNull();
     expect(getCallCloseErrorMessage(new V4FailureError({ Status: 'failure' } as never))).toBeNull();
+    // A timeout or rate limit is not a refusal: sending again can work (Dispatch isCallCloseRejection).
+    expect(getCallCloseErrorMessage(new ApiError({ kind: 'http', status: 408, data: 'Request Timeout' }))).toBeNull();
+    expect(getCallCloseErrorMessage(new ApiError({ kind: 'http', status: 429, data: 'Too many requests' }))).toBeNull();
   });
 
   it('matches an active command by call id', () => {

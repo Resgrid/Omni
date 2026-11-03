@@ -12,6 +12,7 @@ export const CALL_ROUTE_PATTERNS = {
 
 const encodeId = (id: string): string => {
   if (!isSafeRouteId(id)) throw new Error('Unsafe call route id');
+
   return encodeURIComponent(id);
 };
 
@@ -24,3 +25,9 @@ export const callRoutes = {
 } as const;
 
 export const { callDetail, callEdit, callNew, callCorrect } = callRoutes;
+
+/**
+ * Where a call saved as Pending waits (the call-queues module's screen, only in variants with `calls.queues`): the new
+ * call form shows it after "Save as pending", as Dispatch does.
+ */
+export const PENDING_CALLS_ROUTE = '/pending-calls';

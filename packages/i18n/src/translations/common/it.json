@@ -231,7 +231,33 @@
     "info": {
       "dispatched_on": "Dispatched",
       "logged_on": "Logged"
-    }
+    },
+    "delete_call": "Elimina chiamata",
+    "delete_call_confirm": "Eliminare questa chiamata? Questa azione non può essere annullata.",
+    "delete_call_success": "Chiamata eliminata",
+    "delete_call_error": "Impossibile eliminare la chiamata",
+    "reschedule": "Riprogramma",
+    "reschedule_success": "Ora di invio aggiornata",
+    "reschedule_error": "Impossibile riprogrammare la chiamata",
+    "reschedule_invalid": "Choose a valid dispatch date and time",
+    "reschedule_in_1_hour": "Tra 1 ora",
+    "reschedule_in_1_day": "Tra 1 giorno",
+    "reschedule_tomorrow_morning": "Domani alle 8:00",
+    "reschedule_datetime": "Data e ora di invio",
+    "dispatch_more": "Invia risorse aggiuntive",
+    "pending_banner_title": "In attesa — non ancora inviata",
+    "pending_banner_description": "Questa chiamata è salvata ma nessuno è stato avvisato. Scegli chi inviare e inviala quando è pronta.",
+    "dispatch_call": "Invia",
+    "map_call": "Chiamata",
+    "map_destination": "Destinazione",
+    "audio": "Audio",
+    "audio_empty": "Nessuna registrazione audio",
+    "audio_play": "Play {{name}}",
+    "audio_stop": "Stop {{name}}",
+    "audio_play_error": "Could not play this recording",
+    "scheduled_on": "Data e ora di invio programmate",
+    "destination_type": "Tipo di destinazione",
+    "keyboard_shortcuts": "Tip: Press 1-9 to switch tabs, Ctrl+E to edit, Escape to go back"
   },
   "calls": {
     "address": "Indirizzo",
@@ -253,7 +279,9 @@
     "contact_phone_placeholder": "Inserisci il telefono del contatto",
     "contact_picker": {
       "linked": "Contatto collegato: {{name}}",
-      "select": "Select Contact"
+      "select": "Select Contact",
+      "search_placeholder": "Cerca contatti...",
+      "empty": "Nessun contatto disponibile"
     },
     "coordinates": "Coordinate GPS",
     "coordinates_found": "Coordinate trovate e indirizzo aggiornato",
@@ -398,7 +426,9 @@
     },
     "protocols": {
       "select": "Seleziona protocolli",
-      "selected_count": "{{count}} selected"
+      "selected_count": "{{count}} selected",
+      "attached": "Già associati: {{names}}",
+      "add": "Aggiungi protocolli"
     },
     "queued": {
       "badge": "Queued — not dispatched yet",
@@ -447,8 +477,25 @@
       "name_required": "Enter a name for the call",
       "nature_required": "Enter the nature of the call",
       "required": "Required by your department",
-      "udf_required": "Fill in the required custom fields"
-    }
+      "udf_required": "Fill in the required custom fields",
+      "type_required": "Choose a call type"
+    },
+    "pending_saved": "Chiamata salvata in attesa",
+    "required_fields_missing_edit": "Il tuo dipartimento richiede questi campi prima di poter salvare una chiamata: {{fields}}",
+    "search_address": "Cerca indirizzo",
+    "search_what3words": "Cerca indirizzo what3words",
+    "search_plus_code": "Cerca plus code",
+    "looking_up_address": "Ricerca dell'indirizzo per queste coordinate...",
+    "notify_cancelled_entities": "Notifica entità annullate",
+    "notify_cancelled_entities_description": "Invia un messaggio al personale e alle unità rimossi dall’elenco di invio.",
+    "linked_calls": {
+      "edit_hint": "I collegamenti già presenti su questa chiamata vengono mantenuti; scegli una chiamata per aggiungerne un altro."
+    },
+    "scheduled_on_edit_hint": "Scegli un orario per programmare o riprogrammare l'invio. Lasciandolo vuoto resta la programmazione attuale della chiamata.",
+    "scheduled_on_helper": "Lascia vuoto per inviare immediatamente",
+    "save_pending_call": "Salva chiamata in attesa",
+    "keyboard_shortcuts": "Suggerimento: Premi Ctrl+Invio per creare, Esc per annullare",
+    "edit_keyboard_shortcuts": "Suggerimento: Premi Ctrl+S per salvare, Esc per annullare"
   },
   "chat": {
     "ack_pending_count": "Hai {{count}} messaggi urgenti da confermare",
@@ -3443,7 +3490,8 @@
     "table_priority": "Priorità",
     "table_scheduled": "Programmata per",
     "table_type": "Tipo",
-    "title": "Chiamate programmate"
+    "title": "Chiamate programmate",
+    "scheduled_for": "Programmata per"
   },
   "certifications": {
     "add": "Aggiungi certificazione",
@@ -3608,6 +3656,7 @@
     "severity_levels": "Livelli di gravità",
     "show_area": "Mostra area",
     "show_calls": "Mostra chiamate",
+    "show_linked_calls": "Mostra chiamate collegate",
     "show_expiry": "Mostra scadenza",
     "show_headline": "Mostra titolo",
     "show_personnel": "Mostra personale",
@@ -3788,6 +3837,7 @@
     "check_in": "Check in",
     "clear_search": "Clear search",
     "expand_map": "Open the full map",
+    "gps": "GPS",
     "map_unavailable": "No map is configured for this department.",
     "no_overdue_check_ins": "No overdue check-ins",
     "no_resources": "No units or personnel to show",
@@ -3811,11 +3861,14 @@
     "ptt_error_permission": "Microphone access is needed to talk.",
     "ptt_hotkey_hint": "Hold {{hotkey}} to talk",
     "ptt_no_channels": "No voice channels",
+    "ptt_off": "OFF",
     "ptt_ready": "Ready",
     "ptt_receiving": "Receiving",
     "ptt_reconnecting": "Reconnecting…",
+    "ptt_rx": "RX",
     "ptt_stop": "Stop talking",
     "ptt_talk": "Talk",
+    "ptt_tx": "TX",
     "resources": "Resources",
     "resources_on_call": "Resources on call",
     "search_notes": "Search notes",
@@ -3877,6 +3930,7 @@
     "note_added_to_console": "Una nuova nota è stata aggiunta alla console",
     "note_created": "Nota creata",
     "notes": "Note",
+    "on_call": "In servizio",
     "personnel": "Personale",
     "personnel_deselected": "Personale deselezionato",
     "personnel_on_call": "Personale in servizio",
@@ -3897,6 +3951,7 @@
     "transmission_ended": "Trasmissione terminata",
     "transmitting": "Transmitting",
     "transmitting_on": "Trasmissione su {{channel}}",
+    "unassigned": "Non assegnato",
     "unit_deselected": "Unità deselezionata",
     "unit_selected": "Unità selezionata",
     "unit_status_updated": "Stato unità aggiornato",

@@ -1,7 +1,18 @@
-// Calls feature (omni-plan §7.10, §8.5): list, card, detail with a tab registry, create/edit (offline-capable),
-// close, menu, notes/images/files, dispatch selection. Screens are app-agnostic: capabilities, rights, flags and form
+// Calls feature (omni-plan §7.10, §8.5; Dispatch baseline for view/new/edit/close): list, card, detail with a tab
+// registry, create/edit (offline-capable), close, delete, reschedule, dispatch now / dispatch more, menu,
+// notes/images/files/audio, dispatch selection. Screens are app-agnostic: capabilities, rights, flags and form
 // factor specialise them. Route files re-export the screens, e.g.
 //   export { default } from '@resgrid/features/calls/screens/call-detail';
+
+// Dispatch-baseline call actions and rules shared by the call detail, the queues and the console. Re-exported through
+// one statement: Oxlint's readable spacing wants a blank line between top-level statements, which the export sorter removes.
+import { AddResourcesSheet, type AddResourcesSheetProps } from './components/add-resources-sheet';
+import { CallConfirmDialog, type CallConfirmDialogProps } from './components/call-confirm-dialog';
+import { type CallDispatchNowControls, useCallDispatchNow, type UseCallDispatchNowOptions } from './hooks/use-call-dispatch-now';
+import { callDestinationTarget, callLocationTarget, isUsablePoint } from './lib/call-location';
+import { getScheduledDispatchPrefill, isDispatchTimeTooSoon, MIN_DISPATCH_LEAD_MINUTES, toDispatchOnUtc } from './lib/call-schedule';
+import { buildAddResourcesRequest, dispatchesToSelection, isDispatchSelectionEmpty, mergeDispatchSelections, selectionSize } from './lib/dispatch-selection';
+import { getMissingCallFieldsFromRefusal } from './lib/server-refusal';
 
 // Screens
 export { default as CallDetailScreen, type CallDetailScreenProps } from './screens/call-detail';
@@ -28,8 +39,19 @@ export { SyncedCallNoticeRow, SyncedCallNotices, type SyncedCallNoticesProps } f
 export { BUILT_IN_CALL_DETAIL_TABS, CALL_DETAIL_TAB_IDS, registerBuiltInCallDetailTabs } from './detail-tabs/built-in-tabs';
 export { type CallDetailTabContext, type CallDetailTabDefinition, getCallDetailTabs, registerCallDetailTab, resolveCallDetailTabs, unregisterCallDetailTab, useRegisteredCallDetailTabs } from './detail-tabs/registry';
 
-// Call form hook points (contacts, run cards, maps, custom fields)
-export { type CallFormHookPoints, type ContactPickerProps, getCallFormHookPoints, type LocationPickerProps, registerCallFormHookPoints, type RunCardRecommendationProps, useCallFormHookPoints } from './hook-points';
+// Call form and detail hook points (run cards; replacements for the built-in contact picker, map picker, custom fields)
+export {
+  type AddResourcesRecommendationProps,
+  type AudioClipHandle,
+  type CallFormHookPoints,
+  type ContactPickerProps,
+  getCallFormHookPoints,
+  type LocationPickerProps,
+  registerCallFormHookPoints,
+  type RunCardRecommendationProps,
+  type StaticLocationMapProps,
+  useCallFormHookPoints,
+} from './hook-points';
 
 // Hooks
 export { useHasActiveIncidentCommand } from './hooks/use-active-incident-command';
@@ -43,21 +65,49 @@ export { readableColors, readableTextColor } from './lib/call-colors';
 export { type CallAssignmentContext, getDispatchTypeStyle, getUniqueDispatches, isCurrentUserOnCall, isUnitDispatchType } from './lib/call-dispatch';
 export { type CallListFilters, type CallListTab, EMPTY_CALL_FILTERS, filterCalls, matchesCallQuery } from './lib/call-filters';
 export {
+  type CallFormEditContext,
   type CallFormValues,
   callToFormValues,
+  callTypeName,
   createRequestToFormValues,
   type DispatchSelection,
   EMPTY_DISPATCH_SELECTION,
+  keepHiddenEditFieldsUnchanged,
+  missingPolicyFields,
   parseCoordinates,
   toCreateCallRequest,
   toUpdateCallRequest,
   validateCallForm,
 } from './lib/call-form';
 export { BUILT_IN_PRIORITIES, defaultPriorityId, type PriorityOption, priorityOptions, resolvePriority } from './lib/call-priority';
-export { CallState, isPendingCall, isScheduledCall, timeAgo } from './lib/call-time';
+export { CallState, isClosedCall, isPendingCall, isScheduledCall, scheduledDispatchUtc, timeAgo } from './lib/call-time';
 export { CLOSE_CALL_TYPES, getCallCloseErrorMessage } from './lib/close-call';
-export { createFieldPolicy, type NewCallFieldPolicy } from './lib/field-policy';
+export { createFieldPolicy, describeCallFields, type NewCallFieldPolicy, type PolicyFieldValues, toNewCallFieldKey } from './lib/field-policy';
 
 // Routes and nav
 export { callsNav, type FeatureNavEntry } from './nav';
-export { CALL_ROUTE_PATTERNS, callCorrect, callDetail, callEdit, callNew, callRoutes } from './routes';
+export { CALL_ROUTE_PATTERNS, callCorrect, callDetail, callEdit, callNew, callRoutes, PENDING_CALLS_ROUTE } from './routes';
+
+// Call actions (Dispatch baseline)
+export {
+  AddResourcesSheet,
+  type AddResourcesSheetProps,
+  buildAddResourcesRequest,
+  CallConfirmDialog,
+  type CallConfirmDialogProps,
+  callDestinationTarget,
+  type CallDispatchNowControls,
+  callLocationTarget,
+  dispatchesToSelection,
+  getMissingCallFieldsFromRefusal,
+  getScheduledDispatchPrefill,
+  isDispatchSelectionEmpty,
+  isDispatchTimeTooSoon,
+  isUsablePoint,
+  mergeDispatchSelections,
+  MIN_DISPATCH_LEAD_MINUTES,
+  selectionSize,
+  toDispatchOnUtc,
+  useCallDispatchNow,
+  type UseCallDispatchNowOptions,
+};

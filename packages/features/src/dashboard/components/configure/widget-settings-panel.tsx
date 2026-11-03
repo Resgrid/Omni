@@ -160,6 +160,7 @@ const MapPanel: React.FC = () => {
       </SettingsSection>
       <SettingsSection title={t('configure.visible_pins')}>
         <SettingSwitch label={t('configure.show_calls')} value={settings.showCalls} onChange={(showCalls) => update({ showCalls })} testID="setting-map-showCalls" />
+        <SettingSwitch label={t('configure.show_linked_calls')} value={settings.showLinkedCalls} onChange={(showLinkedCalls) => update({ showLinkedCalls })} testID="setting-map-showLinkedCalls" />
         <SettingSwitch label={t('configure.show_units')} value={settings.showUnits} onChange={(showUnits) => update({ showUnits })} testID="setting-map-showUnits" />
         <SettingSwitch label={t('configure.show_stations')} value={settings.showStations} onChange={(showStations) => update({ showStations })} testID="setting-map-showStations" />
         <SettingSwitch label={t('configure.show_personnel')} value={settings.showPersonnel} onChange={(showPersonnel) => update({ showPersonnel })} testID="setting-map-showPersonnel" />

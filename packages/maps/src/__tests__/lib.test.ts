@@ -101,10 +101,26 @@ describe('custom map tiles and indoor images (URL builders, D21 rendering)', () 
           }),
         },
         { ...zone, IndoorMapZoneId: 'b', Name: 'B', Color: '#000', GeoGeometry: '{not json' },
+        { ...zone, IndoorMapZoneId: 'legacy', Name: 'Legacy', Color: null, GeoGeometry: null, CenterLatitude: 41.8, CenterLongitude: -87.6, PixelGeometry: '[[-87.6,41.8],[-87.59,41.8],[-87.59,41.81]]' },
+        { ...zone, IndoorMapZoneId: 'pixels', Name: 'Pixels', Color: null, GeoGeometry: null, CenterLatitude: 41.8, CenterLongitude: -87.6, PixelGeometry: '[[0,0],[10,0],[10,10]]' },
       ],
     });
-    expect(result.features).toHaveLength(1);
+    expect(result.features).toHaveLength(2);
     expect(result.features[0].properties).toMatchObject({ zoneId: 'a', name: 'A', color: '#3b82f6' });
+    expect(result.features[1]).toMatchObject({
+      id: 'legacy',
+      geometry: {
+        type: 'Polygon',
+        coordinates: [
+          [
+            [-87.6, 41.8],
+            [-87.59, 41.8],
+            [-87.59, 41.81],
+            [-87.6, 41.8],
+          ],
+        ],
+      },
+    });
   });
 });
 

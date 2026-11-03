@@ -2,7 +2,7 @@ import { useAuthStore } from '@resgrid/auth';
 import { usePersonnelStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import { type ChatChannelResultData } from '@resgrid/models';
-import { Button, ButtonText, CustomBottomSheet, HStack, Input, InputField, Pressable, ScrollView, Spinner, Text, View, VStack } from '@resgrid/ui';
+import { Button, ButtonText, CustomBottomSheet, HStack, Input, InputField, Pressable, ScrollView, Spinner, Text, useThemeColors, View, VStack } from '@resgrid/ui';
 import { Check } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 
@@ -19,6 +19,7 @@ const fullName = (person: { FirstName?: string; LastName?: string }): string => 
 /** Start a conversation (Dispatch sheet): one person opens a direct message, several create a named group. Online only. */
 export const NewConversationSheet: React.FC<NewConversationSheetProps> = ({ isOpen, onClose, onCreated }) => {
   const { t } = useTranslation();
+  const colors = useThemeColors();
   const userId = useAuthStore((state) => state.userId);
   const personnel = usePersonnelStore((state) => state.personnel);
   const isLoading = usePersonnelStore((state) => state.loading.personnel === true);
@@ -88,7 +89,7 @@ export const NewConversationSheet: React.FC<NewConversationSheetProps> = ({ isOp
               >
                 <HStack space="sm" className="items-center">
                   <View className={`size-5 items-center justify-center rounded border-2 ${isSelected ? 'border-primary-500 bg-primary-500' : 'border-outline-300'}`}>
-                    {isSelected ? <Check size={12} color="#ffffff" /> : null}
+                    {isSelected ? <Check size={12} color={colors.textInverse} /> : null}
                   </View>
                   <VStack className="flex-1">
                     <Text className="text-typography-900">{fullName(person)}</Text>

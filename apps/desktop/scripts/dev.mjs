@@ -5,7 +5,7 @@
 //   node scripts/dev.mjs --variant bigboard --export         against apps/omni/dist/bigboard through app:// (or loopback)
 //   node scripts/dev.mjs --variant bigboard --web <dir>      against another export
 //
-// Start the dev server first: `cd apps/omni && APP_VARIANT=unit npx expo start --web`. The run uses its own staging folder
+// Start the dev server first: `pnpm web:unit` from the repository root. The run uses its own staging folder
 // (out/dev-bundle/) and its own profile folder (<userDataDir>-dev), so it never touches an installed app or a packaging run.
 // RESGRID_DESKTOP_APPDATA_DIR moves that profile folder elsewhere (unpackaged runs only).
 import { spawn } from 'node:child_process';

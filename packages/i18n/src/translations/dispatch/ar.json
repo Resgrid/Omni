@@ -48,30 +48,10 @@
       "auto_linked": "مرتبط تلقائيًا",
       "auto_linked_hint": "أُرسلت دون مكالمة؛ ربطها Resgrid بالمكالمة من الحالة السابقة أو من الإرسال."
     },
-    "audio": "الصوت",
-    "delete_call": "حذف البلاغ",
-    "delete_call_confirm": "هل تريد حذف هذا البلاغ؟ لا يمكن التراجع عن هذا الإجراء.",
-    "delete_call_error": "تعذر حذف البلاغ",
-    "delete_call_success": "تم حذف البلاغ",
     "destination_address": "عنوان الوجهة",
-    "destination_type": "نوع الوجهة",
-    "dispatch_more": "إرسال موارد إضافية",
     "dispatch_more_error": "تعذر إرسال الموارد",
     "dispatch_more_success": "تم إرسال الموارد وإشعارها",
-    "map_call": "البلاغ",
-    "map_destination": "الوجهة",
-    "missing_call_id": "معرّف المكالمة مفقود",
-    "pending_banner_description": "تم حفظ هذه المكالمة لكن لم يتم إشعار أي شخص. اختر من سترسل وأرسلها عندما تكون جاهزة.",
-    "pending_banner_title": "معلقة — لم يتم إرسالها بعد",
-    "reschedule": "إعادة الجدولة",
-    "reschedule_datetime": "تاريخ ووقت الإرسال",
-    "reschedule_error": "تعذرت إعادة جدولة البلاغ",
-    "reschedule_in_1_day": "خلال يوم",
-    "reschedule_in_1_hour": "خلال ساعة",
-    "reschedule_invalid": "أدخل تاريخًا ووقتًا صالحين (YYYY-MM-DD HH:mm)",
-    "reschedule_success": "تم تحديث وقت الإرسال",
-    "reschedule_tomorrow_morning": "غدًا الساعة 8 صباحًا",
-    "scheduled_on": "تاريخ ووقت الإرسال المجدول"
+    "missing_call_id": "معرّف المكالمة مفقود"
   },
   "calls": {
     "audio": {
@@ -84,7 +64,6 @@
     "contact_information": "معلومات الاتصال",
     "contact_picker": {
       "none": "لا توجد جهات اتصال متاحة",
-      "search_placeholder": "البحث في جهات الاتصال...",
       "title": "اختر جهة اتصال"
     },
     "coordinates_incomplete": "أدخل خط العرض وخط الطول معًا",
@@ -119,19 +98,16 @@
     "dispatch_recipients_empty": "لا يظهر لك أي أفراد أو مجموعات أو أدوار أو وحدات. تحقق من أذونات قسمك أو أرسل إلى الجميع.",
     "dispatch_recipients_partial_load": "تعذر تحميل بعض المستلمين. قد تكون القوائم أدناه غير مكتملة.",
     "edit_call_web_hint": "حدّث تفاصيل المكالمة أدناه. اضغط Ctrl+S للحفظ.",
-    "edit_keyboard_shortcuts": "نصيحة: اضغط Ctrl+S للحفظ، Escape للإلغاء",
     "expand_map": "توسيع الخريطة",
     "form": {
       "no_form": "لم يتم تكوين نموذج مكالمة",
       "title": "نموذج المكالمة"
     },
-    "keyboard_shortcuts": "نصيحة: اضغط Ctrl+Enter للإنشاء، Escape للإلغاء",
     "latitude": "خط العرض",
     "latitude_invalid": "أدخل خط عرض بالدرجات العشرية بين -90 و 90",
     "latitude_placeholder": "مثال: 39.122639",
     "linked_calls": {
       "change": "تغيير المكالمة المرتبطة",
-      "edit_hint": "يتم الاحتفاظ بالروابط الموجودة على هذا البلاغ؛ اختر بلاغًا لإضافة رابط آخر.",
       "linked": "مرتبطة",
       "none": "لا توجد مكالمات نشطة متاحة",
       "search_placeholder": "البحث في المكالمات...",
@@ -141,29 +117,19 @@
     "longitude": "خط الطول",
     "longitude_invalid": "أدخل خط طول بالدرجات العشرية بين -180 و 180",
     "longitude_placeholder": "مثال: -119.758773",
-    "looking_up_address": "جارٍ البحث عن العنوان لهذه الإحداثيات...",
     "new_call_web_hint": "أكمل تفاصيل المكالمة أدناه. اضغط Ctrl+Enter للإنشاء.",
     "no_destination": "بدون وجهة",
-    "notify_cancelled_entities": "إشعار الجهات الملغاة",
-    "notify_cancelled_entities_description": "إرسال رسالة إلى الأفراد والوحدات التي تمت إزالتها من قائمة الإرسال.",
-    "pending_saved": "تم حفظ المكالمة كمعلقة",
     "protocols": {
-      "add": "إضافة بروتوكولات",
-      "attached": "مرفقة بالفعل: {{names}}",
       "collapse": "طي",
       "expand_questions": "عرض الأسئلة",
       "none": "لا توجد بروتوكولات متاحة",
       "title": "البروتوكولات"
     },
-    "required_fields_missing_edit": "يطلب قسمك هذه الحقول قبل حفظ البلاغ: {{fields}}",
     "save_as_pending": "حفظ كمعلقة (عدم الإرسال الآن)",
     "save_as_pending_description": "يتم حفظ المكالمة وترقيمها، لكن لا يتم إشعار أي شخص ولا تظهر في التطبيقات الميدانية. يتم الاحتفاظ بالمستلمين الذين تختارهم كإرسال مقترح؛ أرسلها لاحقًا من المكالمات المعلقة.",
-    "save_pending_call": "حفظ المكالمة المعلقة",
     "schedule_dispatch": "جدولة الإرسال",
     "schedule_dispatch_description": "حدد تاريخاً ووقتاً مستقبليين لجدولة هذه المكالمة للإرسال لاحقاً",
     "scheduled_on": "تاريخ ووقت الجدولة",
-    "scheduled_on_edit_hint": "اختر وقتاً لجدولة الإرسال أو إعادة جدولته. تركه فارغاً يُبقي الجدولة الحالية للبلاغ.",
-    "scheduled_on_helper": "اتركه فارغاً للإرسال الفوري",
     "scheduled_on_past_error": "يجب أن يكون وقت الجدولة في المستقبل",
     "scheduled_on_too_soon": "يجب أن يكون وقت الإرسال المجدول بعد 15 دقيقة على الأقل من الآن",
     "templates": {
@@ -244,7 +210,6 @@
     "note_save_error": "فشل حفظ الملاحظة: {{error}}",
     "note_title_label": "العنوان",
     "note_title_placeholder": "أدخل عنوان الملاحظة...",
-    "on_call": "في مكالمة",
     "pending_calls": "معلقة",
     "personnel_actions": {
       "destination": "الوجهة",
@@ -281,7 +246,6 @@
     "station": "محطة",
     "stations": "المحطات",
     "system_update": "تحديث النظام",
-    "unassigned": "غير مخصص",
     "unit_actions": "إجراءات الوحدة",
     "unit_actions_panel": {
       "call_destination": "وجهة البلاغ",
@@ -513,9 +477,6 @@
     "type": "النوع",
     "unknown_type": "نوع غير معروف",
     "unnamed": "نقطة اهتمام بدون اسم"
-  },
-  "scheduled_calls": {
-    "scheduled_for": "مجدولة ل"
   },
   "settings": {
     "select_server": "اختر خادمًا"

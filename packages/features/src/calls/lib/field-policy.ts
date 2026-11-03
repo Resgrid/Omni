@@ -5,11 +5,17 @@ import { type NewCallFieldKey, NewCallFieldKeys, type NewCallFieldRuleData } fro
  * fields the department does not use and refuse to submit until the fields it requires have values. Fail-open: no
  * rules (unreachable, offline, older server) keeps the stock form — the server enforces the same policy on save.
  */
+/** What the form holds for a policy field: text, a picked id, a "has one" flag or a list of picked ids. */
+export type PolicyFieldValue = string | number | boolean | readonly number[] | null | undefined;
+
+/** The form's values keyed by policy field, for `missingRequired`. */
+export type PolicyFieldValues = Partial<Record<NewCallFieldKey, PolicyFieldValue>>;
+
 export interface NewCallFieldPolicy {
   isVisible: (key: NewCallFieldKey) => boolean;
   isRequired: (key: NewCallFieldKey) => boolean;
   /** Required fields left blank, given the current form values. Empty = the form may submit. */
-  missingRequired: (values: Partial<Record<NewCallFieldKey, unknown>>) => NewCallFieldKey[];
+  missingRequired: (values: PolicyFieldValues) => NewCallFieldKey[];
   isLoaded: boolean;
 }
 
@@ -20,34 +26,64 @@ const NEVER_REQUIRED_KEYS = new Set<NewCallFieldKey>([NewCallFieldKeys.PlusCode]
 
 export const hasFieldValue = (value: unknown): boolean => {
   if (value === null || value === undefined) return false;
+
   if (typeof value === 'string') return value.trim().length > 0;
+
   if (typeof value === 'number') return Number.isFinite(value) && value !== 0;
+
   if (typeof value === 'boolean') return value;
+
   if (Array.isArray(value)) return value.length > 0;
+
   return true;
 };
 
 export function createFieldPolicy(rules: readonly NewCallFieldRuleData[] | null | undefined, isLoaded = true): NewCallFieldPolicy {
   const byKey = new Map<string, NewCallFieldRuleData>();
+
   for (const rule of rules ?? []) if (rule?.Key) byKey.set(rule.Key.toLowerCase(), rule);
 
   const isVisible = (key: NewCallFieldKey): boolean => byKey.get(key.toLowerCase())?.Visible ?? true;
+
   // A hidden field is never required: requiring something nobody can fill in would block call creation.
   const isRequired = (key: NewCallFieldKey): boolean => {
     const rule = byKey.get(key.toLowerCase());
+
     return !!rule && rule.Visible && rule.Required && !NEVER_REQUIRED_KEYS.has(key);
   };
-  const missingRequired = (values: Partial<Record<NewCallFieldKey, unknown>>): NewCallFieldKey[] => {
+
+  const missingRequired = (values: PolicyFieldValues): NewCallFieldKey[] => {
     const missing: NewCallFieldKey[] = [];
+
     for (const [lowerKey, rule] of byKey) {
       const key = CANONICAL_KEYS.get(lowerKey);
+
       if (!key || !rule.Visible || !rule.Required || NEVER_REQUIRED_KEYS.has(key)) continue;
+
       if (!hasFieldValue(values[key])) missing.push(key);
     }
+
     return missing;
   };
+
   return { isVisible, isRequired, missingRequired, isLoaded };
 }
+
+/** The canonical policy key for a key in any casing (a stored rule, a server message), or undefined for one this build does not know. */
+export const toNewCallFieldKey = (key: string | null | undefined): NewCallFieldKey | undefined => (key ? CANONICAL_KEYS.get(key.trim().toLowerCase()) : undefined);
+
+/**
+ * The fields named the way the form names them, joined for a message (Dispatch `describeCallFields`). A key this build
+ * does not know (a custom field's label, a newer server's key) is shown as-is rather than dropped.
+ */
+export const describeCallFields = (keys: readonly string[], t: (key: string) => string): string =>
+  keys
+    .map((key) => {
+      const canonical = toNewCallFieldKey(key);
+
+      return canonical ? t(FIELD_LABEL_KEYS[canonical]) : key;
+    })
+    .join(', ');
 
 /** Translation keys for the policy field names (shown in "Your department requires …"). */
 export const FIELD_LABEL_KEYS: Record<NewCallFieldKey, string> = {

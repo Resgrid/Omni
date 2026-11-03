@@ -3,20 +3,23 @@ import './test-setup';
 import { buildNewCallInput } from '@resgrid/api';
 import { featureFlagsStore, type SecurityView } from '@resgrid/auth';
 import { getActiveVariant } from '@resgrid/config';
-import { useCallDetailStore, useCallsStore, useCallVideoFeedsStore, useCheckInTimersStore, useNavigationEtaStore } from '@resgrid/data';
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { useCallDetailStore, useCallQueueActionsStore, useCallsStore, useCallVideoFeedsStore, useCheckInTimersStore, useNavigationEtaStore } from '@resgrid/data';
+import { useToastStore } from '@resgrid/ui';
+import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import React from 'react';
-import { Text } from 'react-native';
+import { Dimensions, Text } from 'react-native';
 
 import { CallDispatchedPanel } from '../components/detail/call-dispatched-panel';
 import { BUILT_IN_CALL_DETAIL_TABS, registerBuiltInCallDetailTabs } from '../detail-tabs/built-in-tabs';
 import { type CallDetailTabContext, getCallDetailTabs, registerCallDetailTab, resolveCallDetailTabs } from '../detail-tabs/registry';
+import { registerCallFormHookPoints, resetCallFormHookPointsForTests } from '../hook-points';
 import CallDetailScreen from '../screens/call-detail';
 import { activateVariant, hidden, makeCall, setRights } from './test-utils';
 
 const contextFor = (overrides: Partial<CallDetailTabContext> = {}): CallDetailTabContext => {
   const variant = getActiveVariant();
+
   return {
     callId: '10',
     call: makeCall('10'),
@@ -66,6 +69,7 @@ describe('call detail tab registry', () => {
 
   it('lets a module add a variant-specific tab by order and hides a tab whose visibility throws', () => {
     activateVariant('ic');
+
     const removeIc = registerCallDetailTab({
       id: 'unit-readiness',
       order: 65,
@@ -73,6 +77,7 @@ describe('call detail tab registry', () => {
       render: () => <Text>Readiness</Text>,
       visible: (context) => context.capabilities.incidentCommand === 'command',
     });
+
     const removeBroken = registerCallDetailTab({
       id: 'broken',
       order: 1,
@@ -82,6 +87,7 @@ describe('call detail tab registry', () => {
         throw new Error('bad module');
       },
     });
+
     const icTabs = ids(contextFor());
     expect(icTabs.indexOf('unit-readiness')).toBe(icTabs.indexOf('check-in') + 1);
     expect(icTabs).not.toContain('broken');
@@ -164,6 +170,23 @@ describe('CallDetailScreen', () => {
     remove();
   });
 
+  it('stacks the tabs at full width under the summary on a landscape tablet', async () => {
+    activateVariant('dispatch');
+    const initial = { window: Dimensions.get('window'), screen: Dimensions.get('screen') };
+    const board = { width: 1366, height: 1024, scale: 2, fontScale: 1 };
+    await act(() => Dimensions.set({ window: board, screen: board }));
+
+    try {
+      await render(<CallDetailScreen />);
+      const scroll = within(screen.getByTestId('call-detail-scroll'));
+      expect(scroll.getByTestId('call-detail-summary')).toBeTruthy();
+      expect(scroll.getByTestId('call-detail-notes')).toBeTruthy();
+      expect(scroll.getByTestId('call-detail-tabs')).toBeTruthy();
+    } finally {
+      await act(() => Dimensions.set(initial));
+    }
+  });
+
   it('opens the menu with edit and close for users who may, and routes edit to the canonical path', async () => {
     activateVariant('responder');
     await render(<CallDetailScreen />);
@@ -181,6 +204,86 @@ describe('CallDetailScreen', () => {
     expect(screen.queryByTestId('call-menu-edit', hidden)).toBeNull();
     expect(screen.queryByTestId('call-menu-close', hidden)).toBeNull();
     expect(screen.getByTestId('call-menu-notes', hidden)).toBeTruthy();
+  });
+
+  const lastToast = () => useToastStore.getState().toasts[useToastStore.getState().toasts.length - 1];
+
+  const setCall = (overrides: Parameters<typeof makeCall>[1]) =>
+    useCallDetailStore.setState((state) => ({ details: { ...state.details, '10': { ...state.details['10'], call: makeCall('10', { Name: 'House fire', ...overrides }) } } }));
+
+  it('offers dispatch more and delete on an active call, reschedule only while it is scheduled, and no close once closed (Dispatch menu)', async () => {
+    activateVariant('ic');
+    const { unmount } = await render(<CallDetailScreen />);
+    await fireEvent.press(screen.getByTestId('call-detail-menu-button'));
+    expect(screen.getByTestId('call-menu-dispatch-more', hidden)).toBeTruthy();
+    expect(screen.getByTestId('call-menu-delete', hidden)).toBeTruthy();
+    expect(screen.queryByTestId('call-menu-reschedule', hidden)).toBeNull();
+    await unmount();
+
+    setCall({ DispatchedOnUtc: new Date(Date.now() + 3_600_000).toISOString() });
+    const scheduled = await render(<CallDetailScreen />);
+    expect(screen.getByTestId('scheduled-call-banner')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('call-detail-menu-button'));
+    expect(screen.getByTestId('call-menu-reschedule', hidden)).toBeTruthy();
+    await scheduled.unmount();
+
+    setCall({ State: 1 });
+    await render(<CallDetailScreen />);
+    await fireEvent.press(screen.getByTestId('call-detail-menu-button'));
+    expect(screen.queryByTestId('call-menu-close', hidden)).toBeNull();
+    expect(screen.queryByTestId('call-menu-dispatch-more', hidden)).toBeNull();
+  });
+
+  it('asks before deleting a call, then deletes it and leaves the screen', async () => {
+    const deleteCall = jest.fn(async () => undefined);
+    useCallDetailStore.setState({ deleteCall });
+    useCallsStore.setState({ fetchCalls: jest.fn(async () => undefined), refreshQueuedCallLists: jest.fn(async () => undefined) });
+    activateVariant('unit');
+    await render(<CallDetailScreen />);
+    await fireEvent.press(screen.getByTestId('call-detail-menu-button'));
+    await fireEvent.press(screen.getByTestId('call-menu-delete', hidden));
+    expect(deleteCall).not.toHaveBeenCalled();
+    await act(async () => fireEvent.press(screen.getByTestId('call-delete-confirm-confirm', hidden)));
+    expect(deleteCall).toHaveBeenCalledWith('10');
+    expect(lastToast().message).toBe('call_detail.delete_call_success');
+    expect(router.back).toHaveBeenCalled();
+  });
+
+  it('dispatches a Pending call from its banner with the proposed recipients preselected', async () => {
+    const dispatchNow = jest.fn(async () => ({ ok: true, error: null }));
+    useCallQueueActionsStore.setState({ dispatchNow });
+    setCall({ State: 8 });
+    activateVariant('dispatch');
+    await render(<CallDetailScreen />);
+    expect(screen.getByTestId('pending-call-banner')).toBeTruthy();
+    await act(async () => fireEvent.press(screen.getByTestId('pending-call-dispatch-button')));
+    await act(async () => fireEvent.press(screen.getByTestId('dispatch-selection-confirm', hidden)));
+    expect(dispatchNow).toHaveBeenCalledWith('10', { dispatchList: 'U:1' });
+  });
+
+  it('routes to the call through the navigation hand-off, and says so when the call has no location', async () => {
+    useToastStore.getState().clearToasts();
+    setCall({ Address: '' });
+    activateVariant('responder');
+    await render(<CallDetailScreen />);
+    await act(async () => fireEvent.press(screen.getByTestId('call-detail-route')));
+    expect(lastToast().message).toBe('call_detail.no_location_for_routing');
+  });
+
+  it("shows the app's map of the call and toggles to its destination", async () => {
+    resetCallFormHookPointsForTests();
+    registerCallFormHookPoints({ StaticLocationMap: ({ latitude, longitude, address }) => <Text testID="static-map">{`${latitude},${longitude} ${address ?? ''}`}</Text> });
+    setCall({ Latitude: '39.5', Longitude: '-105', DestinationLatitude: 39.6, DestinationLongitude: -105.1, DestinationName: 'County Hospital' });
+    activateVariant('dispatch');
+
+    try {
+      await render(<CallDetailScreen />);
+      expect(screen.getByTestId('static-map')).toHaveTextContent('39.5,-105 10 Main St');
+      await fireEvent.press(screen.getByTestId('call-detail-map-destination'));
+      expect(screen.getByTestId('static-map')).toHaveTextContent('39.6,-105.1 County Hospital');
+    } finally {
+      resetCallFormHookPointsForTests();
+    }
   });
 
   it('shows a queued call as "not dispatched yet" and offers correction when it was rejected', async () => {
@@ -208,6 +311,7 @@ describe('CallDispatchedPanel live ETAs', () => {
     { Id: '7', Type: 'Unit', Name: 'Engine 7' },
     { Id: 'u-1', Type: 'User', Name: 'Pat Doe' },
   ] as never;
+
   const navigation = (CallId: number) => ({
     UnitId: 7,
     CallId,
@@ -222,6 +326,7 @@ describe('CallDispatchedPanel live ETAs', () => {
     ReportedOn: new Date().toISOString(),
     IsStale: false,
   });
+
   const fetchActiveNavigations = jest.fn(async () => undefined);
 
   beforeEach(() => {

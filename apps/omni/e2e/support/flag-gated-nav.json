@@ -1,0 +1,91 @@
+{
+  "responder": [
+    {
+      "id": "checklists",
+      "flags": ["Checklists.System"]
+    },
+    {
+      "id": "records",
+      "flags": ["Records.System", "Records.Field.Responder"]
+    },
+    {
+      "id": "operations",
+      "flags": ["Operations.Deployments"]
+    },
+    {
+      "id": "work-orders",
+      "flags": ["Maintenance.WorkOrders"]
+    },
+    {
+      "id": "chat",
+      "flags": ["Chat.System"]
+    },
+    {
+      "id": "chatbot",
+      "flags": ["Chat.System"]
+    }
+  ],
+  "unit": [
+    {
+      "id": "checklists",
+      "flags": ["Checklists.System"]
+    },
+    {
+      "id": "records",
+      "flags": ["Records.System", "Records.Field.Unit"]
+    },
+    {
+      "id": "operations",
+      "flags": ["Operations.Deployments"]
+    },
+    {
+      "id": "chat",
+      "flags": ["Chat.System"]
+    },
+    {
+      "id": "chatbot",
+      "flags": ["Chat.System"]
+    }
+  ],
+  "ic": [
+    {
+      "id": "records",
+      "flags": ["Records.System", "Records.Field.IncidentCommand"]
+    },
+    {
+      "id": "operations",
+      "flags": ["Operations.Deployments"]
+    },
+    {
+      "id": "chat",
+      "flags": ["Chat.System"]
+    },
+    {
+      "id": "chatbot",
+      "flags": ["Chat.System"]
+    }
+  ],
+  "dispatch": [
+    {
+      "id": "awaiting-resources",
+      "flags": ["Dispatch.RunCards", "Dispatch.RunCardConditions"]
+    },
+    {
+      "id": "records",
+      "flags": ["Records.System", "Records.Field.Dispatch"]
+    },
+    {
+      "id": "operations",
+      "flags": ["Operations.Deployments"]
+    },
+    {
+      "id": "chat",
+      "flags": ["Chat.System"]
+    },
+    {
+      "id": "chatbot",
+      "flags": ["Chat.System"]
+    }
+  ],
+  "bigboard": []
+}

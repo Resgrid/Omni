@@ -16,7 +16,7 @@ Expo SDK 58 · React Native 0.88 (New Architecture, Hermes) · React 19.3 · Typ
 ## Layout (target — see plan §5.1)
 
 ```
-apps/omni/                 the one Expo project; variants/<v>/{variant.json, variant.ts, app/, assets/, theme.css}
+apps/omni/                 the one Expo project; variants/<v>/{variant.json, variant.ts, app/, assets/}
 apps/desktop/              Electron shell (packages each variant's web export)
 packages/<name>/           @resgrid/{config,core,models,api,offline,auth,data,realtime,notifications,
                            location,voice,maps,navigation,i18n,ui,app-shell,features,config-plugins}

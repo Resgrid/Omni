@@ -69,9 +69,19 @@ const record = (extra: Partial<RecordData> = {}): RecordData => ({
   StateName: 'Draft',
   RowVersion: 3,
   Values: {
-    Cells: [
-      { SectionKey: 'main', FieldKey: 'summary', Value: 'Smoke' },
-      { SectionKey: 'main', FieldKey: 'secret', Value: 'REDACTED', IsWithheld: true },
+    Sections: [
+      {
+        SectionKey: 'main',
+        Rows: [
+          {
+            Ordinal: 0,
+            Cells: [
+              { FieldKey: 'summary', Value: 'Smoke' },
+              { FieldKey: 'secret', Withheld: true },
+            ],
+          },
+        ],
+      },
     ],
   },
   ...extra,
@@ -248,6 +258,7 @@ describe('RecordDetailScreen', () => {
     await render(<RecordDetailScreen />);
     await waitFor(() => expect(screen.getByTestId('records-field-main-secret-protected')).toBeTruthy());
     expect(screen.queryByText('REDACTED')).toBeNull();
+    expect(screen.getByTestId('records-field-main-summary-input')).toHaveProp('value', 'Smoke');
     await fireEvent.changeText(screen.getByTestId('records-field-main-summary-input'), 'Smoke and fire');
     await fireEvent.press(screen.getByTestId('record-save'));
     await waitFor(() => expect(useRecordsStore.getState().pushDraft).toHaveBeenCalledWith('edit-r1-3'));

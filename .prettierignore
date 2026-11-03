@@ -11,4 +11,6 @@ apps/omni/public/maplibre-gl-worker.js
 apps/omni/e2e/test-results
 apps/omni/e2e/playwright-report
 apps/omni/e2e/results
+apps/omni/e2e/maestro-output
+apps/omni/e2e/qa-output
 tooling/oxlint/anti-slop

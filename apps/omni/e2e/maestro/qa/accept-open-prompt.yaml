@@ -1,0 +1,19 @@
+# Accepts iOS's "Open in “<app>”?" alert after a link to the app's own scheme (the dev-client link, deep links to
+# screens). On a phone the button is tapped by its label. On a landscape iPad Maestro cannot reach the alert's buttons
+# (their frames come back rotated), so while the alert still hides every element of the app, Open is tapped where iOS
+# draws it: centre right of the screen. Never fires while any app element is visible, so it cannot press app controls.
+appId: ${APP_ID}
+---
+- tapOn:
+    text: 'Open'
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 2000
+- runFlow:
+    when:
+      notVisible:
+        id: 'login-screen|onboarding-screen|shell-gate-onboarding|app-shell-.*|shell-header-title|shell-menu-button|shell-nav-profile-name|shell-init-loading'
+      platform: iOS
+    commands:
+      - tapOn:
+          point: '55%,52%'

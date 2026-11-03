@@ -1,4 +1,5 @@
-import type { CustomMapLayerResultData, IndoorMapFloorResultData } from '@resgrid/models';
+import type { CustomMapLayerResultData, IndoorMapFloorResultData, IndoorMapZoneResultData } from '@resgrid/models';
+import { z } from 'zod';
 
 import { isSafeMapUrl } from '../provider/url-safety';
 import type { ImageCoordinates } from '../rg/types';
@@ -19,7 +20,9 @@ const joinUrl = (base: string, path: string): string => `${base.replace(/\/+$/, 
 export const buildCustomMapTileUrlTemplate = (apiBaseUrl: string, layerId: string): string | null => {
   const base = apiBaseUrl.trim();
   const id = layerId.trim();
+
   if (!base || !id) return null;
+
   return joinUrl(base, `/Mapping/GetCustomMapTile/${encodeURIComponent(id)}/{z}/{x}/{y}`);
 };
 
@@ -27,7 +30,9 @@ export const buildCustomMapTileUrlTemplate = (apiBaseUrl: string, layerId: strin
 export const buildCustomMapLayerImageUrl = (apiBaseUrl: string, layerId: string): string | null => {
   const base = apiBaseUrl.trim();
   const id = layerId.trim();
+
   if (!base || !id) return null;
+
   return joinUrl(base, `/Mapping/GetCustomMapLayerImage/${encodeURIComponent(id)}`);
 };
 
@@ -35,7 +40,9 @@ export const buildCustomMapLayerImageUrl = (apiBaseUrl: string, layerId: string)
 export const buildIndoorFloorImageUrl = (apiBaseUrl: string, floorId: string): string | null => {
   const base = apiBaseUrl.trim();
   const id = floorId.trim();
+
   if (!base || !id) return null;
+
   return joinUrl(base, `/Mapping/GetIndoorMapFloorImage/${encodeURIComponent(id)}`);
 };
 
@@ -54,9 +61,11 @@ const finite = (value: number | null | undefined): value is number => typeof val
  */
 export const boundsToImageCoordinates = (bounds: BoundsFields): ImageCoordinates | null => {
   const { BoundsNELat: north, BoundsNELon: east, BoundsSWLat: south, BoundsSWLon: west } = bounds;
+
   if (!finite(north) || !finite(east) || !finite(south) || !finite(west) || north <= south || east === west) {
     return null;
   }
+
   return [
     [west, north],
     [east, north],
@@ -84,28 +93,76 @@ export const resolveCustomMapLayerRendering = (
 ): CustomMapLayerRendering => {
   const opacity = finite(layer.Opacity) ? Math.min(1, Math.max(0, layer.Opacity)) : 1;
   const mercator = typeof layer.MercatorTileUrl === 'string' ? layer.MercatorTileUrl.trim() : '';
+
   if (mercator && isSafeMapUrl(mercator) && hasTilePlaceholders(mercator)) {
     return { kind: 'tiles', tileUrlTemplate: mercator, opacity };
   }
+
   if (layer.IsTiled || !layer.HasImage) return { kind: 'none' };
   const coordinates = boundsToImageCoordinates(layer);
   const url = buildCustomMapLayerImageUrl(apiBaseUrl, layer.IndoorMapFloorId);
+
   return coordinates && url ? { kind: 'image', url, coordinates, opacity } : { kind: 'none' };
 };
 
-/** Zone outlines of an indoor floor as GeoJSON (zones without valid `GeoGeometry` are skipped). */
+const legacyRingSchema = z.array(z.tuple([z.number().min(-180).max(180), z.number().min(-90).max(90)])).min(3);
+
+function legacyGeographicOutline(zone: IndoorMapZoneResultData): GeoJSON.Polygon | null {
+  const { CenterLatitude: latitude, CenterLongitude: longitude, PixelGeometry: outline } = zone;
+
+  if (!outline || !Number.isFinite(latitude) || !Number.isFinite(longitude) || Math.abs(latitude) > 90 || Math.abs(longitude) > 180 || (latitude === 0 && longitude === 0)) {
+    return null;
+  }
+
+  const parsed: unknown = JSON.parse(outline);
+  const ring = legacyRingSchema.safeParse(parsed);
+
+  // Older imports put geographic rings in the pixel field. Require every vertex to be near the saved geographic center.
+  if (!ring.success || ring.data.some(([x, y]) => Math.abs(x - longitude) > 0.02 || Math.abs(y - latitude) > 0.02)) return null;
+
+  const coordinates = ring.data;
+  const first = coordinates[0];
+  const second = coordinates.find(([x, y]) => x !== first[0] || y !== first[1]);
+
+  if (!second) return null;
+  const hasArea = coordinates.some(([x, y]) => Math.abs((second[0] - first[0]) * (y - first[1]) - (second[1] - first[1]) * (x - first[0])) > 1e-14);
+
+  if (!hasArea) return null;
+
+  const last = coordinates[coordinates.length - 1];
+
+  return { type: 'Polygon', coordinates: [first[0] === last[0] && first[1] === last[1] ? coordinates : [...coordinates, first]] };
+}
+
+/** Zone outlines on a geographic map, including older imports whose saved geographic rings predate GeoGeometry. */
 export const indoorZonesToFeatureCollection = (floor: Pick<IndoorMapFloorResultData, 'Zones'>): GeoJSON.FeatureCollection => {
   const features: GeoJSON.Feature[] = [];
+
   for (const zone of floor.Zones ?? []) {
-    if (!zone.GeoGeometry) continue;
     try {
+      if (!zone.GeoGeometry) {
+        const geometry = legacyGeographicOutline(zone);
+
+        if (geometry) features.push(indoorZoneFeature(zone, geometry));
+        continue;
+      }
+
       const parsed: unknown = JSON.parse(zone.GeoGeometry);
       const geometry = (parsed as { type?: string; geometry?: GeoJSON.Geometry }).type === 'Feature' ? (parsed as GeoJSON.Feature).geometry : (parsed as GeoJSON.Geometry);
+
       if (!geometry || typeof geometry.type !== 'string') continue;
-      features.push({ type: 'Feature', id: zone.IndoorMapZoneId, geometry, properties: { zoneId: zone.IndoorMapZoneId, name: zone.Name, color: zone.Color || '#3b82f6', zoneType: zone.ZoneType } });
+      features.push(indoorZoneFeature(zone, geometry));
     } catch {
       // Malformed zone geometry: skip the zone, keep the floor.
     }
   }
+
   return { type: 'FeatureCollection', features };
 };
+
+const indoorZoneFeature = (zone: IndoorMapZoneResultData, geometry: GeoJSON.Geometry): GeoJSON.Feature => ({
+  type: 'Feature',
+  id: zone.IndoorMapZoneId,
+  geometry,
+  properties: { zoneId: zone.IndoorMapZoneId, name: zone.Name, color: zone.Color || '#3b82f6', zoneType: zone.ZoneType },
+});

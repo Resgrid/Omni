@@ -48,30 +48,10 @@
       "auto_linked": "vinculado automáticamente",
       "auto_linked_hint": "Enviado sin llamada; Resgrid lo vinculó a partir del estado anterior o del despacho."
     },
-    "audio": "Audio",
-    "delete_call": "Eliminar llamada",
-    "delete_call_confirm": "¿Eliminar esta llamada? Esta acción no se puede deshacer.",
-    "delete_call_error": "No se pudo eliminar la llamada",
-    "delete_call_success": "Llamada eliminada",
     "destination_address": "Dirección del destino",
-    "destination_type": "Tipo de destino",
-    "dispatch_more": "Despachar recursos adicionales",
     "dispatch_more_error": "No se pudieron despachar los recursos",
     "dispatch_more_success": "Recursos despachados y notificados",
-    "map_call": "Llamada",
-    "map_destination": "Destino",
-    "missing_call_id": "Falta el ID de la llamada",
-    "pending_banner_description": "Esta llamada está guardada pero no se ha notificado a nadie. Elija a quién enviar y despáchela cuando esté lista.",
-    "pending_banner_title": "Pendiente — aún no despachada",
-    "reschedule": "Reprogramar",
-    "reschedule_datetime": "Fecha y hora de despacho",
-    "reschedule_error": "No se pudo reprogramar la llamada",
-    "reschedule_in_1_day": "En 1 día",
-    "reschedule_in_1_hour": "En 1 hora",
-    "reschedule_invalid": "Introduzca una fecha y hora válidas (AAAA-MM-DD HH:mm)",
-    "reschedule_success": "Hora de despacho actualizada",
-    "reschedule_tomorrow_morning": "Mañana a las 8 a. m.",
-    "scheduled_on": "Fecha y hora de despacho programado"
+    "missing_call_id": "Falta el ID de la llamada"
   },
   "calls": {
     "audio": {
@@ -84,7 +64,6 @@
     "contact_information": "Información de Contacto",
     "contact_picker": {
       "none": "No hay contactos disponibles",
-      "search_placeholder": "Buscar contactos...",
       "title": "Seleccionar Contacto"
     },
     "coordinates_incomplete": "Introduzca la latitud y la longitud",
@@ -119,19 +98,16 @@
     "dispatch_recipients_empty": "No hay personal, grupos, roles ni unidades visibles para ti. Revisa los permisos de tu departamento o despacha a Todos.",
     "dispatch_recipients_partial_load": "No se pudieron cargar algunos destinatarios. Las listas siguientes pueden estar incompletas.",
     "edit_call_web_hint": "Actualice los detalles de la llamada a continuación. Presione Ctrl+S para guardar.",
-    "edit_keyboard_shortcuts": "Consejo: Presione Ctrl+S para guardar, Escape para cancelar",
     "expand_map": "Expandir Mapa",
     "form": {
       "no_form": "No hay formulario de llamada configurado",
       "title": "Formulario de Llamada"
     },
-    "keyboard_shortcuts": "Consejo: Presione Ctrl+Enter para crear, Escape para cancelar",
     "latitude": "Latitud",
     "latitude_invalid": "Introduzca una latitud en grados decimales, entre -90 y 90",
     "latitude_placeholder": "p. ej. 39.122639",
     "linked_calls": {
       "change": "Cambiar llamada vinculada",
-      "edit_hint": "Los vínculos que ya tiene esta llamada se conservan; elige una llamada para añadir otro.",
       "linked": "Vinculada",
       "none": "No hay llamadas activas disponibles",
       "search_placeholder": "Buscar llamadas...",
@@ -141,29 +117,19 @@
     "longitude": "Longitud",
     "longitude_invalid": "Introduzca una longitud en grados decimales, entre -180 y 180",
     "longitude_placeholder": "p. ej. -119.758773",
-    "looking_up_address": "Buscando la dirección de estas coordenadas...",
     "new_call_web_hint": "Complete los detalles de la llamada a continuación. Presione Ctrl+Enter para crear.",
     "no_destination": "Sin destino",
-    "notify_cancelled_entities": "Notificar entidades canceladas",
-    "notify_cancelled_entities_description": "Enviar un mensaje al personal y las unidades eliminados de la lista de despacho.",
-    "pending_saved": "Llamada guardada como pendiente",
     "protocols": {
-      "add": "Añadir protocolos",
-      "attached": "Ya adjuntos: {{names}}",
       "collapse": "Contraer",
       "expand_questions": "Ver preguntas",
       "none": "No hay protocolos disponibles",
       "title": "Protocolos"
     },
-    "required_fields_missing_edit": "Tu departamento exige estos campos antes de poder guardar una llamada: {{fields}}",
     "save_as_pending": "Guardar como pendiente (no despachar todavía)",
     "save_as_pending_description": "La llamada se guarda y se numera, pero no se notifica a nadie y las aplicaciones de campo no la ven. Los destinatarios que elija se conservan como despacho propuesto; despáchela más tarde desde Llamadas pendientes.",
-    "save_pending_call": "Guardar llamada pendiente",
     "schedule_dispatch": "Programar Despacho",
     "schedule_dispatch_description": "Establezca una fecha y hora futura para programar esta llamada para despacho posterior",
     "scheduled_on": "Fecha y Hora Programada",
-    "scheduled_on_edit_hint": "Elige una hora para programar o reprogramar el despacho. Si lo dejas vacío, se mantiene la programación actual de la llamada.",
-    "scheduled_on_helper": "Deje vacío para despachar inmediatamente",
     "scheduled_on_past_error": "La hora programada debe ser en el futuro",
     "scheduled_on_too_soon": "La hora de despacho programada debe ser al menos 15 minutos a partir de ahora",
     "templates": {
@@ -244,7 +210,6 @@
     "note_save_error": "Error al guardar la nota: {{error}}",
     "note_title_label": "Título",
     "note_title_placeholder": "Ingrese el título de la nota...",
-    "on_call": "En Llamada",
     "pending_calls": "Pendientes",
     "personnel_actions": {
       "destination": "Destino",
@@ -281,7 +246,6 @@
     "station": "Estación",
     "stations": "Estaciones",
     "system_update": "Actualización del Sistema",
-    "unassigned": "Sin Asignar",
     "unit_actions": "Acciones de Unidad",
     "unit_actions_panel": {
       "call_destination": "Destino de la llamada",
@@ -513,9 +477,6 @@
     "type": "Tipo",
     "unknown_type": "Tipo desconocido",
     "unnamed": "PDI sin nombre"
-  },
-  "scheduled_calls": {
-    "scheduled_for": "Programada para"
   },
   "settings": {
     "select_server": "Selecciona un servidor"

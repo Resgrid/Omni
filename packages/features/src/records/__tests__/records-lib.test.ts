@@ -1,7 +1,7 @@
 import '../../calls/__tests__/test-setup';
 
 import { type PendingRecordDraft, useRecordsStore } from '@resgrid/data';
-import { type RecordDefinitionSchema, type RecordDeploymentData, RmsFieldClassification, RmsFieldType, RmsRuleEffect, RmsRuleOperator } from '@resgrid/models';
+import { type RecordDefinitionSchema, type RecordDeploymentData, RmsFieldClassification, RmsFieldType, RmsRecordState, RmsRuleEffect, RmsRuleOperator } from '@resgrid/models';
 
 import { readableDefinitionKey } from '../lib/definition-name';
 import { countBy, deploymentStatusAction, fillStatusAction, isConnectorOwned, openDeploymentCount, sortDeployments, statusKey } from '../lib/deployment-format';
@@ -64,6 +64,7 @@ describe('record schema', () => {
       [cellKey('main', 'secret', null)]: { SectionKey: 'main', FieldKey: 'secret', Value: 'x' },
       [cellKey('crew', 'name', 'r1')]: { SectionKey: 'crew', FieldKey: 'name', RowKey: 'r1', Ordinal: 0, Value: '' },
     };
+
     expect(rowKeysFor(values, 'crew')).toEqual(['r1']);
     expect(validate(schema, values, false).map((issue) => `${issue.fieldKey}:${issue.code}`)).toEqual(['count:range', 'name:required']);
   });
@@ -73,6 +74,7 @@ describe('record schema', () => {
       { SectionKey: 'main', FieldKey: 'kind', Value: 'fire' },
       { SectionKey: 'main', FieldKey: 'secret', Value: 'REDACTED', IsWithheld: true },
     ];
+
     const values = toValueMap(cells);
     const withheld = withheldCellKeys(cells);
     expect(Object.keys(values)).toEqual([cellKey('main', 'kind', null)]);
@@ -81,6 +83,33 @@ describe('record schema', () => {
     const tampered = { ...values, [cellKey('main', 'secret', null)]: { SectionKey: 'main', FieldKey: 'secret', Value: 'REDACTED' } };
     expect(toValueList(tampered, withheld).map((value) => value.FieldKey)).toEqual(['kind']);
     expect(toValueList(tampered).map((value) => value.FieldKey)).toEqual(['kind']);
+  });
+
+  it('reads nested Core rows and keeps wire metadata and withheld values separate', () => {
+    const data = {
+      Sections: [
+        {
+          SectionKey: 'charges',
+          Rows: [
+            {
+              RowKey: 'a',
+              Ordinal: 2,
+              Cells: [
+                { FieldKey: 'price', Value: '45.00', CurrencyCode: 'CAD', OffsetMinutes: -240, ReferenceType: 'Contact', ReferenceId: '7' },
+                { FieldKey: 'restricted', Withheld: true },
+                { FieldKey: 'protected', Value: 'REDACTED' },
+              ],
+            },
+          ],
+        },
+      ],
+      WithheldFieldKeys: ['protected'],
+    };
+
+    expect(toValueList(toValueMap(data))).toEqual([expect.objectContaining({ SectionKey: 'charges', RowKey: 'a', Ordinal: 2, FieldKey: 'price', CurrencyCode: 'CAD', OffsetMinutes: -240, ReferenceId: '7' })]);
+    expect(withheldCellKeys(data)).toEqual(new Set(['charges::a::restricted', 'charges::a::protected']));
+    expect([RmsRecordState.Approved, RmsRecordState.Finalized, RmsRecordState.Corrected]).toEqual([4, 5, 12]);
+    expect([RmsFieldClassification.Standard, RmsFieldClassification.Restricted, RmsFieldClassification.Protected]).toEqual([0, 1, 2]);
   });
 
   it('fails closed on unknown field types and never authors a sealed definition offline', () => {
@@ -141,6 +170,7 @@ describe('drafts', () => {
     useRecordsStore.setState({
       pushDraft: jest.fn(async (id: string) => {
         useRecordsStore.getState().applyDraftResult(id, { RecordId: 'r9', RowVersion: 2, DefinitionVersion: 1, State: 1 });
+
         return { outcome: 'sent' as const, id: 'e1' };
       }),
     });

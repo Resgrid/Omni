@@ -68,10 +68,7 @@
     "personnel": "Особи",
     "protocols": "Протоколи",
     "reference_id": "Ідентифікатор посилання",
-    "search_address": "Пошук адреси",
-    "search_coordinates": "Пошук координат",
-    "search_plus_code": "Пошук plus code",
-    "search_what3words": "Пошук адреси what3words"
+    "search_coordinates": "Пошук координат"
   },
   "chat": {
     "attach": "Прикріпити",

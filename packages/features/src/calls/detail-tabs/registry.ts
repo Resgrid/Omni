@@ -21,7 +21,7 @@ export interface CallDetailTabContext {
   formFactor: FormFactor;
   /** Department feature flags (`useFeatureFlag`), read through the screen so registrations stay pure. */
   isFeatureEnabled: (flag: string) => boolean;
-  /** Overdue/critical check-in timers on the call (badge for the check-in tab). */
+  /** Check-in timers on the call needing attention — overdue, due soon or critical (badge for the check-in tab, Dispatch). */
   overdueCheckIns: number;
   /** Re-reads the call (after a write, a protected reveal, a realtime ping). */
   refresh: () => Promise<void>;
@@ -29,6 +29,8 @@ export interface CallDetailTabContext {
   openNotes: () => void;
   openImages: () => void;
   openFiles: () => void;
+  /** Add resources to the call (Dispatch "Dispatch more"); undefined when the user may not or the call is not out. */
+  openDispatchMore?: () => void;
 }
 
 export interface CallDetailTabDefinition {
@@ -52,6 +54,7 @@ let snapshot: readonly CallDetailTabDefinition[] = [];
 
 const emit = (): void => {
   snapshot = [...tabs.values()].sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
+
   for (const listener of [...listeners]) listener();
 };
 
@@ -59,6 +62,7 @@ const emit = (): void => {
 export function registerCallDetailTab(definition: CallDetailTabDefinition): () => void {
   tabs.set(definition.id, definition);
   emit();
+
   return () => {
     if (tabs.get(definition.id) === definition) {
       tabs.delete(definition.id);
@@ -80,6 +84,7 @@ export function getCallDetailTabs(): readonly CallDetailTabDefinition[] {
 export function resolveCallDetailTabs(context: CallDetailTabContext, definitions: readonly CallDetailTabDefinition[] = snapshot): CallDetailTabDefinition[] {
   return definitions.filter((definition) => {
     if (!definition.visible) return true;
+
     try {
       return definition.visible(context);
     } catch {
@@ -90,6 +95,7 @@ export function resolveCallDetailTabs(context: CallDetailTabContext, definitions
 
 const subscribe = (listener: () => void): (() => void) => {
   listeners.add(listener);
+
   return () => listeners.delete(listener);
 };
 

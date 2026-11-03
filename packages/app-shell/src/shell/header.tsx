@@ -133,9 +133,10 @@ export function ShellHeader({ nav }: ShellHeaderProps) {
     router.replace(href.home() ?? ('/' as Href));
   }, [href, router]);
 
-  const onColor = colors.textInverse;
+  // The Dispatch app bar: the panel-header surface with body text, a hairline and a soft shadow, in every app.
+  const onColor = colors.text;
   return (
-    <View style={StyleSheet.flatten([styles.header, { paddingTop: insets.top, backgroundColor: colors.primaryStrong }])} testID="shell-header">
+    <View style={StyleSheet.flatten([styles.header, { paddingTop: insets.top, backgroundColor: colors.surface, borderBottomColor: colors.border }])} testID="shell-header">
       <View style={styles.side}>
         {leading === 'back' ? (
           <Pressable accessibilityRole="button" accessibilityLabel={t('shell.back')} onPress={goBack} style={styles.iconButton} testID="shell-back-button">
@@ -174,12 +175,24 @@ export function ShellHeader({ nav }: ShellHeaderProps) {
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, minHeight: 56 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    minHeight: 56,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+    zIndex: 1,
+  },
   side: { minWidth: 48, flexDirection: 'row', alignItems: 'center' },
   actions: { justifyContent: 'flex-end' },
   iconButton: { padding: 8, minWidth: 40, minHeight: 40, alignItems: 'center', justifyContent: 'center' },
   titleBox: { flex: 1, alignItems: 'center', paddingHorizontal: 8 },
-  title: { fontSize: 18, fontWeight: '600' },
+  title: { fontSize: 18, fontWeight: '700', letterSpacing: 0.5 },
   pending: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, paddingHorizontal: 8, paddingVertical: 4, marginRight: 4 },
   pendingText: { fontSize: 12, fontWeight: '600', marginLeft: 4 },
 });

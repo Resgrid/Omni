@@ -21,8 +21,17 @@ export enum LogLevel {
   None = 6,
 }
 
+// The real flag values: a connection's `transport` combines them.
+export enum HttpTransportType {
+  None = 0,
+  WebSockets = 1,
+  ServerSentEvents = 2,
+  LongPolling = 4,
+}
+
 export interface FakeConnectionOptions {
   accessTokenFactory?: () => string | Promise<string>;
+  transport?: HttpTransportType;
 }
 
 type Callback = (...args: unknown[]) => void;

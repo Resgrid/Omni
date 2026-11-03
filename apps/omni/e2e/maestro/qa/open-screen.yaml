@@ -1,0 +1,21 @@
+# Opens one signed-in screen by deep link (<app scheme>://<route>) and checks it rendered: the app shell is up, start-up
+# did not fail, the route exists, no render error, still signed in. A screenshot of every screen goes to the report.
+# Variables: APP_ID, SCREEN_URL, SCREEN_NAME, QA_SETTLE_MS.
+appId: ${APP_ID}
+---
+- openLink: ${SCREEN_URL}
+- runFlow: accept-open-prompt.yaml
+- extendedWaitUntil:
+    visible:
+      # The shell's root id, or the accessible elements iOS exposes instead: header title, menu button, sidebar profile.
+      id: 'app-shell-.*|shell-header-title|shell-menu-button|shell-nav-profile-name'
+    timeout: 60000
+- waitForAnimationToEnd:
+    timeout: ${QA_SETTLE_MS}
+- assertNotVisible:
+    id: 'shell-init-failed'
+- assertNotVisible:
+    id: 'login-screen'
+- assertNotVisible:
+    text: '.*(Unmatched Route|Render Error|Something went wrong).*'
+- takeScreenshot: ${SCREEN_NAME}

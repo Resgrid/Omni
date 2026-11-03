@@ -52,6 +52,8 @@ export default [
       // Copied from maplibre-gl by metro.config.js on every Metro start (git-ignored).
       'apps/omni/public/maplibre-gl-worker.js',
       'apps/desktop/out/**',
+      // Playwright and Maestro output (traces carry the bundle's JavaScript), written while a suite runs.
+      'apps/omni/e2e/{test-results,playwright-report,results,maestro-output,qa-output}/**',
       'apps/desktop/release/**',
       '.claude/**',
       '.agents/**',

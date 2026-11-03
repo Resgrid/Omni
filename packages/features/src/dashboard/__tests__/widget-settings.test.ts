@@ -52,6 +52,11 @@ describe('normalizeWidgetSettings', () => {
     expect(defaultWidgetSettings().personnel.hideGroups).toEqual([]);
   });
 
+  it('preserves call visibility on boards saved before the linked-call toggle', () => {
+    expect(normalizeWidgetSettings({ map: { showCalls: false } }).map.showLinkedCalls).toBe(false);
+    expect(normalizeWidgetSettings({ map: { showCalls: false, showLinkedCalls: true } }).map.showLinkedCalls).toBe(true);
+  });
+
   it('completes column orders', () => {
     expect(normalizeColumnOrder(['dispatched', 'id'], CALLS_COLUMNS)).toEqual(['dispatched', 'id', 'name', 'address', 'timestamp', 'priority']);
     expect(normalizeColumnOrder('nope', PERSONNEL_COLUMNS)).toEqual([...PERSONNEL_COLUMNS]);

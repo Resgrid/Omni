@@ -22,12 +22,15 @@ export interface ResourcesPanelProps {
   onSelectPersonnel: (userId: string) => void;
   onSetUnitStatusForCall?: (unitId: string) => void;
   onSetPersonnelStatusForCall?: (userId: string) => void;
+  /** The rows' details buttons: open the unit's or member's screen. */
+  onOpenUnit?: (unitId: string) => void;
+  onOpenPersonnel?: (userId: string) => void;
   flex?: number;
   maxHeight?: number;
 }
 
 /** Units and personnel in one list ("Single list" view toggle, Dispatch baseline ResourcesPanel). */
-export const ResourcesPanel: React.FC<ResourcesPanelProps> = ({ callFilter, onSelectUnit, onSelectPersonnel, onSetUnitStatusForCall, onSetPersonnelStatusForCall, flex, maxHeight }) => {
+export const ResourcesPanel: React.FC<ResourcesPanelProps> = ({ callFilter, onSelectUnit, onSelectPersonnel, onSetUnitStatusForCall, onSetPersonnelStatusForCall, onOpenUnit, onOpenPersonnel, flex, maxHeight }) => {
   const { t } = useTranslation();
   const units = useUnitsStore((state) => state.unitInfos);
   const personnel = usePersonnelStore((state) => state.personnel);
@@ -75,6 +78,7 @@ export const ResourcesPanel: React.FC<ResourcesPanelProps> = ({ callFilter, onSe
             hasPendingStatus={pendingUnits.has(item.unit.UnitId)}
             onPress={handleUnitPress}
             onLongPress={(unitId) => (useConsoleStore.getState().isSelectionMode ? useConsoleStore.getState().toggleUnitInSelection(unitId) : useConsoleStore.getState().startSelection([unitId]))}
+            onOpen={isSelectionMode ? undefined : onOpenUnit}
             onSetStatusForCall={callFilter && !isSelectionMode ? onSetUnitStatusForCall : undefined}
           />
         );
@@ -86,11 +90,26 @@ export const ResourcesPanel: React.FC<ResourcesPanelProps> = ({ callFilter, onSe
           isOnCall={isPersonOnCall(item.person, callFilter)}
           hasPendingStatus={pendingPeople.has(item.person.UserId)}
           onPress={onSelectPersonnel}
+          onOpen={onOpenPersonnel}
           onSetStatusForCall={callFilter ? onSetPersonnelStatusForCall : undefined}
         />
       );
     },
-    [callFilter, handleUnitPress, isSelectionMode, onSelectPersonnel, onSetPersonnelStatusForCall, onSetUnitStatusForCall, pendingPeople, pendingUnits, selectedPersonnelId, selectedSet, selectedUnitId]
+    [
+      callFilter,
+      handleUnitPress,
+      isSelectionMode,
+      onOpenPersonnel,
+      onOpenUnit,
+      onSelectPersonnel,
+      onSetPersonnelStatusForCall,
+      onSetUnitStatusForCall,
+      pendingPeople,
+      pendingUnits,
+      selectedPersonnelId,
+      selectedSet,
+      selectedUnitId,
+    ]
   );
 
   return (

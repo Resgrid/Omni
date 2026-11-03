@@ -41,80 +41,83 @@ export const ConsoleCallCard: React.FC<ConsoleCallCardProps> = React.memo(({ cal
   const ageText = age ? t(TIME_AGO_KEYS[age.unit], { count: age.count }) : '';
   const testID = `console-call-${call.CallId}`;
 
+  // The corner buttons are siblings laid over the card, not children of it: on the web a button inside a button is invalid markup.
   return (
-    <Pressable
-      onPress={() => onSelect(call.CallId)}
-      accessibilityRole="button"
-      accessibilityState={{ selected: isSelected }}
-      accessibilityLabel={`#${call.Number} ${call.Name}`}
-      style={StyleSheet.flatten([styles.card, { backgroundColor: priorityColor }, isSelected ? styles.selected : null])}
-      testID={testID}
-    >
-      {isSelected ? (
-        <Badge action="info" className="mb-1 self-start" testID={`${testID}-selected`}>
-          <BadgeText>{t('dispatch.active_filter')}</BadgeText>
-        </Badge>
-      ) : null}
-      <HStack className="items-center justify-between">
-        <Text className="text-xs font-bold" style={{ color: textColor }}>{`#${call.Number || call.CallId}`}</Text>
+    <View style={styles.cardWrap}>
+      <Pressable
+        onPress={() => onSelect(call.CallId)}
+        accessibilityRole="button"
+        accessibilityState={{ selected: isSelected }}
+        accessibilityLabel={`#${call.Number} ${call.Name}`}
+        style={StyleSheet.flatten([styles.card, { backgroundColor: priorityColor }, isSelected ? styles.selected : null])}
+        testID={testID}
+      >
+        {isSelected ? (
+          <Badge action="info" className="mb-1 self-start" testID={`${testID}-selected`}>
+            <BadgeText>{t('dispatch.active_filter')}</BadgeText>
+          </Badge>
+        ) : null}
+        <HStack className="items-center justify-between">
+          <Text className="text-xs font-bold" style={{ color: textColor }}>{`#${call.Number || call.CallId}`}</Text>
+          <HStack space="xs" className="items-center">
+            <View>
+              <Clock size={10} color={textColor} />
+            </View>
+            <Text className="text-xs" style={{ color: textColor }}>
+              {ageText}
+            </Text>
+          </HStack>
+        </HStack>
+        <HStack space="xs" className="mt-0.5 items-center">
+          <TypeIcon iconUrl={call.TypeIconUrl ?? null} mapIcon={call.TypeMapIcon ?? null} size={18} />
+          <Text className="flex-1 text-sm font-bold" style={{ color: textColor }} numberOfLines={1}>
+            {call.Name}
+          </Text>
+          <AlarmLevelBadge alarmLevel={call.AlarmLevel} testID={`${testID}-alarm`} />
+        </HStack>
+        {call.Address ? (
+          <HStack space="xs" className="items-center">
+            <View>
+              <MapPin size={10} color={textColor} />
+            </View>
+            <Text className="flex-1 text-xs" style={{ color: textColor }} numberOfLines={1}>
+              {call.Address}
+            </Text>
+          </HStack>
+        ) : null}
+        {destination ? (
+          <HStack space="xs" className="items-center">
+            <View>
+              <Navigation size={10} color={textColor} />
+            </View>
+            <Text className="flex-1 text-xs italic" style={{ color: textColor }} numberOfLines={1}>
+              {destination}
+            </Text>
+          </HStack>
+        ) : null}
+        {nature ? (
+          <Text className="text-xs opacity-90" style={{ color: textColor }} numberOfLines={1}>
+            {nature}
+          </Text>
+        ) : null}
+        <View style={StyleSheet.flatten([styles.divider, { backgroundColor: textColor }])} />
         <HStack space="xs" className="items-center">
           <View>
-            <Clock size={10} color={textColor} />
+            <Radio size={10} color={textColor} />
           </View>
-          <Text className="text-xs" style={{ color: textColor }}>
-            {ageText}
-          </Text>
-        </HStack>
-      </HStack>
-      <HStack space="xs" className="mt-0.5 items-center">
-        <TypeIcon iconUrl={call.TypeIconUrl ?? null} mapIcon={call.TypeMapIcon ?? null} size={18} />
-        <Text className="flex-1 text-sm font-bold" style={{ color: textColor }} numberOfLines={1}>
-          {call.Name}
-        </Text>
-        <AlarmLevelBadge alarmLevel={call.AlarmLevel} testID={`${testID}-alarm`} />
-      </HStack>
-      {call.Address ? (
-        <HStack space="xs" className="items-center">
-          <View>
-            <MapPin size={10} color={textColor} />
+          <View className="flex-1">
+            <DispatchTicker dispatches={dispatches} testID={`${testID}-ticker`} />
           </View>
-          <Text className="flex-1 text-xs" style={{ color: textColor }} numberOfLines={1}>
-            {call.Address}
-          </Text>
         </HStack>
-      ) : null}
-      {destination ? (
-        <HStack space="xs" className="items-center">
-          <View>
-            <Navigation size={10} color={textColor} />
+        <CallNavigationEtas callId={call.CallId} dispatches={dispatches} testID={`${testID}-etas`} />
+        {overdueNames.length > 0 ? (
+          <View style={styles.overdue} testID={`${testID}-overdue`}>
+            <Text className="text-xs font-bold text-typography-0" numberOfLines={1}>
+              {t('dispatch_console.overdue_check_ins', { names: overdueNames.join(', ') })}
+            </Text>
           </View>
-          <Text className="flex-1 text-xs italic" style={{ color: textColor }} numberOfLines={1}>
-            {destination}
-          </Text>
-        </HStack>
-      ) : null}
-      {nature ? (
-        <Text className="text-xs opacity-90" style={{ color: textColor }} numberOfLines={1}>
-          {nature}
-        </Text>
-      ) : null}
-      <View style={StyleSheet.flatten([styles.divider, { backgroundColor: textColor }])} />
-      <HStack space="xs" className="items-center">
-        <View>
-          <Radio size={10} color={textColor} />
-        </View>
-        <View className="flex-1">
-          <DispatchTicker dispatches={dispatches} testID={`${testID}-ticker`} />
-        </View>
-      </HStack>
-      <CallNavigationEtas callId={call.CallId} dispatches={dispatches} testID={`${testID}-etas`} />
-      {overdueNames.length > 0 ? (
-        <View style={styles.overdue} testID={`${testID}-overdue`}>
-          <Text className="text-xs font-bold text-typography-0" numberOfLines={1}>
-            {t('dispatch_console.overdue_check_ins', { names: overdueNames.join(', ') })}
-          </Text>
-        </View>
-      ) : null}
+        ) : null}
+      </Pressable>
       <View style={styles.cornerButtons}>
         {onAddResources ? (
           <Pressable onPress={() => onAddResources(call)} hitSlop={8} accessibilityRole="button" accessibilityLabel={t('dispatch_console.add_resources')} style={styles.cornerButton} testID={`${testID}-add-resources`}>
@@ -129,14 +132,15 @@ export const ConsoleCallCard: React.FC<ConsoleCallCardProps> = React.memo(({ cal
           </View>
         </Pressable>
       </View>
-    </Pressable>
+    </View>
   );
 });
 
 ConsoleCallCard.displayName = 'ConsoleCallCard';
 
 const styles = StyleSheet.create({
-  card: { borderRadius: 8, padding: 8, paddingRight: 56, marginBottom: 6 },
+  cardWrap: { marginBottom: 6 },
+  card: { borderRadius: 8, padding: 8, paddingRight: 56 },
   selected: { borderWidth: 3, borderColor: '#6366f1' },
   divider: { height: StyleSheet.hairlineWidth, opacity: 0.4, marginVertical: 4 },
   overdue: { marginTop: 4, backgroundColor: '#dc2626', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 },

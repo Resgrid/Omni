@@ -231,7 +231,33 @@
     "info": {
       "dispatched_on": "Dispatched",
       "logged_on": "Logged"
-    }
+    },
+    "delete_call": "Usuń zgłoszenie",
+    "delete_call_confirm": "Usunąć to zgłoszenie? Tej operacji nie można cofnąć.",
+    "delete_call_success": "Usunięto zgłoszenie",
+    "delete_call_error": "Nie udało się usunąć zgłoszenia",
+    "reschedule": "Zmień termin",
+    "reschedule_success": "Zaktualizowano godzinę wysłania",
+    "reschedule_error": "Nie udało się zmienić terminu zgłoszenia",
+    "reschedule_invalid": "Choose a valid dispatch date and time",
+    "reschedule_in_1_hour": "Za 1 godzinę",
+    "reschedule_in_1_day": "Za 1 dzień",
+    "reschedule_tomorrow_morning": "Jutro o 8:00",
+    "reschedule_datetime": "Data i godzina wysłania",
+    "dispatch_more": "Wyślij dodatkowe zasoby",
+    "pending_banner_title": "Oczekujące — jeszcze nie zadysponowane",
+    "pending_banner_description": "To zgłoszenie jest zapisane, ale nikt nie został powiadomiony. Wybierz, kogo wysłać, i zadysponuj je, gdy będzie gotowe.",
+    "dispatch_call": "Dysponuj",
+    "map_call": "Zgłoszenie",
+    "map_destination": "Miejsce docelowe",
+    "audio": "Audio",
+    "audio_empty": "Brak nagrań dźwiękowych",
+    "audio_play": "Play {{name}}",
+    "audio_stop": "Stop {{name}}",
+    "audio_play_error": "Could not play this recording",
+    "scheduled_on": "Zaplanowana data i godzina wysłania",
+    "destination_type": "Typ miejsca docelowego",
+    "keyboard_shortcuts": "Tip: Press 1-9 to switch tabs, Ctrl+E to edit, Escape to go back"
   },
   "calls": {
     "address": "Adres",
@@ -253,7 +279,9 @@
     "contact_phone_placeholder": "Wpisz telefon kontaktowy",
     "contact_picker": {
       "linked": "Powiązany kontakt: {{name}}",
-      "select": "Select Contact"
+      "select": "Select Contact",
+      "search_placeholder": "Szukaj kontaktów...",
+      "empty": "Brak dostępnych kontaktów"
     },
     "coordinates": "Współrzędne GPS",
     "coordinates_found": "Współrzędne znalezione i adres zaktualizowany",
@@ -398,7 +426,9 @@
     },
     "protocols": {
       "select": "Wybierz protokoły",
-      "selected_count": "{{count}} selected"
+      "selected_count": "{{count}} selected",
+      "attached": "Już dołączone: {{names}}",
+      "add": "Dodaj protokoły"
     },
     "queued": {
       "badge": "Queued — not dispatched yet",
@@ -447,8 +477,25 @@
       "name_required": "Enter a name for the call",
       "nature_required": "Enter the nature of the call",
       "required": "Required by your department",
-      "udf_required": "Fill in the required custom fields"
-    }
+      "udf_required": "Fill in the required custom fields",
+      "type_required": "Choose a call type"
+    },
+    "pending_saved": "Zgłoszenie zapisane jako oczekujące",
+    "required_fields_missing_edit": "Twój departament wymaga tych pól przed zapisaniem zgłoszenia: {{fields}}",
+    "search_address": "Szukaj adresu",
+    "search_what3words": "Szukaj adresu what3words",
+    "search_plus_code": "Szukaj plus code",
+    "looking_up_address": "Wyszukiwanie adresu dla tych współrzędnych...",
+    "notify_cancelled_entities": "Powiadom wycofane jednostki",
+    "notify_cancelled_entities_description": "Wyślij wiadomość do personelu i jednostek usuniętych z listy wysyłki.",
+    "linked_calls": {
+      "edit_hint": "Istniejące powiązania tego zgłoszenia zostaną zachowane; wybierz zgłoszenie, aby dodać kolejne."
+    },
+    "scheduled_on_edit_hint": "Wybierz czas, aby zaplanować lub przełożyć dyspozycję. Puste pole zachowuje bieżący harmonogram zgłoszenia.",
+    "scheduled_on_helper": "Pozostaw puste, aby zadysponować natychmiast",
+    "save_pending_call": "Zapisz oczekujące zgłoszenie",
+    "keyboard_shortcuts": "Wskazówka: Naciśnij Ctrl+Enter, aby utworzyć, Escape, aby anulować",
+    "edit_keyboard_shortcuts": "Wskazówka: Naciśnij Ctrl+S, aby zapisać, Escape, aby anulować"
   },
   "chat": {
     "ack_pending_count": "Masz {{count}} pilnych wiadomości do potwierdzenia",
@@ -3443,7 +3490,8 @@
     "table_priority": "Priorytet",
     "table_scheduled": "Zaplanowano na",
     "table_type": "Typ",
-    "title": "Zaplanowane zgłoszenia"
+    "title": "Zaplanowane zgłoszenia",
+    "scheduled_for": "Zaplanowano na"
   },
   "certifications": {
     "add": "Dodaj uprawnienie",
@@ -3608,6 +3656,7 @@
     "severity_levels": "Poziomy ważności",
     "show_area": "Pokaż obszar",
     "show_calls": "Pokaż zgłoszenia",
+    "show_linked_calls": "Pokaż powiązane zgłoszenia",
     "show_expiry": "Pokaż czas wygaśnięcia",
     "show_headline": "Pokaż nagłówek",
     "show_personnel": "Pokaż personel",
@@ -3788,6 +3837,7 @@
     "check_in": "Check in",
     "clear_search": "Clear search",
     "expand_map": "Open the full map",
+    "gps": "GPS",
     "map_unavailable": "No map is configured for this department.",
     "no_overdue_check_ins": "No overdue check-ins",
     "no_resources": "No units or personnel to show",
@@ -3811,11 +3861,14 @@
     "ptt_error_permission": "Microphone access is needed to talk.",
     "ptt_hotkey_hint": "Hold {{hotkey}} to talk",
     "ptt_no_channels": "No voice channels",
+    "ptt_off": "OFF",
     "ptt_ready": "Ready",
     "ptt_receiving": "Receiving",
     "ptt_reconnecting": "Reconnecting…",
+    "ptt_rx": "RX",
     "ptt_stop": "Stop talking",
     "ptt_talk": "Talk",
+    "ptt_tx": "TX",
     "resources": "Resources",
     "resources_on_call": "Resources on call",
     "search_notes": "Search notes",
@@ -3877,6 +3930,7 @@
     "note_added_to_console": "Nowa notatka została dodana do konsoli",
     "note_created": "Notatka utworzona",
     "notes": "Notatki",
+    "on_call": "Na zgłoszeniu",
     "personnel": "Personel",
     "personnel_deselected": "Personel odznaczony",
     "personnel_on_call": "Personel na zgłoszeniu",
@@ -3897,6 +3951,7 @@
     "transmission_ended": "Transmisja zakończona",
     "transmitting": "Transmitting",
     "transmitting_on": "Transmisja na {{channel}}",
+    "unassigned": "Nieprzypisane",
     "unit_deselected": "Jednostka odznaczona",
     "unit_selected": "Jednostka wybrana",
     "unit_status_updated": "Status jednostki zaktualizowany",

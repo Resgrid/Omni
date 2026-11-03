@@ -1,5 +1,5 @@
 import { useTranslation } from '@resgrid/i18n';
-import { HStack, Pressable, Text, Textarea, TextareaInput, View, VStack } from '@resgrid/ui';
+import { HStack, Pressable, Text, Textarea, TextareaInput, useThemeColors, View, VStack } from '@resgrid/ui';
 import { AlertTriangle, ImagePlay, Send } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
 
@@ -25,6 +25,7 @@ export interface MessageComposerProps {
  */
 export const MessageComposer: React.FC<MessageComposerProps> = ({ onSend, disabled = false, placeholder, initialValue = '', allowUrgent = true, onCancelEdit, onOpenGif, maxLength = 4000 }) => {
   const { t } = useTranslation();
+  const colors = useThemeColors();
   const [text, setText] = useState(initialValue);
   const [urgent, setUrgent] = useState(false);
   const canSend = !disabled && text.trim().length > 0;
@@ -58,7 +59,7 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({ onSend, disabl
             accessibilityLabel={t('chat.urgent')}
             className={`mb-1 size-9 items-center justify-center rounded-full ${urgent ? 'bg-error-500' : 'bg-background-100'}`}
           >
-            <AlertTriangle size={16} color={urgent ? '#ffffff' : '#6b7280'} />
+            <AlertTriangle size={16} color={urgent ? colors.textInverse : colors.token('typography-500')} />
           </Pressable>
         ) : null}
         {onOpenGif && !onCancelEdit ? (
@@ -88,7 +89,7 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({ onSend, disabl
           accessibilityLabel={onCancelEdit ? t('chat.save') : t('chat.send')}
           className={`mb-1 size-9 items-center justify-center rounded-full ${canSend ? 'bg-primary-500' : 'bg-background-200'}`}
         >
-          <Send size={16} color="#ffffff" />
+          <Send size={16} color={canSend ? colors.textInverse : colors.token('typography-500')} />
         </Pressable>
       </HStack>
     </VStack>

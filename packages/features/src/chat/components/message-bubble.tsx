@@ -1,7 +1,7 @@
 import { safeFormatDate } from '@resgrid/core/utils/dates';
 import { useTranslation } from '@resgrid/i18n';
 import { ChatMessagePriority, type ChatMessageResultData, ChatMessageType } from '@resgrid/models';
-import { HStack, Image, Pressable, Text, View, VStack } from '@resgrid/ui';
+import { HStack, Image, Pressable, Text, useThemeColors, View, VStack } from '@resgrid/ui';
 import { AlertTriangle, Clock, MapPin, Pin } from 'lucide-react-native';
 import React, { useMemo } from 'react';
 
@@ -33,6 +33,7 @@ const gifSize = (width?: number, height?: number): { width: number; height: numb
 /** One message (Responder bubble): sender in group channels, body, GIF or picture, urgency, edited/deleted/pinned markers and send state. */
 export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({ message, isOwn, showSender, onLongPress, onRetry, onOpenImage }) => {
   const { t } = useTranslation();
+  const colors = useThemeColors();
   const isDeleted = !!message.DeletedOn;
   const isUrgent = message.Priority === ChatMessagePriority.Urgent;
   const status = message._localStatus;
@@ -57,7 +58,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({ message
         {showSender && !isOwn ? <Text className="mb-0.5 text-xs font-semibold text-typography-600">{message.SenderDisplayName || t('chat.someone')}</Text> : null}
         {isUrgent ? (
           <HStack space="xs" className="items-center">
-            <AlertTriangle size={12} color={isOwn ? '#ffffff' : '#dc2626'} />
+            <AlertTriangle size={12} color={isOwn ? colors.textInverse : colors.token('error-600')} />
             <Text className={`text-xs font-bold ${isOwn ? 'text-typography-0' : 'text-error-600'}`}>{t('chat.urgent')}</Text>
           </HStack>
         ) : null}
@@ -70,14 +71,14 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({ message
           <Image source={{ uri: gif.GifUrl }} style={{ ...gifSize(gif.Width, gif.Height), borderRadius: 10 }} contentFit="contain" accessibilityLabel={message.Body || t('chat.gif')} testID={`${testID}-gif`} />
         ) : (
           <HStack space="xs" className="items-center">
-            {message.MessageType === ChatMessageType.Location ? <MapPin size={14} color={isOwn ? '#ffffff' : '#374151'} /> : null}
+            {message.MessageType === ChatMessageType.Location ? <MapPin size={14} color={isOwn ? colors.textInverse : colors.icon} /> : null}
             <Text className={textClassName}>{body}</Text>
           </HStack>
         )}
         <HStack space="xs" className="mt-0.5 items-center justify-end">
-          {message.PinnedOn ? <Pin size={10} color={isOwn ? '#ffffff' : '#6b7280'} /> : null}
+          {message.PinnedOn ? <Pin size={10} color={isOwn ? colors.textInverse : colors.token('typography-500')} /> : null}
           {message.EditedOn && !isDeleted ? <Text className={`text-[10px] ${isOwn ? 'text-typography-0' : 'text-typography-500'}`}>{t('chat.edited')}</Text> : null}
-          {status === 'pending' ? <Clock size={10} color={isOwn ? '#ffffff' : '#6b7280'} /> : null}
+          {status === 'pending' ? <Clock size={10} color={isOwn ? colors.textInverse : colors.token('typography-500')} /> : null}
           <Text className={`text-[10px] ${isOwn ? 'text-typography-0' : 'text-typography-500'}`}>{safeFormatDate(message.SentOn, 'h:mm a', '')}</Text>
         </HStack>
       </VStack>

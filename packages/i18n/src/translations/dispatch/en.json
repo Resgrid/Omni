@@ -48,30 +48,10 @@
       "auto_linked": "auto-linked",
       "auto_linked_hint": "Sent without a call; Resgrid linked it from the previous status or the dispatch."
     },
-    "audio": "Audio",
-    "delete_call": "Delete Call",
-    "delete_call_confirm": "Delete this call? This cannot be undone.",
-    "delete_call_error": "Failed to delete call",
-    "delete_call_success": "Call deleted",
     "destination_address": "Destination Address",
-    "destination_type": "Destination Type",
-    "dispatch_more": "Dispatch additional resources",
     "dispatch_more_error": "Failed to dispatch resources",
     "dispatch_more_success": "Resources dispatched and notified",
-    "map_call": "Call",
-    "map_destination": "Destination",
-    "missing_call_id": "Call ID is missing",
-    "pending_banner_description": "This call is saved but nobody has been notified. Choose who to send and dispatch it when ready.",
-    "pending_banner_title": "Pending — not yet dispatched",
-    "reschedule": "Reschedule",
-    "reschedule_datetime": "Dispatch date & time",
-    "reschedule_error": "Failed to reschedule call",
-    "reschedule_in_1_day": "In 1 day",
-    "reschedule_in_1_hour": "In 1 hour",
-    "reschedule_invalid": "Enter a valid date and time (YYYY-MM-DD HH:mm)",
-    "reschedule_success": "Dispatch time updated",
-    "reschedule_tomorrow_morning": "Tomorrow 8 AM",
-    "scheduled_on": "Scheduled Dispatch Date & Time"
+    "missing_call_id": "Call ID is missing"
   },
   "calls": {
     "audio": {
@@ -84,7 +64,6 @@
     "contact_information": "Contact Information",
     "contact_picker": {
       "none": "No contacts available",
-      "search_placeholder": "Search contacts...",
       "title": "Select Contact"
     },
     "coordinates_incomplete": "Enter both latitude and longitude",
@@ -119,19 +98,16 @@
     "dispatch_recipients_empty": "No personnel, groups, roles or units are visible to you. Check your department's permissions, or dispatch to Everyone.",
     "dispatch_recipients_partial_load": "Some recipients couldn't be loaded. The lists below may be incomplete.",
     "edit_call_web_hint": "Update the call details below. Press Ctrl+S to save.",
-    "edit_keyboard_shortcuts": "Tip: Press Ctrl+S to save, Escape to cancel",
     "expand_map": "Expand Map",
     "form": {
       "no_form": "No call form configured",
       "title": "Call Form"
     },
-    "keyboard_shortcuts": "Tip: Press Ctrl+Enter to create, Escape to cancel",
     "latitude": "Latitude",
     "latitude_invalid": "Enter a latitude in decimal degrees, between -90 and 90",
     "latitude_placeholder": "e.g. 39.122639",
     "linked_calls": {
       "change": "Change linked call",
-      "edit_hint": "Links already on this call are kept; pick a call to add another.",
       "linked": "Linked",
       "none": "No active calls available",
       "search_placeholder": "Search calls...",
@@ -141,29 +117,19 @@
     "longitude": "Longitude",
     "longitude_invalid": "Enter a longitude in decimal degrees, between -180 and 180",
     "longitude_placeholder": "e.g. -119.758773",
-    "looking_up_address": "Looking up the address for these coordinates...",
     "new_call_web_hint": "Fill in the call details below. Press Ctrl+Enter to create.",
     "no_destination": "No destination",
-    "notify_cancelled_entities": "Notify cancelled entities",
-    "notify_cancelled_entities_description": "Message personnel/units removed from the dispatch list.",
-    "pending_saved": "Call saved as pending",
     "protocols": {
-      "add": "Add Protocols",
-      "attached": "Already attached: {{names}}",
       "collapse": "Collapse",
       "expand_questions": "View questions",
       "none": "No protocols available",
       "title": "Protocols"
     },
-    "required_fields_missing_edit": "Your department requires these fields before a call can be saved: {{fields}}",
     "save_as_pending": "Save as pending (do not dispatch yet)",
     "save_as_pending_description": "The call is saved and numbered, but nobody is notified and the field apps do not see it. Recipients you pick are kept as the proposed dispatch; dispatch it later from Pending Calls.",
-    "save_pending_call": "Save Pending Call",
     "schedule_dispatch": "Schedule Dispatch",
     "schedule_dispatch_description": "Set a future date and time to schedule this call for later dispatch",
     "scheduled_on": "Scheduled Date & Time",
-    "scheduled_on_edit_hint": "Pick a time to schedule or reschedule the dispatch. Leaving it empty keeps the call's current schedule.",
-    "scheduled_on_helper": "Leave empty to dispatch immediately",
     "scheduled_on_past_error": "Scheduled time must be in the future",
     "scheduled_on_too_soon": "The scheduled dispatch time must be at least 15 minutes from now",
     "templates": {
@@ -244,7 +210,6 @@
     "note_save_error": "Failed to save note: {{error}}",
     "note_title_label": "Title",
     "note_title_placeholder": "Enter note title...",
-    "on_call": "On Call",
     "pending_calls": "Pending",
     "personnel_actions": {
       "destination": "Destination",
@@ -281,7 +246,6 @@
     "station": "Station",
     "stations": "Stations",
     "system_update": "System Update",
-    "unassigned": "Unassigned",
     "unit_actions": "Unit Actions",
     "unit_actions_panel": {
       "call_destination": "Call destination",
@@ -513,9 +477,6 @@
     "type": "Type",
     "unknown_type": "Unknown type",
     "unnamed": "Unnamed POI"
-  },
-  "scheduled_calls": {
-    "scheduled_for": "Scheduled for"
   },
   "settings": {
     "select_server": "Select a server"

@@ -1,3 +1,5 @@
+import { toDevProxyUrl } from '@resgrid/core/env/dev-proxy';
+
 /**
  * The HTTP surface offline maps use: the global `fetch` matches it structurally; tests inject a fake. Requests go only
  * to the Resgrid server's signed URLs (manifest, packs) — never to a tile provider.
@@ -12,7 +14,7 @@ export interface OfflineFetchResponse {
 
 export type OfflineFetch = (url: string, init?: { method?: string; headers?: Record<string, string>; signal?: AbortSignal }) => Promise<OfflineFetchResponse>;
 
-export const defaultOfflineFetch: OfflineFetch = (url, init) => fetch(url, init);
+export const defaultOfflineFetch: OfflineFetch = (url, init) => fetch(toDevProxyUrl(url), init);
 
 export interface RangeResponse {
   status: number;

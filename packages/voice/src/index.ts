@@ -58,6 +58,9 @@ export {
 // Desktop PTT
 export { DEFAULT_DESKTOP_PTT_HOTKEY, DesktopPttController, type DesktopPttHotkey, type DesktopPttMode, formatHotkey, isEditableTarget } from './desktop/desktop-ptt-controller';
 
+// Recorded clips (call audio)
+export { type AudioClipHandle, playAudioClip } from './audio/clip-player';
+
 // Department audio streams
 export { type AudioStreamError, type AudioStreamState, useAudioStreamStore } from './audio-streams/audio-stream-store';
 export { redactStreamUrl, resolveStreamSource } from './audio-streams/stream-source';

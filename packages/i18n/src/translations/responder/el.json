@@ -68,10 +68,7 @@
     "personnel": "Άτομα",
     "protocols": "Πρωτόκολλα",
     "reference_id": "Αναγνωριστικό Αναφοράς",
-    "search_address": "Αναζήτηση διεύθυνσης",
-    "search_coordinates": "Αναζήτηση συντεταγμένων",
-    "search_plus_code": "Αναζήτηση plus code",
-    "search_what3words": "Αναζήτηση διεύθυνσης what3words"
+    "search_coordinates": "Αναζήτηση συντεταγμένων"
   },
   "chat": {
     "attach": "Επισύναψη",

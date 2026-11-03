@@ -48,30 +48,10 @@
       "auto_linked": "powiązano automatycznie",
       "auto_linked_hint": "Wysłano bez zgłoszenia; Resgrid powiązał status na podstawie poprzedniego statusu lub zadysponowania."
     },
-    "audio": "Audio",
-    "delete_call": "Usuń zgłoszenie",
-    "delete_call_confirm": "Usunąć to zgłoszenie? Tej operacji nie można cofnąć.",
-    "delete_call_error": "Nie udało się usunąć zgłoszenia",
-    "delete_call_success": "Usunięto zgłoszenie",
     "destination_address": "Adres miejsca docelowego",
-    "destination_type": "Typ miejsca docelowego",
-    "dispatch_more": "Wyślij dodatkowe zasoby",
     "dispatch_more_error": "Nie udało się wysłać zasobów",
     "dispatch_more_success": "Zasoby zostały wysłane i powiadomione",
-    "map_call": "Zgłoszenie",
-    "map_destination": "Miejsce docelowe",
-    "missing_call_id": "Brak identyfikatora zgłoszenia",
-    "pending_banner_description": "To zgłoszenie jest zapisane, ale nikt nie został powiadomiony. Wybierz, kogo wysłać, i zadysponuj je, gdy będzie gotowe.",
-    "pending_banner_title": "Oczekujące — jeszcze nie zadysponowane",
-    "reschedule": "Zmień termin",
-    "reschedule_datetime": "Data i godzina wysłania",
-    "reschedule_error": "Nie udało się zmienić terminu zgłoszenia",
-    "reschedule_in_1_day": "Za 1 dzień",
-    "reschedule_in_1_hour": "Za 1 godzinę",
-    "reschedule_invalid": "Wprowadź prawidłową datę i godzinę (RRRR-MM-DD GG:mm)",
-    "reschedule_success": "Zaktualizowano godzinę wysłania",
-    "reschedule_tomorrow_morning": "Jutro o 8:00",
-    "scheduled_on": "Zaplanowana data i godzina wysłania"
+    "missing_call_id": "Brak identyfikatora zgłoszenia"
   },
   "calls": {
     "audio": {
@@ -84,7 +64,6 @@
     "contact_information": "Dane kontaktowe",
     "contact_picker": {
       "none": "Brak dostępnych kontaktów",
-      "search_placeholder": "Szukaj kontaktów...",
       "title": "Wybierz kontakt"
     },
     "coordinates_incomplete": "Podaj szerokość i długość geograficzną",
@@ -119,19 +98,16 @@
     "dispatch_recipients_empty": "Nie widzisz żadnego personelu, grup, ról ani jednostek. Sprawdź uprawnienia swojego departamentu lub wyślij do Wszystkich.",
     "dispatch_recipients_partial_load": "Nie udało się wczytać niektórych odbiorców. Poniższe listy mogą być niekompletne.",
     "edit_call_web_hint": "Zaktualizuj szczegóły zgłoszenia poniżej. Naciśnij Ctrl+S, aby zapisać.",
-    "edit_keyboard_shortcuts": "Wskazówka: Naciśnij Ctrl+S, aby zapisać, Escape, aby anulować",
     "expand_map": "Powiększ mapę",
     "form": {
       "no_form": "Nie skonfigurowano formularza zgłoszenia",
       "title": "Formularz zgłoszenia"
     },
-    "keyboard_shortcuts": "Wskazówka: Naciśnij Ctrl+Enter, aby utworzyć, Escape, aby anulować",
     "latitude": "Szerokość geograficzna",
     "latitude_invalid": "Podaj szerokość geograficzną w stopniach dziesiętnych, od -90 do 90",
     "latitude_placeholder": "np. 39.122639",
     "linked_calls": {
       "change": "Zmień powiązane zgłoszenie",
-      "edit_hint": "Istniejące powiązania tego zgłoszenia zostaną zachowane; wybierz zgłoszenie, aby dodać kolejne.",
       "linked": "Powiązane",
       "none": "Brak dostępnych aktywnych zgłoszeń",
       "search_placeholder": "Szukaj zgłoszeń...",
@@ -141,29 +117,19 @@
     "longitude": "Długość geograficzna",
     "longitude_invalid": "Podaj długość geograficzną w stopniach dziesiętnych, od -180 do 180",
     "longitude_placeholder": "np. -119.758773",
-    "looking_up_address": "Wyszukiwanie adresu dla tych współrzędnych...",
     "new_call_web_hint": "Wypełnij szczegóły zgłoszenia poniżej. Naciśnij Ctrl+Enter, aby utworzyć.",
     "no_destination": "Brak miejsca docelowego",
-    "notify_cancelled_entities": "Powiadom wycofane jednostki",
-    "notify_cancelled_entities_description": "Wyślij wiadomość do personelu i jednostek usuniętych z listy wysyłki.",
-    "pending_saved": "Zgłoszenie zapisane jako oczekujące",
     "protocols": {
-      "add": "Dodaj protokoły",
-      "attached": "Już dołączone: {{names}}",
       "collapse": "Zwiń",
       "expand_questions": "Zobacz pytania",
       "none": "Brak dostępnych protokołów",
       "title": "Protokoły"
     },
-    "required_fields_missing_edit": "Twój departament wymaga tych pól przed zapisaniem zgłoszenia: {{fields}}",
     "save_as_pending": "Zapisz jako oczekujące (jeszcze nie dysponuj)",
     "save_as_pending_description": "Zgłoszenie zostanie zapisane i otrzyma numer, ale nikt nie zostanie powiadomiony, a aplikacje terenowe go nie zobaczą. Wybrani odbiorcy zostaną zachowani jako proponowana dyspozycja; zadysponuj je później z listy Oczekujące zgłoszenia.",
-    "save_pending_call": "Zapisz oczekujące zgłoszenie",
     "schedule_dispatch": "Zaplanuj dyspozycję",
     "schedule_dispatch_description": "Ustaw przyszłą datę i godzinę, aby zaplanować to zgłoszenie do późniejszej dyspozycji",
     "scheduled_on": "Zaplanowana data i godzina",
-    "scheduled_on_edit_hint": "Wybierz czas, aby zaplanować lub przełożyć dyspozycję. Puste pole zachowuje bieżący harmonogram zgłoszenia.",
-    "scheduled_on_helper": "Pozostaw puste, aby zadysponować natychmiast",
     "scheduled_on_past_error": "Zaplanowany czas musi być w przyszłości",
     "scheduled_on_too_soon": "Zaplanowany czas dyspozycji musi być co najmniej 15 minut od teraz",
     "templates": {
@@ -244,7 +210,6 @@
     "note_save_error": "Nie udało się zapisać notatki: {{error}}",
     "note_title_label": "Tytuł",
     "note_title_placeholder": "Wprowadź tytuł notatki...",
-    "on_call": "Na zgłoszeniu",
     "pending_calls": "Oczekujące",
     "personnel_actions": {
       "destination": "Cel",
@@ -281,7 +246,6 @@
     "station": "Stacja",
     "stations": "Stacje",
     "system_update": "Aktualizacja systemu",
-    "unassigned": "Nieprzypisane",
     "unit_actions": "Akcje jednostki",
     "unit_actions_panel": {
       "call_destination": "Cel zgłoszenia",
@@ -513,9 +477,6 @@
     "type": "Typ",
     "unknown_type": "Nieznany typ",
     "unnamed": "POI bez nazwy"
-  },
-  "scheduled_calls": {
-    "scheduled_for": "Zaplanowano na"
   },
   "settings": {
     "select_server": "Wybierz serwer"

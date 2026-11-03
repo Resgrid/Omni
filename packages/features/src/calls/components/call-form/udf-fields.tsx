@@ -4,6 +4,8 @@ import { Input, InputField, Pressable, Switch, Text } from '@resgrid/ui';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import { isUdfFieldShown } from '../../lib/call-form';
+
 /** Server FieldDataType values (Resgrid.Model.UdfFieldDataType). */
 export const UDF_FIELD_TYPE = { Text: 0, Number: 1, Decimal: 2, Boolean: 3, Date: 4, DateTime: 5, Dropdown: 6, MultiSelect: 7, Email: 8, Phone: 9, Url: 10, ComboBox: 11 } as const;
 
@@ -17,23 +19,30 @@ const asText = (value: unknown): string => (typeof value === 'string' ? value : 
 /** Options from a field's ValidationRules (`{"Options":[{"Key","Label"}]}` JSON, or a comma list for older data) — Dispatch `parseUdfOptions`. */
 export function parseUdfOptions(validationRules: string | null | undefined): UdfOption[] {
   const rules = (validationRules ?? '').trim();
+
   if (!rules) return [];
+
   if (rules.startsWith('{')) {
     try {
       const parsed: unknown = JSON.parse(rules);
       const list = parsed && typeof parsed === 'object' ? ((parsed as { Options?: unknown; options?: unknown }).Options ?? (parsed as { options?: unknown }).options) : null;
+
       if (!Array.isArray(list)) return [];
+
       return list.flatMap((raw: unknown) => {
         if (!raw || typeof raw !== 'object') return [];
         const record = raw as Record<string, unknown>;
         const key = asText(record.Key ?? record.key).trim();
+
         if (!key) return [];
+
         return [{ key, label: asText(record.Label ?? record.label).trim() || key }];
       });
     } catch {
       return [];
     }
   }
+
   return rules
     .split(',')
     .map((option) => option.trim())
@@ -56,14 +65,15 @@ const KEYBOARD: Partial<Record<number, 'numeric' | 'decimal-pad' | 'email-addres
   [UDF_FIELD_TYPE.Url]: 'url',
 };
 
-/** The department's custom call fields (Dispatch UDF renderer): text-like inputs, switches and option chips; mobile-visible, enabled fields only. */
+/** The department's custom call fields (Dispatch UDF renderer): text-like inputs, switches and option chips; enabled fields shown on mobile, and required ones. */
 export const UdfFields: React.FC<UdfFieldsProps> = ({ fields, values, onChange, missingFieldIds = [] }) => {
   const { t } = useTranslation();
-  const visible = [...fields].filter((field) => field.IsEnabled && field.IsVisibleOnMobile).sort((a, b) => a.SortOrder - b.SortOrder);
+  const visible = [...fields].filter(isUdfFieldShown).sort((a, b) => a.SortOrder - b.SortOrder);
   const valueOf = (fieldId: string, fallback: string): string => values.find((value) => value.UdfFieldId === fieldId)?.Value ?? fallback;
   const setValue = (fieldId: string, value: string) => onChange([...values.filter((entry) => entry.UdfFieldId !== fieldId), { UdfFieldId: fieldId, Value: value }]);
 
   if (visible.length === 0) return null;
+
   return (
     <View testID="udf-fields">
       {visible.map((field) => {
@@ -72,12 +82,14 @@ export const UdfFields: React.FC<UdfFieldsProps> = ({ fields, values, onChange, 
         const missing = missingFieldIds.includes(field.UdfFieldId);
         const options = parseUdfOptions(field.ValidationRules);
         const isMulti = field.FieldDataType === UDF_FIELD_TYPE.MultiSelect;
+
         const selected = isMulti
           ? value
               .split(',')
               .map((entry) => entry.trim())
               .filter(Boolean)
           : [value];
+
         return (
           <View key={field.UdfFieldId} style={styles.field} testID={`udf-field-${field.UdfFieldId}`}>
             <Text size="sm" className="mb-1 text-typography-700">
@@ -89,6 +101,7 @@ export const UdfFields: React.FC<UdfFieldsProps> = ({ fields, values, onChange, 
               <View style={styles.options} accessibilityRole={isMulti ? undefined : 'radiogroup'} accessibilityLabel={label}>
                 {options.map((option) => {
                   const isSelected = selected.includes(option.key);
+
                   return (
                     <Pressable
                       key={option.key}
@@ -113,6 +126,7 @@ export const UdfFields: React.FC<UdfFieldsProps> = ({ fields, values, onChange, 
                   keyboardType={KEYBOARD[field.FieldDataType] ?? 'default'}
                   autoCapitalize={field.FieldDataType === UDF_FIELD_TYPE.Email || field.FieldDataType === UDF_FIELD_TYPE.Url ? 'none' : 'sentences'}
                   accessibilityLabel={label}
+                  testID={`udf-input-${field.UdfFieldId}`}
                 />
               </Input>
             )}

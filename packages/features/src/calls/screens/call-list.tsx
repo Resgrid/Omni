@@ -3,7 +3,7 @@ import { useCapability } from '@resgrid/config';
 import { type CallListItem, useCallsStore, useCheckInTimersStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import type { DispatchedEventResultData } from '@resgrid/models';
-import { Button, ButtonText, FlatList, Loading, Pressable, RefreshControl, Text, useFormFactor, ZeroState } from '@resgrid/ui';
+import { Button, ButtonText, FlatList, Loading, Pressable, RefreshControl, Text, useFormFactor, useThemeColors, ZeroState } from '@resgrid/ui';
 import { useRouter } from 'expo-router';
 import { Plus } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -40,6 +40,7 @@ const TAB_KEYS: Record<CallListTab, string> = { active: 'calls.tabs.active', pen
  */
 export default function CallListScreen({ density, realtime = true, onOpenCall, showHeader = true }: CallListScreenProps) {
   const { t } = useTranslation();
+  const colors = useThemeColors();
   const router = useRouter();
   const calls = useCapability('calls');
   const { canUserCreateCalls } = useSecurity();
@@ -142,7 +143,7 @@ export default function CallListScreen({ density, realtime = true, onOpenCall, s
           {canCreate ? (
             <Button size="sm" onPress={() => router.push(callNew())} accessibilityLabel={t('calls.new_call')} testID="call-list-new">
               <View style={styles.buttonIcon}>
-                <Plus size={16} color="#FFFFFF" />
+                <Plus size={16} color={colors.textInverse} />
               </View>
               <ButtonText>{t('calls.new_call')}</ButtonText>
             </Button>

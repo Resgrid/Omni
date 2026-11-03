@@ -89,21 +89,24 @@ export const PoiList: React.FC<PoiListProps> = ({ pois, poiTypes = [], onPoiPres
   const filtered = useMemo(() => filterAndSortPois(pois, { poiTypeId, sortBy, search }), [pois, poiTypeId, sortBy, search]);
   const hasFilters = poiTypeId !== ALL_POI_TYPES || sortBy !== 'name';
 
+  // "View on map" sits beside the row's button, not inside it: on the web a button inside a button is invalid markup.
   const renderItem = useCallback<ListRenderItem<PoiResultData>>(
     ({ item }) => (
-      <Pressable onPress={() => onPoiPress?.(item)} style={StyleSheet.flatten([styles.item, { borderColor: colors.border }])} accessibilityRole="button" testID={`${testID}-item-${item.PoiId}`}>
-        <PoiMarkerIcon color={item.Color} iconUrl={item.IconUrl} />
-        <View style={styles.itemText}>
-          <Text style={StyleSheet.flatten([styles.itemTitle, { color: colors.text }])} numberOfLines={1}>
-            {getPoiDisplayName(item)}
-          </Text>
-          {item.PoiTypeName ? <Text style={{ color: colors.mutedText }}>{item.PoiTypeName}</Text> : null}
-          {item.Address ? (
-            <Text style={{ color: colors.mutedText }} numberOfLines={1}>
-              {item.Address}
+      <View style={StyleSheet.flatten([styles.item, { borderColor: colors.border }])}>
+        <Pressable onPress={() => onPoiPress?.(item)} style={styles.itemPress} accessibilityRole="button" testID={`${testID}-item-${item.PoiId}`}>
+          <PoiMarkerIcon color={item.Color} iconUrl={item.IconUrl} />
+          <View style={styles.itemText}>
+            <Text style={StyleSheet.flatten([styles.itemTitle, { color: colors.text }])} numberOfLines={1}>
+              {getPoiDisplayName(item)}
             </Text>
-          ) : null}
-        </View>
+            {item.PoiTypeName ? <Text style={{ color: colors.mutedText }}>{item.PoiTypeName}</Text> : null}
+            {item.Address ? (
+              <Text style={{ color: colors.mutedText }} numberOfLines={1}>
+                {item.Address}
+              </Text>
+            ) : null}
+          </View>
+        </Pressable>
         {onViewOnMap ? (
           <Pressable onPress={() => onViewOnMap(item)} accessibilityRole="button" accessibilityLabel={t('maps.poi.view_on_map')} hitSlop={8} testID={`${testID}-map-${item.PoiId}`}>
             <View>
@@ -111,7 +114,7 @@ export const PoiList: React.FC<PoiListProps> = ({ pois, poiTypes = [], onPoiPres
             </View>
           </Pressable>
         ) : null}
-      </Pressable>
+      </View>
     ),
     [colors, onPoiPress, onViewOnMap, t, testID]
   );
@@ -187,8 +190,13 @@ const styles = StyleSheet.create({
   item: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  itemPress: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
   },
   itemText: {
     flex: 1,

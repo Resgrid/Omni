@@ -68,10 +68,7 @@
     "personnel": "Personas",
     "protocols": "Protocolos",
     "reference_id": "ID de referencia",
-    "search_address": "Buscar dirección",
-    "search_coordinates": "Buscar coordenadas",
-    "search_plus_code": "Buscar plus code",
-    "search_what3words": "Buscar dirección what3words"
+    "search_coordinates": "Buscar coordenadas"
   },
   "chat": {
     "attach": "Adjuntar",

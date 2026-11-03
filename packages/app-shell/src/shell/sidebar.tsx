@@ -14,13 +14,13 @@ import { PANEL_SIDEBAR_WIDTH, PERMANENT_SIDEBAR_WIDTH } from './sidebar-mode';
 function MenuRow({ item, active, onPress }: { item: NavItem; active: boolean; onPress: (item: NavItem) => void }) {
   const colors = useThemeColors();
   const Icon = item.icon;
-  const color = active ? colors.primaryStrong : colors.icon;
+  const color = active ? colors.primaryStrong : colors.textMuted;
   return (
     <Pressable
       accessibilityRole="menuitem"
       accessibilityState={{ selected: active }}
       onPress={() => onPress(item)}
-      style={StyleSheet.flatten([styles.row, active ? { backgroundColor: colors.surfaceRaised } : null])}
+      style={({ pressed }) => StyleSheet.flatten([styles.row, active ? { backgroundColor: colors.token('primary-500', 0.12) } : pressed ? { backgroundColor: colors.surfaceRaised } : null])}
       testID={item.testID}
     >
       {Icon ? (
@@ -28,7 +28,7 @@ function MenuRow({ item, active, onPress }: { item: NavItem; active: boolean; on
           <Icon size={22} color={color} />
         </View>
       ) : null}
-      <Text style={StyleSheet.flatten([styles.rowLabel, { color: active ? colors.primaryStrong : colors.text }])} numberOfLines={1}>
+      <Text style={StyleSheet.flatten([styles.rowLabel, { color: active ? colors.primaryStrong : colors.icon }, active ? styles.rowLabelActive : null])} numberOfLines={1}>
         {item.label}
       </Text>
     </Pressable>
@@ -115,7 +115,7 @@ export function InlineSidebar({ nav }: { nav: NavRegistry }) {
   const width = shell.sidebarMode === 'permanent' ? PERMANENT_SIDEBAR_WIDTH : PANEL_SIDEBAR_WIDTH;
   return (
     <View
-      style={StyleSheet.flatten([styles.inline, { width, backgroundColor: colors.background, borderRightColor: colors.border }])}
+      style={StyleSheet.flatten([styles.inline, { width, backgroundColor: colors.canvas, borderRightColor: colors.border }])}
       testID={shell.sidebarMode === 'permanent' ? 'shell-sidebar-permanent' : 'shell-sidebar-panel'}
     >
       <SidebarContent nav={nav} onNavigate={noop} />
@@ -147,7 +147,8 @@ const styles = StyleSheet.create({
   profileDepartment: { fontSize: 14, marginTop: 2 },
   row: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, minHeight: 48 },
   rowIcon: { marginRight: 12 },
-  rowLabel: { fontSize: 16, flexShrink: 1 },
+  rowLabel: { fontSize: 16, fontWeight: '500', flexShrink: 1 },
+  rowLabelActive: { fontWeight: '600' },
   inline: { borderRightWidth: StyleSheet.hairlineWidth },
   drawerBody: { flex: 1 },
 });

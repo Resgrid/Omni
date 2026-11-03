@@ -1,11 +1,11 @@
 import { featureFlagsStore, securityStore, terminologyStore, useAuthStore } from '@resgrid/auth';
 import type { VariantId } from '@resgrid/config';
 import type { DepartmentRightsResultData } from '@resgrid/models';
-import { computeFormFactor, type FormFactorInfo, ScreenHeader, useFormFactor } from '@resgrid/ui';
+import { ColorSchemeProvider, computeFormFactor, type FormFactorInfo, getThemeColors, ScreenHeader, useFormFactor } from '@resgrid/ui';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { MapIcon, MessageCircleIcon, SettingsIcon } from 'lucide-react-native';
 import React from 'react';
-import { Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 
 import { activateVariant } from '../../__tests__/helpers/variants';
 import { mockNavigationState, resetMockNavigation, router } from '../../__tests__/mocks/expo-router';
@@ -74,6 +74,23 @@ describe('createAppShell', () => {
     expect(screen.getByTestId('mock-slot')).toBeTruthy();
     expect(screen.queryByTestId('mock-tabs')).toBeNull();
     expect(screen.getByTestId('shell-header-title')).toHaveTextContent('Map');
+  });
+
+  // One design system (Dispatch's): the app bar is the raised surface with body text in every app and both schemes. It was the
+  // primary fill, which the reversed dark ramp turned into a pale bar with dark text.
+  it.each(['light', 'dark'] as const)('draws the Dispatch app bar in %s mode', async (scheme) => {
+    const variant = activateVariant('responder');
+    const Shell = createAppShell(variant, { nav });
+    await render(
+      <ColorSchemeProvider mode={scheme}>
+        <Shell />
+      </ColorSchemeProvider>
+    );
+    await act(async () => undefined);
+    const colors = getThemeColors(scheme);
+
+    expect(StyleSheet.flatten(screen.getByTestId('shell-header').props.style)).toMatchObject({ backgroundColor: colors.surface, borderBottomColor: colors.border });
+    expect(StyleSheet.flatten(screen.getByTestId('shell-header-title').props.style).color).toBe(colors.text);
   });
 
   it('tabs (Unit): tab bar generated from the registry with hidden routes as href: null', async () => {

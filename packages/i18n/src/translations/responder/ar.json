@@ -68,10 +68,7 @@
     "personnel": "الأشخاص",
     "protocols": "البروتوكولات",
     "reference_id": "معرف المرجع",
-    "search_address": "البحث عن العنوان",
-    "search_coordinates": "البحث عن الإحداثيات",
-    "search_plus_code": "البحث عن Plus Code",
-    "search_what3words": "البحث عن عنوان what3words"
+    "search_coordinates": "البحث عن الإحداثيات"
   },
   "chat": {
     "attach": "إرفاق",

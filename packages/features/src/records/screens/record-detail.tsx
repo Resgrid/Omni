@@ -64,11 +64,11 @@ function RecordDetail({ id, showHeader, recordsTitle }: { id: string; showHeader
   const [dirty, setDirty] = useState(false);
 
   useEffect(() => {
-    setValues(toValueMap(record?.Values?.Cells));
+    setValues(toValueMap(record?.Values));
     setDirty(false);
   }, [record]);
 
-  const withheld = useMemo(() => withheldCellKeys(record?.Values?.Cells), [record]);
+  const withheld = useMemo(() => withheldCellKeys(record?.Values), [record]);
   const unsupported = useMemo(() => unsupportedFieldKeys(schema), [schema]);
   const editable = record ? record.State === RmsRecordState.Draft || record.State === RmsRecordState.Returned : false;
   const canAct = editable && unsupported.length === 0;

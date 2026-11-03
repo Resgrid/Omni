@@ -9,7 +9,7 @@ import { configureAppUpdates } from '@resgrid/core';
 import { PendingApprovalWatcher } from '@resgrid/features/approve-sign-in';
 import { AccessDeniedScreen, LoginScreen, MaintenanceScreen, OnboardingScreen, PersonalLockScreen, RecoveryCodesSheet, SharedDeviceLockScreen } from '@resgrid/features/auth-ui';
 import { AwaitingResourcesBanner, AwaitingResourcesHost, awaitingResourcesRoutes, registerAwaitingResourcesCallDetailTab } from '@resgrid/features/awaiting-resources';
-import { registerCallDetailTab } from '@resgrid/features/calls';
+import { type LocationPickerProps, registerCallDetailTab, registerCallFormHookPoints, type StaticLocationMapProps } from '@resgrid/features/calls';
 import { createDataChecklistRunWriter, registerChecklistRunWriter } from '@resgrid/features/checklists';
 import { setDashboardDepartmentConfig, setDashboardStorage } from '@resgrid/features/dashboard';
 import { StepUpPromptHost } from '@resgrid/features/data-protection';
@@ -19,7 +19,9 @@ import { CALL_RECORDS_TAB, configureRecords, registerRecordsContextHook } from '
 import { registerRunCardCallDetailTab, registerRunCardHookPoints } from '@resgrid/features/runcards';
 import { configureSettings } from '@resgrid/features/settings';
 import { UnitStatusSidebar } from '@resgrid/features/unit-status';
+import { FullScreenLocationPicker, StaticMap } from '@resgrid/maps';
 import { configureNotificationSounds } from '@resgrid/notifications';
+import { playAudioClip } from '@resgrid/voice';
 import { usePathname } from 'expo-router';
 
 import { appUpdatesModule } from './app-updates';
@@ -55,9 +57,20 @@ function UnitSidebar(props: SidebarContentProps) {
   return <UnitStatusSidebar {...props} onClearActiveCall={clearActiveCall} />;
 }
 
+/** The call form's full-screen map picker (the address of the picked point comes from the server). */
+function CallLocationPicker({ isOpen, onClose, initial, onSelect }: LocationPickerProps) {
+  return <FullScreenLocationPicker isOpen={isOpen} initialLocation={initial} onClose={onClose} onLocationSelected={onSelect} />;
+}
+
+/** The map of a call (detail) or of the location being entered (form). */
+function CallStaticMap({ latitude, longitude, address, height, onPress, testID }: StaticLocationMapProps) {
+  return <StaticMap latitude={latitude} longitude={longitude} address={address} zoom={15} height={height} showUserLocation onPress={onPress} testID={testID} />;
+}
+
 /** The awaiting-resources strip under the app bar, except on the Awaiting Resources screen itself. */
 function AwaitingBanner() {
   const pathname = usePathname();
+
   return <AwaitingResourcesBanner hidden={pathname === awaitingResourcesRoutes.list()} />;
 }
 
@@ -69,37 +82,55 @@ registerShellScreens({
   SharedDeviceLock: SharedDeviceLockScreen,
   AccessDenied: GateAccessDenied,
 });
+
 registerShellOverlay('recovery-codes', RecoveryCodesSheet);
+
 registerShellOverlay('step-up-prompt', StepUpPromptHost);
+
 // Opens the approve screen when a sign-in request is waiting (inert without capabilities.push.approveSignIns).
 registerShellOverlay('pending-approval', PendingApprovalWatcher);
+
 // Dispatch's awaiting-resources sync and unit-available alerts, and its banner (inert without calls.runCards + flags).
 registerShellOverlay('awaiting-resources', AwaitingResourcesHost);
+
 registerShellBanner('awaiting-resources', AwaitingBanner);
+
 // Unit's status console in the sidebar (only read where shell.sidebarContent is 'unit-status').
 registerSidebarContent('unit-status', UnitSidebar);
 
 // Around the signed-in frame, outermost first: maps (style, services, offline packs), then the session facts the
 // feature sheets read.
 registerShellProvider('maps', ShellMapProvider, { order: 10 });
+
 registerShellProvider('navigation-handoff', ShellNavigationHandoffProvider, { order: 20 });
+
 registerShellProvider('status', ShellStatusProvider, { order: 30 });
+
 registerShellProvider('chat-identity', ShellChatIdentityProvider, { order: 40 });
+
 registerShellProvider('unit-routes-map', ShellRouteMapProvider, { order: 50 });
 
 // Call detail tabs from other modules — Records (Records.System + the app's field flag), Incident command (by tier),
 // Run card and Awaiting (calls.runCards + Dispatch.RunCards*) — and run-card recommendations in the new-call form.
 registerCallDetailTab(CALL_RECORDS_TAB);
+
 registerCallDetailTab(createIncidentCommandCallTab());
+
 registerRunCardCallDetailTab();
+
 registerAwaitingResourcesCallDetailTab();
+
 registerRunCardHookPoints();
+
+// The calls screens never import maps or native audio: the app hands them the map picker, the static map and clip playback.
+registerCallFormHookPoints({ LocationPicker: CallLocationPicker, StaticLocationMap: CallStaticMap, playAudioClip });
 
 // Readiness checklist runs save through the data layer's checklists store.
 registerChecklistRunWriter(createDataChecklistRunWriter());
 
 // Settings → Offline maps follows the pack manager (shown on iOS/Android when the department offers packs).
 registerOfflineMapsSettings();
+
 registerOfflineMapsSteps();
 
 // The department config's signed map URLs (style, static map, offline manifest) are fetched again before they expire.
@@ -129,9 +160,11 @@ registerInitStep(
       const variant = getActiveVariant();
       configureSettings({ storageSync: storageSyncServices(), activeUnit: variant.capabilities.status.subject === 'unit' ? ACTIVE_UNIT_ADAPTER : null });
       configureRecords({ outbox: runtime ? runtime.outbox : null });
+
       if (variant.capabilities.incidentCommand === 'command') {
         registerRecordsContextHook(useCommandRecordsContext);
       }
+
       if (variant.modules.includes('dashboard')) {
         // BigBoard kept its layouts and widget settings in react-native-mmkv's default instance.
         setDashboardStorage(runtime && runtime.storage.instances.has('mmkv.default') ? runtime.storage.get('mmkv.default') : (runtime?.storage.main ?? null));

@@ -3,6 +3,9 @@ import React from 'react';
 import { type ResolvedColorScheme, useResolvedColorScheme } from './color-scheme';
 import { darkTokens, lightTokens, type ThemeTokenMap, type ThemeTokenName } from './tokens';
 
+// Department colours on the theme surface live beside the theme colours (one import for both).
+export { contentOnFill, contrastRatio, MARK_CONTRAST, parseColor, readableOnSurface, TEXT_CONTRAST, THEME_SURFACES, type ThemeReadableColors, tintOf, useReadableColor } from './readable-color';
+
 export interface ThemeColors {
   scheme: ResolvedColorScheme;
   isDark: boolean;
@@ -12,9 +15,11 @@ export interface ThemeColors {
   token: (name: ThemeTokenName, alpha?: number) => string;
 
   // Semantic roles — use these instead of `isDark ? '#hex' : '#hex'` ternaries.
-  /** Screen background (background-0). */
+  /** Screen background and panels (background-0). */
   background: string;
-  /** Cards, sheets, panels (background-50). */
+  /** The page behind panels and the app sidebar (background-canvas): gray-100 / gray-950. */
+  canvas: string;
+  /** Raised rows, cards, panel and app-bar headers (background-50). */
   surface: string;
   /** Raised/pressed surface, inputs (background-100). */
   surfaceRaised: string;
@@ -67,6 +72,7 @@ export function getThemeColors(scheme: ResolvedColorScheme): ThemeColors {
     tokens,
     token,
     background: tokens['background-0'],
+    canvas: tokens['background-canvas'],
     surface: tokens['background-50'],
     surfaceRaised: tokens['background-100'],
     text: tokens['typography-900'],

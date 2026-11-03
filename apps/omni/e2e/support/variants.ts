@@ -20,7 +20,7 @@ export interface VariantManifest {
     electron: { appId: string; productName: string; protocol: string | null };
   };
   capabilities: { platform: { webEdition: boolean; electron: boolean } };
-  shell: { homeRoute: string };
+  shell: { homeRoute: string; sidebar: { phone: string; tablet: string; desktop: string } };
 }
 
 export const e2eRoot = path.resolve(__dirname, '..');
@@ -39,9 +39,10 @@ export function otherVariants(id: VariantId): VariantManifest[] {
   return VARIANT_IDS.filter((v) => v !== id).map(loadManifest);
 }
 
-/** `apps/omni/dist/<variant>` — written by `APP_VARIANT=<v> pnpm --filter @resgrid/omni web:export`. */
+/** `apps/omni/dist/<variant>` (or `$E2E_WEB_EXPORT_ROOT/<variant>`) — written by `APP_VARIANT=<v> pnpm --filter @resgrid/omni web:export`. */
 export function webExportDir(id: VariantId): string {
-  return path.join(omniRoot, 'dist', id);
+  // E2E_WEB_EXPORT_ROOT: test exports kept elsewhere (a release build, a copy that a parallel export cannot replace).
+  return path.join(process.env.E2E_WEB_EXPORT_ROOT || path.join(omniRoot, 'dist'), id);
 }
 
 export function hasWebExport(id: VariantId): boolean {

@@ -1,5 +1,5 @@
 import { useTranslation } from '@resgrid/i18n';
-import { Button, ButtonSpinner, ButtonText, Input, InputField, Pressable, Text } from '@resgrid/ui';
+import { Button, ButtonSpinner, ButtonText, Input, InputField, Pressable, Text, useThemeColors } from '@resgrid/ui';
 import type { LucideIcon } from 'lucide-react-native';
 import { Search, X } from 'lucide-react-native';
 import React from 'react';
@@ -36,30 +36,34 @@ export const QueueActionButton: React.FC<{ label: string; icon: LucideIcon; onPr
   isBusy = false,
   accessibilityLabel,
   testID,
-}) => (
-  <Button
-    size="xs"
-    action={tone === 'negative' ? 'negative' : 'primary'}
-    variant={tone === 'negative' ? 'outline' : 'solid'}
-    onPress={(event?: GestureResponderEvent) => {
-      event?.stopPropagation?.();
-      onPress();
-    }}
-    isDisabled={isBusy}
-    accessibilityLabel={accessibilityLabel}
-    className="ml-2"
-    testID={testID}
-  >
-    {isBusy ? (
-      <ButtonSpinner />
-    ) : (
-      <View>
-        <Icon size={14} color={tone === 'negative' ? '#dc2626' : '#ffffff'} />
-      </View>
-    )}
-    <ButtonText>{label}</ButtonText>
-  </Button>
-);
+}) => {
+  const colors = useThemeColors();
+
+  return (
+    <Button
+      size="xs"
+      action={tone === 'negative' ? 'negative' : 'primary'}
+      variant={tone === 'negative' ? 'outline' : 'solid'}
+      onPress={(event?: GestureResponderEvent) => {
+        event?.stopPropagation?.();
+        onPress();
+      }}
+      isDisabled={isBusy}
+      accessibilityLabel={accessibilityLabel}
+      className="ml-2"
+      testID={testID}
+    >
+      {isBusy ? (
+        <ButtonSpinner />
+      ) : (
+        <View>
+          <Icon size={14} color={tone === 'negative' ? colors.token('error-600') : colors.textInverse} />
+        </View>
+      )}
+      <ButtonText>{label}</ButtonText>
+    </Button>
+  );
+};
 
 /** A filter chip (archived calls filters). */
 export const FilterChip: React.FC<{ label: string; active: boolean; onPress: () => void; color?: string; testID: string }> = ({ label, active, onPress, color, testID }) => (

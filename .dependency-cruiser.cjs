@@ -69,7 +69,9 @@ module.exports = {
   forbidden,
   options: {
     doNotFollow: { path: 'node_modules' },
-    exclude: { path: '(node_modules|__tests__|\\.test\\.|apps/omni/(ios|android)|apps/desktop/(out|release))' },
+    // Generated output stays out: apps/omni/dist holds the web exports check-all leaves behind (about 175 MB of bundles
+    // that took the cruise to Node's heap limit).
+    exclude: { path: '(node_modules|__tests__|\\.test\\.|apps/omni/(ios|android|dist)|apps/desktop/(out|release))' },
     tsConfig: { fileName: 'tsconfig.json' },
     tsPreCompilationDeps: true,
     enhancedResolveOptions: { exportsFields: ['exports'], conditionNames: ['import', 'require', 'node', 'default'] },

@@ -231,7 +231,33 @@
     "info": {
       "dispatched_on": "Dispatched",
       "logged_on": "Logged"
-    }
+    },
+    "delete_call": "Видалити виклик",
+    "delete_call_confirm": "Видалити цей виклик? Цю дію неможливо скасувати.",
+    "delete_call_success": "Виклик видалено",
+    "delete_call_error": "Не вдалося видалити виклик",
+    "reschedule": "Перепланувати",
+    "reschedule_success": "Час диспетчеризації оновлено",
+    "reschedule_error": "Не вдалося перепланувати виклик",
+    "reschedule_invalid": "Choose a valid dispatch date and time",
+    "reschedule_in_1_hour": "Через 1 годину",
+    "reschedule_in_1_day": "Через 1 день",
+    "reschedule_tomorrow_morning": "Завтра о 8:00",
+    "reschedule_datetime": "Дата й час диспетчеризації",
+    "dispatch_more": "Надіслати додаткові ресурси",
+    "pending_banner_title": "В очікуванні — ще не диспетчеризовано",
+    "pending_banner_description": "Цей виклик збережено, але нікого не сповіщено. Виберіть, кого надіслати, і диспетчеризуйте його, коли буде готово.",
+    "dispatch_call": "Диспетчеризувати",
+    "map_call": "Виклик",
+    "map_destination": "Місце призначення",
+    "audio": "Аудіо",
+    "audio_empty": "Немає аудіозаписів",
+    "audio_play": "Play {{name}}",
+    "audio_stop": "Stop {{name}}",
+    "audio_play_error": "Could not play this recording",
+    "scheduled_on": "Заплановані дата й час диспетчеризації",
+    "destination_type": "Тип місця призначення",
+    "keyboard_shortcuts": "Tip: Press 1-9 to switch tabs, Ctrl+E to edit, Escape to go back"
   },
   "calls": {
     "address": "Адреса",
@@ -253,7 +279,9 @@
     "contact_phone_placeholder": "Введіть телефон контакту",
     "contact_picker": {
       "linked": "Пов'язаний контакт: {{name}}",
-      "select": "Select Contact"
+      "select": "Select Contact",
+      "search_placeholder": "Пошук контактів...",
+      "empty": "Контакти відсутні"
     },
     "coordinates": "GPS координати",
     "coordinates_found": "Координати знайдено та адресу оновлено",
@@ -398,7 +426,9 @@
     },
     "protocols": {
       "select": "Вибрати протоколи",
-      "selected_count": "{{count}} selected"
+      "selected_count": "{{count}} selected",
+      "attached": "Уже додано: {{names}}",
+      "add": "Додати протоколи"
     },
     "queued": {
       "badge": "Queued — not dispatched yet",
@@ -447,8 +477,25 @@
       "name_required": "Enter a name for the call",
       "nature_required": "Enter the nature of the call",
       "required": "Required by your department",
-      "udf_required": "Fill in the required custom fields"
-    }
+      "udf_required": "Fill in the required custom fields",
+      "type_required": "Choose a call type"
+    },
+    "pending_saved": "Виклик збережено як очікуваний",
+    "required_fields_missing_edit": "Ваш відділ вимагає ці поля перед збереженням виклику: {{fields}}",
+    "search_address": "Пошук адреси",
+    "search_what3words": "Пошук адреси what3words",
+    "search_plus_code": "Пошук plus code",
+    "looking_up_address": "Пошук адреси для цих координат...",
+    "notify_cancelled_entities": "Сповістити скасовані підрозділи",
+    "notify_cancelled_entities_description": "Надіслати повідомлення персоналу й підрозділам, вилученим зі списку диспетчеризації.",
+    "linked_calls": {
+      "edit_hint": "Наявні зв'язки цього виклику зберігаються; виберіть виклик, щоб додати ще один."
+    },
+    "scheduled_on_edit_hint": "Виберіть час, щоб запланувати або перенести диспетчеризацію. Якщо залишити порожнім, поточний розклад виклику збережеться.",
+    "scheduled_on_helper": "Залиште порожнім для негайної диспетчеризації",
+    "save_pending_call": "Зберегти виклик в очікуванні",
+    "keyboard_shortcuts": "Підказка: Натисніть Ctrl+Enter для створення, Escape для скасування",
+    "edit_keyboard_shortcuts": "Підказка: Натисніть Ctrl+S для збереження, Escape для скасування"
   },
   "chat": {
     "ack_pending_count": "У вас {{count}} термінових повідомлень для підтвердження",
@@ -3443,7 +3490,8 @@
     "table_priority": "Пріоритет",
     "table_scheduled": "Заплановано на",
     "table_type": "Тип",
-    "title": "Заплановані виклики"
+    "title": "Заплановані виклики",
+    "scheduled_for": "Заплановано на"
   },
   "certifications": {
     "add": "Додати посвідчення",
@@ -3608,6 +3656,7 @@
     "severity_levels": "Рівні серйозності",
     "show_area": "Показати область",
     "show_calls": "Показати виклики",
+    "show_linked_calls": "Показати пов'язані виклики",
     "show_expiry": "Показати час закінчення",
     "show_headline": "Показати заголовок",
     "show_personnel": "Показати персонал",
@@ -3788,6 +3837,7 @@
     "check_in": "Check in",
     "clear_search": "Clear search",
     "expand_map": "Open the full map",
+    "gps": "GPS",
     "map_unavailable": "No map is configured for this department.",
     "no_overdue_check_ins": "No overdue check-ins",
     "no_resources": "No units or personnel to show",
@@ -3811,11 +3861,14 @@
     "ptt_error_permission": "Microphone access is needed to talk.",
     "ptt_hotkey_hint": "Hold {{hotkey}} to talk",
     "ptt_no_channels": "No voice channels",
+    "ptt_off": "OFF",
     "ptt_ready": "Ready",
     "ptt_receiving": "Receiving",
     "ptt_reconnecting": "Reconnecting…",
+    "ptt_rx": "RX",
     "ptt_stop": "Stop talking",
     "ptt_talk": "Talk",
+    "ptt_tx": "TX",
     "resources": "Resources",
     "resources_on_call": "Resources on call",
     "search_notes": "Search notes",
@@ -3877,6 +3930,7 @@
     "note_added_to_console": "Нову нотатку додано до консолі",
     "note_created": "Нотатку створено",
     "notes": "Нотатки",
+    "on_call": "На виклику",
     "personnel": "Персонал",
     "personnel_deselected": "Вибір персоналу скасовано",
     "personnel_on_call": "Персонал на виклику",
@@ -3897,6 +3951,7 @@
     "transmission_ended": "Передачу завершено",
     "transmitting": "Transmitting",
     "transmitting_on": "Передача на {{channel}}",
+    "unassigned": "Не призначено",
     "unit_deselected": "Вибір підрозділу скасовано",
     "unit_selected": "Підрозділ вибрано",
     "unit_status_updated": "Статус підрозділу оновлено",

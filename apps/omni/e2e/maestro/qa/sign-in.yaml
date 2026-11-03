@@ -1,0 +1,120 @@
+# Signs in through the login screen as a seeded QA persona (Core: Docker/qa-departments), past the first-launch
+# onboarding, and waits for the app shell. An MFA-enrolled persona gets QA_TOTP, which qa-regression.ts computes for a
+# fresh time step just before the flow starts.
+# Variables: APP_ID, QA_USERNAME, QA_PASSWORD, QA_TOTP ('none' when the persona has no authenticator).
+appId: ${APP_ID}
+---
+- extendedWaitUntil:
+    visible:
+      id: 'login-screen|onboarding-screen|shell-gate-onboarding'
+    # A dev client builds the Metro bundle on first open; allow for a cold transform cache.
+    timeout: 300000
+# Page through with the bottom button (Next, then Get started): on a landscape iPad the dev client's floating button
+# covers Skip. A tap that lands while the first render is still settling can be dropped, so repeat until it is gone.
+- repeat:
+    while:
+      visible:
+        id: 'onboarding-screen|shell-gate-onboarding'
+    times: 8
+    commands:
+      - tapOn:
+          id: 'onboarding-next|onboarding-finish|shell-onboarding-continue'
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: 'login-username'
+    timeout: 60000
+- tapOn:
+    id: 'login-username'
+- inputText: ${QA_USERNAME}
+# Return dismisses the keyboard (the field does not move focus on); on a landscape iPad the open keyboard hides the
+# whole form, so the password field is only reachable once it is down.
+- pressKey: Enter
+- tapOn:
+    id: 'login-password'
+- inputText: ${QA_PASSWORD}
+# Return on the password field signs in (as a person would); hideKeyboard is unreliable on iOS text fields.
+- pressKey: Enter
+- waitForAnimationToEnd:
+    timeout: 3000
+# Fallback when Return did not submit; the button is disabled while a sign-in is in flight, so this never submits twice.
+- runFlow:
+    when:
+      visible:
+        id: 'login-submit'
+    commands:
+      - tapOn:
+          id: 'login-submit'
+          optional: true
+# Up to two minutes for the sign-in to land. iOS may offer to save the password in a sheet that hides the whole app.
+- repeat:
+    while:
+      notVisible:
+        id: 'app-shell-.*|shell-header-title|shell-menu-button|shell-nav-profile-name|login-otp-code|login-mfa-code|login-error-dialog|login-error-message'
+    times: 24
+    commands:
+      - tapOn:
+          text: 'Not Now'
+          optional: true
+      - extendedWaitUntil:
+          visible:
+            id: 'app-shell-.*|shell-header-title|shell-menu-button|shell-nav-profile-name|login-otp-code|login-mfa-code|login-error-dialog|login-error-message'
+          timeout: 5000
+          optional: true
+# On an iPad the "Save Password?" sheet hides the whole app and its buttons cannot be reached: restart the app, which
+# closes the sheet and keeps the session (a development client reopens its bundle through the link).
+- runFlow:
+    when:
+      notVisible:
+        id: 'app-shell-.*|shell-header-title|shell-menu-button|shell-nav-profile-name|login-otp-code|login-mfa-code|login-error-dialog|login-error-message'
+    commands:
+      - launchApp:
+          stopApp: true
+      - runFlow:
+          when:
+            true: ${DEV_CLIENT_URL != 'none'}
+          commands:
+            - openLink: ${DEV_CLIENT_LINK}
+            - runFlow: accept-open-prompt.yaml
+      - extendedWaitUntil:
+          visible:
+            id: 'app-shell-.*|shell-header-title|shell-menu-button|shell-nav-profile-name|login-otp-code|login-mfa-code'
+          timeout: 180000
+- runFlow:
+    when:
+      visible:
+        id: 'login-otp-code|login-mfa-code'
+    commands:
+      - tapOn:
+          id: 'login-otp-code|login-mfa-code'
+      - inputText: ${QA_TOTP}
+      # The sheet may submit by itself once the sixth digit is in.
+      - tapOn:
+          id: 'login-otp-submit|login-mfa-submit'
+          optional: true
+# The shell: its root id, or (iOS exposes only accessible elements) the header title, menu button or sidebar profile.
+- repeat:
+    while:
+      notVisible:
+        id: 'app-shell-.*|shell-header-title|shell-menu-button|shell-nav-profile-name'
+    times: 24
+    commands:
+      - tapOn:
+          text: 'Not Now'
+          optional: true
+      - extendedWaitUntil:
+          visible:
+            id: 'app-shell-.*|shell-header-title|shell-menu-button|shell-nav-profile-name'
+          timeout: 5000
+          optional: true
+- assertVisible:
+    id: 'app-shell-.*|shell-header-title|shell-menu-button|shell-nav-profile-name'
+- extendedWaitUntil:
+    notVisible:
+      id: 'shell-init-loading'
+    timeout: 120000
+- assertNotVisible:
+    id: 'shell-init-failed'
+- takeScreenshot: signed-in

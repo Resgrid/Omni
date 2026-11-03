@@ -1,5 +1,5 @@
 import { useTranslation } from '@resgrid/i18n';
-import { Button, ButtonText, HStack, Pressable, ScrollView, Text, View, VStack } from '@resgrid/ui';
+import { Button, ButtonText, HStack, Pressable, ScrollView, Text, useThemeColors, View, VStack } from '@resgrid/ui';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ArrowDown, ArrowUp, LayoutGrid, Plus, RotateCcw, Trash2 } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
@@ -26,6 +26,7 @@ export interface ConfigureDashboardScreenProps {
  */
 export default function ConfigureDashboardScreen({ initialWidget, onDone }: ConfigureDashboardScreenProps) {
   const { t } = useTranslation();
+  const colors = useThemeColors();
   const params = useLocalSearchParams<{ widget?: string | string[] }>();
   const widgets = useDashboardStore((state) => state.widgets);
   const addWidget = useDashboardStore((state) => state.addWidget);
@@ -68,7 +69,7 @@ export default function ConfigureDashboardScreen({ initialWidget, onDone }: Conf
                 testID={`configure-tab-${type}`}
               >
                 <View className="mr-1.5">
-                  <Icon size={14} color={active ? '#ffffff' : '#6b7280'} />
+                  <Icon size={14} color={active ? colors.textInverse : colors.token('typography-500')} />
                 </View>
                 <Text className={active ? 'text-sm font-medium text-typography-0' : 'text-sm text-typography-800'}>{t(WIDGET_LABEL_KEYS[type])}</Text>
               </Pressable>
@@ -90,7 +91,7 @@ export default function ConfigureDashboardScreen({ initialWidget, onDone }: Conf
               </Button>
             ) : (
               <Button size="sm" onPress={() => void addWidget(selected, grid)} testID="configure-add-widget">
-                <Plus size={14} color="#ffffff" />
+                <Plus size={14} color={colors.textInverse} />
                 <ButtonText className="ml-1">{t('dashboard.add_to_board')}</ButtonText>
               </Button>
             )}

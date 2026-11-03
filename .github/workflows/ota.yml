@@ -35,7 +35,7 @@ defaults:
 env:
   EXPO_NO_TELEMETRY: '1'
   EXPO_NO_DOTENV: '1'
-  EAS_CLI_VERSION: '24.14.0'
+  EAS_CLI_VERSION: '27.3.0'
 
 jobs:
   plan:

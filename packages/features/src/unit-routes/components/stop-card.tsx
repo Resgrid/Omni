@@ -1,6 +1,6 @@
 import { useTranslation } from '@resgrid/i18n';
 import type { RouteStopWithDetailsResultData } from '@resgrid/models';
-import { HStack, Pressable, Text, View, VStack } from '@resgrid/ui';
+import { HStack, Pressable, Text, useThemeColors, View, VStack } from '@resgrid/ui';
 import { Circle, CircleCheck, Clock, LogIn, LogOut, type LucideIcon, MapPin, SkipForward, User } from 'lucide-react-native';
 import React from 'react';
 import { StyleSheet } from 'react-native';
@@ -10,9 +10,11 @@ import { type StopActionKind, stopActions, stopStatusLook } from '../lib/route-s
 
 const STATUS_ICONS: Readonly<Record<number, LucideIcon>> = { 0: Circle, 1: Clock, 2: CircleCheck, 3: SkipForward };
 
-const ACTIONS: Readonly<Record<StopActionKind, { labelKey: string; icon: LucideIcon; className: string; textClassName: string; iconColor: string }>> = {
-  checkIn: { labelKey: 'routes.check_in', icon: LogIn, className: 'bg-primary-600', textClassName: 'text-typography-0', iconColor: '#ffffff' },
-  checkOut: { labelKey: 'routes.check_out', icon: LogOut, className: 'bg-success-600', textClassName: 'text-typography-0', iconColor: '#ffffff' },
+const ACTIONS: Readonly<
+  Record<StopActionKind, { labelKey: string; icon: LucideIcon; className: string; textClassName: string; /** null: drawn on the fill (the theme's inverse text colour). */ iconColor: string | null }>
+> = {
+  checkIn: { labelKey: 'routes.check_in', icon: LogIn, className: 'bg-primary-600', textClassName: 'text-typography-0', iconColor: null },
+  checkOut: { labelKey: 'routes.check_out', icon: LogOut, className: 'bg-success-600', textClassName: 'text-typography-0', iconColor: null },
   skip: { labelKey: 'routes.skip', icon: SkipForward, className: 'border border-warning-500 bg-background-0', textClassName: 'text-warning-700', iconColor: '#ca8a04' },
 };
 
@@ -38,6 +40,7 @@ export interface StopCardProps {
  */
 export const StopCard: React.FC<StopCardProps> = React.memo(({ stop, isCurrent = false, onAction, onPress, routeInProgress = true, isBusy = false, actionMinHeight = 48, testID }) => {
   const { t } = useTranslation();
+  const colors = useThemeColors();
   const id = stop.RouteInstanceStopId ?? stop.RouteStopId;
   const cardTestId = testID ?? `stop-card-${id}`;
   const look = stopStatusLook(stop.Status);
@@ -102,7 +105,7 @@ export const StopCard: React.FC<StopCardProps> = React.memo(({ stop, isCurrent =
                 style={StyleSheet.flatten([{ minHeight: actionMinHeight }, isBusy ? styles.busy : null])}
               >
                 <View style={styles.actionIcon}>
-                  <ActionIcon size={16} color={action.iconColor} />
+                  <ActionIcon size={16} color={action.iconColor ?? colors.textInverse} />
                 </View>
                 <Text className={`font-semibold ${action.textClassName}`}>{t(action.labelKey)}</Text>
               </Pressable>
