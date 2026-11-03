@@ -25,7 +25,6 @@ import { StatusOptionRow } from './status-option';
 
 export type StatusPickerSubject = 'unit' | 'personnel';
 export type StatusPickerTab = 'status' | 'staffing';
-export type { StatusPickerStep };
 /** The data layer's write outcome: sent now, queued for reconnect, or refused by the server. */
 export type StatusSubmitOutcome = 'sent' | 'queued' | 'rejected';
 

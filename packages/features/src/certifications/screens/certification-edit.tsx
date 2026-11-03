@@ -35,14 +35,24 @@ export default function CertificationEditScreen({ certificationId }: Certificati
   const hasIdParam = certificationId !== undefined || (params.id !== undefined && params.id !== '');
   const id = certificationId ?? parseCertificationId(params.id);
   const existing = useCertificationsStore((state) => (id ? (state.certificationsById[id] ?? state.certifications.find((item) => item.Id === id)) : undefined));
-  const isLoading = useCertificationsStore((state) => state.loading.detail === true);
   const loadError = useCertificationsStore((state) => state.errors.detail ?? null);
+  // The id whose read has finished. Until then a record the store does not hold is loading, not missing: Core's
+  // not_found reply resolves without an error, so the store's error alone cannot tell the two apart.
+  const [settledId, setSettledId] = useState<number | null>(null);
   const goBack = useCallback(() => goBackOr(id ? certificationsRoutes.detail(id) : certificationsRoutes.list()), [id]);
 
   useEffect(() => {
     const store = useCertificationsStore.getState();
     if (store.types.length === 0) void store.fetchTypes({ appliesTo: 0 });
-    if (id && !store.certificationsById[id] && !store.certifications.some((item) => item.Id === id)) void store.fetchCertification(id);
+    if (!id || store.certificationsById[id] || store.certifications.some((item) => item.Id === id)) return;
+    let active = true;
+    void store.fetchCertification(id).finally(() => {
+      if (active) setSettledId(id);
+    });
+
+    return () => {
+      active = false;
+    };
   }, [id]);
 
   const title = hasIdParam ? t('certifications.editTitle') : t('certifications.addTitle');
@@ -51,7 +61,7 @@ export default function CertificationEditScreen({ certificationId }: Certificati
     return (
       <View className="flex-1 bg-background-50" testID="certification-edit-screen">
         <ScreenHeader title={title} onBack={goBack} testID="certification-edit-header" />
-        {id && (isLoading || !loadError) ? (
+        {id && settledId !== id ? (
           <Loading />
         ) : (
           <ZeroState isError heading={t('certifications.loadOneFailed')} description={t(loadError ? certificationErrorKey(loadError) : 'certifications.errors.notFound')} testID="certification-edit-error">

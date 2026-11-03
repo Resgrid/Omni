@@ -3721,7 +3721,7 @@
     "anti-slop/require-readable-spacing": 1
   },
   "packages/features/src/status/components/status-picker.tsx": {
-    "anti-slop/require-readable-spacing": 16
+    "anti-slop/require-readable-spacing": 15
   },
   "packages/features/src/status/components/status-sheet.tsx": {
     "anti-slop/require-readable-spacing": 1

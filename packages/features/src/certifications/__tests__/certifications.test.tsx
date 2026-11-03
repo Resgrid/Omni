@@ -418,4 +418,44 @@ describe('CertificationEditScreen', () => {
     await waitFor(() => expect(store.fetchCertification).toHaveBeenCalledWith(8));
     expect(screen.queryByTestId('certification-save')).toBeNull();
   });
+
+  it('waits for a record it reads, then says it is missing when Core has none (not_found carries no error)', async () => {
+    let resolveRead: (value: null) => void = () => undefined;
+    store.fetchCertification.mockImplementationOnce(
+      () =>
+        new Promise<null>((resolve) => {
+          resolveRead = resolve;
+        })
+    );
+    await render(<CertificationEditScreen certificationId={8} />);
+    expect(store.fetchCertification).toHaveBeenCalledWith(8);
+    expect(screen.queryByTestId('certification-edit-error')).toBeNull();
+    expect(screen.queryByTestId('certification-save')).toBeNull();
+
+    await act(async () => resolveRead(null));
+    expect(screen.getByTestId('certification-edit-error')).toHaveTextContent(/certifications\.errors\.notFound/);
+    expect(screen.queryByTestId('certification-save')).toBeNull();
+    await fireEvent.press(screen.getByTestId('certification-edit-back'));
+    expect(router.back).toHaveBeenCalled();
+  });
+
+  it("shows why a record it reads could not be loaded, not another record's earlier failure", async () => {
+    useCertificationsStore.setState({ errors: { detail: { code: 'rejected', status: 400, messageKey: 'errors.data.rejected' } } });
+    let failRead: () => void = () => undefined;
+    store.fetchCertification.mockImplementationOnce(
+      () =>
+        new Promise<null>((resolve) => {
+          failRead = () => {
+            useCertificationsStore.setState({ errors: { detail: { code: 'network', messageKey: 'errors.data.network' } } });
+            resolve(null);
+          };
+        })
+    );
+    await render(<CertificationEditScreen certificationId={9} />);
+    expect(screen.queryByTestId('certification-edit-error')).toBeNull();
+
+    await act(async () => failRead());
+    expect(screen.getByTestId('certification-edit-error')).toHaveTextContent(/certifications\.errors\.offline/);
+    expect(screen.queryByTestId('certification-save')).toBeNull();
+  });
 });

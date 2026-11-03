@@ -15,6 +15,7 @@
 - `package.json` (`"type": "module"`) added so Node loads the TypeScript sources as ES modules without the `MODULE_TYPELESS_PACKAGE_JSON` warning. Upstream has none.
 - Upstream formatting is kept: this folder is excluded from ESLint and Prettier, and from Oxlint itself.
 - Rule sources are unchanged.
+- Upstream's rule tests (`rules/*.test.ts`, among them the `require-readable-spacing` tests that `vendor/eslint-stylistic/UPSTREAM.md` names) are not vendored, and that file's `pnpm check` and `pnpm sync:skill-assets` are upstream scripts Omni does not have. Both apply only to the upstream repository; it stays unedited. Omni's check is `pnpm lint:anti-slop` (see Configuration).
 
 ## Configuration
 
