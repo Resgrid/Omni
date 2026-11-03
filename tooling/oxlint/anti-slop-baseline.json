@@ -136,7 +136,7 @@
   },
   "apps/omni/__tests__/app-config.test.ts": {
     "anti-slop/no-unknown-parameters": 6,
-    "anti-slop/require-safety-comment-for-type-assertion": 3
+    "anti-slop/require-safety-comment-for-type-assertion": 1
   },
   "apps/omni/__tests__/app-updates.test.ts": {
     "anti-slop/no-unsafe-dictionary-type": 1,

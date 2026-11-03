@@ -3,6 +3,8 @@
 // lockfile, Prettier, ESLint, anti-slop, TypeScript, translations, dependency rules, variant manifests, eas.json, workflow files,
 // CI script tests, Jest, then per variant the expo config sanity check, web export and Playwright web tests.
 // Every step runs even after a failure; the summary at the end lists what failed. A check added to ci.yml goes here too.
+// A complete run (no --variants or --skip) that passes is recorded, so the Claude Code Stop hook (scripts/ci/check-all-hook.mjs)
+// does not run it again on the same checkout.
 //
 // Usage: pnpm check-all [--quick] [--variants unit,ic] [--skip jest,e2e] [--bail] [--list]
 //   --quick     skip the web exports and Playwright tests (the slow part)
@@ -14,6 +16,7 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { checkoutFingerprint, recordPass } from './ci/check-all-hook.mjs';
 import { csv, parseArgs, repoRoot, VARIANT_IDS } from './ci/lib.mjs';
 
 // pnpm 10 forwards a `--` separator literally.
@@ -74,6 +77,16 @@ if (unknownSkips.length > 0) {
 }
 
 const seconds = (ms) => (ms < 60_000 ? `${(ms / 1000).toFixed(1)}s` : `${Math.floor(ms / 60_000)}m ${String(Math.round((ms % 60_000) / 1000)).padStart(2, '0')}s`);
+const fingerprint = () => {
+  try {
+    return checkoutFingerprint();
+  } catch {
+    return null;
+  }
+};
+
+const passLevel = args.variants || skip.size > 0 ? null : args.quick ? 'quick' : 'full';
+const checkedCheckout = passLevel === null ? null : fingerprint();
 const results = new Map();
 const startedAll = Date.now();
 
@@ -110,4 +123,14 @@ for (const s of steps) {
 const counts = (status) => [...results.values()].filter((r) => r.status === status).length;
 const failed = counts('FAIL');
 console.log(`\n${counts('pass')} passed, ${failed} failed, ${steps.length - counts('pass') - failed} skipped in ${seconds(Date.now() - startedAll)}`);
+
+// Only when nothing changed during the run: a pass says nothing about edits made after a step had checked its files.
+if (failed === 0 && checkedCheckout !== null && fingerprint() === checkedCheckout) {
+  try {
+    recordPass(checkedCheckout, passLevel);
+  } catch (error) {
+    console.error(`Could not record the pass for the Claude Code hook: ${error.message}`);
+  }
+}
+
 process.exit(failed > 0 ? 1 : 0);

@@ -76,6 +76,7 @@ exports[`app.config per variant bigboard production config is stable 1`] = `
     "expo-build-properties",
     "expo",
     "expo-secure-store",
+    "react-native-expo-plugin",
     "custom-gradle.js",
     "custom-manifest.js",
     "maplibre-react-native",
