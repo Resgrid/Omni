@@ -56,6 +56,8 @@ export default [
       '.claude/**',
       '.agents/**',
       'packages/config-plugins/plugins/live-activities/**',
+      // Vendored anti-slop Oxlint plugin: upstream formatting kept so updates diff cleanly (UPSTREAM.md there).
+      'tooling/oxlint/anti-slop/**',
     ],
   },
   ...expoConfig,

@@ -74,7 +74,7 @@ Never fork code per app. In order of preference: **capability** (`useCapability(
 ## Skills (`.claude/skills/`, mirrored to `.agents/skills/` by `node scripts/sync-agent-skills.mjs`)
 
 Resgrid/Omni: `omni-variants`, `omni-offline-first`, `omni-porting-from-legacy`, `omni-platform-builds`, `resgrid-domain`, `resgrid-v4-api`, `resgrid-realtime-push`, `resgrid-auth-security`, `resgrid-i18n`, `resgrid-maps`.
-Third-party (vetted; provenance in each `SOURCE.md`): `expo-upgrade`, `eas-app-stores`, `eas-update`, `expo-router`, `expo-module`, `expo-animation`, `react-native-best-practices`, `react-native-testing`, `nativewind-preview-to-rc`.
+Third-party (vetted; provenance in each `SOURCE.md`): `expo-upgrade`, `eas-app-stores`, `eas-update`, `expo-router`, `expo-module`, `expo-animation`, `react-native-best-practices`, `react-native-testing`, `nativewind-preview-to-rc`, `install-anti-slop` (vendored Oxlint rules in `tooling/oxlint/anti-slop`, run with `pnpm lint:anti-slop`; advisory, not in CI or hooks yet).
 
 Precedence when guidance conflicts: this file and the Omni/Resgrid skills win over third-party skills. Specifically — UI is gluestack + NativeWind (not `@expo/ui` or native-UI-first advice); networking is axios + zustand stores (ignore "avoid axios"); upgrades use `expo-upgrade` (CNG — there are no committed native folders); expo-router guidance written for iOS must also work on web and Electron; never publish an EAS update or submit to a store without the owner asking.
 

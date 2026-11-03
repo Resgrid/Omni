@@ -198,6 +198,7 @@ Push notifications on iOS and Android need the app's Firebase files (`google-ser
 ```bash
 pnpm test          # Jest unit and component tests
 pnpm lint          # ESLint (zero warnings)
+pnpm lint:anti-slop # Oxlint anti-slop rules (advisory; tooling/oxlint/anti-slop)
 pnpm type-check    # TypeScript
 pnpm i18n:check    # translation keys match across all ten languages
 pnpm check-all     # everything CI checks except tests
