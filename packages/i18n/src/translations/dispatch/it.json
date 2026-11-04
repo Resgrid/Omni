@@ -66,7 +66,6 @@
       "none": "Nessun contatto disponibile",
       "title": "Seleziona contatto"
     },
-    "coordinates_incomplete": "Inserisci sia la latitudine sia la longitudine",
     "coordinates_invalid": "Controlla latitudine e longitudine: servono entrambe, in gradi decimali",
     "dispatch_board": {
       "at_station": "In sede",
@@ -103,9 +102,6 @@
       "no_form": "Nessun modulo intervento configurato",
       "title": "Modulo intervento"
     },
-    "latitude": "Latitudine",
-    "latitude_invalid": "Inserisci una latitudine in gradi decimali, tra -90 e 90",
-    "latitude_placeholder": "es. 39.122639",
     "linked_calls": {
       "change": "Cambia intervento collegato",
       "linked": "Collegato",
@@ -114,9 +110,6 @@
       "select": "Collega a un intervento esistente",
       "title": "Intervento collegato"
     },
-    "longitude": "Longitudine",
-    "longitude_invalid": "Inserisci una longitudine in gradi decimali, tra -180 e 180",
-    "longitude_placeholder": "es. -119.758773",
     "new_call_web_hint": "Compila i dettagli dell'intervento qui sotto. Premi Ctrl+Invio per creare.",
     "no_destination": "Nessuna destinazione",
     "protocols": {

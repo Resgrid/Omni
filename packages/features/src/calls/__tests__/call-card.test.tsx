@@ -9,6 +9,7 @@ import { CallCard } from '../components/call-card';
 import { makeCall } from './test-utils';
 
 const NOW = Date.parse('2026-10-31T12:00:00Z');
+
 const dispatches = [
   { Id: '7', Type: 'Unit', Name: 'Engine 7', GroupId: '', Group: '', Note: '', StatusId: 0, Location: '', StatusText: '', StatusColor: '', Timestamp: '' },
   { Id: 'u1', Type: 'User', Name: 'Pat Smith', GroupId: '', Group: '', Note: '', StatusId: 0, Location: '', StatusText: '', StatusColor: '', Timestamp: '' },
@@ -63,6 +64,12 @@ describe('CallCard', () => {
     await render(<CallCard call={makeCall('5', { Name: 'REDACTED', RedactedFields: ['calls.name'] })} now={NOW} />);
     expect(screen.getByText('data_protection.protected_value')).toBeTruthy();
     expect(screen.queryByText('REDACTED')).toBeNull();
+  });
+
+  it("shows a name as text, never the sanitizer's &amp;", async () => {
+    await render(<CallCard call={makeCall('6', { Name: 'Smith &amp; Sons' })} now={NOW} />);
+    expect(screen.getByText('Smith & Sons')).toBeTruthy();
+    expect(screen.queryByText(/&amp;/)).toBeNull();
   });
 
   it('shows check-in timer attention (Unit/IC timer props)', async () => {

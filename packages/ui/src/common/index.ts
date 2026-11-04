@@ -4,6 +4,6 @@ export { HeaderBackButton, type HeaderBackButtonProps } from './header-back-butt
 export { CardSkeleton, ListSkeleton, Loading, type LoadingProps, LoadingSkeleton, type LoadingSkeletonProps, ProfileSkeleton } from './loading';
 export { OFFLINE_TOAST_DURATION_MS, OfflineStatusToast, type OfflineStatusToastProps } from './offline-status-toast';
 export { REALTIME_OUTAGE_GRACE_MS, type RealtimeHubOutage, RealtimeStatusBanner, type RealtimeStatusBannerProps } from './realtime-status-banner';
-export { AppBarBackContext, ScreenHeader, type ScreenHeaderProps, useAppBarShowsBack } from './screen-header';
+export { AppBarBackContext, type AppBarScreenTitle, type AppBarTitleSlot, AppBarTitleSlotContext, ScreenHeader, type ScreenHeaderProps, useAppBarShowsBack } from './screen-header';
 export { getTypeIconUrl, getTypeMapIcon, normalizeMapIconKey, TypeIcon, type TypeIconProps, type TypeMapIconEntry, TypeMapIconProvider, type TypeMapIconRegistry } from './type-icon';
 export { ZeroState, type ZeroStateProps } from './zero-state';

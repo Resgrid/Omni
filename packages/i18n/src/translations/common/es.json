@@ -399,7 +399,7 @@
     "create_not_allowed_description": "Creating calls is not available in this app or for your account.",
     "custom_fields": "Custom Fields",
     "dispatch": {
-      "none_pages_everyone": "No one selected — everyone available will be paged"
+      "none_pages_nobody": "No one selected — no one will be paged"
     },
     "edit": {
       "offline": "Editing a call needs a connection. Your changes have not been saved."
@@ -496,7 +496,21 @@
     "scheduled_on_helper": "Deje vacío para despachar inmediatamente",
     "save_pending_call": "Guardar llamada pendiente",
     "keyboard_shortcuts": "Consejo: Presione Ctrl+Enter para crear, Escape para cancelar",
-    "edit_keyboard_shortcuts": "Consejo: Presione Ctrl+S para guardar, Escape para cancelar"
+    "edit_keyboard_shortcuts": "Consejo: Presione Ctrl+S para guardar, Escape para cancelar",
+    "edit_not_allowed": "You can't edit this call",
+    "edit_not_allowed_description": "A call can be edited while it is active or pending, by a department admin or the member who logged it.",
+    "latitude": "Latitud",
+    "longitude": "Longitud",
+    "latitude_placeholder": "p. ej. 39.122639",
+    "longitude_placeholder": "p. ej. -119.758773",
+    "latitude_invalid": "Introduzca una latitud en grados decimales, entre -90 y 90",
+    "longitude_invalid": "Introduzca una longitud en grados decimales, entre -180 y 180",
+    "coordinates_incomplete": "Introduzca la latitud y la longitud",
+    "place_on_map": "Place on map",
+    "destination_poi_select": "Select a destination",
+    "destination_poi_search": "Search destinations...",
+    "destination_poi_none_found": "No destinations match your search",
+    "destination_poi_clear": "Clear destination"
   },
   "chat": {
     "ack_pending_count": "Tienes {{count}} mensajes urgentes por confirmar",
@@ -895,6 +909,8 @@
     "retry": "Reintentar",
     "route": "Ruta",
     "save": "Guardar",
+    "scroll_tabs_left": "Desplazar las pestañas a la izquierda",
+    "scroll_tabs_right": "Desplazar las pestañas a la derecha",
     "search": "Buscar",
     "select_option": "Seleccionar opción",
     "selected_location": "Ubicación seleccionada",
@@ -3246,7 +3262,8 @@
     "update_ready_title": "Actualización lista",
     "update_ready_message": "Toca para reiniciar ahora. Si no, la actualización se instalará la próxima vez que se inicie la aplicación.",
     "update_ready_wall_message": "Toca para reiniciar ahora; si no, la pantalla se reiniciará sola tras {{minutes}} minutos sin uso.",
-    "update_restart_failed": "No se pudo reiniciar la aplicación. La actualización se instalará la próxima vez que se inicie la aplicación."
+    "update_restart_failed": "No se pudo reiniciar la aplicación. La actualización se instalará la próxima vez que se inicie la aplicación.",
+    "notifications_unread": "Notifications, {{count}} unread"
   },
   "access_denied": {
     "back_to_sign_in": "Back to sign in",

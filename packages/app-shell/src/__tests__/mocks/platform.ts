@@ -19,6 +19,7 @@ export const notifications = {
   navigateToNotificationTarget: jest.fn(async () => true),
   NotificationsInboxProvider: ({ children }: { children?: ReactNode }) => children ?? null,
   useNovuInboxConfig: jest.fn(() => ({ ready: false, subscriberId: '', applicationIdentifier: '', apiUrl: '', socketUrl: '' })),
+  useInboxUnreadCount: jest.fn(() => 0),
   usePushNotifications: jest.fn(() => ({ pushToken: null })),
   useClearBadgeOnForeground: jest.fn(),
   configureNotifications: jest.fn(),

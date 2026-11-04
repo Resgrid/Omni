@@ -1,7 +1,6 @@
-import { useSecurity } from '@resgrid/auth';
 import { formatUtcInDepartmentTime } from '@resgrid/core/utils/dates';
 import { useCallsStore } from '@resgrid/data';
-import { CALL_LIST_REFRESH_EVENTS, callRoutes } from '@resgrid/features/calls';
+import { CALL_LIST_REFRESH_EVENTS, callRoutes, useCallPermissionsResolver, useCallRights } from '@resgrid/features/calls';
 import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import type { CallResultData } from '@resgrid/models';
@@ -30,7 +29,8 @@ export default function ScheduledCallsScreen({ showHeader = true, realtime = tru
   const { t } = useTranslation();
   const timeZone = useDepartmentTimeZone();
   const router = useRouter();
-  const { canUserCreateCalls } = useSecurity();
+  const { canCreateCalls } = useCallRights();
+  const permissionsFor = useCallPermissionsResolver();
   const scheduledCalls = useCallsStore((state) => state.scheduledCalls);
   const isLoading = useCallsStore((state) => state.loading.scheduled === true);
   const error = useCallsStore((state) => state.errors.scheduled ?? null);
@@ -64,17 +64,19 @@ export default function ScheduledCallsScreen({ showHeader = true, realtime = tru
   );
 
   const renderActions = useCallback(
-    (call: CallResultData) => (
-      <QueueActionButton
-        label={t('call_queues.dispatch_now')}
-        icon={Send}
-        isBusy={busyCallId === call.CallId}
-        onPress={() => confirmDispatchNow(call.CallId)}
-        accessibilityLabel={`${t('call_queues.dispatch_now')} ${call.Number || call.CallId}`}
-        testID={`scheduled-call-dispatch-now-${call.CallId}`}
-      />
-    ),
-    [busyCallId, confirmDispatchNow, t]
+    // Dispatching now edits the call: a department admin's or its reporter's.
+    (call: CallResultData) =>
+      permissionsFor(call).canDispatch ? (
+        <QueueActionButton
+          label={t('call_queues.dispatch_now')}
+          icon={Send}
+          isBusy={busyCallId === call.CallId}
+          onPress={() => confirmDispatchNow(call.CallId)}
+          accessibilityLabel={`${t('call_queues.dispatch_now')} ${call.Number || call.CallId}`}
+          testID={`scheduled-call-dispatch-now-${call.CallId}`}
+        />
+      ) : null,
+    [busyCallId, confirmDispatchNow, permissionsFor, t]
   );
 
   const renderContent = () => {
@@ -89,7 +91,7 @@ export default function ScheduledCallsScreen({ showHeader = true, realtime = tru
         calls={visible}
         columns={columns}
         onOpenCall={(call) => router.push(callRoutes.callDetail(call.CallId) as Href)}
-        renderActions={canUserCreateCalls ? renderActions : undefined}
+        renderActions={canCreateCalls ? renderActions : undefined}
         refreshing={isRefreshing}
         onRefresh={handleRefresh}
         testID="scheduled-calls-table"

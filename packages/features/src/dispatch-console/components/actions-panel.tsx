@@ -1,6 +1,6 @@
-import { useSecurity } from '@resgrid/auth';
 import { useCapability } from '@resgrid/config';
 import { personnelFullName, usePersonnelStore, useUnitsStore } from '@resgrid/data';
+import { useCallPermissions, useCallRights } from '@resgrid/features/calls';
 import { CheckInSheet, type CheckInTarget, CheckInType } from '@resgrid/features/check-in';
 import { CurrentStatusBadge, PersonnelStatusSheet, UnitStatusSheet } from '@resgrid/features/status';
 import { useTranslation } from '@resgrid/i18n';
@@ -63,7 +63,8 @@ type OpenSheet = { kind: 'unit-status'; unitIds: string[]; withCall: boolean } |
  */
 export const ActionsPanel: React.FC<ActionsPanelProps> = ({ selectedCall, onCreateCall, onViewCall, onAddCallNote, onCloseCall, onAddResources, onViewUnit, onViewPersonnel, onStatusSaved }) => {
   const { t } = useTranslation();
-  const { canUserCreateCalls } = useSecurity();
+  const rights = useCallRights();
+  const permissions = useCallPermissions(selectedCall);
   const checkIn = useCapability('checkIn');
   const selectedUnitId = useConsoleStore((state) => state.selectedUnitId);
   const selectedPersonnelId = useConsoleStore((state) => state.selectedPersonnelId);
@@ -170,21 +171,29 @@ export const ActionsPanel: React.FC<ActionsPanelProps> = ({ selectedCall, onCrea
       ) : null}
 
       <Section title={t('dispatch.call_actions')}>
-        {onCreateCall && canUserCreateCalls ? <ActionButton icon={Plus} label={t('dispatch.new_call')} color="#ef4444" onPress={onCreateCall} testID="console-action-new-call" /> : null}
+        {onCreateCall && permissions.canCreate ? <ActionButton icon={Plus} label={t('dispatch.new_call')} color="#ef4444" onPress={onCreateCall} testID="console-action-new-call" /> : null}
         <ActionButton icon={Info} label={t('dispatch.view_details')} color="#3b82f6" disabled={!callId} onPress={() => (callId ? onViewCall(callId) : undefined)} testID="console-action-view-call" />
         <ActionButton icon={StickyNote} label={t('dispatch.add_note')} color="#8b5cf6" disabled={!callId} onPress={() => (callId ? onAddCallNote(callId) : undefined)} testID="console-action-add-note" />
-        {canUserCreateCalls ? (
+        {/* Shown to members with the right; disabled unless they may change the selected call (admin, or they logged it). */}
+        {rights.canCreateCalls ? (
           <ActionButton
             icon={UserPlus}
             label={t('dispatch_console.add_resources')}
             color="#22c55e"
-            disabled={!selectedCall}
-            onPress={() => (selectedCall ? onAddResources(selectedCall) : undefined)}
+            disabled={!permissions.canDispatchMore}
+            onPress={() => (selectedCall && permissions.canDispatchMore ? onAddResources(selectedCall) : undefined)}
             testID="console-action-add-resources"
           />
         ) : null}
-        {canUserCreateCalls ? (
-          <ActionButton icon={AlertTriangle} label={t('dispatch.close_call')} color="#f59e0b" disabled={!callId} onPress={() => (callId ? onCloseCall(callId) : undefined)} testID="console-action-close-call" />
+        {rights.canCloseCalls ? (
+          <ActionButton
+            icon={AlertTriangle}
+            label={t('dispatch.close_call')}
+            color="#f59e0b"
+            disabled={!permissions.canClose}
+            onPress={() => (callId && permissions.canClose ? onCloseCall(callId) : undefined)}
+            testID="console-action-close-call"
+          />
         ) : null}
       </Section>
 

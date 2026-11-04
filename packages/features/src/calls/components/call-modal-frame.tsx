@@ -1,5 +1,5 @@
 import { useTranslation } from '@resgrid/i18n';
-import { NativeModal, Pressable, Text } from '@resgrid/ui';
+import { NativeModal, NativeModalScreen, Pressable, Text } from '@resgrid/ui';
 import { X } from 'lucide-react-native';
 import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
@@ -10,15 +10,17 @@ export interface CallModalFrameProps {
   title: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
+  /** False when the content scrolls itself (a long, virtualized list); default true. */
+  scrollable?: boolean;
   testID?: string;
 }
 
 /** Page-sheet frame for the call's notes, images and files (R modal UI inside Unit's NativeModal: toasts show above it). */
-export const CallModalFrame: React.FC<CallModalFrameProps> = ({ isOpen, onClose, title, children, footer, testID }) => {
+export const CallModalFrame: React.FC<CallModalFrameProps> = ({ isOpen, onClose, title, children, footer, scrollable = true, testID }) => {
   const { t } = useTranslation();
   return (
     <NativeModal visible={isOpen} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose} testID={testID}>
-      <View style={styles.screen} className="bg-background-0">
+      <NativeModalScreen className="bg-background-0">
         <View style={styles.header} className="border-outline-100">
           <Text className="flex-1 text-lg font-bold text-typography-900" accessibilityRole="header">
             {title}
@@ -27,17 +29,20 @@ export const CallModalFrame: React.FC<CallModalFrameProps> = ({ isOpen, onClose,
             <X size={22} color="#6B7280" />
           </Pressable>
         </View>
-        <ScrollView style={styles.body} keyboardShouldPersistTaps="handled">
-          {children}
-        </ScrollView>
+        {scrollable ? (
+          <ScrollView style={styles.body} keyboardShouldPersistTaps="handled">
+            {children}
+          </ScrollView>
+        ) : (
+          <View style={styles.body}>{children}</View>
+        )}
         {footer}
-      </View>
+      </NativeModalScreen>
     </NativeModal>
   );
 };
 
 const styles = StyleSheet.create({
-  screen: { flex: 1 },
   body: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8, borderBottomWidth: 1 },
 });

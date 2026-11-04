@@ -6,10 +6,11 @@ import { createElement, type ReactNode, useEffect } from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 
 import { buildNovuSubscriberId, inboxItemTarget, isNovuInboxEnabled, NOVU_PLACEHOLDER_CONFIG, type NovuInboxConfig, resolveNovuInboxConfig, selectNovuSubscriberHash } from '../novu';
-import { NotificationsInboxProvider, openInboxItem, SUBSCRIBER_HASH_ATTEMPTS_BEFORE_SETTLING, useNovuInboxConfig, type UseNovuInboxConfigInput, useUnitSubscriberHash } from '../novu-provider';
+import { NotificationsInboxProvider, openInboxItem, SUBSCRIBER_HASH_ATTEMPTS_BEFORE_SETTLING, useInboxUnreadCount, useNovuInboxConfig, type UseNovuInboxConfigInput, useUnitSubscriberHash } from '../novu-provider';
 import { configureForTest, defaultSession, flushAll, selectVariant, type TestContext } from './helpers';
 
 const mockProviderProps: Record<string, unknown>[] = [];
+const mockUseCounts = jest.fn();
 
 jest.mock('@novu/react-native', () => ({
   NovuProvider: (props: Record<string, unknown> & { children?: ReactNode }) => {
@@ -17,6 +18,7 @@ jest.mock('@novu/react-native', () => ({
     mockProviderProps.push(rest);
     return children ?? null;
   },
+  useCounts: (...args: unknown[]) => mockUseCounts(...args),
 }));
 
 const config = { NovuApplicationId: 'app-id', NovuBackendApiUrl: 'https://novu-api.test', NovuSocketUrl: 'wss://novu-ws.test' };
@@ -157,6 +159,14 @@ describe('hooks', () => {
     return null;
   }
 
+  let latestUnread: number | null = null;
+
+  function UnreadHarness(): null {
+    latestUnread = useInboxUnreadCount();
+
+    return null;
+  }
+
   const render = async (element: ReturnType<typeof createElement>) => {
     await act(async () => {
       if (renderer) renderer.update(element);
@@ -170,7 +180,22 @@ describe('hooks', () => {
     renderer = null;
     latest = null;
     latestHash = null;
+    latestUnread = null;
     jest.useRealTimers();
+  });
+
+  it('counts unread inbox items with one filter list across renders, 0 until Novu answers', async () => {
+    mockUseCounts.mockReturnValue({ counts: undefined, isLoading: true, isFetching: true });
+    await render(createElement(UnreadHarness));
+
+    expect(latestUnread).toBe(0);
+
+    mockUseCounts.mockReturnValue({ counts: [{ count: 12, filter: { read: false } }], isLoading: false, isFetching: false });
+    await render(createElement(UnreadHarness));
+
+    expect(latestUnread).toBe(12);
+    expect(mockUseCounts.mock.calls[0]?.[0]).toEqual({ filters: [{ read: false }] });
+    expect(mockUseCounts.mock.calls.at(-1)?.[0].filters).toBe(mockUseCounts.mock.calls[0]?.[0].filters);
   });
 
   it('fetches the unit hash and opens the unit inbox with it (Unit)', async () => {

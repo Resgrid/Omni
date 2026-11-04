@@ -12,6 +12,7 @@
   "shell.navigation": "Main navigation",
   "shell.changes_waiting": "Changes waiting: {{count}}",
   "shell.changes_waiting_hint": "Opens storage and sync",
+  "shell.notifications_unread": "Notifications, {{count}} unread",
   "shell.gate.login_title": "Sign in",
   "shell.gate.username": "Username",
   "shell.gate.password": "Password",

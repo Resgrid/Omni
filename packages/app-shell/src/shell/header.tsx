@@ -1,6 +1,7 @@
-import { Text, useThemeColors } from '@resgrid/ui';
+import { useInboxUnreadCount } from '@resgrid/notifications';
+import { contentOnFill, Text, useThemeColors } from '@resgrid/ui';
 import { type Href, usePathname, useRouter } from 'expo-router';
-import { ArrowLeft, Menu, RefreshCw } from 'lucide-react-native';
+import { ArrowLeft, Bell, Menu, RefreshCw } from 'lucide-react-native';
 import React, { useCallback } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,10 +9,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useShellTranslation } from '../i18n';
 import { type NavEntry, type NavRegistry, normalizeHref } from '../nav/define-nav';
 import { useNavLabel } from '../nav/use-nav-items';
+import { useShellInboxStatus } from '../providers/inbox-provider';
 import { matchRoutePattern } from '../routes/define-routes';
 import { useHref } from '../routes/href';
 import { useShellStore } from '../runtime/shell-state';
-import { useHeaderActionsNode, useShell } from './shell-context';
+import { useHeaderActionsNode, useScreenTitle, useShell } from './shell-context';
 import type { SidebarMode } from './sidebar-mode';
 
 export type HeaderLeading = 'back' | 'menu' | 'none';
@@ -108,6 +110,60 @@ function PendingChangesIndicator() {
   );
 }
 
+const MAX_BADGE_COUNT = 99;
+
+function InboxBellButton({ count, onPress }: { count: number; onPress: () => void }) {
+  const colors = useThemeColors();
+  const { t, tk } = useShellTranslation();
+  const label = count > 0 ? t('shell.notifications_unread', { count }) : tk('notifications.title', 'Notifications');
+
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={styles.iconButton} testID="shell-notifications-button">
+      <View>
+        <Bell size={24} color={colors.text} />
+      </View>
+      {count > 0 ? (
+        <View style={StyleSheet.flatten([styles.badge, { backgroundColor: colors.error }])} testID="shell-notifications-badge">
+          <Text style={StyleSheet.flatten([styles.badgeText, { color: contentOnFill(colors.error) }])} numberOfLines={1}>
+            {count > MAX_BADGE_COUNT ? `${MAX_BADGE_COUNT}+` : String(count)}
+          </Text>
+        </View>
+      ) : null}
+    </Pressable>
+  );
+}
+
+/** Counts unread items; mounted only under a ready inbox provider (against the placeholder client it counts for nobody). */
+function ReadyInboxBell({ onPress }: { onPress: () => void }) {
+  const count = useInboxUnreadCount();
+
+  return <InboxBellButton count={count} onPress={onPress} />;
+}
+
+/**
+ * The notification bell with the unread count (every legacy app with an inbox had it): shown where the variant has the
+ * inbox route and Novu runs on this platform with department settings. The count appears once the inbox is ready.
+ */
+function InboxBell() {
+  const status = useShellInboxStatus();
+  const href = useHref();
+  const router = useRouter();
+  const pathname = usePathname();
+  const target = href.notifications();
+
+  const open = useCallback(() => {
+    if (target && normalizeHref(pathname) !== normalizeHref(String(target))) {
+      router.push(target);
+    }
+  }, [pathname, router, target]);
+
+  if (!target || status === 'unavailable') {
+    return null;
+  }
+
+  return status === 'ready' ? <ReadyInboxBell onPress={open} /> : <InboxBellButton count={0} onPress={open} />;
+}
+
 export interface ShellHeaderProps {
   nav: NavRegistry;
 }
@@ -121,9 +177,11 @@ export function ShellHeader({ nav }: ShellHeaderProps) {
   const { t, tk } = useShellTranslation();
   const label = useNavLabel();
   const actions = useHeaderActionsNode();
+  // A detail screen's own header (ScreenHeader) titles the bar while the bar shows back, instead of a second row below.
+  const screenTitle = useScreenTitle();
 
   const { leading, match } = useHeaderLeading(nav);
-  const title = match ? label(match.entry) : tk('app.title', shell.variant.identity.name, { appName: shell.variant.identity.name });
+  const title = screenTitle?.title ?? (match ? label(match.entry) : tk('app.title', shell.variant.identity.name, { appName: shell.variant.identity.name }));
 
   const goBack = useCallback(() => {
     if (router.canGoBack()) {
@@ -168,7 +226,9 @@ export function ShellHeader({ nav }: ShellHeaderProps) {
       </View>
       <View style={StyleSheet.flatten([styles.side, styles.actions])}>
         <PendingChangesIndicator />
+        {screenTitle?.right ?? null}
         {actions}
+        <InboxBell />
       </View>
     </View>
   );
@@ -195,4 +255,6 @@ const styles = StyleSheet.create({
   title: { fontSize: 18, fontWeight: '700', letterSpacing: 0.5 },
   pending: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, paddingHorizontal: 8, paddingVertical: 4, marginRight: 4 },
   pendingText: { fontSize: 12, fontWeight: '600', marginLeft: 4 },
+  badge: { position: 'absolute', top: 2, right: 0, minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 4, alignItems: 'center', justifyContent: 'center' },
+  badgeText: { fontSize: 11, fontWeight: '700' },
 });

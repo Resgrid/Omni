@@ -83,7 +83,7 @@ export {
   type ResolveNovuInboxConfigInput,
   selectNovuSubscriberHash,
 } from './novu';
-export { NotificationsInboxProvider, type NotificationsInboxProviderProps, openInboxItem, useNovuInboxConfig, type UseNovuInboxConfigInput, useUnitSubscriberHash } from './novu-provider';
+export { NotificationsInboxProvider, type NotificationsInboxProviderProps, openInboxItem, useInboxUnreadCount, useNovuInboxConfig, type UseNovuInboxConfigInput, useUnitSubscriberHash } from './novu-provider';
 export { type ParsedNotification, parseNotificationData, type PushNotificationData, type PushNotificationModalState, type ShowNotificationOptions, usePushNotificationModalStore } from './push-modal-store';
 export { pushNotificationService, usePushNotifications } from './push-notification';
 export type { PushNotificationService, PushRegistrationTrigger, RegisterOptions, UsePushNotificationsResult } from './push-types';

@@ -22,7 +22,7 @@ Living tracker for executing [`architecture/omni-plan.md`](architecture/omni-pla
 | Spike S4 — storage-identity upgrade test | ⬜ | device test: Responder keeps the session (re-key + queue key adoption); the other four start over under device keys |
 | Spike S5 — MapLibre RN on Expo 57 incl. local PMTiles | ⬜ | |
 | Spike S6 — desktop shell packaging, signing, auto-update | 🟡 | `apps/desktop` built: BigBoard Windows NSIS 86 MB (legacy 387 MB); mac/linux packaging and signing/notarization not yet exercised |
-| Spike S7 — durable web storage (SQLite OPFS vs IndexedDB) | ⬜ | |
+| Spike S7 — durable web storage (SQLite OPFS vs IndexedDB) | ⬜ | Interim (2026-11-04): the web/Electron memory database is kept as one IndexedDB snapshot (`resgrid-offline.<variant>`), written before each write resolves, by one tab at a time (Web Lock); the OPFS SQLite evaluation is still open |
 | CI workflows (`ci.yml`, `release.yml`, `nightly.yml`, `ota.yml`) | ✅ | Written and validated locally; not yet run on GitHub. Secrets: `docs/build/ci-secrets.md`. Fingerprint stabilized (`apps/omni/fingerprint.config.js`) so OTA can apply |
 | Docker image (nginx runtime, legacy env names) | ✅ | Built and run for BigBoard; health, env-config escaping, cache headers verified |
 
@@ -34,7 +34,7 @@ Living tracker for executing [`architecture/omni-plan.md`](architecture/omni-pla
 | `@resgrid/api` | ✅ | 425 endpoint functions in 42 domains; injected-auth HTTP client; durable-cache seam; contract test vs QA Swagger (all 425 pass); 534 tests. Auth flows (token/MFA/passkeys/SSO) go to `@resgrid/auth` |
 | `@resgrid/core` | ✅ | 159 tests. Deviations: trailing-debounce lifecycle; native Sentry keeps SDK release naming |
 | `@resgrid/i18n` | ✅ | 46 tests. Keys in ≥2 apps → common (1998); app wording overrides kept per variant; review CSVs in `packages/i18n/review/` |
-| `@resgrid/offline` | ✅ | 249 tests (memory + real SQLite engines). Open: unsent changes on logout (owner decision); legacy queue import; BlobStore; web durability waits for S7 |
+| `@resgrid/offline` | ✅ | 249 tests (memory + real SQLite engines). Open: unsent changes on logout (owner decision); legacy queue import; BlobStore; web/Electron database kept in IndexedDB until S7 (a snapshot per write; other tabs of the app stay in memory) |
 | `@resgrid/ui` | ✅ | 172 tests. HtmlRenderer hardened (native origin whitelist, web sandbox); gluestack/webview patches via pnpm |
 | `@resgrid/auth` | ✅ | 246 tests. Legacy session blobs restore for every variant; logout only on token-endpoint invalid_grant; client_id retry fallback until Core registers the apps |
 | `@resgrid/realtime` | ✅ | 90 tests. Fresh token per reconnect, exhausted-hub recovery, re-join after reconnect, capability-driven event sets, watchdog |

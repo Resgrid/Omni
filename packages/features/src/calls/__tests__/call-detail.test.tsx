@@ -1,7 +1,7 @@
 import './test-setup';
 
 import { buildNewCallInput } from '@resgrid/api';
-import { featureFlagsStore, type SecurityView } from '@resgrid/auth';
+import { featureFlagsStore, type SecurityView, useAuthStore } from '@resgrid/auth';
 import { getActiveVariant } from '@resgrid/config';
 import { useCallDetailStore, useCallQueueActionsStore, useCallsStore, useCallVideoFeedsStore, useCheckInTimersStore, useNavigationEtaStore } from '@resgrid/data';
 import { useToastStore } from '@resgrid/ui';
@@ -170,6 +170,34 @@ describe('CallDetailScreen', () => {
     remove();
   });
 
+  it('keeps the selected tab in the route, so Back from a chat channel opened on a tab remounts on that tab', async () => {
+    activateVariant('responder');
+    const first = await render(<CallDetailScreen />);
+    await fireEvent.press(screen.getByTestId('shared-tab-dispatched'));
+    expect(router.setParams).toHaveBeenCalledWith({ tab: 'dispatched' });
+    await first.unmount();
+
+    // The Slot shell unmounted the screen; Back restores the route with the params it had.
+    jest.mocked(useLocalSearchParams).mockReturnValue({ id: '10', tab: 'dispatched' });
+    await render(<CallDetailScreen />);
+
+    expect(screen.getByTestId('shared-tab-dispatched').props.accessibilityState).toEqual(expect.objectContaining({ selected: true }));
+    expect(screen.getByTestId('shared-tab-info').props.accessibilityState).toEqual(expect.objectContaining({ selected: false }));
+  });
+
+  it('sizes the action buttons to their labels and wraps the row rather than squeezing each into a fifth', async () => {
+    activateVariant('responder');
+    await render(<CallDetailScreen />);
+
+    for (const id of ['notes', 'images', 'files', 'audio', 'route']) {
+      const className = String(screen.getByTestId(`call-detail-${id}`).props.className ?? '');
+      expect(className).toMatch(/\bgrow\b/);
+      expect(className).not.toMatch(/\bflex-1\b/);
+    }
+
+    expect(screen.getByText('call_detail.images').props.numberOfLines).toBe(1);
+  });
+
   it('stacks the tabs at full width under the summary on a landscape tablet', async () => {
     activateVariant('dispatch');
     const initial = { window: Dimensions.get('window'), screen: Dimensions.get('screen') };
@@ -232,6 +260,42 @@ describe('CallDetailScreen', () => {
     await fireEvent.press(screen.getByTestId('call-detail-menu-button'));
     expect(screen.queryByTestId('call-menu-close', hidden)).toBeNull();
     expect(screen.queryByTestId('call-menu-dispatch-more', hidden)).toBeNull();
+  });
+
+  it('offers close and delete by their own permissions, and edit and dispatch more only to an admin or the member who logged the call', async () => {
+    activateVariant('ic');
+    useAuthStore.setState({ userId: 'member-7' });
+    const menuIds = ['edit', 'dispatch-more', 'close', 'delete'];
+
+    const openMenu = async () => {
+      const view = await render(<CallDetailScreen />);
+      await fireEvent.press(screen.getByTestId('call-detail-menu-button'));
+      const offered = menuIds.filter((id) => screen.queryByTestId(`call-menu-${id}`, hidden) !== null);
+      await view.unmount();
+
+      return offered;
+    };
+
+    try {
+      setRights({ CanCloseCalls: false, CanDeleteCalls: false });
+      setCall({ ReportingUserId: 'someone-else' });
+      expect(await openMenu()).toEqual([]);
+
+      setRights({ CanCloseCalls: true, CanDeleteCalls: true });
+      expect(await openMenu()).toEqual(['close', 'delete']);
+
+      // Ids compare without case; a call nobody logged (an email import) is only an admin's to edit.
+      setCall({ ReportingUserId: 'MEMBER-7' });
+      expect(await openMenu()).toEqual(menuIds);
+
+      setCall({ ReportingUserId: null });
+      expect(await openMenu()).toEqual(['close', 'delete']);
+
+      setRights({ IsAdmin: true, CanCloseCalls: true, CanDeleteCalls: true });
+      expect(await openMenu()).toEqual(menuIds);
+    } finally {
+      useAuthStore.setState({ userId: null });
+    }
   });
 
   it('asks before deleting a call, then deletes it and leaves the screen', async () => {

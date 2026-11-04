@@ -1,3 +1,4 @@
+import { DepartmentRightsResultData } from '@resgrid/models';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 
 import { dataProtectionStore } from '../data-protection/grant-store';
@@ -14,19 +15,23 @@ import { setupHarness } from './helpers/harness';
 
 // React 19 marks react-test-renderer deprecated; the warning is not about this package.
 const consoleError = console.error;
+
 beforeAll(() => {
   jest.spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
     if (typeof args[0] === 'string' && args[0].includes('react-test-renderer is deprecated')) {
       return;
     }
+
     consoleError(...args);
   });
 });
+
 afterAll(() => {
   jest.restoreAllMocks();
 });
 
 const mounted: ReactTestRenderer[] = [];
+
 afterEach(() => {
   act(() => {
     mounted.splice(0).forEach((renderer) => renderer.unmount());
@@ -35,15 +40,19 @@ afterEach(() => {
 
 function renderHook<T>(hook: () => T): { current: () => T; renderer: ReactTestRenderer } {
   let value: T;
+
   function Probe(): null {
     value = hook();
+
     return null;
   }
+
   let renderer: ReactTestRenderer | undefined;
   act(() => {
     renderer = create(<Probe />);
   });
   mounted.push(renderer as ReactTestRenderer);
+
   return { current: () => value, renderer: renderer as ReactTestRenderer };
 }
 
@@ -80,6 +89,23 @@ describe('hooks', () => {
     expect(view.current().canUserCreateCalls).toBe(true);
     expect(view.current().isUserGroupAdmin(2)).toBe(true);
     expect(view.current().isUserGroupAdmin(3)).toBe(false);
+  });
+
+  it('useSecurity combines Create Call with the Close Call and Delete Call rights, falling back to Create Call for older servers', () => {
+    const view = renderHook(() => useSecurity());
+
+    const setRights = (fields: Partial<DepartmentRightsResultData>) =>
+      act(() => {
+        securityStore.setState({ rights: { ...new DepartmentRightsResultData(), DepartmentId: '1', ...fields } });
+      });
+
+    expect(view.current()).toMatchObject({ canUserCloseCalls: false, canUserDeleteCalls: false });
+    setRights({ CanCreateCalls: true });
+    expect(view.current()).toMatchObject({ canUserCloseCalls: true, canUserDeleteCalls: true });
+    setRights({ CanCreateCalls: true, CanCloseCalls: false, CanDeleteCalls: true });
+    expect(view.current()).toMatchObject({ canUserCloseCalls: false, canUserDeleteCalls: true });
+    setRights({ CanCreateCalls: false, CanCloseCalls: true, CanDeleteCalls: true });
+    expect(view.current()).toMatchObject({ canUserCloseCalls: false, canUserDeleteCalls: false });
   });
 
   it('useAuth exposes what the login screens render', () => {

@@ -84,7 +84,7 @@ export async function initOffline(options: InitOfflineOptions): Promise<OfflineR
   };
 
   const storage = await openVariantStorage({ ...options.storage, manifest });
-  const db = options.db ?? (await openDurableDb(options.dbOptions));
+  const db = options.db ?? (await openDurableDb({ variantId: manifest.id, ...options.dbOptions }));
   const schema = await applySchema(db, [outboxSchemaModule, ...(options.schemaModules ?? [])]);
 
   const platform = options.storage?.platform ?? KV_PLATFORM;

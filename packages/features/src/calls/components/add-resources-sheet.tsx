@@ -1,7 +1,7 @@
 import { useCallDetailStore, useCallsStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import type { CallResultData } from '@resgrid/models';
-import { Button, ButtonSpinner, ButtonText, HStack, NativeModal, Pressable, ScrollView, Text, useThemeColors, useToast, VStack } from '@resgrid/ui';
+import { Button, ButtonSpinner, ButtonText, HStack, NativeModal, NativeModalScreen, Pressable, ScrollView, Text, useThemeColors, useToast, VStack } from '@resgrid/ui';
 import { UserPlus, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -76,7 +76,7 @@ export const AddResourcesSheet: React.FC<AddResourcesSheetProps> = ({ call, onCl
 
   return (
     <NativeModal visible={isOpen} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose} testID="add-resources-sheet">
-      <View style={styles.screen} className="bg-background-0">
+      <NativeModalScreen className="bg-background-0">
         <HStack className="items-center justify-between border-b border-outline-100 px-4 py-3">
           <VStack className="flex-1">
             <Text className="text-lg font-bold">{t('dispatch_console.add_resources')}</Text>
@@ -114,7 +114,7 @@ export const AddResourcesSheet: React.FC<AddResourcesSheetProps> = ({ call, onCl
             <ButtonText>{t('dispatch_console.add_resources_dispatch')}</ButtonText>
           </Button>
         </ScrollView>
-      </View>
+      </NativeModalScreen>
       <DispatchSelectionModal
         isOpen={isPickerOpen}
         onClose={() => setIsPickerOpen(false)}
@@ -130,6 +130,5 @@ export const AddResourcesSheet: React.FC<AddResourcesSheetProps> = ({ call, onCl
 };
 
 const styles = StyleSheet.create({
-  screen: { flex: 1 },
   content: { padding: 16 },
 });

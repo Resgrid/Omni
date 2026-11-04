@@ -141,7 +141,9 @@ describe('CallFormScreen: create', () => {
     activateVariant('responder');
     await render(<CallFormScreen mode="create" />);
     await fillBasics();
-    await fireEvent.changeText(screen.getByTestId('call-form-coordinates'), '39.74, -104.99');
+    // A pasted "lat, lon" fills both fields.
+    await fireEvent.changeText(screen.getByTestId('call-form-latitude'), '39.74, -104.99');
+    expect(screen.getByTestId('call-form-longitude').props.value).toBe('-104.99');
     await fireEvent.press(screen.getByTestId('call-form-dispatch'));
     await fireEvent.press(screen.getByTestId('dispatch-option-units-7', hidden));
     await fireEvent.press(screen.getByTestId('dispatch-selection-confirm', hidden));
@@ -151,6 +153,15 @@ describe('CallFormScreen: create', () => {
     );
     expect(lastToast().message).toBe('calls.create_success');
     expect(router.back).toHaveBeenCalled();
+  });
+
+  it('creates a call with no one picked as dispatched to nobody, not everyone', async () => {
+    activateVariant('responder');
+    await render(<CallFormScreen mode="create" />);
+    await fillBasics();
+    expect(screen.getByTestId('call-form-dispatch-summary')).toHaveTextContent('calls.dispatch.none_pages_nobody');
+    await act(async () => fireEvent.press(screen.getByTestId('call-form-submit')));
+    expect(mockCreateCall).toHaveBeenCalledWith(expect.objectContaining({ dispatchPicked: true, dispatchEveryone: false, dispatchUsers: [], dispatchGroups: [], dispatchRoles: [], dispatchUnits: [] }));
   });
 
   it('offline: shows the banner, queues the call and says it is not dispatched yet', async () => {
@@ -272,7 +283,8 @@ describe('CallFormScreen: create', () => {
     await fireEvent.changeText(screen.getByTestId('call-form-address'), '1 main');
     await act(async () => fireEvent.press(screen.getByTestId('call-form-address-search')));
     expect(mockLookupAddress).toHaveBeenCalledWith('1 main');
-    expect(screen.getByTestId('call-form-coordinates').props.value).toBe('39.7, -104.9');
+    expect(screen.getByTestId('call-form-latitude').props.value).toBe('39.7');
+    expect(screen.getByTestId('call-form-longitude').props.value).toBe('-104.9');
     expect(screen.getByTestId('call-form-address').props.value).toBe('1 Main St, Denver');
     expect(lastToast().message).toBe('calls.address_found');
 
@@ -282,10 +294,83 @@ describe('CallFormScreen: create', () => {
 
     await fireEvent.changeText(screen.getByTestId('call-form-address'), '');
     mockLookupAddressAt.mockResolvedValue('5 Elm St');
-    await fireEvent.changeText(screen.getByTestId('call-form-coordinates'), '39.8, -105');
-    await act(async () => fireEvent(screen.getByTestId('call-form-coordinates'), 'blur'));
+    await fireEvent.changeText(screen.getByTestId('call-form-latitude'), '39.8');
+    await fireEvent.changeText(screen.getByTestId('call-form-longitude'), '-105');
+    // Leaving a field looks nothing up: placing the point does.
+    await act(async () => fireEvent(screen.getByTestId('call-form-longitude'), 'blur'));
+    expect(mockLookupAddressAt).not.toHaveBeenCalled();
+    await act(async () => fireEvent.press(screen.getByTestId('call-form-place-on-map')));
     expect(mockLookupAddressAt).toHaveBeenCalledWith(39.8, -105);
     expect(screen.getByTestId('call-form-address').props.value).toBe('5 Elm St');
+  });
+
+  it('picks the destination from a searchable list rather than a row of chips', async () => {
+    const poi = (PoiId: number, Name: string, PoiTypeName: string, Address = '') => ({ PoiId, Name, PoiTypeName, Address, IsDestination: true });
+    // SAFETY: the picker reads only the id, name, type and address of a destination.
+    useCallsStore.setState({ destinationPois: [poi(3, 'St. Mary Hospital', 'Hospital', '200 Oak Ave'), poi(1, 'Mercy Medical Center', 'Hospital'), poi(2, 'Station 9', 'Fire Station')] as never });
+    activateVariant('dispatch');
+    await render(<CallFormScreen mode="create" />);
+    await fillBasics();
+    expect(screen.getByTestId('call-form-destination')).toHaveTextContent('calls.destination_poi_select');
+    expect(screen.queryByTestId('call-form-destination-1')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('call-form-destination'));
+    await fireEvent.changeText(screen.getByTestId('call-destination-search', hidden), 'hosp');
+    expect(screen.getByTestId('call-destination-poi-1', hidden)).toBeTruthy();
+    expect(screen.getByTestId('call-destination-poi-3', hidden)).toBeTruthy();
+    expect(screen.queryByTestId('call-destination-poi-2', hidden)).toBeNull();
+
+    await fireEvent.changeText(screen.getByTestId('call-destination-search', hidden), 'oak ave');
+    await fireEvent.press(screen.getByTestId('call-destination-poi-3', hidden));
+    expect(screen.getByTestId('call-form-destination')).toHaveTextContent('St. Mary Hospital');
+
+    await fireEvent.press(screen.getByTestId('call-form-destination-clear'));
+    expect(screen.getByTestId('call-form-destination')).toHaveTextContent('calls.destination_poi_select');
+    await fireEvent.press(screen.getByTestId('call-form-destination'));
+    await fireEvent.press(screen.getByTestId('call-destination-poi-2', hidden));
+    await fireEvent.press(screen.getByTestId('call-form-dispatch'));
+    await fireEvent.press(screen.getByTestId('dispatch-option-units-7', hidden));
+    await fireEvent.press(screen.getByTestId('dispatch-selection-confirm', hidden));
+    await act(async () => fireEvent.press(screen.getByTestId('call-form-submit')));
+    expect(mockCreateCall).toHaveBeenCalledWith(expect.objectContaining({ destinationPoiId: 2 }));
+  });
+
+  it('places typed coordinates on the map and keeps an address the dispatcher typed', async () => {
+    activateVariant('unit');
+    const mapSlot = jest.fn(() => <Text>Map</Text>);
+    await render(<CallFormScreen mode="create" mapSlot={mapSlot} />);
+    await fireEvent.changeText(screen.getByTestId('call-form-address'), 'Gate 4, County Fairgrounds');
+    await fireEvent.changeText(screen.getByTestId('call-form-latitude'), '39.5');
+    await fireEvent.changeText(screen.getByTestId('call-form-longitude'), '-105');
+    // Typing alone does not move the map.
+    expect(mapSlot).toHaveBeenLastCalledWith(null, expect.any(Function));
+
+    await act(async () => fireEvent.press(screen.getByTestId('call-form-place-on-map')));
+    expect(mapSlot).toHaveBeenLastCalledWith({ latitude: 39.5, longitude: -105 }, expect.any(Function));
+    expect(mockLookupAddressAt).not.toHaveBeenCalled();
+    expect(screen.getByTestId('call-form-address').props.value).toBe('Gate 4, County Fairgrounds');
+  });
+
+  it('checks each coordinate field and places nothing that is not a valid point', async () => {
+    activateVariant('unit');
+    const mapSlot = jest.fn(() => <Text>Map</Text>);
+    await render(<CallFormScreen mode="create" mapSlot={mapSlot} />);
+    await fireEvent.changeText(screen.getByTestId('call-form-latitude'), '95');
+    await act(async () => fireEvent(screen.getByTestId('call-form-latitude'), 'blur'));
+    expect(screen.getByTestId('call-form-latitude-error')).toHaveTextContent(/calls.latitude_invalid/);
+    expect(screen.getByTestId('call-form-place-on-map')).toBeDisabled();
+
+    await fireEvent.changeText(screen.getByTestId('call-form-longitude'), 'west');
+    await act(async () => fireEvent.press(screen.getByTestId('call-form-place-on-map')));
+    expect(screen.getByTestId('call-form-longitude-error')).toHaveTextContent(/calls.longitude_invalid/);
+    expect(mapSlot).toHaveBeenLastCalledWith(null, expect.any(Function));
+    expect(mockLookupAddressAt).not.toHaveBeenCalled();
+
+    await fillBasics();
+    await fireEvent.changeText(screen.getByTestId('call-form-longitude'), '');
+    await act(async () => fireEvent.press(screen.getByTestId('call-form-submit')));
+    expect(screen.getByTestId('call-form-longitude-error')).toHaveTextContent(/calls.coordinates_incomplete/);
+    expect(mockCreateCall).not.toHaveBeenCalled();
   });
 
   it('picks the call contact from the department contacts (built-in picker)', async () => {
@@ -357,11 +442,12 @@ describe('CallFormScreen: create', () => {
     expect(mockCreateCall).toHaveBeenCalledWith(expect.objectContaining({ dispatchUnits: ['7'], runCardOutcomeNodeKey: 'node-1', contactId: null }));
   });
 
-  it('renders the map slot placeholder with the typed coordinates', async () => {
+  it('renders the map slot placeholder with the placed coordinates', async () => {
     activateVariant('unit');
     const mapSlot = jest.fn(() => <Text>Map</Text>);
     await render(<CallFormScreen mode="create" mapSlot={mapSlot} />);
-    await fireEvent.changeText(screen.getByTestId('call-form-coordinates'), '39.5, -105');
+    await fireEvent.changeText(screen.getByTestId('call-form-latitude'), '39.5, -105');
+    await act(async () => fireEvent.press(screen.getByTestId('call-form-place-on-map')));
     expect(screen.getByTestId('call-form-map-slot')).toBeTruthy();
     expect(mapSlot).toHaveBeenLastCalledWith({ latitude: 39.5, longitude: -105 }, expect.any(Function));
   });
@@ -396,7 +482,7 @@ describe('CallFormScreen: edit', () => {
     });
   });
 
-  it("never starts an edit without the call's dispatches (a blank list would page everyone), and offers a retry", async () => {
+  it("never starts an edit without the call's dispatches (saving would un-dispatch them), and offers a retry", async () => {
     const fetchCallDetail = jest.fn(async () => undefined);
 
     useCallDetailStore.setState({
@@ -411,6 +497,34 @@ describe('CallFormScreen: edit', () => {
     expect(fetchCallDetail).toHaveBeenLastCalledWith('42', { bypassCache: true });
   });
 
+  it("refuses to edit someone else's call for a non-admin, a closed call, or without the right", async () => {
+    activateVariant('dispatch');
+
+    const editRefused = async () => {
+      const view = await render(<CallFormScreen mode="edit" callId="42" />);
+      await waitFor(() => expect(screen.queryByTestId('call-form-edit-not-allowed') ?? screen.queryByTestId('call-form-submit')).toBeTruthy());
+      const refused = screen.queryByTestId('call-form-edit-not-allowed') !== null;
+      await view.unmount();
+
+      return refused;
+    };
+
+    const setCall = (overrides: Parameters<typeof makeCall>[1]) => useCallDetailStore.setState((state) => ({ details: { '42': { ...state.details['42'], call: makeCall('42', { Name: 'Edit me', ...overrides }) } } }));
+
+    setCall({ ReportingUserId: 'someone-else' });
+    expect(await editRefused()).toBe(true);
+
+    setRights({ IsAdmin: true });
+    expect(await editRefused()).toBe(false);
+
+    setCall({ ReportingUserId: 'someone-else', State: 1 });
+    expect(await editRefused()).toBe(true);
+
+    setCall({});
+    setRights({ CanCreateCalls: false });
+    expect(await editRefused()).toBe(true);
+  });
+
   it('starts from the call and leaves fields the policy hides as the call stores them', async () => {
     mockRules = [{ Key: 'contactName', Visible: false, Required: false }];
     activateVariant('responder');
@@ -421,6 +535,27 @@ describe('CallFormScreen: edit', () => {
     // A hidden text field goes up blank, which EditCall reads as "keep the stored value" (Dispatch).
     expect(mockUpdateCall).toHaveBeenCalledWith(expect.objectContaining({ callId: '42', name: 'Edit me', type: 'Fire', contactName: '', latitude: 39.1, longitude: -104.8, notifyCancelledEntities: false }));
     expect(lastToast().message).toBe('call_detail.update_call_success');
+  });
+
+  it('shows a nature and note the web wrote as rich text as plain text, and saves them as stored unless they change', async () => {
+    const nature = '<p>JUST A TEST!</p><p>Smoke &amp; flames</p>';
+    const note = '<p><strong>Gate</strong> code 1234</p>';
+    useCallDetailStore.setState({
+      details: {
+        // SAFETY: the edit reads only the dispatches from the extra data.
+        '42': { call: makeCall('42', { Name: 'Smith &amp; Sons', Nature: nature, Note: note }), extraData: { Dispatches: [] } as never, notes: [], images: null, files: null, audio: null, fetchedAt: 1 },
+      },
+    });
+    activateVariant('dispatch');
+    await render(<CallFormScreen mode="edit" callId="42" />);
+    await waitFor(() => expect(screen.getByTestId('call-form-nature').props.value).toBe('JUST A TEST!\nSmoke & flames'));
+    expect(screen.getByTestId('call-form-name').props.value).toBe('Smith & Sons');
+    expect(screen.getByTestId('call-form-note').props.value).toBe('Gate code 1234');
+    await act(async () => fireEvent.press(screen.getByTestId('call-form-submit')));
+    expect(mockUpdateCall).toHaveBeenLastCalledWith(expect.objectContaining({ name: 'Smith & Sons', nature, note }));
+    await fireEvent.changeText(screen.getByTestId('call-form-nature'), 'JUST A TEST!\nFire out');
+    await act(async () => fireEvent.press(screen.getByTestId('call-form-submit')));
+    expect(mockUpdateCall).toHaveBeenLastCalledWith(expect.objectContaining({ nature: '<p>JUST A TEST!</p><p>Fire out</p>', note }));
   });
 
   it('adds protocols to the ones attached, can notify removed resources and names fields the server refused', async () => {

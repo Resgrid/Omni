@@ -6,8 +6,8 @@
  * the structured operations, so the same code runs on:
  * - `createSqliteDb()` — expo-sqlite (iOS/Android; web too if spike S7 adopts OPFS);
  * - `createMemoryDb()` — pure JS, for tests and the web/Electron fallback until S7 decides between
- *   expo-sqlite web (OPFS, needs COOP/COEP) and IndexedDB. A persistence adapter can make it durable
- *   (`MemoryDbPersistence`); without one it lives for the page session only.
+ *   expo-sqlite web (OPFS, needs COOP/COEP) and IndexedDB. A persistence adapter makes it durable
+ *   (`MemoryDbPersistence`; on web `openDurableDb()` uses IndexedDB); without one it lives for the page session only.
  */
 
 export type SqlValue = string | number | null;

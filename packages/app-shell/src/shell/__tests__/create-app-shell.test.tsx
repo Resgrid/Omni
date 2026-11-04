@@ -1,8 +1,9 @@
 import { featureFlagsStore, securityStore, terminologyStore, useAuthStore } from '@resgrid/auth';
 import type { VariantId } from '@resgrid/config';
 import type { DepartmentRightsResultData } from '@resgrid/models';
+import { useInboxUnreadCount } from '@resgrid/notifications';
 import { ColorSchemeProvider, computeFormFactor, type FormFactorInfo, getThemeColors, ScreenHeader, useFormFactor } from '@resgrid/ui';
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 import { MapIcon, MessageCircleIcon, SettingsIcon } from 'lucide-react-native';
 import React from 'react';
 import { StyleSheet, Text } from 'react-native';
@@ -20,6 +21,12 @@ import { findNavEntryForPath, isTopLevelScreen, resolveHeaderLeading } from '../
 import { resolveSidebarMode } from '../sidebar-mode';
 
 jest.mock('@resgrid/ui', () => ({ ...jest.requireActual('@resgrid/ui'), useFormFactor: jest.fn() }));
+
+let mockInboxStatus: 'loading' | 'ready' | 'unavailable' = 'loading';
+
+jest.mock('../../providers/inbox-provider', () => ({ ...jest.requireActual('../../providers/inbox-provider'), useShellInboxStatus: () => mockInboxStatus }));
+
+const mockUseInboxUnreadCount = jest.mocked(useInboxUnreadCount);
 
 const mockUseFormFactor = useFormFactor as jest.MockedFunction<typeof useFormFactor>;
 
@@ -68,10 +75,13 @@ describe('createAppShell', () => {
     setFormFactor('phone');
   });
 
-  it('drawer-slot (Dispatch): header + Slot, no tab bar', async () => {
+  it('drawer-slot (Dispatch): header + a header-less stack, no tab bar', async () => {
     await renderShell('dispatch');
     expect(screen.getByTestId('app-shell-drawer-slot')).toBeTruthy();
-    expect(screen.getByTestId('mock-slot')).toBeTruthy();
+    // A stack, not a Slot: the screen under a call or chat stays mounted, so Back finds it as it was (Home on its Calls tab).
+    expect(screen.getByTestId('mock-stack')).toBeTruthy();
+    expect(screen.queryByTestId('mock-slot')).toBeNull();
+    expect(mockNavigationState.stack?.screenOptions).toEqual({ headerShown: false, animation: 'none' });
     expect(screen.queryByTestId('mock-tabs')).toBeNull();
     expect(screen.getByTestId('shell-header-title')).toHaveTextContent('Map');
   });
@@ -179,6 +189,32 @@ describe('createAppShell', () => {
     expect(router.navigate).toHaveBeenCalledWith('/settings');
   });
 
+  it('a menu hop in a drawer shell goes back to the first screen before opening the section, so the stack stays short', async () => {
+    setFormFactor('tabletLandscape');
+    mockNavigationState.canGoBack = true;
+    await renderShell('responder');
+
+    await fireEvent.press(screen.getByTestId('nav-settings'));
+
+    expect(router.dismissAll).toHaveBeenCalledTimes(1);
+    expect(router.navigate).toHaveBeenCalledWith('/settings');
+    expect(jest.mocked(router.dismissAll).mock.invocationCallOrder[0]).toBeLessThan(jest.mocked(router.navigate).mock.invocationCallOrder[0]);
+  });
+
+  it('a menu hop in a tabs shell only switches tabs', async () => {
+    setFormFactor('tabletLandscape');
+    mockNavigationState.canGoBack = true;
+    await renderShell('ic');
+    // IC's menu is a drawer at every size.
+    await fireEvent.press(screen.getByTestId('shell-menu-button'));
+    await act(async () => undefined);
+
+    await fireEvent.press(screen.getByTestId('nav-settings', { includeHiddenElements: true }));
+
+    expect(router.dismissAll).not.toHaveBeenCalled();
+    expect(router.navigate).toHaveBeenCalledWith('/settings');
+  });
+
   it('the menu opens with who is signed in: avatar, name and department', async () => {
     securityStore.setState({ rights: { FullName: ' Jane Doe ', DepartmentName: 'Station 9 Fire' } as unknown as DepartmentRightsResultData });
     setFormFactor('tabletLandscape');
@@ -226,10 +262,71 @@ describe('createAppShell', () => {
     expect(router.push).not.toHaveBeenCalled();
   });
 
+  describe('notification bell', () => {
+    beforeEach(() => {
+      mockInboxStatus = 'loading';
+      mockUseInboxUnreadCount.mockReturnValue(0);
+      setRouteContract(defineRoutes(['home', 'notifications']));
+    });
+
+    it('is absent where the variant has no inbox route (BigBoard)', async () => {
+      setRouteContract(defineRoutes(['home']));
+      mockInboxStatus = 'ready';
+      await renderShell('bigboard');
+
+      expect(screen.queryByTestId('shell-notifications-button')).toBeNull();
+    });
+
+    it('is absent where Novu is unavailable (web without the inbox, no department settings)', async () => {
+      mockInboxStatus = 'unavailable';
+      await renderShell('responder');
+
+      expect(screen.queryByTestId('shell-notifications-button')).toBeNull();
+    });
+
+    it('shows without a count until the inbox is ready and opens the inbox', async () => {
+      mockUseInboxUnreadCount.mockReturnValue(7);
+      await renderShell('responder');
+
+      expect(screen.getByRole('button', { name: 'Notifications' })).toBeTruthy();
+      expect(screen.queryByTestId('shell-notifications-badge')).toBeNull();
+      expect(mockUseInboxUnreadCount).not.toHaveBeenCalled();
+
+      await fireEvent.press(screen.getByTestId('shell-notifications-button'));
+
+      expect(router.push).toHaveBeenCalledWith('/notifications');
+    });
+
+    it.each([
+      ['unit', 5, '5'],
+      ['ic', 1, '1'],
+      ['dispatch', 120, '99+'],
+    ] as const)('%s: shows the unread count once the inbox is ready', async (variant, count, shown) => {
+      mockInboxStatus = 'ready';
+      mockUseInboxUnreadCount.mockReturnValue(count);
+      await renderShell(variant);
+
+      expect(screen.getByTestId('shell-notifications-badge')).toHaveTextContent(shown);
+      expect(screen.getByRole('button', { name: `Notifications, ${count} unread` })).toBeTruthy();
+    });
+
+    it('hides the badge when nothing is unread and does not reopen the inbox from the inbox', async () => {
+      mockInboxStatus = 'ready';
+      mockNavigationState.pathname = '/notifications';
+      await renderShell('responder');
+
+      expect(screen.queryByTestId('shell-notifications-badge')).toBeNull();
+
+      await fireEvent.press(screen.getByTestId('shell-notifications-button'));
+
+      expect(router.push).not.toHaveBeenCalled();
+    });
+  });
+
   it('keeps the navigator mounted under the loading overlay while the session bootstrap runs', async () => {
     sessionInit.reset();
     await renderShell('dispatch');
-    expect(screen.getByTestId('mock-slot')).toBeTruthy();
+    expect(screen.getByTestId('mock-stack')).toBeTruthy();
     expect(screen.getByTestId('shell-init-loading')).toBeTruthy();
   });
 
@@ -259,6 +356,17 @@ describe('createAppShell', () => {
     expect(screen.queryByTestId('shell-back-button')).toEqual(canGoBack ? expect.anything() : null);
     expect(screen.queryByTestId('back-button')).toEqual(canGoBack ? null : expect.anything());
     expect(screen.getByRole('header', { name: 'Account security' })).toBeTruthy();
+  });
+
+  it("puts a detail screen's title and actions in the app bar instead of a second header row", async () => {
+    mockNavigationState.pathname = '/call/12';
+    mockNavigationState.canGoBack = true;
+    mockNavigationState.slot = <ScreenHeader title="Call Details" onBack={jest.fn()} right={<Text testID="call-detail-menu-button">menu</Text>} />;
+    await renderShell('dispatch');
+    expect(screen.getByTestId('shell-header-title')).toHaveTextContent('Call Details');
+    expect(within(screen.getByTestId('shell-header')).getByTestId('call-detail-menu-button')).toBeTruthy();
+    expect(screen.queryByTestId('screen-header')).toBeNull();
+    expect(screen.getAllByRole('header', { name: 'Call Details' })).toHaveLength(1);
   });
 });
 

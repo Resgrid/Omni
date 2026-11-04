@@ -1,7 +1,6 @@
-import { useSecurity } from '@resgrid/auth';
 import { formatUtcInDepartmentTime } from '@resgrid/core/utils/dates';
 import { useCallsStore } from '@resgrid/data';
-import { CALL_LIST_REFRESH_EVENTS, callRoutes } from '@resgrid/features/calls';
+import { CALL_LIST_REFRESH_EVENTS, callRoutes, useCallPermissionsResolver, useCallRights } from '@resgrid/features/calls';
 import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import type { CallResultData } from '@resgrid/models';
@@ -32,7 +31,8 @@ export default function PendingCallsScreen({ showHeader = true, realtime = true 
   const { t } = useTranslation();
   const timeZone = useDepartmentTimeZone();
   const router = useRouter();
-  const { canUserCreateCalls } = useSecurity();
+  const { canCreateCalls } = useCallRights();
+  const permissionsFor = useCallPermissionsResolver();
   const pendingCalls = useCallsStore((state) => state.pendingCalls);
   const isLoading = useCallsStore((state) => state.loading.pending === true);
   const error = useCallsStore((state) => state.errors.pending ?? null);
@@ -69,30 +69,36 @@ export default function PendingCallsScreen({ showHeader = true, realtime = true 
     (call: CallResultData) => {
       const isBusy = busyCallId === call.CallId;
       const label = call.Number || call.CallId;
+      // Dispatching edits the call (an admin's or its reporter's); cancelling closes it (Close Call permission).
+      const { canDispatch, canClose } = permissionsFor(call);
 
       return (
         <>
-          <QueueActionButton
-            label={t('call_queues.dispatch')}
-            icon={Send}
-            isBusy={isBusy}
-            onPress={() => void openDispatchPicker(call.CallId)}
-            accessibilityLabel={`${t('call_queues.dispatch')} ${label}`}
-            testID={`pending-call-dispatch-${call.CallId}`}
-          />
-          <QueueActionButton
-            label={t('pending_calls.cancel_call')}
-            icon={XCircle}
-            tone="negative"
-            isBusy={isBusy}
-            onPress={() => confirmCancelPending(call.CallId)}
-            accessibilityLabel={`${t('pending_calls.cancel_call')} ${label}`}
-            testID={`pending-call-cancel-${call.CallId}`}
-          />
+          {canDispatch ? (
+            <QueueActionButton
+              label={t('call_queues.dispatch')}
+              icon={Send}
+              isBusy={isBusy}
+              onPress={() => void openDispatchPicker(call.CallId)}
+              accessibilityLabel={`${t('call_queues.dispatch')} ${label}`}
+              testID={`pending-call-dispatch-${call.CallId}`}
+            />
+          ) : null}
+          {canClose ? (
+            <QueueActionButton
+              label={t('pending_calls.cancel_call')}
+              icon={XCircle}
+              tone="negative"
+              isBusy={isBusy}
+              onPress={() => confirmCancelPending(call.CallId)}
+              accessibilityLabel={`${t('pending_calls.cancel_call')} ${label}`}
+              testID={`pending-call-cancel-${call.CallId}`}
+            />
+          ) : null}
         </>
       );
     },
-    [busyCallId, confirmCancelPending, openDispatchPicker, t]
+    [busyCallId, confirmCancelPending, openDispatchPicker, permissionsFor, t]
   );
 
   const renderContent = () => {
@@ -108,7 +114,7 @@ export default function PendingCallsScreen({ showHeader = true, realtime = true 
         calls={visible}
         columns={columns}
         onOpenCall={(call) => router.push(callRoutes.callDetail(call.CallId) as Href)}
-        renderActions={canUserCreateCalls ? renderActions : undefined}
+        renderActions={canCreateCalls ? renderActions : undefined}
         refreshing={isRefreshing}
         onRefresh={handleRefresh}
         testID="pending-calls-table"

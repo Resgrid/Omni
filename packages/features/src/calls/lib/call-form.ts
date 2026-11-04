@@ -1,6 +1,16 @@
 import { type CreateCallRequest, formatGeolocation, type UpdateCallRequest } from '@resgrid/api';
 import { isFieldRedacted, type ProtectedFieldId, ProtectedFieldIds, REDACTION_VALUE } from '@resgrid/auth';
-import { type CallResultData, type CallTypeResultData, type DispatchedEventResultData, type NewCallFieldKey, NewCallFieldKeys, type UdfFieldResultData, type UdfFieldValueInput } from '@resgrid/models';
+import {
+  type CallQuickTemplateResultData,
+  type CallResultData,
+  type CallTypeResultData,
+  type DispatchedEventResultData,
+  type NewCallFieldKey,
+  NewCallFieldKeys,
+  type UdfFieldResultData,
+  type UdfFieldValueInput,
+} from '@resgrid/models';
+import { richTextForSave, richTextToPlain } from '@resgrid/ui';
 
 import { getScheduledDispatchPrefill, isDispatchTimeTooSoon, toDispatchOnUtc } from './call-schedule';
 import { CallState, scheduledDispatchUtc } from './call-time';
@@ -20,8 +30,10 @@ export interface CallFormValues {
   nature: string;
   note: string;
   address: string;
-  /** "lat, lon" as typed (or set from the map / a POI / a contact). */
-  coordinates: string;
+  /** Decimal degrees as typed (or set from the map, a lookup or a contact), -90 to 90. */
+  latitude: string;
+  /** Decimal degrees as typed (or set with the latitude), -180 to 180. */
+  longitude: string;
   what3words: string;
   /** Locates the call while it is entered (server lookup) and is never stored on it. */
   plusCode: string;
@@ -56,7 +68,8 @@ export const emptyCallFormValues = (priority: number | null = null): CallFormVal
   nature: '',
   note: '',
   address: '',
-  coordinates: '',
+  latitude: '',
+  longitude: '',
   what3words: '',
   plusCode: '',
   priority,
@@ -101,15 +114,84 @@ export function parseCoordinates(input: string): CoordinateParse {
 
 export const formatCoordinates = (latitude: number, longitude: number): string => `${latitude}, ${longitude}`;
 
+export type CoordinateValueParse = { ok: true; value: number } | { ok: false; reason: 'empty' | 'invalid_format' | 'out_of_range' };
+
+/** A plain decimal number of degrees: no separators, units or hemisphere letters. */
+const DECIMAL_DEGREES = /^[+-]?(\d+(\.\d*)?|\.\d+)$/;
+
+const parseDegrees = (input: string, limit: number): CoordinateValueParse => {
+  const trimmed = input.trim();
+
+  if (!trimmed) return { ok: false, reason: 'empty' };
+
+  if (!DECIMAL_DEGREES.test(trimmed)) return { ok: false, reason: 'invalid_format' };
+  const value = Number(trimmed);
+
+  return Math.abs(value) > limit ? { ok: false, reason: 'out_of_range' } : { ok: true, value };
+};
+
+/** A latitude field: decimal degrees, -90 to 90. */
+export const parseLatitude = (input: string): CoordinateValueParse => parseDegrees(input, 90);
+
+/** A longitude field: decimal degrees, -180 to 180. */
+export const parseLongitude = (input: string): CoordinateValueParse => parseDegrees(input, 180);
+
+/** The point the latitude and longitude fields give: both valid, or why not (both blank is `empty`). */
+export function parseCoordinateFields(latitude: string, longitude: string): CoordinateParse {
+  const lat = parseLatitude(latitude);
+  const lon = parseLongitude(longitude);
+
+  if (lat.ok && lon.ok) return { ok: true, latitude: lat.value, longitude: lon.value };
+
+  if (!lat.ok && !lon.ok && lat.reason === 'empty' && lon.reason === 'empty') return { ok: false, reason: 'empty' };
+  const outOfRange = [lat, lon].some((parse) => !parse.ok && parse.reason === 'out_of_range');
+
+  // One field without the other is not a point either.
+  return { ok: false, reason: outOfRange ? 'out_of_range' : 'invalid_format' };
+}
+
+export type CoordinateFieldErrors = Partial<Record<'latitude' | 'longitude', string>>;
+
+const coordinateError = (parse: CoordinateValueParse, invalidKey: string): string | undefined => {
+  if (parse.ok) return undefined;
+
+  return parse.reason === 'empty' ? 'calls.coordinates_incomplete' : invalidKey;
+};
+
+/**
+ * The latitude and longitude fields' errors: blank together is no location; otherwise each must be decimal degrees in
+ * range, and one filled needs the other.
+ */
+export function coordinateFieldErrors(latitude: string, longitude: string): CoordinateFieldErrors {
+  const lat = parseLatitude(latitude);
+  const lon = parseLongitude(longitude);
+
+  if (!lat.ok && !lon.ok && lat.reason === 'empty' && lon.reason === 'empty') return {};
+  const errors: CoordinateFieldErrors = {};
+  const latitudeError = coordinateError(lat, 'calls.latitude_invalid');
+  const longitudeError = coordinateError(lon, 'calls.longitude_invalid');
+
+  if (latitudeError) errors.latitude = latitudeError;
+
+  if (longitudeError) errors.longitude = longitudeError;
+
+  return errors;
+}
+
+/** A point as the latitude and longitude fields hold it. */
+export const toCoordinateFields = (latitude: number, longitude: number): Pick<CallFormValues, 'latitude' | 'longitude'> => ({ latitude: String(latitude), longitude: String(longitude) });
+
 /** Which optional pickers this form renders: a property the client has no picker for is left out of the request. */
 export interface CallFormPickers {
   protocols: boolean;
   linkedCall: boolean;
   udf: boolean;
   contact: boolean;
+  /** The dispatch list is shown: the selection is exactly who the call goes to, so an empty one dispatches nobody. */
+  dispatchList: boolean;
 }
 
-export type CallFormErrorKey = 'name' | 'nature' | 'priority' | 'type' | 'coordinates' | 'dispatchOnUtc' | 'udf' | NewCallFieldKey;
+export type CallFormErrorKey = 'name' | 'nature' | 'priority' | 'type' | 'latitude' | 'longitude' | 'dispatchOnUtc' | 'udf' | NewCallFieldKey;
 
 export interface CallFormValidation {
   errors: Partial<Record<CallFormErrorKey, string>>;
@@ -151,8 +233,8 @@ export interface CallFormEditContext {
   initialDispatchOnUtc: string;
 }
 
-const coordinatesAsGeolocation = (input: string): string => {
-  const parsed = parseCoordinates(input);
+const coordinatesAsGeolocation = (values: Pick<CallFormValues, 'latitude' | 'longitude'>): string => {
+  const parsed = parseCoordinateFields(values.latitude, values.longitude);
 
   return parsed.ok ? formatGeolocation(parsed.latitude, parsed.longitude) : '';
 };
@@ -161,7 +243,7 @@ const coordinatesAsGeolocation = (input: string): string => {
 export function policyValues(values: CallFormValues): PolicyFieldValues {
   return {
     [NewCallFieldKeys.Address]: values.address,
-    [NewCallFieldKeys.Geolocation]: coordinatesAsGeolocation(values.coordinates),
+    [NewCallFieldKeys.Geolocation]: coordinatesAsGeolocation(values),
     [NewCallFieldKeys.What3Words]: values.what3words,
     [NewCallFieldKeys.DestinationPoi]: values.destinationPoiId,
     [NewCallFieldKeys.Note]: values.note,
@@ -190,7 +272,8 @@ const storedGeolocation = (call: CallResultData): string => {
 /**
  * Edit: the policy values the edit is checked against (Dispatch `getEditCallFieldValues`) — what the form submits,
  * merged with what the call already stores wherever EditCall keeps the stored value (a blank text input, protocols
- * already attached). A blank dispatch list on an edit means "everyone" to the server, so it must be an explicit pick.
+ * already attached). The dispatch list is what the form submits: an empty selection dispatches nobody, so a required
+ * list needs someone picked.
  */
 export function editPolicyValues(values: CallFormValues, edit: CallFormEditContext): PolicyFieldValues {
   const { call } = edit;
@@ -200,7 +283,7 @@ export function editPolicyValues(values: CallFormValues, edit: CallFormEditConte
   return {
     [NewCallFieldKeys.Note]: textOrStored(values.note, call.Note),
     [NewCallFieldKeys.Address]: textOrStored(values.address, call.Address),
-    [NewCallFieldKeys.Geolocation]: coordinatesAsGeolocation(values.coordinates) || (geolocationWithheld ? REDACTION_VALUE : storedGeolocation(call)),
+    [NewCallFieldKeys.Geolocation]: coordinatesAsGeolocation(values) || (geolocationWithheld ? REDACTION_VALUE : storedGeolocation(call)),
     [NewCallFieldKeys.What3Words]: textOrStored(values.what3words, call.What3Words),
     [NewCallFieldKeys.ContactName]: textOrStored(values.contactName, call.ContactName),
     [NewCallFieldKeys.ContactInfo]: textOrStored(values.contactInfo, call.ContactInfo),
@@ -286,11 +369,12 @@ export function validateCallForm(values: CallFormValues, options: CallFormValida
 
   if (validTypeNames.length > 0 && !validTypeNames.includes(values.type)) errors.type = values.type ? 'calls.invalid_type' : 'calls.validation.type_required';
 
-  if (values.coordinates.trim()) {
-    const parsed = parseCoordinates(values.coordinates);
+  // A withheld point is locked on the form and kept as stored by the save.
+  const coordinateErrors = withheld.has('coordinates') ? {} : coordinateFieldErrors(values.latitude, values.longitude);
 
-    if (!parsed.ok) errors.coordinates = parsed.reason === 'out_of_range' ? 'calls.coordinates_out_of_range' : 'calls.coordinates_invalid_format';
-  }
+  if (coordinateErrors.latitude) errors.latitude = coordinateErrors.latitude;
+
+  if (coordinateErrors.longitude) errors.longitude = coordinateErrors.longitude;
 
   const dispatchOn = pickedDispatchOn(values, options.edit);
   const dispatchTooSoon = !!dispatchOn && !Number.isNaN(Date.parse(dispatchOn)) && isDispatchTimeTooSoon(dispatchOn, options.now);
@@ -311,7 +395,7 @@ export function validateCallForm(values: CallFormValues, options: CallFormValida
 const optional = (value: string): string | undefined => (value.trim() ? value.trim() : undefined);
 
 const coordinatesOf = (values: CallFormValues): { latitude?: number; longitude?: number } => {
-  const parsed = parseCoordinates(values.coordinates);
+  const parsed = parseCoordinateFields(values.latitude, values.longitude);
 
   return parsed.ok ? { latitude: parsed.latitude, longitude: parsed.longitude } : {};
 };
@@ -333,6 +417,7 @@ const commonRequestFields = (values: CallFormValues, pickers: CallFormPickers) =
   dispatchGroups: values.dispatch.groups,
   dispatchRoles: values.dispatch.roles,
   dispatchUnits: values.dispatch.units,
+  dispatchPicked: pickers.dispatchList,
   ...(pickers.linkedCall ? { linkedCallId: values.linkedCall?.callId ?? '' } : {}),
   ...(pickers.protocols ? { protocolIds: values.protocolIds } : {}),
   incidentId: optional(values.incidentId),
@@ -361,7 +446,8 @@ export function toCreateCallRequest(values: CallFormValues, pickers: CallFormPic
  * - the destination is sent as stored (a missing one clears it on servers that do not yet ignore hidden fields);
  * - protocols and linked call are left out, which tells the server this edit does not touch them;
  * - no dispatch time is sent, which keeps the call's schedule.
- * The dispatch list needs nothing here: with its picker hidden the selection is still the one loaded from the call.
+ * The dispatch list needs nothing here: with its picker hidden the request is not marked as picked, so an empty
+ * selection goes up blank and EditCall keeps the call's dispatches.
  */
 export function keepHiddenEditFieldsUnchanged(request: UpdateCallRequest, isVisible: (key: NewCallFieldKey) => boolean, call: CallResultData): UpdateCallRequest {
   const next: UpdateCallRequest = { ...request };
@@ -448,27 +534,40 @@ export function toUpdateCallRequest(callId: string, values: CallFormValues, pick
   const { contactId, ...common } = commonRequestFields(values, pickers);
   const dispatchOnUtc = toDispatchOnUtc(pickedDispatchOn(values, options.edit));
   const contactChanged = contactId !== undefined && (contactId ?? null) !== (options.edit.call.Contacts?.[0]?.ContactId ?? null);
-  const request: UpdateCallRequest = { callId, ...common, notifyCancelledEntities: values.notifyCancelledEntities, rebroadcastCall: options.rebroadcast ?? false };
+  const { call } = options.edit;
+
+  const request: UpdateCallRequest = {
+    callId,
+    ...common,
+    // The form edits these as plain text; a call whose nature or note the web wrote as rich text keeps it (and its formatting) unless the text changed.
+    nature: richTextForSave(common.nature, call.Nature),
+    note: richTextForSave(common.note, call.Note),
+    notifyCancelledEntities: values.notifyCancelledEntities,
+    rebroadcastCall: options.rebroadcast ?? false,
+  };
 
   if (contactChanged) request.contactId = contactId;
 
   if (dispatchOnUtc) request.dispatchOnUtc = dispatchOnUtc;
 
-  return keepWithheldEditFieldsUnchanged(keepHiddenEditFieldsUnchanged(request, options.isVisible, options.edit.call), options.edit.call);
+  return keepWithheldEditFieldsUnchanged(keepHiddenEditFieldsUnchanged(request, options.isVisible, call), call);
 }
 
 /** The call's current dispatch list as a picker selection (edit). */
 export const dispatchSelectionFromDispatches = (dispatches: readonly DispatchedEventResultData[]): DispatchSelection => dispatchesToSelection(dispatches);
 
-const coordinateString = (latitude: string | number | null | undefined, longitude: string | number | null | undefined): string => {
+const NO_COORDINATES: Pick<CallFormValues, 'latitude' | 'longitude'> = { latitude: '', longitude: '' };
+
+/** The call's stored point as the form's fields, blank when it has none (0,0 is no point). */
+const storedCoordinateFields = (latitude: string | number | null | undefined, longitude: string | number | null | undefined): Pick<CallFormValues, 'latitude' | 'longitude'> => {
   const lat = typeof latitude === 'number' ? latitude : Number(latitude);
   const lon = typeof longitude === 'number' ? longitude : Number(longitude);
 
-  if (latitude === '' || longitude === '' || latitude == null || longitude == null || !Number.isFinite(lat) || !Number.isFinite(lon)) return '';
+  if (latitude === '' || longitude === '' || latitude == null || longitude == null || !Number.isFinite(lat) || !Number.isFinite(lon)) return NO_COORDINATES;
 
-  if (lat === 0 && lon === 0) return '';
+  if (lat === 0 && lon === 0) return NO_COORDINATES;
 
-  return formatCoordinates(lat, lon);
+  return toCoordinateFields(lat, lon);
 };
 
 const udfInputs = (values: readonly unknown[] | undefined): UdfFieldValueInput[] =>
@@ -496,18 +595,42 @@ export function callTypeName(call: Pick<CallResultData, 'Type' | 'TypeId'>, type
  * Edit: the form starts from the call as loaded, including fields the policy hides. Protocols and the linked call start
  * empty (an edit only adds them); the dispatch time starts as the stored one only while the call is still scheduled.
  */
-/** The protectable fields as the form holds them: what the call stores, or blank where ADP withheld it (never the sentinel). */
-const protectedEditValues = (call: CallResultData): Pick<CallFormValues, WithheldEditField> => {
+/** The form fields that hold each protectable field (the point is two). */
+const WITHHELD_FORM_FIELDS = {
+  name: ['name'],
+  nature: ['nature'],
+  note: ['note'],
+  address: ['address'],
+  coordinates: ['latitude', 'longitude'],
+  what3words: ['what3words'],
+  contactName: ['contactName'],
+  contactInfo: ['contactInfo'],
+} as const satisfies Record<WithheldEditField, readonly (keyof CallFormValues)[]>;
+
+export type ProtectedFormField = (typeof WITHHELD_FORM_FIELDS)[WithheldEditField][number];
+
+/** The form fields a withheld protectable field locks. */
+export const withheldFormFields = (field: WithheldEditField): readonly ProtectedFormField[] => WITHHELD_FORM_FIELDS[field];
+
+/**
+ * The protectable fields as the form holds them: what the call stores, or blank where ADP withheld it (never the
+ * sentinel). Name, nature and note come through Core's HTML sanitizer, and the web writes nature and note as rich text,
+ * so the form gets them as plain text (line breaks kept, tags dropped, `&amp;` decoded) — never markup to edit.
+ */
+const protectedEditValues = (call: CallResultData): Pick<CallFormValues, ProtectedFormField> => {
   const withheld = withheldEditFields(call);
   const [lat, lon] = (call.Geolocation ?? '').split(',');
   const shown = (key: WithheldEditField, value: string | null | undefined): string => (withheld.has(key) ? '' : (value ?? ''));
+  const shownText = (key: WithheldEditField, value: string | null | undefined): string => richTextToPlain(shown(key, value));
+  const point = withheld.has('coordinates') ? NO_COORDINATES : storedCoordinateFields(call.Latitude || lat, call.Longitude || lon);
 
   return {
-    name: shown('name', call.Name),
-    nature: shown('nature', call.Nature),
-    note: shown('note', call.Note),
+    name: shownText('name', call.Name),
+    nature: shownText('nature', call.Nature),
+    note: shownText('note', call.Note),
     address: shown('address', call.Address),
-    coordinates: shown('coordinates', coordinateString(call.Latitude || lat, call.Longitude || lon)),
+    latitude: point.latitude,
+    longitude: point.longitude,
     what3words: shown('what3words', call.What3Words),
     contactName: shown('contactName', call.ContactName),
     contactInfo: shown('contactInfo', call.ContactInfo),
@@ -541,11 +664,28 @@ export function syncWithheldEditFields(values: CallFormValues, call: CallResultD
   const next = { ...values };
 
   for (const { key } of PROTECTED_EDIT_FIELDS) {
-    if (withheld.has(key)) next[key] = '';
-    else if (wasWithheld.has(key)) next[key] = stored[key];
+    for (const field of WITHHELD_FORM_FIELDS[key]) {
+      if (withheld.has(key)) next[field] = '';
+      else if (wasWithheld.has(key)) next[field] = stored[field];
+    }
   }
 
   return next;
+}
+
+/**
+ * A call quick template applied to the form (Dispatch): its name, nature, type and a priority the department still has
+ * replace the form's; a blank template field leaves the form's value. The web writes a template's nature as rich text,
+ * so it goes in as plain text.
+ */
+export function applyCallTemplate(values: CallFormValues, template: CallQuickTemplateResultData, validPriorityIds: readonly number[]): CallFormValues {
+  return {
+    ...values,
+    name: template.CallName || values.name,
+    nature: (template.CallNature ? richTextToPlain(template.CallNature) : '') || values.nature,
+    type: template.CallType || values.type,
+    priority: validPriorityIds.includes(template.CallPriority) ? template.CallPriority : values.priority,
+  };
 }
 
 /** Correction of a rejected queued call: the form starts from the request that was refused. */
@@ -556,7 +696,7 @@ export function createRequestToFormValues(request: CreateCallRequest): CallFormV
     nature: request.nature,
     note: request.note ?? '',
     address: request.address ?? '',
-    coordinates: typeof request.latitude === 'number' && typeof request.longitude === 'number' ? formatCoordinates(request.latitude, request.longitude) : '',
+    ...(typeof request.latitude === 'number' && typeof request.longitude === 'number' ? toCoordinateFields(request.latitude, request.longitude) : NO_COORDINATES),
     what3words: request.what3words ?? '',
     type: request.type ?? '',
     contactName: request.contactName ?? '',

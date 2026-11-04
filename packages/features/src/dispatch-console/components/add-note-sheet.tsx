@@ -1,6 +1,6 @@
 import { useNotesStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
-import { Button, ButtonSpinner, ButtonText, HStack, Input, InputField, NativeModal, Pressable, ScrollView, Text, Textarea, TextareaInput, useToast, VStack } from '@resgrid/ui';
+import { Button, ButtonSpinner, ButtonText, HStack, Input, InputField, NativeModal, NativeModalScreen, Pressable, ScrollView, Text, Textarea, TextareaInput, useToast, VStack } from '@resgrid/ui';
 import { X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -54,7 +54,7 @@ export const AddNoteSheet: React.FC<AddNoteSheetProps> = ({ isOpen, onClose, onN
 
   return (
     <NativeModal visible={isOpen} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose} testID="add-note-sheet">
-      <View style={styles.screen} className="bg-background-0">
+      <NativeModalScreen className="bg-background-0">
         <HStack className="items-center justify-between border-b border-outline-100 px-4 py-3">
           <Text className="text-lg font-bold">{t('dispatch.add_note_title')}</Text>
           <Pressable onPress={onClose} hitSlop={10} accessibilityRole="button" accessibilityLabel={t('common.close')} testID="add-note-sheet-close">
@@ -103,12 +103,11 @@ export const AddNoteSheet: React.FC<AddNoteSheetProps> = ({ isOpen, onClose, onN
             </Button>
           </VStack>
         </ScrollView>
-      </View>
+      </NativeModalScreen>
     </NativeModal>
   );
 };
 
 const styles = StyleSheet.create({
-  screen: { flex: 1 },
   content: { padding: 16 },
 });

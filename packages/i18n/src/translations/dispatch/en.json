@@ -66,7 +66,6 @@
       "none": "No contacts available",
       "title": "Select Contact"
     },
-    "coordinates_incomplete": "Enter both latitude and longitude",
     "coordinates_invalid": "Check the latitude and longitude: both are needed, in decimal degrees",
     "dispatch_board": {
       "at_station": "At station",
@@ -103,9 +102,6 @@
       "no_form": "No call form configured",
       "title": "Call Form"
     },
-    "latitude": "Latitude",
-    "latitude_invalid": "Enter a latitude in decimal degrees, between -90 and 90",
-    "latitude_placeholder": "e.g. 39.122639",
     "linked_calls": {
       "change": "Change linked call",
       "linked": "Linked",
@@ -114,9 +110,6 @@
       "select": "Link to existing call",
       "title": "Linked Call"
     },
-    "longitude": "Longitude",
-    "longitude_invalid": "Enter a longitude in decimal degrees, between -180 and 180",
-    "longitude_placeholder": "e.g. -119.758773",
     "new_call_web_hint": "Fill in the call details below. Press Ctrl+Enter to create.",
     "no_destination": "No destination",
     "protocols": {

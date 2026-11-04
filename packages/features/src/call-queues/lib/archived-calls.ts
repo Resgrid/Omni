@@ -1,5 +1,6 @@
 import { CLOSE_CALL_TYPES } from '@resgrid/features/calls';
 import type { CallResultData } from '@resgrid/models';
+import { richTextToPlain } from '@resgrid/ui';
 
 /** The close types an archived call can have, Closed (1) through False Alarm (7), with the close sheet's labels. */
 export const ARCHIVED_CALL_STATES: readonly { value: number; labelKey: string }[] = CLOSE_CALL_TYPES;
@@ -30,7 +31,8 @@ export const countActiveArchivedCallFilters = (filters: ArchivedCallFilters): nu
 
 const searchableText = (call: CallResultData): string =>
   [call.Number, call.CallId, call.Name, call.Nature, call.Note, call.Address, call.Type, call.DestinationName, call.IncidentId, call.ReferenceId, call.ExternalId, call.ContactName, call.ContactInfo]
-    .filter((value): value is string => typeof value === 'string' && value.length > 0)
+    // The text as shown: the web's rich-text nature and note without markup, Core's `&amp;` in the name as `&`.
+    .flatMap((value) => (typeof value === 'string' && value.length > 0 ? [richTextToPlain(value)] : []))
     .join('\n')
     .toLowerCase();
 
@@ -43,20 +45,30 @@ export const filterArchivedCalls = (calls: readonly CallResultData[], filters: A
   const states = new Set(filters.states);
   const priorities = new Set(filters.priorities);
   const types = new Set(filters.types);
+
   return calls.filter((call) => {
     if (states.size > 0 && !states.has(Number(call.State))) return false;
+
     if (priorities.size > 0 && !priorities.has(call.Priority)) return false;
+
     if (types.size > 0 && !types.has(call.Type || '')) return false;
+
     if (filters.fromDate || filters.toDate) {
       const day = loggedOnDay(call);
+
       if (!day) return false;
+
       if (filters.fromDate && day < filters.fromDate) return false;
+
       if (filters.toDate && day > filters.toDate) return false;
     }
+
     if (terms.length > 0) {
       const text = searchableText(call);
+
       return terms.every((term) => text.includes(term));
     }
+
     return true;
   });
 };

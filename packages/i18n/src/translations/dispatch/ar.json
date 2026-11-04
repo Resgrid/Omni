@@ -66,7 +66,6 @@
       "none": "لا توجد جهات اتصال متاحة",
       "title": "اختر جهة اتصال"
     },
-    "coordinates_incomplete": "أدخل خط العرض وخط الطول معًا",
     "coordinates_invalid": "تحقق من خط العرض وخط الطول: كلاهما مطلوب بالدرجات العشرية",
     "dispatch_board": {
       "at_station": "في المحطة",
@@ -103,9 +102,6 @@
       "no_form": "لم يتم تكوين نموذج مكالمة",
       "title": "نموذج المكالمة"
     },
-    "latitude": "خط العرض",
-    "latitude_invalid": "أدخل خط عرض بالدرجات العشرية بين -90 و 90",
-    "latitude_placeholder": "مثال: 39.122639",
     "linked_calls": {
       "change": "تغيير المكالمة المرتبطة",
       "linked": "مرتبطة",
@@ -114,9 +110,6 @@
       "select": "ربط بمكالمة موجودة",
       "title": "مكالمة مرتبطة"
     },
-    "longitude": "خط الطول",
-    "longitude_invalid": "أدخل خط طول بالدرجات العشرية بين -180 و 180",
-    "longitude_placeholder": "مثال: -119.758773",
     "new_call_web_hint": "أكمل تفاصيل المكالمة أدناه. اضغط Ctrl+Enter للإنشاء.",
     "no_destination": "بدون وجهة",
     "protocols": {

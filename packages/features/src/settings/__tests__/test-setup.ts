@@ -83,7 +83,7 @@ jest.mock('expo-router', () => ({
   useIsFocused: jest.fn(() => true),
   useFocusEffect: jest.fn(),
   useLocalSearchParams: jest.fn(() => ({})),
-  router: { push: jest.fn(), back: jest.fn(), replace: jest.fn(), canGoBack: jest.fn(() => false) },
+  router: { push: jest.fn(), back: jest.fn(), replace: jest.fn(), setParams: jest.fn(), canGoBack: jest.fn(() => false) },
   useRouter: jest.fn(() => require('expo-router').router),
 }));
 jest.mock('expo-navigation-bar', () => ({ setVisibilityAsync: jest.fn(() => Promise.resolve()) }));

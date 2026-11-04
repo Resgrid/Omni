@@ -9,7 +9,7 @@
 
 import sanitizeHtmlLib from 'sanitize-html';
 
-import { decodeHtmlEntities, decodeHtmlEntitiesIfEncoded } from './html-entities';
+import { decodeHtmlEntities, decodeHtmlEntitiesIfEncoded, escapeHtml } from './html-entities';
 
 /**
  * Checks if a URL scheme is safe (not javascript:, vbscript: or data:)
@@ -19,6 +19,7 @@ export function isSafeScheme(url: string): boolean {
   // Browsers ignore ASCII whitespace and control characters inside a scheme ("java<TAB>script:"), so drop them before checking.
 
   const normalizedUrl = url.replace(/[\u0000-\u0020\u007f]+/g, '').toLowerCase();
+
   return !normalizedUrl.startsWith('javascript:') && !normalizedUrl.startsWith('data:') && !normalizedUrl.startsWith('vbscript:');
 }
 
@@ -34,6 +35,7 @@ function filterDangerousAttributes(tag: string, name: string, value: string): bo
   // Block style attributes with expressions or javascript
   if (name.toLowerCase() === 'style') {
     const normalizedValue = value.toLowerCase();
+
     if (normalizedValue.includes('expression(') || normalizedValue.includes('javascript:')) {
       return false;
     }
@@ -224,4 +226,57 @@ export function htmlToPlainText(html: string): string {
   if (!html) return '';
 
   return decodeHtmlEntities(sanitizeHtmlLib(decodeHtmlEntitiesIfEncoded(html), { allowedTags: [], allowedAttributes: {} })).trim();
+}
+
+// Formatting tags the web's rich-text editor (Quill) and Core's sanitizer write: call natures and notes, messages,
+// calendar and shift descriptions. An allowlist rather than `<[^>]+>`: plain text such as the assistant's own `C<id>`,
+// `<details>` and `<number or name>` placeholders must survive.
+const FORMATTING_TAGS = 'a|b|blockquote|br|center|code|div|em|font|h[1-6]|hr|i|img|li|ol|p|pre|s|small|span|strike|strong|sub|sup|table|tbody|td|th|thead|tr|u|ul';
+const FORMATTING_TAG = new RegExp(`</?(?:${FORMATTING_TAGS})(?:\\s[^<>]*)?/?>`, 'gi');
+const HAS_FORMATTING_TAG = new RegExp(FORMATTING_TAG.source, 'i');
+const LINE_BREAK = /<br\s*\/?>(?:\r?\n)?/gi;
+const BLOCK_END = /<\/(?:blockquote|div|h[1-6]|li|ol|p|pre|table|tr|ul)>(?:\r?\n)?/gi;
+const LIST_ITEM = /<li(?:\s[^<>]*)?>/gi;
+
+/** Whether the value is rich text (it has the editor's formatting tags), entity-encoded or not. */
+export const isRichText = (text: string): boolean => HAS_FORMATTING_TAG.test(decodeHtmlEntitiesIfEncoded(text));
+
+/**
+ * Rich text as plain text, for a text input or a text view: line breaks and list bullets kept, formatting tags dropped,
+ * entities decoded (Core's sanitizer writes `&amp;` even in plain-text fields such as a call's name).
+ */
+export const richTextToPlain = (text: string): string => {
+  const markup = decodeHtmlEntitiesIfEncoded(text);
+
+  if (!HAS_FORMATTING_TAG.test(markup)) return decodeHtmlEntities(markup);
+  const plain = markup.replace(LINE_BREAK, '\n').replace(BLOCK_END, '\n').replace(LIST_ITEM, '• ').replace(FORMATTING_TAG, '');
+
+  return decodeHtmlEntities(plain)
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+};
+
+/** Plain text as the rich text the web's editor writes: one paragraph per line, an empty line as an empty paragraph. */
+export const plainTextToRichText = (text: string): string =>
+  text
+    .split(/\r?\n/)
+    .map((line) => `<p>${line ? escapeHtml(line) : '<br>'}</p>`)
+    .join('');
+
+/**
+ * A rich-text field (a call's nature or note) as a save sends it after a form edited it as plain text
+ * (`richTextToPlain`). The field keeps the format it is stored in:
+ * - left as loaded: the stored rich text, so the formatting the web gave it (bold, lists, links) survives an edit of
+ *   another field;
+ * - changed: the edited text as paragraphs, so its line breaks still show on the web and in the apps' rich-text views;
+ * - stored as plain text, or blanked: the text as typed (a blank keeps meaning "blank" to the server).
+ */
+export function richTextForSave(edited: string, stored: string | null | undefined): string {
+  const original = stored ?? '';
+  const text = edited.trim();
+
+  if (!text || !isRichText(original)) return edited;
+
+  return text === richTextToPlain(original) ? original : plainTextToRichText(text);
 }

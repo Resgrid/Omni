@@ -66,7 +66,6 @@
       "none": "No hay contactos disponibles",
       "title": "Seleccionar Contacto"
     },
-    "coordinates_incomplete": "Introduzca la latitud y la longitud",
     "coordinates_invalid": "Revise la latitud y la longitud: se necesitan ambas, en grados decimales",
     "dispatch_board": {
       "at_station": "En la estación",
@@ -103,9 +102,6 @@
       "no_form": "No hay formulario de llamada configurado",
       "title": "Formulario de Llamada"
     },
-    "latitude": "Latitud",
-    "latitude_invalid": "Introduzca una latitud en grados decimales, entre -90 y 90",
-    "latitude_placeholder": "p. ej. 39.122639",
     "linked_calls": {
       "change": "Cambiar llamada vinculada",
       "linked": "Vinculada",
@@ -114,9 +110,6 @@
       "select": "Vincular a llamada existente",
       "title": "Llamada Vinculada"
     },
-    "longitude": "Longitud",
-    "longitude_invalid": "Introduzca una longitud en grados decimales, entre -180 y 180",
-    "longitude_placeholder": "p. ej. -119.758773",
     "new_call_web_hint": "Complete los detalles de la llamada a continuación. Presione Ctrl+Enter para crear.",
     "no_destination": "Sin destino",
     "protocols": {

@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { type LayoutChangeEvent, type NativeScrollEvent, type NativeSyntheticEvent, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { Box } from './box';
@@ -29,11 +29,16 @@ export interface SharedTabsProps {
   variant?: 'default' | 'pills' | 'underlined' | 'segmented';
   size?: 'sm' | 'md' | 'lg';
   titleFontSize?: TabTitleFontSize;
+  /**
+   * Root classes. The tabs size to their content by default, which is what a ScrollView needs: there a `flex-1` root has
+   * no height to fill and Android squeezed the tab bar to its padding, hiding the labels. Pass `flex-1` to fill a
+   * bounded screen (a full-screen tab layout whose content scrolls itself).
+   */
   className?: string;
   tabClassName?: string;
   tabsContainerClassName?: string;
   contentClassName?: string;
-  /** Edge chevrons hinting that more tabs are scrolled off-screen (scrollable bar only). */
+  /** Edge chevron buttons that show more tabs are scrolled off-screen and page the bar towards them (scrollable bar only). */
   showOverflowIndicators?: boolean;
   /**
    * Keep visited tabs mounted (hidden with display:none) so their state survives switching back —
@@ -55,7 +60,19 @@ interface OverflowState {
 }
 
 const OVERFLOW_TOLERANCE = 2;
+const OVERFLOW_INDICATOR_WIDTH = 28;
 const MAX_BADGE = 99;
+
+/**
+ * Where a chevron press scrolls the bar: one visible width minus both chevrons, so the tab that was cut off at the edge
+ * lands fully in view, but never less than half the bar (a narrow bar would otherwise crawl).
+ */
+const getTabScrollTarget = ({ contentWidth, offsetX, viewportWidth }: ScrollMetrics, direction: -1 | 1): number => {
+  const page = Math.max(viewportWidth - 2 * OVERFLOW_INDICATOR_WIDTH, viewportWidth / 2);
+  const maxOffset = Math.max(0, contentWidth - viewportWidth);
+
+  return Math.min(maxOffset, Math.max(0, offsetX + direction * page));
+};
 
 const getBadgeContainerClassName = (badgeVariant: TabItem['badgeVariant']): string => {
   const backgroundClassName = badgeVariant === 'warning' ? 'bg-warning-500' : 'bg-error-500';
@@ -103,6 +120,7 @@ export const SharedTabs: React.FC<SharedTabsProps> = ({
     setMountedTabs(next);
   }
 
+  const scrollViewRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
   const scrollMetricsRef = useRef<ScrollMetrics>({ contentWidth: 0, offsetX: 0, viewportWidth: 0 });
   const [overflowState, setOverflowState] = useState<OverflowState>({ canScrollLeft: false, canScrollRight: false });
 
@@ -116,20 +134,57 @@ export const SharedTabs: React.FC<SharedTabsProps> = ({
     setOverflowState((currentState) => (currentState.canScrollLeft === nextState.canScrollLeft && currentState.canScrollRight === nextState.canScrollRight ? currentState : nextState));
   }, []);
 
+  // Where each tab of the scrollable bar sits, and which selection the bar last brought into view.
+  const tabLayoutsRef = useRef(new Map<number, { x: number; width: number }>());
+  const revealedIndexRef = useRef<number | null>(null);
+
+  // Scroll the bar so a tab is in view (centred), once the bar and the tab have been measured.
+  const revealTab = useCallback((index: number, animated: boolean) => {
+    const layout = tabLayoutsRef.current.get(index);
+    const { contentWidth, offsetX, viewportWidth } = scrollMetricsRef.current;
+
+    if (layout === undefined || viewportWidth === 0 || contentWidth === 0) return;
+
+    revealedIndexRef.current = index;
+
+    if (layout.x >= offsetX && layout.x + layout.width <= offsetX + viewportWidth) return;
+
+    const centred = layout.x - (viewportWidth - layout.width) / 2;
+
+    scrollViewRef.current?.scrollTo({ x: Math.min(Math.max(0, contentWidth - viewportWidth), Math.max(0, centred)), animated });
+  }, []);
+
+  // A screen can open on a tab further along (Back to a call on its Command tab): when the measurements arrive, show
+  // that tab instead of the start of the bar. Later layout passes leave a bar the user has scrolled alone.
+  const revealPendingTab = useCallback(() => {
+    if (revealedIndexRef.current !== currentIndex) revealTab(currentIndex, false);
+  }, [currentIndex, revealTab]);
+
+  useEffect(() => {
+    if (revealedIndexRef.current !== currentIndex) revealTab(currentIndex, revealedIndexRef.current !== null);
+  }, [currentIndex, revealTab]);
+
+  const handleTabLayout = (index: number, event: LayoutChangeEvent) => {
+    tabLayoutsRef.current.set(index, { x: event.nativeEvent.layout.x, width: event.nativeEvent.layout.width });
+    revealPendingTab();
+  };
+
   const handleScrollViewLayout = useCallback(
     (event: LayoutChangeEvent) => {
       scrollMetricsRef.current.viewportWidth = event.nativeEvent.layout.width;
       updateOverflowState();
+      revealPendingTab();
     },
-    [updateOverflowState]
+    [revealPendingTab, updateOverflowState]
   );
 
   const handleContentSizeChange = useCallback(
     (contentWidth: number) => {
       scrollMetricsRef.current.contentWidth = contentWidth;
       updateOverflowState();
+      revealPendingTab();
     },
-    [updateOverflowState]
+    [revealPendingTab, updateOverflowState]
   );
 
   const handleHeaderScroll = useCallback(
@@ -139,6 +194,11 @@ export const SharedTabs: React.FC<SharedTabsProps> = ({
     },
     [updateOverflowState]
   );
+
+  // The scroll events this animates update the offset and the chevrons, as a swipe does.
+  const scrollTabs = useCallback((direction: -1 | 1) => {
+    scrollViewRef.current?.scrollTo({ x: getTabScrollTarget(scrollMetricsRef.current, direction), animated: true });
+  }, []);
 
   const handleTabPress = useCallback(
     (index: number) => {
@@ -245,6 +305,7 @@ export const SharedTabs: React.FC<SharedTabsProps> = ({
         accessibilityState={{ selected: isActive }}
         className={fill ? `flex-1 ${getTabStyles(index)}` : getTabStyles(index)}
         style={fill ? undefined : styles.scrollableTab}
+        onLayout={fill ? undefined : (event: LayoutChangeEvent) => handleTabLayout(index, event)}
         onPress={() => handleTabPress(index)}
       >
         {renderTabInner(tab, index)}
@@ -267,10 +328,11 @@ export const SharedTabs: React.FC<SharedTabsProps> = ({
   };
 
   return (
-    <Box className={`flex-1 ${className}`}>
+    <Box className={className} testID="shared-tabs">
       {scrollable ? (
         <View style={styles.scrollWrapper}>
           <ScrollView
+            ref={scrollViewRef}
             horizontal
             showsHorizontalScrollIndicator={false}
             style={styles.scrollView}
@@ -286,15 +348,27 @@ export const SharedTabs: React.FC<SharedTabsProps> = ({
           </ScrollView>
 
           {showOverflowIndicators && overflowState.canScrollLeft ? (
-            <View pointerEvents="none" testID="shared-tabs-left-overflow" style={StyleSheet.flatten([styles.overflowIndicator, styles.overflowLeft, { backgroundColor: colors.token('background-0', 0.95) }])}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t('common.scroll_tabs_left', { defaultValue: 'Scroll tabs left' })}
+              onPress={() => scrollTabs(-1)}
+              testID="shared-tabs-left-overflow"
+              style={StyleSheet.flatten([styles.overflowIndicator, styles.overflowLeft, { backgroundColor: colors.token('background-0', 0.95) }])}
+            >
               <ChevronLeft size={20} color={colors.icon} />
-            </View>
+            </Pressable>
           ) : null}
 
           {showOverflowIndicators && overflowState.canScrollRight ? (
-            <View pointerEvents="none" testID="shared-tabs-right-overflow" style={StyleSheet.flatten([styles.overflowIndicator, styles.overflowRight, { backgroundColor: colors.token('background-0', 0.95) }])}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t('common.scroll_tabs_right', { defaultValue: 'Scroll tabs right' })}
+              onPress={() => scrollTabs(1)}
+              testID="shared-tabs-right-overflow"
+              style={StyleSheet.flatten([styles.overflowIndicator, styles.overflowRight, { backgroundColor: colors.token('background-0', 0.95) }])}
+            >
               <ChevronRight size={20} color={colors.icon} />
-            </View>
+            </Pressable>
           ) : null}
         </View>
       ) : (
@@ -317,7 +391,7 @@ const styles = StyleSheet.create({
   scrollableTab: { flexShrink: 0, marginRight: 4 },
   tabLabel: { flexShrink: 0 },
   badge: { minHeight: 18, zIndex: 1 },
-  overflowIndicator: { position: 'absolute', top: 0, bottom: 0, width: 28, alignItems: 'center', justifyContent: 'center', zIndex: 2 },
+  overflowIndicator: { position: 'absolute', top: 0, bottom: 0, width: OVERFLOW_INDICATOR_WIDTH, alignItems: 'center', justifyContent: 'center', zIndex: 2 },
   overflowLeft: { left: 0 },
   overflowRight: { right: 0 },
   activeContent: { flex: 1 },

@@ -57,6 +57,7 @@ describe('call queue helpers', () => {
       { Id: '', Type: 'Unit' },
       { Id: 'x', Type: 'Other' },
     ] as never);
+
     expect(selection).toEqual({ everyone: false, users: ['u1'], groups: ['g1'], roles: ['r1'], units: ['e1'] });
     expect(mergeDispatchSelections(selection, { everyone: false, users: ['u1', 'u2'], groups: [], roles: [], units: ['e2'] }).units).toEqual(['e1', 'e2']);
     expect(mergeDispatchSelections(selection, { ...selection, everyone: true })).toEqual({ everyone: true, users: [], groups: [], roles: [], units: [] });
@@ -68,9 +69,14 @@ describe('call queue helpers', () => {
       makeCall('a', { State: 1, Priority: 1, Type: 'Fire', LoggedOn: '2026-03-01T10:00:00', Name: 'Barn fire', ContactName: 'Lee' }),
       makeCall('b', { State: 2, Priority: 2, Type: 'EMS', LoggedOn: '2026-05-01T10:00:00', Name: 'Fall' }),
     ];
+
     expect(filterArchivedCalls(calls, { ...EMPTY_ARCHIVED_CALL_FILTERS, states: [2] }).map((call) => call.CallId)).toEqual(['b']);
     expect(filterArchivedCalls(calls, { ...EMPTY_ARCHIVED_CALL_FILTERS, fromDate: '2026-04-01' }).map((call) => call.CallId)).toEqual(['b']);
     expect(filterArchivedCalls(calls, { ...EMPTY_ARCHIVED_CALL_FILTERS, query: 'barn lee' }).map((call) => call.CallId)).toEqual(['a']);
+    // Searched as shown: Core's `&amp;` as `&`, the web's rich text without its markup.
+    const encoded = [makeCall('c', { Name: 'Smith &amp; Sons', Nature: '<p>Gas <strong>leak</strong></p>' })];
+    expect(filterArchivedCalls(encoded, { ...EMPTY_ARCHIVED_CALL_FILTERS, query: 'smith & sons gas leak' })).toHaveLength(1);
+    expect(filterArchivedCalls(encoded, { ...EMPTY_ARCHIVED_CALL_FILTERS, query: 'strong' })).toHaveLength(0);
     expect(countActiveArchivedCallFilters({ ...EMPTY_ARCHIVED_CALL_FILTERS, states: [1], toDate: '2026-01-01', query: 'x' })).toBe(2);
     expect(archivedCallTypes(calls)).toEqual(['EMS', 'Fire']);
     expect(archivedCallStateLabelKey(7)).toBe('call_detail.close_call_types.false_alarm');
@@ -136,9 +142,29 @@ describe('PendingCallsScreen', () => {
     await render(<PendingCallsScreen realtime={false} />);
     expect(screen.getByText('pending_calls.no_pending_calls')).toBeTruthy();
   });
+
+  it("offers cancel by the Close Call permission and dispatch only on the member's own calls (or to an admin)", async () => {
+    useCallsStore.setState({ pendingCalls: [makeCall('p1', { State: 8, ReportingUserId: 'someone-else' }), makeCall('p2', { State: 8, ReportingUserId: null })] });
+    setRights({ CanCloseCalls: false });
+    const { unmount } = await render(<PendingCallsScreen realtime={false} />);
+    expect(screen.queryByTestId('pending-call-dispatch-p1')).toBeNull();
+    expect(screen.queryByTestId('pending-call-cancel-p1')).toBeNull();
+    await unmount();
+
+    setRights({ IsAdmin: true });
+    await render(<PendingCallsScreen realtime={false} />);
+    expect(screen.getByTestId('pending-call-dispatch-p2')).toBeTruthy();
+    expect(screen.getByTestId('pending-call-cancel-p2')).toBeTruthy();
+  });
 });
 
 describe('ScheduledCallsScreen', () => {
+  it("offers dispatch now only on the member's own scheduled calls", async () => {
+    useCallsStore.setState({ scheduledCalls: [makeCall('s1', { ScheduledOnUtc: '2026-11-02T09:00:00Z', ReportingUserId: 'someone-else' })] });
+    await render(<ScheduledCallsScreen realtime={false} />);
+    expect(screen.queryByTestId('scheduled-call-dispatch-now-s1')).toBeNull();
+  });
+
   it('dispatches a scheduled call now after confirming, to the recipients already on it', async () => {
     await render(<ScheduledCallsScreen realtime={false} />);
     expect(screen.getByText('Burn permit')).toBeTruthy();

@@ -1,9 +1,10 @@
 import { FeatureFlagKeys, featureFlagsStore, getFeatureFlagStatus, isFeatureEnabled, recordsFieldFlagKey } from '../flags/feature-flags-store';
 import { checkAppAccess, enforceAppAccess, requiredAppAccessRight } from '../rights/app-access';
-import { getActiveDepartmentId, resetSecurity, securityStore } from '../rights/security-store';
+import { getActiveDepartmentId, resetSecurity, securityStore, startRightsRefreshOnForeground } from '../rights/security-store';
 import { refreshEngine, useAuthStore } from '../session/auth-store';
 import { loadSessionGates } from '../session-gates';
 import { definitionTermKey, getTerm, recordTypeTermKey, terminologyStore, TermKeys } from '../terminology/terminology-store';
+import { __setAppState } from './fakes/react-native';
 import { v4 } from './helpers/fake-server';
 import { flush, type Harness, setupHarness } from './helpers/harness';
 import { tokenResponse } from './helpers/jwt';
@@ -48,6 +49,36 @@ describe('rights (kept offline, re-scoped on a department change)', () => {
     h.server.on('GET', '/Security/GetCurrentUsersRights', { data: v4(rights({ DepartmentId: '11' })) });
     await securityStore.getState().getRights();
     expect(h.apiCache.setScope).toHaveBeenLastCalledWith({ departmentId: '11' });
+  });
+
+  it('re-reads the rights on returning to the app, at most once a minute, so a changed permission applies', async () => {
+    let clock = 1_000_000;
+    const reads = () => h.server.requestsTo('GET', '/Security/GetCurrentUsersRights').length;
+    h.server.on('GET', '/Security/GetCurrentUsersRights', { data: v4(rights({ CanDeleteCalls: true })) });
+    const stop = startRightsRefreshOnForeground(60_000, () => clock);
+
+    try {
+      __setAppState('background');
+      __setAppState('active');
+      await flush();
+      expect(reads()).toBe(0);
+
+      clock += 61_000;
+      __setAppState('background');
+      __setAppState('active');
+      await flush(50);
+      expect(reads()).toBe(1);
+      expect(securityStore.getState().rights?.CanDeleteCalls).toBe(true);
+
+      // Staying active (no return from the background) reads nothing.
+      clock += 61_000;
+      __setAppState('active');
+      await flush();
+      expect(reads()).toBe(1);
+    } finally {
+      stop();
+      __setAppState('active');
+    }
   });
 
   it('keeps the last rights when a refresh fails offline or on a server error (Responder nulled them)', async () => {

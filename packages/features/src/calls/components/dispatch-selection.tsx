@@ -23,7 +23,7 @@ export interface DispatchSelectionModalProps {
   recipients: DispatchRecipients;
   value: DispatchSelection;
   onConfirm: (selection: DispatchSelection) => void;
-  /** "Everyone" is not offered for pending calls (a blank list pages everyone). */
+  /** "Everyone" is not offered for pending calls: the dispatcher who sends one picks its recipients. */
   allowEveryone?: boolean;
 }
 

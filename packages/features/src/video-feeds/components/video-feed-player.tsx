@@ -1,6 +1,6 @@
 import { useTranslation } from '@resgrid/i18n';
 import type { CallVideoFeedResultData } from '@resgrid/models';
-import { Button, ButtonText, NativeModal, Pressable, Text } from '@resgrid/ui';
+import { Button, ButtonText, NativeModal, NativeModalScreen, Pressable, Text } from '@resgrid/ui';
 import { Copy, X } from 'lucide-react-native';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -22,7 +22,7 @@ export const VideoFeedPlayer: React.FC<VideoFeedPlayerProps> = ({ feed, isOpen, 
   const copyOnly = feedPlayback(feed.FeedFormat, feed.Url) === 'copy-only';
   return (
     <NativeModal visible={isOpen} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose} testID="video-feed-player">
-      <View style={styles.screen}>
+      <NativeModalScreen style={styles.screen}>
         <View style={styles.header}>
           <Text className="flex-1 text-lg font-bold text-typography-0" numberOfLines={1} accessibilityRole="header">
             {feed.Name}
@@ -42,13 +42,13 @@ export const VideoFeedPlayer: React.FC<VideoFeedPlayerProps> = ({ feed, isOpen, 
             </Button>
           ) : null}
         </View>
-      </View>
+      </NativeModalScreen>
     </NativeModal>
   );
 };
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#000000' },
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingTop: 48, paddingBottom: 8 },
+  screen: { backgroundColor: '#000000' },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingTop: 8, paddingBottom: 8 },
   body: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 });

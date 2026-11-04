@@ -7,7 +7,7 @@
  * client when the real ones arrive. Inbox UI must render only when `config.ready` (it would fetch against the
  * placeholder client otherwise).
  */
-import { NovuProvider } from '@novu/react-native';
+import { NovuProvider, useCounts } from '@novu/react-native';
 import { type ApiContext, ApiError, getUnitSubscriberHash } from '@resgrid/api';
 import { logger } from '@resgrid/core';
 import { type ReactNode, useEffect, useRef, useState } from 'react';
@@ -148,6 +148,19 @@ export function NotificationsInboxProvider({ config, children, enabled = true }:
     </NovuProvider>
   );
 }
+
+// One array for every render: a new filter list each time would refetch the count on every render.
+const UNREAD_FILTERS: Parameters<typeof useCounts>[0]['filters'] = [{ read: false }];
+
+/**
+ * The subscriber's unread inbox count (the header bell); Novu keeps it current over its socket. Call it only under a
+ * ready provider (`useNovuInboxConfig().ready`): against the placeholder client it would count for nobody.
+ */
+export const useInboxUnreadCount = (): number => {
+  const { counts } = useCounts({ filters: UNREAD_FILTERS });
+
+  return counts?.[0]?.count ?? 0;
+};
 
 /** Opens an inbox item like a tapped push (deep link to its target, else the push modal). */
 export async function openInboxItem(item: NovuInboxItemLike & { subject?: string | null; body?: string | null }): Promise<boolean> {

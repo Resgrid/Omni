@@ -399,7 +399,7 @@
     "create_not_allowed_description": "Creating calls is not available in this app or for your account.",
     "custom_fields": "Custom Fields",
     "dispatch": {
-      "none_pages_everyone": "No one selected — everyone available will be paged"
+      "none_pages_nobody": "No one selected — no one will be paged"
     },
     "edit": {
       "offline": "Editing a call needs a connection. Your changes have not been saved."
@@ -496,7 +496,21 @@
     "scheduled_on_helper": "Laisser vide pour dispatcher immédiatement",
     "save_pending_call": "Enregistrer l’intervention en attente",
     "keyboard_shortcuts": "Astuce : Appuyez sur Ctrl+Entrée pour créer, Échap pour annuler",
-    "edit_keyboard_shortcuts": "Astuce : Appuyez sur Ctrl+S pour sauvegarder, Échap pour annuler"
+    "edit_keyboard_shortcuts": "Astuce : Appuyez sur Ctrl+S pour sauvegarder, Échap pour annuler",
+    "edit_not_allowed": "You can't edit this call",
+    "edit_not_allowed_description": "A call can be edited while it is active or pending, by a department admin or the member who logged it.",
+    "latitude": "Latitude",
+    "longitude": "Longitude",
+    "latitude_placeholder": "ex. 39.122639",
+    "longitude_placeholder": "ex. -119.758773",
+    "latitude_invalid": "Saisissez une latitude en degrés décimaux, entre -90 et 90",
+    "longitude_invalid": "Saisissez une longitude en degrés décimaux, entre -180 et 180",
+    "coordinates_incomplete": "Saisissez la latitude et la longitude",
+    "place_on_map": "Place on map",
+    "destination_poi_select": "Select a destination",
+    "destination_poi_search": "Search destinations...",
+    "destination_poi_none_found": "No destinations match your search",
+    "destination_poi_clear": "Clear destination"
   },
   "chat": {
     "ack_pending_count": "Vous avez {{count}} messages urgents à accuser réception",
@@ -895,6 +909,8 @@
     "retry": "Réessayer",
     "route": "Itinéraire",
     "save": "Enregistrer",
+    "scroll_tabs_left": "Faire défiler les onglets vers la gauche",
+    "scroll_tabs_right": "Faire défiler les onglets vers la droite",
     "search": "Rechercher",
     "select_option": "Sélectionner une option",
     "selected_location": "Localisation sélectionnée",
@@ -3246,7 +3262,8 @@
     "update_ready_title": "Mise à jour prête",
     "update_ready_message": "Touchez pour redémarrer maintenant. Sinon, la mise à jour sera installée au prochain démarrage de l'application.",
     "update_ready_wall_message": "Touchez pour redémarrer maintenant, sinon l'écran redémarrera de lui-même après {{minutes}} minutes sans utilisation.",
-    "update_restart_failed": "L'application n'a pas pu redémarrer. La mise à jour sera installée au prochain démarrage de l'application."
+    "update_restart_failed": "L'application n'a pas pu redémarrer. La mise à jour sera installée au prochain démarrage de l'application.",
+    "notifications_unread": "Notifications, {{count}} unread"
   },
   "access_denied": {
     "back_to_sign_in": "Back to sign in",

@@ -8,13 +8,24 @@ export interface MockTabScreen {
   options: Record<string, unknown>;
 }
 
-export const mockNavigationState = {
+interface MockNavigationState {
+  pathname: string;
+  segments: string[];
+  canGoBack: boolean;
+  /** What the shell's navigator (Slot or the drawer shells' Stack) renders: the current route's screen. */
+  slot: ReactNode;
+  /** The props the drawer shells' Stack was given (null until a Stack renders). */
+  stack: { screenOptions: unknown } | null;
+  tabs: null | { screens: MockTabScreen[]; screenOptions: unknown; screenListeners?: (props: { route: { name: string } }) => unknown };
+}
+
+export const mockNavigationState: MockNavigationState = {
   pathname: '/',
-  segments: [] as string[],
+  segments: [],
   canGoBack: false,
-  /** What the Slot renders (the current route's screen). */
-  slot: null as ReactNode,
-  tabs: null as null | { screens: MockTabScreen[]; screenOptions: unknown; screenListeners?: (props: { route: { name: string } }) => unknown },
+  slot: null,
+  stack: null,
+  tabs: null,
 };
 
 export const router = {
@@ -22,18 +33,25 @@ export const router = {
   replace: jest.fn(),
   back: jest.fn(),
   navigate: jest.fn(),
+  dismissAll: jest.fn(),
   canGoBack: jest.fn(() => mockNavigationState.canGoBack),
+  canDismiss: jest.fn(() => mockNavigationState.canGoBack),
 };
 
 export const useRouter = (): typeof router => router;
 export const usePathname = (): string => mockNavigationState.pathname;
 export const useSegments = (): string[] => mockNavigationState.segments;
 
+/** The one rendered screen is the focused one. */
+export const useIsFocused = (): boolean => true;
+
 const navigationRef = { isReady: jest.fn(() => true), current: null };
 export const useNavigationContainerRef = (): typeof navigationRef => navigationRef;
 
-export function Stack(): ReactElement {
-  return <View testID="mock-stack" />;
+export function Stack({ screenOptions }: { screenOptions?: unknown }): ReactElement {
+  mockNavigationState.stack = { screenOptions };
+
+  return <View testID="mock-stack">{mockNavigationState.slot}</View>;
 }
 
 export function Redirect({ href }: { href: string }): ReactElement {
@@ -85,6 +103,7 @@ export function resetMockNavigation(): void {
   mockNavigationState.segments = [];
   mockNavigationState.canGoBack = false;
   mockNavigationState.slot = null;
+  mockNavigationState.stack = null;
   mockNavigationState.tabs = null;
   Object.values(router).forEach((fn) => fn.mockClear());
 }
