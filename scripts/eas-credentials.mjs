@@ -127,6 +127,9 @@ for (const variant of variants) {
     console.log(`  App Groups: ${appGroupTargets.map((target) => `${target.id} ${target.groups.join(', ')}`).join('; ')}`);
     console.log('  When eas-cli asks to log in to your Apple account, say yes and sign in with an Apple ID: only that session assigns the App Group.');
 
+    // Only the build-credentials setup syncs App ID capabilities; the interactive manager's sign-in changes nothing.
+    if (!setup) console.log('  Signing in does not assign it on its own: choose "Build Credentials", then "All: Set up all the required credentials", or rerun with --setup.');
+
     if (ASC_KEY_ENV.some((name) => process.env[name])) console.log(`  ${ASC_KEY_ENV.join(', ')} make eas-cli sign in with an App Store Connect API key, which cannot assign App Groups: unset them for this run.`);
   }
 

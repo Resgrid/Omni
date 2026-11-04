@@ -1971,6 +1971,7 @@
     "open_hint": "Opens the note"
   },
   "notifications": {
+    "inbox_unavailable": "La bandeja de notificaciones no está disponible aquí.",
     "additional_info": "Información adicional",
     "confirm_delete_message_one": "¿Seguro que quieres eliminar esta notificación? Esta acción no se puede deshacer.",
     "confirm_delete_title": "Confirmar eliminación",
@@ -2541,7 +2542,8 @@
     "discard_draft": "Discard draft",
     "no_call_records": "No Records for this call yet.",
     "remove_attachment": "Remove attachment",
-    "remove_row": "Remove row"
+    "remove_row": "Remove row",
+    "definition_missing": "Este registro no está vinculado a ningún formulario, por lo que no se pueden mostrar sus campos."
   },
   "roles": {
     "modal": {

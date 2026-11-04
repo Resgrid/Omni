@@ -2,6 +2,8 @@
 // The shell never imports features (layering), so this app-layer file is the one place that joins them; every variant
 // root layout imports it. Everything here is safe in every variant: features gate themselves on capabilities, modules
 // and department flags (a tab or watcher a variant cannot use stays hidden or inert).
+import './call-file-reader';
+
 import type { ShellGateScreenProps, SidebarContentProps } from '@resgrid/app-shell';
 import { getShellOfflineRuntime, registerInitStep, registerShellBanner, registerShellOverlay, registerShellProvider, registerShellScreens, registerSidebarContent, useShellStore } from '@resgrid/app-shell';
 import { getActiveVariant } from '@resgrid/config';

@@ -7,5 +7,6 @@
   "records.discard_draft": "Discard draft",
   "records.no_call_records": "No Records for this call yet.",
   "records.remove_attachment": "Remove attachment",
-  "records.remove_row": "Remove row"
+  "records.remove_row": "Remove row",
+  "records.definition_missing": "This Record is not linked to a form, so its fields cannot be shown."
 }

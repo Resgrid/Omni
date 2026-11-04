@@ -7,13 +7,17 @@ import { getActiveUnitId, getNotificationsSession } from '../runtime/session';
 import { getAppShellOptions } from '../runtime/shell-config';
 import { useShellStore } from '../runtime/shell-state';
 
-const InboxReadyContext = createContext(false);
+export type ShellInboxStatus = 'loading' | 'ready' | 'unavailable';
+
+const InboxStatusContext = createContext<ShellInboxStatus>('loading');
 
 /**
  * Whether the inbox can render: the Novu provider is mounted on this platform and has real credentials. The
  * notifications screen shows its pending state until then (rendering against the placeholder client fetches for nobody).
  */
-export const useShellInboxReady = (): boolean => useContext(InboxReadyContext);
+export const useShellInboxStatus = (): ShellInboxStatus => useContext(InboxStatusContext);
+
+export const useShellInboxReady = (): boolean => useShellInboxStatus() === 'ready';
 
 /**
  * The always-mounted Novu provider (Responder's fix): placeholder credentials until the department config, rights (and
@@ -33,11 +37,13 @@ export function ShellInboxProvider({ children }: { children?: ReactNode }) {
   // Recomputed when the session inputs change; the getter reads the stores at call time.
   const session = useMemo(() => (status === 'signedIn' && userId && rights ? getNotificationsSession() : null), [status, userId, rights]);
   const config = useNovuInboxConfig({ session, config: departmentConfig, unitId: getActiveUnitId(), isWeb });
-  const ready = enabled ? config.ready : false;
+  const hasProviderSettings = departmentConfig?.NovuApplicationId?.trim() && departmentConfig.NovuBackendApiUrl?.trim() && departmentConfig.NovuSocketUrl?.trim();
+  const isUnavailable = !enabled || (departmentConfig !== null && !hasProviderSettings);
+  const inboxStatus = config.ready && enabled ? 'ready' : isUnavailable ? 'unavailable' : 'loading';
 
   return (
     <NotificationsInboxProvider config={config} enabled={enabled}>
-      <InboxReadyContext.Provider value={ready}>{children}</InboxReadyContext.Provider>
+      <InboxStatusContext.Provider value={inboxStatus}>{children}</InboxStatusContext.Provider>
     </NotificationsInboxProvider>
   );
 }

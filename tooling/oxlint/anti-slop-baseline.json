@@ -273,9 +273,6 @@
   "apps/omni/screens/map.tsx": {
     "anti-slop/require-readable-spacing": 2
   },
-  "apps/omni/screens/notifications-inbox.tsx": {
-    "anti-slop/require-readable-spacing": 1
-  },
   "apps/omni/stubs/countly-sdk.web.ts": {
     "anti-slop/no-unknown-parameters": 3
   },

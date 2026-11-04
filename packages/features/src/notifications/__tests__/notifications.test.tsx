@@ -106,6 +106,12 @@ describe('NotificationsInboxScreen', () => {
     expect(screen.getByTestId('notifications-inbox-pending')).toBeTruthy();
   });
 
+  it('explains when the inbox is unavailable instead of waiting for a provider', async () => {
+    await render(<NotificationsInboxScreen isReady={false} isUnavailable />);
+    expect(screen.getByTestId('notifications-inbox-unavailable')).toBeTruthy();
+    expect(screen.queryByTestId('notifications-inbox-pending')).toBeNull();
+  });
+
   it('shows the empty state', async () => {
     setInbox([]);
     await render(<NotificationsInboxScreen />);

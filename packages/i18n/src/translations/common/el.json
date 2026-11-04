@@ -1971,6 +1971,7 @@
     "open_hint": "Opens the note"
   },
   "notifications": {
+    "inbox_unavailable": "Τα εισερχόμενα ειδοποιήσεων δεν είναι διαθέσιμα εδώ.",
     "additional_info": "Πρόσθετες Πληροφορίες",
     "confirm_delete_message_one": "Είστε βέβαιοι ότι θέλετε να διαγράψετε αυτήν την ειδοποίηση; Η ενέργεια δεν είναι αναστρέψιμη.",
     "confirm_delete_title": "Επιβεβαίωση διαγραφής",
@@ -2541,7 +2542,8 @@
     "discard_draft": "Discard draft",
     "no_call_records": "No Records for this call yet.",
     "remove_attachment": "Remove attachment",
-    "remove_row": "Remove row"
+    "remove_row": "Remove row",
+    "definition_missing": "Αυτή η εγγραφή δεν συνδέεται με κάποια φόρμα, οπότε τα πεδία της δεν μπορούν να εμφανιστούν."
   },
   "roles": {
     "modal": {

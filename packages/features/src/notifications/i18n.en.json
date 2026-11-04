@@ -1,4 +1,5 @@
 {
+  "notifications.inbox_unavailable": "The notification inbox is unavailable here.",
   "notifications.mark_all_read": "Mark all as read",
   "notifications.unread": "Unread",
   "push_notifications.communication_test_confirmed": "Receipt confirmed",

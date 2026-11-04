@@ -283,6 +283,18 @@ describe('RecordDetailScreen', () => {
     await waitFor(() => expect(screen.getByTestId('record-form')).toBeTruthy());
   });
 
+  it('says the record has no form, without a retry, when it carries no definition key', async () => {
+    mockFetchRecord.mockResolvedValue(record({ DefinitionKey: null }));
+    const fetchSchema = jest.fn(async () => schema);
+    useRecordsStore.setState({ fetchSchema });
+    await render(<RecordDetailScreen recordId="r1" />);
+    await waitFor(() => expect(screen.getByTestId('record-detail-no-definition')).toHaveTextContent('records.definition_missing'));
+    expect(screen.queryByTestId('record-detail-schema-error')).toBeNull();
+    expect(screen.queryByText('common.retry')).toBeNull();
+    expect(screen.queryByTestId('record-save')).toBeNull();
+    expect(fetchSchema).not.toHaveBeenCalled();
+  });
+
   it('shows withheld cells as protected and never posts them back', async () => {
     mockFetchRecord.mockResolvedValue(record());
     useRecordsStore.setState({

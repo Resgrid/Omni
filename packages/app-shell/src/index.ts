@@ -5,7 +5,7 @@
 export { configureAppShell, runBackgroundStartup } from './configure';
 export { HomePlaceholder } from './home-placeholder';
 export { HomeRoute, resolveHomeRedirect } from './home-route';
-export { useShellInboxReady } from './providers/inbox-provider';
+export { useShellInboxReady, useShellInboxStatus } from './providers/inbox-provider';
 export { PushNotificationModalHost } from './providers/push-modal-host';
 export { RootProviders } from './providers/root-providers';
 export { RootLayout } from './root-layout';

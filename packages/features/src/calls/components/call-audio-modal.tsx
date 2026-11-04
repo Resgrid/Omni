@@ -9,6 +9,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
 
 import { type AudioClipHandle, useCallFormHookPoints } from '../hook-points';
+import { getCallFileUrl } from '../lib/call-file-url';
 import { CallModalFrame } from './call-modal-frame';
 
 export interface CallAudioModalProps {
@@ -20,7 +21,7 @@ export interface CallAudioModalProps {
 /**
  * The call's audio recordings (Dispatch call audio modal): one plays at a time, tapping it again stops it, and closing
  * the sheet stops playback. Playback is the app's `playAudioClip` hook point; without it a recording opens in the
- * platform's player. Only https recordings play.
+ * platform's player. Recording URLs follow the call attachment scheme rules.
  */
 export const CallAudioModal: React.FC<CallAudioModalProps> = ({ isOpen, onClose, callId }) => {
   const { t } = useTranslation();
@@ -66,7 +67,9 @@ export const CallAudioModal: React.FC<CallAudioModalProps> = ({ isOpen, onClose,
       return;
     }
 
-    if (!/^https:\/\//i.test(file.Url.trim())) {
+    const url = getCallFileUrl(file.Url);
+
+    if (!url) {
       toast.error(t('call_detail.audio_play_error'));
 
       return;
@@ -75,7 +78,7 @@ export const CallAudioModal: React.FC<CallAudioModalProps> = ({ isOpen, onClose,
     stop();
 
     if (!playAudioClip) {
-      Linking.openURL(file.Url.trim()).catch(() => toast.error(t('call_detail.audio_play_error')));
+      Linking.openURL(url).catch(() => toast.error(t('call_detail.audio_play_error')));
 
       return;
     }
@@ -83,7 +86,7 @@ export const CallAudioModal: React.FC<CallAudioModalProps> = ({ isOpen, onClose,
     setLoadingId(file.Id);
 
     try {
-      const handle = await playAudioClip(file.Url, () => {
+      const handle = await playAudioClip(url, () => {
         if (clip.current === handle) stop();
       });
 

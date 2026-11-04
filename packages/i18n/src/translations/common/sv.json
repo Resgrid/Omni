@@ -1971,6 +1971,7 @@
     "open_hint": "Opens the note"
   },
   "notifications": {
+    "inbox_unavailable": "Inkorgen för aviseringar är inte tillgänglig här.",
     "additional_info": "Ytterligare information",
     "confirm_delete_message_one": "Är du säker på att du vill ta bort den här aviseringen? Åtgärden kan inte ångras.",
     "confirm_delete_title": "Bekräfta borttagning",
@@ -2541,7 +2542,8 @@
     "discard_draft": "Discard draft",
     "no_call_records": "No Records for this call yet.",
     "remove_attachment": "Remove attachment",
-    "remove_row": "Remove row"
+    "remove_row": "Remove row",
+    "definition_missing": "Den här posten är inte kopplad till något formulär, så dess fält kan inte visas."
   },
   "roles": {
     "modal": {

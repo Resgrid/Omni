@@ -7,8 +7,9 @@ import { Button, ButtonText, Image, Input, InputField, Pressable, Text, useToast
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Linking, StyleSheet, View } from 'react-native';
+import { Linking, Platform, StyleSheet, View } from 'react-native';
 
+import { getCallFileUrl } from '../lib/call-file-url';
 import { CallModalFrame } from './call-modal-frame';
 import { CallNotesPanel } from './call-notes-panel';
 
@@ -151,10 +152,21 @@ export const CallFilesModal: React.FC<ModalProps> = ({ isOpen, onClose, callId }
 
   const addFile = async () => {
     try {
-      const result = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true, multiple: false });
+      const isWeb = Platform.OS === 'web';
+      const result = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true, multiple: false, base64: isWeb });
       const asset = result.canceled ? null : result.assets[0];
+
       if (!asset) return;
-      const outcome = await uploadCallFile({ callId, type: CallFileKind.File, name: asset.name, stagedUri: asset.uri });
+
+      // A browser blob URL cannot be restored after a reload. Queue the picked bytes on web.
+      const data = isWeb ? asset.base64?.split(',', 2)[1] : undefined;
+
+      if (isWeb && !data) {
+        toast.error(t('call_detail.files.select_error'));
+        return;
+      }
+
+      const outcome = await uploadCallFile({ callId, type: CallFileKind.File, name: asset.name, data, stagedUri: isWeb ? undefined : asset.uri });
       if (outcome.outcome === 'queued') toast.info(t('call_detail.files.queued'));
       else if (outcome.outcome === 'rejected') toast.error(t('call_detail.files.upload_error'));
     } catch {
@@ -163,11 +175,13 @@ export const CallFilesModal: React.FC<ModalProps> = ({ isOpen, onClose, callId }
   };
 
   const open = (file: CallFileResultData) => {
-    if (!/^https:\/\//i.test(file.Url)) {
+    const url = getCallFileUrl(file.Url);
+
+    if (!url) {
       toast.error(t('call_detail.files.open_error'));
       return;
     }
-    Linking.openURL(file.Url).catch(() => toast.error(t('call_detail.files.open_error')));
+    Linking.openURL(url).catch(() => toast.error(t('call_detail.files.open_error')));
   };
 
   return (

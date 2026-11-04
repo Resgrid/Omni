@@ -216,13 +216,16 @@ function RecordDetail({ id, showHeader, recordsTitle }: { id: string; showHeader
             <RecordForm schema={schema} values={values} issues={issues} withheld={withheld} readOnly={!canAct} onChange={handleChange} />
           ) : isLoading ? (
             <Loading />
-          ) : (
+          ) : record.DefinitionKey ? (
             <View testID="record-detail-schema-error">
               <Text>{t('records.load_failed')}</Text>
               <Button variant="outline" onPress={() => void reload()}>
                 <ButtonText>{t('common.retry')}</ButtonText>
               </Button>
             </View>
+          ) : (
+            // No definition to load a schema for, so a retry could never show the fields.
+            <Text testID="record-detail-no-definition">{t('records.definition_missing')}</Text>
           )}
 
           <RecordAttachments recordId={record.RecordId} allowAttachments={entry?.AllowAttachments !== false} readOnly={!editable} />
