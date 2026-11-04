@@ -10,6 +10,7 @@ import {
   evaluateUnitStatusAlert,
   evaluateUnitStatusTimer,
   formatElapsed,
+  NO_ALERT,
   NO_TIMER,
   requiresAcknowledgementNote,
   resolveAcknowledgement,
@@ -134,5 +135,12 @@ describe("the unit's own status timer", () => {
     expect(evaluateUnitStatusTimer(dispatchedFor(30, { CurrentStatusBaseType: 2 }), thresholds, NOW)).toBe(NO_TIMER);
     expect(evaluateUnitStatusTimer(dispatchedFor(30, { CurrentStatusTimestampUtc: 'garbage' }), thresholds, NOW)).toBe(NO_TIMER);
     expect(evaluateUnitStatusTimer(dispatchedFor(30), [{ BaseType: DISPATCHED, WarnSeconds: 0, AlertSeconds: 0 }], NOW)).toBe(NO_TIMER);
+  });
+
+  it('hands every caller the same frozen "nothing to flag" values', () => {
+    expect(evaluateUnitStatusAlert(dispatchedFor(30), [], NOW)).toBe(NO_ALERT);
+    expect(Object.isFrozen(NO_ALERT)).toBe(true);
+    expect(Object.isFrozen(NO_TIMER)).toBe(true);
+    expect(NO_TIMER.alert).toBe(NO_ALERT);
   });
 });

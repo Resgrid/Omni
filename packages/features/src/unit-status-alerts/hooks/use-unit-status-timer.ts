@@ -27,7 +27,8 @@ export interface UnitStatusTimerView extends UnitStatusTimer {
   acknowledgementState: UnitAlertAcknowledgementState;
 }
 
-const EMPTY_VIEW: UnitStatusTimerView = { ...NO_TIMER, unit: null, acknowledgement: null, acknowledgementState: 'none' };
+// Every screen with no timer to show gets this one object, so it is frozen like NO_TIMER.
+const EMPTY_VIEW: Readonly<UnitStatusTimerView> = Object.freeze({ ...NO_TIMER, unit: null, acknowledgement: null, acknowledgementState: 'none' });
 
 /**
  * One unit's status timer as the unit sees it (Unit app): read from the same roster row dispatch's board reads, so both

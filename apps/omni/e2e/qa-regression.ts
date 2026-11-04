@@ -81,6 +81,11 @@ const { values, positionals } = parseArgs({
   },
 });
 
+// What cleanUp() stops. Declared before the argument checks below: their fail() calls cleanUp() while this module is
+// still evaluating, and reading these any later would throw (temporal dead zone) instead of printing the usage error.
+const started: ChildProcess[] = [];
+const bootedDevices: (() => void)[] = [];
+
 const variantArg = positionals[0] ?? process.env.APP_VARIANT ?? '';
 
 if (!isVariantId(variantArg)) fail(`usage: pnpm qa:regression <responder|unit|ic|dispatch|bigboard> [options] (got "${variantArg}")`);
@@ -111,8 +116,6 @@ process.env.ADB_MDNS = '0';
 // CocoaPods (inside the iOS build) refuses to run without a UTF-8 locale, which non-interactive shells often lack.
 const NATIVE_ENV: NodeJS.ProcessEnv = { ...process.env, LANG: process.env.LANG || 'en_US.UTF-8', LC_ALL: process.env.LC_ALL || process.env.LANG || 'en_US.UTF-8' };
 const legs: Leg[] = [];
-const started: ChildProcess[] = [];
-const bootedDevices: (() => void)[] = [];
 
 function fail(message: string): never {
   console.error(`qa-regression: ${message}`);

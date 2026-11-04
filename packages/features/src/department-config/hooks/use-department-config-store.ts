@@ -1,6 +1,7 @@
 import { getConfig } from '@resgrid/api';
 import { getEnv } from '@resgrid/core/env/env';
-import { getDataApiContext, hasDataApiContext, registerDataStoreReset } from '@resgrid/data';
+import { logger } from '@resgrid/core/logging/logger';
+import { getDataApiContext, hasDataApiContext, registerDataStoreReset, toDataError } from '@resgrid/data';
 import type { GetConfigResultData } from '@resgrid/models';
 import { create } from 'zustand';
 
@@ -49,9 +50,14 @@ export const useDepartmentConfigStore = create<DepartmentConfigState>()((set) =>
 
         if (started !== generation) return;
         set((state) => ({ config: result?.Data ?? state.config, isLoading: false, hasError: !result?.Data && !state.config }));
-      } catch {
+      } catch (error) {
+        if (started !== generation) return;
+        // The failure's kind only: the raw error carries the request (its Authorization header).
+        const { code, status } = toDataError(error);
+
+        logger.warn({ message: 'Department config load failed', context: { code, status } });
         // Keep whatever config is loaded: status timers and the weather key must not vanish on a network blip.
-        if (started === generation) set((state) => ({ isLoading: false, hasError: !state.config }));
+        set((state) => ({ isLoading: false, hasError: !state.config }));
       }
     };
 

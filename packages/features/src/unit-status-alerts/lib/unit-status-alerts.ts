@@ -20,7 +20,8 @@ export interface UnitStatusAlert {
   thresholdSeconds: number | null;
 }
 
-export const NO_ALERT: UnitStatusAlert = { level: 'none', secondsInStatus: null, thresholdSeconds: null };
+/** Returned to every caller whose unit has nothing to flag, so it is frozen: one caller cannot change it for the rest. */
+export const NO_ALERT: Readonly<UnitStatusAlert> = Object.freeze({ level: 'none', secondsInStatus: null, thresholdSeconds: null });
 
 /** Seconds since a UTC timestamp (shared parser: some `*Utc` fields arrive without "Z"); null when unusable. */
 export const secondsSince = (timestampUtc: string | null | undefined, now: number): number | null => {
@@ -70,7 +71,7 @@ export function evaluateUnitStatusAlert(unit: Pick<BoardUnit, 'CurrentStatusBase
 /** none = nobody acknowledged it · acknowledged = seen, stays highlighted · muted = out of the way until it ends. */
 export type UnitAlertAcknowledgementState = 'none' | 'acknowledged' | 'muted';
 
-const LEVEL_RANK: Record<UnitStatusAlertLevel, number> = { none: 0, warn: 1, alert: 2 };
+const LEVEL_RANK: Readonly<Record<UnitStatusAlertLevel, number>> = { none: 0, warn: 1, alert: 2 };
 
 /** Mirrors the server's UnitStatusAlertNoteRequirements. */
 export const UnitStatusAlertNoteRequirement = { Optional: 0, AtAlert: 1, Always: 2 } as const;
@@ -203,7 +204,8 @@ export interface UnitStatusTimer {
   approaching: boolean;
 }
 
-export const NO_TIMER: UnitStatusTimer = { hasTimer: false, alert: NO_ALERT, next: null, approaching: false };
+/** Shared like NO_ALERT, so frozen too. */
+export const NO_TIMER: Readonly<UnitStatusTimer> = Object.freeze({ hasTimer: false, alert: NO_ALERT, next: null, approaching: false });
 
 /** The unit's own timer at one instant: its level, what fires next and when, and whether that is close. */
 export function evaluateUnitStatusTimer(unit: Pick<BoardUnit, 'CurrentStatusBaseType' | 'CurrentStatusTimestampUtc'>, thresholds: readonly UnitStatusThresholdData[], now: number): UnitStatusTimer {

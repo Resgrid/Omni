@@ -1,3 +1,4 @@
+import { logger } from '@resgrid/core/logging/logger';
 import type { GetConfigResultData } from '@resgrid/models';
 import { defaultResetRegistry } from '@resgrid/offline';
 
@@ -36,6 +37,20 @@ describe('department config', () => {
     expect(mockGetConfig).toHaveBeenCalledTimes(2);
     expect(useDepartmentConfigStore.getState()).toMatchObject({ isLoading: false, hasError: false });
     expect(useDepartmentConfigStore.getState().config?.UnitStatusThresholds).toHaveLength(1);
+  });
+
+  it('logs a failed load by its kind and status only, never the request', async () => {
+    const warn = jest.spyOn(logger, 'warn').mockImplementation(() => undefined);
+    // An axios-style refusal: the request it carries holds the bearer token.
+    const refusal = Object.assign(new Error('Request failed with status code 503'), { response: { status: 503 }, config: { headers: { Authorization: 'Bearer secret-token' } } });
+
+    mockGetConfig.mockRejectedValueOnce(refusal);
+    await useDepartmentConfigStore.getState().load();
+
+    expect(warn).toHaveBeenCalledWith({ message: 'Department config load failed', context: { code: 'server', status: 503 } });
+    expect(JSON.stringify(warn.mock.calls)).not.toContain('secret-token');
+    expect(useDepartmentConfigStore.getState()).toMatchObject({ isLoading: false, hasError: true });
+    warn.mockRestore();
   });
 
   it("takes the shell's copy over a late answer and is dropped on sign-out", async () => {
