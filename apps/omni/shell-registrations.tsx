@@ -11,14 +11,15 @@ import { AccessDeniedScreen, LoginScreen, MaintenanceScreen, OnboardingScreen, P
 import { AwaitingResourcesBanner, AwaitingResourcesHost, awaitingResourcesRoutes, registerAwaitingResourcesCallDetailTab } from '@resgrid/features/awaiting-resources';
 import { type LocationPickerProps, registerCallDetailTab, registerCallFormHookPoints, type StaticLocationMapProps } from '@resgrid/features/calls';
 import { createDataChecklistRunWriter, registerChecklistRunWriter } from '@resgrid/features/checklists';
-import { setDashboardDepartmentConfig, setDashboardStorage } from '@resgrid/features/dashboard';
+import { setDashboardStorage } from '@resgrid/features/dashboard';
 import { StepUpPromptHost } from '@resgrid/features/data-protection';
+import { setDepartmentConfig } from '@resgrid/features/department-config';
 import { createIncidentCommandCallTab } from '@resgrid/features/incident-command';
 import { registerOfflineMapsSettings } from '@resgrid/features/offline-maps';
 import { CALL_RECORDS_TAB, configureRecords, registerRecordsContextHook } from '@resgrid/features/records';
 import { registerRunCardCallDetailTab, registerRunCardHookPoints } from '@resgrid/features/runcards';
 import { configureSettings } from '@resgrid/features/settings';
-import { UnitStatusSidebar } from '@resgrid/features/unit-status';
+import { StatusTimerBanner, StatusTimerNotifications, unitStatusRoutes, UnitStatusSidebar } from '@resgrid/features/unit-status';
 import { FullScreenLocationPicker, StaticMap } from '@resgrid/maps';
 import { configureNotificationSounds } from '@resgrid/notifications';
 import { playAudioClip } from '@resgrid/voice';
@@ -50,6 +51,13 @@ function GateOnboarding({ onComplete }: ShellGateScreenProps) {
 
 function GateAccessDenied({ onComplete }: ShellGateScreenProps) {
   return <AccessDeniedScreen onDismiss={onComplete} />;
+}
+
+/** The unit's status timer strip under the app bar, except on the status console, which shows the timer card itself. */
+function UnitTimerBanner() {
+  const pathname = usePathname();
+
+  return <StatusTimerBanner hidden={pathname === unitStatusRoutes.console()} />;
 }
 
 /** Unit's landscape sidebar (manifest shell.sidebarContent 'unit-status'): the status console. */
@@ -94,6 +102,12 @@ registerShellOverlay('pending-approval', PendingApprovalWatcher);
 registerShellOverlay('awaiting-resources', AwaitingResourcesHost);
 
 registerShellBanner('awaiting-resources', AwaitingBanner);
+
+// Unit's own status timer strip (inert without the unit-status module and an active unit).
+registerShellBanner('unit-status-timer', UnitTimerBanner);
+
+// ...and its notifications while the app is in the background or the screen is off (same gates; iOS and Android).
+registerShellOverlay('unit-status-timer-notifications', StatusTimerNotifications);
 
 // Unit's status console in the sidebar (only read where shell.sidebarContent is 'unit-status').
 registerSidebarContent('unit-status', UnitSidebar);
@@ -150,7 +164,8 @@ configureNotificationSounds(NOTIFICATION_SOUNDS);
 
 // Once storage is open, before any screen mounts: Storage & sync (and Unit's unit choice), the Records outbox controls
 // and BigBoard's dashboard storage read the offline runtime; a variant that commands incidents authors records against
-// the board's call and the member's command role; the dashboard follows the department config.
+// the board's call and the member's command role; feature screens (status timers, the dashboard) follow the shell's
+// department config.
 registerInitStep(
   'startup',
   {
@@ -168,13 +183,14 @@ registerInitStep(
       if (variant.modules.includes('dashboard')) {
         // BigBoard kept its layouts and widget settings in react-native-mmkv's default instance.
         setDashboardStorage(runtime && runtime.storage.instances.has('mmkv.default') ? runtime.storage.get('mmkv.default') : (runtime?.storage.main ?? null));
-        setDashboardDepartmentConfig(useShellStore.getState().departmentConfig);
-        useShellStore.subscribe((state, previous) => {
-          if (state.departmentConfig !== previous.departmentConfig) {
-            setDashboardDepartmentConfig(state.departmentConfig);
-          }
-        });
       }
+
+      setDepartmentConfig(useShellStore.getState().departmentConfig);
+      useShellStore.subscribe((state, previous) => {
+        if (state.departmentConfig !== previous.departmentConfig) {
+          setDepartmentConfig(state.departmentConfig);
+        }
+      });
     },
   },
   { after: 'startup.offline' }

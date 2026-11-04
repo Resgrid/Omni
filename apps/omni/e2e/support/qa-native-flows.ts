@@ -24,9 +24,11 @@ export const screenLink = (app: VariantManifest, route: string): string => `${ap
 
 /**
  * One department's Maestro flow for one native form factor: a clean launch with every permission granted, the
- * orientation (phones portrait, tablets landscape), sign-in as the department admin, a check that the form factor's
- * layout engaged (Responder and Unit tablets in landscape show the permanent sidebar; a phone never does), then every
- * signed-in screen by deep link with a screenshot each. Null for a department with no password sign-in (SSO only).
+ * orientation (phones portrait, tablets landscape; on Android the run sets it on the emulator, because Maestro's
+ * Android orientations assume a portrait-native screen and a Pixel Tablet's LANDSCAPE_LEFT is portrait), sign-in as
+ * the department admin, a check that the form factor's layout engaged (Responder and Unit tablets in landscape show the
+ * permanent sidebar; a phone never does), then every signed-in screen by deep link with a screenshot each. Null for a
+ * department with no password sign-in (SSO only).
  */
 export function nativeFlow({ app, department, formFactor, platform, flowDir }: NativeFlowOptions): string | null {
   if (!persona(department, 'admin') || department.features.sso === 'required') return null;
@@ -42,7 +44,7 @@ export function nativeFlow({ app, department, formFactor, platform, flowDir }: N
     `  - ${formFactor}`,
     '---',
     `- runFlow: ${yaml(path.join(qaFlows, 'launch.yaml'))}`,
-    `- setOrientation: ${formFactor === 'tablet' ? 'LANDSCAPE_LEFT' : 'PORTRAIT'}`,
+    ...(platform === 'ios' ? [`- setOrientation: ${formFactor === 'tablet' ? 'LANDSCAPE_LEFT' : 'PORTRAIT'}`] : []),
     `- runFlow: ${yaml(path.join(qaFlows, 'sign-in.yaml'))}`,
     // The sidebar is open without a tap only in the permanent layout; its profile name is an element iOS exposes too.
     permanent ? `- assertVisible:\n    id: ${yaml(SIDEBAR)}` : `- assertNotVisible:\n    id: ${yaml(SIDEBAR)}`,

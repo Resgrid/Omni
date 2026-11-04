@@ -29,7 +29,10 @@ export function useCallShortcuts(handlers: CallShortcutHandlers): void {
       const { onBack, onEdit, onSubmit, onTab } = latest.current;
       const withModifier = event.ctrlKey || event.metaKey;
 
+      // Escape cancels from any field (the form's "Escape to cancel" tip), but not a key an open popup already handled.
       if (event.key === 'Escape') {
+        if (event.defaultPrevented) return;
+        event.preventDefault();
         onBack();
 
         return;

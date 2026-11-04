@@ -27,8 +27,13 @@ const toLookup = (data: ForwardGeocodeData | undefined, typed: string): GeocodeL
   return { succeeded: true, place: { latitude: data.Latitude, longitude: data.Longitude, address: data.Address || typed } };
 };
 
-/** what3words addresses are three words joined by dots ("filled.count.soap"). */
-export const isWhat3WordsFormat = (words: string): boolean => /^[a-z]+\.[a-z]+\.[a-z]+$/.test(words.trim().toLowerCase());
+// A what3words word in any of its languages ("filled", "größte", "дом", "مكتب"): letters and combining marks, so
+// anything but whitespace, digits and ASCII punctuation (the dot included).
+const W3W_WORD = '[^\\s\\d!-/:-@\\[-`{-~]+';
+const W3W_ADDRESS = new RegExp(`^${W3W_WORD}\\.${W3W_WORD}\\.${W3W_WORD}$`);
+
+/** what3words addresses are three words joined by dots ("filled.count.soap", "игра.дом.окно"), in any of its languages. */
+export const isWhat3WordsFormat = (words: string): boolean => W3W_ADDRESS.test(words.trim());
 
 export async function lookupAddress(address: string): Promise<GeocodeLookup> {
   return toLookup((await forwardGeocode(getDataApiContext(), { address: address.trim() })).Data, address.trim());

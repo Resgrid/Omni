@@ -43,18 +43,36 @@ if (!['android', 'ios'].includes(platform)) fail('--platform must be android or 
 const manifest = JSON.parse(fs.readFileSync(path.join(omniRoot, 'variants', variant, 'variant.json'), 'utf8'));
 const baseId = platform === 'ios' ? manifest.identity.ios.bundleIdentifier : manifest.identity.android.package;
 const appId = STORE_ENVS.includes(appEnv) ? baseId : `${baseId}.${appEnv}`;
-const devClientLink = devClientUrl ? `exp+${manifest.identity.slug}://expo-development-client/?url=${encodeURIComponent(devClientUrl)}` : 'none';
+
+// Keeps the dev client's own UI off the app under test: disableOnboarding=1 skips the developer-menu introduction sheet,
+// disableAutoLaunch=1 stops the menu opening at launch (Android opens it on a fresh install), disableFab=1 hides the
+// floating menu button, which sits over the header's top-right corner (onboarding Skip on a landscape tablet).
+const devClientLink = devClientUrl ? `exp+${manifest.identity.slug}://expo-development-client/?url=${encodeURIComponent(devClientUrl)}&disableOnboarding=1&disableAutoLaunch=1&disableFab=1` : 'none';
 const flowsDir = path.resolve(opt('flows', path.join(here, variant)));
 
 const env = { APP_ID: appId, APP_NAME: manifest.identity.name, APP_VARIANT: variant, DEV_CLIENT_URL: devClientUrl || 'none', DEV_CLIENT_LINK: devClientLink };
-const args = ['test', flowsDir, ...Object.entries(env).flatMap(([k, v]) => ['-e', `${k}=${v}`]), '--format', 'junit', '--output', path.join(output, 'junit.xml'), ...(device ? ['--device', device] : []), ...extra];
+
+const args = [
+  'test',
+  flowsDir,
+  ...Object.entries(env).flatMap(([k, v]) => ['-e', `${k}=${v}`]),
+  '--format',
+  'junit',
+  '--output',
+  path.join(output, 'junit.xml'),
+  '--test-output-dir',
+  output,
+  ...(device ? ['--device', device] : []),
+  ...extra,
+];
 
 console.log(`Maestro: ${variant} on ${platform} (${appEnv}) → appId ${appId}`);
-console.log(`maestro ${args.join(' ')}`);
+// Sign-in values passed with -e stay out of the console and CI logs.
+console.log(`maestro ${args.map((a) => a.replace(/^((?:[A-Z_]*_)?(?:PASSWORD|TOTP|SECRET|TOKEN)=).+/, '$1***')).join(' ')}`);
 if (flag('dry-run')) process.exit(0);
 
 fs.mkdirSync(output, { recursive: true });
-// takeScreenshot writes relative to the working directory, so screenshots land next to the report.
+// --test-output-dir (Maestro 2) and the working directory (older releases) put screenshots next to the report.
 // Windows installs maestro as a .bat, which needs a shell; quote arguments that contain spaces (APP_NAME).
 const win = process.platform === 'win32';
 const result = spawnSync('maestro', win ? args.map((a) => (/\s/.test(a) ? `"${a}"` : a)) : args, { cwd: output, stdio: 'inherit', shell: win });

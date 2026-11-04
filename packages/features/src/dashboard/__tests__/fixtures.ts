@@ -1,10 +1,10 @@
 import { securityStore } from '@resgrid/auth';
 import { useCallsStore, useMapMarkersStore, useMessagesStore, useNotesStore, usePersonnelStore, useUnitsStore, useUnitStatusAlertsStore, useWeatherAlertsStore } from '@resgrid/data';
+import { useDepartmentConfigStore } from '@resgrid/features/department-config';
 import type { DepartmentRightsResultData, GetConfigResultData } from '@resgrid/models';
 
 import { useDashboardStore } from '../hooks/use-dashboard-store';
 import { useDashboardViewStore } from '../hooks/use-dashboard-view-store';
-import { useDashboardConfigStore } from '../hooks/use-department-config';
 import { useWidgetSettingsStore } from '../hooks/use-widget-settings-store';
 
 const noop = () => jest.fn(async () => undefined);
@@ -60,7 +60,7 @@ export function stubDataStores() {
   useUnitStatusAlertsStore.setState({ acknowledgements: {}, loading: {}, errors: {}, fetchAcknowledgements: mocks.fetchAcknowledgements, acknowledge: mocks.acknowledge, clear: mocks.clear });
   useMessagesStore.setState({ recipients: [], fetchRecipients: mocks.fetchRecipients });
   useMapMarkersStore.setState({ markers: [], centerLatitude: null, centerLongitude: null, loading: {}, errors: {}, fetchedAt: {}, fetchMarkers: mocks.fetchMarkers });
-  useDashboardConfigStore.setState({ config: null, isLoading: false, hasError: false, load: mocks.loadConfig });
+  useDepartmentConfigStore.setState({ config: null, isLoading: false, hasError: false, load: mocks.loadConfig });
   useDashboardStore.setState({ widgets: [] });
   useDashboardViewStore.setState({ isEditMode: false, showAddMenu: false });
   useWidgetSettingsStore.getState().resetAllSettings();
@@ -73,7 +73,7 @@ export function setRights(rights: Partial<DepartmentRightsResultData>): void {
 }
 
 export function setConfig(config: Partial<GetConfigResultData>): void {
-  useDashboardConfigStore.setState({ config: { UnitStatusThresholds: [], ...config } as GetConfigResultData });
+  useDepartmentConfigStore.setState({ config: { UnitStatusThresholds: [], ...config } as GetConfigResultData });
 }
 
 export const NOW = Date.now();

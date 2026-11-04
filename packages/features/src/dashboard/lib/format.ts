@@ -1,14 +1,5 @@
 import { parseDateISOString, parseUtcMs } from '@resgrid/core/utils/dates';
 
-/** Compact elapsed time for a wall board: "45s", "4m", "1h 12m". Empty when unknown. */
-export const formatElapsed = (seconds: number | null | undefined): string => {
-  if (seconds === null || seconds === undefined || !Number.isFinite(seconds) || seconds < 0) return '';
-  if (seconds < 60) return `${Math.floor(seconds)}s`;
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m`;
-  return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
-};
-
 export type ElapsedUnit = 'just_now' | 'minutes' | 'hours' | 'days';
 
 export interface ElapsedSince {

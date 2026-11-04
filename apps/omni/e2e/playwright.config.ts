@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 import { defineConfig, devices } from '@playwright/test';
 
 import type { ConsoleGuardOptions, VariantWorkerOptions } from './support/variant-fixtures';
@@ -9,20 +11,22 @@ import { selectedWebVariants, VARIANT_IDS } from './support/variants';
 //   qa-<variant>       the same export signed in to seeded QA departments (E2E_QA_MANIFEST; see e2e/README.md)
 // Select web variants with E2E_VARIANT=unit,ic (or `all`); by default every exported variant runs.
 // Run through `node scripts/ci/run-playwright.mjs test -c apps/omni/e2e/playwright.config.ts [--project web-unit]`.
+// E2E_OUTPUT_DIR=<dir> puts the traces and screenshots in <dir>/test-results and the HTML report in <dir>/playwright-report;
+// run-playwright.mjs sets it to e2e/results/run-<pid> for a run that overlaps another in the same checkout.
 const CI = Boolean(process.env.CI);
+const outputRoot = process.env.E2E_OUTPUT_DIR ? path.resolve(process.env.E2E_OUTPUT_DIR) : null;
+const reportFolder = outputRoot ? path.join(outputRoot, 'playwright-report') : './playwright-report';
 
 export default defineConfig<ConsoleGuardOptions, VariantWorkerOptions>({
   testDir: '.',
-  outputDir: './test-results',
+  outputDir: outputRoot ? path.join(outputRoot, 'test-results') : './test-results',
   timeout: 60_000,
   expect: { timeout: 20_000 },
   fullyParallel: true,
   forbidOnly: CI,
   retries: CI ? 1 : 0,
   workers: CI ? 2 : undefined,
-  reporter: CI
-    ? [['list'], ['github'], ['junit', { outputFile: './results/junit.xml' }], ['html', { open: 'never', outputFolder: './playwright-report' }]]
-    : [['list'], ['html', { open: 'never', outputFolder: './playwright-report' }]],
+  reporter: CI ? [['list'], ['github'], ['junit', { outputFile: './results/junit.xml' }], ['html', { open: 'never', outputFolder: reportFolder }]] : [['list'], ['html', { open: 'never', outputFolder: reportFolder }]],
   use: {
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',

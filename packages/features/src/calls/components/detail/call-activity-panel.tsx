@@ -1,4 +1,5 @@
 import { formatUtcInDepartmentTime } from '@resgrid/core/utils/dates';
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import type { DispatchedEventResultData } from '@resgrid/models';
 import { Text } from '@resgrid/ui';
@@ -19,6 +20,7 @@ export const activityLinkKind = (source: number | null | undefined): 'auto' | 'i
 /** The call's timeline (status changes tied to the call), marking statuses the sender did not attach explicitly (Dispatch marker). */
 export const CallActivityPanel: React.FC<CallActivityPanelProps> = ({ activity }) => {
   const { t } = useTranslation();
+  const timeZone = useDepartmentTimeZone();
   if (activity.length === 0) {
     return (
       <View style={styles.panel} testID="call-activity-panel">
@@ -48,7 +50,7 @@ export const CallActivityPanel: React.FC<CallActivityPanelProps> = ({ activity }
               {[event.Name, event.Group].filter(Boolean).join(' — ')}
             </Text>
             <Text size="xs" className="text-typography-500">
-              {formatUtcInDepartmentTime(event.Timestamp, null, undefined, undefined, event.Timestamp)}
+              {formatUtcInDepartmentTime(event.Timestamp, timeZone, undefined, undefined, event.Timestamp)}
             </Text>
             {event.Note ? (
               <Text size="xs" className="text-typography-600">

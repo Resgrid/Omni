@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { useCallFormHookPoints } from '../../hook-points';
+import { revealedCallText } from '../../lib/call-display';
 import { isUsablePoint } from '../../lib/call-location';
 
 export interface CallMapSectionProps {
@@ -35,10 +36,9 @@ export const CallMapSection: React.FC<CallMapSectionProps> = ({ call }) => {
   const hasDestination = isUsablePoint(call.DestinationLatitude, call.DestinationLongitude);
   // Without a usable call point the destination is all there is to show.
   const showDestination = hasDestination && (view === 'destination' || !point);
-  const addressWithheld = isFieldRedacted(call.RedactedFields, ProtectedFieldIds.callAddress, call.Address);
   const latitude = showDestination ? Number(call.DestinationLatitude) : point?.latitude;
   const longitude = showDestination ? Number(call.DestinationLongitude) : point?.longitude;
-  const address = showDestination ? call.DestinationAddress || call.DestinationName : addressWithheld ? undefined : call.Address;
+  const address = showDestination ? call.DestinationAddress || call.DestinationName : (revealedCallText(call, 'Address') ?? undefined);
 
   if (!StaticLocationMap || (!point && !hasDestination)) return null;
 

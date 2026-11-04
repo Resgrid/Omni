@@ -1,5 +1,6 @@
+import { useNow } from '@resgrid/core/lifecycle/use-now';
 import { selectActiveCalls, useCallsStore } from '@resgrid/data';
-import { CallCard, DispatchTicker } from '@resgrid/features/calls';
+import { CallCard, callDisplayName, callDisplayText, DispatchTicker } from '@resgrid/features/calls';
 import { CallNavigationEtas } from '@resgrid/features/navigation-eta';
 import { useTranslation } from '@resgrid/i18n';
 import type { CallResultData } from '@resgrid/models';
@@ -7,7 +8,6 @@ import { HStack, ScrollView, TypeIcon, View, VStack } from '@resgrid/ui';
 import React, { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 
-import { useNow } from '../../hooks/use-now';
 import { usePriorityLookup } from '../../hooks/use-priority-lookup';
 import { useStale } from '../../hooks/use-stale';
 import { useWidgetSettings } from '../../hooks/use-widget-settings-store';
@@ -41,6 +41,7 @@ export const CallsWidget: React.FC<WidgetProps> = ({ isEditMode, onRemove, onCon
   const priorityOf = usePriorityLookup(priorities);
   const stale = useStale(active.length > 0, hasError);
   const { fontSize } = settings;
+  const protectedLabel = t('data_protection.protected_value');
 
   const columns = useMemo<TableColumn<CallResultData>[]>(() => {
     const visible: Record<CallsColumnKey, boolean> = {
@@ -51,6 +52,7 @@ export const CallsWidget: React.FC<WidgetProps> = ({ isEditMode, onRemove, onCon
       priority: settings.showPriority,
       dispatched: settings.showDispatched,
     };
+
     const render: Record<CallsColumnKey, (call: CallResultData) => React.ReactNode> = {
       id: (call) => (
         <CellText fontSize={fontSize} bold>
@@ -60,16 +62,17 @@ export const CallsWidget: React.FC<WidgetProps> = ({ isEditMode, onRemove, onCon
       name: (call) => (
         <HStack space="xs" className="items-center">
           <TypeIcon iconUrl={call.TypeIconUrl ?? null} mapIcon={call.TypeMapIcon ?? null} size={fontSize + 4} />
-          <CellText fontSize={fontSize}>{call.Name}</CellText>
+          <CellText fontSize={fontSize}>{callDisplayName(call, protectedLabel)}</CellText>
         </HStack>
       ),
       address: (call) => (
         <CellText fontSize={fontSize} muted>
-          {call.Address || t('dashboard.no_address')}
+          {callDisplayText(call, 'Address', protectedLabel) || t('dashboard.no_address')}
         </CellText>
       ),
       timestamp: (call) => {
         const elapsed = elapsedSince(call.LoggedOnUtc, now);
+
         return (
           <CellText fontSize={fontSize} muted>
             {elapsed ? t(ELAPSED_KEYS[elapsed.unit], { count: elapsed.count }) : ''}
@@ -78,6 +81,7 @@ export const CallsWidget: React.FC<WidgetProps> = ({ isEditMode, onRemove, onCon
       },
       priority: (call) => {
         const priority = priorityOf(call.Priority);
+
         return (
           <CellText fontSize={fontSize} color={priority.color}>
             {priority.label}
@@ -86,6 +90,7 @@ export const CallsWidget: React.FC<WidgetProps> = ({ isEditMode, onRemove, onCon
       },
       dispatched: (call) => {
         const dispatches = dispatchesByCall[call.CallId] ?? [];
+
         return (
           <VStack>
             {dispatches.length > 0 ? (
@@ -100,8 +105,9 @@ export const CallsWidget: React.FC<WidgetProps> = ({ isEditMode, onRemove, onCon
         );
       },
     };
+
     return settings.columnOrder.filter((key) => visible[key]).map((key) => ({ key, label: t(CALLS_COLUMN_LABEL_KEYS[key]), flex: COLUMN_FLEX[key], render: render[key] }));
-  }, [dispatchesByCall, fontSize, now, priorityOf, settings, t]);
+  }, [dispatchesByCall, fontSize, now, priorityOf, protectedLabel, settings, t]);
 
   const body =
     isLoading && active.length === 0 ? (
@@ -116,6 +122,7 @@ export const CallsWidget: React.FC<WidgetProps> = ({ isEditMode, onRemove, onCon
       <ScrollView style={styles.fill} nestedScrollEnabled testID="calls-cards">
         {active.map((call) => {
           const priority = priorityOf(call.Priority);
+
           return (
             <View key={call.CallId}>
               <CallCard

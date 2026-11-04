@@ -1,4 +1,5 @@
 import { formatUtcInDepartmentTime } from '@resgrid/core/utils/dates';
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import type { ChecklistDue, ChecklistHistory, ChecklistTarget } from '@resgrid/models';
 import { Badge, BadgeText, Button, ButtonText, HStack, Pressable, Text, useThemeColors, VStack } from '@resgrid/ui';
@@ -19,9 +20,10 @@ export interface DueCheckRowProps {
 /** A scheduled check: name, state, what to check and when; the whole card opens it. */
 export const DueCheckRow: React.FC<DueCheckRowProps> = React.memo(({ row, disabled = false, onOpen }) => {
   const { t } = useTranslation();
+  const timeZone = useDepartmentTimeZone();
   const colors = useThemeColors();
   const badge = occurrenceStateBadge(row.State);
-  const when = formatUtcInDepartmentTime(row.PeriodStartUtc, null);
+  const when = formatUtcInDepartmentTime(row.PeriodStartUtc, timeZone);
   return (
     <View testID={`checklist-due-${row.Id}`}>
       <Pressable
@@ -46,7 +48,7 @@ export const DueCheckRow: React.FC<DueCheckRowProps> = React.memo(({ row, disabl
               ) : null}
             </HStack>
             <Text size="sm" className="text-typography-600">{`${row.Target.Name} · ${when}`}</Text>
-            {row.WindowEndUtc ? <Text size="xs" className="text-typography-500">{`${t('checklists.labels.WindowEnds')}: ${formatUtcInDepartmentTime(row.WindowEndUtc, null)}`}</Text> : null}
+            {row.WindowEndUtc ? <Text size="xs" className="text-typography-500">{`${t('checklists.labels.WindowEnds')}: ${formatUtcInDepartmentTime(row.WindowEndUtc, timeZone)}`}</Text> : null}
             {row.CanStart ? null : (
               <Text size="xs" className="text-typography-500">
                 {t('checklists.labels.AssignmentPermission')}
@@ -109,9 +111,10 @@ export interface ChecklistHistoryRowProps {
 /** A past or unfinished run: checklist, target, when, outcome and score; the card opens the run. */
 export const ChecklistHistoryRow: React.FC<ChecklistHistoryRowProps> = React.memo(({ row, name, onOpen }) => {
   const { t } = useTranslation();
+  const timeZone = useDepartmentTimeZone();
   const colors = useThemeColors();
   const badge = historyOutcomeBadge(row);
-  const when = formatUtcInDepartmentTime(row.SubmittedOn ?? row.UpdatedOn, null);
+  const when = formatUtcInDepartmentTime(row.SubmittedOn ?? row.UpdatedOn, timeZone);
   const details = [name ? row.TargetName : '', when, row.Score != null ? `${t('checklists.labels.Score')}: ${row.Score}` : ''].filter((part) => !!part).join(' · ');
   return (
     <Pressable onPress={() => onOpen(row.Id)} accessibilityRole="button" accessibilityLabel={[name ?? row.TargetName, t(badge.labelKey), details].join(', ')} className={CARD} testID={`checklist-history-${row.Id}`}>

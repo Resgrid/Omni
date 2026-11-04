@@ -2,6 +2,13 @@
 // Register the sidebar from the Unit root layout:
 //   registerSidebarContent('unit-status', (props) => <UnitStatusSidebar {...props} onClearActiveCall={clearActiveCall} />);
 // Route file for /console: export { default } from '@resgrid/features/unit-status/screens/unit-console';
+//
+// The status timer pieces are re-exported through one statement: Oxlint's readable spacing wants a blank line between
+// top-level statements, which the export sorter removes.
+import { StatusTimerBanner, type StatusTimerBannerProps } from './components/status-timer-banner';
+import { StatusTimerCard, type StatusTimerCardProps } from './components/status-timer-card';
+import { StatusTimerNotifications } from './components/status-timer-notifications';
+import { timerToneColors, unitTimerNotifications, type UnitTimerText, unitTimerText, type UnitTimerTone } from './lib/status-timer-text';
 
 // Screens
 export { default as UnitConsoleScreen, type UnitConsoleScreenProps } from './screens/unit-console';
@@ -28,3 +35,17 @@ export { resolveUnitStatusDisplay, STATE_STYLE_COLORS, statusStyleColor, type Un
 // Routes and nav
 export { type FeatureNavEntry, unitStatusNav } from './nav';
 export { UNIT_STATUS_ROUTE_PATTERNS, unitStatusRoutes } from './routes';
+
+// Status timer (the console card, the shell banner and the notifications while the app is in the background)
+export {
+  StatusTimerBanner,
+  type StatusTimerBannerProps,
+  StatusTimerCard,
+  type StatusTimerCardProps,
+  StatusTimerNotifications,
+  timerToneColors,
+  unitTimerNotifications,
+  type UnitTimerText,
+  unitTimerText,
+  type UnitTimerTone,
+};

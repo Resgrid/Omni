@@ -3,7 +3,7 @@
  * the app shell configures it once at startup with getters for the session and the services it needs.
  */
 import type { ApiContext } from '@resgrid/api';
-import { getCapability } from '@resgrid/config';
+import { type FeatureModuleId, getActiveVariant, getCapability } from '@resgrid/config';
 import type { Href } from 'expo-router';
 
 import type { NotificationTarget } from './event-codes';
@@ -102,6 +102,18 @@ export function getPushSubjectKind(): PushSubjectKind {
 export function isDesktopPushEnabled(): boolean {
   try {
     return getCapability('push').desktopPush;
+  } catch {
+    return false;
+  }
+}
+
+/** Modules that show the unit's own status timer, so the app schedules its notifications (manifest `modules`). */
+export const STATUS_TIMER_MODULES: readonly FeatureModuleId[] = ['unit-status'];
+
+/** This app schedules the unit's own status timer notifications: its channel and category exist only there. */
+export function hasStatusTimerNotifications(): boolean {
+  try {
+    return getActiveVariant().modules.some((module) => STATUS_TIMER_MODULES.includes(module));
   } catch {
     return false;
   }

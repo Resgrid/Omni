@@ -2,12 +2,13 @@ import { isApiError } from '@resgrid/api';
 import { useFeatureFlag, useSecurity } from '@resgrid/auth';
 import { useCapability } from '@resgrid/config';
 import { useCallDetailStore, useCallsStore } from '@resgrid/data';
+import { ProtectedLabel, ProtectedRevealBar } from '@resgrid/features/data-protection';
 import { useTranslation } from '@resgrid/i18n';
 import { type CallQuickTemplateResultData, type NewCallFieldKey, NewCallFieldKeys, type UdfFieldValueInput } from '@resgrid/models';
 import { Button, ButtonText, DateTimeField, Input, InputField, Loading, Pressable, ScreenHeader, Spinner, Switch, Text, Textarea, TextareaInput, useFormFactor, useThemeColors, useToast, ZeroState } from '@resgrid/ui';
 import { useRouter } from 'expo-router';
 import { MapPin, Search } from 'lucide-react-native';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { CallContactPicker } from '../components/call-form/contact-picker';
@@ -32,9 +33,12 @@ import {
   emptyCallFormValues,
   formatCoordinates,
   parseCoordinates,
+  syncWithheldEditFields,
   toCreateCallRequest,
   toUpdateCallRequest,
   validateCallForm,
+  type WithheldEditField,
+  withheldEditFields,
 } from '../lib/call-form';
 import { type GeocodeLookup, isWhat3WordsFormat, lookupAddress, lookupAddressAt, lookupPlusCode, lookupWhat3Words } from '../lib/call-geocoding';
 import { defaultPriorityId, priorityOptions } from '../lib/call-priority';
@@ -60,6 +64,8 @@ export interface CallFormScreenProps {
   /** After a successful save (default: navigate back; a call saved as Pending opens the pending queue). */
   onDone?: () => void;
 }
+
+const NO_WITHHELD_FIELDS = new Set<WithheldEditField>();
 
 /** Fields a quick create shows even when the policy does not require them. */
 const QUICK_FIELDS = new Set<NewCallFieldKey>([NewCallFieldKeys.Address, NewCallFieldKeys.Geolocation, NewCallFieldKeys.Note]);
@@ -126,19 +132,32 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
   const [startedFrom, setStartedFrom] = useState<'blank' | 'source' | null>(() => (!isEdit && !correctLocalId ? 'blank' : null));
   const [initialDispatchOnUtc, setInitialDispatchOnUtc] = useState('');
   const [udfApplied, setUdfApplied] = useState(false);
+  // Edit: set once this screen's own read of the call has finished, so the form never starts from a cached copy.
+  const [detailRead, setDetailRead] = useState(false);
+
+  const readDetail = useCallback(
+    (options?: { bypassCache?: boolean }) => {
+      if (!callId) return;
+      setDetailRead(false);
+      void fetchCallDetail(callId, options).finally(() => setDetailRead(true));
+    },
+    [callId, fetchCallDetail]
+  );
 
   useEffect(() => {
     void fetchCallFormData();
 
-    if (isEdit && callId) void fetchCallDetail(callId);
-  }, [callId, fetchCallDetail, fetchCallFormData, isEdit]);
+    if (isEdit) readDetail();
+  }, [fetchCallFormData, isEdit, readDetail]);
 
-  // Start from the call (edit, hidden fields included) or the refused request (correction) once it is available.
+  // Start from the call (edit, hidden fields included) or the refused request (correction) once it is available. An
+  // edit waits for the call's dispatches: EditCall reads a blank dispatch list as "everyone", so a form started without
+  // them would page the whole department on save.
   useEffect(() => {
     if (startedFrom === 'source') return;
 
-    if (isEdit && detail?.call) {
-      const start = callToFormValues(detail.call, detail.extraData?.Dispatches ?? [], { types: callTypes });
+    if (isEdit && detailRead && detail?.call && detail.extraData) {
+      const start = callToFormValues(detail.call, detail.extraData.Dispatches ?? [], { types: callTypes });
 
       setValues(start);
       setInitialDispatchOnUtc(start.dispatchOnUtc);
@@ -149,7 +168,22 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
     } else if (startedFrom === 'blank' && callPriorities.length > 0) {
       setValues((current) => (current.name || current.nature ? current : { ...current, priority: defaultPriorityId(callPriorities) }));
     }
-  }, [callPriorities, callTypes, detail, isEdit, queuedCall, startedFrom]);
+  }, [callPriorities, callTypes, detail, detailRead, isEdit, queuedCall, startedFrom]);
+
+  // Edit: the fields ADP withheld from the call as last read show locked. A reveal, a conceal or the grant running out
+  // re-reads the call (reveal bar) and the form follows: newly readable fields fill in, newly withheld ones empty again.
+  const detailCall = detail?.call;
+  const withheld = useMemo(() => (isEdit && detailCall ? withheldEditFields(detailCall) : NO_WITHHELD_FIELDS), [detailCall, isEdit]);
+  const isWithheld = (key: keyof CallFormValues): boolean => [...withheld].some((field) => field === key);
+  const formWithheld = useRef<ReadonlySet<WithheldEditField> | null>(null);
+
+  useEffect(() => {
+    if (!isEdit || startedFrom !== 'source' || !detailRead || !detailCall) return;
+    const previous = formWithheld.current ?? withheld;
+
+    formWithheld.current = withheld;
+    setValues((current) => syncWithheldEditFields(current, detailCall, previous));
+  }, [detailCall, detailRead, isEdit, startedFrom, withheld]);
 
   // Custom fields start at their defaults (or, on an edit, what the call stores) once the form has its values.
   useEffect(() => {
@@ -395,8 +429,16 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
     return <ZeroState isError heading={t('calls.create_not_allowed')} description={t('calls.create_not_allowed_description')} testID="call-form-not-allowed" />;
   }
 
-  if (isEdit && !detail?.call) {
-    return <Loading text={t('call_detail.loading')} />;
+  if (isEdit && startedFrom !== 'source') {
+    return detailRead && !(detail?.call && detail.extraData) ? (
+      <ZeroState isError heading={t('calls.edit_load_error')} testID="call-form-load-error">
+        <Button onPress={() => readDetail({ bypassCache: true })} accessibilityLabel={t('common.retry')} testID="call-form-load-retry">
+          <ButtonText>{t('common.retry')}</ButtonText>
+        </Button>
+      </ZeroState>
+    ) : (
+      <Loading text={t('call_detail.loading')} />
+    );
   }
 
   const title = isEdit ? t('calls.edit_call') : correctingId ? t('calls.queued.correct_title') : t('calls.new_call');
@@ -444,6 +486,20 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
       action?: React.ReactNode;
     }
   ) => {
+    // Withheld by ADP: locked until revealed, never the sentinel as text to edit (the save keeps the stored value).
+    if (isWithheld(key)) {
+      return (
+        <View style={styles.field} testID={`${options.testID}-protected`}>
+          <Text size="sm" className="mb-1 text-typography-700">
+            {label}
+          </Text>
+          <View className="rounded border border-outline-200 bg-background-50 px-3 py-2" accessible accessibilityLabel={`${label}: ${t('data_protection.protected_value')}`}>
+            <ProtectedLabel size="sm" testID={`${options.testID}-protected-label`} />
+          </View>
+        </View>
+      );
+    }
+
     const raw = values[key];
     const value = typeof raw === 'string' ? raw : '';
     const error = options.errorKey ? errors[options.errorKey] : undefined;
@@ -496,6 +552,7 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
     <View style={styles.screen} className="bg-background-50" testID="call-form-screen">
       <ScreenHeader title={title} onBack={() => router.back()} />
       {!isOnline ? isEdit ? <Text className="mx-3 my-2 text-warning-700">{t('calls.edit.offline')}</Text> : <OfflineCallBanner context="form" /> : null}
+      {isEdit ? <ProtectedRevealBar onRefresh={() => readDetail({ bypassCache: true })} testID="call-form-reveal-bar" /> : null}
       <ScrollView contentContainerStyle={StyleSheet.flatten([styles.content, isDesktop ? styles.desktop : null])} keyboardShouldPersistTaps="handled">
         {queuedCall ? (
           <View style={styles.section} className="bg-background-0" testID="call-form-correction">
@@ -604,7 +661,7 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
                   action: lookupButton('plusCode', t('calls.search_plus_code'), values.plusCode, 'call-form-plus-code-search'),
                 })
               : null}
-            {show(NewCallFieldKeys.Geolocation) ? (
+            {show(NewCallFieldKeys.Geolocation) && !isWithheld('coordinates') ? (
               <>
                 {mapSlot ? (
                   <View style={styles.map} testID="call-form-map-slot">
@@ -763,7 +820,7 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
                 >
                   <Text className="text-typography-900">{`${t('calls.select_recipients')}${isPendingCall ? '' : req(NewCallFieldKeys.DispatchList)}`}</Text>
                   <Text size="xs" className="text-typography-500" testID="call-form-dispatch-summary">
-                    {summarizeDispatchSelection(values.dispatch, recipients, { everyone: t('calls.everyone'), none: values.isPending ? t('common.none') : t('calls.dispatch.none_pages_everyone') })}
+                    {summarizeDispatchSelection(values.dispatch, recipients, { everyone: t('calls.everyone'), none: isPendingCall ? t('common.none') : t('calls.dispatch.none_pages_everyone') })}
                   </Text>
                 </Pressable>
                 {errors.dispatchList ? (
@@ -857,7 +914,7 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
         onClose={() => setOpen(null)}
         recipients={recipients}
         value={values.dispatch}
-        allowEveryone={!values.isPending}
+        allowEveryone={!isPendingCall}
         onConfirm={(selection) => {
           set('dispatch', selection);
           setOpen(null);

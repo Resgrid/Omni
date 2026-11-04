@@ -8,6 +8,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { useCallFormHookPoints } from '../hook-points';
 import { useDispatchRecipients } from '../hooks/use-call-form-data';
+import { callDisplayName } from '../lib/call-display';
 import { buildAddResourcesRequest, dispatchesToSelection, type DispatchSelection, EMPTY_DISPATCH_SELECTION, selectionSize } from '../lib/dispatch-selection';
 import { DispatchSelectionModal } from './dispatch-selection';
 
@@ -48,8 +49,9 @@ export const AddResourcesSheet: React.FC<AddResourcesSheetProps> = ({ call, onCl
     setIsSaving(true);
 
     try {
-      // Union against the server's current dispatches, never a cached list: a stale one would un-dispatch resources.
-      const latest = await useCallsStore.getState().fetchCallExtraData(call.CallId, { bypassCache: true });
+      // EditCall rewrites the whole call, so it is built from the server's current call and dispatches, never cached
+      // copies: a stale call would undo another dispatcher's edit, and a stale dispatch list would un-dispatch resources.
+      const latest = await useCallDetailStore.getState().fetchCurrentCall(call.CallId);
 
       if (!latest) {
         toast.error(t('dispatch_console.add_resources_error'));
@@ -57,7 +59,7 @@ export const AddResourcesSheet: React.FC<AddResourcesSheetProps> = ({ call, onCl
         return;
       }
 
-      await useCallDetailStore.getState().updateCall(buildAddResourcesRequest(call, dispatchesToSelection(latest.Dispatches), added, { callFormData: latest.CallFormData, unitResponseCodes }));
+      await useCallDetailStore.getState().updateCall(buildAddResourcesRequest(latest.call, dispatchesToSelection(latest.extraData.Dispatches), added, { callFormData: latest.extraData.CallFormData, unitResponseCodes }));
       void useCallsStore.getState().fetchCallDispatches([call.CallId], { bypassCache: true });
       toast.success(t('dispatch_console.add_resources_success'));
       onDispatched?.(call.CallId);
@@ -70,6 +72,7 @@ export const AddResourcesSheet: React.FC<AddResourcesSheetProps> = ({ call, onCl
   };
 
   const count = selectionSize(added);
+  const callLabel = call ? `#${call.Number} ${callDisplayName(call, t('data_protection.protected_value'))}` : null;
 
   return (
     <NativeModal visible={isOpen} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose} testID="add-resources-sheet">
@@ -77,7 +80,11 @@ export const AddResourcesSheet: React.FC<AddResourcesSheetProps> = ({ call, onCl
         <HStack className="items-center justify-between border-b border-outline-100 px-4 py-3">
           <VStack className="flex-1">
             <Text className="text-lg font-bold">{t('dispatch_console.add_resources')}</Text>
-            {call ? <Text className="text-xs text-typography-500" numberOfLines={1}>{`#${call.Number} ${call.Name}`}</Text> : null}
+            {callLabel ? (
+              <Text className="text-xs text-typography-500" numberOfLines={1}>
+                {callLabel}
+              </Text>
+            ) : null}
           </VStack>
           <Pressable onPress={onClose} hitSlop={10} accessibilityRole="button" accessibilityLabel={t('common.close')} testID="add-resources-sheet-close">
             <View>

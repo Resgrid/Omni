@@ -1,8 +1,9 @@
+import { summarizeUnitAlerts, useUnitAlerts } from '@resgrid/features/unit-status-alerts';
 import { useTranslation } from '@resgrid/i18n';
 import { contentOnFill, HStack, Pressable, Text, useResolvedColorScheme, useThemeColors, VStack } from '@resgrid/ui';
 import type { LucideIcon } from 'lucide-react-native';
-import { AlertTriangle, CalendarClock, Clock, CloudLightning, Phone, Truck, User, Users } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import { AlertTriangle, CalendarClock, Clock, CloudLightning, Phone, Timer, Truck, User, Users } from 'lucide-react-native';
+import React, { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import type { ConsoleStats } from '../lib/console-stats';
@@ -62,7 +63,7 @@ const StatTile: React.FC<StatTileProps> = React.memo(({ icon: Icon, label, value
     </HStack>
   );
 
-  // Only the queue and weather tiles open a screen; the others are plain tiles (a disabled Pressable is drawn dimmed).
+  // Only the queue, timer and weather tiles open something; the others are plain tiles (a disabled Pressable is drawn dimmed).
   return onPress ? (
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`${label}: ${value}`} style={styles.tile} testID={testID}>
       {content}
@@ -92,6 +93,31 @@ const LiveClock: React.FC = React.memo(() => {
 
 LiveClock.displayName = 'LiveClock';
 
+/**
+ * Units over their status timer that nobody has acknowledged yet, in the alert's red (amber while only warnings): the
+ * dispatcher's cue to contact them. Its own leaf, since the timers re-evaluate on a tick. Hidden while there are none.
+ */
+const UnitTimersTile: React.FC<{ onPress?: () => void }> = React.memo(({ onPress }) => {
+  const { t } = useTranslation();
+  const { annotated } = useUnitAlerts();
+  const summary = useMemo(() => summarizeUnitAlerts(annotated), [annotated]);
+
+  if (summary.unacknowledged === 0) return null;
+
+  return (
+    <StatTile
+      icon={Timer}
+      label={t('dispatch_console.unit_timers')}
+      value={summary.unacknowledged}
+      tone={summary.worstUnacknowledged === 'alert' ? TONES.active : TONES.pending}
+      onPress={onPress}
+      testID={`stat-unit-timers-${summary.worstUnacknowledged}`}
+    />
+  );
+});
+
+UnitTimersTile.displayName = 'UnitTimersTile';
+
 export interface StatsHeaderProps {
   stats: ConsoleStats;
   /** Calls saved as Pending, from the pending queue. */
@@ -101,16 +127,18 @@ export interface StatsHeaderProps {
   onPendingCallsPress?: () => void;
   onScheduledCallsPress?: () => void;
   onWeatherAlertsPress?: () => void;
+  /** Opens the units over their status timers (the console's Unit timers tab). */
+  onUnitTimersPress?: () => void;
   /** Off in tests (the clock ticks every second). */
   showClock?: boolean;
 }
 
 /**
  * The console's stats bar (Dispatch baseline): active, pending and scheduled calls, available units and personnel,
- * personnel on duty, extreme/severe weather alerts and a clock, each tile washed in its own colour. The queue and weather
- * tiles open their screens.
+ * personnel on duty, units over their status timers, extreme/severe weather alerts and a clock, each tile washed in its
+ * own colour. The queue, timer and weather tiles open their screens or tab.
  */
-export const StatsHeader: React.FC<StatsHeaderProps> = ({ stats, pendingCalls, extremeAlerts, severeAlerts, onPendingCallsPress, onScheduledCallsPress, onWeatherAlertsPress, showClock = true }) => {
+export const StatsHeader: React.FC<StatsHeaderProps> = ({ stats, pendingCalls, extremeAlerts, severeAlerts, onPendingCallsPress, onScheduledCallsPress, onWeatherAlertsPress, onUnitTimersPress, showClock = true }) => {
   const { t } = useTranslation();
   const colors = useThemeColors();
 
@@ -123,6 +151,7 @@ export const StatsHeader: React.FC<StatsHeaderProps> = ({ stats, pendingCalls, e
         <StatTile icon={Truck} label={t('dispatch_console.units_available')} value={stats.unitsAvailable} tone={TONES.units} testID="stat-units-available" />
         <StatTile icon={User} label={t('dispatch_console.personnel_available')} value={stats.personnelAvailable} tone={TONES.personnel} testID="stat-personnel-available" />
         <StatTile icon={Users} label={t('dispatch_console.personnel_on_duty')} value={stats.personnelOnDuty} tone={TONES.onDuty} testID="stat-personnel-on-duty" />
+        <UnitTimersTile onPress={onUnitTimersPress} />
         {extremeAlerts + severeAlerts > 0 ? (
           <StatTile icon={CloudLightning} label={t('dispatch_console.weather_alerts')} value={`${extremeAlerts} / ${severeAlerts}`} tone={TONES.weather} onPress={onWeatherAlertsPress} testID="stat-weather-alerts" />
         ) : null}

@@ -1,4 +1,5 @@
 import { useRoutesStore, useUnitsStore } from '@resgrid/data';
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useStatusContext } from '@resgrid/features/status';
 import { useTranslation } from '@resgrid/i18n';
 import type { RouteStopResultData } from '@resgrid/models';
@@ -28,6 +29,7 @@ export interface RouteStartScreenProps {
  */
 export default function RouteStartScreen({ planId: planIdProp, renderMap }: RouteStartScreenProps) {
   const { t } = useTranslation();
+  const timeZone = useDepartmentTimeZone();
   const toast = useToast();
   const { isElectron, isDesktop } = useFormFactor();
   const params = useLocalSearchParams<{ planId?: string | string[] }>();
@@ -94,8 +96,8 @@ export default function RouteStartScreen({ planId: planIdProp, renderMap }: Rout
   }
 
   const renderStop = (stop: RouteStopResultData, index: number) => {
-    const arrival = formatRouteTime(stop.PlannedArrivalTime);
-    const departure = formatRouteTime(stop.PlannedDepartureTime);
+    const arrival = formatRouteTime(stop.PlannedArrivalTime, timeZone);
+    const departure = formatRouteTime(stop.PlannedDepartureTime, timeZone);
     return (
       <View key={stop.RouteStopId} testID={`route-start-stop-${stop.RouteStopId}`}>
         <HStack space="md" className="items-start py-3">

@@ -254,7 +254,7 @@ Department feature flags (`Chat.System`, `Records.Field.*`, `Checklists.System`,
 
 #### 5.3.3 Identity that must not change
 
-Bundle IDs and Android packages (including `wtdt.resgrid.andriod`), URL schemes, SSO return schemes, passkey associated domains, App Group (`group.com.wavetech.resgrid.shared`, Responder), MMKV ids (keys are per device, D8), persisted store names, Electron appIds and protocols, BigBoard's Electron loopback origin `127.0.0.1:29317` (or a migration of its localStorage), Docker image names and legacy runtime env names (`${PREFIX}_*`), Novu subscriber id formats, push `Source` values, `RESGRID_CLIENT` ids. Full table: Appendix B.
+Bundle IDs and Android packages (including `wtdt.resgrid.andriod`), URL schemes, SSO return schemes, passkey associated domains, App Groups (`group.com.wavetech.resgrid.shared`, Responder; `group.com.resgrid.unit.shared`, Unit), MMKV ids (keys are per device, D8), persisted store names, Electron appIds and protocols, BigBoard's Electron loopback origin `127.0.0.1:29317` (or a migration of its localStorage), Docker image names and legacy runtime env names (`${PREFIX}_*`), Novu subscriber id formats, push `Source` values, `RESGRID_CLIENT` ids. Full table: Appendix B.
 
 #### 5.3.4 Routes
 
@@ -480,7 +480,7 @@ Notation: R/U/I/D/B. "A + B's X" = take A, merge X from B. Every row also takes 
 ### 7.5 Realtime
 
 - **Service:** D `signalr.service.ts` (visibility handling skipped on Electron, `withServerTimeout(60000)`, abort controllers, `connection.off` cleanup, connected check in `invoke`, hub state events) + token read at call time (D reuses the connect-time token on reconnect) + U geo-hub auth without query-string token (confirm server support) + R recovery of hubs that exhausted retries when NetInfo returns, intentional-disconnect tracking, typed `invoke<T>` + U stop-on-empty-refresh and 10-retry linear backoff capped at 60 s. Emit loop wrapped per listener (R lacks try/catch); all hub arguments forwarded (B forwards only the first).
-- **Store:** R structure (safe handlers subscribed once, rejoin generation counters, outage tracking) + per-variant event sets (D `unitActiveRolesUpdated`, `checkInUpdated`, `outstandingRequirementsUpdated`; B `unitStatusAlertUpdated`; R/U `checklistUpdated`; I coalesced board refresh + debounced `/Sync/Bundle`) + B's hub watchdog (`hubWatchdog` capability for always-on screens).
+- **Store:** R structure (safe handlers subscribed once, rejoin generation counters, outage tracking) + per-variant event sets (D `unitActiveRolesUpdated`, `checkInUpdated`, `outstandingRequirementsUpdated`; B/D/U `unitStatusAlertUpdated` — by module: dashboard, dispatch console, unit console; R/U `checklistUpdated`; I coalesced board refresh + debounced `/Sync/Bundle`) + B's hub watchdog (`hubWatchdog` capability for always-on screens).
 - **Live locations:** D `lib/live-locations.ts` + `use-map-live-locations.ts` (five APIs today).
 
 ### 7.6 Notifications

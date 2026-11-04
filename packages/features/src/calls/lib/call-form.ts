@@ -1,4 +1,5 @@
 import { type CreateCallRequest, formatGeolocation, type UpdateCallRequest } from '@resgrid/api';
+import { isFieldRedacted, type ProtectedFieldId, ProtectedFieldIds, REDACTION_VALUE } from '@resgrid/auth';
 import { type CallResultData, type CallTypeResultData, type DispatchedEventResultData, type NewCallFieldKey, NewCallFieldKeys, type UdfFieldResultData, type UdfFieldValueInput } from '@resgrid/models';
 
 import { getScheduledDispatchPrefill, isDispatchTimeTooSoon, toDispatchOnUtc } from './call-schedule';
@@ -120,6 +121,27 @@ export interface CallFormValidation {
   isValid: boolean;
 }
 
+/** The edit form's text fields that Advanced Data Protection can withhold. */
+export type WithheldEditField = 'name' | 'nature' | 'note' | 'address' | 'coordinates' | 'what3words' | 'contactName' | 'contactInfo';
+
+const PROTECTED_EDIT_FIELDS = [
+  { key: 'name', fieldId: ProtectedFieldIds.callName, stored: (call: CallResultData) => call.Name },
+  { key: 'nature', fieldId: ProtectedFieldIds.callNature, stored: (call: CallResultData) => call.Nature },
+  { key: 'note', fieldId: ProtectedFieldIds.callNotes, stored: (call: CallResultData) => call.Note },
+  { key: 'address', fieldId: ProtectedFieldIds.callAddress, stored: (call: CallResultData) => call.Address },
+  { key: 'coordinates', fieldId: ProtectedFieldIds.callGeolocation, stored: (call: CallResultData) => call.Geolocation },
+  { key: 'what3words', fieldId: ProtectedFieldIds.callWhat3Words, stored: (call: CallResultData) => call.What3Words },
+  { key: 'contactName', fieldId: ProtectedFieldIds.callContactName, stored: (call: CallResultData) => call.ContactName },
+  { key: 'contactInfo', fieldId: ProtectedFieldIds.callContactNumber, stored: (call: CallResultData) => call.ContactInfo },
+] as const satisfies readonly { key: WithheldEditField; fieldId: ProtectedFieldId; stored: (call: CallResultData) => string | null | undefined }[];
+
+/**
+ * Edit: the fields ADP withheld from the call as loaded. The form shows them locked (never the REDACTED sentinel as
+ * text to edit) and the save leaves them as the call stores them; a reveal re-reads the call and unlocks them.
+ */
+export const withheldEditFields = (call: CallResultData): ReadonlySet<WithheldEditField> =>
+  new Set(PROTECTED_EDIT_FIELDS.flatMap(({ key, fieldId, stored }) => (isFieldRedacted(call.RedactedFields, fieldId, stored(call)) ? [key] : [])));
+
 /** Edit: the call the form was loaded from, which decides what EditCall keeps and which requirements apply. */
 export interface CallFormEditContext {
   call: CallResultData;
@@ -172,11 +194,13 @@ const storedGeolocation = (call: CallResultData): string => {
  */
 export function editPolicyValues(values: CallFormValues, edit: CallFormEditContext): PolicyFieldValues {
   const { call } = edit;
+  // A withheld point is still the call's point: the requirement is met by what is stored.
+  const geolocationWithheld = withheldEditFields(call).has('coordinates');
 
   return {
     [NewCallFieldKeys.Note]: textOrStored(values.note, call.Note),
     [NewCallFieldKeys.Address]: textOrStored(values.address, call.Address),
-    [NewCallFieldKeys.Geolocation]: coordinatesAsGeolocation(values.coordinates) || storedGeolocation(call),
+    [NewCallFieldKeys.Geolocation]: coordinatesAsGeolocation(values.coordinates) || (geolocationWithheld ? REDACTION_VALUE : storedGeolocation(call)),
     [NewCallFieldKeys.What3Words]: textOrStored(values.what3words, call.What3Words),
     [NewCallFieldKeys.ContactName]: textOrStored(values.contactName, call.ContactName),
     [NewCallFieldKeys.ContactInfo]: textOrStored(values.contactInfo, call.ContactInfo),
@@ -251,10 +275,12 @@ const pickedDispatchOn = (values: CallFormValues, edit: CallFormEditContext | nu
 export function validateCallForm(values: CallFormValues, options: CallFormValidationOptions): CallFormValidation {
   const errors: Partial<Record<CallFormErrorKey, string>> = {};
   const validTypeNames = options.validTypeNames ?? [];
+  // A withheld name or nature is locked on the form and kept as stored by the save, so it is not blank.
+  const withheld = options.edit ? withheldEditFields(options.edit.call) : new Set<WithheldEditField>();
 
-  if (!values.name.trim()) errors.name = 'calls.validation.name_required';
+  if (!withheld.has('name') && !values.name.trim()) errors.name = 'calls.validation.name_required';
 
-  if (!values.nature.trim()) errors.nature = 'calls.validation.nature_required';
+  if (!withheld.has('nature') && !values.nature.trim()) errors.nature = 'calls.validation.nature_required';
 
   if (values.priority === null || (options.validPriorityIds.length > 0 && !options.validPriorityIds.includes(values.priority))) errors.priority = 'calls.invalid_priority';
 
@@ -372,6 +398,41 @@ export function keepHiddenEditFieldsUnchanged(request: UpdateCallRequest, isVisi
   return next;
 }
 
+/**
+ * Leaves every field ADP withheld exactly as the call stores it. The form never held its value, so what it holds for
+ * the field is not the dispatcher's choice:
+ * - name and nature go up as the REDACTED sentinel: EditCall overwrites both unconditionally, and Core restores the
+ *   stored value for a round-tripped sentinel;
+ * - the other text fields go up blank, which EditCall reads as "keep the stored value" (a sentinel address would read
+ *   as a new address and drop the call's point);
+ * - no point is posted for a withheld location, so the stored one stays.
+ */
+export function keepWithheldEditFieldsUnchanged(request: UpdateCallRequest, call: CallResultData): UpdateCallRequest {
+  const withheld = withheldEditFields(call);
+  const next: UpdateCallRequest = { ...request };
+
+  if (withheld.has('name')) next.name = REDACTION_VALUE;
+
+  if (withheld.has('nature')) next.nature = REDACTION_VALUE;
+
+  if (withheld.has('note')) next.note = '';
+
+  if (withheld.has('address')) next.address = '';
+
+  if (withheld.has('coordinates')) {
+    next.latitude = undefined;
+    next.longitude = undefined;
+  }
+
+  if (withheld.has('what3words')) next.what3words = '';
+
+  if (withheld.has('contactName')) next.contactName = '';
+
+  if (withheld.has('contactInfo')) next.contactInfo = '';
+
+  return next;
+}
+
 export interface UpdateCallRequestOptions {
   edit: CallFormEditContext;
   isVisible: (key: NewCallFieldKey) => boolean;
@@ -393,7 +454,7 @@ export function toUpdateCallRequest(callId: string, values: CallFormValues, pick
 
   if (dispatchOnUtc) request.dispatchOnUtc = dispatchOnUtc;
 
-  return keepHiddenEditFieldsUnchanged(request, options.isVisible, options.edit.call);
+  return keepWithheldEditFieldsUnchanged(keepHiddenEditFieldsUnchanged(request, options.isVisible, options.edit.call), options.edit.call);
 }
 
 /** The call's current dispatch list as a picker selection (edit). */
@@ -435,21 +496,29 @@ export function callTypeName(call: Pick<CallResultData, 'Type' | 'TypeId'>, type
  * Edit: the form starts from the call as loaded, including fields the policy hides. Protocols and the linked call start
  * empty (an edit only adds them); the dispatch time starts as the stored one only while the call is still scheduled.
  */
-export function callToFormValues(call: CallResultData, dispatches: readonly DispatchedEventResultData[] = [], options: { types?: readonly Pick<CallTypeResultData, 'Id' | 'Name'>[]; now?: number } = {}): CallFormValues {
+/** The protectable fields as the form holds them: what the call stores, or blank where ADP withheld it (never the sentinel). */
+const protectedEditValues = (call: CallResultData): Pick<CallFormValues, WithheldEditField> => {
+  const withheld = withheldEditFields(call);
   const [lat, lon] = (call.Geolocation ?? '').split(',');
-  const coordinates = coordinateString(call.Latitude || lat, call.Longitude || lon);
+  const shown = (key: WithheldEditField, value: string | null | undefined): string => (withheld.has(key) ? '' : (value ?? ''));
 
   return {
+    name: shown('name', call.Name),
+    nature: shown('nature', call.Nature),
+    note: shown('note', call.Note),
+    address: shown('address', call.Address),
+    coordinates: shown('coordinates', coordinateString(call.Latitude || lat, call.Longitude || lon)),
+    what3words: shown('what3words', call.What3Words),
+    contactName: shown('contactName', call.ContactName),
+    contactInfo: shown('contactInfo', call.ContactInfo),
+  };
+};
+
+export function callToFormValues(call: CallResultData, dispatches: readonly DispatchedEventResultData[] = [], options: { types?: readonly Pick<CallTypeResultData, 'Id' | 'Name'>[]; now?: number } = {}): CallFormValues {
+  return {
     ...emptyCallFormValues(call.Priority),
-    name: call.Name ?? '',
-    nature: call.Nature ?? '',
-    note: call.Note ?? '',
-    address: call.Address ?? '',
-    coordinates,
-    what3words: call.What3Words ?? '',
+    ...protectedEditValues(call),
     type: callTypeName(call, options.types ?? []),
-    contactName: call.ContactName ?? '',
-    contactInfo: call.ContactInfo ?? '',
     contactId: call.Contacts?.[0]?.ContactId ?? null,
     externalId: call.ExternalId ?? '',
     referenceId: call.ReferenceId ?? '',
@@ -459,6 +528,24 @@ export function callToFormValues(call: CallResultData, dispatches: readonly Disp
     dispatchOnUtc: getScheduledDispatchPrefill(scheduledDispatchUtc(call), options.now),
     udfValues: udfInputs(call.UdfValues),
   };
+}
+
+/**
+ * Edit: the form after a reveal or a conceal re-read the call. A field that was withheld and is readable now starts from
+ * its stored value; a field withheld now is emptied, so its plaintext leaves the form when the grant ends; every other
+ * field keeps what the dispatcher typed.
+ */
+export function syncWithheldEditFields(values: CallFormValues, call: CallResultData, wasWithheld: ReadonlySet<WithheldEditField>): CallFormValues {
+  const withheld = withheldEditFields(call);
+  const stored = protectedEditValues(call);
+  const next = { ...values };
+
+  for (const { key } of PROTECTED_EDIT_FIELDS) {
+    if (withheld.has(key)) next[key] = '';
+    else if (wasWithheld.has(key)) next[key] = stored[key];
+  }
+
+  return next;
 }
 
 /** Correction of a rejected queued call: the form starts from the request that was refused. */

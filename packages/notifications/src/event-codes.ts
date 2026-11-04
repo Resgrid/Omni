@@ -21,7 +21,8 @@
  */
 import { isSafeRouteId } from '@resgrid/core';
 
-export type NotificationKind = 'call' | 'message' | 'notification' | 'chat' | 'chatbot' | 'weatherAlert' | 'workOrder' | 'signInApproval' | 'communicationTest';
+/** `unitStatusTimer` (the unit's status console) comes only from notifications the app schedules itself, never a code. */
+export type NotificationKind = 'call' | 'message' | 'notification' | 'chat' | 'chatbot' | 'weatherAlert' | 'workOrder' | 'signInApproval' | 'communicationTest' | 'unitStatusTimer';
 
 /** Where a notification points. The variant maps it to a route (`resolveRoute`) — or to nothing when it lacks the screen. */
 export interface NotificationTarget {

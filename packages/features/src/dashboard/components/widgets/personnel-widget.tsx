@@ -1,10 +1,10 @@
+import { useNow } from '@resgrid/core/lifecycle/use-now';
 import { usePersonnelStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import type { PersonnelInfoResultData } from '@resgrid/models';
 import { HStack, TypeIcon } from '@resgrid/ui';
 import React, { useMemo } from 'react';
 
-import { useNow } from '../../hooks/use-now';
 import { useStale } from '../../hooks/use-stale';
 import { useWidgetSettings } from '../../hooks/use-widget-settings-store';
 import { useWidgetTitle } from '../../hooks/use-widget-title';

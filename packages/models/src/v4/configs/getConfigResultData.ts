@@ -89,6 +89,12 @@ export class GetConfigResultData {
   public DispatchRecommendationAutoDispatch?: boolean;
   /** Always true on current servers; Omni ships only the modern sound set. */
   public EnableModernApplicationSounds?: boolean;
+  /**
+   * The department's time zone as an IANA id ("America/Chicago"; a Windows id also resolves). Server instants show in it and
+   * wall-clock input (`UpdateScheduledDispatchTime`) is sent in it. Absent from older servers and null for a department
+   * without a zone: the device zone is used then.
+   */
+  public TimeZoneId?: string | null;
 }
 
 /** Time-in-status threshold for one unit status base type (Core UnitStatusThresholdData). */

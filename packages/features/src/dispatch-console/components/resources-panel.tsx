@@ -1,4 +1,5 @@
 import { usePersonnelStore, useUnitsStore } from '@resgrid/data';
+import { useUnitAlertsByUnit } from '@resgrid/features/unit-status-alerts';
 import { useTranslation } from '@resgrid/i18n';
 import type { PersonnelInfoResultData, UnitInfoResultData } from '@resgrid/models';
 import { FlatList, Text } from '@resgrid/ui';
@@ -41,6 +42,7 @@ export const ResourcesPanel: React.FC<ResourcesPanelProps> = ({ callFilter, onSe
   const selectedUnitIds = useConsoleStore((state) => state.selectedUnitIds);
   const pendingUnits = usePendingUnitIds();
   const pendingPeople = usePendingPersonnelIds();
+  const timers = useUnitAlertsByUnit();
   const [query, setQuery] = useState('');
 
   const rows = useMemo<ResourceRow[]>(() => {
@@ -69,6 +71,8 @@ export const ResourcesPanel: React.FC<ResourcesPanelProps> = ({ callFilter, onSe
     ({ item }: { item: ResourceRow }) => {
       if (item.kind === 'header') return <Text className="mb-1 mt-2 text-xs font-semibold uppercase text-typography-500">{item.title}</Text>;
       if (item.kind === 'unit') {
+        const timer = timers.get(item.unit.UnitId);
+
         return (
           <ConsoleUnitRow
             unit={item.unit}
@@ -80,6 +84,9 @@ export const ResourcesPanel: React.FC<ResourcesPanelProps> = ({ callFilter, onSe
             onLongPress={(unitId) => (useConsoleStore.getState().isSelectionMode ? useConsoleStore.getState().toggleUnitInSelection(unitId) : useConsoleStore.getState().startSelection([unitId]))}
             onOpen={isSelectionMode ? undefined : onOpenUnit}
             onSetStatusForCall={callFilter && !isSelectionMode ? onSetUnitStatusForCall : undefined}
+            timerLevel={timer?.alert.level}
+            timerAcknowledgement={timer?.acknowledgementState}
+            timerSeconds={timer?.alert.secondsInStatus}
           />
         );
       }
@@ -109,6 +116,7 @@ export const ResourcesPanel: React.FC<ResourcesPanelProps> = ({ callFilter, onSe
       selectedPersonnelId,
       selectedSet,
       selectedUnitId,
+      timers,
     ]
   );
 

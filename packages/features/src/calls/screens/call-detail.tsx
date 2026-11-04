@@ -1,4 +1,4 @@
-import { featureFlagsStore, isFieldRedacted, ProtectedFieldIds, useSecurity } from '@resgrid/auth';
+import { featureFlagsStore, useSecurity } from '@resgrid/auth';
 import { getActiveVariant, useCapability } from '@resgrid/config';
 import { isSafeRouteId } from '@resgrid/core/utils/route-ids';
 import { type QueuedCall, useCallDetailStore, useCallsStore, useCheckInTimersStore } from '@resgrid/data';
@@ -28,6 +28,7 @@ import { type CallDetailTabContext, resolveCallDetailTabs, useRegisteredCallDeta
 import { useCallDispatchNow } from '../hooks/use-call-dispatch-now';
 import { CALL_SHORTCUTS_AVAILABLE, useCallShortcuts } from '../hooks/use-call-shortcuts';
 import { readableColors } from '../lib/call-colors';
+import { callDisplayName, revealedCallText } from '../lib/call-display';
 import { callLocationTarget } from '../lib/call-location';
 import { resolvePriority } from '../lib/call-priority';
 import { CallState, isClosedCall, isPendingCall, isScheduledCall, scheduledDispatchUtc } from '../lib/call-time';
@@ -207,8 +208,8 @@ function ServerCallDetail({ callId, mapSlot, menuItems, onMenuAction, onClosed, 
 
   const priority = resolvePriority(priorities, call.Priority);
   const colors = readableColors(priority?.color);
-  const nameProtected = isFieldRedacted(call.RedactedFields, ProtectedFieldIds.callName, call.Name);
-  const natureProtected = isFieldRedacted(call.RedactedFields, ProtectedFieldIds.callNature, call.Nature);
+  const protectedLabel = t('data_protection.protected_value');
+  const nature = revealedCallText(call, 'Nature');
   const isWide = isDesktop || isLandscapeBoard;
   const closedOrDeleted = onClosed ?? back;
 
@@ -256,7 +257,7 @@ function ServerCallDetail({ callId, mapSlot, menuItems, onMenuAction, onClosed, 
         <View style={styles.titleRow}>
           <TypeIcon iconUrl={call.TypeIconUrl} mapIcon={call.TypeMapIcon} size={28} />
           <Text className="ml-2 flex-1 text-lg font-bold text-typography-900" accessibilityRole="header" testID="call-detail-title">
-            {nameProtected ? `${t('data_protection.protected_value')} (#${call.Number})` : `${call.Name} (#${call.Number})`}
+            {`${callDisplayName(call, protectedLabel)} (#${call.Number})`}
           </Text>
         </View>
         {priority ? (
@@ -270,10 +271,10 @@ function ServerCallDetail({ callId, mapSlot, menuItems, onMenuAction, onClosed, 
             </Text>
           </View>
         ) : null}
-        {natureProtected ? (
-          <Text className="mt-2 italic text-typography-500">{t('data_protection.protected_value')}</Text>
-        ) : call.Nature ? (
-          <HtmlRenderer html={call.Nature} scrollEnabled style={styles.nature} rendererKey={`${call.CallId}-nature`} testID="call-detail-nature" />
+        {nature === null ? (
+          <Text className="mt-2 italic text-typography-500">{protectedLabel}</Text>
+        ) : nature ? (
+          <HtmlRenderer html={nature} scrollEnabled style={styles.nature} rendererKey={`${call.CallId}-nature`} testID="call-detail-nature" />
         ) : null}
       </View>
       {isPending || isScheduled ? (

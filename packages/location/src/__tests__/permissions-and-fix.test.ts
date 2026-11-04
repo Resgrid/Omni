@@ -6,6 +6,7 @@ import { LOCATION_I18N_FALLBACKS, LOCATION_I18N_KEYS } from '../i18n-keys';
 import { acquireLocationFix, FIX_TIMEOUT_MS, getLocationFixErrorMessage } from '../location-fix';
 import { getCurrentLocation, resetLocationStores } from '../location-store';
 import { getLocationPermissionRationale, PERMISSION_TIMEOUT_MS, requestBackgroundLocationPermission, runLocationPermissionFlow } from '../permissions';
+import { resetSettingsDialogForTests } from '../settings-dialog';
 import {
   __resetLocation,
   __setBackground,
@@ -20,7 +21,7 @@ import {
   requestForegroundPermissionsAsync,
 } from './fakes/expo-location';
 import { __resetReactNative, Platform } from './fakes/react-native';
-import { flushPromises } from './helpers';
+import { flushPromises, locationAccuracyDeclined } from './helpers';
 
 const setNavigator = (value: unknown): void => {
   Object.defineProperty(globalThis, 'navigator', { value, writable: true, configurable: true });
@@ -31,6 +32,7 @@ beforeEach(() => {
   __resetReactNative();
   __resetLocation();
   resetLocationStores();
+  resetSettingsDialogForTests();
 });
 
 afterEach(() => {
@@ -141,6 +143,17 @@ describe('acquireLocationFix', () => {
   it('distinguishes location services being switched off from a missing fix', async () => {
     hasServicesEnabledAsync.mockResolvedValueOnce(false);
     expect((await acquireLocationFix()).outcome).toBe('services-disabled');
+  });
+
+  it('takes the fix on device location once Location Accuracy is declined, and does not ask again (Android)', async () => {
+    getCurrentPositionAsync.mockRejectedValueOnce(locationAccuracyDeclined());
+    expect((await acquireLocationFix()).outcome).toBe('acquired');
+    expect(getCurrentPositionAsync).toHaveBeenNthCalledWith(1, expect.objectContaining({ mayShowUserSettingsDialog: true }));
+    expect(getCurrentPositionAsync).toHaveBeenNthCalledWith(2, expect.objectContaining({ mayShowUserSettingsDialog: false }));
+
+    await acquireLocationFix();
+    expect(getCurrentPositionAsync).toHaveBeenCalledTimes(3);
+    expect(getCurrentPositionAsync).toHaveBeenLastCalledWith(expect.objectContaining({ mayShowUserSettingsDialog: false }));
   });
 
   it('falls back to a recent cached fix when the live one fails', async () => {

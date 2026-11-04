@@ -1,5 +1,6 @@
 import { formatUtcInDepartmentTime } from '@resgrid/core/utils/dates';
 import { useCallDetailStore } from '@resgrid/data';
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import type { CallFileResultData } from '@resgrid/models';
 import { Pressable, Spinner, Text, useThemeColors, useToast } from '@resgrid/ui';
@@ -23,6 +24,7 @@ export interface CallAudioModalProps {
  */
 export const CallAudioModal: React.FC<CallAudioModalProps> = ({ isOpen, onClose, callId }) => {
   const { t } = useTranslation();
+  const timeZone = useDepartmentTimeZone();
   const toast = useToast();
   const colors = useThemeColors();
   const { playAudioClip } = useCallFormHookPoints();
@@ -41,12 +43,19 @@ export const CallAudioModal: React.FC<CallAudioModalProps> = ({ isOpen, onClose,
     setPlayingId(null);
   }, []);
 
+  // Closing also supersedes a clip still starting, so it cannot begin playing after the sheet is gone.
+  const cancel = useCallback(() => {
+    request.current += 1;
+    setLoadingId(null);
+    stop();
+  }, [stop]);
+
   useEffect(() => {
     if (isOpen) void fetchCallAudio(callId);
-    else stop();
-  }, [callId, fetchCallAudio, isOpen, stop]);
+    else cancel();
+  }, [callId, cancel, fetchCallAudio, isOpen]);
 
-  useEffect(() => () => stop(), [stop]);
+  useEffect(() => () => cancel(), [cancel]);
 
   const toggle = async (file: CallFileResultData) => {
     const current = ++request.current;
@@ -115,7 +124,7 @@ export const CallAudioModal: React.FC<CallAudioModalProps> = ({ isOpen, onClose,
               <View style={styles.body}>
                 <Text className="text-typography-900">{label}</Text>
                 <Text size="xs" className="text-typography-500">
-                  {formatUtcInDepartmentTime(file.Timestamp, null)}
+                  {formatUtcInDepartmentTime(file.Timestamp, timeZone)}
                 </Text>
               </View>
             </Pressable>

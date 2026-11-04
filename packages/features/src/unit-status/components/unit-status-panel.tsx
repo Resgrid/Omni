@@ -16,6 +16,7 @@ import { CurrentStatusCard } from './current-status-card';
 import { QuickActions } from './quick-actions';
 import { SharedSessionCard } from './shared-session-card';
 import { StatusButtons } from './status-buttons';
+import { StatusTimerCard } from './status-timer-card';
 import { UnitSummaryCard } from './unit-summary-card';
 
 export interface UnitStatusPanelProps {
@@ -36,10 +37,11 @@ interface SheetRequest {
 }
 
 /**
- * The Unit app's status console (omni-plan §7.11): the active unit and its voice channel, current status and crew seats,
- * the active call with directions, the most urgent check-in timer, the shared-session controls, shortcuts and the status
- * buttons. A status button opens the shared unit status sheet (destinations, notes, GPS, hold-to-confirm) which saves
- * through the outbox. On an MDT (Electron / desktop window) targets grow to 64 px and the screen layout splits in two.
+ * The Unit app's status console (omni-plan §7.11): the active unit and its voice channel, current status and its status
+ * timer (when the department times it), crew seats, the active call with directions, the most urgent check-in timer, the
+ * shared-session controls, shortcuts and the status buttons. A status button opens the shared unit status sheet
+ * (destinations, notes, GPS, hold-to-confirm) which saves through the outbox. On an MDT (Electron / desktop window)
+ * targets grow to 64 px and the screen layout splits in two.
  */
 export const UnitStatusPanel: React.FC<UnitStatusPanelProps> = ({ onNavigate, onClearActiveCall, excludeQuickActions, layout = 'sidebar', testID = 'unit-status-panel' }) => {
   const { t } = useTranslation();
@@ -50,6 +52,7 @@ export const UnitStatusPanel: React.FC<UnitStatusPanelProps> = ({ onNavigate, on
   const [sheet, setSheet] = useState<SheetRequest | null>(null);
 
   const openSheet = useCallback((option: StatusOption, holdConfirmed: boolean) => setSheet({ statusId: option.Id, holdConfirmed }), []);
+
   const goToSettings = useCallback(() => {
     router.push('/settings' as Href);
     onNavigate?.();
@@ -62,6 +65,7 @@ export const UnitStatusPanel: React.FC<UnitStatusPanelProps> = ({ onNavigate, on
     <VStack space="md">
       <UnitSummaryCard unit={unit} unitInfo={unitInfo} buttonSize={Math.max(44, metrics.buttonMinHeight - 8)} iconSize={metrics.iconSize} />
       {unitId ? <CurrentStatusCard status={status} /> : null}
+      {unitId ? <StatusTimerCard unitId={unitId} /> : null}
       {unitId ? <UnitRolesButton unitId={unitId} /> : null}
       <ActiveCallCard
         activeCallId={context.activeCallId}

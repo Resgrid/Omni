@@ -6,6 +6,7 @@ import { Check } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import { callDisplayName } from '../../lib/call-display';
 import type { LinkedCallRef } from '../../lib/call-form';
 import { CallModalFrame } from '../call-modal-frame';
 
@@ -17,6 +18,7 @@ export const CallTemplatesModal: React.FC<{ isOpen: boolean; onClose: () => void
   onSelect,
 }) => {
   const { t } = useTranslation();
+
   return (
     <CallModalFrame isOpen={isOpen} onClose={onClose} title={t('calls.templates.title')} testID="call-templates">
       <View style={styles.panel}>
@@ -56,7 +58,13 @@ export const LinkedCallModal: React.FC<{ isOpen: boolean; onClose: () => void; s
   const calls = useCallsStore((state) => state.calls);
   const [query, setQuery] = useState('');
   const needle = query.trim().toLowerCase();
-  const visible = calls.filter((call) => call.CallId !== excludeCallId && (!needle || `${call.Number} ${call.Name}`.toLowerCase().includes(needle)));
+  const protectedLabel = t('data_protection.protected_value');
+
+  const visible = calls
+    .filter((call) => call.CallId !== excludeCallId)
+    .map((call) => ({ call, name: callDisplayName(call, protectedLabel) }))
+    .filter(({ call, name }) => !needle || `${call.Number} ${name}`.toLowerCase().includes(needle));
+
   return (
     <CallModalFrame isOpen={isOpen} onClose={onClose} title={t('calls.linked_call')} testID="linked-call">
       <View style={styles.panel}>
@@ -78,20 +86,20 @@ export const LinkedCallModal: React.FC<{ isOpen: boolean; onClose: () => void; s
           </Button>
         ) : null}
         {visible.length === 0 ? <Text className="text-typography-500">{t('calls.no_open_calls')}</Text> : null}
-        {visible.map((call) => (
+        {visible.map(({ call, name }) => (
           <Pressable
             key={call.CallId}
             onPress={() => {
-              onSelect({ callId: call.CallId, number: call.Number, name: call.Name });
+              onSelect({ callId: call.CallId, number: call.Number, name });
               onClose();
             }}
             accessibilityRole="radio"
             accessibilityState={{ selected: call.CallId === selectedCallId }}
-            accessibilityLabel={`#${call.Number} ${call.Name}`}
+            accessibilityLabel={`#${call.Number} ${name}`}
             testID={`linked-call-${call.CallId}`}
             className={`mb-1 rounded-md px-2 py-2 ${call.CallId === selectedCallId ? 'bg-primary-50' : ''}`}
           >
-            <Text className="text-typography-900">{`#${call.Number} ${call.Name}`}</Text>
+            <Text className="text-typography-900">{`#${call.Number} ${name}`}</Text>
           </Pressable>
         ))}
       </View>
@@ -128,6 +136,7 @@ export const ProtocolSelectorModal: React.FC<{ isOpen: boolean; onClose: () => v
         {options.length === 0 ? <Text className="text-typography-500">{t('protocols.empty')}</Text> : null}
         {options.map((option) => {
           const checked = draft.includes(option.id);
+
           return (
             <Pressable
               key={option.id}

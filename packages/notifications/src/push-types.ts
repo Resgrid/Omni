@@ -20,7 +20,7 @@ export interface PushNotificationService {
    * BEFORE the access token is cleared and before any server switch: the server URL is read synchronously here.
    */
   unregisterAtSignOut(accessToken: string | null): Promise<void>;
-  /** Local teardown after sign-out: token, badge, delivered notifications, dedupe state. */
+  /** Local teardown after sign-out: token, badge, delivered and scheduled local notifications, dedupe state. */
   clearLocalState(): Promise<void>;
   /** Forgets what was registered so the next call registers again (department/store reset). */
   resetRegistration(): void;

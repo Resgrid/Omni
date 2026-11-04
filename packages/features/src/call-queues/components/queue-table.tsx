@@ -1,5 +1,5 @@
 import { useCallsStore } from '@resgrid/data';
-import { resolvePriority } from '@resgrid/features/calls';
+import { callDisplayName, callDisplayText, resolvePriority } from '@resgrid/features/calls';
 import { useTranslation } from '@resgrid/i18n';
 import type { CallResultData } from '@resgrid/models';
 import { FlatList, HStack, Pressable, RefreshControl, Text, TypeIcon, useFormFactor, VStack } from '@resgrid/ui';
@@ -33,6 +33,7 @@ export const PriorityCell: React.FC<{ priorityId: number }> = ({ priorityId }) =
   const priorities = useCallsStore((state) => state.callPriorities);
   const priority = resolvePriority(priorities, priorityId);
   const label = priority ? (priority.isLabelKey ? t(priority.label) : priority.label) : '-';
+
   return (
     <HStack space="xs" className="items-center">
       <View style={StyleSheet.flatten([styles.dot, { backgroundColor: priority?.color || '#6b7280' }])} />
@@ -59,6 +60,13 @@ export const TextCell: React.FC<{ value: string | null | undefined; tone?: 'defa
   </Text>
 );
 
+/** The call's address; a withheld one shows the protected label, never the wire sentinel. */
+export const AddressCell: React.FC<{ call: CallResultData }> = ({ call }) => {
+  const { t } = useTranslation();
+
+  return <TextCell value={callDisplayText(call, 'Address', t('data_protection.protected_value'))} />;
+};
+
 /**
  * The queue screens' list (Dispatch baseline tables): a striped table on tablets and desktop consoles — number, name,
  * then the screen's columns and actions — and stacked cards on phones. Rows open the call; actions inside a row never
@@ -71,11 +79,13 @@ export const QueueTable: React.FC<QueueTableProps> = ({ calls, columns, onOpenCa
   const renderRow = useCallback(
     ({ item, index }: { item: CallResultData; index: number }) => {
       const actions = renderActions ? renderActions(item) : null;
+      const name = callDisplayName(item, t('data_protection.protected_value'));
+
       if (isPhone) {
         return (
           <Pressable onPress={() => onOpenCall(item)} className="mb-2 rounded-xl border border-outline-200 bg-background-0 p-3" testID={`${rowTestID}-${item.CallId}`}>
             <Text className="font-bold" numberOfLines={1}>
-              {`${item.Number || item.CallId} · ${item.Name}`}
+              {`${item.Number || item.CallId} · ${name}`}
             </Text>
             <VStack space="xs" className="mt-1">
               {columns.map((column) => (
@@ -89,6 +99,7 @@ export const QueueTable: React.FC<QueueTableProps> = ({ calls, columns, onOpenCa
           </Pressable>
         );
       }
+
       return (
         <Pressable
           onPress={() => onOpenCall(item)}
@@ -102,7 +113,7 @@ export const QueueTable: React.FC<QueueTableProps> = ({ calls, columns, onOpenCa
           </View>
           <View style={styles.nameCell}>
             <Text className="text-sm font-medium" numberOfLines={1}>
-              {item.Name}
+              {name}
             </Text>
           </View>
           {columns.map((column) => (

@@ -1,4 +1,5 @@
 import { formatUtcInDepartmentTime } from '@resgrid/core/utils/dates';
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import { type CallVideoFeedResultData, CallVideoFeedStatus } from '@resgrid/models';
 import { Button, ButtonText, Text } from '@resgrid/ui';
@@ -22,11 +23,12 @@ const STATUS_COLORS: Record<number, string> = { [CallVideoFeedStatus.Active]: '#
 /** A call video feed: name, type/format, status, who added it; watch and copy for everyone, edit/delete for managers. */
 export const VideoFeedCard: React.FC<VideoFeedCardProps> = ({ feed, onWatch, onCopyUrl, onEdit, onDelete }) => {
   const { t } = useTranslation();
+  const timeZone = useDepartmentTimeZone();
   const meta = [feed.FeedType !== null ? t(FEED_TYPE_LABELS[feed.FeedType] ?? 'video_feeds.type_other') : null, feed.FeedFormat !== null ? t(FEED_FORMAT_LABELS[feed.FeedFormat] ?? 'video_feeds.format_other') : null]
     .filter((part): part is string => !!part)
     .join(' · ');
   const status = t(FEED_STATUS_LABELS[feed.Status] ?? 'video_feeds.status_inactive');
-  const added = formatUtcInDepartmentTime(feed.AddedOnUtc, null) || feed.AddedOnFormatted;
+  const added = formatUtcInDepartmentTime(feed.AddedOnUtc, timeZone) || feed.AddedOnFormatted;
   return (
     <View style={styles.card} className="border-outline-100 bg-background-0" testID={`video-feed-card-${feed.CallVideoFeedId}`}>
       <View style={styles.header}>

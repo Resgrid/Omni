@@ -24,6 +24,9 @@ export function resolveNotificationRoute(target: NotificationTarget, href: HrefB
     case 'signInApproval':
       // ApproveSignInScreen reads the request from the `id` parameter (auth-ui authRoutes.approveSignIn).
       return href.build('approveSignIn', {}, { id: target.id });
+    case 'unitStatusTimer':
+      // The unit's own status timer (a notification the app scheduled): its status console, where the crew updates it.
+      return href.unitConsole();
     case 'notification':
     case 'communicationTest':
       return null;

@@ -1,3 +1,4 @@
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import type { RouteStopWithDetailsResultData } from '@resgrid/models';
 import { HStack, Pressable, Text, useThemeColors, View, VStack } from '@resgrid/ui';
@@ -40,13 +41,14 @@ export interface StopCardProps {
  */
 export const StopCard: React.FC<StopCardProps> = React.memo(({ stop, isCurrent = false, onAction, onPress, routeInProgress = true, isBusy = false, actionMinHeight = 48, testID }) => {
   const { t } = useTranslation();
+  const timeZone = useDepartmentTimeZone();
   const colors = useThemeColors();
   const id = stop.RouteInstanceStopId ?? stop.RouteStopId;
   const cardTestId = testID ?? `stop-card-${id}`;
   const look = stopStatusLook(stop.Status);
   const Icon = STATUS_ICONS[stop.Status] ?? Circle;
   const actions = isCurrent && onAction ? stopActions(stop, routeInProgress) : [];
-  const planned = formatRouteTime(stop.EstimatedArrivalOn ?? stop.PlannedArrivalTime);
+  const planned = formatRouteTime(stop.EstimatedArrivalOn ?? stop.PlannedArrivalTime, timeZone);
 
   return (
     <View className={`mb-2 rounded-xl p-4 ${isCurrent ? 'border-2 border-primary-500 bg-primary-50' : 'bg-background-0'}`} testID={cardTestId}>

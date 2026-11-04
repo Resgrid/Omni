@@ -128,5 +128,8 @@
   "dispatch.view_details": "Details",
   "pending_calls.title": "Pending Calls",
   "run_cards.covered_on_call": "The resources on this call already cover the run card (alarm {{level}}). Add more by hand if needed.",
-  "scheduled_calls.title": "Scheduled Calls"
+  "scheduled_calls.title": "Scheduled Calls",
+  "dispatch_console.unit_timers": "Unit timers",
+  "dispatch_console.unit_timer_warning": "Unit timer warning",
+  "dispatch_console.unit_timer_alert": "Unit timer alert"
 }

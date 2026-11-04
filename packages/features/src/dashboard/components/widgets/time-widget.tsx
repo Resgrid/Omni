@@ -1,9 +1,9 @@
+import { useNow } from '@resgrid/core/lifecycle/use-now';
 import { useTranslation } from '@resgrid/i18n';
 import { Text, View } from '@resgrid/ui';
 import React from 'react';
 import { StyleSheet } from 'react-native';
 
-import { useNow } from '../../hooks/use-now';
 import { useWidgetSettings } from '../../hooks/use-widget-settings-store';
 import { formatClock, formatClockDate } from '../../lib/format';
 import { WIDGET_LABEL_KEYS, WidgetTypes } from '../../lib/widget-types';

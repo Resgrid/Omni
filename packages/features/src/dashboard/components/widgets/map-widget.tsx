@@ -1,5 +1,6 @@
 import { useSecurity } from '@resgrid/auth';
 import { getDataApiContext, hasDataApiContext, useMapMarkersStore } from '@resgrid/data';
+import { useDepartmentConfig } from '@resgrid/features/department-config';
 import { useNavigationEtaPins } from '@resgrid/features/navigation-eta';
 import { useTranslation } from '@resgrid/i18n';
 import { Camera, type CameraRef, MapPins, MapProvider, MapView, useFitBounds, useMapProviderContext } from '@resgrid/maps';
@@ -9,7 +10,6 @@ import { useColorScheme } from 'nativewind';
 import React, { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet } from 'react-native';
 
-import { useDashboardConfig } from '../../hooks/use-department-config';
 import { useStale } from '../../hooks/use-stale';
 import { useWidgetSettings } from '../../hooks/use-widget-settings-store';
 import { useWidgetTitle } from '../../hooks/use-widget-title';
@@ -27,7 +27,7 @@ const MAP_EVENTS: readonly RealtimeEventName[] = ['callsUpdated', 'callAdded', '
  */
 const WidgetMapProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { hasProvider } = useMapProviderContext();
-  const config = useDashboardConfig();
+  const config = useDepartmentConfig();
   const scheme = useColorScheme().colorScheme === 'dark' ? 'dark' : 'light';
   if (hasProvider) return <>{children}</>;
   return (
@@ -41,7 +41,7 @@ const DepartmentMap: React.FC<{ isEditMode: boolean }> = ({ isEditMode }) => {
   const { t } = useTranslation();
   const { canUserViewPII } = useSecurity();
   const { center: providerCenter, style } = useMapProviderContext();
-  const config = useDashboardConfig();
+  const config = useDepartmentConfig();
   const settings = useWidgetSettings('map');
   // Persisted department pins (@resgrid/data): a board that starts offline still shows the last map.
   const markers = useMapMarkersStore((state) => state.markers);

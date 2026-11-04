@@ -25,10 +25,13 @@
 //   --ios-tablet <name>
 //   --android-phone <avd>   AVD names (defaults: the first phone AVD / Resgrid_QA_Tablet, created when missing)
 //   --android-tablet <avd>
+//   --form-factors <list>   phone,tablet for the native legs (default both)
 //   --keep-devices          leave simulators and emulators this run booted running
+//   --allow-app-errors      report console errors of the native apps without failing their legs
 //   --settle-ms <ms>        time each screen gets before the next opens (default 1500)
 import { type ChildProcess, spawn, spawnSync, type SpawnSyncOptions } from 'node:child_process';
 import fs from 'node:fs';
+import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
@@ -71,10 +74,17 @@ const { values, positionals } = parseArgs({
     'ios-tablet': { type: 'string' },
     'android-phone': { type: 'string' },
     'android-tablet': { type: 'string', default: TABLET_AVD },
+    'form-factors': { type: 'string', default: 'phone,tablet' },
     'keep-devices': { type: 'boolean', default: false },
+    'allow-app-errors': { type: 'boolean', default: false },
     'settle-ms': { type: 'string', default: '1500' },
   },
 });
+
+// What cleanUp() stops. Declared before the argument checks below: their fail() calls cleanUp() while this module is
+// still evaluating, and reading these any later would throw (temporal dead zone) instead of printing the usage error.
+const started: ChildProcess[] = [];
+const bootedDevices: (() => void)[] = [];
 
 const variantArg = positionals[0] ?? process.env.APP_VARIANT ?? '';
 
@@ -87,6 +97,8 @@ const unknownPlatforms = platforms.filter((p) => !PLATFORMS.some((known) => know
 if (unknownPlatforms.length) fail(`--platforms: unknown ${unknownPlatforms.join(', ')}; use ${PLATFORMS.join(', ')}`);
 
 const wants = (platform: Platform): boolean => platforms.includes(platform);
+const formFactors = values['form-factors'].split(',').map((f) => f.trim());
+const wantsFormFactor = (formFactor: FormFactor): boolean => formFactors.includes(formFactor);
 const core = path.resolve(values.core);
 const stackScript = path.join(core, 'Docker', 'qa-departments', 'stack', 'qa-stack.py');
 const manifestFile = path.join(core, 'Docker', 'qa-departments', 'stack', 'private', 'out', 'qa-departments.json');
@@ -96,14 +108,19 @@ const runDir = path.join(omniRoot, 'e2e', 'qa-output', variant, new Date().toISO
 const exportRoot = path.join(runDir, 'export');
 const app: VariantManifest = loadManifest(variant);
 
+// adb 37's mDNS discovery (its Rust bridge) aborts the adb server on some service names it parses, every few seconds once
+// an emulator is up here; installs then fail and Maestro loses the device. The suite only uses emulators, so every adb
+// server this run starts, or that restarts after a crash, comes up without mDNS.
+process.env.ADB_MDNS = '0';
+
 // CocoaPods (inside the iOS build) refuses to run without a UTF-8 locale, which non-interactive shells often lack.
 const NATIVE_ENV: NodeJS.ProcessEnv = { ...process.env, LANG: process.env.LANG || 'en_US.UTF-8', LC_ALL: process.env.LC_ALL || process.env.LANG || 'en_US.UTF-8' };
 const legs: Leg[] = [];
-const started: ChildProcess[] = [];
-const bootedDevices: (() => void)[] = [];
 
 function fail(message: string): never {
   console.error(`qa-regression: ${message}`);
+  // process.exit skips main's finally: stop Metro and the devices this run started here.
+  cleanUp();
   process.exit(2);
 }
 
@@ -262,8 +279,52 @@ function freshTotp(username: string, secret: string): string {
   return totp(secret, step * 30_000);
 }
 
+// Console errors of the native apps that the QA stack itself causes, with why. Everything else fails the leg.
+const EXPLAINED_APP_ERRORS: readonly { pattern: RegExp; why: string }[] = [
+  {
+    pattern: /MapLibre Native \[ERROR\][\s\S]*(api\.maptiler\.com|Failed to load tile \S+ for source resgrid-raster)/,
+    why: 'The QA stack configures no MapTiler key, so the base map (raster source resgrid-raster) has its tiles refused or reset; markers and the map itself still render.',
+  },
+];
+
+const metroLog = (): string => path.join(runDir, 'metro.log');
+
+// Colours and the cursor moves Metro's progress line uses; text a carriage return overwrote goes too.
+const ANSI = new RegExp(`${String.fromCharCode(27)}\\[[0-9;?]*[A-Za-z]|[^\\n]*\\r(?!\\n)`, 'g');
+
+/**
+ * Bundles Metro could not build from `from` on, each with the reason on the line after (a module another change added
+ * after Metro started, a syntax error): the dev client then sits on its splash or error screen and every flow times out.
+ */
+function bundleFailuresSince(from: number): string[] {
+  const lines = fs.readFileSync(metroLog(), 'utf8').slice(from).replace(ANSI, '').split('\n');
+
+  return lines.flatMap((line, index) => (/Bundling failed/.test(line) ? [`${line.trim()}: ${lines[index + 1]?.trim() ?? ''}`] : []));
+}
+
+/** The ERROR blocks Metro printed from `from` on (development builds forward console.error and LogBox errors to Metro). */
+function appErrorsSince(from: number): string[] {
+  const text = fs.readFileSync(metroLog(), 'utf8').slice(from).replace(ANSI, '');
+  const blocks: string[] = [];
+  let current: string[] | null = null;
+
+  for (const line of text.split('\n')) {
+    const marker = /^\s*(LOG|WARN|INFO|ERROR)\b/.exec(line)?.[1];
+
+    if (marker) {
+      if (current) blocks.push(current.join('\n').trim());
+      current = marker === 'ERROR' ? [line] : null;
+    } else if (current && current.length < 40) current.push(line);
+  }
+
+  if (current) blocks.push(current.join('\n').trim());
+
+  return blocks;
+}
+
 async function maestroLeg(platform: 'ios' | 'android', formFactor: FormFactor, device: string, manifest: QaManifest): Promise<number> {
   const out = path.join(runDir, `${platform}-${formFactor}`);
+  const logStart = fs.existsSync(metroLog()) ? fs.statSync(metroLog()).size : 0;
   let failures = 0;
 
   for (const department of selectedQaDepartments(manifest, { ...process.env, E2E_QA_SCENARIOS: values.scenarios })) {
@@ -303,6 +364,23 @@ async function maestroLeg(platform: 'ios' | 'android', formFactor: FormFactor, d
     if (status !== 0) failures++;
   }
 
+  const bundleFailures = bundleFailuresSince(logStart);
+
+  for (const failure of bundleFailures) console.log(`  the app's bundle failed to build: ${failure}`);
+
+  if (bundleFailures.length) failures++;
+
+  const errors = appErrorsSince(logStart);
+  const unexplained = errors.filter((block) => !EXPLAINED_APP_ERRORS.some((known) => known.pattern.test(block)));
+
+  if (errors.length) {
+    fs.mkdirSync(out, { recursive: true });
+    fs.writeFileSync(path.join(out, 'app-errors.txt'), `${errors.join('\n\n----\n\n')}\n`);
+    console.log(`  ${errors.length} console errors from the app (${unexplained.length} unexplained): ${path.relative(repoRoot, path.join(out, 'app-errors.txt'))}`);
+  }
+
+  if (unexplained.length && !values['allow-app-errors']) failures++;
+
   return failures;
 }
 
@@ -317,9 +395,42 @@ function startMetro(): ChildProcess {
     stdio: ['ignore', logFile, logFile],
   });
 
+  // Metro has its own copy of the descriptor; the log is read back by path.
+  fs.closeSync(logFile);
   started.push(metro);
 
   return metro;
+}
+
+const ExpoManifestSchema = z.object({ launchAsset: z.object({ url: z.string() }) });
+
+/**
+ * Builds a platform's bundle while its native build runs, from the URL in Metro's own manifest (the one the dev client
+ * asks for): a dev client waits a limited time for its first bundle, and one built from cold caches takes longer.
+ */
+async function warmBundle(platform: 'ios' | 'android'): Promise<void> {
+  const started = Date.now();
+
+  try {
+    const manifest = ExpoManifestSchema.parse(await (await fetch(`http://localhost:${metroPort}/`, { headers: { 'expo-platform': platform, accept: 'application/expo+json,application/json' } })).json());
+    const bundle = await fetch(manifest.launchAsset.url);
+
+    await bundle.arrayBuffer();
+    console.log(`  ${platform} bundle built in ${Math.round((Date.now() - started) / 1000)}s (HTTP ${bundle.status})`);
+  } catch (error) {
+    console.log(`  could not build the ${platform} bundle ahead: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+/** True when something already listens on the port. */
+function portInUse(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const server = net.createServer();
+
+    server.once('error', () => resolve(true));
+    server.once('listening', () => server.close(() => resolve(false)));
+    server.listen(port);
+  });
 }
 
 async function metroReady(): Promise<boolean> {
@@ -331,8 +442,33 @@ async function metroReady(): Promise<boolean> {
 }
 
 /** Builds the development client for one device (scripts/run-native.mjs prebuilds when the native project is another app's). */
-function buildNative(platform: 'ios' | 'android', device: string): number {
-  return run('node', ['scripts/run-native.mjs', platform, variant, '--no-bundler', '--device', device], { cwd: repoRoot, env: { ...NATIVE_ENV, APP_ENV: 'development' } });
+function buildNative(platform: 'ios' | 'android', device: string): Promise<{ status: number; text: string }> {
+  return new Promise((resolve) => {
+    let text = '';
+    const child = spawn('node', ['scripts/run-native.mjs', platform, variant, '--no-bundler', '--device', device], { cwd: repoRoot, env: { ...NATIVE_ENV, APP_ENV: 'development' } });
+
+    const tee = (chunk: Buffer, to: NodeJS.WriteStream): void => {
+      text += chunk.toString();
+      to.write(chunk);
+    };
+
+    child.stdout.on('data', (chunk: Buffer) => tee(chunk, process.stdout));
+    child.stderr.on('data', (chunk: Buffer) => tee(chunk, process.stderr));
+    child.on('close', (code) => resolve({ status: code ?? 1, text }));
+  });
+}
+
+const ANDROID_APK = path.join(omniRoot, 'android', 'app', 'build', 'outputs', 'apk', 'debug', 'app-debug.apk');
+
+/** Installs the debug APK Gradle just built: a long streamed install over a loaded emulator's adb link can drop, so retry. */
+async function installApk(serial: string): Promise<boolean> {
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    await emulatorOnline(serial);
+
+    if (run(adb, ['-s', serial, 'install', '-r', ANDROID_APK]) === 0) return true;
+  }
+
+  return false;
 }
 
 // ---- iOS simulators ------------------------------------------------------------------------------------------------------
@@ -440,6 +576,25 @@ function runningEmulator(avd: string): string | null {
   return null;
 }
 
+/** An emulator's ADB link can drop to `offline` under load (a long build in between): reconnect and wait for `device`. */
+async function emulatorOnline(serial: string): Promise<void> {
+  await waitFor(
+    `${serial} to be online in adb`,
+    () => {
+      const state = output(adb, ['-s', serial, 'get-state']);
+
+      if (state !== 'device') run(adb, ['reconnect', 'offline'], { stdio: 'ignore' });
+
+      return state === 'device';
+    },
+    180_000
+  );
+
+  // The emulator's localhost is the emulator: Metro and the QA stack's http doors come through adb reverse, which a
+  // reconnect drops, so the mappings go in again every time.
+  for (const port of [metroPort, ...NATIVE_PORTS]) run(adb, ['-s', serial, 'reverse', `tcp:${port}`, `tcp:${port}`], { stdio: 'ignore' });
+}
+
 async function bootEmulator(kind: FormFactor, avd: string, port: number): Promise<string> {
   let serial = runningEmulator(avd);
 
@@ -456,14 +611,21 @@ async function bootEmulator(kind: FormFactor, avd: string, port: number): Promis
   const target = serial;
 
   await waitFor(`${avd} to boot`, () => output(adb, ['-s', target, 'shell', 'getprop', 'sys.boot_completed']) === '1', 300_000);
+  await emulatorOnline(target);
 
-  // The emulator's localhost is the emulator: Metro and the QA stack's http doors come through adb reverse.
-  for (const port of [metroPort, ...NATIVE_PORTS]) run(adb, ['-s', target, 'reverse', `tcp:${port}`, `tcp:${port}`], { stdio: 'ignore' });
+  // The apps hide the navigation bar (FocusAwareStatusBar); a fresh device answers that with a "Viewing full screen"
+  // notice over the app until someone taps Got it.
+  run(adb, ['-s', target, 'shell', 'settings', 'put', 'secure', 'immersive_mode_confirmations', 'confirmed'], { stdio: 'ignore' });
+  // A loaded host makes the emulator's own system process miss deadlines, and its "isn't responding" dialog then covers
+  // whatever the flow is looking for. Hidden as test harnesses do; an app that crashes still fails the flow (it is gone).
+  run(adb, ['-s', target, 'shell', 'settings', 'put', 'global', 'hide_error_dialogs', '1'], { stdio: 'ignore' });
 
-  if (kind === 'tablet') {
-    run(adb, ['-s', target, 'shell', 'settings', 'put', 'system', 'accelerometer_rotation', '0'], { stdio: 'ignore' });
-    run(adb, ['-s', target, 'shell', 'settings', 'put', 'system', 'user_rotation', '1'], { stdio: 'ignore' });
-  }
+  // Phones portrait, tablets landscape, set here rather than in the flow (support/qa-native-flows.ts): rotation 0 is
+  // the screen's natural shape, which is landscape on a Pixel Tablet and portrait on a phone.
+  const [width = 0, height = 0] = (/(\d+)x(\d+)/.exec(output(adb, ['-s', target, 'shell', 'wm', 'size'])) ?? []).slice(1).map(Number);
+
+  run(adb, ['-s', target, 'shell', 'settings', 'put', 'system', 'accelerometer_rotation', '0'], { stdio: 'ignore' });
+  run(adb, ['-s', target, 'shell', 'settings', 'put', 'system', 'user_rotation', width > height === (kind === 'tablet') ? '0' : '1'], { stdio: 'ignore' });
 
   console.log(`  ${kind}: ${avd} (${target})`);
 
@@ -473,6 +635,10 @@ async function bootEmulator(kind: FormFactor, avd: string, port: number): Promis
 // ---- Run -------------------------------------------------------------------------------------------------------------------
 
 async function main(): Promise<void> {
+  // A Metro left on the port (an interrupted run) would answer the readiness check and serve the apps a bundle of the
+  // tree as it was then, so the native legs would test stale code without a sign of it.
+  if ((wants('ios') || wants('android')) && (await portInUse(metroPort))) fail(`port ${metroPort} is in use (a Metro left running?): stop it or pass --metro-port`);
+
   fs.mkdirSync(runDir, { recursive: true });
   const manifest = stack();
 
@@ -485,47 +651,66 @@ async function main(): Promise<void> {
   if (wants('electron')) await leg(`electron (${variant})`, path.join(runDir, 'electron'), async () => playwright(`qa-desktop-${variant}`, path.join(runDir, 'electron'), '1'));
 
   if (wants('ios') || wants('android')) {
-    const devices: { platform: 'ios' | 'android'; formFactor: FormFactor; device: string }[] = [];
+    // One device at a time (boot, install, test, shut down): two emulators beside the simulators, Metro and the stack
+    // overload a typical machine, and their adb links start to drop. Metro bundles while the first build runs.
+    startMetro();
+    const metroUp = waitFor('Metro', metroReady, 300_000);
+    // One platform at a time, in the order the devices run.
+    const iosBundle = wants('ios') ? metroUp.then(async () => warmBundle('ios')) : metroUp;
+    const bundled = { ios: iosBundle, android: wants('android') ? iosBundle.then(async () => warmBundle('android')) : iosBundle };
+
+    const runOn = async (platform: 'ios' | 'android', formFactor: FormFactor, device: string): Promise<void> => {
+      await bundled[platform];
+
+      if (platform === 'android') await emulatorOnline(device);
+      await leg(`${platform} ${formFactor} (${variant})`, path.join(runDir, `${platform}-${formFactor}`), async () => maestroLeg(platform, formFactor, device, manifest));
+    };
+
+    const shutDownBooted = (): void => {
+      for (const shutdown of bootedDevices.splice(0)) shutdown();
+    };
 
     if (wants('ios')) {
-      log('iOS simulators');
-      const phone = await bootSimulator('phone', values['ios-phone']);
-      const tablet = await bootSimulator('tablet', values['ios-tablet']);
+      for (const formFactor of (['phone', 'tablet'] as const).filter(wantsFormFactor)) {
+        log(`iOS ${formFactor}`);
+        const device = await bootSimulator(formFactor, values[formFactor === 'phone' ? 'ios-phone' : 'ios-tablet']);
 
-      for (const [formFactor, device] of [
-        ['phone', phone],
-        ['tablet', tablet],
-      ] as const) {
         log(`Build ${variant} for iOS (${formFactor})`);
 
-        if (buildNative('ios', device) !== 0) legs.push({ name: `ios ${formFactor}`, status: 'failed', seconds: 0, report: '', detail: 'build failed' });
-        else devices.push({ platform: 'ios', formFactor, device });
+        if ((await buildNative('ios', device)).status !== 0) legs.push({ name: `ios ${formFactor}`, status: 'failed', seconds: 0, report: '', detail: 'build failed' });
+        else await runOn('ios', formFactor, device);
+        shutDownBooted();
       }
     }
 
     if (wants('android')) {
-      log('Android emulators');
       const phoneName = phoneAvd();
-      const phone = await bootEmulator('phone', phoneName, 5554);
-      const tablet = await bootEmulator('tablet', tabletAvd(phoneName), 5556);
+      let built = false;
 
-      for (const [formFactor, device] of [
-        ['phone', phone],
-        ['tablet', tablet],
-      ] as const) {
-        log(`Build ${variant} for Android (${formFactor})`);
+      // A server already running may have mDNS on: restart it under this run's environment (ADB_MDNS above).
+      run(adb, ['kill-server'], { stdio: 'ignore' });
+      run(adb, ['start-server'], { stdio: 'ignore' });
 
-        if (buildNative('android', device) !== 0) legs.push({ name: `android ${formFactor}`, status: 'failed', seconds: 0, report: '', detail: 'build failed' });
-        else devices.push({ platform: 'android', formFactor, device });
-      }
-    }
+      for (const formFactor of (['phone', 'tablet'] as const).filter(wantsFormFactor)) {
+        log(`Android ${formFactor}`);
+        const device = formFactor === 'phone' ? await bootEmulator('phone', phoneName, 5554) : await bootEmulator('tablet', tabletAvd(phoneName), 5556);
+        let installed: boolean;
 
-    if (devices.length) {
-      startMetro();
-      await waitFor('Metro', metroReady, 180_000);
+        if (!built) {
+          // Gradle once, for the first emulator; when only expo run's own install failed, the built APK goes in with adb.
+          log(`Build ${variant} for Android (${formFactor})`);
+          const build = await buildNative('android', device);
 
-      for (const { platform, formFactor, device } of devices) {
-        await leg(`${platform} ${formFactor} (${variant})`, path.join(runDir, `${platform}-${formFactor}`), async () => maestroLeg(platform, formFactor, device, manifest));
+          built = build.status === 0 || /BUILD SUCCESSFUL/.test(build.text);
+          installed = build.status === 0 || (built && (await installApk(device)));
+        } else {
+          log(`Install ${variant} on Android (${formFactor})`);
+          installed = await installApk(device);
+        }
+
+        if (!installed) legs.push({ name: `android ${formFactor}`, status: 'failed', seconds: 0, report: '', detail: 'build or install failed' });
+        else await runOn('android', formFactor, device);
+        shutDownBooted();
       }
     }
   }
@@ -548,16 +733,22 @@ async function main(): Promise<void> {
   process.exitCode = legs.some((l) => l.status === 'failed') ? 1 : 0;
 }
 
+/** Stops what this run started; safe to call again (fail() and main's finally can both reach it). */
 function cleanUp(): void {
-  for (const child of started) child.kill();
+  for (const child of started.splice(0)) child.kill();
 
-  for (const shutdown of bootedDevices) shutdown();
+  for (const shutdown of bootedDevices.splice(0)) shutdown();
 }
 
-process.on('SIGINT', () => {
-  cleanUp();
-  process.exit(130);
-});
+for (const [signal, code] of [
+  ['SIGINT', 130],
+  ['SIGTERM', 143],
+] as const) {
+  process.on(signal, () => {
+    cleanUp();
+    process.exit(code);
+  });
+}
 
 // An error escapes as an unhandled rejection: Node prints it and exits 1, after the devices and Metro are stopped.
 void main().finally(cleanUp);

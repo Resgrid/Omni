@@ -1,14 +1,16 @@
 import { formatUtcInDepartmentTime } from '@resgrid/core/utils/dates';
 import { useCheckInTimersStore, useWeatherAlertsStore } from '@resgrid/data';
 import { checkInSeverity, CheckInTab, CheckInTimerCard } from '@resgrid/features/check-in';
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { ResponseCodeChip } from '@resgrid/features/runcards';
+import { summarizeUnitAlerts, UnitAlertList, useUnitAlerts } from '@resgrid/features/unit-status-alerts';
 import { WeatherAlertCard, weatherAlertsRoutes } from '@resgrid/features/weather-alerts';
 import { useTranslation } from '@resgrid/i18n';
 import type { CallResultData, CheckInTimerStatusResultData, DispatchedEventResultData, WeatherAlertResultData } from '@resgrid/models';
 import { FlatList, HStack, Pressable, Text, useReadableColor, useThemeColors, VStack } from '@resgrid/ui';
 import { type Href, useRouter } from 'expo-router';
 import type { LucideIcon } from 'lucide-react-native';
-import { AlertTriangle, CloudLightning, Info, Mic, Radio, ShieldCheck, Truck, User, Zap } from 'lucide-react-native';
+import { AlertTriangle, CloudLightning, Info, Mic, Radio, ShieldCheck, Timer, Truck, User, Zap } from 'lucide-react-native';
 import React, { useCallback, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -63,6 +65,7 @@ ActivityRow.displayName = 'ActivityRow';
 
 const CallActivityRow: React.FC<{ event: DispatchedEventResultData }> = React.memo(({ event }) => {
   const readable = useReadableColor();
+  const timeZone = useDepartmentTimeZone();
 
   return (
     <View style={StyleSheet.flatten([styles.timelineRow, { borderLeftColor: readable.mark(event.StatusColor, '#3b82f6') }])}>
@@ -75,7 +78,7 @@ const CallActivityRow: React.FC<{ event: DispatchedEventResultData }> = React.me
       <Text className="text-xs text-typography-600" numberOfLines={1}>
         {[event.Name, event.Group].filter(Boolean).join(' — ')}
       </Text>
-      <Text className="text-xs text-typography-400">{formatUtcInDepartmentTime(event.Timestamp, null, undefined, undefined, event.Timestamp)}</Text>
+      <Text className="text-xs text-typography-400">{formatUtcInDepartmentTime(event.Timestamp, timeZone, undefined, undefined, event.Timestamp)}</Text>
       {event.Note ? <Text className="text-xs text-typography-600">{event.Note}</Text> : null}
     </View>
   );
@@ -123,8 +126,9 @@ const NO_TIMERS: CheckInTimerStatusResultData[] = [];
 
 /**
  * The console's tabbed activity card (Dispatch baseline ActivityLogPanel): the activity log (or the filtered call's
- * timeline), the radio log, context actions, check-ins (the filtered call's timers and PAR, else every overdue timer)
- * and the active weather alerts. Selecting a call, unit or person surfaces the actions tab.
+ * timeline), the radio log, context actions, check-ins (the filtered call's timers and PAR, else every overdue timer),
+ * the units over their status timers (acknowledge or mute each once contacted) and the active weather alerts. Selecting
+ * a call, unit or person surfaces the actions tab.
  */
 export const ActivityPanel: React.FC<ActivityPanelProps> = ({ selectedCall, callActivity, flex, maxHeight, ...handlers }) => {
   const { t } = useTranslation();
@@ -135,6 +139,8 @@ export const ActivityPanel: React.FC<ActivityPanelProps> = ({ selectedCall, call
   const radioLog = useConsoleStore((state) => state.radioLog);
   const statusesByCall = useCheckInTimersStore((state) => state.statusesByCall);
   const weatherAlerts = useWeatherAlertsStore((state) => state.alerts);
+  const { annotated } = useUnitAlerts();
+  const unitTimers = useMemo(() => summarizeUnitAlerts(annotated), [annotated]);
   const callId = selectedCall?.CallId ?? null;
 
   const callTimers = callId ? (statusesByCall[callId] ?? NO_TIMERS) : NO_TIMERS;
@@ -150,13 +156,17 @@ export const ActivityPanel: React.FC<ActivityPanelProps> = ({ selectedCall, call
   const urgentCount = callId ? callTimers.filter((timer) => checkInSeverity(timer.Status) === 'critical').length : overdueTimers.length;
   const filteredLog = useMemo(() => (callId ? activityLog.filter((entry) => entry.metadata?.callId === callId || entry.type === 'system') : activityLog), [activityLog, callId]);
   const activeTransmissions = radioLog.filter((entry) => entry.isActive).length;
+  // The tab shows the filtered call's timeline when it has one, else the (filtered) activity log.
+  const activityCount = callId && callActivity.length > 0 ? callActivity.length : filteredLog.length;
 
-  // Dispatch's tab counts; an overdue check-in or a live transmission is urgent and stays red whichever tab is open.
+  // Dispatch's tab counts; an overdue check-in, a unit nobody has contacted about its status timer or a live transmission
+  // is urgent and stays red whichever tab is open.
   const tabs: { key: ConsoleTab; icon: LucideIcon; label: string; badge?: number; urgent?: boolean }[] = [
-    { key: 'activity', icon: Zap, label: t('dispatch.activity'), badge: filteredLog.length || undefined },
+    { key: 'activity', icon: Zap, label: t('dispatch.activity'), badge: activityCount || undefined },
     { key: 'radio', icon: Radio, label: t('dispatch.radio_log'), badge: activeTransmissions || undefined, urgent: true },
     { key: 'actions', icon: Info, label: t('dispatch.actions') },
     { key: 'checkins', icon: ShieldCheck, label: t('dispatch.check_ins'), badge: urgentCount || undefined, urgent: true },
+    { key: 'unit-timers', icon: Timer, label: t('dispatch_console.unit_timers'), badge: unitTimers.unacknowledged || undefined, urgent: true },
     { key: 'weather', icon: CloudLightning, label: t('dispatch_console.weather_alerts'), badge: weatherAlerts.length || undefined },
   ];
 
@@ -188,6 +198,12 @@ export const ActivityPanel: React.FC<ActivityPanelProps> = ({ selectedCall, call
             keyExtractor={(item: CheckInTimerStatusResultData, index: number) => `${item.TargetType}-${item.TargetEntityId}-${index}`}
             contentContainerStyle={styles.list}
           />
+        );
+      case 'unit-timers':
+        return (
+          <View style={styles.timers} testID="console-unit-timers">
+            <UnitAlertList onOpenUnit={handlers.onViewUnit} />
+          </View>
         );
       case 'weather':
         return weatherAlerts.length === 0 ? (
@@ -258,6 +274,7 @@ const styles = StyleSheet.create({
   icon: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   timelineRow: { borderLeftWidth: 3, paddingLeft: 8, marginBottom: 8 },
   list: { padding: 8 },
+  timers: { flex: 1, padding: 8 },
   // Dispatch's tabs: an indigo underline, and a grey count that turns indigo on the open tab.
   tab: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 10, borderBottomWidth: 2, borderBottomColor: 'transparent' },
   tabActive: { borderBottomColor: '#6366f1' },

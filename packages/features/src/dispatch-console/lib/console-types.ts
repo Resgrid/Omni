@@ -24,7 +24,7 @@ export interface RadioLogEntry {
   isActive: boolean;
 }
 
-export type ConsoleTab = 'activity' | 'radio' | 'actions' | 'checkins' | 'weather';
+export type ConsoleTab = 'activity' | 'radio' | 'actions' | 'checkins' | 'unit-timers' | 'weather';
 
 /** Collapsible console cards (persisted per device, legacy keys kept). */
 export type DashboardCardKey = 'active-calls' | 'units' | 'personnel' | 'notes' | 'resources' | 'map' | 'activity-log' | 'ptt';

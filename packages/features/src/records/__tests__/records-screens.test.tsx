@@ -10,6 +10,7 @@ import React from 'react';
 
 import { activateVariant } from '../../calls/__tests__/test-utils';
 import { CallRecordsTab, isCallRecordsTabVisible } from '../components/call-records-tab';
+import { recordStateAction } from '../components/record-list-item';
 import { RecordsQuickCreate } from '../components/records-quick-create';
 import { configureRecords, resetRecordsRuntimeForTests } from '../runtime';
 import RecordConnectorDetailScreen from '../screens/record-connector-detail';
@@ -153,6 +154,15 @@ afterEach(async () => {
   resetRecordsRuntimeForTests();
 });
 
+describe('record state badges', () => {
+  it('shows approved and accepted records as done, records out for review or reporting as under way', () => {
+    expect([RmsRecordState.Approved, RmsRecordState.Finalized, RmsRecordState.Amended, RmsRecordState.Accepted].map(recordStateAction)).toEqual(['success', 'success', 'success', 'success']);
+    expect([RmsRecordState.ReadyForReview, RmsRecordState.Submitted, RmsRecordState.Corrected].map(recordStateAction)).toEqual(['info', 'info', 'info']);
+    expect([RmsRecordState.Draft, RmsRecordState.Returned].map(recordStateAction)).toEqual(['muted', 'warning']);
+    expect([RmsRecordState.Voided, RmsRecordState.Cancelled, RmsRecordState.Rejected].map(recordStateAction)).toEqual(['error', 'error', 'error']);
+  });
+});
+
 describe('RecordsHomeScreen', () => {
   it('waits for flags, and shows nothing to start when the department has Field Records off', async () => {
     featureFlagsStore.setState({ flags: { 'Records.System': { enabled: false } }, isLoaded: true });
@@ -203,6 +213,18 @@ describe('RecordsHomeScreen', () => {
 });
 
 describe('RecordNewScreen', () => {
+  it('blocks saving an unavailable schema and lets the user retry', async () => {
+    const fetchSchema = jest.fn().mockResolvedValueOnce(null).mockResolvedValueOnce(schema);
+    useRecordsStore.setState({ fetchSchema });
+    await render(<RecordNewScreen />);
+    await fireEvent.press(screen.getByTestId('records-choose-system.run'));
+    await waitFor(() => expect(screen.getByTestId('record-new-schema-error')).toBeTruthy());
+    expect(screen.getByTestId('records-save-send')).toBeDisabled();
+    expect(screen.getByTestId('records-save-local')).toBeDisabled();
+    await fireEvent.press(screen.getByText('common.retry'));
+    await waitFor(() => expect(screen.getByTestId('record-form')).toBeTruthy());
+  });
+
   it('picks a definition, validates, then saves and opens the new record', async () => {
     useRecordsStore.setState({
       pushDraft: jest.fn(async (id: string) => {

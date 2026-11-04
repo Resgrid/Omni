@@ -1,4 +1,3 @@
-import { ProtectedFieldIds, revealedValue } from '@resgrid/auth';
 import type { CallListItem } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import type { DispatchedEventResultData } from '@resgrid/models';
@@ -9,6 +8,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { readableColors } from '../lib/call-colors';
 import { type CallAssignmentContext, isCurrentUserOnCall } from '../lib/call-dispatch';
+import { callDisplayName, revealedCallText } from '../lib/call-display';
 import { TIME_AGO_KEYS, timeAgo } from '../lib/call-time';
 import { DispatchTicker } from './dispatch-ticker';
 import { QUEUED_CALL_COLORS, QueuedCallBadge } from './queued-call-badge';
@@ -67,9 +67,9 @@ export const CallCard: React.FC<CallCardProps> = React.memo(function CallCard({
   const { backgroundColor, textColor } = queued ? { backgroundColor: QUEUED_CALL_COLORS[queued.state].background, textColor: QUEUED_CALL_COLORS[queued.state].text } : readableColors(priorityColor ?? GREY);
 
   const protectedLabel = t('data_protection.protected_value');
-  const name = revealedValue(call.RedactedFields, ProtectedFieldIds.callName, call.Name) ?? protectedLabel;
-  const address = revealedValue(call.RedactedFields, ProtectedFieldIds.callAddress, call.Address);
-  const natureValue = revealedValue(call.RedactedFields, ProtectedFieldIds.callNature, call.Nature);
+  const name = callDisplayName(call, protectedLabel);
+  const address = revealedCallText(call, 'Address');
+  const natureValue = revealedCallText(call, 'Nature');
   const nature = useMemo(() => (natureValue ? htmlToPlainText(natureValue) : ''), [natureValue]);
   const elapsed = timeAgo(call.LoggedOnUtc, now ?? Date.now());
   const elapsedLabel = elapsed ? t(TIME_AGO_KEYS[elapsed.unit], { count: elapsed.count }) : t('common.unknown');
@@ -77,6 +77,7 @@ export const CallCard: React.FC<CallCardProps> = React.memo(function CallCard({
   // A queued call has no number yet: it does not exist on the server.
   const numberLabel = queued ? null : call.Number ? `#${call.Number}` : null;
   const timersLabel = timerState && (timerState.overdue > 0 || timerState.warning > 0) ? t('calls.card.timers_attention', { overdue: timerState.overdue, warning: timerState.warning }) : null;
+
   const a11yLabel = [numberLabel, name, address, queued ? (queued.state === 'rejected' ? t('calls.queued.rejected_badge') : t('calls.queued.badge')) : null, priorityLabel, elapsedLabel]
     .filter((part): part is string => !!part)
     .join(', ');
@@ -91,6 +92,7 @@ export const CallCard: React.FC<CallCardProps> = React.memo(function CallCard({
     queued && !isCompact ? { borderColor: QUEUED_CALL_COLORS[queued.state].border, borderWidth: 2, borderStyle: 'dashed' as const } : null,
     isAssigned && !queued ? styles.assigned : null,
   ]);
+
   const color = isCompact ? undefined : textColor;
 
   const content = (

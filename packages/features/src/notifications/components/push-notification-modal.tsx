@@ -2,7 +2,7 @@ import { recordPushResponse } from '@resgrid/api';
 import { useTranslation } from '@resgrid/i18n';
 import { getNotificationsDependencies, navigateToNotificationTarget, type NotificationKind, type NotificationTarget, usePushNotificationModalStore } from '@resgrid/notifications';
 import { Button, ButtonText, HStack, Modal, ModalBackdrop, ModalBody, ModalContent, ModalFooter, ModalHeader, Text, useToast, VStack } from '@resgrid/ui';
-import { AlertCircle, Bell, Bot, CloudLightning, KeyRound, Mail, MessageCircle, Phone, RadioTower, Wrench } from 'lucide-react-native';
+import { AlertCircle, Bell, Bot, CloudLightning, KeyRound, Mail, MessageCircle, Phone, RadioTower, Timer, Wrench } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 
 type ModalKind = NotificationKind | 'unknown';
@@ -17,6 +17,7 @@ const ICONS: Record<ModalKind, React.ComponentType<{ size?: number; color?: stri
   workOrder: Wrench,
   signInApproval: KeyRound,
   communicationTest: RadioTower,
+  unitStatusTimer: Timer,
   unknown: Bell,
 };
 
@@ -30,6 +31,7 @@ const COLORS: Record<ModalKind, string> = {
   workOrder: '#F97316',
   signInApproval: '#8B5CF6',
   communicationTest: '#0EA5E9',
+  unitStatusTimer: '#D97706',
   unknown: '#6B7280',
 };
 
@@ -43,6 +45,7 @@ const TYPE_KEYS: Record<ModalKind, string> = {
   workOrder: 'push_notifications.types.work_order',
   signInApproval: 'push_notifications.types.sign_in_approval',
   communicationTest: 'push_notifications.types.communication_test',
+  unitStatusTimer: 'unit_status.timer_title',
   unknown: 'push_notifications.types.notification',
 };
 
@@ -54,6 +57,7 @@ const VIEW_KEYS: Partial<Record<NotificationKind, string>> = {
   weatherAlert: 'push_notifications.view_alert',
   workOrder: 'push_notifications.view_work_order',
   signInApproval: 'push_notifications.view_sign_in',
+  unitStatusTimer: 'unit_status.timer_update_status',
 };
 
 /** Whether this variant has a screen for the target (the variant's deep-link resolver decides; absent routes stay hidden). */

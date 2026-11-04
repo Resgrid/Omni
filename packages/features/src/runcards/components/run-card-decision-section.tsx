@@ -1,4 +1,5 @@
 import { formatUtcInDepartmentTime } from '@resgrid/core/utils/dates';
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import { RecommendationOutcome, type RunCardConditionData, RunCardConditionResult, RunCardConditionType, type RunCardDecisionData } from '@resgrid/models';
 import { Badge, BadgeText, Button, ButtonSpinner, ButtonText, HStack, Text, VStack } from '@resgrid/ui';
@@ -83,12 +84,13 @@ const ConditionRow: React.FC<{ condition: RunCardConditionData; index: number; t
  */
 export const RunCardDecisionSection: React.FC<RunCardDecisionSectionProps> = ({ decision, onReevaluate, isReevaluating = false, testID }) => {
   const { t } = useTranslation();
+  const timeZone = useDepartmentTimeZone();
   const sectionTestID = `${testID}-decision`;
   const path = decision.Path ?? [];
   const fallbacks = decision.Fallbacks ?? [];
   const firstArriving = decision.FirstArriving ?? [];
   const advice = decision.AdviceText?.trim();
-  const pinnedTime = formatUtcInDepartmentTime(decision.PinnedOn, null, undefined, undefined, t('run_cards.conditions.pinned_unknown_time'));
+  const pinnedTime = formatUtcInDepartmentTime(decision.PinnedOn, timeZone, undefined, undefined, t('run_cards.conditions.pinned_unknown_time'));
   const isAdvice = decision.Outcome === RecommendationOutcome.Advice;
 
   return (

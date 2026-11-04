@@ -142,11 +142,16 @@ describe('app.config per variant', () => {
       return extension.entitlements['com.apple.security.application-groups'];
     };
 
-    // Responder keeps legacy Responder's group; Unit has none in its manifest, so the widget plugin's group.<bundle id>.
+    // Store builds use the manifest's group, registered on the Apple team (Responder keeps legacy Responder's); the other
+    // environments use group.<bundle id>, also registered. eas-cli cannot assign a group to an App ID with an API key, so a
+    // group that is not registered and assigned there fails the archive.
     expect(widgetAppGroups('responder', 'production')).toEqual(['group.com.wavetech.resgrid.shared']);
     expect(widgetAppGroups('responder', 'staging')).toEqual(['group.com.wavetech.Resgrid.staging']);
-    expect(widgetAppGroups('unit', 'production')).toEqual(['group.com.resgrid.unit']);
+    expect(widgetAppGroups('unit', 'production')).toEqual(['group.com.resgrid.unit.shared']);
+    expect(widgetAppGroups('unit', 'internal')).toEqual(['group.com.resgrid.unit.shared']);
     expect(widgetAppGroups('unit', 'staging')).toEqual(['group.com.resgrid.unit.staging']);
+    expect(widgetAppGroups('unit', 'development')).toEqual(['group.com.resgrid.unit.development']);
+    expect(build('unit').ios.entitlements['com.apple.security.application-groups']).toEqual(['group.com.resgrid.unit.shared']);
     expect(build('ic').extra.eas.build).toBeUndefined();
   });
 });

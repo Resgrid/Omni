@@ -21,6 +21,7 @@
     "firebase": "catalog:",
     "react": "catalog:",
     "react-native": "catalog:",
+    "zod": "catalog:",
     "zustand": "catalog:"
   },
   "devDependencies": {

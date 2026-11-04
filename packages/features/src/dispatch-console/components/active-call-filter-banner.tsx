@@ -1,5 +1,5 @@
 import { useCallsStore } from '@resgrid/data';
-import { readableTextColor, resolvePriority } from '@resgrid/features/calls';
+import { callDisplayName, callDisplayText, readableTextColor, resolvePriority } from '@resgrid/features/calls';
 import { useTranslation } from '@resgrid/i18n';
 import type { CallResultData } from '@resgrid/models';
 import { HStack, Pressable, Text } from '@resgrid/ui';
@@ -18,6 +18,8 @@ export const ActiveCallFilterBanner: React.FC<ActiveCallFilterBannerProps> = ({ 
   const priorities = useCallsStore((state) => state.callPriorities);
   const color = resolvePriority(priorities, call.Priority)?.color || '#6366f1';
   const textColor = readableTextColor(color) ?? '#FFFFFF';
+  const protectedLabel = t('data_protection.protected_value');
+  const label = callDisplayName(call, protectedLabel) || callDisplayText(call, 'Nature', protectedLabel);
 
   return (
     <View style={StyleSheet.flatten([styles.banner, { backgroundColor: color }])} testID="active-call-filter-banner">
@@ -26,7 +28,7 @@ export const ActiveCallFilterBanner: React.FC<ActiveCallFilterBannerProps> = ({ 
           <AlertTriangle size={16} color={textColor} />
         </View>
         <Text className="flex-1 text-sm font-semibold" style={{ color: textColor }} numberOfLines={1}>
-          {`${t('dispatch.filtering_by_call')}: #${call.Number} - ${call.Name || call.Nature}`}
+          {`${t('dispatch.filtering_by_call')}: #${call.Number} - ${label}`}
         </Text>
       </HStack>
       <Pressable onPress={onClearFilter} hitSlop={10} accessibilityRole="button" accessibilityLabel={t('dispatch.clear_filter')} style={styles.clear} testID="active-call-filter-clear">

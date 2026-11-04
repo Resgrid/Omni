@@ -1,4 +1,5 @@
 import { formatUtcInDepartmentTime } from '@resgrid/core/utils/dates';
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import type { CheckInRecordResultData } from '@resgrid/models';
 import { Text } from '@resgrid/ui';
@@ -16,6 +17,7 @@ export interface CheckInHistoryListProps {
 /** Recorded check-ins on the call, newest first. */
 export const CheckInHistoryList: React.FC<CheckInHistoryListProps> = ({ records, nameFor }) => {
   const { t } = useTranslation();
+  const timeZone = useDepartmentTimeZone();
   if (records.length === 0) return null;
   const sorted = [...records].sort((a, b) => (b.Timestamp > a.Timestamp ? 1 : b.Timestamp < a.Timestamp ? -1 : 0));
   return (
@@ -29,7 +31,7 @@ export const CheckInHistoryList: React.FC<CheckInHistoryListProps> = ({ records,
             {record.CheckInTypeName || t(CHECK_IN_TYPE_LABEL_KEYS[record.CheckInType] ?? 'common.unknown')}
           </Text>
           <Text size="xs" className="text-typography-500">
-            {[nameFor?.(record.UserId), formatUtcInDepartmentTime(record.Timestamp, null)].filter(Boolean).join(' · ')}
+            {[nameFor?.(record.UserId), formatUtcInDepartmentTime(record.Timestamp, timeZone)].filter(Boolean).join(' · ')}
           </Text>
           {record.Note ? (
             <Text size="xs" className="text-typography-600">

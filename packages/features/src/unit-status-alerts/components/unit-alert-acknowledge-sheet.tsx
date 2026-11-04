@@ -1,16 +1,17 @@
 import { formatUtcInDepartmentTime } from '@resgrid/core/utils/dates';
 import { type UnitAlertAcknowledgementOutcome, useUnitsStore, useUnitStatusAlertsStore } from '@resgrid/data';
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import { UnitStatusAlertAcknowledgementMode, type UnitStatusAlertAcknowledgementResultData } from '@resgrid/models';
 import { Button, ButtonText, CustomBottomSheet, HStack, showToast, Text, Textarea, TextareaInput, View, VStack } from '@resgrid/ui';
 import { BellOff, CircleCheck } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
-import { formatElapsed } from '../lib/format';
-import { type BoardUnit, requiresAcknowledgementNote, toAcknowledgedLevel, type UnitAlertAcknowledgementState, type UnitStatusAlert } from '../lib/unit-status-alerts';
+import { type BoardUnit, formatElapsed, requiresAcknowledgementNote, toAcknowledgedLevel, type UnitAlertAcknowledgementState, type UnitStatusAlert } from '../lib/unit-status-alerts';
 
 /** Mirrors UnitStatusAlertAcknowledgement.MaxNoteLength on the server. */
 export const MAX_ACKNOWLEDGEMENT_NOTE_LENGTH = 500;
+
 /** Mute choices in minutes; 0 = until the unit changes status. */
 export const MUTE_OPTIONS = [0, 15, 30, 60] as const;
 
@@ -25,15 +26,17 @@ export interface UnitAlertAcknowledgeSheetProps {
   noteRequirement: number;
 }
 
-/** A UTC wire time as device-local hours and minutes (shared UTC parser). */
-const formatTime = (value: string | null, locale: string): string => formatUtcInDepartmentTime(value, null, { hour: '2-digit', minute: '2-digit' }, locale);
+/** A UTC wire time as hours and minutes in the department's zone (the device zone when unknown; shared UTC parser). */
+const formatTime = (value: string | null, zoneId: string | null, locale: string): string => formatUtcInDepartmentTime(value, zoneId, { hour: '2-digit', minute: '2-digit' }, locale);
 
 /**
  * Deal with a unit that sat in a status past its timer: mark it seen, mute it, and say why ("MUG not departed,
- * technical malfunction reported"). Online only; every board in the department sees the result.
+ * technical malfunction reported", "contacted by radio, stuck in traffic"). Online only; every board, console and the
+ * unit itself see the result.
  */
 export const UnitAlertAcknowledgeSheet: React.FC<UnitAlertAcknowledgeSheetProps> = ({ isOpen, onClose, unit, alert, acknowledgement, acknowledgementState, noteRequirement }) => {
   const { t, i18n } = useTranslation();
+  const timeZone = useDepartmentTimeZone();
   const acknowledge = useUnitStatusAlertsStore((state) => state.acknowledge);
   const clear = useUnitStatusAlertsStore((state) => state.clear);
   const [note, setNote] = useState('');
@@ -62,12 +65,14 @@ export const UnitAlertAcknowledgeSheet: React.FC<UnitAlertAcknowledgeSheetProps>
       if (outcome.ok) {
         showToast('success', success);
         onClose();
+
         return;
       }
+
       switch (outcome.error) {
         case 'unit_alert_status_changed':
         case 'unit_alert_not_overdue':
-          // The board is behind the unit: catch up so the row moves or disappears.
+          // This screen is behind the unit: catch up so the row moves or disappears.
           void useUnitsStore.getState().fetchUnitInfos({ bypassCache: true });
           showToast('info', t(outcome.error === 'unit_alert_status_changed' ? 'unitAlerts.errorStatusChanged' : 'unitAlerts.errorNotOverdue'));
           onClose();
@@ -77,11 +82,11 @@ export const UnitAlertAcknowledgeSheet: React.FC<UnitAlertAcknowledgeSheetProps>
           onClose();
           break;
         case 'unit_alert_note_required':
-          // Stays open: the department started asking for a reason after this board loaded its settings.
+          // Stays open: the department started asking for a reason after this screen loaded its settings.
           showToast('error', t('unitAlerts.errorNoteRequired'));
           break;
         case 'offline':
-          showToast('error', t('dashboard.acknowledge_offline'));
+          showToast('error', t('unitAlerts.errorOffline'));
           break;
         default:
           showToast('error', t('unitAlerts.errorGeneric'));
@@ -95,8 +100,10 @@ export const UnitAlertAcknowledgeSheet: React.FC<UnitAlertAcknowledgeSheetProps>
       if (!unit || !alert || alert.level === 'none' || noteMissing) return;
       const unitIdNumber = Number(unit.UnitId);
       const stateId = unit.CurrentUnitStateId ?? 0;
+
       if (!Number.isFinite(unitIdNumber) || stateId <= 0) return;
       setIsSubmitting(true);
+
       try {
         const outcome = await acknowledge({
           UnitId: unitIdNumber,
@@ -106,6 +113,7 @@ export const UnitAlertAcknowledgeSheet: React.FC<UnitAlertAcknowledgeSheetProps>
           MuteMinutes: mode === UnitStatusAlertAcknowledgementMode.Muted ? muteMinutes : 0,
           Note: note.trim(),
         });
+
         report(outcome, t(mode === UnitStatusAlertAcknowledgementMode.Muted ? 'unitAlerts.muteSuccess' : 'unitAlerts.acknowledgeSuccess'));
       } finally {
         setIsSubmitting(false);
@@ -117,6 +125,7 @@ export const UnitAlertAcknowledgeSheet: React.FC<UnitAlertAcknowledgeSheetProps>
   const handleClear = useCallback(async () => {
     if (!acknowledgement) return;
     setIsSubmitting(true);
+
     try {
       report(await clear(acknowledgement), t('unitAlerts.clearSuccess'));
     } finally {
@@ -126,8 +135,14 @@ export const UnitAlertAcknowledgeSheet: React.FC<UnitAlertAcknowledgeSheetProps>
 
   const levelColor = alert?.level === 'alert' ? '#dc2626' : '#d97706';
   const seenBy = acknowledgement?.AcknowledgedByName ? t('unitAlerts.acknowledgedBy', { name: acknowledgement.AcknowledgedByName }) : t('unitAlerts.acknowledged');
+
   const muteDescription =
-    acknowledgementState === 'muted' ? (acknowledgement?.MutedUntilUtc ? t('unitAlerts.mutedUntil', { time: formatTime(acknowledgement.MutedUntilUtc, i18n.language) }) : t('unitAlerts.mutedUntilStatusChange')) : null;
+    acknowledgementState === 'muted'
+      ? acknowledgement?.MutedUntilUtc
+        ? t('unitAlerts.mutedUntil', { time: formatTime(acknowledgement.MutedUntilUtc, timeZone, i18n.language) })
+        : t('unitAlerts.mutedUntilStatusChange')
+      : null;
+
   const noteLabel = noteRequired ? t('unitAlerts.noteRequired') : t('unitAlerts.note');
 
   return (

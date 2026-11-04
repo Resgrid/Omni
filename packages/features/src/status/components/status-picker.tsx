@@ -24,7 +24,9 @@ import { StatusDestinationList } from './status-destination-list';
 import { StatusOptionRow } from './status-option';
 
 export type StatusPickerSubject = 'unit' | 'personnel';
+
 export type StatusPickerTab = 'status' | 'staffing';
+
 /** The data layer's write outcome: sent now, queued for reconnect, or refused by the server. */
 export type StatusSubmitOutcome = 'sent' | 'queued' | 'rejected';
 
@@ -76,6 +78,7 @@ export interface StatusPickerProps {
 
 const EMPTY_LISTS: DestinationLists = { calls: [], stations: [], pois: [] };
 const SHEET_SNAP_POINT = 80;
+
 /** Room the list leaves in the sheet for the title, tabs, summary, hint and buttons (a two-line title included). */
 const SHEET_CHROME_HEIGHT = 300;
 const LIST_MIN_HEIGHT = 120;
@@ -171,20 +174,24 @@ export const StatusPicker: React.FC<StatusPickerProps> = ({
   const destinationTabs = useMemo(() => (detail > 0 ? getDestinationTabs(detail, lenientDestinations) : []), [detail, lenientDestinations]);
   const hasDestinationStep = destinationTabs.length > 0;
   const allowsCalls = destinationTabs.includes('call');
+
   const effectiveDestination = useMemo(
     () => (selectedStatus ? resolveEffectiveDestination({ detail, lenient: lenientDestinations, selection, hasExplicitChoice, defaultCall }) : NO_DESTINATION),
     [defaultCall, detail, hasExplicitChoice, lenientDestinations, selectedStatus, selection]
   );
+
   const isAwaitingDestinations = isLoadingDestinations && (hasDestinationStep || hasPotentialDefaultCall);
 
   const noteRequired = isStaffingTab ? isNoteRequired(selectedStaffing) : isNoteRequired(selectedStatus);
   const optionHasNoteStep = isStaffingTab ? hasNoteStep(selectedStaffing) : hasNoteStep(selectedStatus);
   // The status passed in skips the list once its option has loaded (were it missing, the list lets the user pick another).
   const hasPresetStatus = initialStatusId != null && selectedStatus !== null && selectedId === toOptionId(initialStatusId);
+
   const steps = useMemo(
     () => getStatusPickerSteps({ isStaffing: isStaffingTab, hasPresetStatus, hasDestinationStep, hasNoteStep: optionHasNoteStep }),
     [hasDestinationStep, hasPresetStatus, isStaffingTab, optionHasNoteStep]
   );
+
   // A step the selection no longer has (its options changed under the open sheet) falls back to the first.
   const currentStep = step !== null && steps.includes(step) ? step : steps[0];
   const stepIndex = steps.indexOf(currentStep);
@@ -205,8 +212,10 @@ export const StatusPicker: React.FC<StatusPickerProps> = ({
       if (outcome === 'rejected') {
         setError(t('status.failed_to_save_status'));
         toast.error(t('status.failed_to_save_status'));
+
         return;
       }
+
       if (outcome === 'queued') toast.warning(t('status.status_queued'));
       else toast.success(t('status.status_saved_successfully'));
       onClose();
@@ -221,8 +230,10 @@ export const StatusPicker: React.FC<StatusPickerProps> = ({
       pendingRef.current = id;
       setIsSubmitting(true);
       setError(null);
+
       try {
         const outcome = await submit();
+
         if (pendingRef.current === id) finish(outcome);
       } catch (caught) {
         if (pendingRef.current === id) {
@@ -257,10 +268,13 @@ export const StatusPicker: React.FC<StatusPickerProps> = ({
     if (!isOpen || !holdPending || !selectedStatus || isSubmitting || isAwaitingDestinations) return;
     setHoldPending(false);
     const nextStep = steps.find((value) => value !== 'select');
+
     if (!nextStep || canSubmitStatusWithoutInput(selectedStatus, { allowsCalls, hasDefaultCall: !!defaultCall })) {
       submitStatus();
+
       return;
     }
+
     setStep(nextStep);
   }, [allowsCalls, defaultCall, holdPending, isAwaitingDestinations, isOpen, isSubmitting, selectedStatus, steps, submitStatus]);
 
@@ -302,6 +316,7 @@ export const StatusPicker: React.FC<StatusPickerProps> = ({
 
   const handleNext = useCallback(() => {
     if (!canProceed) return;
+
     if (!isLastStep) setStep(steps[stepIndex + 1]);
     else if (isStaffingTab) submitStaffing();
     else submitStatus();
@@ -436,7 +451,7 @@ export const StatusPicker: React.FC<StatusPickerProps> = ({
         {currentStep !== 'select' && !isStaffingTab && selectedStatus ? (
           <VStack className="rounded-lg bg-background-50 p-3" testID={`${testID}-summary`}>
             <Text className="text-sm text-typography-700">{`${t('status.selected_status')}: ${selectedStatus.Text}`}</Text>
-            <Text className="text-sm text-typography-700">{`${t('status.selected_destination')}: ${effectiveDestination.type === 'none' ? t('status.no_destination') : destinationLabel(effectiveDestination)}`}</Text>
+            <Text className="text-sm text-typography-700">{`${t('status.selected_destination')}: ${effectiveDestination.type === 'none' ? t('status.no_destination') : destinationLabel(effectiveDestination, t('data_protection.protected_value'))}`}</Text>
           </VStack>
         ) : null}
 

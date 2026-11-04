@@ -57,6 +57,9 @@ function run(label, args, cwd, env) {
 for (const variant of variants) {
   const env = { ...process.env, APP_VARIANT: variant, EXPO_NO_DOTENV: '1' };
 
+  // The export runs in apps/omni and the packaging in apps/desktop: a relative WEB_EXPORT_DIR must name one folder for both.
+  if (env.WEB_EXPORT_DIR) env.WEB_EXPORT_DIR = path.resolve(projectRoot, env.WEB_EXPORT_DIR);
+
   try {
     env.APP_ENV = resolveBuildTarget(env).appEnv;
   } catch (error) {

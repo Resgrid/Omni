@@ -1,11 +1,11 @@
 import './test-setup';
 
+import { setDepartmentConfig, useDepartmentConfigStore } from '@resgrid/features/department-config';
 import type { GetConfigResultData } from '@resgrid/models';
 import { createMemoryKvBackend, defaultResetRegistry, DurableKv } from '@resgrid/offline';
 
 import { DASHBOARD_LAYOUT_STORE_NAME, type DashboardWidget, normalizeLayout, useDashboardStore } from '../hooks/use-dashboard-store';
 import { useDashboardViewStore } from '../hooks/use-dashboard-view-store';
-import { setDashboardDepartmentConfig, useDashboardConfigStore } from '../hooks/use-department-config';
 import { useWidgetSettingsStore, WIDGET_SETTINGS_STORE_NAME } from '../hooks/use-widget-settings-store';
 import { computeGridConfig } from '../lib/grid';
 import { setDashboardStorage } from '../lib/storage';
@@ -137,10 +137,10 @@ describe('dashboard view store', () => {
 describe('dashboard department config', () => {
   it('takes the shell’s copy and is dropped on sign-out (device layout and settings are kept)', async () => {
     useDashboardStore.setState({ widgets: [widget('a', 'time', 0, 0, 1, 1)] });
-    setDashboardDepartmentConfig({ OpenWeatherApiKey: 'k', UnitStatusThresholds: [] } as unknown as GetConfigResultData);
-    expect(useDashboardConfigStore.getState().config?.OpenWeatherApiKey).toBe('k');
-    await defaultResetRegistry.getStoreResets().get('data.dashboard-config')?.('logout');
-    expect(useDashboardConfigStore.getState().config).toBeNull();
+    setDepartmentConfig({ OpenWeatherApiKey: 'k', UnitStatusThresholds: [] } as unknown as GetConfigResultData);
+    expect(useDepartmentConfigStore.getState().config?.OpenWeatherApiKey).toBe('k');
+    await defaultResetRegistry.getStoreResets().get('data.department-config')?.('logout');
+    expect(useDepartmentConfigStore.getState().config).toBeNull();
     expect(useDashboardStore.getState().widgets).toHaveLength(1);
   });
 });

@@ -17,10 +17,22 @@ import * as Notifications from 'expo-notifications';
 import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 
-import { ANDROID_CHANNELS, type AndroidChannelSpec, buildIosCategories, CHANNEL_LIGHT_COLOR, CHANNEL_VIBRATION_PATTERN, type ChannelTranslate, CHECK_IN_ACTION_ID } from './channels';
-import { getOptionalNotificationsDependencies, getPushSubjectKind, hasCheckInActions, type NotificationsDependencies, type PushSubjectKind, readActiveUnitId, readSession, readSignedIn } from './configure';
+import { ANDROID_CHANNELS, type AndroidChannelSpec, buildIosCategories, CHANNEL_LIGHT_COLOR, CHANNEL_VIBRATION_PATTERN, type ChannelTranslate, CHECK_IN_ACTION_ID, STATUS_TIMER_CHANNEL } from './channels';
+import {
+  getOptionalNotificationsDependencies,
+  getPushSubjectKind,
+  hasCheckInActions,
+  hasStatusTimerNotifications,
+  type NotificationsDependencies,
+  type PushSubjectKind,
+  readActiveUnitId,
+  readSession,
+  readSignedIn,
+} from './configure';
 import { openNotification } from './deep-links';
 import { extractPushNotificationData } from './event-codes';
+import { openLocalNotification, readLocalNotificationData } from './local-notification-data';
+import { cancelAllLocalNotifications } from './local-notifications';
 import { type PushNotificationData, usePushNotificationModalStore } from './push-modal-store';
 import type { PushNotificationService, PushRegistrationTrigger, RegisterOptions, UsePushNotificationsResult } from './push-types';
 import { createMemoryNotificationsKv, isSameRegistration, isSameSubscriber, type NotificationsKv, RegistrationStore, type StoredNativePushRegistration } from './registration-storage';
@@ -74,6 +86,12 @@ const subjectOf = (registration: StoredNativePushRegistration): PushSubject => {
   if (registration.Source === IC_PUSH_SOURCE) return { kind: 'icUser' };
   return { kind: 'user' };
 };
+
+/** How a notification arriving in the foreground is shown: pushes as usual. */
+const FOREGROUND_PRESENTATION: Notifications.NotificationBehavior = { shouldShowBanner: true, shouldShowList: true, shouldPlaySound: true, shouldSetBadge: true };
+
+/** The app's own local notifications (the status timer) stay quiet in the foreground: the app shows them on screen. */
+const LOCAL_FOREGROUND_PRESENTATION: Notifications.NotificationBehavior = { shouldShowBanner: false, shouldShowList: false, shouldPlaySound: false, shouldSetBadge: false };
 
 const isAccepted = (result: PushRegistrationResult | null | undefined): boolean => REGISTERED_STATUSES.includes((result?.Status ?? '').toLowerCase());
 
@@ -164,7 +182,7 @@ class NativePushNotificationService implements PushNotificationService {
 
     // Foreground presentation: expo-notifications owns the UNUserNotificationCenter delegate.
     Notifications.setNotificationHandler({
-      handleNotification: async () => ({ shouldShowBanner: true, shouldShowList: true, shouldPlaySound: true, shouldSetBadge: true }),
+      handleNotification: async (notification) => (readLocalNotificationData(notification.request.content.data) ? LOCAL_FOREGROUND_PRESENTATION : FOREGROUND_PRESENTATION),
     });
 
     // Listeners first, synchronously, so receipts and taps during startup are not missed.
@@ -213,13 +231,14 @@ class NativePushNotificationService implements PushNotificationService {
       // A channel's sound is fixed once created. Channels a legacy build created with a classic (or the default) sound
       // are deleted and created again with the modern one — best effort: some Android versions restore a re-created
       // channel's previous user settings.
+      const channels = hasStatusTimerNotifications() ? [...ANDROID_CHANNELS, STATUS_TIMER_CHANNEL] : ANDROID_CHANNELS;
       const existing = await notifee.getChannels().catch(() => []);
       const existingSounds = new Map(existing.map((channel) => [channel.id, channel.sound]));
-      const outdated = ANDROID_CHANNELS.filter((spec) => existingSounds.has(spec.id) && existingSounds.get(spec.id) !== spec.sound);
+      const outdated = channels.filter((spec) => existingSounds.has(spec.id) && existingSounds.get(spec.id) !== spec.sound);
       await Promise.all(outdated.map((spec) => notifee.deleteChannel(spec.id).catch(() => undefined)));
 
-      await notifee.createChannels(ANDROID_CHANNELS.map(toNotifeeChannel));
-      logger.info({ message: 'Android notification channels set up', context: { channels: ANDROID_CHANNELS.length, recreated: outdated.length } });
+      await notifee.createChannels(channels.map(toNotifeeChannel));
+      logger.info({ message: 'Android notification channels set up', context: { channels: channels.length, recreated: outdated.length } });
     } catch (error) {
       logger.error({ message: 'Error setting up Android notification channels', context: errorContext(error) });
     }
@@ -231,7 +250,7 @@ class NativePushNotificationService implements PushNotificationService {
     }
     try {
       // Registers categories only; it never asks for permission.
-      await notifee.setNotificationCategories(buildIosCategories({ checkInActions: hasCheckInActions(), translate: channelTranslate }));
+      await notifee.setNotificationCategories(buildIosCategories({ checkInActions: hasCheckInActions(), statusTimer: hasStatusTimerNotifications(), translate: channelTranslate }));
       logger.info({ message: 'iOS notification categories set up' });
     } catch (error) {
       logger.error({ message: 'Error setting up iOS notification categories', context: errorContext(error) });
@@ -242,6 +261,12 @@ class NativePushNotificationService implements PushNotificationService {
 
   private handleNotificationReceived = (notification: Notifications.Notification): void => {
     const request = notification.request;
+
+    // The app's own notification (the status timer) is already on screen in the app; no push modal for it.
+    if (readLocalNotificationData(request.content.data)) {
+      return;
+    }
+
     const { eventCode, data } = extractPushNotificationData(request);
     logger.info({ message: 'Notification received', context: { eventCode } });
     if (!eventCode) {
@@ -274,6 +299,15 @@ class NativePushNotificationService implements PushNotificationService {
         if (oldest !== undefined) this.handledResponseIds.delete(oldest);
       }
       this.handledResponseIds.add(identifier);
+    }
+
+    // The app's own notification (the status timer): a tap or its action opens its screen (cold start included).
+    const local = readLocalNotificationData(request.content.data);
+
+    if (local) {
+      void openLocalNotification(local);
+
+      return;
     }
 
     if (response.actionIdentifier === CHECK_IN_ACTION_ID) {
@@ -563,6 +597,8 @@ class NativePushNotificationService implements PushNotificationService {
     usePushNotificationModalStore.getState().hideNotificationModal();
     await Notifications.setBadgeCountAsync(0).catch(() => undefined);
     await Notifications.dismissAllNotificationsAsync().catch(() => undefined);
+    // Nothing the app scheduled for the signed-out session may still fire.
+    await cancelAllLocalNotifications();
     if (Platform.OS === 'android') {
       await notifee.cancelAllNotifications().catch(() => undefined);
     }

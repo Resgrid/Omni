@@ -308,6 +308,7 @@
     "dispatch_to_everyone": "Відправити до всього доступного персоналу",
     "edit_call": "Редагувати виклик",
     "edit_call_description": "Оновити інформацію про виклик",
+    "edit_load_error": "Не вдалося завантажити цей виклик для редагування. Спробуйте ще раз.",
     "everyone": "Всі",
     "field_policy_loading": "Налаштування викликів вашого відділу ще завантажуються, спробуйте ще раз за мить",
     "files": {
@@ -2354,7 +2355,8 @@
       "resource_order": "Resource Order",
       "generic_call": "Generic Call",
       "general_notification": "Notifications",
-      "general_message": "Messages"
+      "general_message": "Messages",
+      "unit_status_timer": "Unit Status Timer"
     },
     "communication_test_confirmed": "Receipt confirmed",
     "communication_test_failed": "Could not confirm receipt. Please try again.",
@@ -3675,7 +3677,6 @@
     "zoom_out_show_all": "Зменшити масштаб, щоб показати всі маркери"
   },
   "dashboard": {
-    "acknowledge_offline": "No connection. Acknowledge the alert again once the board is back online.",
     "add_named_widget": "Add {{name}}",
     "add_to_board": "Add to dashboard",
     "add_widget": "Add Widget",
@@ -3808,7 +3809,11 @@
     "openAcknowledge": "Підтвердити сповіщення для {{name}}",
     "sheetTitle": "Сповіщення про статус підрозділу",
     "unitsWithoutMeaning": "Підрозділи у статусі без значення: {{count}}. До них не може застосовуватися жоден таймер; надайте цим статусам значення у Власних статусах.",
-    "withinThresholds": "Усі підрозділи в межах своїх таймерів статусу"
+    "withinThresholds": "Усі підрозділи в межах своїх таймерів статусу",
+    "badgeAlert": "Status timer alert: {{elapsed}} in status",
+    "badgeWarn": "Status timer warning: {{elapsed}} in status",
+    "errorOffline": "No connection. Acknowledge the alert again once you are back online.",
+    "openUnit": "Open {{name}}"
   },
   "widgets": {
     "calls": "Виклики",
@@ -3883,7 +3888,10 @@
     "time_minutes": "{{count}}m ago",
     "title": "Dispatch Console",
     "units_available": "Units available",
-    "weather_alerts": "Weather alerts"
+    "weather_alerts": "Weather alerts",
+    "unit_timers": "Unit timers",
+    "unit_timer_warning": "Unit timer warning",
+    "unit_timer_alert": "Unit timer alert"
   },
   "dispatch": {
     "actions": "Дії",
@@ -4280,7 +4288,19 @@
     "console_title": "Status console",
     "responding_to": "Responding to {{name}}",
     "since": "Since {{time}}",
-    "switch_operator_body": "This ends your shift on this device and signs you out so the next operator can sign in. Unsent changes stay on the device."
+    "switch_operator_body": "This ends your shift on this device and signs you out so the next operator can sign in. Unsent changes stay on the device.",
+    "timer_alert_at": "Alert at {{time}}",
+    "timer_alert_in": "Status timer alert in {{time}}",
+    "timer_exceeded": "Status timer exceeded: {{status}} for {{elapsed}}",
+    "timer_in_status": "{{elapsed}} in {{status}}",
+    "timer_title": "Status timer",
+    "timer_update_status": "Update status",
+    "timer_warn_at": "Warning at {{time}}",
+    "timer_warn_in": "Status timer warning in {{time}}",
+    "timer_warning": "Status timer warning: {{status}} for {{elapsed}}",
+    "timer_notification_body": "{{unit}}: update your status if it has changed.",
+    "timer_exact_alarms_allow": "Allow on-time timer alerts",
+    "timer_exact_alarms_hint": "Status timer alerts can arrive late while the app is in the background."
   },
   "workOrders": {
     "reportNotSent": "Not sent",

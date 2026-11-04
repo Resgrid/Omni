@@ -13,7 +13,6 @@ export {
   CHAT_EVENTS,
   type ChatEventName,
   COMMON_EVENTING_EVENTS,
-  DASHBOARD_EVENTING_EVENTS,
   DISPATCH_EVENTING_EVENTS,
   EVENTING_CONNECTED_ACK,
   type EventingEventName,
@@ -26,6 +25,9 @@ export {
   type RealtimeVariantInput,
   resolveRealtimeFeatures,
   showsNavigationEtas,
+  showsUnitStatusAlerts,
+  UNIT_STATUS_ALERT_EVENTING_EVENTS,
+  UNIT_STATUS_ALERT_MODULES,
 } from './events';
 
 // Service

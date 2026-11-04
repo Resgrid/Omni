@@ -1,11 +1,14 @@
 import { isRedactedValue } from '@resgrid/auth';
 import { formatUtcInDepartmentTime } from '@resgrid/core/utils/dates';
 import { useCallDetailStore } from '@resgrid/data';
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import type { LocationHistoryCallData, LocationHistoryMatch } from '@resgrid/models';
 import { Button, ButtonText, Loading, Pressable, Text } from '@resgrid/ui';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
+
+import { callDisplayName } from '../../lib/call-display';
 
 export interface LocationHistoryPanelProps {
   callId: string;
@@ -32,6 +35,7 @@ export const LocationHistoryPanel: React.FC<LocationHistoryPanelProps> = ({ call
   }, [callId, fetchHistory]);
 
   if (isLoading && !history) return <Loading text={t('location_history.loading')} />;
+
   if (error && !history) {
     return (
       <View style={styles.panel} testID="location-history-panel">
@@ -42,7 +46,9 @@ export const LocationHistoryPanel: React.FC<LocationHistoryPanelProps> = ({ call
       </View>
     );
   }
+
   const calls = (history?.Calls ?? []).filter((call) => call.CallId !== callId);
+
   return (
     <View style={styles.panel} testID="location-history-panel">
       <Text className="font-semibold text-typography-900" accessibilityRole="header">
@@ -82,15 +88,17 @@ export const LocationHistoryPanel: React.FC<LocationHistoryPanelProps> = ({ call
 
 const HistoryRow: React.FC<{ call: LocationHistoryCallData; onOpenCall?: (callId: string) => void }> = ({ call, onOpenCall }) => {
   const { t } = useTranslation();
+  const timeZone = useDepartmentTimeZone();
   const [showNotes, setShowNotes] = useState(false);
   const protectedLabel = t('data_protection.protected_value');
-  const title = `#${call.Number} ${isRedactedValue(call.Name) ? protectedLabel : call.Name}`;
+  const title = `#${call.Number} ${callDisplayName(call, protectedLabel)}`;
+
   return (
     <View style={styles.row} className="border-outline-100" testID={`location-history-${call.CallId}`}>
       <Pressable onPress={onOpenCall ? () => onOpenCall(call.CallId) : undefined} accessibilityRole={onOpenCall ? 'button' : undefined} accessibilityLabel={title} disabled={!onOpenCall}>
         <Text className="font-semibold text-typography-900">{title}</Text>
         <Text size="xs" className="text-typography-500">
-          {[t(`location_history.state.${call.State}`), call.LoggedOn || formatUtcInDepartmentTime(call.LoggedOnUtc, null), call.PriorityText].filter(Boolean).join(' · ')}
+          {[t(`location_history.state.${call.State}`), call.LoggedOn || formatUtcInDepartmentTime(call.LoggedOnUtc, timeZone), call.PriorityText].filter(Boolean).join(' · ')}
         </Text>
         <Text size="xs" className="text-typography-600">
           {[...call.Matches.map((match) => t(MATCH_KEYS[match] ?? 'common.unknown')), call.DistanceMeters ? t('location_history.meters_away', { distance: Math.round(call.DistanceMeters) }) : null]

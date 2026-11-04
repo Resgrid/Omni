@@ -89,9 +89,10 @@ export function defineQaRegression(test: typeof qaTest): void {
             expect(outcome).toBe('signed-in');
             await expect.poll(() => flags.size, { message: 'FeatureToggles/GetAll loaded', timeout: 90_000 }).toBeGreaterThan(0);
 
+            // A flag the server did not send is off to the app (unknown flags are disabled), so a missing one seeded on fails.
             const mismatches = Object.entries(department.flags.expected)
-              .filter(([key, expected]) => expected.enabled !== null && flags.has(key) && flags.get(key) !== expected.enabled)
-              .map(([key, expected]) => `${key}: app has ${flags.get(key) ? 'on' : 'off'}, seeded ${expected.enabled ? 'on' : 'off'} (${expected.source})`);
+              .filter(([key, expected]) => expected.enabled !== null && (flags.get(key) ?? false) !== expected.enabled)
+              .map(([key, expected]) => `${key}: app has ${flags.has(key) ? (flags.get(key) ? 'on' : 'off') : 'none (off)'}, seeded ${expected.enabled ? 'on' : 'off'} (${expected.source})`);
 
             expect(mismatches).toEqual([]);
             await page.waitForTimeout(SETTLE_MS);

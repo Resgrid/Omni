@@ -4,7 +4,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-import { ANDROID_CHANNEL_IDS, ANDROID_CHANNELS, buildIosCategories, CHECK_IN_ACTION_ID, IOS_CATEGORY_IDS } from '../channels';
+import { ANDROID_CHANNEL_IDS, ANDROID_CHANNELS, buildIosCategories, CHECK_IN_ACTION_ID, IOS_CATEGORY_IDS, STATUS_TIMER_CATEGORY_ID, STATUS_TIMER_CHANNEL } from '../channels';
 import { CUSTOM_TONE_COUNT, IOS_SERVER_SOUND_ALIASES, isCustomTone, isModernSound, MODERN_SOUNDS, PUSH_SOUND_TYPE_SOUNDS, PUSH_SOUND_TYPES, soundForSoundType } from '../sounds';
 import { REPO_ROOT } from './helpers';
 
@@ -163,5 +163,23 @@ describe('iOS categories', () => {
     const withCheckIn = buildIosCategories({ checkInActions: true, translate });
     expect(withCheckIn[0].actions?.map((action) => action.id)).toEqual(['view', CHECK_IN_ACTION_ID]);
     expect(withCheckIn.slice(1).every((category) => !category.actions)).toBe(true);
+  });
+});
+
+describe('status timer channel and category (scheduled by the app, never sent by Core)', () => {
+  const translate = (_key: string, fallback: string) => fallback;
+
+  it('is a separate channel with a modern sound that exists on disk, and vibrates', () => {
+    expect(ANDROID_CHANNEL_IDS).not.toContain(STATUS_TIMER_CHANNEL.id);
+    expect(isModernSound(STATUS_TIMER_CHANNEL.sound)).toBe(true);
+    expect(fs.existsSync(path.join(audioDir, `${STATUS_TIMER_CHANNEL.sound}.wav`))).toBe(true);
+    expect(STATUS_TIMER_CHANNEL).toMatchObject({ id: 'unit-status-timer', nameKey: 'push_notifications.channels.unit_status_timer', vibration: true });
+  });
+
+  it('adds its category, with an Update Status action that opens the app, only when asked', () => {
+    expect(buildIosCategories({ checkInActions: true, translate }).map((category) => category.id)).not.toContain(STATUS_TIMER_CATEGORY_ID);
+    const categories = buildIosCategories({ checkInActions: false, statusTimer: true, translate });
+    expect(categories.map((category) => category.id)).toEqual([...IOS_CATEGORY_IDS, STATUS_TIMER_CATEGORY_ID]);
+    expect(categories[4].actions).toEqual([{ id: 'view', title: 'Update status', foreground: true }]);
   });
 });

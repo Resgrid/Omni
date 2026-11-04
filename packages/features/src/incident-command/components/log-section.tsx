@@ -1,4 +1,5 @@
 import { formatUtcInDepartmentTime, parseUtcMs } from '@resgrid/core/utils/dates';
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import type { CommandLogEntry } from '@resgrid/models';
 import { Text, VStack } from '@resgrid/ui';
@@ -14,10 +15,11 @@ export const sortLogEntries = (entries: readonly CommandLogEntry[]): CommandLogE
 
 export const LogEntryRow: React.FC<{ entry: CommandLogEntry; testID?: string }> = ({ entry, testID }) => {
   const { t } = useTranslation();
+  const timeZone = useDepartmentTimeZone();
   return (
     <View style={styles.entry} className="border-l-4 border-primary-500" testID={testID}>
       <Text className="text-sm text-typography-900">{entry.Description || t('incident_command.log_entry')}</Text>
-      <Text className="text-xs text-typography-500">{formatUtcInDepartmentTime(entry.OccurredOn, null)}</Text>
+      <Text className="text-xs text-typography-500">{formatUtcInDepartmentTime(entry.OccurredOn, timeZone)}</Text>
     </View>
   );
 };

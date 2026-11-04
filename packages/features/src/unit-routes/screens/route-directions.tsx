@@ -1,5 +1,6 @@
 import { useRoutesStore } from '@resgrid/data';
 import { useNavigationHandoff } from '@resgrid/features/contacts';
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useInAppNavigationAvailable } from '@resgrid/features/navigation/hooks/use-in-app-navigation';
 import { navigationRoutes } from '@resgrid/features/navigation/routes';
 import { useTranslation } from '@resgrid/i18n';
@@ -31,6 +32,7 @@ export interface RouteDirectionsScreenProps {
  */
 export default function RouteDirectionsScreen({ instanceId: instanceIdProp, renderMap }: RouteDirectionsScreenProps) {
   const { t } = useTranslation();
+  const timeZone = useDepartmentTimeZone();
   const toast = useToast();
   const handoff = useNavigationHandoff();
   const params = useLocalSearchParams<{ instanceId?: string | string[] }>();
@@ -133,7 +135,7 @@ export default function RouteDirectionsScreen({ instanceId: instanceIdProp, rend
                     </Text>
                     {!isStopDone(waypoint.Status) && waypoint.EtaUtc ? (
                       <Text className="text-xs text-typography-500" testID={`route-directions-eta-${id}`}>
-                        {t('unit_routes.stop_eta', { time: formatRouteTime(waypoint.EtaUtc) })}
+                        {t('unit_routes.stop_eta', { time: formatRouteTime(waypoint.EtaUtc, timeZone) })}
                       </Text>
                     ) : null}
                   </VStack>

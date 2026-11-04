@@ -1,4 +1,5 @@
 import { formatUtcInDepartmentTime } from '@resgrid/core/utils/dates';
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import type { IncidentCommand } from '@resgrid/models';
 import { Badge, BadgeText, Heading, HStack, Text, VStack } from '@resgrid/ui';
@@ -50,6 +51,7 @@ export const CommandHeader: React.FC<CommandHeaderProps> = ({
   extraActions,
 }) => {
   const { t } = useTranslation();
+  const timeZone = useDepartmentTimeZone();
   const nowMs = useNow(30_000, !isClosed && !!command?.EstablishedOn);
   const elapsed = isClosed ? null : sceneElapsed(command?.EstablishedOn, nowMs);
   const iconOnly = !roomy;
@@ -96,7 +98,7 @@ export const CommandHeader: React.FC<CommandHeaderProps> = ({
             ) : null}
           </HStack>
           {commanderName ? <Text className="mt-1 text-xs text-typography-600">{t('incident_command.commander_name', { name: commanderName })}</Text> : null}
-          {command?.EstimatedEndOn ? <Text className="text-xs text-typography-600">{t('incident_command.estimated_end_at', { time: formatUtcInDepartmentTime(command.EstimatedEndOn, null) })}</Text> : null}
+          {command?.EstimatedEndOn ? <Text className="text-xs text-typography-600">{t('incident_command.estimated_end_at', { time: formatUtcInDepartmentTime(command.EstimatedEndOn, timeZone) })}</Text> : null}
         </VStack>
         <HStack className="flex-wrap items-center" space="xs">
           <BoardButton label={t('incident_command.refresh')} icon={RefreshCw} iconOnly onPress={onRefresh} testID="command-refresh" />

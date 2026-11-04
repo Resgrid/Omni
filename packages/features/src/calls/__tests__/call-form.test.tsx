@@ -382,9 +382,33 @@ describe('CallFormScreen: edit', () => {
   beforeEach(() => {
     useCallDetailStore.setState({
       details: {
-        '42': { call: makeCall('42', { Name: 'Edit me', ContactName: 'Hidden contact', Latitude: '39.1', Longitude: '-104.8' }), extraData: null, notes: [], images: null, files: null, audio: null, fetchedAt: 1 },
+        // SAFETY: the edit reads only the dispatches and protocols from the extra data.
+        '42': {
+          call: makeCall('42', { Name: 'Edit me', ContactName: 'Hidden contact', Latitude: '39.1', Longitude: '-104.8' }),
+          extraData: { Dispatches: [] } as never,
+          notes: [],
+          images: null,
+          files: null,
+          audio: null,
+          fetchedAt: 1,
+        },
       },
     });
+  });
+
+  it("never starts an edit without the call's dispatches (a blank list would page everyone), and offers a retry", async () => {
+    const fetchCallDetail = jest.fn(async () => undefined);
+
+    useCallDetailStore.setState({
+      details: { '42': { call: makeCall('42', { Name: 'Edit me' }), extraData: null, notes: [], images: null, files: null, audio: null, fetchedAt: 1 } },
+      fetchCallDetail,
+    });
+    activateVariant('dispatch');
+    await render(<CallFormScreen mode="edit" callId="42" />);
+    await waitFor(() => expect(screen.getByTestId('call-form-load-error')).toBeTruthy());
+    expect(screen.queryByTestId('call-form-submit')).toBeNull();
+    await act(async () => fireEvent.press(screen.getByTestId('call-form-load-retry')));
+    expect(fetchCallDetail).toHaveBeenLastCalledWith('42', { bypassCache: true });
   });
 
   it('starts from the call and leaves fields the policy hides as the call stores them', async () => {

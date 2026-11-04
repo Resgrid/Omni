@@ -1,6 +1,7 @@
 import { TermKeys, useTerm } from '@resgrid/auth';
 import { formatUtcInDepartmentTime } from '@resgrid/core/utils/dates';
 import { generateDataId, selectUnitById, useInventoryStore, useUnitsStore } from '@resgrid/data';
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useStatusContext } from '@resgrid/features/status';
 import { useTranslation } from '@resgrid/i18n';
 import { InventoryAssetStatus, type InventoryCount, type InventoryCountDetail, InventoryCountStatus, type InventoryEquipment, type InventoryFieldLocation } from '@resgrid/models';
@@ -27,6 +28,7 @@ const isNeedsAttention = (status: number | null): boolean => status !== null && 
  */
 export default function InventoryHomeScreen() {
   const { t } = useTranslation();
+  const timeZone = useDepartmentTimeZone();
   const toast = useToast();
   const { isElectron, isDesktop } = useFormFactor();
   const targetSize = isElectron || isDesktop ? 64 : 48;
@@ -170,7 +172,7 @@ export default function InventoryHomeScreen() {
               <Text className="font-semibold text-typography-900">{t('inventory.counts')}</Text>
               {counts.slice(0, RECENT_COUNTS_SHOWN).map((count) => {
                 const unsaved = Object.keys(drafts[count.Id] ?? {}).length;
-                const when = formatUtcInDepartmentTime(count.CompletedOn ?? count.SnapshotOn, null);
+                const when = formatUtcInDepartmentTime(count.CompletedOn ?? count.SnapshotOn, timeZone);
                 return (
                   <Pressable
                     key={count.Id}

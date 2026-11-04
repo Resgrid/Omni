@@ -7,7 +7,7 @@ import { type RecordDeploymentConnectorData, type RecordDeploymentData, type Rec
 export type BadgeAction = 'muted' | 'info' | 'warning' | 'success' | 'error';
 
 /** A server UTC timestamp for display (the shared parser; some arrive without "Z"), or '' when missing/unparsable. */
-export const formatWhen = (timestamp: string | null | undefined): string => formatUtcInDepartmentTime(timestamp, null, { dateStyle: 'medium', timeStyle: 'short' });
+export const formatWhen = (timestamp: string | null | undefined, zoneId: string | null): string => formatUtcInDepartmentTime(timestamp, zoneId, { dateStyle: 'medium', timeStyle: 'short' });
 
 /** True when an external ordering-system connector maintains this order's snapshots. */
 export const isConnectorOwned = (deployment: Pick<RecordDeploymentData, 'OwnershipMarker'> | null | undefined): boolean => (deployment?.OwnershipMarker ?? '').toLowerCase() === RmsExternalOrderOwnership.Connector;

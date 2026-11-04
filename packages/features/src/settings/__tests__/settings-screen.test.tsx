@@ -14,7 +14,7 @@ import { getLocationPreferences, getThemeMode } from '../lib/preferences';
 import { registerSettingsSection, resetSettingsSectionsForTests } from '../registry';
 import { configureSettings, resetSettingsRuntimeForTests } from '../runtime';
 import { SettingsScreen } from '../screens/settings-screen';
-import { mockRealtimeStore, mockSoundService, mockTransmitter } from './native-mocks';
+import { mockExactAlarms, mockRealtimeStore, mockSoundService, mockTransmitter } from './native-mocks';
 import { activateTestVariant } from './variant';
 
 jest.mock('@resgrid/auth', () => require('../../auth-ui/__tests__/auth-fake').buildAuthMock(jest.requireActual('@resgrid/auth')));
@@ -36,6 +36,7 @@ describe('SettingsScreen', () => {
     fakeAuthStore.setState({ status: 'signedIn', accessToken: 'token' });
     kv = new DurableKv(createMemoryKvBackend('settings'));
     setDevicePreferencesKv(kv);
+    mockExactAlarms.access = 'notNeeded';
   });
 
   afterEach(() => setDevicePreferencesKv(undefined));
@@ -141,6 +142,24 @@ describe('SettingsScreen', () => {
     await render(<SettingsScreen />);
     await fireEvent.press(screen.getByRole('button', { name: 'settings.sounds.play [name=settings.sounds.call_emergency]' }));
     expect(mockSoundService.play).toHaveBeenCalledWith('moderncallemergency');
+  });
+
+  it('offers to allow exact alarms on Android while they are off, in the app with unit status timers only', async () => {
+    mockExactAlarms.access = 'denied';
+    activateTestVariant('responder');
+    const responder = await render(<SettingsScreen />);
+    expect(screen.queryByTestId('settings-exact-alarms')).toBeNull();
+    await responder.unmount();
+
+    activateTestVariant('unit');
+    const unit = await render(<SettingsScreen />);
+    await fireEvent.press(screen.getByTestId('settings-exact-alarms'));
+    expect(mockExactAlarms.request).toHaveBeenCalledTimes(1);
+    await unit.unmount();
+
+    mockExactAlarms.access = 'granted';
+    await render(<SettingsScreen />);
+    expect(screen.queryByTestId('settings-exact-alarms')).toBeNull();
   });
 
   it('selects the active unit through the shell adapter', async () => {

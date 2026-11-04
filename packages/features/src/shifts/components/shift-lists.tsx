@@ -1,4 +1,5 @@
 import { formatUtcInDepartmentTime } from '@resgrid/core/utils/dates';
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import type { OnDutyPersonResultData, PendingShiftSignupResultData, ShiftTradeResultData } from '@resgrid/models';
 import { Badge, BadgeText, Button, ButtonText, FlatList, HStack, Pressable, RefreshControl, Text, VStack, ZeroState } from '@resgrid/ui';
@@ -119,9 +120,10 @@ export interface ShiftApprovalsListProps {
 
 const PendingSignupCard: React.FC<{ signup: PendingShiftSignupResultData; onAction: (action: ShiftSheetAction) => void }> = ({ signup, onAction }) => {
   const { t, i18n } = useTranslation();
+  const timeZone = useDepartmentTimeZone();
   const locale = i18n.language;
   const roles = (signup.Roles ?? []).join(', ');
-  const requested = formatUtcInDepartmentTime(signup.SignupTimestamp, null, { dateStyle: 'medium', timeStyle: 'short' }, locale);
+  const requested = formatUtcInDepartmentTime(signup.SignupTimestamp, timeZone, { dateStyle: 'medium', timeStyle: 'short' }, locale);
   return (
     <VStack space="xs" className="mb-3 rounded-xl border border-outline-100 bg-background-0 p-4" testID={`pending-signup-${signup.ShiftSignupId}`}>
       <Text className="font-semibold text-typography-900">{signup.UserName}</Text>

@@ -1,4 +1,5 @@
 import { useRoutesStore } from '@resgrid/data';
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import type { RouteStopWithDetailsResultData } from '@resgrid/models';
 import { HStack, Loading, ScreenHeader, ScrollView, Text, View, VStack, ZeroState } from '@resgrid/ui';
@@ -28,6 +29,7 @@ const dwellText = (seconds: number | null, t: (key: string, options?: Record<str
  */
 export default function RouteInstanceScreen({ instanceId: instanceIdProp, renderMap }: RouteInstanceScreenProps) {
   const { t } = useTranslation();
+  const timeZone = useDepartmentTimeZone();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const instanceId = instanceIdProp ?? readRouteParam(params.id);
   const detail = useRoutesStore((state) => (instanceId ? state.instanceDetailsById[instanceId] : undefined)) ?? null;
@@ -70,8 +72,8 @@ export default function RouteInstanceScreen({ instanceId: instanceIdProp, render
     const id = stop.RouteInstanceStopId ?? stop.RouteStopId;
     const stopLook = stopStatusLook(stop.Status);
     const lines = [
-      stop.CheckInOn ? t('unit_routes.checked_in_at', { time: formatRouteTime(stop.CheckInOn) }) : '',
-      stop.CheckOutOn ? t('unit_routes.checked_out_at', { time: formatRouteTime(stop.CheckOutOn) }) : '',
+      stop.CheckInOn ? t('unit_routes.checked_in_at', { time: formatRouteTime(stop.CheckInOn, timeZone) }) : '',
+      stop.CheckOutOn ? t('unit_routes.checked_out_at', { time: formatRouteTime(stop.CheckOutOn, timeZone) }) : '',
       dwellText(stop.DwellSeconds, t),
       stop.SkipReason ? `${t('routes.skip_reason')}: ${stop.SkipReason}` : '',
       stop.InstanceNotes ? `${t('routes.notes')}: ${stop.InstanceNotes}` : '',
@@ -114,8 +116,8 @@ export default function RouteInstanceScreen({ instanceId: instanceIdProp, render
                 </Text>
               </View>
             </HStack>
-            {instance.ActualStartOn ? <Text className="text-sm text-typography-700">{`${t('routes.start')}: ${formatRouteTime(instance.ActualStartOn)}`}</Text> : null}
-            {instance.ActualEndOn ? <Text className="text-sm text-typography-700">{`${t('routes.end')}: ${formatRouteTime(instance.ActualEndOn)}`}</Text> : null}
+            {instance.ActualStartOn ? <Text className="text-sm text-typography-700">{`${t('routes.start')}: ${formatRouteTime(instance.ActualStartOn, timeZone)}`}</Text> : null}
+            {instance.ActualEndOn ? <Text className="text-sm text-typography-700">{`${t('routes.end')}: ${formatRouteTime(instance.ActualEndOn, timeZone)}`}</Text> : null}
             <RouteStats
               stats={[
                 { id: 'stops', label: t('routes.stops_completed'), value: `${detail?.progress?.CompletedStops ?? instance.StopsCompleted}/${detail?.progress?.TotalStops ?? instance.StopsTotal}` },

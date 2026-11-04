@@ -17,8 +17,10 @@ export const contactDisplayName = (contact: ContactResultData): string =>
 export const contactReachInfo = (contact: ContactResultData): string =>
   contact.Email?.trim() || contact.Phone?.trim() || contact.Mobile?.trim() || contact.CellPhoneNumber?.trim() || contact.OfficePhoneNumber?.trim() || contact.HomePhoneNumber?.trim() || '';
 
+/** Search covers the name and every way to reach the contact the row can show. */
 const matches = (contact: ContactResultData, needle: string): boolean =>
-  !needle || [contactDisplayName(contact), contact.Email, contact.Phone, contact.Mobile, contact.CellPhoneNumber].some((value) => !!value && value.toLowerCase().includes(needle));
+  !needle ||
+  [contactDisplayName(contact), contact.Email, contact.Phone, contact.Mobile, contact.CellPhoneNumber, contact.OfficePhoneNumber, contact.HomePhoneNumber].some((value) => !!value && value.toLowerCase().includes(needle));
 
 /**
  * Pick the call's contact from the department's contacts (Dispatch contact picker): fills the contact name and how to

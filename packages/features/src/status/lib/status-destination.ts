@@ -3,6 +3,7 @@
  * status offers, the call a status defaults to, and the RespondingTo/RespondingToType a selection sends. A status links
  * to a call only through its destination, so the summary line and the submit both read `resolveEffectiveDestination`.
  */
+import { callDisplayName } from '@resgrid/features/calls/lib/call-display';
 import { type CallResultData, DestinationEntityTypes, type GroupResultData, type PoiResultData, statusDetailAllowsCalls, statusDetailAllowsPois, statusDetailAllowsStations } from '@resgrid/models';
 
 export type DestinationTab = 'call' | 'station' | 'poi';
@@ -20,9 +21,13 @@ export interface DestinationLists {
 /** The destination tabs a status Detail offers. `lenient` = Unit's rule (older call-only values also allow stations/POIs). */
 export const getDestinationTabs = (detail: number, lenient = false): DestinationTab[] => {
   const tabs: DestinationTab[] = [];
+
   if (statusDetailAllowsCalls(detail)) tabs.push('call');
+
   if (statusDetailAllowsStations(detail, { lenient })) tabs.push('station');
+
   if (statusDetailAllowsPois(detail, { lenient })) tabs.push('poi');
+
   return tabs;
 };
 
@@ -40,9 +45,11 @@ export interface CurrentDestinationRef {
 export const getCurrentStatusCallId = (current: CurrentDestinationRef | null | undefined): string | null => {
   if (!current) return null;
   const destinationId = current.DestinationId == null ? '' : String(current.DestinationId).trim();
+
   if (destinationId === '' || destinationId === '0') return null;
   const rawType = current.DestinationType;
   const type = rawType == null || rawType === '' ? DestinationEntityTypes.None : Number(rawType);
+
   return type === DestinationEntityTypes.Call || type === DestinationEntityTypes.None ? destinationId : null;
 };
 
@@ -54,9 +61,12 @@ export const getCurrentStatusCallId = (current: CurrentDestinationRef | null | u
 export const resolveDefaultStatusCall = (calls: readonly CallResultData[], activeCallId: string | null | undefined, current: CurrentDestinationRef | null | undefined): CallResultData | null => {
   if (activeCallId) {
     const active = calls.find((call) => call.CallId === activeCallId);
+
     if (active) return active;
   }
+
   const currentCallId = getCurrentStatusCallId(current);
+
   return currentCallId ? (calls.find((call) => String(call.CallId) === currentCallId) ?? null) : null;
 };
 
@@ -77,8 +87,11 @@ export interface EffectiveDestinationInput {
 export const resolveEffectiveDestination = ({ detail, lenient, selection, hasExplicitChoice, defaultCall }: EffectiveDestinationInput): StatusDestination => {
   if (detail === 0) return defaultCall ? { type: 'call', call: defaultCall } : NO_DESTINATION;
   const tabs = getDestinationTabs(detail, lenient);
+
   if (selection.type !== 'none' && tabs.includes(selection.type)) return selection;
+
   if (!hasExplicitChoice && tabs.includes('call') && defaultCall) return { type: 'call', call: defaultCall };
+
   return NO_DESTINATION;
 };
 
@@ -96,11 +109,15 @@ export const toRespondingTo = (destination: StatusDestination): { respondingTo: 
   }
 };
 
-/** The label of a destination row / summary. */
-export const destinationLabel = (destination: StatusDestination): string => {
+/** The label of a destination row / summary; a call's withheld name shows as `protectedLabel`. */
+export const destinationLabel = (destination: StatusDestination, protectedLabel: string): string => {
   switch (destination.type) {
-    case 'call':
-      return destination.call.Number ? `#${destination.call.Number} ${destination.call.Name}`.trim() : destination.call.Name;
+    case 'call': {
+      const name = callDisplayName(destination.call, protectedLabel);
+
+      return destination.call.Number ? `#${destination.call.Number} ${name}`.trim() : name;
+    }
+
     case 'station':
       return destination.station.Name;
     case 'poi':

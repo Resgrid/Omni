@@ -26,6 +26,9 @@ describe('readable-color', () => {
     const red = parseColor(readableOnSurface('#7f0000', 'dark'));
     expect(red?.r).toBeGreaterThan(red?.g ?? 255);
     expect(readableOnSurface('#e03131', 'light', MARK_CONTRAST)).toBe('#e03131');
+    // A translucent colour would render fainter than the contrast it was judged by: it comes back opaque.
+    expect(readableOnSurface('#00000033', 'light')).toBe('#000000');
+    expect(readableOnSurface('rgba(224, 49, 49, 0.2)', 'light', MARK_CONTRAST)).toBe('#e03131');
     expect(readableOnSurface('label-default', 'dark')).toBe('label-default');
     expect(readableOnSurface(undefined, 'dark')).toBe('');
   });

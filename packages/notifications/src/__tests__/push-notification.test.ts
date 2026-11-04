@@ -2,7 +2,10 @@
 // cold-start dedupe, notifee events and the check-in action. Ported from Unit's push-notification tests (integration,
 // cold-start dedupe, tap deep-linking, notifee press events, listener lifecycle, channels) and Responder's
 // channel/deep-link tests, adapted to the injected resolver.
-import { ANDROID_CHANNELS, CHECK_IN_ACTION_ID } from '../channels';
+import type { NotificationBehavior } from 'expo-notifications';
+
+import { ANDROID_CHANNELS, CHECK_IN_ACTION_ID, STATUS_TIMER_CATEGORY_ID, STATUS_TIMER_CHANNEL } from '../channels';
+import { syncLocalNotifications } from '../local-notifications';
 import { usePushNotificationModalStore } from '../push-modal-store';
 import { HANDLED_RESPONSE_LIMIT, pushNotificationService } from '../push-notification';
 import { configureForTest, flushAll, selectVariant, type TestContext } from './helpers';
@@ -15,6 +18,17 @@ import { EventType, mockNotifeeState, mockResetNotifee } from './mocks/notifee';
 const rn = jest.requireMock('react-native') as { Platform: { OS: string } };
 
 let ctx: TestContext;
+
+/** What a scheduled status timer notification carries (local-notifications.ts). */
+const LOCAL_DATA = { localKind: 'statusTimer', scope: '12', episode: '12:501:0', signature: 'x' };
+
+/** The foreground presentation handler the service registered, as these tests call it. */
+interface ForegroundHandler {
+  handleNotification: (notification: { request: ReturnType<typeof mockRequest> }) => Promise<NotificationBehavior>;
+}
+
+// SAFETY: the mock records the one handler object the service passed to setNotificationHandler during initialize().
+const foregroundHandler = (): ForegroundHandler => (notifications.setNotificationHandler.mock.calls[0] as unknown as [ForegroundHandler])[0];
 
 const modal = () => usePushNotificationModalStore.getState();
 
@@ -59,8 +73,22 @@ describe('startup', () => {
 
   it('presents foreground pushes with banner, list, sound and badge', async () => {
     await initialize();
-    const handler = (notifications.setNotificationHandler.mock.calls[0] as unknown as [{ handleNotification: () => Promise<unknown> }])[0];
-    await expect(handler.handleNotification()).resolves.toEqual({ shouldShowBanner: true, shouldShowList: true, shouldPlaySound: true, shouldSetBadge: true });
+    await expect(foregroundHandler().handleNotification({ request: mockRequest('p1', { eventCode: 'C:1' }) })).resolves.toEqual({
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+    });
+  });
+
+  it('keeps a status timer notification the app scheduled quiet in the foreground (the app shows the timer on screen)', async () => {
+    await initialize();
+    await expect(foregroundHandler().handleNotification({ request: mockRequest('statusTimer:12:warn', LOCAL_DATA) })).resolves.toEqual({
+      shouldShowBanner: false,
+      shouldShowList: false,
+      shouldPlaySound: false,
+      shouldSetBadge: false,
+    });
   });
 
   it('removes every listener on cleanup, and cleanup is safe to repeat', async () => {
@@ -80,15 +108,22 @@ describe('Android channels', () => {
     rn.Platform.OS = 'android';
   });
 
-  it('creates every channel with its modern sound in one call', async () => {
+  it('creates every channel with its modern sound in one call, plus the status timer channel where the app schedules it', async () => {
     await initialize();
-    expect(mockNotifeeState.channels.map((channel) => channel.id)).toEqual(ANDROID_CHANNELS.map((channel) => channel.id));
+    expect(mockNotifeeState.channels.map((channel) => channel.id)).toEqual([...ANDROID_CHANNELS, STATUS_TIMER_CHANNEL].map((channel) => channel.id));
     for (const created of mockNotifeeState.channels) {
-      expect(created.sound).toBe(ANDROID_CHANNELS.find((channel) => channel.id === created.id)?.sound);
+      expect(created.sound).toBe([...ANDROID_CHANNELS, STATUS_TIMER_CHANNEL].find((channel) => channel.id === created.id)?.sound);
     }
+    expect(mockNotifeeState.channels.find((channel) => channel.id === STATUS_TIMER_CHANNEL.id)).toMatchObject({ name: 'Unit Status Timer', sound: 'modernunitnotice', vibration: true });
     const emergency = mockNotifeeState.channels.find((channel) => channel.id === '7');
     expect(emergency?.name).toBe('Emergency Call');
     expect(mockNotifeeState.channels.find((channel) => channel.id === 'c3')?.name).toBe('Custom Call Tone 3');
+  });
+
+  it('creates no status timer channel in an app without the unit status console (IC)', async () => {
+    selectVariant('ic');
+    await initialize();
+    expect(mockNotifeeState.channels.map((channel) => channel.id)).toEqual(ANDROID_CHANNELS.map((channel) => channel.id));
   });
 
   it('recreates channels a legacy build created with a classic or default sound, and leaves matching ones alone', async () => {
@@ -115,10 +150,11 @@ describe('Android channels', () => {
 });
 
 describe('iOS categories', () => {
-  it('registers calls, messages, notifications and chats with the check-in action for Unit', async () => {
+  it('registers calls, messages, notifications and chats with the check-in action, and the status timer category, for Unit', async () => {
     await initialize();
-    expect(mockNotifeeState.categories.map((category) => category.id)).toEqual(['calls', 'messages', 'notifications', 'chats']);
+    expect(mockNotifeeState.categories.map((category) => category.id)).toEqual(['calls', 'messages', 'notifications', 'chats', STATUS_TIMER_CATEGORY_ID]);
     expect(mockNotifeeState.categories[0].actions?.map((action) => action.id)).toEqual(['view', CHECK_IN_ACTION_ID]);
+    expect(mockNotifeeState.categories[4].actions).toEqual([{ id: 'view', title: 'Update status', foreground: true }]);
     expect(mockNotifeeState.channels).toEqual([]);
   });
 
@@ -146,6 +182,12 @@ describe('foreground receipts', () => {
     await flushAll();
     expect(modal().isOpen).toBe(true);
     expect(modal().notification).toMatchObject({ eventCode, kind, title: 'Title', body: 'Body' });
+  });
+
+  it('shows no modal for a status timer notification the app scheduled', async () => {
+    mockDeliverNotification({ request: mockRequest('statusTimer:12:warn', LOCAL_DATA, { title: 'Status timer warning' }) });
+    await flushAll();
+    expect(modal().isOpen).toBe(false);
   });
 
   it('keeps extra data fields', async () => {
@@ -243,6 +285,24 @@ describe('taps', () => {
     expect(modal().isOpen).toBe(false);
   });
 
+  it('opens the status console for a tap on a status timer notification, or on its Update Status action', async () => {
+    mockDeliverResponse(mockResponse('statusTimer:12:warn', LOCAL_DATA));
+    mockDeliverResponse(mockResponse('statusTimer:12:alert', LOCAL_DATA, { actionIdentifier: 'view' }));
+    await flushAll();
+    expect(ctx.resolveRoute).toHaveBeenCalledTimes(2);
+    expect(ctx.resolveRoute).toHaveBeenCalledWith({ kind: 'unitStatusTimer', id: '12' });
+    expect(routerPushWithRetry).toHaveBeenCalledWith('/unitStatusTimer/12', expect.objectContaining({ maxAttempts: 40, retryDelayMs: 250 }));
+    expect(modal().isOpen).toBe(false);
+  });
+
+  it('shows no modal when the app has no screen for the status timer notification', async () => {
+    ctx.resolveRoute.mockReturnValueOnce(null);
+    mockDeliverResponse(mockResponse('statusTimer:12:warn', LOCAL_DATA));
+    await flushAll();
+    expect(routerPushWithRetry).not.toHaveBeenCalled();
+    expect(modal().isOpen).toBe(false);
+  });
+
   it('runs the check-in action instead of navigating when the call category action is pressed', async () => {
     mockDeliverResponse(mockResponse('r1', { eventCode: 'C1' }, { actionIdentifier: CHECK_IN_ACTION_ID }));
     await flushAll();
@@ -282,6 +342,13 @@ describe('cold-start dedupe', () => {
     mockDeliverResponse(mockResponse(`id-${HANDLED_RESPONSE_LIMIT}`, { eventCode: 'C:x' }));
     await flushAll();
     expect(routerPushWithRetry).toHaveBeenCalledTimes(HANDLED_RESPONSE_LIMIT + 2);
+  });
+
+  it('opens the status console when the app was launched from a status timer notification', async () => {
+    mockNotificationState.lastResponse = mockResponse('statusTimer:12:alert', LOCAL_DATA);
+    await initialize();
+    expect(ctx.resolveRoute).toHaveBeenCalledWith({ kind: 'unitStatusTimer', id: '12' });
+    expect(routerPushWithRetry).toHaveBeenCalledTimes(1);
   });
 
   it('forgets handled taps when the local state is cleared at sign-out', async () => {
@@ -346,6 +413,15 @@ describe('local state and badge', () => {
     expect(jest.requireMock('@notifee/react-native').default.cancelAllNotifications).toHaveBeenCalled();
     expect(modal().isOpen).toBe(false);
     expect(pushNotificationService.getPushToken()).toBeNull();
+  });
+
+  it('cancels the status timer notifications still scheduled at sign-out', async () => {
+    rn.Platform.OS = 'android';
+    await initialize();
+    await syncLocalNotifications('statusTimer', { scope: '12', episode: 'e1', notifications: [{ key: 'warn', at: Date.now() + 60_000, title: 'Warning', body: 'Engine 1' }] });
+    expect(mockNotificationState.scheduled.size).toBe(1);
+    await pushNotificationService.clearLocalState();
+    expect(mockNotificationState.scheduled.size).toBe(0);
   });
 
   it('clears the badge on demand', async () => {

@@ -1,4 +1,5 @@
 import { formatUtcInDepartmentTime } from '@resgrid/core/utils/dates';
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import { Button, ButtonSpinner, ButtonText, Text, useThemeColors } from '@resgrid/ui';
 import { CalendarClock, Hourglass, Send } from 'lucide-react-native';
@@ -17,6 +18,7 @@ export interface CallQueueBannerProps {
 /** Not dispatched yet (Dispatch call detail): a Pending call waiting for a dispatcher, or a scheduled call before its time. */
 export const CallQueueBanner: React.FC<CallQueueBannerProps> = ({ kind, dispatchAtUtc, onDispatch, isBusy = false }) => {
   const { t } = useTranslation();
+  const timeZone = useDepartmentTimeZone();
   const colors = useThemeColors();
   const isPending = kind === 'pending';
   const Icon = isPending ? Hourglass : CalendarClock;
@@ -29,7 +31,7 @@ export const CallQueueBanner: React.FC<CallQueueBannerProps> = ({ kind, dispatch
         </View>
         <View style={styles.body}>
           <Text className={isPending ? 'font-bold text-warning-800' : 'font-bold text-info-800'}>
-            {isPending ? t('call_detail.pending_banner_title') : `${t('scheduled_calls.scheduled_for')}: ${formatUtcInDepartmentTime(dispatchAtUtc, null)}`}
+            {isPending ? t('call_detail.pending_banner_title') : `${t('scheduled_calls.scheduled_for')}: ${formatUtcInDepartmentTime(dispatchAtUtc, timeZone)}`}
           </Text>
           {isPending ? (
             <Text size="sm" className="mt-1 text-typography-700">

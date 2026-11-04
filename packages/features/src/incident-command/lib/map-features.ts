@@ -1,3 +1,4 @@
+import { type CallTextFields, revealedCallText } from '@resgrid/features/calls/lib/call-display';
 import type { IncidentCommandBoard, IncidentMapAnnotation, ResourceAssignment } from '@resgrid/models';
 
 import { activeAssignments, isDepartmentUnitKind, parseCoordinates } from './board';
@@ -41,10 +42,15 @@ const isLngLat = (value: unknown): value is LngLat =>
 const toGeometries = (parsed: unknown): GeometryLike[] => {
   if (!parsed || typeof parsed !== 'object') return [];
   const value = parsed as { type?: unknown; geometry?: unknown; features?: unknown; coordinates?: unknown; geometries?: unknown };
+
   if (value.type === 'FeatureCollection' && Array.isArray(value.features)) return value.features.flatMap(toGeometries);
+
   if (value.type === 'Feature') return toGeometries(value.geometry);
+
   if (value.type === 'GeometryCollection' && Array.isArray(value.geometries)) return (value.geometries as unknown[]).flatMap(toGeometries);
+
   if (typeof value.type === 'string' && value.coordinates !== undefined) return [value as GeometryLike];
+
   return [];
 };
 
@@ -52,24 +58,30 @@ const toGeometries = (parsed: unknown): GeometryLike[] => {
 export function annotationShapes(annotations: readonly IncidentMapAnnotation[] | null | undefined): AnnotationShapes {
   const features: FeatureLike[] = [];
   const points: AnnotationShapes['points'] = [];
+
   for (const annotation of annotations ?? []) {
     if (annotation.DeletedOn) continue;
     let parsed: unknown;
+
     try {
       parsed = JSON.parse(annotation.GeoJson);
     } catch {
       continue;
     }
+
     toGeometries(parsed).forEach((geometry, index) => {
       if (geometry.type === 'Point') {
         if (isLngLat(geometry.coordinates)) points.push({ id: `${annotation.IncidentMapAnnotationId}-${index}`, coordinate: [geometry.coordinates[0], geometry.coordinates[1]], label: annotation.Label ?? null });
+
         return;
       }
+
       if (geometry.type === 'LineString' || geometry.type === 'Polygon' || geometry.type === 'MultiLineString' || geometry.type === 'MultiPolygon') {
         features.push({ type: 'Feature', geometry, properties: { id: annotation.IncidentMapAnnotationId, label: annotation.Label ?? '', kind: geometry.type.includes('Polygon') ? 'polygon' : 'line' } });
       }
     });
   }
+
   return { shapes: { type: 'FeatureCollection', features }, points };
 }
 
@@ -82,17 +94,22 @@ export interface MapSite {
 }
 
 /** The incident's fixed sites: ICP/command post, staging, rehab, plus the call location. */
-export function incidentSites(board: IncidentCommandBoard | null | undefined, call?: { Latitude?: string | null; Longitude?: string | null; Address?: string | null } | null): MapSite[] {
+export function incidentSites(board: IncidentCommandBoard | null | undefined, call?: ({ Latitude?: string | null; Longitude?: string | null } & CallTextFields) | null): MapSite[] {
   const command = board?.Command;
   const sites: MapSite[] = [];
+
   const add = (kind: SiteKind, lat: string | null | undefined, lon: string | null | undefined, label: string | null | undefined) => {
     const position = parseCoordinates(lat, lon);
+
     if (position) sites.push({ kind, coordinate: [position.longitude, position.latitude], label: label ?? null });
   };
-  add('call', call?.Latitude, call?.Longitude, call?.Address);
+
+  // A withheld address leaves the pin unlabelled.
+  add('call', call?.Latitude, call?.Longitude, call ? revealedCallText(call, 'Address') : null);
   add('command-post', command?.CommandPostLatitude, command?.CommandPostLongitude, command?.CommandPostLocationText);
   add('staging', command?.StagingLatitude, command?.StagingLongitude, command?.StagingLocationText);
   add('rehab', command?.RehabLatitude, command?.RehabLongitude, command?.RehabLocationText);
+
   return sites;
 }
 
@@ -106,12 +123,15 @@ export interface ResourceMarker {
 /** Department units on the incident that have a known position, coloured by their lane. */
 export function resourceMarkers(board: IncidentCommandBoard | null | undefined, position: (assignment: ResourceAssignment) => { latitude: number; longitude: number } | null): ResourceMarker[] {
   const nodes = board?.Nodes ?? [];
+
   return activeAssignments(board?.Assignments)
     .filter((assignment) => isDepartmentUnitKind(assignment.ResourceKind))
     .flatMap((assignment) => {
       const found = position(assignment);
+
       if (!found) return [];
       const node = nodes.find((candidate) => candidate.CommandStructureNodeId === assignment.CommandStructureNodeId);
+
       return [{ assignment, coordinate: [found.longitude, found.latitude] as LngLat, color: node?.Color ?? null }];
     });
 }
@@ -120,7 +140,9 @@ export function resourceMarkers(board: IncidentCommandBoard | null | undefined, 
 export function initialMapCenter(board: IncidentCommandBoard | null | undefined, sites: readonly MapSite[], resources: readonly ResourceMarker[]): { center: LngLat; zoom: number } | null {
   const saved = parseCoordinates(board?.Command?.MapCenterLatitude, board?.Command?.MapCenterLongitude);
   const zoom = parseFloat(board?.Command?.MapZoomLevel ?? '');
+
   if (saved) return { center: [saved.longitude, saved.latitude], zoom: Number.isFinite(zoom) ? Math.min(22, Math.max(0, zoom)) : 16 };
   const first = sites[0]?.coordinate ?? resources[0]?.coordinate;
+
   return first ? { center: first, zoom: 16 } : null;
 }

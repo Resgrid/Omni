@@ -33,6 +33,7 @@ Verify against Core before coding: controllers `../Core/Web/Resgrid.Web.Services
 ## Time
 
 - Instants are UTC on the wire; department-local time is for display and wall-clock input only.
+- The department's zone is `GetConfig` `TimeZoneId` (IANA; absent on older servers), read with `useDepartmentTimeZone()` / `getDepartmentTimeZone()` from `@resgrid/features/department-config` and passed to `formatUtcInDepartmentTime` / `toZonedWallClock` / `zonedWallClockToUtc`. Null means the device zone; never pass a literal `null` (source-rule test). `UpdateScheduledDispatchTime` takes a department wall clock (`toDispatchWallClock`).
 - Many results carry a zone-less local field plus a `*Utc` field (`LoggedOn` / `LoggedOnUtc`). **`LoggedOnUtc` is temporarily sent without "Z"** — parse both forms with the shared UTC parser (`parseApiUtcDate`).
 - Inputs: status writes send `Timestamp` + `TimestampUtc` (server accepts −7 days … +5 min); scheduled calls `DispatchOnUtc`; deployment entries `StartLocal`/`EndLocal`; calendar dates are never shifted.
 

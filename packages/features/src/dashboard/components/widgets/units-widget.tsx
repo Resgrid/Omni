@@ -1,22 +1,20 @@
 import { useSecurity } from '@resgrid/auth';
+import { useNow } from '@resgrid/core/lifecycle/use-now';
 import { UnitNavigationEtaChip } from '@resgrid/features/navigation-eta';
+import { acknowledgedColors, alertColors, type AnnotatedUnit, canAcknowledgeUnit, compareAnnotatedUnits, formatElapsed, UnitAlertAcknowledgeSheet, useUnitAlerts } from '@resgrid/features/unit-status-alerts';
 import { useTranslation } from '@resgrid/i18n';
 import { HStack, Text, TypeIcon, View, VStack } from '@resgrid/ui';
 import { BellOff, CircleCheck } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useMemo, useState } from 'react';
 
-import { useNow } from '../../hooks/use-now';
 import { useStale } from '../../hooks/use-stale';
-import { useUnitAlerts } from '../../hooks/use-unit-alerts';
 import { useWidgetSettings } from '../../hooks/use-widget-settings-store';
 import { useWidgetTitle } from '../../hooks/use-widget-title';
 import { UNITS_COLUMN_LABEL_KEYS } from '../../lib/column-labels';
-import { ELAPSED_KEYS, elapsedSince, formatElapsed, normalizeColor } from '../../lib/format';
-import { acknowledgedColors, alertColors, type AnnotatedUnit, canAcknowledgeUnit, compareAnnotatedUnits } from '../../lib/unit-status-alerts';
+import { ELAPSED_KEYS, elapsedSince, normalizeColor } from '../../lib/format';
 import type { UnitsColumnKey } from '../../lib/widget-settings';
 import { WidgetTypes } from '../../lib/widget-types';
-import { UnitAlertAcknowledgeSheet } from '../unit-alert-acknowledge-sheet';
 import { WidgetContainer, WidgetLoading, WidgetMessage } from '../widget-container';
 import { CellText, type TableColumn, WidgetTable } from '../widget-table';
 import type { WidgetProps } from './types';
