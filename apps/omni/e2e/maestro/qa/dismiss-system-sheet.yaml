@@ -1,0 +1,20 @@
+# Closes a system sheet that can cover the app while sign-in lands: iOS's "Save Password?" (Not Now), and on Android
+# Google's Location Accuracy dialog, which the app's first location request brings up (No thanks: the app then uses the
+# device's location as it is and does not ask again). Each platform's button by its literal label: iOS's system alerts
+# answer to that, which a regex alternation was not seen to match.
+appId: ${APP_ID}
+---
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn:
+          text: 'Not Now'
+          optional: true
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - tapOn:
+          text: 'No thanks'
+          optional: true

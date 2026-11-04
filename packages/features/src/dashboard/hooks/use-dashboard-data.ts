@@ -1,17 +1,16 @@
-import { useCallsStore, useNotesStore, usePersonnelStore, useUnitsStore, useUnitStatusAlertsStore, useWeatherAlertsStore } from '@resgrid/data';
+import { useCallsStore, useNotesStore, usePersonnelStore, useUnitsStore, useWeatherAlertsStore } from '@resgrid/data';
+import { useDepartmentConfigStore } from '@resgrid/features/department-config';
 import { useNavigationEtaFlag, useNavigationEtaSync } from '@resgrid/features/navigation-eta';
+import { useUnitAlertsSync } from '@resgrid/features/unit-status-alerts';
 import { useWeatherAlertsRealtime } from '@resgrid/features/weather-alerts';
 import { type RealtimeEventName, useRealtimeRefetch } from '@resgrid/realtime';
 import { useCallback, useEffect, useMemo } from 'react';
 
 import { type DashboardDataSource, dataSourcesFor, type WidgetType } from '../lib/widget-types';
-import { useDashboardConfigStore } from './use-department-config';
 
 const CALL_EVENTS: readonly RealtimeEventName[] = ['callsUpdated', 'callAdded', 'callClosed', 'eventingHubJoined'];
 const UNIT_EVENTS: readonly RealtimeEventName[] = ['unitStatusUpdated', 'eventingHubJoined'];
 const PERSONNEL_EVENTS: readonly RealtimeEventName[] = ['personnelStatusUpdated', 'personnelStaffingUpdated', 'eventingHubJoined'];
-/** A status change ends the episode an acknowledgement covered, so acknowledgements refetch on unit pushes too. */
-const UNIT_ALERT_EVENTS: readonly RealtimeEventName[] = ['unitStatusAlertUpdated', 'unitStatusUpdated', 'eventingHubJoined'];
 /** Department settings changed (status timers, map centre, weather key). */
 const CONFIG_EVENTS: readonly RealtimeEventName[] = ['departmentUpdated'];
 /** Notes have no push; a wall board re-reads them now and then. */
@@ -61,8 +60,7 @@ export function useDashboardData(widgetTypes: readonly WidgetType[], enabled: bo
   }, [wantsCalls, wantsScheduled]);
   const refreshUnits = useCallback(() => useUnitsStore.getState().fetchUnitInfos({ bypassCache: true }), []);
   const refreshPersonnel = useCallback(() => usePersonnelStore.getState().fetchPersonnel({ bypassCache: true }), []);
-  const refreshUnitAlerts = useCallback(() => useUnitStatusAlertsStore.getState().fetchAcknowledgements({ bypassCache: true }), []);
-  const refreshConfig = useCallback(() => useDashboardConfigStore.getState().load({ bypassCache: true }), []);
+  const refreshConfig = useCallback(() => useDepartmentConfigStore.getState().load({ bypassCache: true }), []);
 
   useEffect(() => {
     if (wantsCalls)
@@ -90,10 +88,7 @@ export function useDashboardData(widgetTypes: readonly WidgetType[], enabled: bo
     if (wantsWeatherAlerts) void useWeatherAlertsStore.getState().fetchActiveAlerts();
   }, [wantsWeatherAlerts]);
   useEffect(() => {
-    if (wantsUnitAlerts) void useUnitStatusAlertsStore.getState().fetchAcknowledgements();
-  }, [wantsUnitAlerts]);
-  useEffect(() => {
-    if (wantsConfig && !useDashboardConfigStore.getState().config) void useDashboardConfigStore.getState().load();
+    if (wantsConfig && !useDepartmentConfigStore.getState().config) void useDepartmentConfigStore.getState().load();
   }, [wantsConfig]);
   useEffect(() => {
     if (!wantsNotes) return undefined;
@@ -105,7 +100,8 @@ export function useDashboardData(widgetTypes: readonly WidgetType[], enabled: bo
   useRealtimeRefetch(CALL_EVENTS, refreshCalls, wantsCalls || wantsScheduled);
   useRealtimeRefetch(UNIT_EVENTS, refreshUnits, wantsUnits);
   useRealtimeRefetch(PERSONNEL_EVENTS, refreshPersonnel, wantsPersonnel);
-  useRealtimeRefetch(UNIT_ALERT_EVENTS, refreshUnitAlerts, wantsUnitAlerts);
+  // Acknowledgements (and the department's timers) stay live through the shared unit status timer sync.
+  useUnitAlertsSync(wantsUnitAlerts);
   useRealtimeRefetch(CONFIG_EVENTS, refreshConfig, wantsConfig);
   useWeatherAlertsRealtime(wantsWeatherAlerts);
   // Loads the navigating units' ETAs and keeps them live (`unitNavigationUpdated`, hub rejoins).

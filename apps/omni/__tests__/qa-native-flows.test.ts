@@ -48,6 +48,13 @@ describe('QA native flows', () => {
     expect(flow('ic', 'tablet')).toContain('- assertNotVisible:\n    id: "shell-sidebar-permanent|shell-nav-profile-name"');
   });
 
+  it('leaves the orientation to the run on Android, where Maestro assumes a portrait-native screen', () => {
+    const android = nativeFlow({ app: loadManifest('responder'), department: department('base'), formFactor: 'tablet', platform: 'android', flowDir: '/tmp/qa/flows' }) ?? '';
+
+    expect(android).not.toContain('setOrientation');
+    expect(android).toContain('- assertVisible:\n    id: "shell-sidebar-permanent|shell-nav-profile-name"');
+  });
+
   it('runs phones in portrait without the permanent sidebar', () => {
     expect(flow('responder', 'phone')).toContain('- setOrientation: PORTRAIT');
     expect(flow('responder', 'phone')).toContain('- assertNotVisible:\n    id: "shell-sidebar-permanent|shell-nav-profile-name"');

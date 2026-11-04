@@ -233,6 +233,19 @@ const STEP_MS = 30_000;
 // Core accepts a code up to two steps ahead of the clock (and never the same step twice: replay protection).
 const MAX_STEPS_AHEAD = 2;
 
+// A turn holds the lock for at most the wait for a free step (two steps) plus one sign-in (under a minute); a lock older
+// than this was left by a worker that was killed during its turn.
+const STALE_LOCK_MS = 3 * 60_000;
+
+const isStaleLock = (lock: string): boolean => {
+  try {
+    return Date.now() - fs.statSync(lock).mtimeMs > STALE_LOCK_MS;
+  } catch {
+    // Released while we looked: not stale, the next attempt takes it.
+    return false;
+  }
+};
+
 /**
  * Runs `submit` with a TOTP time (ms) whose step no earlier sign-in of this persona used. Core accepts each step once and
  * only above the last one it accepted, and a refused code counts toward the account lockout, so parallel workers signing
@@ -250,7 +263,23 @@ export async function withTotpTime<T>(username: string, submit: (at: number) => 
     try {
       fs.mkdirSync(lock);
       break;
-    } catch {
+    } catch (error) {
+      if (!(error instanceof Error && 'code' in error && error.code === 'EEXIST')) throw error;
+
+      if (isStaleLock(lock)) {
+        // Moved aside first, so of several workers that found it stale only one removes it.
+        const stale = `${lock}.stale-${process.pid}-${Date.now()}`;
+
+        try {
+          fs.renameSync(lock, stale);
+          fs.rmSync(stale, { recursive: true, force: true });
+        } catch {
+          // Another worker moved it aside first.
+        }
+
+        continue;
+      }
+
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
   }

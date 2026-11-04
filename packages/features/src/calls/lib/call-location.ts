@@ -2,6 +2,8 @@ import { ProtectedFieldIds, revealedValue } from '@resgrid/auth';
 import type { NavigationTarget } from '@resgrid/features/contacts';
 import type { CallResultData } from '@resgrid/models';
 
+import { revealedCallText } from './call-display';
+
 /** A coordinate as Core sends it: text on the call (`Latitude`), a number on its destination (`DestinationLatitude`). */
 export type CoordinateValue = string | number | null | undefined;
 
@@ -46,14 +48,14 @@ const callIdOf = (call: CallLocationFields): { callId: number } | Record<string,
  * navigation routes to the call through the server; a withheld location never gets one (the route would reveal it).
  */
 export function callLocationTarget(call: CallLocationFields): NavigationTarget | null {
-  const label = revealedValue(call.RedactedFields, ProtectedFieldIds.callName, call.Name) ?? undefined;
+  const label = revealedCallText(call, 'Name') || undefined;
   const geolocationWithheld = revealedValue(call.RedactedFields, ProtectedFieldIds.callGeolocation, call.Geolocation ?? '') === null;
 
   if (!geolocationWithheld && isUsablePoint(call.Latitude, call.Longitude)) return { latitude: Number(call.Latitude), longitude: Number(call.Longitude), label, ...callIdOf(call) };
   const fromGeolocation = geolocationWithheld ? null : geolocationPoint(call.Geolocation);
 
   if (fromGeolocation) return { ...fromGeolocation, label, ...callIdOf(call) };
-  const address = revealedValue(call.RedactedFields, ProtectedFieldIds.callAddress, call.Address)?.trim() ?? '';
+  const address = revealedCallText(call, 'Address')?.trim() ?? '';
 
   return address !== '' ? { address, label } : null;
 }

@@ -70,8 +70,13 @@ module.exports = {
   options: {
     doNotFollow: { path: 'node_modules' },
     // Generated output stays out: apps/omni/dist holds the web exports check-all leaves behind (about 175 MB of bundles
-    // that took the cruise to Node's heap limit).
-    exclude: { path: '(node_modules|__tests__|\\.test\\.|apps/omni/(ios|android|dist)|apps/desktop/(out|release))' },
+    // that took the cruise to Node's heap limit). The e2e output folders (apps/omni/e2e/.gitignore) fill with Playwright
+    // trace bundles and QA web exports while another session's e2e run is going: parsing them ran out of heap, or failed
+    // with ENOENT when Playwright deleted a file mid-read. The Expo and Metro caches and the maplibre worker that
+    // metro.config.js copies into public/ on every Metro start are generated too.
+    exclude: {
+      path: '(node_modules|__tests__|\\.test\\.|apps/omni/(ios|android|dist|\\.expo|\\.metro-cache|public/maplibre-gl-worker\\.js|e2e/(test-results|playwright-report|results|maestro-output|qa-output))|apps/desktop/(out|release))',
+    },
     tsConfig: { fileName: 'tsconfig.json' },
     tsPreCompilationDeps: true,
     enhancedResolveOptions: { exportsFields: ['exports'], conditionNames: ['import', 'require', 'node', 'default'] },

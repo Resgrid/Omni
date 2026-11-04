@@ -24,7 +24,8 @@ interface DesktopVariantConfig {
 }
 
 interface PrepareBundle {
-  prepareBundle: (options: { variant: string; bundleDir: string; webDir: string; log?: { log: () => void } }) => { config: DesktopVariantConfig };
+  /** `log.warn` reports an export whose title is not this app's (default: console). */
+  prepareBundle: (options: { variant: string; bundleDir: string; webDir: string; log?: { warn: (message: string) => void } }) => { config: DesktopVariantConfig };
 }
 
 interface VariantConfig {
@@ -55,7 +56,7 @@ export const test = qaTest.extend<QaDesktopTestFixtures, QaDesktopWorkerFixtures
       // SAFETY: apps/desktop/src/core/variant-config.js exports bundleOriginFor(config) (CommonJS, no types).
       const { bundleOriginFor } = desktopRequire('./src/core/variant-config') as VariantConfig;
       const dir = path.join(workerInfo.project.outputDir, `electron-bundle-${variantId}-${workerInfo.parallelIndex}`);
-      const { config } = prepareBundle({ variant: variantId, bundleDir: dir, webDir: webExportDir(variantId), log: { log: () => undefined } });
+      const { config } = prepareBundle({ variant: variantId, bundleDir: dir, webDir: webExportDir(variantId) });
       const web = path.join(dir, 'web');
 
       fs.writeFileSync(path.join(web, 'env-config.js'), `window.__ENV__ = Object.assign(window.__ENV__ || {}, ${JSON.stringify({ BASE_API_URL: manifest?.apiUrl ?? '' })});\n`);

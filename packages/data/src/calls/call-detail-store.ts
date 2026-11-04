@@ -106,8 +106,19 @@ export interface QueueCallFileInput {
   stagedUri?: string;
 }
 
+/** A call and its extra data as the server has them now. */
+export interface CurrentCallData {
+  call: CallResultData;
+  extraData: CallExtraDataResultData;
+}
+
 export interface CallDetailState extends CallDetailData {
   fetchCallDetail: (callId: string, options?: FetchOptions) => Promise<void>;
+  /**
+   * Reads the call and its extra data from the server (never a cache) for a write built from the whole call, such as
+   * EditCall: null when either is missing. Throws on a failed request. The detail record is updated with what it read.
+   */
+  fetchCurrentCall: (callId: string) => Promise<CurrentCallData | null>;
   fetchCallNotes: (callId: string, options?: FetchOptions) => Promise<void>;
   fetchCallImages: (callId: string, options?: FetchOptions) => Promise<void>;
   fetchCallFiles: (callId: string, options?: FetchOptions) => Promise<void>;
@@ -136,8 +147,10 @@ const emptyRecord = (): CallDetailRecord => ({ call: null, extraData: null, note
 
 const capDetails = (details: Record<string, CallDetailRecord>): Record<string, CallDetailRecord> => {
   const entries = Object.entries(details);
+
   if (entries.length <= CALL_DETAIL_CACHE_LIMIT) return details;
   entries.sort((a, b) => b[1].fetchedAt - a[1].fetchedAt);
+
   return Object.fromEntries(entries.slice(0, CALL_DETAIL_CACHE_LIMIT));
 };
 
@@ -149,6 +162,7 @@ const patchRecord = (state: CallDetailData, callId: string, patch: Partial<CallD
 export const selectCallNotes = (state: Pick<CallDetailData, 'details' | 'queuedNotes'>, callId: string): CallNoteListItem[] => {
   const server: CallNoteListItem[] = state.details[callId]?.notes ?? [];
   const session = getDataSessionScope();
+
   const queued: CallNoteListItem[] = Object.values(state.queuedNotes)
     .filter((note) => note.callId === callId)
     .sort((a, b) => a.createdAt - b.createdAt)
@@ -166,13 +180,16 @@ export const selectCallNotes = (state: Pick<CallDetailData, 'details' | 'queuedN
       FullName: session?.displayName ?? '',
       queued: { localId: note.localId, state: note.state },
     }));
+
   return [...server, ...queued];
 };
 
 /** Dispatch note search over a call's notes. */
 export const searchCallNotes = (notes: CallNoteResultData[], query: string): CallNoteResultData[] => {
   const needle = query.trim().toLowerCase();
+
   if (!needle) return notes;
+
   return notes.filter((note) => note.Note.toLowerCase().includes(needle) || note.FullName.toLowerCase().includes(needle));
 };
 
@@ -182,6 +199,7 @@ export const useCallDetailStore = create<CallDetailState>()(
   persist(
     (set, get) => {
       runner = createSliceRunner<DetailSlice, CallDetailState>('call-detail', set);
+
       const fileFetch = (slice: 'images' | 'files' | 'audio', type: number) => async (callId: string) => {
         await runner.run(
           slice,
@@ -190,8 +208,10 @@ export const useCallDetailStore = create<CallDetailState>()(
           { flightKey: `${slice}:${callId}` }
         );
       };
+
       const write = async (fn: () => Promise<void>): Promise<void> => {
         set({ isWriting: true, writeError: null });
+
         try {
           await fn();
           set({ isWriting: false });
@@ -210,11 +230,25 @@ export const useCallDetailStore = create<CallDetailState>()(
             'detail',
             async () => {
               const [call, extraData] = await Promise.all([getCall(getDataApiContext(), { callId }), getCallExtraData(getDataApiContext(), { callId })]);
+
               return { call: unwrapItem(call), extraData: unwrapItem(extraData) };
             },
             (value, state) => patchRecord(state, callId, { ...value, fetchedAt: dataNow() }),
             { flightKey: `detail:${callId}` }
           );
+        },
+
+        fetchCurrentCall: async (callId) => {
+          const generation = runner.generation();
+          const [call, extraData] = await Promise.all([getCall(getDataApiContext(), { callId }), getCallExtraData(getDataApiContext(), { callId })]);
+          const current = { call: unwrapItem(call), extraData: unwrapItem(extraData) };
+
+          if (!current.call || !current.extraData) return null;
+
+          // A response that lands after sign-out is not kept.
+          if (generation === runner.generation()) set((state) => patchRecord(state, callId, { ...current, fetchedAt: dataNow() }));
+
+          return { call: current.call, extraData: current.extraData };
         },
 
         fetchCallNotes: async (callId) => {
@@ -282,6 +316,7 @@ export const useCallDetailStore = create<CallDetailState>()(
             set((state) => {
               const details = { ...state.details };
               delete details[callId];
+
               return { details };
             });
           }),
@@ -300,9 +335,12 @@ export const useCallDetailStore = create<CallDetailState>()(
           set((state) => {
             const queuedNotes = { ...state.queuedNotes };
             const existing = queuedNotes[localId];
+
             if (!existing) return {};
+
             if (noteState === null) delete queuedNotes[localId];
             else queuedNotes[localId] = { ...existing, state: noteState };
+
             return { queuedNotes };
           }),
 
@@ -312,9 +350,12 @@ export const useCallDetailStore = create<CallDetailState>()(
           set((state) => {
             const queuedFiles = { ...state.queuedFiles };
             const existing = queuedFiles[localId];
+
             if (!existing) return {};
+
             if (fileState === null) delete queuedFiles[localId];
             else queuedFiles[localId] = { ...existing, state: fileState };
+
             return { queuedFiles };
           }),
       };
@@ -361,6 +402,7 @@ export function setCallFileReader(reader: CallFileReader | null): void {
 /** Bytes for a queued upload. TODO(offline attachments staging): the staging area, orphan cleanup (24 h) and retention live in @resgrid/offline. */
 export async function readQueuedFileData(payload: Pick<CallFilePayload, 'data' | 'stagedUri'>): Promise<string> {
   if (payload.data) return payload.data;
+
   if (payload.stagedUri && fileReader) return fileReader(payload.stagedUri);
   throw new Error('No attachment data or reader for the queued upload.');
 }
@@ -377,4 +419,5 @@ export const toCallFileUpload = (payload: CallFilePayload, userId: string, data:
 });
 
 registerPersistedStore('omni-call-detail-storage', useCallDetailStore);
+
 registerDataStoreReset<CallDetailState>('call-detail', useCallDetailStore, initialData, () => runner.invalidate());

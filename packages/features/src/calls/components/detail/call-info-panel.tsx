@@ -1,6 +1,7 @@
 import { isFieldRedacted, ProtectedFieldIds } from '@resgrid/auth';
 import { formatUtcInDepartmentTime } from '@resgrid/core/utils/dates';
 import { useCallsStore } from '@resgrid/data';
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import type { CallResultData } from '@resgrid/models';
 import { HtmlRenderer, Text } from '@resgrid/ui';
@@ -15,14 +16,13 @@ export interface CallInfoPanelProps {
   call: CallResultData;
 }
 
-const callTime = (utc: string | null | undefined): string => formatUtcInDepartmentTime(utc, null);
-
 /**
  * Info tab (Dispatch): priority, alarm level once escalated, type, location, destination and its type, contact,
  * references, times (with the scheduled dispatch time while the call waits for it) and the call's note (HtmlRenderer).
  */
 export const CallInfoPanel: React.FC<CallInfoPanelProps> = ({ call }) => {
   const { t } = useTranslation();
+  const timeZone = useDepartmentTimeZone();
   const priorities = useCallsStore((state) => state.callPriorities);
   const priority = resolvePriority(priorities, call.Priority);
   const redacted = (fieldId: string, value: string | null | undefined): boolean => isFieldRedacted(call.RedactedFields, fieldId, value);
@@ -45,11 +45,11 @@ export const CallInfoPanel: React.FC<CallInfoPanelProps> = ({ call }) => {
       <DetailRow label={t('calls.incident_id')} value={call.IncidentId} />
       <DetailRow label={t('call_detail.reference_id')} value={call.ReferenceId} />
       <DetailRow label={t('call_detail.external_id')} value={call.ExternalId} />
-      <DetailRow label={t('call_detail.info.logged_on')} value={callTime(call.LoggedOnUtc)} />
+      <DetailRow label={t('call_detail.info.logged_on')} value={formatUtcInDepartmentTime(call.LoggedOnUtc, timeZone)} />
       {isScheduledCall(call, Date.now()) ? (
-        <DetailRow label={t('call_detail.scheduled_on')} value={callTime(scheduledDispatchUtc(call))} testID="call-info-scheduled-on" />
+        <DetailRow label={t('call_detail.scheduled_on')} value={formatUtcInDepartmentTime(scheduledDispatchUtc(call), timeZone)} testID="call-info-scheduled-on" />
       ) : (
-        <DetailRow label={t('call_detail.info.dispatched_on')} value={callTime(call.DispatchedOnUtc)} />
+        <DetailRow label={t('call_detail.info.dispatched_on')} value={formatUtcInDepartmentTime(call.DispatchedOnUtc, timeZone)} />
       )}
       {noteProtected ? (
         <DetailRow label={t('call_detail.note')} value={null} isProtected />

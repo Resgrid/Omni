@@ -1,4 +1,5 @@
 import { formatUtcInDepartmentTime } from '@resgrid/core/utils/dates';
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import type { CallProtocolsResultData } from '@resgrid/models';
 import { Button, ButtonText, CustomBottomSheet, Text } from '@resgrid/ui';
@@ -16,8 +17,9 @@ export interface ProtocolDetailsSheetProps {
 /** Protocol details in a bottom sheet (Unit baseline): code, description, sanitized text, updated date. */
 export const ProtocolDetailsSheet: React.FC<ProtocolDetailsSheetProps> = ({ protocol, isOpen, onClose }) => {
   const { t } = useTranslation();
+  const timeZone = useDepartmentTimeZone();
   const isVisible = isOpen ? protocol !== null : false;
-  const updated = protocol ? formatUtcInDepartmentTime(protocol.UpdatedOn || protocol.CreatedOn, null) : '';
+  const updated = protocol ? formatUtcInDepartmentTime(protocol.UpdatedOn || protocol.CreatedOn, timeZone) : '';
   return (
     <CustomBottomSheet isOpen={isVisible} onClose={onClose} snapPoints={[80]} testID="protocol-details-sheet">
       {protocol ? (

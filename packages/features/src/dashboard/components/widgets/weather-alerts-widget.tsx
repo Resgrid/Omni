@@ -1,3 +1,4 @@
+import { useNow } from '@resgrid/core/lifecycle/use-now';
 import { sortWeatherAlerts, useWeatherAlertsStore } from '@resgrid/data';
 import { alertTimes, SeverityBadge, severityColor, weatherAlertsRoutes } from '@resgrid/features/weather-alerts';
 import { useTranslation } from '@resgrid/i18n';
@@ -7,7 +8,6 @@ import { router } from 'expo-router';
 import React, { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 
-import { useNow } from '../../hooks/use-now';
 import { useStale } from '../../hooks/use-stale';
 import { useWidgetSettings } from '../../hooks/use-widget-settings-store';
 import { useWidgetTitle } from '../../hooks/use-widget-title';

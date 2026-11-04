@@ -57,15 +57,27 @@ export const getDispatchTypeStyle = (type: string): DispatchTypeStyle => {
 
 export const isUnitDispatchType = (type: string): boolean => dispatchKind(type) === 'unit';
 
+const nameKeyOf = (dispatch: DispatchedEventResultData): string => `name:${normalize(dispatch.Type)}:${normalize(dispatch.Name)}`;
+
+const idKeyOf = (dispatch: DispatchedEventResultData): string | null => {
+  const id = normalize(dispatch.Id);
+
+  return id.length > 0 ? `id:${normalize(dispatch.Type)}:${id}` : null;
+};
+
+/**
+ * The entity a dispatch went to, unique within `getUniqueDispatches`' result: use it as the React key. Core's ids are
+ * per type (person 7 and unit 7 are different entities), so the id alone repeats on a call dispatched to both.
+ */
+export const dispatchKey = (dispatch: DispatchedEventResultData): string => idKeyOf(dispatch) ?? nameKeyOf(dispatch);
+
 /** One row per entity: the same dispatch can arrive twice (by id and by name). */
 export const getUniqueDispatches = (dispatches: readonly DispatchedEventResultData[]): DispatchedEventResultData[] => {
   const seen = new Set<string>();
 
   return dispatches.filter((dispatch) => {
-    const type = normalize(dispatch.Type);
-    const nameKey = `name:${type}:${normalize(dispatch.Name)}`;
-    const id = normalize(dispatch.Id);
-    const idKey = id.length > 0 ? `id:${type}:${id}` : null;
+    const nameKey = nameKeyOf(dispatch);
+    const idKey = idKeyOf(dispatch);
 
     if (seen.has(nameKey) || (idKey !== null && seen.has(idKey))) return false;
     seen.add(nameKey);

@@ -6,9 +6,12 @@ import { useToastStore } from '@resgrid/ui';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import React from 'react';
 
+import { CallAudioModal } from '../components/call-audio-modal';
 import { CallNotesPanel } from '../components/call-notes-panel';
 import { CloseCallSheet } from '../components/close-call-sheet';
 import { DispatchSelectionModal, summarizeDispatchSelection } from '../components/dispatch-selection';
+import { RescheduleCallSheet } from '../components/reschedule-call-sheet';
+import { registerCallFormHookPoints, resetCallFormHookPointsForTests } from '../hook-points';
 import { EMPTY_DISPATCH_SELECTION } from '../lib/call-form';
 import { activateVariant, hidden, setRights } from './test-utils';
 
@@ -106,6 +109,59 @@ describe('DispatchSelectionModal', () => {
     expect(summarizeDispatchSelection(EMPTY_DISPATCH_SELECTION, recipients, labels)).toBe('NONE');
     expect(summarizeDispatchSelection({ ...EMPTY_DISPATCH_SELECTION, everyone: true }, recipients, labels)).toBe('ALL');
     expect(summarizeDispatchSelection({ everyone: false, users: ['u1'], groups: ['g1'], roles: ['r1'], units: ['7'] }, recipients, labels)).toBe('Pat Smith, Station 1, Medic +1');
+  });
+});
+
+describe('RescheduleCallSheet', () => {
+  const HOUR_MS = 60 * 60 * 1000;
+  // SAFETY: the sheet reads only the call's schedule fields.
+  const scheduledCall = (at: number) => ({ CallId: '5', State: 0, ScheduledOnUtc: new Date(at).toISOString(), DispatchedOnUtc: '' }) as never;
+  const record = (at: number) => ({ call: scheduledCall(at), extraData: null, notes: [], images: null, files: null, audio: null, fetchedAt: 1 });
+
+  it('keeps the time the dispatcher picked when the call is refreshed under it', async () => {
+    const reschedule = jest.fn<Promise<void>, [string, string]>(async () => undefined);
+    const scheduledAt = Date.now() + 5 * HOUR_MS;
+
+    useCallDetailStore.setState({ details: { '5': record(scheduledAt) }, rescheduleDispatchTime: reschedule });
+    useCallsStore.setState({ refreshQueuedCallLists: jest.fn(async () => undefined) });
+    await render(<RescheduleCallSheet isOpen onClose={jest.fn()} callId="5" />);
+    const pickedAt = Date.now() + HOUR_MS;
+
+    await fireEvent.press(screen.getByTestId('reschedule-reschedule_in_1_hour', hidden));
+    // A realtime ping re-reads the call: a new call object with the same schedule.
+    await act(async () => useCallDetailStore.setState({ details: { '5': record(scheduledAt) } }));
+    await act(async () => fireEvent.press(screen.getByTestId('reschedule-submit', hidden)));
+
+    const [, wallClock] = reschedule.mock.calls[0];
+
+    // Wall-clock time on this device, as the sheet sends it.
+    expect(Math.abs(new Date(wallClock).getTime() - pickedAt)).toBeLessThan(60_000);
+  });
+});
+
+describe('CallAudioModal', () => {
+  afterEach(() => resetCallFormHookPointsForTests());
+
+  it('never starts a clip that was still loading when the sheet closed', async () => {
+    const stop = jest.fn();
+    let resolveStart: (handle: { stop: () => void }) => void = () => undefined;
+
+    registerCallFormHookPoints({ playAudioClip: () => new Promise((resolve) => (resolveStart = resolve)) });
+    useCallDetailStore.setState({
+      // SAFETY: the modal reads only the id, name, timestamp and https link of each recording.
+      details: {
+        '5': { call: null, extraData: null, notes: [], images: null, files: null, audio: [{ Id: 'a1', Name: 'Radio', FileName: 'radio.mp3', Url: 'https://cdn.example/radio.mp3', Timestamp: '' }] as never, fetchedAt: 1 },
+      },
+      fetchCallAudio: jest.fn(async () => undefined),
+    });
+
+    const view = await render(<CallAudioModal isOpen onClose={jest.fn()} callId="5" />);
+
+    await fireEvent.press(screen.getByTestId('call-audio-a1', hidden));
+    await view.rerender(<CallAudioModal isOpen={false} onClose={jest.fn()} callId="5" />);
+    await act(async () => resolveStart({ stop }));
+
+    expect(stop).toHaveBeenCalled();
   });
 });
 

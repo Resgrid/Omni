@@ -1,5 +1,5 @@
-import { ProtectedFieldIds, revealedValue } from '@resgrid/auth';
 import { selectActiveCalls, useCallsStore } from '@resgrid/data';
+import { callDisplayName } from '@resgrid/features/calls';
 import { useTranslation } from '@resgrid/i18n';
 import { Button, ButtonText, CustomBottomSheet, HStack, Pressable, Text, View, VStack } from '@resgrid/ui';
 import { Check } from 'lucide-react-native';
@@ -31,7 +31,7 @@ export const ActiveCallSheet: React.FC<ActiveCallSheetProps> = ({ isOpen, onClos
   }, [isOpen]);
 
   const protectedLabel = t('data_protection.protected_value');
-  const rows = useMemo(() => calls.map((call) => ({ call, name: revealedValue(call.RedactedFields, ProtectedFieldIds.callName, call.Name) ?? protectedLabel })), [calls, protectedLabel]);
+  const rows = useMemo(() => calls.map((call) => ({ call, name: callDisplayName(call, protectedLabel) })), [calls, protectedLabel]);
 
   return (
     <CustomBottomSheet isOpen={isOpen} onClose={onClose} isLoading={calls.length === 0 ? isLoading : false} loadingText={t('common.loading')} snapPoints={[60]} testID={testID}>
@@ -51,6 +51,7 @@ export const ActiveCallSheet: React.FC<ActiveCallSheetProps> = ({ isOpen, onClos
       ) : null}
       {rows.map(({ call, name }) => {
         const selected = call.CallId === activeCallId;
+
         return (
           <Pressable
             key={call.CallId}

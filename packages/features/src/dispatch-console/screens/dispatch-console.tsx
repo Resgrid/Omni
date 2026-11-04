@@ -1,6 +1,6 @@
 import { useCallsStore, usePersonnelStore, useUnitsStore, useWeatherAlertsStore } from '@resgrid/data';
 import { callQueuesRoutes } from '@resgrid/features/call-queues';
-import { CallNotesModal, callRoutes, CloseCallSheet } from '@resgrid/features/calls';
+import { callDisplayName, callDisplayText, CallNotesModal, callRoutes, CloseCallSheet } from '@resgrid/features/calls';
 import { personnelRoutes } from '@resgrid/features/personnel';
 import { unitsRoutes } from '@resgrid/features/units';
 import { weatherAlertsRoutes } from '@resgrid/features/weather-alerts';
@@ -24,6 +24,7 @@ import { PersonnelPanel } from '../components/personnel-panel';
 import { PttPanel } from '../components/ptt-panel';
 import { ResourcesPanel } from '../components/resources-panel';
 import { StatsHeader } from '../components/stats-header';
+import { UnitTimerActivity } from '../components/unit-timer-activity';
 import { UnitsPanel } from '../components/units-panel';
 import { ViewToggles } from '../components/view-toggles';
 import { useConsoleData } from '../hooks/use-console-data';
@@ -58,9 +59,10 @@ type StatusTarget = { kind: 'unit'; unitId: string } | { kind: 'personnel'; user
 /**
  * The Dispatch console (omni-plan §7.11; Dispatch baseline home / home.web): stats bar, the call filter banner and the
  * panels — active calls, units, personnel (or one resources list), notes, the live map, the tabbed activity card
- * (activity, radio, actions, check-ins, weather) and push-to-talk — laid out in three columns on desktop, Electron and
- * landscape tablets, two on portrait tablets and one scrolling column on phones. Selecting a call filters every panel
- * to it; units support multi-select for one status change. Writes in Dispatch's offline scope (statuses on behalf, call
+ * (activity, radio, actions, check-ins, unit timers, weather) and push-to-talk — laid out in three columns on desktop,
+ * Electron and landscape tablets, two on portrait tablets and one scrolling column on phones. Selecting a call filters
+ * every panel to it; units support multi-select for one status change. Units over their status timer are flagged in
+ * the stats bar, their rows and the Unit timers tab, and each crossing is logged. Writes in Dispatch's offline scope (statuses on behalf, call
  * notes, check-ins) go through the outbox; dispatching, closing and department notes are online.
  */
 export default function DispatchConsoleScreen({ realtime = true, mapHref = '/map', mapSlot, showClock = true, showViewToggles = true, now = Date.now }: DispatchConsoleScreenProps) {
@@ -97,7 +99,16 @@ export default function DispatchConsoleScreen({ realtime = true, mapHref = '/map
     (callId: string) => {
       const isOn = useConsoleStore.getState().toggleCallFilter(callId);
       const call = useCallsStore.getState().calls.find((entry) => entry.CallId === callId);
-      if (call) log({ type: 'call', action: isOn ? t('dispatch.call_filter_active') : t('dispatch.call_filter_cleared'), description: `#${call.Number} - ${call.Name || call.Nature}`, metadata: { callId } });
+      const protectedLabel = t('data_protection.protected_value');
+
+      if (call) {
+        log({
+          type: 'call',
+          action: isOn ? t('dispatch.call_filter_active') : t('dispatch.call_filter_cleared'),
+          description: `#${call.Number} - ${callDisplayName(call, protectedLabel) || callDisplayText(call, 'Nature', protectedLabel)}`,
+          metadata: { callId },
+        });
+      }
     },
     [log, t]
   );
@@ -111,6 +122,7 @@ export default function DispatchConsoleScreen({ realtime = true, mapHref = '/map
     (unitId: string) => {
       const isOn = useConsoleStore.getState().selectUnit(unitId);
       const unit = useUnitsStore.getState().unitInfos.find((entry) => entry.UnitId === unitId);
+
       if (unit) log({ type: 'unit', action: isOn ? t('dispatch.unit_selected') : t('dispatch.unit_deselected'), description: unit.Name, metadata: { unitId } });
     },
     [log, t]
@@ -120,6 +132,7 @@ export default function DispatchConsoleScreen({ realtime = true, mapHref = '/map
     (userId: string) => {
       const isOn = useConsoleStore.getState().selectPersonnel(userId);
       const person = usePersonnelStore.getState().personnel.find((entry) => entry.UserId === userId);
+
       if (person)
         log({ type: 'personnel', action: isOn ? t('dispatch.personnel_selected') : t('dispatch.personnel_deselected'), description: `${person.FirstName} ${person.LastName}`.trim(), metadata: { personnelId: userId } });
     },
@@ -150,9 +163,11 @@ export default function DispatchConsoleScreen({ realtime = true, mapHref = '/map
       {...sizing}
     />
   );
+
   const unitsPanel = (sizing: { flex?: number; maxHeight?: number }) => (
     <UnitsPanel callFilter={callFilter} onSelectUnit={handleSelectUnit} onOpenUnit={handlers.onViewUnit} onSetStatusForCall={(unitId) => setStatusTarget({ kind: 'unit', unitId })} {...sizing} />
   );
+
   const personnelPanel = (sizing: { flex?: number; maxHeight?: number }) => (
     <PersonnelPanel
       callFilter={callFilter}
@@ -162,6 +177,7 @@ export default function DispatchConsoleScreen({ realtime = true, mapHref = '/map
       {...sizing}
     />
   );
+
   const resourcesPanel = (sizing: { flex?: number; maxHeight?: number }) => (
     <ResourcesPanel
       callFilter={callFilter}
@@ -174,6 +190,7 @@ export default function DispatchConsoleScreen({ realtime = true, mapHref = '/map
       {...sizing}
     />
   );
+
   const notesPanel = (sizing: { flex?: number; maxHeight?: number }) => <NotesPanel callId={filteredCall ? filteredCall.CallId : null} onNewNote={() => setIsAddNoteOpen(true)} {...sizing} />;
   const mapPanel = (sizing: { flex?: number; maxHeight?: number }) => <MapPanel selectedCall={filteredCall} onExpand={mapHref ? () => router.push(mapHref as Href) : undefined} mapSlot={mapSlot} {...sizing} />;
   const activityPanel = (sizing: { flex?: number; maxHeight?: number }) => <ActivityPanel selectedCall={filteredCall} callActivity={extraData?.Activity ?? []} {...handlers} {...sizing} />;
@@ -198,6 +215,7 @@ export default function DispatchConsoleScreen({ realtime = true, mapHref = '/map
         </View>
       );
     }
+
     if (layout === 'two-column') {
       return (
         <View style={styles.row} testID="console-layout-two-column">
@@ -215,6 +233,7 @@ export default function DispatchConsoleScreen({ realtime = true, mapHref = '/map
         </View>
       );
     }
+
     return (
       <ScrollView contentContainerStyle={styles.scroll} testID="console-layout-single-column">
         {callsPanel({ maxHeight: PHONE_PANEL_HEIGHT })}
@@ -239,8 +258,10 @@ export default function DispatchConsoleScreen({ realtime = true, mapHref = '/map
         onPendingCallsPress={() => router.push(callQueuesRoutes.pending() as Href)}
         onScheduledCallsPress={() => router.push(callQueuesRoutes.scheduled() as Href)}
         onWeatherAlertsPress={() => router.push(weatherAlertsRoutes.list() as Href)}
+        onUnitTimersPress={() => useConsoleStore.getState().setActiveTab('unit-timers')}
         showClock={showClock}
       />
+      <UnitTimerActivity />
       {showViewToggles ? <ViewToggles /> : null}
       {filteredCall ? <ActiveCallFilterBanner call={filteredCall} onClearFilter={handleClearFilter} /> : null}
       <View style={styles.body}>{renderLayout()}</View>

@@ -1,4 +1,4 @@
-import { DispatchTicker, readableTextColor, timeAgo } from '@resgrid/features/calls';
+import { callDisplayName, DispatchTicker, readableTextColor, revealedCallText, timeAgo } from '@resgrid/features/calls';
 import { CallNavigationEtas } from '@resgrid/features/navigation-eta';
 import { AlarmLevelBadge } from '@resgrid/features/runcards';
 import { useTranslation } from '@resgrid/i18n';
@@ -35,7 +35,11 @@ const TIME_AGO_KEYS = { just_now: 'dispatch_console.time_just_now', minutes: 'di
 export const ConsoleCallCard: React.FC<ConsoleCallCardProps> = React.memo(({ call, priorityColor, dispatches, overdueNames, isSelected, now, onSelect, onOpenDetails, onAddResources }) => {
   const { t } = useTranslation();
   const textColor = readableTextColor(priorityColor) ?? '#FFFFFF';
-  const nature = useMemo(() => plainText(call.Nature), [call.Nature]);
+  const protectedLabel = t('data_protection.protected_value');
+  const name = callDisplayName(call, protectedLabel);
+  const address = revealedCallText(call, 'Address');
+  const natureValue = revealedCallText(call, 'Nature');
+  const nature = useMemo(() => (natureValue === null ? protectedLabel : plainText(natureValue)), [natureValue, protectedLabel]);
   const destination = call.DestinationName ? (call.DestinationTypeName ? `${call.DestinationTypeName}: ${call.DestinationName}` : call.DestinationName) : '';
   const age = timeAgo(call.LoggedOnUtc, now);
   const ageText = age ? t(TIME_AGO_KEYS[age.unit], { count: age.count }) : '';
@@ -48,7 +52,7 @@ export const ConsoleCallCard: React.FC<ConsoleCallCardProps> = React.memo(({ cal
         onPress={() => onSelect(call.CallId)}
         accessibilityRole="button"
         accessibilityState={{ selected: isSelected }}
-        accessibilityLabel={`#${call.Number} ${call.Name}`}
+        accessibilityLabel={`#${call.Number} ${name}`}
         style={StyleSheet.flatten([styles.card, { backgroundColor: priorityColor }, isSelected ? styles.selected : null])}
         testID={testID}
       >
@@ -71,17 +75,17 @@ export const ConsoleCallCard: React.FC<ConsoleCallCardProps> = React.memo(({ cal
         <HStack space="xs" className="mt-0.5 items-center">
           <TypeIcon iconUrl={call.TypeIconUrl ?? null} mapIcon={call.TypeMapIcon ?? null} size={18} />
           <Text className="flex-1 text-sm font-bold" style={{ color: textColor }} numberOfLines={1}>
-            {call.Name}
+            {name}
           </Text>
           <AlarmLevelBadge alarmLevel={call.AlarmLevel} testID={`${testID}-alarm`} />
         </HStack>
-        {call.Address ? (
+        {address !== '' ? (
           <HStack space="xs" className="items-center">
             <View>
               <MapPin size={10} color={textColor} />
             </View>
             <Text className="flex-1 text-xs" style={{ color: textColor }} numberOfLines={1}>
-              {call.Address}
+              {address ?? protectedLabel}
             </Text>
           </HStack>
         ) : null}

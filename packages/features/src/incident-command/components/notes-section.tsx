@@ -1,4 +1,5 @@
 import { formatUtcInDepartmentTime } from '@resgrid/core/utils/dates';
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import { IncidentContentVisibility, type IncidentNote } from '@resgrid/models';
 import { Badge, BadgeText, HStack, Text, VStack } from '@resgrid/ui';
@@ -21,6 +22,7 @@ export interface NotesSectionProps {
 /** Operational status notes (IC notes section), newest first; public notes are marked. */
 export const NotesSection: React.FC<NotesSectionProps> = ({ notes, canAdd, onAdd, authorName, testID = 'command-notes' }) => {
   const { t } = useTranslation();
+  const timeZone = useDepartmentTimeZone();
   const sorted = useMemo(() => sortByCreated(notes.filter((note) => !note.DeletedOn)), [notes]);
   return (
     <SectionCard
@@ -46,7 +48,7 @@ export const NotesSection: React.FC<NotesSectionProps> = ({ notes, canAdd, onAdd
               </HStack>
               <Text className="text-sm text-typography-900">{note.Body}</Text>
               <Text className="text-xs text-typography-500">
-                {[isLocalId(note.IncidentNoteId) ? t('incident_command.pending_sync') : formatUtcInDepartmentTime(note.CreatedOn, null), note.CreatedByUserId && authorName ? authorName(note.CreatedByUserId) : '']
+                {[isLocalId(note.IncidentNoteId) ? t('incident_command.pending_sync') : formatUtcInDepartmentTime(note.CreatedOn, timeZone), note.CreatedByUserId && authorName ? authorName(note.CreatedByUserId) : '']
                   .filter(Boolean)
                   .join(' · ')}
               </Text>

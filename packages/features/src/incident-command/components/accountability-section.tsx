@@ -1,4 +1,5 @@
 import { formatUtcInDepartmentTime } from '@resgrid/core/utils/dates';
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import type { PersonnelCallCheckInStatus } from '@resgrid/models';
 import { Badge, BadgeText, HStack, Text, VStack } from '@resgrid/ui';
@@ -25,6 +26,7 @@ export interface AccountabilitySectionProps {
  */
 export const AccountabilitySection: React.FC<AccountabilitySectionProps> = ({ rows, personName, onOpenCheckIns, testID = 'command-accountability' }) => {
   const { t } = useTranslation();
+  const timeZone = useDepartmentTimeZone();
   const counts = useMemo(() => accountabilityCounts(rows), [rows]);
   const sorted = useMemo(() => sortAccountability(rows), [rows]);
 
@@ -64,7 +66,7 @@ export const AccountabilitySection: React.FC<AccountabilitySectionProps> = ({ ro
                   {row.FullName || personName(row.UserId)}
                 </Text>
                 <Text className="text-xs text-typography-500">
-                  {row.LastCheckIn ? t('incident_command.last_check_in', { time: formatUtcInDepartmentTime(row.LastCheckIn, null) }) : t('incident_command.never_checked_in')}
+                  {row.LastCheckIn ? t('incident_command.last_check_in', { time: formatUtcInDepartmentTime(row.LastCheckIn, timeZone) }) : t('incident_command.never_checked_in')}
                 </Text>
               </VStack>
               <Badge action={parStatusAction(row.Status)} size="sm">

@@ -16,6 +16,7 @@ import {
   toUpdateCallRequest,
   validateCallForm,
 } from '../lib/call-form';
+import { isWhat3WordsFormat } from '../lib/call-geocoding';
 import { defaultPriorityId, priorityOptions, resolvePriority } from '../lib/call-priority';
 import { getScheduledDispatchPrefill, isDispatchTimeTooSoon } from '../lib/call-schedule';
 import { isClosedCall, isScheduledCall, timeAgo } from '../lib/call-time';
@@ -320,5 +321,13 @@ describe('routes', () => {
     expect(callNew()).toBe('/call/new');
     expect(callCorrect('abc-123')).toBe('/call/new?correct=abc-123');
     expect(() => callDetail('../secrets')).toThrow();
+  });
+});
+
+describe('what3words addresses', () => {
+  it('accepts three dot-joined words in any language and nothing else', () => {
+    for (const words of ['filled.count.soap', ' Filled.Count.Soap ', 'größte.straße.baum', 'игра.дом.окно', 'λέξη.λέξη.λέξη', 'مكتب.باب.شمس']) expect(isWhat3WordsFormat(words)).toBe(true);
+
+    for (const words of ['filled.count', 'filled..soap', 'filled.count.soap.extra', 'fil led.count.soap', '12.34.56', 'a_b.c.d', '']) expect(isWhat3WordsFormat(words)).toBe(false);
   });
 });

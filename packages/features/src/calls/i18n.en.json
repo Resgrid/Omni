@@ -49,6 +49,7 @@
   "calls.dispatch.none_pages_everyone": "No one selected — everyone available will be paged",
   "calls.edit.offline": "Editing a call needs a connection. Your changes have not been saved.",
   "calls.edit_keyboard_shortcuts": "Tip: Press Ctrl+S to save, Escape to cancel",
+  "calls.edit_load_error": "This call could not be loaded for editing. Try again.",
   "calls.filters.priority": "Filter by priority",
   "calls.keyboard_shortcuts": "Tip: Press Ctrl+Enter to create, Escape to cancel",
   "calls.linked.clear": "Remove linked call",

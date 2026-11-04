@@ -21,7 +21,8 @@
     "expo-location": "catalog:",
     "expo-task-manager": "catalog:",
     "react": "catalog:",
-    "react-native": "catalog:"
+    "react-native": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "react-test-renderer": "catalog:"

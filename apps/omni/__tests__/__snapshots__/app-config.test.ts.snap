@@ -471,6 +471,7 @@ exports[`app.config per variant unit production config is stable 1`] = `
       "android.permission.RECORD_AUDIO",
       "android.permission.CAPTURE_AUDIO_OUTPUT",
       "android.permission.POST_NOTIFICATIONS",
+      "android.permission.SCHEDULE_EXACT_ALARM",
       "android.permission.FOREGROUND_SERVICE",
       "android.permission.FOREGROUND_SERVICE_MICROPHONE",
       "android.permission.FOREGROUND_SERVICE_PHONE_CALL",
@@ -492,6 +493,9 @@ exports[`app.config per variant unit production config is stable 1`] = `
       "aps-environment": "production",
       "com.apple.developer.usernotifications.critical-alerts": true,
       "com.apple.developer.usernotifications.time-sensitive": true,
+      "com.apple.security.application-groups": [
+        "group.com.resgrid.unit.shared",
+      ],
     },
     "infoPlist": {
       "ITSAppUsesNonExemptEncryption": false,

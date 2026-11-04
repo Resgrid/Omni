@@ -4,11 +4,29 @@
 # Variables: APP_ID, QA_USERNAME, QA_PASSWORD, QA_TOTP ('none' when the persona has no authenticator).
 appId: ${APP_ID}
 ---
-- extendedWaitUntil:
-    visible:
-      id: 'login-screen|onboarding-screen|shell-gate-onboarding'
-    # A dev client builds the Metro bundle on first open; allow for a cold transform cache.
-    timeout: 300000
+# Up to five minutes for the first screen (a cold transform cache). A development client's launcher can fail its first
+# load: iOS gives up on a manifest Metro takes over 10 s to answer (a loaded machine), and Android's launcher can drop a
+# link that arrives while it starts and show its server list. Either way the link goes in again.
+- repeat:
+    while:
+      notVisible:
+        id: 'login-screen|onboarding-screen|shell-gate-onboarding'
+    times: 10
+    commands:
+      - runFlow:
+          when:
+            true: ${DEV_CLIENT_URL != 'none'}
+            visible: 'There was a problem loading the project.*|Fetch development servers'
+          commands:
+            - openLink: ${DEV_CLIENT_LINK}
+            - runFlow: accept-open-prompt.yaml
+      - extendedWaitUntil:
+          visible:
+            id: 'login-screen|onboarding-screen|shell-gate-onboarding'
+          timeout: 30000
+          optional: true
+- assertVisible:
+    id: 'login-screen|onboarding-screen|shell-gate-onboarding'
 # Page through with the bottom button (Next, then Get started): on a landscape iPad the dev client's floating button
 # covers Skip. A tap that lands while the first render is still settling can be dropped, so repeat until it is gone.
 - repeat:
@@ -17,6 +35,10 @@ appId: ${APP_ID}
         id: 'onboarding-screen|shell-gate-onboarding'
     times: 8
     commands:
+      # The dev client's developer-menu introduction, should it show despite disableOnboarding.
+      - tapOn:
+          text: 'Continue'
+          optional: true
       - tapOn:
           id: 'onboarding-next|onboarding-finish|shell-onboarding-continue'
           optional: true
@@ -48,16 +70,14 @@ appId: ${APP_ID}
       - tapOn:
           id: 'login-submit'
           optional: true
-# Up to two minutes for the sign-in to land. iOS may offer to save the password in a sheet that hides the whole app.
+# Up to two minutes for the sign-in to land. A system sheet may hide the whole app meanwhile (dismiss-system-sheet.yaml).
 - repeat:
     while:
       notVisible:
         id: 'app-shell-.*|shell-header-title|shell-menu-button|shell-nav-profile-name|login-otp-code|login-mfa-code|login-error-dialog|login-error-message'
     times: 24
     commands:
-      - tapOn:
-          text: 'Not Now'
-          optional: true
+      - runFlow: dismiss-system-sheet.yaml
       - extendedWaitUntil:
           visible:
             id: 'app-shell-.*|shell-header-title|shell-menu-button|shell-nav-profile-name|login-otp-code|login-mfa-code|login-error-dialog|login-error-message'
@@ -101,9 +121,7 @@ appId: ${APP_ID}
         id: 'app-shell-.*|shell-header-title|shell-menu-button|shell-nav-profile-name'
     times: 24
     commands:
-      - tapOn:
-          text: 'Not Now'
-          optional: true
+      - runFlow: dismiss-system-sheet.yaml
       - extendedWaitUntil:
           visible:
             id: 'app-shell-.*|shell-header-title|shell-menu-button|shell-nav-profile-name'

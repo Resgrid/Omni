@@ -72,13 +72,13 @@ export const isMessageExpired = (expiredOn: string | null | undefined, now: numb
 };
 
 /** When it was sent: the UTC instant in the department's zone, else the department-local `SentOn` as given. */
-export const formatSentOn = (message: Pick<MessageResultData, 'SentOn' | 'SentOnUtc'>, locale?: string): string => {
-  if (message.SentOnUtc) return formatUtcInDepartmentTime(message.SentOnUtc, null, { dateStyle: 'medium', timeStyle: 'short' }, locale);
+export const formatSentOn = (message: Pick<MessageResultData, 'SentOn' | 'SentOnUtc'>, zoneId: string | null, locale?: string): string => {
+  if (message.SentOnUtc) return formatUtcInDepartmentTime(message.SentOnUtc, zoneId, { dateStyle: 'medium', timeStyle: 'short' }, locale);
   const local = parseDateISOString(message.SentOn);
   return local ? formatDateForDisplay(local, 'MMM dd, yyyy h:mm tt', locale) : '';
 };
 
-export const formatUtc = (value: string | null | undefined, locale?: string): string => formatUtcInDepartmentTime(value, null, { dateStyle: 'medium', timeStyle: 'short' }, locale);
+export const formatUtc = (value: string | null | undefined, zoneId: string | null, locale?: string): string => formatUtcInDepartmentTime(value, zoneId, { dateStyle: 'medium', timeStyle: 'short' }, locale);
 
 /** The caller may answer: a callback or poll they received, not answered yet, not expired. RSVPs have their own buttons. */
 export const canRespondToMessage = (message: MessageResultData, isOwn: boolean, now: number = Date.now()): boolean =>

@@ -18,7 +18,7 @@ export const formatDuration = (seconds: number | null | undefined, t: Translate)
 };
 
 /** A route time (UTC on the wire) for display; empty when missing or unparseable. */
-export const formatRouteTime = (utc: string | null | undefined): string => (utc ? formatUtcInDepartmentTime(utc, null) : '');
+export const formatRouteTime = (utc: string | null | undefined, zoneId: string | null): string => (utc ? formatUtcInDepartmentTime(utc, zoneId) : '');
 
 /** Arrival clock time `seconds` from `now` (device clock), for "ETA 14:32". */
 export const formatArrivalTime = (seconds: number | null | undefined, now: number = Date.now()): string => {

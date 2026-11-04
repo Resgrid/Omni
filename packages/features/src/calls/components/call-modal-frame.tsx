@@ -9,11 +9,12 @@ export interface CallModalFrameProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  footer?: React.ReactNode;
   testID?: string;
 }
 
 /** Page-sheet frame for the call's notes, images and files (R modal UI inside Unit's NativeModal: toasts show above it). */
-export const CallModalFrame: React.FC<CallModalFrameProps> = ({ isOpen, onClose, title, children, testID }) => {
+export const CallModalFrame: React.FC<CallModalFrameProps> = ({ isOpen, onClose, title, children, footer, testID }) => {
   const { t } = useTranslation();
   return (
     <NativeModal visible={isOpen} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose} testID={testID}>
@@ -26,7 +27,10 @@ export const CallModalFrame: React.FC<CallModalFrameProps> = ({ isOpen, onClose,
             <X size={22} color="#6B7280" />
           </Pressable>
         </View>
-        <ScrollView keyboardShouldPersistTaps="handled">{children}</ScrollView>
+        <ScrollView style={styles.body} keyboardShouldPersistTaps="handled">
+          {children}
+        </ScrollView>
+        {footer}
       </View>
     </NativeModal>
   );
@@ -34,5 +38,6 @@ export const CallModalFrame: React.FC<CallModalFrameProps> = ({ isOpen, onClose,
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
+  body: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8, borderBottomWidth: 1 },
 });

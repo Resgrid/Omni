@@ -1,10 +1,10 @@
+import { useNow } from '@resgrid/core/lifecycle/use-now';
 import { selectActiveCalls, useCallsStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import { ScrollView, Text, View } from '@resgrid/ui';
 import React, { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 
-import { useNow } from '../../hooks/use-now';
 import { useStale } from '../../hooks/use-stale';
 import { useWidgetSettings } from '../../hooks/use-widget-settings-store';
 import { useWidgetTitle } from '../../hooks/use-widget-title';

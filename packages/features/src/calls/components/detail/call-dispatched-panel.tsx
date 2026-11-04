@@ -6,7 +6,7 @@ import { UserPlus } from 'lucide-react-native';
 import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { getDispatchTypeStyle, getUniqueDispatches, isUnitDispatchType } from '../../lib/call-dispatch';
+import { dispatchKey, getDispatchTypeStyle, getUniqueDispatches, isUnitDispatchType } from '../../lib/call-dispatch';
 
 export interface CallDispatchedPanelProps {
   dispatches: readonly DispatchedEventResultData[];
@@ -53,7 +53,7 @@ export const CallDispatchedPanel: React.FC<CallDispatchedPanelProps> = ({ dispat
         const isUnit = isUnitDispatchType(dispatch.Type);
 
         return (
-          <View key={`${dispatch.Id || index}-${dispatch.Type}`} style={styles.row} className="bg-background-50" testID={`call-dispatched-${dispatch.Id || index}`}>
+          <View key={dispatchKey(dispatch)} style={styles.row} className="bg-background-50" testID={`call-dispatched-${dispatch.Id || index}`}>
             <View style={StyleSheet.flatten([styles.badge, { backgroundColor: style.backgroundColor }])}>
               <Text style={StyleSheet.flatten([styles.badgeText, { color: style.textColor }])}>{style.label}</Text>
             </View>

@@ -59,7 +59,19 @@ export const DispatchSelectionModal: React.FC<DispatchSelectionModalProps> = ({ 
   const count = dispatchSelectionCount(draft);
 
   return (
-    <CallModalFrame isOpen={isOpen} onClose={onClose} title={t('calls.select_dispatch_recipients')} testID="dispatch-selection">
+    <CallModalFrame
+      isOpen={isOpen}
+      onClose={onClose}
+      title={t('calls.select_dispatch_recipients')}
+      testID="dispatch-selection"
+      footer={
+        <View className="border-t border-outline-100 bg-background-0 p-4">
+          <Button onPress={() => onConfirm(draft)} accessibilityLabel={t('common.done')} testID="dispatch-selection-confirm">
+            <ButtonText>{draft.everyone ? `${t('common.done')} — ${t('calls.everyone')}` : `${t('common.done')} (${count} ${t('calls.selected')})`}</ButtonText>
+          </Button>
+        </View>
+      }
+    >
       <View style={styles.panel}>
         {allowEveryone ? (
           <View style={styles.everyone}>
@@ -110,9 +122,6 @@ export const DispatchSelectionModal: React.FC<DispatchSelectionModalProps> = ({ 
             </View>
           );
         })}
-        <Button className="mt-4" onPress={() => onConfirm(draft)} accessibilityLabel={t('common.done')} testID="dispatch-selection-confirm">
-          <ButtonText>{draft.everyone ? `${t('common.done')} — ${t('calls.everyone')}` : `${t('common.done')} (${count} ${t('calls.selected')})`}</ButtonText>
-        </Button>
       </View>
     </CallModalFrame>
   );

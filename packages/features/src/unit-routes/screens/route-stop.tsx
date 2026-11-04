@@ -1,4 +1,5 @@
 import { RouteInstanceStatus, useRoutesStore } from '@resgrid/data';
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import { Button, ButtonSpinner, ButtonText, HStack, Pressable, ScreenHeader, ScrollView, Text, Textarea, TextareaInput, useFormFactor, useToast, View, VStack, ZeroState } from '@resgrid/ui';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -36,6 +37,7 @@ const Chip: React.FC<{ label: string; color: string; testID?: string }> = ({ lab
  */
 export default function RouteStopScreen({ stopId: stopIdProp, renderMap }: RouteStopScreenProps) {
   const { t } = useTranslation();
+  const timeZone = useDepartmentTimeZone();
   const toast = useToast();
   const { isElectron, isDesktop } = useFormFactor();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
@@ -67,10 +69,10 @@ export default function RouteStopScreen({ stopId: stopIdProp, renderMap }: Route
 
   const status = stopStatusLook(stop.Status);
   const priority = STOP_PRIORITY_LOOK[stop.Priority] ?? STOP_PRIORITY_LOOK[0];
-  const arrival = formatRouteTime(stop.PlannedArrivalTime);
-  const departure = formatRouteTime(stop.PlannedDepartureTime);
-  const checkedIn = formatRouteTime(stop.CheckInOn);
-  const checkedOut = formatRouteTime(stop.CheckOutOn);
+  const arrival = formatRouteTime(stop.PlannedArrivalTime, timeZone);
+  const departure = formatRouteTime(stop.PlannedDepartureTime, timeZone);
+  const checkedIn = formatRouteTime(stop.CheckInOn, timeZone);
+  const checkedOut = formatRouteTime(stop.CheckOutOn, timeZone);
   const hasContact = !!stop.ContactId || !!stop.ContactName;
 
   const onAction = (kind: StopActionKind) => {

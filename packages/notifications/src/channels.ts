@@ -80,6 +80,7 @@ export const ANDROID_CHANNELS: readonly AndroidChannelSpec[] = [
   spec('calls', 'generic_call', 'Generic Call', EXTRA_CHANNEL_SOUNDS.calls, 'call'),
   ...soundTypeEntries.map(([name, value]) => {
     const channel = SOUND_TYPE_CHANNELS[name];
+
     return spec(String(value), channel.key, channel.name, PUSH_SOUND_TYPE_SOUNDS[value], channel.kind);
   }),
   ...CUSTOM_TONES.map((tone, index) => spec(tone, 'custom_tone', 'Custom Call Tone {{number}}', tone, 'custom', { number: index + 1 })),
@@ -89,14 +90,25 @@ export const ANDROID_CHANNELS: readonly AndroidChannelSpec[] = [
 
 export const ANDROID_CHANNEL_IDS: readonly string[] = ANDROID_CHANNELS.map((channel) => channel.id);
 
+/**
+ * The unit's own status timer, a notification the app schedules on the device (local-notifications.ts), not one Core
+ * sends: so it is not in ANDROID_CHANNELS, and only apps that schedule it (manifest module `unit-status`) create it.
+ */
+export const STATUS_TIMER_CHANNEL: AndroidChannelSpec = spec('unit-status-timer', 'unit_status_timer', 'Unit Status Timer', 'modernunitnotice', 'alert');
+
 /** Vibration pattern for channels that vibrate (Unit baseline). */
 export const CHANNEL_VIBRATION_PATTERN: readonly number[] = [300, 500];
+
 /** LED colour for channels (Unit baseline). */
 export const CHANNEL_LIGHT_COLOR = '#FF231F7C';
 
 /** iOS categories Core sends (`aps.category`, from the event code's first letter: c calls, m messages, n notifications, t/g chats). */
 export const IOS_CATEGORY_IDS = ['calls', 'messages', 'notifications', 'chats'] as const;
+
 export type IosCategoryId = (typeof IOS_CATEGORY_IDS)[number];
+
+/** iOS category of the unit's own status timer (local, like its channel). */
+export const STATUS_TIMER_CATEGORY_ID = 'unit-status-timer';
 
 /** Action ids on notifications. `check-in` is also the Android notifee press action of the check-in timer notification. */
 export const VIEW_ACTION_ID = 'view';
@@ -104,19 +116,37 @@ export const CHECK_IN_ACTION_ID = 'check-in';
 
 /** Structurally compatible with notifee's `IOSNotificationCategory` (kept local so this module has no native import). */
 export interface IosCategorySpec {
-  id: IosCategoryId;
+  id: IosCategoryId | typeof STATUS_TIMER_CATEGORY_ID;
   actions?: { id: string; title: string; foreground?: boolean }[];
 }
 
 export type ChannelTranslate = (key: string, defaultValue: string, params?: Record<string, string | number>) => string;
 
-/** Builds the four iOS categories; `calls` carries View and, for variants with check-in actions, Check In. */
-export const buildIosCategories = (options: { checkInActions: boolean; translate: ChannelTranslate }): IosCategorySpec[] => {
+export interface IosCategoryOptions {
+  checkInActions: boolean;
+  /** The app schedules the unit's own status timer notifications (manifest module `unit-status`). */
+  statusTimer?: boolean;
+  translate: ChannelTranslate;
+}
+
+/**
+ * Builds the four iOS categories Core sends; `calls` carries View and, for variants with check-in actions, Check In.
+ * Apps with the unit's status timer add its category, whose Update Status action opens the status console like a tap.
+ */
+export const buildIosCategories = (options: IosCategoryOptions): IosCategorySpec[] => {
   const { translate } = options;
   const callActions = [{ id: VIEW_ACTION_ID, title: translate('push_notifications.view_call', 'View Call'), foreground: true }];
+
   if (options.checkInActions) {
     // Foreground: the check-in posts through the app's own store (outbox when offline), which needs the JS runtime.
     callActions.push({ id: CHECK_IN_ACTION_ID, title: translate('check_in.perform_check_in', 'Check In'), foreground: true });
   }
-  return [{ id: 'calls', actions: callActions }, { id: 'messages' }, { id: 'notifications' }, { id: 'chats' }];
+
+  const categories: IosCategorySpec[] = [{ id: 'calls', actions: callActions }, { id: 'messages' }, { id: 'notifications' }, { id: 'chats' }];
+
+  if (options.statusTimer) {
+    categories.push({ id: STATUS_TIMER_CATEGORY_ID, actions: [{ id: VIEW_ACTION_ID, title: translate('unit_status.timer_update_status', 'Update status'), foreground: true }] });
+  }
+
+  return categories;
 };

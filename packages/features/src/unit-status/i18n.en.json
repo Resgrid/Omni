@@ -2,5 +2,17 @@
   "unit_status.console_title": "Status console",
   "unit_status.responding_to": "Responding to {{name}}",
   "unit_status.since": "Since {{time}}",
-  "unit_status.switch_operator_body": "This ends your shift on this device and signs you out so the next operator can sign in. Unsent changes stay on the device."
+  "unit_status.switch_operator_body": "This ends your shift on this device and signs you out so the next operator can sign in. Unsent changes stay on the device.",
+  "unit_status.timer_alert_at": "Alert at {{time}}",
+  "unit_status.timer_alert_in": "Status timer alert in {{time}}",
+  "unit_status.timer_exact_alarms_allow": "Allow on-time timer alerts",
+  "unit_status.timer_exact_alarms_hint": "Status timer alerts can arrive late while the app is in the background.",
+  "unit_status.timer_exceeded": "Status timer exceeded: {{status}} for {{elapsed}}",
+  "unit_status.timer_in_status": "{{elapsed}} in {{status}}",
+  "unit_status.timer_notification_body": "{{unit}}: update your status if it has changed.",
+  "unit_status.timer_title": "Status timer",
+  "unit_status.timer_update_status": "Update status",
+  "unit_status.timer_warn_at": "Warning at {{time}}",
+  "unit_status.timer_warn_in": "Status timer warning in {{time}}",
+  "unit_status.timer_warning": "Status timer warning: {{status}} for {{elapsed}}"
 }

@@ -1,4 +1,5 @@
 import { useCallsStore } from '@resgrid/data';
+import { revealedCallText } from '@resgrid/features/calls';
 import { useNavigationHandoff } from '@resgrid/features/contacts';
 import { useStatusContext } from '@resgrid/features/status';
 import { unitRoutesRoutes } from '@resgrid/features/unit-routes/routes';
@@ -35,16 +36,23 @@ const ERROR_KEYS: Record<NavigationErrorCode, string> = {
 
 const sameDestination = (a: NavigationDestination | null, b: NavigationDestination): boolean => {
   if (!a || a.kind !== b.kind) return false;
+
   if (a.kind === 'call' && b.kind === 'call') return a.callId === b.callId;
+
   if (a.kind === 'route' && b.kind === 'route') return a.routeInstanceId === b.routeInstanceId;
+
   if (a.kind === 'point' && b.kind === 'point') return a.latitude === b.latitude && a.longitude === b.longitude;
+
   return false;
 };
 
 const toDestination = (request: NavigationRequest, callName: string | null): NavigationDestination | null => {
   if (!request) return null;
+
   if (request.kind === 'call') return { kind: 'call', callId: request.callId, name: callName };
+
   if (request.kind === 'route') return { kind: 'route', routeInstanceId: request.routeInstanceId, name: null };
+
   return { kind: 'point', latitude: request.point.latitude, longitude: request.point.longitude, name: request.point.name };
 };
 
@@ -72,14 +80,20 @@ export default function NavigationScreen({ simulationSpeedMps: simulationProp = 
   const params = useLocalSearchParams<{ callId?: string | string[]; instanceId?: string | string[]; simulate?: string | string[] }>();
   const simulateParam = Array.isArray(params.simulate) ? params.simulate[0] : params.simulate;
   const simulationSpeedMps = simulationProp ?? (isDevelopmentBuild() && simulateParam === '1' ? SIMULATION_SPEEDS_MPS[1] : null);
+
   const [request] = useState<NavigationRequest>(() => {
     const fromUrl = readNavigationParams(params);
+
     if (fromUrl) return fromUrl;
     const point = takePointNavigationRequest();
+
     return point ? { kind: 'point', point } : null;
   });
+
   const call = useCallsStore((state) => (request?.kind === 'call' ? state.calls.find((item) => Number(item.CallId) === request.callId) : undefined));
-  const destination = useMemo(() => toDestination(request, call?.Name ?? null), [request, call?.Name]);
+  // The name goes into the navigation notification: a withheld or missing one leaves it out ("Navigating").
+  const callName = call ? revealedCallText(call, 'Name') || null : null;
+  const destination = useMemo(() => toDestination(request, callName), [request, callName]);
   const status = useNavigationStore((state) => state.status);
   const error = useNavigationStore((state) => state.error);
   const sessionDestination = useNavigationStore((state) => state.destination);
@@ -96,8 +110,10 @@ export default function NavigationScreen({ simulationSpeedMps: simulationProp = 
     if (started.current || !available || !destination) return;
     started.current = true;
     const current = useNavigationStore.getState();
+
     // Coming back to a session already under way (e.g. from the stop screen) keeps it.
     if ((current.status === 'navigating' || current.status === 'arrived') && sameDestination(current.destination, destination)) return;
+
     if (current.status !== 'idle') current.stop();
     start();
   }, [available, destination, start]);
@@ -115,6 +131,7 @@ export default function NavigationScreen({ simulationSpeedMps: simulationProp = 
   const external = useMemo(() => {
     if (request?.kind === 'point') return { latitude: request.point.latitude, longitude: request.point.longitude, label: request.point.name ?? undefined };
     const leg = useNavigationStore.getState().route?.legs.at(-1);
+
     return leg ? { latitude: leg.destination[1], longitude: leg.destination[0], label: destination?.name ?? undefined } : null;
     // The route's end changes only with a new route.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -123,6 +140,7 @@ export default function NavigationScreen({ simulationSpeedMps: simulationProp = 
   const openExternal = useCallback(async () => {
     if (!external) return;
     const open = handoff.openExternal ?? handoff.navigateTo;
+
     if (!(await open(external))) toast.error(t('map.failed_to_open_maps'));
   }, [external, handoff, t, toast]);
 
@@ -136,6 +154,7 @@ export default function NavigationScreen({ simulationSpeedMps: simulationProp = 
   }
 
   const active = sessionDestination !== null && sameDestination(sessionDestination, destination);
+
   if (!active || status === 'loading' || status === 'idle') {
     return (
       <View style={styles.root} testID="navigation-screen">

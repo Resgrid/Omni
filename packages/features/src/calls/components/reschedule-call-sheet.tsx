@@ -1,5 +1,6 @@
-import { parseApiUtcDate, toZonedWallClock } from '@resgrid/core/utils/dates';
+import { parseApiUtcDate, toZonedWallClock, zonedWallClockToUtc } from '@resgrid/core/utils/dates';
 import { useCallDetailStore, useCallsStore } from '@resgrid/data';
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import { Button, ButtonText, CustomBottomSheet, DateTimeField, Text, useToast } from '@resgrid/ui';
 import React, { useEffect, useState } from 'react';
@@ -15,20 +16,22 @@ export interface RescheduleCallSheetProps {
 
 const pad = (value: number): string => String(value).padStart(2, '0');
 
-/** `UpdateScheduledDispatchTime` takes the wall-clock dispatch time ("yyyy-MM-ddTHH:mm:ss"), as Dispatch sends it. */
-export const toDispatchWallClock = (instant: Date): string => {
-  const wall = toZonedWallClock(instant, null);
+/**
+ * `UpdateScheduledDispatchTime` takes the dispatch time as a wall clock ("yyyy-MM-ddTHH:mm:ss") that Core reads in the
+ * department's zone, so the picked instant is written in that zone; with no department zone (`null`, older servers) it
+ * is written in the device zone, as Dispatch did.
+ */
+export const toDispatchWallClock = (instant: Date, zoneId: string | null): string => {
+  const wall = toZonedWallClock(instant, zoneId);
 
   return `${wall.year}-${pad(wall.month)}-${pad(wall.day)}T${pad(wall.hour)}:${pad(wall.minute)}:${pad(wall.second)}`;
 };
 
 const HOUR_MS = 60 * 60 * 1000;
 
-/** Quick choices (Dispatch): in an hour, in a day, tomorrow at 08:00. */
-const presets = (now: Date): { key: string; at: Date }[] => {
-  const tomorrowMorning = new Date(now.getTime() + 24 * HOUR_MS);
-
-  tomorrowMorning.setHours(8, 0, 0, 0);
+/** Quick choices (Dispatch): in an hour, in a day, tomorrow at 08:00 department time. */
+const presets = (now: Date, zoneId: string | null): { key: string; at: Date }[] => {
+  const tomorrowMorning = zonedWallClockToUtc({ ...toZonedWallClock(new Date(now.getTime() + 24 * HOUR_MS), zoneId), hour: 8, minute: 0, second: 0 }, zoneId);
 
   return [
     { key: 'call_detail.reschedule_in_1_hour', at: new Date(now.getTime() + HOUR_MS) },
@@ -44,16 +47,24 @@ const presets = (now: Date): { key: string; at: Date }[] => {
 export const RescheduleCallSheet: React.FC<RescheduleCallSheetProps> = ({ isOpen, onClose, callId }) => {
   const { t } = useTranslation();
   const toast = useToast();
-  const call = useCallDetailStore((state) => state.details[callId]?.call ?? null);
+  const timeZone = useDepartmentTimeZone();
+
+  // The stored schedule, not the call object: a refresh of the call (a realtime ping) must not reset the time picked.
+  const scheduled = useCallDetailStore((state) => {
+    const call = state.details[callId]?.call;
+
+    return call ? scheduledDispatchUtc(call) : null;
+  });
+
   const isWriting = useCallDetailStore((state) => state.isWriting);
   const [value, setValue] = useState('');
 
   useEffect(() => {
     if (!isOpen) return;
-    const current = call ? parseApiUtcDate(scheduledDispatchUtc(call)) : null;
+    const current = scheduled ? parseApiUtcDate(scheduled) : null;
 
     setValue((current ?? new Date()).toISOString());
-  }, [call, isOpen]);
+  }, [isOpen, scheduled]);
 
   const picked = parseApiUtcDate(value);
 
@@ -65,7 +76,7 @@ export const RescheduleCallSheet: React.FC<RescheduleCallSheetProps> = ({ isOpen
     }
 
     try {
-      await useCallDetailStore.getState().rescheduleDispatchTime(callId, toDispatchWallClock(picked));
+      await useCallDetailStore.getState().rescheduleDispatchTime(callId, toDispatchWallClock(picked, timeZone));
       toast.success(t('call_detail.reschedule_success'));
       const calls = useCallsStore.getState();
 
@@ -84,7 +95,7 @@ export const RescheduleCallSheet: React.FC<RescheduleCallSheetProps> = ({ isOpen
           {t('call_detail.reschedule')}
         </Text>
         <View style={styles.presets}>
-          {presets(new Date()).map((preset) => (
+          {presets(new Date(), timeZone).map((preset) => (
             <Button
               key={preset.key}
               variant="outline"

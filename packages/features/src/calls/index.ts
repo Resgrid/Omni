@@ -9,6 +9,7 @@
 import { AddResourcesSheet, type AddResourcesSheetProps } from './components/add-resources-sheet';
 import { CallConfirmDialog, type CallConfirmDialogProps } from './components/call-confirm-dialog';
 import { type CallDispatchNowControls, useCallDispatchNow, type UseCallDispatchNowOptions } from './hooks/use-call-dispatch-now';
+import { callDisplayName, callDisplayText, type CallTextField, type CallTextFields, revealedCallText } from './lib/call-display';
 import { callDestinationTarget, callLocationTarget, isUsablePoint } from './lib/call-location';
 import { getScheduledDispatchPrefill, isDispatchTimeTooSoon, MIN_DISPATCH_LEAD_MINUTES, toDispatchOnUtc } from './lib/call-schedule';
 import { buildAddResourcesRequest, dispatchesToSelection, isDispatchSelectionEmpty, mergeDispatchSelections, selectionSize } from './lib/dispatch-selection';
@@ -97,7 +98,11 @@ export {
   type CallConfirmDialogProps,
   callDestinationTarget,
   type CallDispatchNowControls,
+  callDisplayName,
+  callDisplayText,
   callLocationTarget,
+  type CallTextField,
+  type CallTextFields,
   dispatchesToSelection,
   getMissingCallFieldsFromRefusal,
   getScheduledDispatchPrefill,
@@ -106,6 +111,7 @@ export {
   isUsablePoint,
   mergeDispatchSelections,
   MIN_DISPATCH_LEAD_MINUTES,
+  revealedCallText,
   selectionSize,
   toDispatchOnUtc,
   useCallDispatchNow,

@@ -1,4 +1,6 @@
 import { formatUtcInDepartmentTime, parseUtcMs } from '@resgrid/core/utils/dates';
+import { callDisplayName, revealedCallText } from '@resgrid/features/calls';
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import { IncidentCommandStatus, type IncidentCommandSummary } from '@resgrid/models';
 import { Badge, BadgeText, HStack, Pressable, Text, VStack } from '@resgrid/ui';
@@ -9,10 +11,12 @@ import { View } from 'react-native';
 /** Whole minutes between establishment and close (or now), `Xh Ym`; null when unknown. */
 export function formatIncidentDuration(summary: Pick<IncidentCommandSummary, 'EstablishedOn' | 'ClosedOn'>, nowMs: number): string | null {
   const start = parseUtcMs(summary.EstablishedOn);
+
   if (start === null) return null;
   const end = parseUtcMs(summary.ClosedOn) ?? nowMs;
   const minutes = Math.max(0, Math.floor((end - start) / 60_000));
   const hours = Math.floor(minutes / 60);
+
   return hours > 0 ? `${hours}h ${minutes % 60}m` : `${minutes}m`;
 }
 
@@ -27,9 +31,15 @@ export interface IncidentCardProps {
 /** One incident in IC's list (IC incident-card): name, call, address, commander, resources and duration. */
 export const IncidentCard: React.FC<IncidentCardProps> = ({ summary, nowMs, isTracked, onPress }) => {
   const { t } = useTranslation();
+  const timeZone = useDepartmentTimeZone();
   const isActive = summary.Status === IncidentCommandStatus.Active;
-  const title = summary.Name || summary.CallName || t('incident_command.call_number', { number: summary.CallNumber || String(summary.CallId) });
+  const protectedLabel = t('data_protection.protected_value');
+  // The summary carries the call's name and address without a RedactedFields list: the sentinel marks a withheld one.
+  const callFields = { Name: summary.CallName, Address: summary.CallAddress };
+  const title = summary.Name || callDisplayName(callFields, protectedLabel) || t('incident_command.call_number', { number: summary.CallNumber || String(summary.CallId) });
+  const address = revealedCallText(callFields, 'Address');
   const duration = formatIncidentDuration(summary, nowMs);
+
   return (
     <Pressable
       onPress={() => onPress(summary)}
@@ -56,13 +66,13 @@ export const IncidentCard: React.FC<IncidentCardProps> = ({ summary, nowMs, isTr
           </Badge>
         </HStack>
       </HStack>
-      {summary.CallAddress ? (
+      {address !== '' ? (
         <HStack className="mt-1 items-center" space="xs">
           <View>
             <MapPin size={14} color="#6b7280" />
           </View>
           <Text className="min-w-0 flex-1 text-sm text-typography-700" numberOfLines={1}>
-            {summary.CallAddress}
+            {address ?? protectedLabel}
           </Text>
         </HStack>
       ) : null}
@@ -82,7 +92,7 @@ export const IncidentCard: React.FC<IncidentCardProps> = ({ summary, nowMs, isTr
           <Text className="text-xs text-typography-600">{t('incident_command.resource_counts', { units: summary.AssignedUnitCount ?? 0, personnel: summary.AssignedPersonnelCount ?? 0 })}</Text>
         </HStack>
         <Text className="text-xs text-typography-500">
-          {duration ? t('incident_command.established_duration', { time: formatUtcInDepartmentTime(summary.EstablishedOn, null), duration }) : formatUtcInDepartmentTime(summary.EstablishedOn, null)}
+          {duration ? t('incident_command.established_duration', { time: formatUtcInDepartmentTime(summary.EstablishedOn, timeZone), duration }) : formatUtcInDepartmentTime(summary.EstablishedOn, timeZone)}
         </Text>
       </HStack>
     </Pressable>

@@ -1,6 +1,7 @@
 import { useTerm } from '@resgrid/auth';
 import { isSafeRouteId } from '@resgrid/core/utils/route-ids';
 import { useWorkOrdersStore } from '@resgrid/data';
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import { WorkOrderActivityType, type WorkOrderTransition } from '@resgrid/models';
 import { Button, ButtonSpinner, ButtonText, HStack, Input, InputField, Loading, ScreenHeader, Text, Textarea, TextareaInput, useThemeColors, View, VStack, ZeroState } from '@resgrid/ui';
@@ -17,6 +18,7 @@ import { choiceName, formatDueDate, formatWorkOrderTime, isConflictCode, parseHo
 
 function WorkOrderDetailContent({ id }: { id: string }) {
   const { t, i18n } = useTranslation();
+  const timeZone = useDepartmentTimeZone();
   const locale = i18n.language;
   const colors = useThemeColors();
   const router = useRouter();
@@ -218,7 +220,7 @@ function WorkOrderDetailContent({ id }: { id: string }) {
               {activities.map((activity) => (
                 <VStack key={activity.Id} className="border-b border-outline-100 pb-1" testID={`work-order-activity-${activity.Id}`}>
                   <Text size="sm" className="text-typography-500">
-                    {`${formatWorkOrderTime(activity.CreatedOn, locale)} · ${t(`workOrders.activityType.${activity.Type}`)}${activity.Type === WorkOrderActivityType.StatusChanged && activity.NewStatus != null ? ` → ${t(`workOrders.status.${activity.NewStatus}`)}` : ''}`}
+                    {`${formatWorkOrderTime(activity.CreatedOn, timeZone, locale)} · ${t(`workOrders.activityType.${activity.Type}`)}${activity.Type === WorkOrderActivityType.StatusChanged && activity.NewStatus != null ? ` → ${t(`workOrders.status.${activity.NewStatus}`)}` : ''}`}
                   </Text>
                   {activity.Note ? <Text className="text-typography-800">{activity.Note}</Text> : null}
                 </VStack>

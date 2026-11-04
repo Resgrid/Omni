@@ -1,5 +1,6 @@
 // Stand-ins for the packages whose native modules have no Jest implementation (voice: BLE/LiveKit; notifications: notifee),
 // plus a realtime store and location transmitter the location section can drive.
+import type { ExactAlarmAccessView } from '@resgrid/notifications';
 import { create } from 'zustand';
 
 export const mockVoiceStore = create(() => ({
@@ -33,7 +34,15 @@ export const voiceModule = () => ({
 
 export const mockSoundService = { play: jest.fn(async () => undefined) };
 
-export const notificationsModule = () => ({ notificationSoundService: mockSoundService });
+/** Exact-alarm access the notifications section reads (Android); tests set `access`. */
+export const mockExactAlarms: ExactAlarmAccessView = { access: 'notNeeded', request: jest.fn(async () => undefined) };
+
+export const notificationsModule = () => ({
+  notificationSoundService: mockSoundService,
+  // The real gate: the active manifest has the unit status console.
+  hasStatusTimerNotifications: () => jest.requireActual<{ getActiveVariant: () => { modules: readonly string[] } }>('@resgrid/config').getActiveVariant().modules.includes('unit-status'),
+  useExactAlarmAccess: (enabled: boolean) => (enabled ? mockExactAlarms : { access: 'notNeeded', request: mockExactAlarms.request }),
+});
 
 export const mockRealtimeStore = create(() => ({
   hubs: { eventing: { status: 'connected', joined: true, joinedAt: 1 }, geolocation: { status: 'disconnected', joined: false, joinedAt: 0 }, chat: { status: 'disconnected', joined: false, joinedAt: 0 } },

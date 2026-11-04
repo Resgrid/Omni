@@ -1,4 +1,5 @@
 import { formatUtcInDepartmentTime } from '@resgrid/core/utils/dates';
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import type { NoteResultData } from '@resgrid/models';
 import { Button, ButtonText, CustomBottomSheet, HtmlRenderer, Text } from '@resgrid/ui';
@@ -14,9 +15,10 @@ export interface NoteDetailsSheetProps {
 /** A department note in a sheet; the body is server HTML and renders only through the sanitizing HtmlRenderer. */
 export const NoteDetailsSheet: React.FC<NoteDetailsSheetProps> = ({ note, isOpen, onClose }) => {
   const { t } = useTranslation();
+  const timeZone = useDepartmentTimeZone();
   const isVisible = isOpen ? note !== null : false;
-  const added = note ? formatUtcInDepartmentTime(note.AddedOn, null) : '';
-  const expires = note?.ExpiresOn ? formatUtcInDepartmentTime(note.ExpiresOn, null) : '';
+  const added = note ? formatUtcInDepartmentTime(note.AddedOn, timeZone) : '';
+  const expires = note?.ExpiresOn ? formatUtcInDepartmentTime(note.ExpiresOn, timeZone) : '';
   return (
     <CustomBottomSheet isOpen={isVisible} onClose={onClose} snapPoints={[80]} testID="note-details-sheet">
       {note ? (

@@ -10,16 +10,21 @@ import { useDefinitionDisplayName } from '../lib/definition-name';
 
 type BadgeAction = 'muted' | 'info' | 'warning' | 'success' | 'error';
 
-const stateAction = (state: number): BadgeAction => {
+/** The badge tone of a record state: under way (info), sent back (warning), done (success), ended or refused (error). */
+export const recordStateAction = (state: number): BadgeAction => {
   switch (state) {
     case RmsRecordState.Draft:
       return 'muted';
     case RmsRecordState.ReadyForReview:
+    case RmsRecordState.Submitted:
+    case RmsRecordState.Corrected:
       return 'info';
     case RmsRecordState.Returned:
       return 'warning';
+    case RmsRecordState.Approved:
     case RmsRecordState.Finalized:
     case RmsRecordState.Amended:
+    case RmsRecordState.Accepted:
       return 'success';
     default:
       return 'error';
@@ -70,6 +75,7 @@ export const RecordListItem: React.FC<RecordListItemProps> = ({ record, onPress,
   const typeName = useDefinitionDisplayName(record.DefinitionKey, catalogName);
   const title = record.RecordNumber || record.DraftReference || typeName || t('records.untitled');
   const state = recordStateName(record);
+
   return (
     <RowShell
       icon={
@@ -80,7 +86,7 @@ export const RecordListItem: React.FC<RecordListItemProps> = ({ record, onPress,
       title={title}
       subtitle={record.DisplaySummary || typeName}
       badge={
-        <Badge action={stateAction(record.State)} size="sm">
+        <Badge action={recordStateAction(record.State)} size="sm">
           <BadgeText>{state}</BadgeText>
         </Badge>
       }
@@ -105,6 +111,7 @@ export const PendingDraftItem: React.FC<PendingDraftItemProps> = ({ draft, onPre
   const title = draft.recordId ? draft.name : typeName;
   const subtitle = draft.conflict ? t(`records.conflict_${draft.conflict.replace('-', '_')}`) : draft.lastError ? t('records.save_failed') : t('records.not_sent_yet');
   const attention = !!draft.conflict || !!draft.lastError;
+
   return (
     <RowShell
       icon={
@@ -137,6 +144,7 @@ export const AssignmentItem: React.FC<AssignmentItemProps> = ({ assignment, onPr
   const { t } = useTranslation();
   const purpose = t(`records.purpose_${assignment.Purpose}`, { defaultValue: assignment.Purpose });
   const state = t(`records.assignment_state_${assignment.State.toLowerCase()}`, { defaultValue: assignment.State });
+
   return (
     <RowShell
       icon={null}

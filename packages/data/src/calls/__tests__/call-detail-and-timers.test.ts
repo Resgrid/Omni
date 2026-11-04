@@ -74,6 +74,29 @@ describe('call detail', () => {
     expect(useCallDetailStore.getState().details['5'].notes).toEqual([]);
   });
 
+  it('reads the current call for a whole-call write, never a cached copy, and refuses when part of it is missing', async () => {
+    // SAFETY: the read touches only the call's id and name and the extra data's dispatches.
+    const stale = { call: { CallId: '5', Name: 'Stale' }, extraData: { Dispatches: [] }, notes: [], images: null, files: null, audio: null, fetchedAt: 1 } as never;
+
+    useCallDetailStore.setState({ details: { '5': stale } });
+    // SAFETY: GetCall and GetCallExtraData envelopes with only the fields this read uses.
+    jest.mocked(getCall).mockResolvedValue(ok({ CallId: '5', Name: 'Renamed by another dispatcher' }) as never);
+    // SAFETY: as above.
+    jest.mocked(getCallExtraData).mockResolvedValue(ok({ Dispatches: [{ Type: 'User', Id: 'u1' }] }) as never);
+
+    const current = await useCallDetailStore.getState().fetchCurrentCall('5');
+
+    expect(current?.call.Name).toBe('Renamed by another dispatcher');
+    expect(current?.extraData.Dispatches).toEqual([{ Type: 'User', Id: 'u1' }]);
+    expect(useCallDetailStore.getState().details['5'].call?.Name).toBe('Renamed by another dispatcher');
+
+    // SAFETY: a not_found GetCallExtraData envelope.
+    jest.mocked(getCallExtraData).mockResolvedValue(notFound(null) as never);
+    expect(await useCallDetailStore.getState().fetchCurrentCall('5')).toBeNull();
+    jest.mocked(getCall).mockRejectedValue(networkError());
+    await expect(useCallDetailStore.getState().fetchCurrentCall('5')).rejects.toBeDefined();
+  });
+
   it('a refused save keeps the loaded call usable (writeError, rethrown) — Dispatch', async () => {
     await useCallDetailStore.getState().fetchCallDetail('5');
     jest.mocked(updateCall).mockRejectedValue(httpError(400));

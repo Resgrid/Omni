@@ -1,6 +1,7 @@
 import { useCallDetailStore, useCallsStore, useMapMarkersStore, useNotesStore, usePersonnelStore, useUnitsStore, useWeatherAlertsStore } from '@resgrid/data';
 import { CALL_LIST_REFRESH_EVENTS } from '@resgrid/features/calls';
 import { useIsNavigationEtaEnabled, useNavigationEtaSync } from '@resgrid/features/navigation-eta';
+import { useUnitAlertsSync } from '@resgrid/features/unit-status-alerts';
 import { useTranslation } from '@resgrid/i18n';
 import { type RealtimeEventName, useRealtimeEvent, useRealtimeRefetch } from '@resgrid/realtime';
 import { useCallback, useEffect } from 'react';
@@ -28,9 +29,10 @@ export const refreshSelectedCall = async (): Promise<void> => {
 
 /**
  * The console's data (Dispatch baseline home screen): calls, priorities, the pending/scheduled queues, units (infos and
- * status sets), personnel, department notes, weather alerts and the map pins — read from the persisted stores first
- * (works offline) and refreshed on mount. SignalR events are id-only pings: each refetches its lists bypassing caches
- * (single flight with one trailing run) and adds a line to the activity log; a hub rejoin catches everything up.
+ * status sets), personnel, department notes, weather alerts, unit status timers and the map pins — read from the
+ * persisted stores first (works offline) and refreshed on mount. SignalR events are id-only pings: each refetches its
+ * lists bypassing caches (single flight with one trailing run) and adds a line to the activity log; a hub rejoin
+ * catches everything up.
  */
 export function useConsoleData({ realtime = true }: { realtime?: boolean } = {}): { refreshAll: () => Promise<void> } {
   const { t } = useTranslation();
@@ -73,6 +75,8 @@ export function useConsoleData({ realtime = true }: { realtime?: boolean } = {})
   useRealtimeRefetch(CONSOLE_PERSONNEL_EVENTS, refreshPersonnel, realtime);
   // Live ETAs of navigating units for the unit rows, call cards and map labels (Navigation.InApp departments).
   useNavigationEtaSync(useIsNavigationEtaEnabled());
+  // Status timer thresholds and acknowledgements for the timer tile, tab and unit rows (the unit rows refresh above).
+  useUnitAlertsSync(true);
 
   const logEvent = useCallback(
     (name: RealtimeEventName) => {

@@ -1,5 +1,5 @@
 import { useCallsStore } from '@resgrid/data';
-import { callRoutes } from '@resgrid/features/calls';
+import { callDisplayName, callRoutes, revealedCallText } from '@resgrid/features/calls';
 import { CheckInTab } from '@resgrid/features/check-in';
 import { useTranslation } from '@resgrid/i18n';
 import { Box, Button, ButtonText, Heading, HStack, Text, VStack } from '@resgrid/ui';
@@ -34,12 +34,16 @@ export const ActiveCallTab: React.FC<ActiveCallTabProps> = ({ callId, onClearAct
     );
   }
 
+  const protectedLabel = t('data_protection.protected_value');
+  const name = callDisplayName(call, protectedLabel);
+  const address = revealedCallText(call, 'Address');
+
   return (
     <VStack space="md" className="py-2" testID={testID}>
       <Box className="rounded-xl bg-background-0 p-4">
         <VStack space="xs">
-          <Heading size="sm">{call.Number ? `${call.Name} (#${call.Number})` : call.Name}</Heading>
-          {call.Address ? <Text className="text-sm text-typography-500">{call.Address}</Text> : null}
+          <Heading size="sm">{call.Number ? `${name} (#${call.Number})` : name}</Heading>
+          {address !== '' ? <Text className="text-sm text-typography-500">{address ?? protectedLabel}</Text> : null}
         </VStack>
       </Box>
 

@@ -1,4 +1,5 @@
 import { awaitingDismissKey, awaitingDispatchKey } from '@resgrid/data';
+import { callDisplayName, revealedCallText } from '@resgrid/features/calls';
 import { formatResponseSeconds, minutesSinceUtc, ResponseCodeChip } from '@resgrid/features/runcards';
 import { useTranslation } from '@resgrid/i18n';
 import type { AwaitingResourceRequirementData, AwaitingResourcesCallData, DispatchResponseCodeData } from '@resgrid/models';
@@ -64,6 +65,7 @@ const RequirementBlock: React.FC<Omit<AwaitingCallCardProps, 'onOpenCall'> & { r
           {units.map((unit) => {
             const response = formatResponseSeconds(unit.ResponseSeconds);
             const isBusy = busyKey === awaitingDispatchKey(call.CallId, unit.UnitId);
+
             return (
               <HStack key={`awaiting-unit-${requirement.CallOutstandingRequirementId}-${unit.UnitId}`} space="sm" className="items-center justify-between" testID={`${testID}-unit-${unit.UnitId}`}>
                 <VStack className="flex-1">
@@ -108,6 +110,11 @@ export const AwaitingCallCard: React.FC<AwaitingCallCardProps> = (props) => {
   const age = minutesSinceUtc(call.LoggedOn, now);
   const callLabel = awaitingCallLabel(call);
   const priorityColor = call.PriorityColor || FALLBACK_PRIORITY_COLOR;
+  const protectedLabel = t('data_protection.protected_value');
+  // The awaiting summary carries no RedactedFields list: the sentinel marks a withheld name or address.
+  const callFields = { Name: call.CallName, Address: call.Address };
+  const name = callDisplayName(callFields, protectedLabel);
+  const address = revealedCallText(callFields, 'Address');
 
   return (
     <View style={StyleSheet.flatten([styles.card, { borderLeftColor: priorityColor }])} className="bg-background-0" testID={`awaiting-call-${call.CallId}`}>
@@ -115,7 +122,7 @@ export const AwaitingCallCard: React.FC<AwaitingCallCardProps> = (props) => {
         <HStack space="sm" className="items-start justify-between">
           <VStack className="flex-1">
             <Text className="text-base font-bold" numberOfLines={2}>
-              {call.CallName ? `${callLabel} · ${call.CallName}` : callLabel}
+              {name ? `${callLabel} · ${name}` : callLabel}
             </Text>
             <HStack space="sm" className="flex-wrap items-center">
               {call.PriorityName ? (
@@ -129,13 +136,13 @@ export const AwaitingCallCard: React.FC<AwaitingCallCardProps> = (props) => {
           </VStack>
           <Text className="text-xs font-semibold text-primary-600">{t('awaiting_resources.open_call')}</Text>
         </HStack>
-        {call.Address ? (
+        {address !== '' ? (
           <HStack space="xs" className="mt-1 items-center">
             <View>
               <MapPin size={12} color="#6b7280" />
             </View>
             <Text className="flex-1 text-xs text-typography-500" numberOfLines={1}>
-              {call.Address}
+              {address ?? protectedLabel}
             </Text>
           </HStack>
         ) : null}

@@ -8,6 +8,7 @@
 // Usage: node scripts/ci/run-playwright.mjs <playwright args>
 //   node scripts/ci/run-playwright.mjs install --with-deps chromium
 //   node scripts/ci/run-playwright.mjs test -c apps/omni/e2e/playwright.config.ts --project web-unit
+// A `test` run that starts while another is running in this checkout writes to its own output folder (playwright-output.mjs).
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
@@ -15,6 +16,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { omniRoot, repoRoot } from './lib.mjs';
+import { claimOutputDir } from './playwright-output.mjs';
 
 // Keep in step with the root devDependency once added (docs/build/ci-secrets.md lists it as a follow-up).
 const PLAYWRIGHT_VERSION = process.env.PLAYWRIGHT_VERSION || '1.64.1';
@@ -47,5 +49,15 @@ if (!pkgJson) {
 const cli = path.join(path.dirname(pkgJson), 'cli.js');
 const env = { ...process.env };
 if (nodePath) env.NODE_PATH = [nodePath, process.env.NODE_PATH].filter(Boolean).join(path.delimiter);
+
+if (process.argv[2] === 'test' && !env.E2E_OUTPUT_DIR) {
+  const claim = claimOutputDir();
+  process.on('exit', claim.release);
+
+  if (claim.outputDir) {
+    env.E2E_OUTPUT_DIR = claim.outputDir;
+    console.error(`Another Playwright run in this checkout (pid ${claim.overlaps.join(', ')}) uses the default output folders; this run writes to ${path.relative(repoRoot, claim.outputDir)}.`);
+  }
+}
 const result = spawnSync(process.execPath, [cli, ...process.argv.slice(2)], { cwd: repoRoot, stdio: 'inherit', env });
 process.exit(result.status ?? 1);

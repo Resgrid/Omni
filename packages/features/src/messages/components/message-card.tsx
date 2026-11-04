@@ -1,4 +1,5 @@
 import { ProtectedLabel } from '@resgrid/features/data-protection';
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import { Badge, BadgeText, HStack, Pressable, Text, useThemeColors, VStack } from '@resgrid/ui';
 import { CheckSquare, Clock, Mail, MailOpen, Send, Square, User } from 'lucide-react-native';
@@ -20,6 +21,7 @@ export interface MessageCardProps {
 /** An inbox or sent message: sender (or recipients for sent), time, type, subject and a preview; unread is bold with a dot. */
 export const MessageCard: React.FC<MessageCardProps> = React.memo(({ item, isRead, isSelected = false, selectionMode = false, onPress, onLongPress }) => {
   const { t, i18n } = useTranslation();
+  const timeZone = useDepartmentTimeZone();
   const colors = useThemeColors();
   const { message, isOwn } = item;
   const expired = isMessageExpired(message.ExpiredOn);
@@ -62,7 +64,7 @@ export const MessageCard: React.FC<MessageCardProps> = React.memo(({ item, isRea
                   <Clock size={12} color={colors.textMuted} />
                 </View>
                 <Text size="xs" className="text-typography-500">
-                  {formatSentOn(message, i18n.language)}
+                  {formatSentOn(message, timeZone, i18n.language)}
                 </Text>
               </HStack>
             </VStack>

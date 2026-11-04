@@ -9,7 +9,7 @@
     "ios": {
       "bundleIdentifier": "com.resgrid.unit",
       "associatedDomains": ["webcredentials:unit.resgrid.com", "webcredentials:unit-eu-central.resgrid.com"],
-      "appGroup": null
+      "appGroup": "group.com.resgrid.unit.shared"
     },
     "android": {
       "package": "com.resgrid.unit"
@@ -116,6 +116,7 @@
       "android.permission.RECORD_AUDIO",
       "android.permission.CAPTURE_AUDIO_OUTPUT",
       "android.permission.POST_NOTIFICATIONS",
+      "android.permission.SCHEDULE_EXACT_ALARM",
       "android.permission.FOREGROUND_SERVICE",
       "android.permission.FOREGROUND_SERVICE_MICROPHONE",
       "android.permission.FOREGROUND_SERVICE_PHONE_CALL",

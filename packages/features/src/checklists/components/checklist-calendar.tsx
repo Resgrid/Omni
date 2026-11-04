@@ -1,5 +1,6 @@
 import { formatUtcInDepartmentTime } from '@resgrid/core/utils/dates';
 import { toDataError } from '@resgrid/data';
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import type { CalendarItemResultData } from '@resgrid/models';
 import { HStack, Pressable, Spinner, Text, useThemeColors, VStack } from '@resgrid/ui';
@@ -30,6 +31,7 @@ const monthRange = (month: Date): { start: string; end: string } => {
 /** Scheduled checks on the department calendar, one month at a time (Responder). Redacted entries show the unlock hint. */
 export const ChecklistCalendar: React.FC<ChecklistCalendarProps> = ({ onOpenOccurrence, revision = 0, query = '' }) => {
   const { t, i18n } = useTranslation();
+  const timeZone = useDepartmentTimeZone();
   const colors = useThemeColors();
   const [month, setMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const [entries, setEntries] = useState<CalendarItemResultData[] | null>(null);
@@ -92,7 +94,7 @@ export const ChecklistCalendar: React.FC<ChecklistCalendarProps> = ({ onOpenOccu
       ) : (
         shown.map((entry) => {
           const title = entry.IsRedacted ? t('checklists.ui.unlock') : entry.Title;
-          const when = formatUtcInDepartmentTime(entry.StartUtc, null, { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+          const when = formatUtcInDepartmentTime(entry.StartUtc, timeZone, { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
           return (
             <Pressable
               key={entry.CalendarItemId}

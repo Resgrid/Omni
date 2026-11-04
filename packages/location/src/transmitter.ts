@@ -23,6 +23,7 @@ import { describeError, getLocationLogger } from './logger';
 import type { LocationEvent } from './outbox-handlers';
 import { buildPersonLocationPayload, buildUnitLocationPayload, coalesceKeyFor, eventTypeFor, targetKeyFor } from './payload';
 import { getBackgroundLocationPermission, getForegroundLocationPermission, type LocationPermissionFlowResult, type PermissionAnswer, requestForegroundLocationPermission, runLocationPermissionFlow } from './permissions';
+import { maySettingsDialogShow, noteSettingsDialogDeclined, SettingsDialogDeclinedSchema } from './settings-dialog';
 import { buildTaskOptions, hasSameTaskOptions, LOCATION_PROFILES, type LocationProfile, type LocationProfileId, profileForTarget } from './task-options';
 import type { LocationTaskConsumer, LocationTaskContext } from './task-runtime';
 import { settleWithin } from './timeouts';
@@ -466,8 +467,11 @@ export class LocationTransmitter implements LocationTaskConsumer {
     if (this.watch) return Promise.resolve();
     if (this.watchStarting) return this.watchStarting;
     const generation = this.watchGeneration;
+    const mayShowUserSettingsDialog = maySettingsDialogShow();
+    let retryWithoutDialog = false;
+
     const starting = Location.watchPositionAsync(
-      this.profile.watcherOptions,
+      { ...this.profile.watcherOptions, mayShowUserSettingsDialog },
       (location) => {
         const fix = toLocationFix(location);
         if (fix && generation === this.watchGeneration) void this.processFix(fix, 'watcher', this.appStateNow());
@@ -485,10 +489,21 @@ export class LocationTransmitter implements LocationTaskConsumer {
         patchTransmissionStatus({ watcherActive: true });
       })
       .catch((error: unknown) => {
+        // Location Accuracy declined (Android): watch on the device's location instead of asking again.
+        if (mayShowUserSettingsDialog && SettingsDialogDeclinedSchema.safeParse(error).success) {
+          noteSettingsDialogDeclined();
+          retryWithoutDialog = true;
+          getLocationLogger().info({ message: 'Location Accuracy declined; watching on device location' });
+
+          return;
+        }
+
         getLocationLogger().error({ message: 'Failed to start the foreground location watcher', context: { error: describeError(error) } });
       })
       .finally(() => {
         if (this.watchStarting === starting) this.watchStarting = null;
+        // After the single-flight slot is free, so the new start is not folded into this one.
+        if (retryWithoutDialog && this.tracking && generation === this.watchGeneration) void this.ensureWatcher();
       });
     this.watchStarting = starting;
     return starting;

@@ -53,7 +53,7 @@ describe('CommandBoardView — command tier (IC)', () => {
     await render(<CommandBoardView callId="7" tier="command" />);
     await fireEvent.press(screen.getByTestId('lane-resource-a1'));
     expect(screen.getByTestId('structure-move-banner')).toBeTruthy();
-    await act(async () => fireEvent.press(screen.getByTestId('lane-n2')));
+    await act(async () => fireEvent.press(screen.getByTestId('lane-target-n2')));
     expect(mockDispatch).toHaveBeenCalledWith(IC_EVENT.moveResource, { callId: '7', body: { ResourceAssignmentId: 'a1', TargetNodeId: 'n2' } });
     expect(screen.queryByTestId('structure-move-banner')).toBeNull();
   });

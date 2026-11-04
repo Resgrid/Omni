@@ -1,15 +1,6 @@
 import './test-setup';
 
-import type {
-  CallPriorityResultData,
-  CallResultData,
-  DispatchedEventResultData,
-  MapMakerInfoData,
-  NoteResultData,
-  PersonnelInfoResultData,
-  StatusesResultData,
-  UnitStatusAlertAcknowledgementResultData,
-} from '@resgrid/models';
+import type { CallPriorityResultData, CallResultData, DispatchedEventResultData, MapMakerInfoData, NoteResultData, PersonnelInfoResultData, StatusesResultData, UnitInfoResultData } from '@resgrid/models';
 
 import {
   comparePriorityUrgency,
@@ -23,19 +14,8 @@ import {
   summarizeCallPriorities,
   summarizeUnits,
 } from '../lib/board-data';
-import { elapsedSince, elapsedSinceLocal, formatClock, formatElapsed, normalizeColor } from '../lib/format';
+import { elapsedSince, elapsedSinceLocal, formatClock, normalizeColor } from '../lib/format';
 import { filterMapPins, resolveWidgetCenter } from '../lib/map-pins';
-import {
-  acknowledgedSortWeight,
-  annotateUnit,
-  type BoardUnit,
-  canAcknowledgeUnit,
-  compareAnnotatedUnits,
-  countUnitsWithoutMeaning,
-  evaluateUnitStatusAlert,
-  requiresAcknowledgementNote,
-  resolveAcknowledgement,
-} from '../lib/unit-status-alerts';
 import { defaultWidgetSettings } from '../lib/widget-settings';
 
 const NOW = Date.UTC(2026, 10, 1, 12, 0, 0);
@@ -43,7 +23,7 @@ const ago = (seconds: number): string => new Date(NOW - seconds * 1000).toISOStr
 
 const person = (UserId: string, extra: Partial<PersonnelInfoResultData> = {}): PersonnelInfoResultData => ({ UserId, FirstName: UserId, LastName: 'X', GroupId: '', Roles: [], ...extra }) as PersonnelInfoResultData;
 const option = (Id: number, Text: string, BaseType: number): StatusesResultData => ({ Id, Text, BaseType, BColor: '#123456' }) as StatusesResultData;
-const unit = (UnitId: string, extra: Partial<BoardUnit> = {}): BoardUnit => ({ UnitId, Name: UnitId, GroupId: '', ...extra }) as BoardUnit;
+const unit = (UnitId: string, extra: Partial<UnitInfoResultData> = {}): UnitInfoResultData => ({ UnitId, Name: UnitId, GroupId: '', ...extra }) as UnitInfoResultData;
 const priority = (Id: number, Name: string, BaseType: number | null, Sort = 0): CallPriorityResultData => ({ Id, Name, BaseType, Sort, Color: '#ff0000', IsDeleted: false }) as CallPriorityResultData;
 const call = (CallId: string, extra: Partial<CallResultData> = {}): CallResultData => ({ CallId, Name: CallId, Priority: 0, State: 0, ...extra }) as CallResultData;
 
@@ -170,11 +150,7 @@ describe('notes and map pins', () => {
 });
 
 describe('format helpers', () => {
-  it('formats elapsed time, ages and colours', () => {
-    expect(formatElapsed(45)).toBe('45s');
-    expect(formatElapsed(4 * 60)).toBe('4m');
-    expect(formatElapsed(72 * 60)).toBe('1h 12m');
-    expect(formatElapsed(null)).toBe('');
+  it('formats ages and colours', () => {
     // Zone-less UTC values are UTC (shared parser), not device-local.
     expect(elapsedSince(ago(5 * 60), NOW)).toEqual({ unit: 'minutes', count: 5 });
     expect(elapsedSince(ago(3 * 3600), NOW)).toEqual({ unit: 'hours', count: 3 });
@@ -186,57 +162,5 @@ describe('format helpers', () => {
     expect(normalizeColor('label-danger')).toBe('#FF0000');
     expect(normalizeColor('##5CB85C')).toBe('#888888');
     expect(formatClock(new Date(NOW), { format24Hour: true, showSeconds: false }, 'en-GB')).toMatch(/^\d{2}:\d{2}$/);
-  });
-});
-
-describe('unit status alerts', () => {
-  const thresholds = [{ BaseType: 6, WarnSeconds: 120, AlertSeconds: 240 }];
-  const ack = (extra: Partial<UnitStatusAlertAcknowledgementResultData> = {}): UnitStatusAlertAcknowledgementResultData =>
-    ({ UnitStatusAlertAcknowledgementId: 'k', UnitId: 'u', UnitStateId: 55, Level: 1, Mode: 0, MutedUntilUtc: null, ClearedOnUtc: null, ...extra }) as UnitStatusAlertAcknowledgementResultData;
-
-  it('evaluates warn/alert by base type and refuses to guess without a timestamp', () => {
-    expect(evaluateUnitStatusAlert(unit('u', { CurrentStatusBaseType: 6, CurrentStatusTimestampUtc: ago(60) }), thresholds, NOW).level).toBe('none');
-    expect(evaluateUnitStatusAlert(unit('u', { CurrentStatusBaseType: 6, CurrentStatusTimestampUtc: ago(150) }), thresholds, NOW)).toEqual({ level: 'warn', secondsInStatus: 150, thresholdSeconds: 120 });
-    expect(evaluateUnitStatusAlert(unit('u', { CurrentStatusBaseType: 6, CurrentStatusTimestampUtc: ago(300) }), thresholds, NOW).level).toBe('alert');
-    expect(evaluateUnitStatusAlert(unit('u', { CurrentStatusBaseType: 6, CurrentStatusTimestampUtc: '' }), thresholds, NOW).level).toBe('none');
-    expect(evaluateUnitStatusAlert(unit('u', { CurrentStatusBaseType: 2, CurrentStatusTimestampUtc: ago(9999) }), thresholds, NOW).level).toBe('none');
-    expect(evaluateUnitStatusAlert(unit('u', { CurrentStatusBaseType: 6, CurrentStatusTimestampUtc: ago(9999) }), [], NOW).level).toBe('none');
-  });
-
-  it('resolves acknowledgements by status episode, level and mute expiry', () => {
-    const current = { CurrentUnitStateId: 55 };
-    expect(resolveAcknowledgement(ack(), current, 'warn', NOW)).toBe('acknowledged');
-    expect(resolveAcknowledgement(ack(), current, 'alert', NOW)).toBe('none');
-    expect(resolveAcknowledgement(ack({ UnitStateId: 54 }), current, 'warn', NOW)).toBe('none');
-    expect(resolveAcknowledgement(ack({ ClearedOnUtc: ago(10) }), current, 'warn', NOW)).toBe('none');
-    expect(resolveAcknowledgement(ack({ Mode: 1, Level: 2 }), current, 'alert', NOW)).toBe('muted');
-    expect(resolveAcknowledgement(ack({ Mode: 1, MutedUntilUtc: new Date(NOW + 60000).toISOString() }), current, 'warn', NOW)).toBe('muted');
-    expect(resolveAcknowledgement(ack({ Mode: 1, MutedUntilUtc: ago(60) }), current, 'warn', NOW)).toBe('acknowledged');
-    expect(resolveAcknowledgement(ack({ Mode: 1, MutedUntilUtc: 'soon' }), current, 'warn', NOW)).toBe('acknowledged');
-    expect(resolveAcknowledgement(ack(), { CurrentUnitStateId: 0 }, 'warn', NOW)).toBe('none');
-  });
-
-  it('sorts alerts first, then warnings, acknowledged, and the rest', () => {
-    expect(acknowledgedSortWeight('alert', 'none')).toBe(0);
-    expect(acknowledgedSortWeight('warn', 'none')).toBe(1);
-    expect(acknowledgedSortWeight('alert', 'acknowledged')).toBe(2);
-    expect(acknowledgedSortWeight('warn', 'muted')).toBe(4);
-    const a = annotateUnit(unit('a', { CurrentStatusBaseType: 6, CurrentStatusTimestampUtc: ago(150) }), thresholds, {}, NOW);
-    const b = annotateUnit(unit('b', { CurrentStatusBaseType: 6, CurrentStatusTimestampUtc: ago(500) }), thresholds, {}, NOW);
-    const c = annotateUnit(unit('c', { CurrentStatusBaseType: 6, CurrentStatusTimestampUtc: ago(200) }), thresholds, {}, NOW);
-    expect([a, b, c].sort(compareAnnotatedUnits).map((entry) => entry.unit.UnitId)).toEqual(['b', 'c', 'a']);
-  });
-
-  it('knows when a reason is required, who may acknowledge, and which units no timer can cover', () => {
-    expect(requiresAcknowledgementNote(2, 'warn')).toBe(true);
-    expect(requiresAcknowledgementNote(1, 'warn')).toBe(false);
-    expect(requiresAcknowledgementNote(1, 'alert')).toBe(true);
-    expect(requiresAcknowledgementNote(undefined, 'alert')).toBe(false);
-    expect(canAcknowledgeUnit({ CurrentUnitStateId: 4 }, true, false)).toBe(true);
-    expect(canAcknowledgeUnit({ CurrentUnitStateId: 4 }, false, false)).toBe(false);
-    expect(canAcknowledgeUnit({ CurrentUnitStateId: 4 }, true, true)).toBe(false);
-    expect(canAcknowledgeUnit({}, true, false)).toBe(false);
-    expect(countUnitsWithoutMeaning([unit('1', { CurrentStatusBaseType: -1 }), unit('2'), unit('3', { CurrentStatusBaseType: 0 })], thresholds)).toBe(2);
-    expect(countUnitsWithoutMeaning([unit('1')], [])).toBe(0);
   });
 });

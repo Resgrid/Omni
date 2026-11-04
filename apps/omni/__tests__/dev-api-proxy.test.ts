@@ -192,6 +192,52 @@ describe('dev API proxy', () => {
     }
   });
 
+  it('ends the page’s response when the server drops the body part-way', async () => {
+    const upstream = await startUpstream((_req, res) => {
+      res.writeHead(200, { 'Content-Type': 'text/event-stream' });
+      res.write('data: first\n\n', () => res.socket?.destroy());
+    });
+
+    try {
+      const ended = await new Promise<string>((resolve, reject) => {
+        const req = http.request({ host: '127.0.0.1', port: proxyPort, path: `/__resgrid-dev-proxy/http/127.0.0.1:${upstream.port}/eventingHub`, headers: { host: `localhost:${proxyPort}` } }, (res) => {
+          res.on('error', () => resolve('closed'));
+          res.on('close', () => resolve('closed'));
+        });
+
+        req.on('error', () => resolve('closed'));
+        req.on('timeout', () => reject(new Error('the response stayed open')));
+        req.setTimeout(5_000);
+        req.end();
+      });
+
+      expect(ended).toBe('closed');
+    } finally {
+      await upstream.close();
+    }
+  });
+
+  it('drops the headers a Connection header nominates, both ways', async () => {
+    const upstream = await startUpstream((_req, res) => {
+      res.writeHead(200, { Connection: 'X-Upstream-Hop', 'X-Upstream-Hop': 'drop', 'X-Upstream-Kept': 'kept' });
+      res.end('ok');
+    });
+
+    try {
+      const sent = await send(proxyPort, `/__resgrid-dev-proxy/http/127.0.0.1:${upstream.port}/api/v4`, { headers: { Connection: 'keep-alive, X-Page-Hop', 'X-Page-Hop': 'drop', 'X-Page-Kept': 'kept' } });
+
+      expect(sent.headers['x-upstream-hop']).toBeUndefined();
+      expect(sent.headers['x-upstream-kept']).toBe('kept');
+
+      const [received] = upstream.requests;
+
+      expect(received.headers['x-page-hop']).toBeUndefined();
+      expect(received.headers['x-page-kept']).toBe('kept');
+    } finally {
+      await upstream.close();
+    }
+  });
+
   it('keeps redirects on the proxy', async () => {
     const upstream = await startUpstream((_req, res) => {
       res.writeHead(302, { Location: '/api/v4/Health' });

@@ -24,8 +24,17 @@ export const COMMON_EVENTING_EVENTS = [
 /** Dispatch console extras: unit crew changes, check-ins of others, conditional run-card requirements (two args). */
 export const DISPATCH_EVENTING_EVENTS = ['unitActiveRolesUpdated', 'checkInUpdated', 'outstandingRequirementsUpdated'] as const;
 
-/** BigBoard dashboard: unit status alerts. */
-export const DASHBOARD_EVENTING_EVENTS = ['unitStatusAlertUpdated'] as const;
+/** Unit status timer acknowledgements (one unit acknowledged, muted or cleared). */
+export const UNIT_STATUS_ALERT_EVENTING_EVENTS = ['unitStatusAlertUpdated'] as const;
+
+/**
+ * Modules whose screens show unit status timers: the dashboard (BigBoard) and the dispatch console (Dispatch) for every
+ * unit, the unit status console (Unit) for its own unit.
+ */
+export const UNIT_STATUS_ALERT_MODULES: readonly FeatureModuleId[] = ['dashboard', 'dispatch-console', 'unit-status'];
+
+/** Whether an app with these modules shows unit status timers (and so subscribes `unitStatusAlertUpdated`). */
+export const showsUnitStatusAlerts = (modules: readonly FeatureModuleId[]): boolean => modules.some((module) => UNIT_STATUS_ALERT_MODULES.includes(module));
 
 /** Live ETAs of units navigating in the Unit app (MapLibre plan §9.4): ids and state only (two args), never the ETA. */
 export const NAVIGATION_EVENTING_EVENTS = ['unitNavigationUpdated'] as const;
@@ -36,7 +45,7 @@ export const NAVIGATION_ETA_MODULES: readonly FeatureModuleId[] = ['dispatch-con
 /** Whether an app with these modules shows live ETAs (and so subscribes `unitNavigationUpdated`). */
 export const showsNavigationEtas = (modules: readonly FeatureModuleId[]): boolean => modules.some((module) => NAVIGATION_ETA_MODULES.includes(module));
 
-export const ALL_EVENTING_EVENTS = [...COMMON_EVENTING_EVENTS, ...DISPATCH_EVENTING_EVENTS, ...DASHBOARD_EVENTING_EVENTS, ...NAVIGATION_EVENTING_EVENTS] as const;
+export const ALL_EVENTING_EVENTS = [...COMMON_EVENTING_EVENTS, ...DISPATCH_EVENTING_EVENTS, ...UNIT_STATUS_ALERT_EVENTING_EVENTS, ...NAVIGATION_EVENTING_EVENTS] as const;
 export type EventingEventName = (typeof ALL_EVENTING_EVENTS)[number];
 
 export const CHAT_EVENTS = [
@@ -97,7 +106,7 @@ export interface RealtimeFeatures {
  * - `unitActiveRolesUpdated` — the dispatch console module;
  * - `checkInUpdated` — apps that watch other people's check-ins (`checkIn.others`: Dispatch, IC);
  * - `outstandingRequirementsUpdated` — conditional run cards (`calls.runCards`);
- * - `unitStatusAlertUpdated` — the dashboard module (BigBoard);
+ * - `unitStatusAlertUpdated` — modules that show unit status timers ({@link UNIT_STATUS_ALERT_MODULES}: BigBoard, Dispatch, Unit);
  * - `unitNavigationUpdated` — modules that show live ETAs ({@link NAVIGATION_ETA_MODULES}: Dispatch, BigBoard);
  * - chat events only with `realtime.chatHub`.
  */
@@ -107,7 +116,7 @@ export function resolveRealtimeFeatures(variant: RealtimeVariantInput): Realtime
   if (modules.includes('dispatch-console')) eventingEvents.push('unitActiveRolesUpdated');
   if (capabilities.checkIn.others) eventingEvents.push('checkInUpdated');
   if (capabilities.calls.runCards) eventingEvents.push('outstandingRequirementsUpdated');
-  if (modules.includes('dashboard')) eventingEvents.push('unitStatusAlertUpdated');
+  if (showsUnitStatusAlerts(modules)) eventingEvents.push('unitStatusAlertUpdated');
   if (showsNavigationEtas(modules)) eventingEvents.push('unitNavigationUpdated');
 
   return {

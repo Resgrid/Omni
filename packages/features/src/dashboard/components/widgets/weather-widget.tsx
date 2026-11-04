@@ -1,10 +1,10 @@
+import { useDepartmentConfig, useDepartmentConfigStore } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import { HStack, ScrollView, Text, View, VStack } from '@resgrid/ui';
 import { Cloud, CloudDrizzle, CloudFog, CloudLightning, CloudRain, CloudSnow, type LucideIcon, Sun, Wind } from 'lucide-react-native';
 import React, { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 
-import { useDashboardConfig, useDashboardConfigStore } from '../../hooks/use-department-config';
 import { useWidgetSettings } from '../../hooks/use-widget-settings-store';
 import type { OpenWeatherErrorKind } from '../../integrations/openweather/openweather-client';
 import { useWeatherOutlook } from '../../integrations/openweather/use-weather-outlook';
@@ -46,8 +46,8 @@ const ICON_COLOR = '#f59e0b';
  */
 export const WeatherWidget: React.FC<WidgetProps> = ({ isEditMode, onRemove, onConfigure, width }) => {
   const { t, i18n } = useTranslation();
-  const config = useDashboardConfig();
-  const configFailed = useDashboardConfigStore((state) => state.hasError);
+  const config = useDepartmentConfig();
+  const configFailed = useDepartmentConfigStore((state) => state.hasError);
   const settings = useWidgetSettings('weather');
   const location = useMemo(() => {
     if (settings.latitude !== 0 || settings.longitude !== 0) return { latitude: settings.latitude, longitude: settings.longitude };

@@ -1,8 +1,23 @@
 // @resgrid/notifications (layer L3) — push (native / web / Electron), notifee channels and iOS categories, the event
 // code parser and deep-link resolver, the foreground push modal store, desktop toasts, the Novu inbox configuration,
-// badge handling and in-app notification sounds (omni-plan §7.6, D17, §10.2a; resgrid-realtime-push skill).
+// badge handling, in-app notification sounds and notifications scheduled on the device itself (the unit's status
+// timer) (omni-plan §7.6, D17, §10.2a; resgrid-realtime-push skill).
 // Imports only config, models, core, i18n, api and offline among Omni packages; the session, routes and check-in
 // action are injected with configureNotifications().
+//
+// The local-notification pieces are re-exported through one statement at the end: Oxlint's readable spacing wants a
+// blank line between top-level statements, which the export sorter removes.
+import {
+  LOCAL_NOTIFICATION_KINDS,
+  type LocalNotification,
+  type LocalNotificationData,
+  localNotificationId,
+  type LocalNotificationKind,
+  type LocalNotificationSet,
+  openLocalNotification,
+  readLocalNotificationData,
+} from './local-notification-data';
+import { cancelAllLocalNotifications, type ExactAlarmAccess, type ExactAlarmAccessView, getExactAlarmAccess, requestExactAlarmAccess, syncLocalNotifications, useExactAlarmAccess } from './local-notifications';
 
 export { clearBadgeCount, useClearBadgeOnForeground } from './badge';
 export {
@@ -16,13 +31,17 @@ export {
   CHECK_IN_ACTION_ID,
   IOS_CATEGORY_IDS,
   type IosCategoryId,
+  type IosCategoryOptions,
   type IosCategorySpec,
+  STATUS_TIMER_CATEGORY_ID,
+  STATUS_TIMER_CHANNEL,
   VIEW_ACTION_ID,
 } from './channels';
 export {
   configureNotifications,
   getNotificationsDependencies,
   getPushSubjectKind,
+  hasStatusTimerNotifications,
   type NotificationsDependencies,
   type NotificationsSession,
   type PushSubjectKind,
@@ -84,3 +103,22 @@ export {
   type PushSoundTypeValue,
   soundForSoundType,
 } from './sounds';
+
+// Notifications scheduled on the device itself (the unit's status timer)
+export {
+  cancelAllLocalNotifications,
+  type ExactAlarmAccess,
+  type ExactAlarmAccessView,
+  getExactAlarmAccess,
+  LOCAL_NOTIFICATION_KINDS,
+  type LocalNotification,
+  type LocalNotificationData,
+  localNotificationId,
+  type LocalNotificationKind,
+  type LocalNotificationSet,
+  openLocalNotification,
+  readLocalNotificationData,
+  requestExactAlarmAccess,
+  syncLocalNotifications,
+  useExactAlarmAccess,
+};

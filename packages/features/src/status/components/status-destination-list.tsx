@@ -21,6 +21,7 @@ const EMPTY_KEYS: Record<DestinationTab, string> = { call: 'status.no_calls_avai
 
 const isSameDestination = (a: StatusDestination, b: StatusDestination): boolean => {
   if (a.type !== b.type) return false;
+
   switch (a.type) {
     case 'call':
       return b.type === 'call' && a.call.CallId === b.call.CallId;
@@ -44,7 +45,9 @@ const DestinationRow: React.FC<{ destination: StatusDestination; isSelected: boo
     ) : (
       <X size={18} color="#6b7280" />
     );
+
   const iconUrl = destination.type === 'call' ? destination.call.TypeIconUrl : destination.type === 'poi' ? destination.poi.IconUrl : null;
+
   return (
     <Pressable
       testID={testID}
@@ -113,7 +116,7 @@ export const StatusDestinationList: React.FC<StatusDestinationListProps> = ({ ta
             isSelected={isSameDestination(selected, destination)}
             onPress={() => onSelect(destination)}
             testID={`status-destination-${destination.type}-${keyOf(destination)}`}
-            label={destinationLabel(destination)}
+            label={destinationLabel(destination, t('data_protection.protected_value'))}
           />
         ))
       )}

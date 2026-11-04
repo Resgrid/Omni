@@ -1,3 +1,4 @@
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import type { RouteDeviationResultData } from '@resgrid/models';
 import { HStack, Pressable, Text, View, VStack } from '@resgrid/ui';
@@ -20,10 +21,11 @@ export interface DeviationBannerProps {
  */
 export const DeviationBanner: React.FC<DeviationBannerProps> = ({ deviations, onAcknowledge, testID = 'route-deviation-banner' }) => {
   const { t } = useTranslation();
+  const timeZone = useDepartmentTimeZone();
   const latest = deviations[0];
   if (!latest) return null;
   const distance = formatDistance(latest.DeviationDistanceMeters);
-  const detail = [distance, formatRouteTime(latest.DetectedOn)].filter((part) => part !== '').join(' · ');
+  const detail = [distance, formatRouteTime(latest.DetectedOn, timeZone)].filter((part) => part !== '').join(' · ');
 
   return (
     <HStack space="sm" className="mx-4 mb-2 items-center rounded-lg bg-warning-50 p-3" testID={testID}>

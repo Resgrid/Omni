@@ -1,6 +1,7 @@
 import { useSecurity } from '@resgrid/auth';
 import { isSafeRouteId } from '@resgrid/core/utils/route-ids';
 import { useRecordDeploymentsStore } from '@resgrid/data';
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import { Badge, BadgeText, Button, ButtonText, Divider, Heading, Loading, RefreshControl, ScreenHeader, Text, ZeroState } from '@resgrid/ui';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -31,6 +32,7 @@ const isHttpsUrl = (value: string | null | undefined): value is string => !!valu
  */
 export default function RecordDeploymentDetailScreen({ orderId: idProp, showHeader = true }: RecordDeploymentDetailScreenProps) {
   const { t } = useTranslation();
+  const timeZone = useDepartmentTimeZone();
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const routeId = firstParam(params.id);
@@ -105,12 +107,12 @@ export default function RecordDeploymentDetailScreen({ orderId: idProp, showHead
 
               <View className="pt-2">
                 <DetailRow label={t('records.source')} value={[deployment.SourceScheme, deployment.SourceSystem, deployment.SourceVersion ? `v${deployment.SourceVersion}` : null].filter(Boolean).join(' · ')} />
-                <DetailRow label={t('records.captured_on')} value={formatWhen(deployment.SourceCapturedOn) || null} />
+                <DetailRow label={t('records.captured_on')} value={formatWhen(deployment.SourceCapturedOn, timeZone) || null} />
                 <DetailRow label={t('records.offices')} value={[deployment.OrderingOffice, deployment.DispatchOffice].filter(Boolean).join(' / ')} />
                 <DetailRow label={t('records.agencies')} value={[deployment.RequestingAgency, deployment.ReceivingAgency, deployment.SendingAgency].filter(Boolean).join(' · ')} />
                 <DetailRow label={t('records.cost_code')} value={deployment.CostCode} />
                 <DetailRow label={t('records.agreement')} value={deployment.AgreementReference} />
-                <DetailRow label={t('records.closed_out_on')} value={formatWhen(deployment.ClosedOutOn) || null} />
+                <DetailRow label={t('records.closed_out_on')} value={formatWhen(deployment.ClosedOutOn, timeZone) || null} />
                 <DetailRow label={t('records.closeout_notes')} value={deployment.CloseoutNotes} />
               </View>
 

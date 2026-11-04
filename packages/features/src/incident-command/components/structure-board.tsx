@@ -49,16 +49,19 @@ const ResourceRow: React.FC<ResourceRowProps> = React.memo(({ assignment, node, 
   const icon = roster.resourceIcon(assignment.ResourceKind, assignment.ResourceId);
   const id = assignment.ResourceAssignmentId;
   return (
-    <Pressable
-      onPress={() => (canMove ? onSelect(id) : onView(assignment))}
-      accessibilityRole="button"
-      accessibilityState={{ selected: isSelected }}
-      accessibilityHint={canMove ? t('incident_command.move_hint') : undefined}
-      className={`rounded-md border px-2 py-1.5 ${isSelected ? 'border-primary-500 bg-primary-50' : assignment.RequirementsWarning ? 'border-warning-500 bg-background-50' : 'border-transparent bg-background-50'}`}
-      testID={`lane-resource-${id}`}
+    <HStack
+      space="sm"
+      className={`items-center rounded-md border px-2 py-1.5 ${isSelected ? 'border-primary-500 bg-primary-50' : assignment.RequirementsWarning ? 'border-warning-500 bg-background-50' : 'border-transparent bg-background-50'}`}
     >
-      <HStack className="items-center justify-between" space="sm">
-        <HStack className="min-w-0 flex-1 items-center" space="sm">
+      <Pressable
+        onPress={() => (canMove ? onSelect(id) : onView(assignment))}
+        accessibilityRole="button"
+        accessibilityState={{ selected: isSelected }}
+        accessibilityHint={canMove ? t('incident_command.move_hint') : undefined}
+        className="min-w-0 flex-1 gap-1"
+        testID={`lane-resource-${id}`}
+      >
+        <HStack className="min-w-0 items-center" space="sm">
           {icon ? <TypeIcon iconUrl={icon.iconUrl} mapIcon={icon.mapIcon} size={20} /> : null}
           <Text className="min-w-0 flex-1 text-sm text-typography-900" numberOfLines={1}>
             {name}
@@ -75,9 +78,9 @@ const ResourceRow: React.FC<ResourceRowProps> = React.memo(({ assignment, node, 
           ) : null}
         </HStack>
         <WorkTimeLight assignedOn={assignment.AssignedOn} node={node} nowMs={nowMs} testID={`lane-worktime-${id}`} />
-        <IconPress label={t('incident_command.view_resource', { name })} icon={Eye} onPress={() => onView(assignment)} testID={`lane-resource-view-${id}`} />
-      </HStack>
-    </Pressable>
+      </Pressable>
+      <IconPress label={t('incident_command.view_resource', { name })} icon={Eye} onPress={() => onView(assignment)} testID={`lane-resource-view-${id}`} />
+    </HStack>
   );
 });
 ResourceRow.displayName = 'ResourceRow';
@@ -126,17 +129,21 @@ export const StructureBoard: React.FC<StructureBoardProps> = ({
     const leads = [roster.leadName(node.PrimaryLeadUserId, node.PrimaryLeadName), roster.leadName(node.SecondaryLeadUserId, node.SecondaryLeadName)].filter((name): name is string => !!name);
     const color = node.Color ? safeColor(node.Color) : null;
     return (
-      <Pressable
+      <View
         key={node.CommandStructureNodeId}
-        onPress={() => dropOn(node.CommandStructureNodeId)}
-        disabled={!isTarget}
-        accessibilityHint={isTarget && selected ? t('incident_command.move_to_lane', { resource: roster.resourceName(selected.ResourceKind, selected.ResourceId), lane: node.Name }) : undefined}
         style={StyleSheet.flatten([styles.lane, columns ? styles.laneColumn : depth > 0 ? { marginLeft: Math.min(depth, 4) * 12 } : null, color ? { borderLeftWidth: 4, borderLeftColor: color } : null])}
         className={`rounded-lg border ${isTarget ? 'border-primary-400 bg-primary-50' : 'border-outline-200 bg-background-0'}`}
         testID={`lane-${node.CommandStructureNodeId}`}
       >
         <HStack className="items-start justify-between">
-          <VStack className="min-w-0 flex-1">
+          <Pressable
+            onPress={() => dropOn(node.CommandStructureNodeId)}
+            disabled={!isTarget}
+            accessibilityHint={isTarget && selected ? t('incident_command.move_to_lane', { resource: roster.resourceName(selected.ResourceKind, selected.ResourceId), lane: node.Name }) : undefined}
+            accessibilityRole="button"
+            className="min-w-0 flex-1"
+            testID={`lane-target-${node.CommandStructureNodeId}`}
+          >
             <HStack className="flex-wrap items-center" space="xs">
               <Text className="font-semibold text-typography-900" numberOfLines={1}>
                 {node.Name}
@@ -160,7 +167,7 @@ export const StructureBoard: React.FC<StructureBoardProps> = ({
                 {t('incident_command.lane_leads', { names: leads.join(', ') })}
               </Text>
             ) : null}
-          </VStack>
+          </Pressable>
           <HStack className="items-center">
             {onOpenLaneChat && laneChatAvailable?.(node.CommandStructureNodeId) ? (
               <IconPress
@@ -201,21 +208,21 @@ export const StructureBoard: React.FC<StructureBoardProps> = ({
             ))
           )}
         </VStack>
-      </Pressable>
+      </View>
     );
   };
 
   const poolTarget = !!selected && !!selected.CommandStructureNodeId;
   const poolCard = (
-    <Pressable
-      onPress={() => dropOn('')}
-      disabled={!poolTarget}
+    <View
       style={StyleSheet.flatten([styles.lane, columns ? styles.laneColumn : null])}
       className={`rounded-lg border border-dashed ${poolTarget ? 'border-primary-400 bg-primary-50' : 'border-outline-300 bg-background-50'}`}
       testID="lane-pool"
     >
-      <Text className="font-semibold text-typography-900">{t('incident_command.unassigned_pool')}</Text>
-      <Text className="mb-2 text-xs text-typography-500">{t('incident_command.unassigned_pool_hint')}</Text>
+      <Pressable onPress={() => dropOn('')} disabled={!poolTarget} accessibilityRole="button" testID="lane-target-pool">
+        <Text className="font-semibold text-typography-900">{t('incident_command.unassigned_pool')}</Text>
+        <Text className="mb-2 text-xs text-typography-500">{t('incident_command.unassigned_pool_hint')}</Text>
+      </Pressable>
       <VStack space="xs">
         {pool.length === 0 ? (
           <Text className="text-sm text-typography-500">{t('incident_command.pool_empty')}</Text>
@@ -234,7 +241,7 @@ export const StructureBoard: React.FC<StructureBoardProps> = ({
           ))
         )}
       </VStack>
-    </Pressable>
+    </View>
   );
 
   return (

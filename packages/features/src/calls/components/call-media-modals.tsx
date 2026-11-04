@@ -1,5 +1,6 @@
 import { formatUtcInDepartmentTime } from '@resgrid/core/utils/dates';
 import { CallFileKind, getDataLocationFix, type QueuedCallFile, useCallDetailStore } from '@resgrid/data';
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import type { CallFileResultData } from '@resgrid/models';
 import { Button, ButtonText, Image, Input, InputField, Pressable, Text, useToast } from '@resgrid/ui';
@@ -137,6 +138,7 @@ const ImageTile: React.FC<{ image: CallFileResultData }> = ({ image }) => {
 /** Files on the call (R files modal UI): open via the signed link, add a document (offline-capable upload). */
 export const CallFilesModal: React.FC<ModalProps> = ({ isOpen, onClose, callId }) => {
   const { t } = useTranslation();
+  const timeZone = useDepartmentTimeZone();
   const toast = useToast();
   const files = useCallDetailStore((state) => state.details[callId]?.files ?? null);
   const fetchCallFiles = useCallDetailStore((state) => state.fetchCallFiles);
@@ -176,7 +178,7 @@ export const CallFilesModal: React.FC<ModalProps> = ({ isOpen, onClose, callId }
             <View style={styles.fileBody}>
               <Text className="text-typography-900">{file.Name || file.FileName}</Text>
               <Text size="xs" className="text-typography-500">
-                {formatUtcInDepartmentTime(file.Timestamp, null)}
+                {formatUtcInDepartmentTime(file.Timestamp, timeZone)}
               </Text>
             </View>
           </Pressable>

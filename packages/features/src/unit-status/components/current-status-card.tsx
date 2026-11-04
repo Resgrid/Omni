@@ -1,4 +1,5 @@
 import { formatUtcInDepartmentTime } from '@resgrid/core/utils/dates';
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { CurrentStatusBadge } from '@resgrid/features/status';
 import { useTranslation } from '@resgrid/i18n';
 import { Text, VStack } from '@resgrid/ui';
@@ -17,7 +18,8 @@ export interface CurrentStatusCardProps {
  */
 export const CurrentStatusCard: React.FC<CurrentStatusCardProps> = ({ status, testID = 'unit-current-status' }) => {
   const { t } = useTranslation();
-  const since = status.timestampUtc ? formatUtcInDepartmentTime(status.timestampUtc, null) : '';
+  const timeZone = useDepartmentTimeZone();
+  const since = status.timestampUtc ? formatUtcInDepartmentTime(status.timestampUtc, timeZone) : '';
   return (
     <VStack space="xs" className="rounded-xl border border-outline-100 bg-background-50 p-3" testID={testID}>
       <Text className="text-xs font-semibold uppercase text-typography-500">{t('status.current_status')}</Text>

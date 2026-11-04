@@ -1,4 +1,5 @@
 import { formatUtcInDepartmentTime } from '@resgrid/core/utils/dates';
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import type { NoteResultData } from '@resgrid/models';
 import { HStack, htmlToPlainText, Pressable, Text, useReadableColor } from '@resgrid/ui';
@@ -16,9 +17,10 @@ export interface NoteCardProps {
  */
 export const NoteCard: React.FC<NoteCardProps> = ({ note, onPress }) => {
   const { t } = useTranslation();
+  const timeZone = useDepartmentTimeZone();
   const readable = useReadableColor();
   const preview = useMemo(() => (note.Body ? htmlToPlainText(note.Body) : ''), [note.Body]);
-  const added = formatUtcInDepartmentTime(note.AddedOn, null, { dateStyle: 'medium' });
+  const added = formatUtcInDepartmentTime(note.AddedOn, timeZone, { dateStyle: 'medium' });
 
   return (
     <Pressable
@@ -35,7 +37,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, onPress }) => {
           {note.Title}
         </Text>
         {note.Category ? (
-          <View className="rounded bg-info-50 px-1.5 py-0.5">
+          <View className="max-w-[40%] shrink rounded bg-info-50 px-1.5 py-0.5">
             <Text className="text-xs text-info-700" numberOfLines={1}>
               {note.Category}
             </Text>
@@ -47,7 +49,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, onPress }) => {
           {preview}
         </Text>
       ) : null}
-      {added ? <Text className="mt-1 text-xs text-typography-400">{added}</Text> : null}
+      {added ? <Text className="mt-1 text-xs text-typography-500">{added}</Text> : null}
     </Pressable>
   );
 };

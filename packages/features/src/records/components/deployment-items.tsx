@@ -1,3 +1,4 @@
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import type { RecordDeploymentConnectorData, RecordDeploymentConnectorRunData, RecordDeploymentData, RecordDeploymentFillData, RecordDeploymentReconciliationData } from '@resgrid/models';
 import { Badge, BadgeText, Pressable, Text } from '@resgrid/ui';
@@ -91,8 +92,9 @@ export const DeploymentListItem: React.FC<{ deployment: RecordDeploymentData; co
 
 export const DeploymentFillItem: React.FC<{ fill: RecordDeploymentFillData; testID?: string }> = ({ fill, testID }) => {
   const { t } = useTranslation();
+  const timeZone = useDepartmentTimeZone();
   const what = [fill.Position, fill.ResourceType, fill.ResourceKind].filter(Boolean).join(' · ');
-  const when = fill.NeededOn ? formatWhen(fill.NeededOn) : '';
+  const when = fill.NeededOn ? formatWhen(fill.NeededOn, timeZone) : '';
   const meta = [fill.HomeUnit, when ? `${t('records.needed_on')} ${when}` : null].filter(Boolean).join(' · ');
   return (
     <View className="px-4 py-2" testID={testID}>
@@ -128,6 +130,7 @@ export const DeploymentFillItem: React.FC<{ fill: RecordDeploymentFillData; test
 /** One disagreement between the source and the department's record. Shown, never applied. */
 export const ReconciliationListItem: React.FC<{ item: RecordDeploymentReconciliationData; showOrder?: boolean; onPress?: () => void; testID?: string }> = ({ item, showOrder = false, onPress, testID }) => {
   const { t } = useTranslation();
+  const timeZone = useDepartmentTimeZone();
   const kind = t(`records.reconciliation_${item.Kind}`, { defaultValue: item.Kind });
   const body = (
     <View style={styles.rowTop}>
@@ -146,7 +149,7 @@ export const ReconciliationListItem: React.FC<{ item: RecordDeploymentReconcilia
         </Text>
         {item.SourceCapturedOn ? (
           <Text size="xs" className="text-typography-400" numberOfLines={1}>
-            {[formatWhen(item.SourceCapturedOn), item.SourceVersion ? `v${item.SourceVersion}` : null].filter(Boolean).join(' · ')}
+            {[formatWhen(item.SourceCapturedOn, timeZone), item.SourceVersion ? `v${item.SourceVersion}` : null].filter(Boolean).join(' · ')}
           </Text>
         ) : null}
       </View>
@@ -166,6 +169,7 @@ export const ReconciliationListItem: React.FC<{ item: RecordDeploymentReconcilia
 
 export const ConnectorListItem: React.FC<{ connector: RecordDeploymentConnectorData; conflicts?: number; onPress: () => void; testID?: string }> = ({ connector, conflicts, onPress, testID }) => {
   const { t } = useTranslation();
+  const timeZone = useDepartmentTimeZone();
   const state = t(connectorStateKey(connector));
   return (
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`${connector.Name}, ${state}`} className="px-4 py-3" testID={testID}>
@@ -181,7 +185,7 @@ export const ConnectorListItem: React.FC<{ connector: RecordDeploymentConnectorD
             {[connector.ProviderKey, connector.SourceScheme, connector.ProfileKey].join(' · ')}
           </Text>
           <Text size="xs" className="text-typography-400" numberOfLines={1}>
-            {connector.LastPolledOn ? `${t('records.last_read')} ${formatWhen(connector.LastPolledOn)}` : t('records.never_read')}
+            {connector.LastPolledOn ? `${t('records.last_read')} ${formatWhen(connector.LastPolledOn, timeZone)}` : t('records.never_read')}
           </Text>
           {connector.LastError ? (
             <Text size="xs" className="text-error-600" numberOfLines={2}>
@@ -206,12 +210,13 @@ export const ConnectorListItem: React.FC<{ connector: RecordDeploymentConnectorD
 
 export const ConnectorRunItem: React.FC<{ run: RecordDeploymentConnectorRunData; testID?: string }> = ({ run, testID }) => {
   const { t } = useTranslation();
+  const timeZone = useDepartmentTimeZone();
   return (
     <View className="px-4 py-2" testID={testID}>
       <View style={styles.rowTop}>
         <View style={styles.body}>
           <Text size="sm" className="text-typography-900" numberOfLines={1}>
-            {`${formatWhen(run.StartedOn)} · ${t(`records.run_trigger_${run.Trigger}`, { defaultValue: run.Trigger })}`}
+            {`${formatWhen(run.StartedOn, timeZone)} · ${t(`records.run_trigger_${run.Trigger}`, { defaultValue: run.Trigger })}`}
           </Text>
           <Text size="xs" className="text-typography-500" numberOfLines={2}>
             {t('records.run_counts', {

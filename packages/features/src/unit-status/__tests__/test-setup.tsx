@@ -129,6 +129,19 @@ jest.mock('@resgrid/voice', () => {
   return { useLiveKitStore: mockLiveKitStore };
 });
 
+// Device notifications: the scheduler is recorded and exact alarms are drivable (`jest.requireMock(...).mockExactAlarms`);
+// the gate is the real rule (the active manifest has the unit status console). The real package pulls in analytics.
+jest.mock('@resgrid/notifications', () => {
+  const mockExactAlarms = { access: 'notNeeded', request: jest.fn(async () => undefined) };
+
+  return {
+    hasStatusTimerNotifications: () => jest.requireActual<{ getActiveVariant: () => { modules: readonly string[] } }>('@resgrid/config').getActiveVariant().modules.includes('unit-status'),
+    syncLocalNotifications: jest.fn(async () => undefined),
+    useExactAlarmAccess: () => mockExactAlarms,
+    mockExactAlarms,
+  };
+});
+
 jest.mock('@resgrid/location', () => ({
   acquireLocationFix: jest.fn(async () => ({ outcome: 'ok', fix: { latitude: 39.1, longitude: -119.7, accuracy: 5, altitude: null, speed: null, heading: null, timestamp: 0 } })),
   getLocationFixErrorMessage: (outcome: string) => `location.${outcome}`,

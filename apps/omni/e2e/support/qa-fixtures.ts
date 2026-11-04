@@ -1,4 +1,4 @@
-import { expect, type Locator, type Page } from '@playwright/test';
+import { expect, type Locator, type Page, type Response } from '@playwright/test';
 import { z } from 'zod';
 
 import { LoginPage } from '../pages/login-page';
@@ -61,17 +61,24 @@ export const test = webTest.extend<QaTestFixtures, QaWorkerFixtures>({
   apiGuard: [
     async ({ page, qa, qaContext }, provide, testInfo) => {
       const failures: ApiFailure[] = [];
+      // Reading a refusal's body is async: the check at the end waits for every one still being read.
+      const reading: Promise<void>[] = [];
       const origin = new URL(qa.apiUrl ?? 'https://invalid.invalid').origin;
 
-      page.on('response', async (response) => {
-        if (response.status() < 400 || new URL(response.url()).origin !== origin) return;
+      const record = async (response: Response): Promise<void> => {
         const body = ErrorBodySchema.safeParse(await response.json().catch(() => null));
         const code = body.success ? (body.data.error ?? body.data.type ?? body.data.Status ?? null) : null;
+        const headers = await response.allHeaders().catch((): Record<string, string> => ({}));
 
-        failures.push({ method: response.request().method(), url: response.url(), status: response.status(), code, reason: (await response.allHeaders())['x-resgrid-reason'] ?? null });
+        failures.push({ method: response.request().method(), url: response.url(), status: response.status(), code, reason: headers['x-resgrid-reason'] ?? null });
+      };
+
+      page.on('response', (response) => {
+        if (response.status() >= 400 && new URL(response.url()).origin === origin) reading.push(record(response));
       });
 
       await provide(failures);
+      await Promise.all(reading);
 
       if (failures.length) await testInfo.attach('api-failures.txt', { body: failures.map(describeFailure).join('\n'), contentType: 'text/plain' });
       expect(unexpectedFailures(failures, qaContext), 'Core answered requests the app should never get').toEqual([]);

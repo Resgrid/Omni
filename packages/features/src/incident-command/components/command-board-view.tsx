@@ -1,6 +1,7 @@
 import { useFeatureFlag, useSecurity } from '@resgrid/auth';
 import { useCapability } from '@resgrid/config';
 import { generateDataId, selectCallById, useCallsStore, useCommandStore, useCommandSupportStore, type WriteResult } from '@resgrid/data';
+import { callDisplayName } from '@resgrid/features/calls';
 import { useTranslation } from '@resgrid/i18n';
 import { type CommandStructureNode, type IncidentNeed, type IncidentTimer, type ResourceAssignment, type TacticalObjective } from '@resgrid/models';
 import { HStack, Text, useFormFactor, useToast } from '@resgrid/ui';
@@ -120,6 +121,7 @@ export const CommandBoardView: React.FC<CommandBoardViewProps> = ({ callId, tier
 
   const lanes = useMemo(() => orderLanes(board?.Nodes), [board?.Nodes]);
   const assignments = useMemo(() => activeAssignments(board?.Assignments), [board?.Assignments]);
+
   const laneName = useCallback(
     (nodeId: string | null | undefined) => (nodeId ? (lanes.find((lane) => lane.node.CommandStructureNodeId === nodeId)?.node.Name ?? t('incident_command.unassigned_pool')) : t('incident_command.unassigned_pool')),
     [lanes, t]
@@ -137,15 +139,21 @@ export const CommandBoardView: React.FC<CommandBoardViewProps> = ({ callId, tier
   const assignTo = useCallback(
     async (kind: number, resourceId: string, targetNodeId: string) => {
       const decision = decideAssignment(board?.Assignments ?? [], kind, resourceId, targetNodeId);
+
       if (decision.action === 'none') return;
+
       if (decision.action === 'move') {
         await run(moveResourceEvent(callId, decision.assignmentId, targetNodeId));
+
         return;
       }
+
       if (decision.action === 'confirm-move') {
         setMoveConflict({ assignmentId: decision.assignmentId, name: roster.resourceName(kind, resourceId), from: laneName(decision.fromNodeId), to: laneName(targetNodeId), targetNodeId });
+
         return;
       }
+
       await run(assignResourceEvent(callId, targetNodeId, kind, resourceId));
     },
     [board?.Assignments, callId, laneName, roster, run]
@@ -157,10 +165,12 @@ export const CommandBoardView: React.FC<CommandBoardViewProps> = ({ callId, tier
     async (node: CommandStructureNode, disposition: LaneDeleteDisposition) => {
       setSheet(null);
       const rows = laneAssignments(assignments, node.CommandStructureNodeId);
+
       // Queued in order behind the moves/releases, so the server never deletes a lane that still holds resources.
       for (const row of rows) {
         await run(disposition === 'pool' ? moveResourceEvent(callId, row.ResourceAssignmentId, '') : releaseResourceEvent(callId, row.ResourceAssignmentId));
       }
+
       await run(deleteLaneEvent(callId, node.CommandStructureNodeId));
     },
     [assignments, callId, run]
@@ -170,6 +180,7 @@ export const CommandBoardView: React.FC<CommandBoardViewProps> = ({ callId, tier
   const reportWrite = useCallback(
     (result: WriteResult | null, messages: { sent: string; queued: string; rejected: string }) => {
       if (!result) return;
+
       if (result.outcome === 'sent') toast.success(messages.sent);
       else if (result.outcome === 'queued') toast.info(messages.queued);
       else toast.error(messages.rejected);
@@ -180,11 +191,14 @@ export const CommandBoardView: React.FC<CommandBoardViewProps> = ({ callId, tier
   const confirmEnd = useCallback(
     async (closeCall: EndCommandCloseCall | null) => {
       setSheet(null);
+
       try {
         const result = await endCommand(callId, closeCall ? { closeCall } : undefined);
         reportWrite(result.command, { sent: t('incident_command.end_command_success'), queued: t('incident_command.end_command_queued'), rejected: t('incident_command.end_command_failed') });
+
         if (closeCall && !result.call && result.command?.outcome === 'rejected') toast.warning(t('incident_command.close_call_skipped'));
         reportWrite(result.call, { sent: t('call_detail.close_call_success'), queued: t('incident_command.close_call_queued'), rejected: t('incident_command.close_call_failed') });
+
         if (result.call?.outcome === 'sent') void useCallsStore.getState().fetchCalls({ bypassCache: true });
         onEnded?.();
       } catch {
@@ -199,7 +213,7 @@ export const CommandBoardView: React.FC<CommandBoardViewProps> = ({ callId, tier
   const command = board?.Command ?? null;
   const commanderName = command?.CurrentCommanderUserId ? roster.personName(command.CurrentCommanderUserId) : null;
   const title = call?.Number ? t('incident_command.call_number', { number: call.Number }) : t('incident_command.call_number', { number: callId });
-  const subtitle = command?.Name || call?.Name || null;
+  const subtitle = command?.Name || (call ? callDisplayName(call, t('data_protection.protected_value')) : '') || null;
   const roles = board?.Roles ?? [];
   const activeRoles = roles.filter((role) => !role.RemovedOn);
 

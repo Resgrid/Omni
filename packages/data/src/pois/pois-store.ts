@@ -41,10 +41,9 @@ export const usePoisStore = create<PoisState>()(
 
         fetchPois: async (options) => {
           if (!options?.bypassCache && get().pois.length > 0) return;
-          // poiTypeId 0 = every type.
           await runner.run(
             'pois',
-            async () => unwrapList(await getPois(getDataApiContext(), { poiTypeId: 0 }, cacheOptions(options))),
+            async () => unwrapList(await getPois(getDataApiContext(), {}, cacheOptions(options))),
             (pois) => ({ pois })
           );
         },
@@ -53,7 +52,7 @@ export const usePoisStore = create<PoisState>()(
           if (!options?.bypassCache && get().destinationPois.length > 0) return;
           await runner.run(
             'destinationPois',
-            async () => unwrapList(await getPois(getDataApiContext(), { poiTypeId: 0, destinationOnly: true }, cacheOptions(options))),
+            async () => unwrapList(await getPois(getDataApiContext(), { destinationOnly: true }, cacheOptions(options))),
             (destinationPois) => ({ destinationPois })
           );
         },

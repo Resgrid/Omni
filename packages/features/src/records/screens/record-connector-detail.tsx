@@ -1,6 +1,7 @@
 import { useSecurity } from '@resgrid/auth';
 import { isSafeRouteId } from '@resgrid/core/utils/route-ids';
 import { useRecordDeploymentsStore } from '@resgrid/data';
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import type { RecordDeploymentConnectorRunData } from '@resgrid/models';
 import { Badge, BadgeText, Button, ButtonText, Heading, RefreshControl, ScreenHeader, Text, ZeroState } from '@resgrid/ui';
@@ -30,6 +31,7 @@ const EMPTY_RUNS: RecordDeploymentConnectorRunData[] = [];
  */
 export default function RecordConnectorDetailScreen({ connectorId: idProp, showHeader = true }: RecordConnectorDetailScreenProps) {
   const { t } = useTranslation();
+  const timeZone = useDepartmentTimeZone();
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const routeId = firstParam(params.id);
@@ -131,11 +133,14 @@ export default function RecordConnectorDetailScreen({ connectorId: idProp, showH
                 </Text>
               </View>
               <View className="pt-2">
-                <DetailRow label={t('records.terms')} value={connector.TermsAcknowledgedOn ? `${t('records.terms_acknowledged')} · ${formatWhen(connector.TermsAcknowledgedOn)}` : t('records.terms_not_acknowledged')} />
+                <DetailRow
+                  label={t('records.terms')}
+                  value={connector.TermsAcknowledgedOn ? `${t('records.terms_acknowledged')} · ${formatWhen(connector.TermsAcknowledgedOn, timeZone)}` : t('records.terms_not_acknowledged')}
+                />
                 <DetailRow label={t('records.read_authority')} value={connector.ReadEnabled ? t('records.granted') : t('records.not_granted')} />
                 <DetailRow label={t('records.write_authority')} value={t('records.write_refused')} />
-                <DetailRow label={t('records.last_read')} value={formatWhen(connector.LastPolledOn) || t('records.never_read')} />
-                <DetailRow label={t('records.last_success')} value={formatWhen(connector.LastSuccessOn) || null} />
+                <DetailRow label={t('records.last_read')} value={formatWhen(connector.LastPolledOn, timeZone) || t('records.never_read')} />
+                <DetailRow label={t('records.last_success')} value={formatWhen(connector.LastSuccessOn, timeZone) || null} />
                 <DetailRow label={t('records.last_error')} value={connector.LastError} testID="connector-last-error" />
                 <DetailRow label={t('records.requests_this_hour')} value={`${connector.RequestsThisHour} / ${connector.MaxRequestsPerHour}`} />
                 <DetailRow label={t('records.poll_interval')} value={t('records.minutes', { count: connector.PollIntervalMinutes })} />

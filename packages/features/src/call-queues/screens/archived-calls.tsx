@@ -1,6 +1,7 @@
 import { formatUtcInDepartmentTime } from '@resgrid/core/utils/dates';
 import { useArchivedCallsStore, useCallsStore } from '@resgrid/data';
 import { callRoutes, priorityOptions } from '@resgrid/features/calls';
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import { DateTimeField, HStack, Loading, Pressable, ScrollView, Text, ZeroState } from '@resgrid/ui';
 import { type Href, useRouter } from 'expo-router';
@@ -9,7 +10,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { FilterChip, QueueSearch } from '../components/queue-controls';
-import { PriorityCell, type QueueColumn, QueueTable, TextCell, TypeCell } from '../components/queue-table';
+import { AddressCell, PriorityCell, type QueueColumn, QueueTable, TextCell, TypeCell } from '../components/queue-table';
 import {
   ARCHIVED_CALL_STATES,
   type ArchivedCallFilters,
@@ -37,6 +38,7 @@ export interface ArchivedCallsScreenProps {
  */
 export default function ArchivedCallsScreen({ showHeader = true, now = Date.now }: ArchivedCallsScreenProps) {
   const { t } = useTranslation();
+  const timeZone = useDepartmentTimeZone();
   const router = useRouter();
   const years = useArchivedCallsStore((state) => state.years);
   const selectedYear = useArchivedCallsStore((state) => state.selectedYear);
@@ -50,6 +52,7 @@ export default function ArchivedCallsScreen({ showHeader = true, now = Date.now 
 
   useEffect(() => {
     void useCallsStore.getState().fetchCallPriorities();
+
     // Archived calls rarely change: coming back reuses the year loaded a moment ago.
     if (now() - (useArchivedCallsStore.getState().fetchedAt.calls ?? 0) > ARCHIVED_CALLS_FRESH_MS) void useArchivedCallsStore.getState().load();
   }, [now]);
@@ -78,14 +81,15 @@ export default function ArchivedCallsScreen({ showHeader = true, now = Date.now 
         flex: 1,
         render: (call) => {
           const key = archivedCallStateLabelKey(call.State);
+
           return <TextCell value={key ? t(key) : null} />;
         },
       },
-      { key: 'address', titleKey: 'scheduled_calls.table_address', flex: 2, render: (call) => <TextCell value={call.Address} /> },
-      { key: 'logged', titleKey: 'archived_calls.table_logged', flex: 1.5, render: (call) => <TextCell value={formatUtcInDepartmentTime(call.LoggedOnUtc, null)} /> },
-      { key: 'closed', titleKey: 'archived_calls.table_closed', flex: 1.5, render: (call) => <TextCell value={formatUtcInDepartmentTime(call.ClosedOnUtc, null)} /> },
+      { key: 'address', titleKey: 'scheduled_calls.table_address', flex: 2, render: (call) => <AddressCell call={call} /> },
+      { key: 'logged', titleKey: 'archived_calls.table_logged', flex: 1.5, render: (call) => <TextCell value={formatUtcInDepartmentTime(call.LoggedOnUtc, timeZone)} /> },
+      { key: 'closed', titleKey: 'archived_calls.table_closed', flex: 1.5, render: (call) => <TextCell value={formatUtcInDepartmentTime(call.ClosedOnUtc, timeZone)} /> },
     ],
-    [t]
+    [t, timeZone]
   );
 
   const renderFilters = () => (
@@ -149,9 +153,13 @@ export default function ArchivedCallsScreen({ showHeader = true, now = Date.now 
   const renderContent = () => {
     // Only the first load replaces the table; a refresh keeps the rows on screen.
     if (isLoading && archivedCalls.length === 0) return <Loading text={t('archived_calls.loading')} />;
+
     if (error && archivedCalls.length === 0) return <ZeroState heading={t('common.errorOccurred')} description={t(error.messageKey)} isError />;
+
     if (archivedCalls.length === 0) return <ZeroState heading={t('archived_calls.no_archived_calls')} description={t('archived_calls.no_archived_calls_description', { year: selectedYear ?? '' })} icon={Archive} />;
+
     if (visible.length === 0) return <ZeroState heading={t('archived_calls.no_matches')} description={t('archived_calls.no_matches_description')} icon={Search} />;
+
     return (
       <QueueTable
         calls={visible}

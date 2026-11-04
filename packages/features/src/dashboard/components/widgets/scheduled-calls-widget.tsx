@@ -1,12 +1,13 @@
+import { useNow } from '@resgrid/core/lifecycle/use-now';
 import { formatUtcInDepartmentTime } from '@resgrid/core/utils/dates';
 import { useCallsStore } from '@resgrid/data';
-import { DispatchTicker } from '@resgrid/features/calls';
+import { callDisplayName, callDisplayText, DispatchTicker } from '@resgrid/features/calls';
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import type { CallResultData } from '@resgrid/models';
 import { HStack, TypeIcon } from '@resgrid/ui';
 import React, { useCallback, useMemo } from 'react';
 
-import { useNow } from '../../hooks/use-now';
 import { usePriorityLookup } from '../../hooks/use-priority-lookup';
 import { useScheduledCallDispatches } from '../../hooks/use-scheduled-call-dispatches';
 import { useStale } from '../../hooks/use-stale';
@@ -25,19 +26,26 @@ const COLUMN_FLEX: Readonly<Record<ScheduledCallsColumnKey, number>> = { name: 1
 /** "Nov 1, 14:30 (12m)" / "(3h)" / "(2d)" / "(overdue)". */
 const useScheduledLabel = (): ((call: CallResultData, now: number) => string) => {
   const { t, i18n } = useTranslation();
+  const timeZone = useDepartmentTimeZone();
   const locale = i18n.language;
+
   return useCallback(
     (call: CallResultData, now: number) => {
       const at = scheduledAt(call);
+
       if (at === null) return '—';
       const minutes = minutesUntilActive(call, now) ?? 0;
-      const time = formatUtcInDepartmentTime(at, null, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }, locale, '—');
+      const time = formatUtcInDepartmentTime(at, timeZone, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }, locale, '—');
+
       if (minutes < 0) return `${time} (${t('scheduledCalls.overdue')})`;
+
       if (minutes < 60) return `${time} (${Math.ceil(minutes)}m)`;
+
       if (minutes < 1440) return `${time} (${Math.floor(minutes / 60)}h)`;
+
       return `${time} (${Math.floor(minutes / 1440)}d)`;
     },
-    [locale, t]
+    [locale, t, timeZone]
   );
 };
 
@@ -60,6 +68,7 @@ export const ScheduledCallsWidget: React.FC<WidgetProps> = ({ isEditMode, onRemo
   const prioritiesById = useMemo(() => new Map(priorities.map((priority) => [priority.Id, priority])), [priorities]);
   const rows = useMemo(() => selectScheduledCalls(scheduledCalls, dispatchesByCall, prioritiesById, settings), [dispatchesByCall, prioritiesById, scheduledCalls, settings]);
   const { fontSize } = settings;
+  const protectedLabel = t('data_protection.protected_value');
 
   const columns = useMemo<TableColumn<CallResultData>[]>(() => {
     const visible: Record<ScheduledCallsColumnKey, boolean> = {
@@ -69,11 +78,12 @@ export const ScheduledCallsWidget: React.FC<WidgetProps> = ({ isEditMode, onRemo
       address: settings.showAddress,
       dispatched: settings.showDispatched,
     };
+
     const render: Record<ScheduledCallsColumnKey, (call: CallResultData) => React.ReactNode> = {
       name: (call) => (
         <HStack space="xs" className="items-center">
           <TypeIcon iconUrl={call.TypeIconUrl ?? null} mapIcon={call.TypeMapIcon ?? null} size={fontSize + 4} />
-          <CellText fontSize={fontSize}>{call.Name}</CellText>
+          <CellText fontSize={fontSize}>{callDisplayName(call, protectedLabel)}</CellText>
         </HStack>
       ),
       scheduledTime: (call) => (
@@ -83,6 +93,7 @@ export const ScheduledCallsWidget: React.FC<WidgetProps> = ({ isEditMode, onRemo
       ),
       priority: (call) => {
         const priority = priorityOf(call.Priority);
+
         return (
           <CellText fontSize={fontSize} color={priority.color}>
             {priority.label}
@@ -91,11 +102,12 @@ export const ScheduledCallsWidget: React.FC<WidgetProps> = ({ isEditMode, onRemo
       },
       address: (call) => (
         <CellText fontSize={fontSize} muted>
-          {call.Address || t('dashboard.no_address')}
+          {callDisplayText(call, 'Address', protectedLabel) || t('dashboard.no_address')}
         </CellText>
       ),
       dispatched: (call) => {
         const dispatches = dispatchesByCall[call.CallId] ?? [];
+
         return dispatches.length > 0 ? (
           <DispatchTicker dispatches={dispatches} animate={settings.scrollDispatches} />
         ) : (
@@ -105,8 +117,9 @@ export const ScheduledCallsWidget: React.FC<WidgetProps> = ({ isEditMode, onRemo
         );
       },
     };
+
     return settings.columnOrder.filter((key) => visible[key]).map((key) => ({ key, label: t(SCHEDULED_CALLS_COLUMN_LABEL_KEYS[key]), flex: COLUMN_FLEX[key], render: render[key] }));
-  }, [dispatchesByCall, fontSize, now, priorityOf, scheduledLabel, settings, t]);
+  }, [dispatchesByCall, fontSize, now, priorityOf, protectedLabel, scheduledLabel, settings, t]);
 
   return (
     <WidgetContainer title={title} testID="scheduled-calls-widget" isEditMode={isEditMode} onRemove={onRemove} onConfigure={onConfigure} stale={stale}>

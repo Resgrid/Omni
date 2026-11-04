@@ -1,4 +1,5 @@
 import { useRoutesStore } from '@resgrid/data';
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import type { RouteInstanceResultData } from '@resgrid/models';
 import { FlatList, HStack, Loading, Pressable, RefreshControl, ScreenHeader, Text, View, VStack, ZeroState } from '@resgrid/ui';
@@ -18,6 +19,7 @@ export interface RouteHistoryScreenProps {
 /** Past runs of a route plan (`/routes/history/[planId]`): status, when, stops done, distance and time; online read. */
 export default function RouteHistoryScreen({ planId: planIdProp }: RouteHistoryScreenProps) {
   const { t } = useTranslation();
+  const timeZone = useDepartmentTimeZone();
   const params = useLocalSearchParams<{ planId?: string | string[] }>();
   const planId = planIdProp ?? readRouteParam(params.planId);
   const history = useRoutesStore((state) => state.routeHistory);
@@ -49,7 +51,7 @@ export default function RouteHistoryScreen({ planId: planIdProp }: RouteHistoryS
       <Pressable onPress={() => router.push(unitRoutesRoutes.instance(item.RouteInstanceId))} accessibilityRole="button" testID={`route-history-${item.RouteInstanceId}`} className="mb-2 rounded-xl bg-background-0 p-4">
         <HStack space="sm" className="items-center">
           <VStack className="flex-1" space="xs">
-            <Text className="font-semibold text-typography-900">{formatRouteTime(item.ActualStartOn ?? item.AddedOn) || t('common.unknown')}</Text>
+            <Text className="font-semibold text-typography-900">{formatRouteTime(item.ActualStartOn ?? item.AddedOn, timeZone) || t('common.unknown')}</Text>
             <Text className="text-xs text-typography-500">{facts.join(' · ')}</Text>
           </VStack>
           <View style={StyleSheet.flatten([styles.badge, { backgroundColor: `${look.color}26` }])}>

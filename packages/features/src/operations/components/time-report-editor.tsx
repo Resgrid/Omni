@@ -1,5 +1,6 @@
 import { formatUtcInDepartmentTime } from '@resgrid/core/utils/dates';
 import { OptionChips } from '@resgrid/features/calls';
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import { type TimeEntry, TimeEntryType, type TimeReport, type TimeReportIssue, TimeReportScope, TimeReportStatus, TimeSubjectType } from '@resgrid/models';
 import { Button, ButtonText, DateTimeField, Input, InputField, Switch, Text } from '@resgrid/ui';
@@ -68,6 +69,7 @@ export const TimeReportEditor: React.FC<TimeReportEditorProps> = ({
   onApprove,
 }) => {
   const { t } = useTranslation();
+  const timeZone = useDepartmentTimeZone();
   const [customerSigner, setCustomerSigner] = useState('');
   const editable = isReportEditable(report);
   const typeOptions = useMemo(() => [TimeEntryType.Deployment, TimeEntryType.Standby, TimeEntryType.Travel].map((value) => ({ value: String(value), label: t(`operations.entryType.${value}`) })), [t]);
@@ -285,7 +287,7 @@ export const TimeReportEditor: React.FC<TimeReportEditorProps> = ({
           <Text className="font-semibold text-typography-900">{t('operations.sign.title')}</Text>
           <Text className="text-typography-500">
             {report.ContractorSignedOn
-              ? t('operations.sign.crewBossSigned', { when: formatUtcInDepartmentTime(report.ContractorSignedOn, null, { dateStyle: 'medium', timeStyle: 'short' }) })
+              ? t('operations.sign.crewBossSigned', { when: formatUtcInDepartmentTime(report.ContractorSignedOn, timeZone, { dateStyle: 'medium', timeStyle: 'short' }) })
               : t('operations.sign.crewBossPending')}
           </Text>
           <Text className="text-typography-500">{report.CustomerSignedOn ? t('operations.sign.customerSigned', { name: report.CustomerSignerName ?? '' }) : t('operations.sign.customerPending')}</Text>

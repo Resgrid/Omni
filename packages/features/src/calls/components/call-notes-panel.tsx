@@ -1,6 +1,7 @@
 import { isFieldRedacted, ProtectedFieldIds, useSecurity } from '@resgrid/auth';
 import { formatUtcInDepartmentTime } from '@resgrid/core/utils/dates';
 import { type CallNoteListItem, getDataLocationFix, searchCallNotes, useCallDetailStore } from '@resgrid/data';
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import type { CallNoteResultData } from '@resgrid/models';
 import { Button, ButtonText, Input, InputField, Text, Textarea, TextareaInput, useToast } from '@resgrid/ui';
@@ -21,6 +22,7 @@ const EMPTY_NOTES: CallNoteResultData[] = [];
  */
 export const CallNotesPanel: React.FC<CallNotesPanelProps> = ({ callId, showSearch = true }) => {
   const { t } = useTranslation();
+  const timeZone = useDepartmentTimeZone();
   const toast = useToast();
   const { canUserCreateNotes } = useSecurity();
   const serverNotes = useCallDetailStore((state) => state.details[callId]?.notes ?? EMPTY_NOTES);
@@ -91,7 +93,7 @@ export const CallNotesPanel: React.FC<CallNotesPanelProps> = ({ callId, showSear
               <Text className="text-typography-900">{isProtected ? t('data_protection.protected_value') : note.Note}</Text>
               <View style={styles.meta}>
                 <Text size="xs" className="text-typography-500">
-                  {[note.FullName, formatUtcInDepartmentTime(note.TimestampUtc || note.Timestamp, null)].filter(Boolean).join(' · ')}
+                  {[note.FullName, formatUtcInDepartmentTime(note.TimestampUtc || note.Timestamp, timeZone)].filter(Boolean).join(' · ')}
                 </Text>
                 {note.queued ? (
                   <Text size="xs" className={note.queued.state === 'rejected' ? 'font-semibold text-error-600' : 'font-semibold text-warning-700'} testID={`call-note-${note.CallNoteId}-queued`}>

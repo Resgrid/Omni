@@ -122,16 +122,21 @@ const fromHsl = (h: number, s: number, l: number): Rgb => {
   return { r: hueToChannel(p, q, h + 1 / 3) * 255, g: hueToChannel(p, q, h) * 255, b: hueToChannel(p, q, h - 1 / 3) * 255 };
 };
 
+const OPAQUE_HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
+
 /**
  * The colour itself when it already reads on the scheme's surface; otherwise the same hue made lighter (dark mode) or
- * darker (light mode) until it reaches `minContrast`. Unparseable input comes back unchanged, so a caller's own
- * fallback still applies.
+ * darker (light mode) until it reaches `minContrast`. The result is always opaque: contrast is judged on the colour
+ * without its alpha, so a translucent one ("#00000033") comes back as that opaque colour. Unparseable input comes back
+ * unchanged, so a caller's own fallback still applies.
  */
 export const readableOnSurface = (color: string | null | undefined, scheme: ResolvedColorScheme, minContrast: number = TEXT_CONTRAST, surface: string = THEME_SURFACES[scheme]): string => {
   if (!color) return color ?? '';
   const rgb = parseColor(color);
 
-  if (!rgb || contrastRatio(toHex(rgb), surface) >= minContrast) return color;
+  if (!rgb) return color;
+
+  if (contrastRatio(toHex(rgb), surface) >= minContrast) return OPAQUE_HEX.test(color.trim()) ? color : toHex(rgb);
 
   const { h, s, l } = toHsl(rgb);
   const towardLight = scheme === 'dark';

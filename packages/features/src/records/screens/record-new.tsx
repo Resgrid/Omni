@@ -62,18 +62,26 @@ export default function RecordNewScreen({ draftId: draftProp, showHeader = true 
     async (chosen: FieldRecordCatalogEntry, existing?: ValueMap) => {
       setIsBusy(true);
       setMessage(null);
+
       try {
         const loaded = await fetchSchema(chosen.DefinitionKey, chosen.Version);
         setEntry(chosen);
         setSchema(loaded);
+
+        if (!loaded) return;
+
         if (existing) {
           setValues(existing);
+
           return;
         }
+
         if (!chosen.SupportsPrefill) {
           setValues({});
+
           return;
         }
+
         const prefilled = await prefill(chosen.DefinitionKey, chosen.Version);
         setValues(prefillToValueMap(prefilled?.Values ?? []));
       } finally {
@@ -94,10 +102,11 @@ export default function RecordNewScreen({ draftId: draftProp, showHeader = true 
 
   const unsupported = useMemo(() => unsupportedFieldKeys(schema), [schema]);
   const offlineCapable = canAuthorOffline(entry);
-  const blocked = isBusy || unsupported.length > 0;
+  const blocked = isBusy || !schema || unsupported.length > 0;
 
   const buildDraft = useCallback(() => {
     if (!entry) return null;
+
     return {
       clientRecordId: resumed?.clientRecordId ?? newClientRecordId(),
       recordId: resumed?.recordId ?? null,
@@ -114,28 +123,39 @@ export default function RecordNewScreen({ draftId: draftProp, showHeader = true 
   }, [entry, resumed, values, context.CallId, context.GroupId]);
 
   const checkValues = useCallback((): boolean => {
+    if (!schema) return false;
     const found = validate(schema, values, false);
     setIssues(found);
+
     if (found.length > 0) setMessage(t('records.fix_fields'));
+
     return found.length === 0;
   }, [schema, values, t]);
 
   const saveAndSend = useCallback(async () => {
     if (!checkValues()) return;
     const draft = buildDraft();
+
     if (!draft) return;
+
     // A definition that seals values (or is not offline-capable) is authored online only.
     if (!offlineCapable && !isOnline) {
       setMessage(t('records.online_only'));
+
       return;
     }
+
     setIsBusy(true);
+
     try {
       const outcome = await stageAndSendDraft(draft);
+
       if (outcome.kind === 'sent' && outcome.recordId) {
         router.replace(recordDetail(outcome.recordId));
+
         return;
       }
+
       setMessage(outcome.kind === 'sent' ? t('records.saved') : outcome.kind === 'queued' ? t('records.saved_locally') : t('records.save_failed'));
     } finally {
       setIsBusy(false);
@@ -146,6 +166,7 @@ export default function RecordNewScreen({ draftId: draftProp, showHeader = true 
   const keepLocally = useCallback(() => {
     if (!checkValues() || !offlineCapable) return;
     const draft = buildDraft();
+
     if (!draft) return;
     stageDraft(draft);
     setMessage(t('records.saved_locally'));
@@ -156,6 +177,7 @@ export default function RecordNewScreen({ draftId: draftProp, showHeader = true 
 
   if (!entry) {
     const definitions = catalog?.Definitions ?? [];
+
     return (
       <View style={styles.screen} className="bg-background-0" testID="record-new-screen">
         {header(t('records.new_record'))}
@@ -225,7 +247,18 @@ export default function RecordNewScreen({ draftId: draftProp, showHeader = true 
             </Text>
           ) : null}
 
-          {schema ? <RecordForm schema={schema} values={values} issues={issues} onChange={setValues} readOnly={unsupported.length > 0} /> : <Loading />}
+          {schema ? (
+            <RecordForm schema={schema} values={values} issues={issues} onChange={setValues} readOnly={unsupported.length > 0} />
+          ) : isBusy ? (
+            <Loading />
+          ) : (
+            <Notice tone="warning" testID="record-new-schema-error">
+              <Text>{t('records.load_failed')}</Text>
+              <Button variant="outline" onPress={() => void choose(entry, resumed ? valueListToMap(resumed.values) : undefined)}>
+                <ButtonText>{t('common.retry')}</ButtonText>
+              </Button>
+            </Notice>
+          )}
 
           <View style={styles.actions}>
             <Button isDisabled={blocked || (!offlineCapable && !isOnline)} onPress={() => void saveAndSend()} testID="records-save-send">
@@ -247,12 +280,14 @@ export default function RecordNewScreen({ draftId: draftProp, showHeader = true 
 /** The header titled with the department's word for the definition (hooks need a component). */
 const DefinitionHeader: React.FC<{ entry: FieldRecordCatalogEntry; render: (title: string) => React.ReactNode }> = ({ entry, render }) => {
   const name = useDefinitionDisplayName(entry.DefinitionKey, entry.Name);
+
   return <>{render(name)}</>;
 };
 
 const DefinitionChoice: React.FC<{ definition: FieldRecordCatalogEntry; disabled: boolean; onPress: () => void }> = ({ definition, disabled, onPress }) => {
   const { t } = useTranslation();
   const name = useDefinitionDisplayName(definition.DefinitionKey, definition.Name);
+
   return (
     <>
       <Pressable onPress={onPress} disabled={disabled} accessibilityRole="button" accessibilityLabel={name} className="px-4 py-4" testID={`records-choose-${definition.DefinitionKey}`}>

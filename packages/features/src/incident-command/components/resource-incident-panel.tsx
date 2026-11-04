@@ -1,6 +1,7 @@
 import { useCapability } from '@resgrid/config';
 import { formatUtcInDepartmentTime } from '@resgrid/core/utils/dates';
 import { getDataSessionScope, useResourceViewStore } from '@resgrid/data';
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import type { IncidentAttachment, IncidentContactInfo, IncidentNeed, ResourceIncidentView, TacticalObjective } from '@resgrid/models';
 import { useRealtimeRefetch } from '@resgrid/realtime';
@@ -126,6 +127,7 @@ export interface ResourceIncidentPanelProps {
  */
 export const ResourceIncidentPanel: React.FC<ResourceIncidentPanelProps> = ({ callId, unitId: unitIdProp }) => {
   const { t } = useTranslation();
+  const timeZone = useDepartmentTimeZone();
   const statusSubject = useCapability('status').subject;
   const unitId = unitIdProp !== undefined ? unitIdProp : statusSubject === 'unit' ? (getDataSessionScope()?.unitId ?? null) : null;
   const hasView = useResourceViewStore((state) => callId in state.viewsByCall);
@@ -185,7 +187,7 @@ export const ResourceIncidentPanel: React.FC<ResourceIncidentPanelProps> = ({ ca
             <View style={StyleSheet.flatten([styles.swatch, { backgroundColor: safeColor(assignment.Color) }])} testID="incident-view-lane-color" />
             <Text className="font-semibold text-typography-900">{assignment.LaneName}</Text>
           </HStack>
-          <Text className="mt-1 text-xs text-typography-500">{t('incident_command.assigned_since_time', { time: formatUtcInDepartmentTime(assignment.AssignedOn, null) })}</Text>
+          <Text className="mt-1 text-xs text-typography-500">{t('incident_command.assigned_since_time', { time: formatUtcInDepartmentTime(assignment.AssignedOn, timeZone) })}</Text>
           {assignment.PrimaryLead ? (
             <ContactCard label={t('incident_command.primary_lead')} contact={assignment.PrimaryLead} onMessage={(userId) => void chat.messagePerson(userId)} testID="incident-view-primary-lead" />
           ) : null}
@@ -216,11 +218,11 @@ export const ResourceIncidentPanel: React.FC<ResourceIncidentPanelProps> = ({ ca
       <SectionCard title={t('incident_command.incident_info')} testID="incident-view-info">
         {view.Commander ? <ContactCard label={t('incident_command.commander')} contact={view.Commander} onMessage={(userId) => void chat.messagePerson(userId)} testID="incident-view-commander" /> : null}
         <Text className="mt-2 text-xs text-typography-500">{t('incident_command.established')}</Text>
-        <Text className="font-medium text-typography-900">{formatUtcInDepartmentTime(view.EstablishedOn, null)}</Text>
+        <Text className="font-medium text-typography-900">{formatUtcInDepartmentTime(view.EstablishedOn, timeZone)}</Text>
         {view.EstimatedEndOn ? (
           <>
             <Text className="mt-2 text-xs text-typography-500">{t('incident_command.estimated_end')}</Text>
-            <Text className="font-medium text-typography-900">{formatUtcInDepartmentTime(view.EstimatedEndOn, null)}</Text>
+            <Text className="font-medium text-typography-900">{formatUtcInDepartmentTime(view.EstimatedEndOn, timeZone)}</Text>
           </>
         ) : null}
         {view.ImportantInformation ? (
@@ -289,7 +291,7 @@ export const ResourceIncidentPanel: React.FC<ResourceIncidentPanelProps> = ({ ca
               <View key={note.IncidentNoteId} className="rounded-lg bg-background-50 p-2" testID={`incident-view-note-${note.IncidentNoteId}`}>
                 {note.Title ? <Heading size="xs">{note.Title}</Heading> : null}
                 <Text className="text-sm text-typography-900">{note.Body}</Text>
-                <Text className="mt-1 text-xs text-typography-500">{formatUtcInDepartmentTime(note.CreatedOn, null)}</Text>
+                <Text className="mt-1 text-xs text-typography-500">{formatUtcInDepartmentTime(note.CreatedOn, timeZone)}</Text>
               </View>
             ))}
           </VStack>

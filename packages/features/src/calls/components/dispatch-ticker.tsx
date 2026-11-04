@@ -3,7 +3,7 @@ import { Text, TypeIcon } from '@resgrid/ui';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Easing, Platform, StyleSheet, View } from 'react-native';
 
-import { getDispatchTypeStyle, getUniqueDispatches, isUnitDispatchType } from '../lib/call-dispatch';
+import { dispatchKey, getDispatchTypeStyle, getUniqueDispatches, isUnitDispatchType } from '../lib/call-dispatch';
 
 export interface DispatchTickerProps {
   dispatches: readonly DispatchedEventResultData[];
@@ -45,7 +45,7 @@ export const DispatchTicker: React.FC<DispatchTickerProps> = ({ dispatches, anim
       const style = getDispatchTypeStyle(dispatch.Type);
       return (
         <View
-          key={`${dispatch.Id || `${dispatch.Type}:${dispatch.Name}`}-${suffix}`}
+          key={`${dispatchKey(dispatch)}-${suffix}`}
           style={StyleSheet.flatten([styles.badge, large ? styles.badgeLarge : null, { backgroundColor: style.backgroundColor }])}
           accessible
           accessibilityLabel={`${style.label} ${dispatch.Name}`}

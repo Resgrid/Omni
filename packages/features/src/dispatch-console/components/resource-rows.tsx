@@ -1,5 +1,6 @@
 import { personnelFullName } from '@resgrid/data';
 import { UnitNavigationEtaChip } from '@resgrid/features/navigation-eta';
+import { alertColors, type UnitAlertAcknowledgementState, UnitAlertBadge, type UnitStatusAlertLevel } from '@resgrid/features/unit-status-alerts';
 import { useTranslation } from '@resgrid/i18n';
 import type { PersonnelInfoResultData, UnitInfoResultData } from '@resgrid/models';
 import { Badge, BadgeText, contentOnFill, HStack, Pressable, Text, TypeIcon, useReadableColor, useThemeColors, VStack } from '@resgrid/ui';
@@ -122,86 +123,96 @@ export interface ConsoleUnitRowProps {
   onOpen?: (unitId: string) => void;
   /** "+": set this unit's status with the filtered call as destination. */
   onSetStatusForCall?: (unitId: string) => void;
+  /** The unit's status timer while it is over it (primitives, so a row re-renders only when its own timer moves). */
+  timerLevel?: UnitStatusAlertLevel;
+  timerAcknowledgement?: UnitAlertAcknowledgementState;
+  timerSeconds?: number | null;
 }
 
 /**
  * A unit on the console (Dispatch's row): its type icon on a tile in the status colour, name, type · group, crew seats,
- * destination, its live ETA while it navigates in the Unit app, and its status as a dot and name with a GPS marker.
+ * destination, its live ETA while it navigates in the Unit app, and its status as a dot and name with a GPS marker. A
+ * unit over its status timer gets the timer's edge colour and badge (until someone mutes it): the cue to contact it.
  */
-export const ConsoleUnitRow: React.FC<ConsoleUnitRowProps> = React.memo(({ unit, isSelected, isOnCall, isSelectionMode, hasPendingStatus = false, onPress, onLongPress, onOpen, onSetStatusForCall }) => {
-  const { t } = useTranslation();
-  const colors = useThemeColors();
-  const readable = useReadableColor();
-  const tileColor = readable.mark(unit.CurrentStatusColor);
+export const ConsoleUnitRow: React.FC<ConsoleUnitRowProps> = React.memo(
+  ({ unit, isSelected, isOnCall, isSelectionMode, hasPendingStatus = false, onPress, onLongPress, onOpen, onSetStatusForCall, timerLevel = 'none', timerAcknowledgement = 'none', timerSeconds = null }) => {
+    const { t } = useTranslation();
+    const colors = useThemeColors();
+    const readable = useReadableColor();
+    const tileColor = readable.mark(unit.CurrentStatusColor);
 
-  const subtitle = [unit.Type, unit.GroupName].flatMap((part) => (part?.trim() ? [part.trim()] : [])).join(' · ') || t('dispatch.unassigned');
+    const subtitle = [unit.Type, unit.GroupName].flatMap((part) => (part?.trim() ? [part.trim()] : [])).join(' · ') || t('dispatch.unassigned');
 
-  const hasPosition = !!unit.Latitude && !!unit.Longitude;
+    const hasPosition = !!unit.Latitude && !!unit.Longitude;
+    // A muted alert keeps its badge but gives up the edge: someone already dealt with it.
+    const timerEdge = timerAcknowledgement === 'muted' ? undefined : alertColors(timerLevel, false).edge;
 
-  return (
-    <HStack className={`mb-2 items-center rounded-lg border ${rowTone(isSelected, isSelectionMode)}`}>
-      <Pressable
-        onPress={(event?: GestureResponderEvent) => onPress(unit.UnitId, event)}
-        onLongPress={() => onLongPress(unit.UnitId)}
-        accessibilityRole="button"
-        accessibilityState={{ selected: isSelected }}
-        className="flex-1 rounded-lg p-2"
-        testID={`console-unit-${unit.UnitId}`}
-      >
-        <HStack space="sm" className="items-center">
-          {isSelectionMode ? <View>{isSelected ? <SquareCheck size={16} color={colors.token('primary-600')} /> : <Square size={16} color={colors.token('typography-400')} />}</View> : null}
-          <View style={StyleSheet.flatten([styles.unitTile, { backgroundColor: tileColor }])}>
-            <TypeIcon iconUrl={unit.TypeIconUrl ?? null} mapIcon={unit.TypeMapIcon ?? null} size={22} containerStyle={styles.typeIconBackdrop} fallback={<Truck size={14} color={contentOnFill(tileColor)} />} />
-          </View>
-          <VStack className="flex-1">
-            <HStack space="xs" className="items-center">
-              <Text className="shrink text-sm font-semibold text-typography-800" numberOfLines={1}>
-                {unit.Name}
-              </Text>
-              {isOnCall ? (
-                <View className="rounded bg-info-50 px-1.5 py-0.5" testID={`console-unit-${unit.UnitId}-on-call`}>
-                  <Text className="text-xs text-info-700">{t('dispatch.on_call')}</Text>
-                </View>
-              ) : null}
-              {hasPendingStatus ? <PendingSyncBadge /> : null}
-            </HStack>
-            <Text className="text-xs text-typography-500" numberOfLines={1}>
-              {subtitle}
-            </Text>
-            <UnitCrewLine unit={unit} />
-            {unit.CurrentDestinationName?.trim() ? <DestinationLine name={unit.CurrentDestinationName} /> : null}
-            <UnitNavigationEtaChip unitId={unit.UnitId} testID={`console-unit-${unit.UnitId}-eta`} />
-          </VStack>
-          <VStack space="xs" className="max-w-[140px] items-end">
-            <StatusLine text={unit.CurrentStatus || t('common.unknown')} color={unit.CurrentStatusColor} testID={`console-unit-${unit.UnitId}-status`} />
-            {hasPosition ? (
+    return (
+      <HStack className={`mb-2 items-center rounded-lg border ${rowTone(isSelected, isSelectionMode)}`} style={timerEdge ? StyleSheet.flatten([styles.timerEdge, { borderLeftColor: timerEdge }]) : undefined}>
+        <Pressable
+          onPress={(event?: GestureResponderEvent) => onPress(unit.UnitId, event)}
+          onLongPress={() => onLongPress(unit.UnitId)}
+          accessibilityRole="button"
+          accessibilityState={{ selected: isSelected }}
+          className="flex-1 rounded-lg p-2"
+          testID={`console-unit-${unit.UnitId}`}
+        >
+          <HStack space="sm" className="items-center">
+            {isSelectionMode ? <View>{isSelected ? <SquareCheck size={16} color={colors.token('primary-600')} /> : <Square size={16} color={colors.token('typography-400')} />}</View> : null}
+            <View style={StyleSheet.flatten([styles.unitTile, { backgroundColor: tileColor }])}>
+              <TypeIcon iconUrl={unit.TypeIconUrl ?? null} mapIcon={unit.TypeMapIcon ?? null} size={22} containerStyle={styles.typeIconBackdrop} fallback={<Truck size={14} color={contentOnFill(tileColor)} />} />
+            </View>
+            <VStack className="flex-1">
               <HStack space="xs" className="items-center">
-                <View>
-                  <MapPin size={10} color={colors.token('typography-400')} />
-                </View>
-                <Text className="text-xs text-typography-400">{t('dispatch_console.gps')}</Text>
+                <Text className="shrink text-sm font-semibold text-typography-800" numberOfLines={1}>
+                  {unit.Name}
+                </Text>
+                {isOnCall ? (
+                  <View className="rounded bg-info-50 px-1.5 py-0.5" testID={`console-unit-${unit.UnitId}-on-call`}>
+                    <Text className="text-xs text-info-700">{t('dispatch.on_call')}</Text>
+                  </View>
+                ) : null}
+                {hasPendingStatus ? <PendingSyncBadge /> : null}
               </HStack>
+              <Text className="text-xs text-typography-500" numberOfLines={1}>
+                {subtitle}
+              </Text>
+              <UnitCrewLine unit={unit} />
+              {unit.CurrentDestinationName?.trim() ? <DestinationLine name={unit.CurrentDestinationName} /> : null}
+              <UnitNavigationEtaChip unitId={unit.UnitId} testID={`console-unit-${unit.UnitId}-eta`} />
+            </VStack>
+            <VStack space="xs" className="max-w-[140px] items-end">
+              <StatusLine text={unit.CurrentStatus || t('common.unknown')} color={unit.CurrentStatusColor} testID={`console-unit-${unit.UnitId}-status`} />
+              <UnitAlertBadge level={timerLevel} acknowledgementState={timerAcknowledgement} secondsInStatus={timerSeconds} testID={`console-unit-${unit.UnitId}-timer`} />
+              {hasPosition ? (
+                <HStack space="xs" className="items-center">
+                  <View>
+                    <MapPin size={10} color={colors.token('typography-400')} />
+                  </View>
+                  <Text className="text-xs text-typography-400">{t('dispatch_console.gps')}</Text>
+                </HStack>
+              ) : null}
+            </VStack>
+          </HStack>
+        </Pressable>
+        {onOpen || onSetStatusForCall ? (
+          <VStack space="xs" className="items-center pr-2">
+            {onOpen ? <RowIconButton icon={ExternalLink} tone="neutral" onPress={() => onOpen(unit.UnitId)} accessibilityLabel={t('dispatch.view_details')} testID={`console-unit-${unit.UnitId}-open`} /> : null}
+            {onSetStatusForCall ? (
+              <RowIconButton
+                icon={Plus}
+                tone="accent"
+                onPress={() => onSetStatusForCall(unit.UnitId)}
+                accessibilityLabel={t('dispatch_console.set_status_for_call')}
+                testID={`console-unit-${unit.UnitId}-status-for-call`}
+              />
             ) : null}
           </VStack>
-        </HStack>
-      </Pressable>
-      {onOpen || onSetStatusForCall ? (
-        <VStack space="xs" className="items-center pr-2">
-          {onOpen ? <RowIconButton icon={ExternalLink} tone="neutral" onPress={() => onOpen(unit.UnitId)} accessibilityLabel={t('dispatch.view_details')} testID={`console-unit-${unit.UnitId}-open`} /> : null}
-          {onSetStatusForCall ? (
-            <RowIconButton
-              icon={Plus}
-              tone="accent"
-              onPress={() => onSetStatusForCall(unit.UnitId)}
-              accessibilityLabel={t('dispatch_console.set_status_for_call')}
-              testID={`console-unit-${unit.UnitId}-status-for-call`}
-            />
-          ) : null}
-        </VStack>
-      ) : null}
-    </HStack>
-  );
-});
+        ) : null}
+      </HStack>
+    );
+  }
+);
 
 ConsoleUnitRow.displayName = 'ConsoleUnitRow';
 
@@ -291,6 +302,7 @@ export const ConsolePersonnelRow: React.FC<ConsolePersonnelRowProps> = React.mem
 ConsolePersonnelRow.displayName = 'ConsolePersonnelRow';
 
 const styles = StyleSheet.create({
+  timerEdge: { borderLeftWidth: 4 },
   unitTile: { width: 28, height: 28, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
   // A light tile behind a unit-type icon so it reads on any status colour, which stays visible as the frame.
   typeIconBackdrop: { backgroundColor: '#ffffff', borderRadius: 4 },

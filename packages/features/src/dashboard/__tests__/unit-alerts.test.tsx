@@ -1,6 +1,7 @@
 import './test-setup';
 
 import { useUnitsStore, useUnitStatusAlertsStore } from '@resgrid/data';
+import type { BoardUnit } from '@resgrid/features/unit-status-alerts';
 import type { UnitStatusAlertAcknowledgementResultData } from '@resgrid/models';
 import { useToastStore } from '@resgrid/ui';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
@@ -9,7 +10,6 @@ import React from 'react';
 import { UnitAlertsWidget } from '../components/widgets/unit-alerts-widget';
 import { UnitsWidget } from '../components/widgets/units-widget';
 import { useWidgetSettingsStore } from '../hooks/use-widget-settings-store';
-import type { BoardUnit } from '../lib/unit-status-alerts';
 import { setConfig, setRights, stubDataStores, utcAgo } from './fixtures';
 
 const props = { isEditMode: false, width: 600, height: 400 };

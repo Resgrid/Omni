@@ -1,4 +1,5 @@
 import { formatUtcInDepartmentTime } from '@resgrid/core/utils/dates';
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import type { ResourceAssignment } from '@resgrid/models';
 import { Button, ButtonText, Text, VStack } from '@resgrid/ui';
@@ -23,13 +24,14 @@ export interface ResourceSheetProps {
 /** One resource on the incident (IC resource-details sheet): where it is, since when, and remove-from-lane / release. */
 export const ResourceSheet: React.FC<ResourceSheetProps> = ({ assignment, onClose, resourceName, laneName, canAssign, onMoveToPool, onRelease, onShowOnMap }) => {
   const { t } = useTranslation();
+  const timeZone = useDepartmentTimeZone();
   return (
     <SheetForm isOpen={!!assignment} onClose={onClose} title={resourceName} snapPoint={55} testID="resource-sheet">
       {assignment ? (
         <VStack space="xs">
           <Text className="text-sm text-typography-500">{resourceKindName(t, assignment.ResourceKind)}</Text>
           <Text className="text-sm text-typography-900">{t('incident_command.resource_lane', { lane: laneName })}</Text>
-          <Text className="text-sm text-typography-900">{t('incident_command.resource_assigned_on', { time: formatUtcInDepartmentTime(assignment.AssignedOn, null) })}</Text>
+          <Text className="text-sm text-typography-900">{t('incident_command.resource_assigned_on', { time: formatUtcInDepartmentTime(assignment.AssignedOn, timeZone) })}</Text>
           {assignment.RequirementsWarning && assignment.RequirementsWarningMessage ? (
             <Text className="text-sm text-warning-700" testID="resource-sheet-warning">
               {assignment.RequirementsWarningMessage}

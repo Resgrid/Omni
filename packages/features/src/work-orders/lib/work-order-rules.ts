@@ -123,7 +123,8 @@ export const formatDueDate = (value: string | null | undefined, locale?: string)
 };
 
 /** Activity and file timestamps are UTC instants. */
-export const formatWorkOrderTime = (value: string | null | undefined, locale?: string): string => formatUtcInDepartmentTime(value, null, { dateStyle: 'medium', timeStyle: 'short' }, locale, value ? String(value) : '');
+export const formatWorkOrderTime = (value: string | null | undefined, zoneId: string | null, locale?: string): string =>
+  formatUtcInDepartmentTime(value, zoneId, { dateStyle: 'medium', timeStyle: 'short' }, locale, value ? String(value) : '');
 
 export const choiceName = (list: readonly WorkOrderChoice[] | undefined, value: string | number | null | undefined): string | null =>
   value == null || value === '' ? null : (list?.find((item) => item.Id === String(value))?.Name ?? null);

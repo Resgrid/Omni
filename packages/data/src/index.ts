@@ -69,6 +69,7 @@ export {
   type CallFileReader,
   type CallNoteListItem,
   type CallNotePayload,
+  type CurrentCallData,
   type QueueCallFileInput,
   type QueuedCallFile,
   type QueuedCallNote,

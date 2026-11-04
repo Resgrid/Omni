@@ -1,5 +1,6 @@
 import { useMessagesStore } from '@resgrid/data';
 import { ProtectedLabel } from '@resgrid/features/data-protection';
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import type { MessageResultData } from '@resgrid/models';
 import { Badge, BadgeText, Box, Button, ButtonSpinner, ButtonText, HStack, Pressable, Spinner, Text, Textarea, TextareaInput, useThemeColors, useToast, VStack } from '@resgrid/ui';
@@ -34,6 +35,7 @@ export interface MessageDetailsProps {
  */
 export const MessageDetails: React.FC<MessageDetailsProps> = ({ messageId, fallback = null, isOwn = false, onDeleted }) => {
   const { t, i18n } = useTranslation();
+  const timeZone = useDepartmentTimeZone();
   const locale = i18n.language;
   const colors = useThemeColors();
   const toast = useToast();
@@ -130,7 +132,7 @@ export const MessageDetails: React.FC<MessageDetailsProps> = ({ messageId, fallb
               <Clock size={14} color={colors.textMuted} />
             </View>
             <Text size="xs" className="text-typography-500">
-              {formatSentOn(message, locale)}
+              {formatSentOn(message, timeZone, locale)}
             </Text>
           </HStack>
         </HStack>
@@ -149,7 +151,7 @@ export const MessageDetails: React.FC<MessageDetailsProps> = ({ messageId, fallb
       {message.ExpiredOn ? (
         <VStack space="xs">
           <Text className="font-semibold text-typography-900">{t('messages.expires_on')}</Text>
-          <Text className="text-typography-600">{formatUtc(message.ExpiredOn, locale)}</Text>
+          <Text className="text-typography-600">{formatUtc(message.ExpiredOn, timeZone, locale)}</Text>
         </VStack>
       ) : null}
 
@@ -273,7 +275,7 @@ export const MessageDetails: React.FC<MessageDetailsProps> = ({ messageId, fallb
                       <Check size={12} color={colors.success} />
                     </View>
                     {/* Core reports the recipient's read receipt (ReadOn) here; answering also sets it. */}
-                    <Text size="xs" className="text-success-700">{`${t('messages.read_on')}: ${formatUtc(recipient.RespondedOn, locale)}`}</Text>
+                    <Text size="xs" className="text-success-700">{`${t('messages.read_on')}: ${formatUtc(recipient.RespondedOn, timeZone, locale)}`}</Text>
                   </HStack>
                 ) : null}
                 {recipient.Response ? <Text size="sm" className="text-typography-700">{`${t('messages.response')}: ${responseKey ? t(responseKey) : recipient.Response}`}</Text> : null}

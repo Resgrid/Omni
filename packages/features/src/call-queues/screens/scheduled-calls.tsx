@@ -2,6 +2,7 @@ import { useSecurity } from '@resgrid/auth';
 import { formatUtcInDepartmentTime } from '@resgrid/core/utils/dates';
 import { useCallsStore } from '@resgrid/data';
 import { CALL_LIST_REFRESH_EVENTS, callRoutes } from '@resgrid/features/calls';
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import type { CallResultData } from '@resgrid/models';
 import { useRealtimeRefetch } from '@resgrid/realtime';
@@ -12,7 +13,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
 
 import { QueueActionButton, QueueSearch } from '../components/queue-controls';
-import { PriorityCell, type QueueColumn, QueueTable, TextCell, TypeCell } from '../components/queue-table';
+import { AddressCell, PriorityCell, type QueueColumn, QueueTable, TextCell, TypeCell } from '../components/queue-table';
 import { useCallDispatchNow } from '../hooks/use-call-dispatch-now';
 import { matchesQueueQuery, scheduledDispatchUtc } from '../lib/queue-filters';
 
@@ -27,6 +28,7 @@ export interface ScheduledCallsScreenProps {
  */
 export default function ScheduledCallsScreen({ showHeader = true, realtime = true }: ScheduledCallsScreenProps) {
   const { t } = useTranslation();
+  const timeZone = useDepartmentTimeZone();
   const router = useRouter();
   const { canUserCreateCalls } = useSecurity();
   const scheduledCalls = useCallsStore((state) => state.scheduledCalls);
@@ -55,10 +57,10 @@ export default function ScheduledCallsScreen({ showHeader = true, realtime = tru
     () => [
       { key: 'type', titleKey: 'scheduled_calls.table_type', flex: 1, render: (call) => <TypeCell call={call} /> },
       { key: 'priority', titleKey: 'scheduled_calls.table_priority', flex: 1, render: (call) => <PriorityCell priorityId={call.Priority} /> },
-      { key: 'address', titleKey: 'scheduled_calls.table_address', flex: 2, render: (call) => <TextCell value={call.Address} /> },
-      { key: 'scheduled', titleKey: 'scheduled_calls.table_scheduled', flex: 1.5, render: (call) => <TextCell value={formatUtcInDepartmentTime(scheduledDispatchUtc(call), null)} tone="accent" /> },
+      { key: 'address', titleKey: 'scheduled_calls.table_address', flex: 2, render: (call) => <AddressCell call={call} /> },
+      { key: 'scheduled', titleKey: 'scheduled_calls.table_scheduled', flex: 1.5, render: (call) => <TextCell value={formatUtcInDepartmentTime(scheduledDispatchUtc(call), timeZone)} tone="accent" /> },
     ],
-    []
+    [timeZone]
   );
 
   const renderActions = useCallback(
@@ -77,8 +79,11 @@ export default function ScheduledCallsScreen({ showHeader = true, realtime = tru
 
   const renderContent = () => {
     if (isLoading && scheduledCalls.length === 0) return <Loading text={t('scheduled_calls.loading')} />;
+
     if (error && scheduledCalls.length === 0) return <ZeroState heading={t('common.errorOccurred')} description={t(error.messageKey)} isError />;
+
     if (visible.length === 0) return <ZeroState heading={t('scheduled_calls.no_scheduled_calls')} description={t('scheduled_calls.no_scheduled_calls_description')} icon={CalendarClock} />;
+
     return (
       <QueueTable
         calls={visible}

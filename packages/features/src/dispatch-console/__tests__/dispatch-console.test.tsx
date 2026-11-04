@@ -2,7 +2,20 @@
 import '../../calls/__tests__/test-setup';
 
 import { featureFlagsStore } from '@resgrid/auth';
-import { useCallDetailStore, useCallsStore, useCheckInTimersStore, useMapMarkersStore, useNavigationEtaStore, useNotesStore, usePersonnelStore, usePoisStore, useUnitsStore, useWeatherAlertsStore } from '@resgrid/data';
+import {
+  useCallDetailStore,
+  useCallsStore,
+  useCheckInTimersStore,
+  useMapMarkersStore,
+  useNavigationEtaStore,
+  useNotesStore,
+  usePersonnelStore,
+  usePoisStore,
+  useUnitsStore,
+  useUnitStatusAlertsStore,
+  useWeatherAlertsStore,
+} from '@resgrid/data';
+import { useDepartmentConfigStore } from '@resgrid/features/department-config';
 import { emitRealtimeEvent } from '@resgrid/realtime';
 import { useToastStore } from '@resgrid/ui';
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
@@ -11,6 +24,7 @@ import React from 'react';
 import { Dimensions } from 'react-native';
 
 import { activateVariant, hidden, makeCall, setRights } from '../../calls/__tests__/test-utils';
+import { ActivityPanel } from '../components/activity-panel';
 import { useConsoleStore } from '../hooks/use-console-store';
 import { useDashboardViewStore } from '../hooks/use-dashboard-view-store';
 import DispatchConsoleScreen from '../screens/dispatch-console';
@@ -18,6 +32,7 @@ import DispatchConsoleScreen from '../screens/dispatch-console';
 jest.mock('@resgrid/maps', () => {
   const { View } = require('react-native');
   const mockReact = require('react');
+
   return {
     MapView: ({ children, testID }: { children?: unknown; testID?: string }) => mockReact.createElement(View, { testID }, children),
     Camera: () => null,
@@ -44,6 +59,7 @@ const mockPtt = {
 jest.mock('@resgrid/voice', () => {
   const { create } = require('zustand');
   const mockLiveKitStore = create(() => ({ activeSpeakerIdentities: [] as string[] }));
+
   return {
     useLiveKitStore: mockLiveKitStore,
     usePtt: () => mockPtt,
@@ -234,6 +250,26 @@ describe('DispatchConsoleScreen layout', () => {
   });
 });
 
+describe('ActivityPanel', () => {
+  it("counts the entries the activity tab shows: the filtered call's timeline when it has one", async () => {
+    const handlers = { onViewCall: jest.fn(), onAddCallNote: jest.fn(), onCloseCall: jest.fn(), onAddResources: jest.fn(), onViewUnit: jest.fn(), onViewPersonnel: jest.fn() };
+
+    // SAFETY: the timeline rows read only the event's type, id, status and timestamp.
+    const timeline = [
+      { Type: 'Unit', Id: '1', StatusText: 'En route', Timestamp: '' },
+      { Type: 'Unit', Id: '2', StatusText: 'On scene', Timestamp: '' },
+      { Type: 'User', Id: 'b', StatusText: 'Responding', Timestamp: '' },
+    ] as never;
+
+    useConsoleStore.setState({ activeTab: 'activity', activityLog: [{ id: 'l1', timestamp: 1, type: 'call', action: 'filtered', description: '#9', metadata: { callId: '9' } }] });
+    const view = await render(<ActivityPanel selectedCall={makeCall('9')} callActivity={timeline} {...handlers} />);
+
+    expect(within(screen.getByTestId('activity-tab-activity-badge')).getByText('3')).toBeTruthy();
+    await view.rerender(<ActivityPanel selectedCall={makeCall('9')} callActivity={[]} {...handlers} />);
+    expect(within(screen.getByTestId('activity-tab-activity-badge')).getByText('1')).toBeTruthy();
+  });
+});
+
 describe('DispatchConsoleScreen call filter and actions', () => {
   it('filters every panel to a pressed call and surfaces its actions', async () => {
     await setWindow(1366, 1024);
@@ -386,5 +422,84 @@ describe('DispatchConsoleScreen live ETAs', () => {
     await renderConsole();
     expect(fetchActiveNavigations).not.toHaveBeenCalled();
     expect(screen.queryByTestId('console-call-9-etas')).toBeNull();
+  });
+});
+
+describe('DispatchConsoleScreen unit status timers', () => {
+  const RESPONDING = 2;
+  /** A UTC wire value `seconds` ago (the timers read the real clock). */
+  const ago = (seconds: number) => new Date(Date.now() - seconds * 1000).toISOString();
+  const fetchAcknowledgements = jest.fn(async () => undefined);
+  const timed = (UnitId: string, seconds: number) => unit(UnitId, { CurrentStatus: 'Responding', CurrentStatusBaseType: RESPONDING, CurrentStatusTimestampUtc: ago(seconds), CurrentUnitStateId: 700 + Number(UnitId) });
+
+  // SAFETY: a test fixture; only the acknowledgement fields the timers read are set.
+  const seen = (UnitId: string, Level = 2) =>
+    ({ UnitStatusAlertAcknowledgementId: `k${UnitId}`, UnitId, UnitStateId: 700 + Number(UnitId), Level, Mode: 0, MutedUntilUtc: null, Note: 'On the radio', AcknowledgedByName: 'Sam', ClearedOnUtc: null }) as never;
+
+  beforeEach(() => {
+    fetchAcknowledgements.mockClear();
+    useUnitStatusAlertsStore.setState({ acknowledgements: {}, loading: {}, errors: {}, fetchAcknowledgements });
+    // SAFETY: a test fixture; only the config fields the timers read are set.
+    useDepartmentConfigStore.setState({
+      config: { UnitStatusThresholds: [{ BaseType: RESPONDING, WarnSeconds: 120, AlertSeconds: 300 }], UnitStatusAlertNoteRequirement: 0 } as never,
+      load: jest.fn(async () => undefined),
+    });
+    useUnitsStore.setState({ unitInfos: [unit('1'), timed('2', 600), timed('3', 150)] });
+  });
+
+  // Still mounted here (RNTL unmounts after): reset inside act.
+  afterEach(async () => {
+    await act(() => {
+      useDepartmentConfigStore.setState({ config: null });
+      useUnitStatusAlertsStore.setState({ acknowledgements: {} });
+    });
+  });
+
+  it('flags units over their timer in the stats bar, their rows and the Unit timers tab, which the tile opens', async () => {
+    await setWindow(1366, 1024);
+    await renderConsole();
+    expect(fetchAcknowledgements).toHaveBeenCalled();
+    expect(screen.getByTestId('stat-unit-timers-alert-value')).toHaveTextContent('2');
+    expect(screen.getByTestId('console-unit-2-timer-alert')).toHaveTextContent('10m');
+    expect(screen.getByTestId('console-unit-3-timer-warn')).toHaveTextContent('2m');
+    expect(screen.queryByTestId('console-unit-1-timer-warn')).toBeNull();
+    expect(screen.getByTestId('activity-tab-unit-timers-badge')).toHaveTextContent('2');
+
+    await fireEvent.press(screen.getByTestId('stat-unit-timers-alert'));
+    expect(useConsoleStore.getState().activeTab).toBe('unit-timers');
+    const tab = within(screen.getByTestId('console-unit-timers'));
+    expect(tab.getByTestId('unit-alert-row-2')).toBeTruthy();
+    expect(tab.getByTestId('unit-alert-row-3')).toBeTruthy();
+    // Contacting the unit: its screen is one press away.
+    await fireEvent.press(tab.getByTestId('unit-alert-open-2'));
+    expect(router.push).toHaveBeenCalledWith('/units/2');
+    // A dispatcher acknowledges once contacted.
+    await fireEvent.press(tab.getByTestId('unit-alert-row-2'));
+    expect(screen.getByTestId('unit-alert-acknowledge-sheet', hidden)).toBeTruthy();
+  });
+
+  it('counts only the units nobody has acknowledged and refetches acknowledgements on pushes', async () => {
+    useUnitStatusAlertsStore.setState({ acknowledgements: { '2': seen('2') } });
+    await setWindow(1366, 1024);
+    await renderConsole();
+    expect(screen.getByTestId('stat-unit-timers-warn-value')).toHaveTextContent('1');
+    expect(screen.getByTestId('console-unit-2-timer-alert-acknowledged')).toBeTruthy();
+    fetchAcknowledgements.mockClear();
+    await act(() => emitRealtimeEvent('unitStatusAlertUpdated', '3'));
+    expect(fetchAcknowledgements).toHaveBeenCalledWith({ bypassCache: true });
+
+    await act(() => useUnitStatusAlertsStore.setState({ acknowledgements: { '2': seen('2'), '3': seen('3', 1) } }));
+    expect(screen.queryByTestId('stat-unit-timers-warn')).toBeNull();
+    expect(screen.queryByTestId('activity-tab-unit-timers-badge')).toBeNull();
+  });
+
+  it('logs a unit crossing its timer, not the ones already over when the console opened', async () => {
+    await setWindow(1366, 1024);
+    await renderConsole();
+    const timerLines = () => useConsoleStore.getState().activityLog.filter((entry) => entry.action.startsWith('dispatch_console.unit_timer'));
+    expect(timerLines()).toHaveLength(0);
+
+    await act(() => useUnitsStore.setState({ unitInfos: [timed('1', 400), timed('2', 600), timed('3', 150)] }));
+    expect(timerLines()).toEqual([expect.objectContaining({ type: 'unit', action: 'dispatch_console.unit_timer_alert', description: 'E1 · unitAlerts.inStatusFor:Responding,6m', metadata: { unitId: '1' } })]);
   });
 });

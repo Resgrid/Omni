@@ -10,10 +10,11 @@ export interface AudioClipHandle {
 
 /**
  * Plays a recorded clip once (Dispatch call audio modal), in the foreground. The audio mode is app-wide: while a PTT
- * channel is joined it stays record-capable, or transmitting breaks. `onFinished` runs when the clip plays to its end.
+ * channel is joined the voice session's mode stays as it is (record-capable, background audio, its route), or
+ * transmitting and background voice break. `onFinished` runs when the clip plays to its end.
  */
 export async function playAudioClip(url: string, onFinished: () => void): Promise<AudioClipHandle> {
-  await setAudioModeAsync({ allowsRecording: useLiveKitStore.getState().isConnected, playsInSilentMode: true, shouldPlayInBackground: false, interruptionMode: 'duckOthers' });
+  if (!useLiveKitStore.getState().isConnected) await setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true, shouldPlayInBackground: false, interruptionMode: 'duckOthers' });
   const player = createAudioPlayer({ uri: url.trim() });
   let released = false;
 

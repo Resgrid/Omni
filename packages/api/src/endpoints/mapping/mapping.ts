@@ -100,7 +100,7 @@ export const getNearbyIndoorMaps = (ctx: ApiContext, params: { lat?: number | st
 export const getPoi = (ctx: ApiContext, params: { poiId: number | string }, options?: CachedRequestOptions): Promise<PoiResult> => cachedRequest<PoiResult>(ctx, E.getPoi, { params }, options);
 
 /** `GET /Mapping/GetPois` (cached) — legacy: DIRU. */
-export const getPois = (ctx: ApiContext, params: { poiTypeId: number | string; destinationOnly?: boolean }, options?: CachedRequestOptions): Promise<PoisResult> =>
+export const getPois = (ctx: ApiContext, params: { poiTypeId?: number | string; destinationOnly?: boolean } = {}, options?: CachedRequestOptions): Promise<PoisResult> =>
   cachedRequest<PoisResult>(ctx, E.getPois, { params }, options);
 
 /** `GET /Mapping/GetPoiTypes` (cached) — legacy: DIRU. */

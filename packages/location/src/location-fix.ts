@@ -6,6 +6,7 @@ import { LOCATION_I18N_KEYS, translateOr } from './i18n-keys';
 import { setCurrentLocation } from './location-store';
 import { describeError, getLocationLogger } from './logger';
 import { PERMISSION_TIMEOUT_MS, requestForegroundLocationPermission } from './permissions';
+import { maySettingsDialogShow, noteSettingsDialogDeclined, SettingsDialogDeclinedSchema } from './settings-dialog';
 import { settleWithin, TIMED_OUT } from './timeouts';
 import type { LocationFix } from './types';
 import { getBrowserGeolocation, getBrowserPosition } from './web-geolocation';
@@ -34,14 +35,24 @@ const LAST_KNOWN_TIMEOUT_MS = 3_000;
 const LAST_KNOWN_MAX_AGE_MS = 60_000;
 const ACCURACY_BALANCED = 3;
 
+const requestLiveFix = (): Promise<Location.LocationObject | null> => {
+  const mayShowUserSettingsDialog = maySettingsDialogShow();
+
+  return Location.getCurrentPositionAsync({ accuracy: ACCURACY_BALANCED, mayShowUserSettingsDialog }).catch((error: unknown) => {
+    // Location Accuracy declined: the device's location still gives a fix.
+    if (mayShowUserSettingsDialog && SettingsDialogDeclinedSchema.safeParse(error).success) {
+      noteSettingsDialogDeclined();
+
+      return requestLiveFix();
+    }
+
+    getLocationLogger().warn({ message: 'Failed to acquire the current position', context: { error: describeError(error) } });
+    return null;
+  });
+};
+
 const readLiveFix = async (): Promise<LocationFix | null> => {
-  const location = await settleWithin(
-    Location.getCurrentPositionAsync({ accuracy: ACCURACY_BALANCED }).catch((error: unknown) => {
-      getLocationLogger().warn({ message: 'Failed to acquire the current position', context: { error: describeError(error) } });
-      return null;
-    }),
-    FIX_TIMEOUT_MS
-  );
+  const location = await settleWithin(requestLiveFix(), FIX_TIMEOUT_MS);
   return location === TIMED_OUT ? null : toLocationFix(location);
 };
 

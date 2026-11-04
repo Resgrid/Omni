@@ -1,5 +1,6 @@
 import { useTerm } from '@resgrid/auth';
 import { useUnitsStore } from '@resgrid/data';
+import { useUnitAlertsByUnit } from '@resgrid/features/unit-status-alerts';
 import { useTranslation } from '@resgrid/i18n';
 import type { UnitInfoResultData } from '@resgrid/models';
 import { FlatList, HStack, Pressable, Text } from '@resgrid/ui';
@@ -66,6 +67,7 @@ export const UnitsPanel: React.FC<UnitsPanelProps> = ({ callFilter, onSelectUnit
   const isSelectionMode = useConsoleStore((state) => state.isSelectionMode);
   const selectedUnitIds = useConsoleStore((state) => state.selectedUnitIds);
   const pendingUnitIds = usePendingUnitIds();
+  const timers = useUnitAlertsByUnit();
   const [query, setQuery] = useState('');
 
   const visible = useMemo(() => filterConsoleUnits(units, { query, availableOnly, callFilter }), [availableOnly, callFilter, query, units]);
@@ -89,20 +91,27 @@ export const UnitsPanel: React.FC<UnitsPanelProps> = ({ callFilter, onSelectUnit
   }, []);
 
   const renderItem = useCallback(
-    ({ item }: { item: UnitInfoResultData }) => (
-      <ConsoleUnitRow
-        unit={item}
-        isSelected={isSelectionMode ? selectedSet.has(item.UnitId) : selectedUnitId === item.UnitId}
-        isOnCall={isUnitOnCall(item, callFilter)}
-        isSelectionMode={isSelectionMode}
-        hasPendingStatus={pendingUnitIds.has(item.UnitId)}
-        onPress={handlePress}
-        onLongPress={handleLongPress}
-        onOpen={isSelectionMode ? undefined : onOpenUnit}
-        onSetStatusForCall={callFilter && !isSelectionMode ? onSetStatusForCall : undefined}
-      />
-    ),
-    [callFilter, handleLongPress, handlePress, isSelectionMode, onOpenUnit, onSetStatusForCall, pendingUnitIds, selectedSet, selectedUnitId]
+    ({ item }: { item: UnitInfoResultData }) => {
+      const timer = timers.get(item.UnitId);
+
+      return (
+        <ConsoleUnitRow
+          unit={item}
+          isSelected={isSelectionMode ? selectedSet.has(item.UnitId) : selectedUnitId === item.UnitId}
+          isOnCall={isUnitOnCall(item, callFilter)}
+          isSelectionMode={isSelectionMode}
+          hasPendingStatus={pendingUnitIds.has(item.UnitId)}
+          onPress={handlePress}
+          onLongPress={handleLongPress}
+          onOpen={isSelectionMode ? undefined : onOpenUnit}
+          onSetStatusForCall={callFilter && !isSelectionMode ? onSetStatusForCall : undefined}
+          timerLevel={timer?.alert.level}
+          timerAcknowledgement={timer?.acknowledgementState}
+          timerSeconds={timer?.alert.secondsInStatus}
+        />
+      );
+    },
+    [callFilter, handleLongPress, handlePress, isSelectionMode, onOpenUnit, onSetStatusForCall, pendingUnitIds, selectedSet, selectedUnitId, timers]
   );
 
   return (

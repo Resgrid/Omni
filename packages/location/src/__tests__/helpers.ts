@@ -79,3 +79,8 @@ export function axiosHttpError(status: number): Error & { isAxiosError: true; re
 export function axiosNetworkError(): Error & { isAxiosError: true; code: string; config: { url: string; method: string } } {
   return Object.assign(new Error('Network Error'), { isAxiosError: true as const, code: 'ERR_NETWORK', config: { url: '/x', method: 'post' } });
 }
+
+/** expo-location's rejection when the user declines Google's Location Accuracy dialog (Android). */
+export function locationAccuracyDeclined(): Error & { code: string } {
+  return Object.assign(new Error('Location request failed due to unsatisfied device settings'), { code: 'ERR_LOCATION_SETTINGS_UNSATISFIED' });
+}

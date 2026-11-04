@@ -10,13 +10,14 @@
 // machine). The page's cookies are not forwarded and the server's are not returned.
 const http = require('node:http');
 const https = require('node:https');
+const { pipeline } = require('node:stream');
 
 const DEV_PROXY_PREFIX = '/__resgrid-dev-proxy/';
 
 const LOOPBACK_HOSTNAMES = new Set(['localhost', '127.0.0.1', '[::1]']);
 const LOOPBACK_ADDRESSES = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
 
-// Hop-by-hop headers (RFC 9110 section 7.6.1) never cross a proxy.
+// Hop-by-hop headers (RFC 9110 section 7.6.1) never cross a proxy, nor do the ones a Connection header names.
 const HOP_BY_HOP = ['connection', 'keep-alive', 'proxy-authenticate', 'proxy-authorization', 'proxy-connection', 'te', 'trailer', 'transfer-encoding', 'upgrade'];
 const DROPPED_REQUEST_HEADERS = new Set([...HOP_BY_HOP, 'host', 'origin', 'referer', 'cookie']);
 
@@ -25,6 +26,19 @@ const DROPPED_REQUEST_HEADERS = new Set([...HOP_BY_HOP, 'host', 'origin', 'refer
 // app's client_id, which the app retries without it) is a 401 with `WWW-Authenticate: Basic`. The app reads the status
 // and body only.
 const DROPPED_RESPONSE_HEADERS = new Set([...HOP_BY_HOP, 'set-cookie', 'strict-transport-security', 'www-authenticate']);
+
+/** The header names a message's Connection header nominates as hop-by-hop, lower-cased. */
+function nominatedHeaders(headers) {
+  const connection = headers.connection;
+  const values = Array.isArray(connection) ? connection : [connection ?? ''];
+
+  return new Set(
+    values
+      .flatMap((value) => String(value).split(','))
+      .map((name) => name.trim().toLowerCase())
+      .filter(Boolean)
+  );
+}
 
 const hostnameOf = (host) => /^(\[[^\]]+\]|[^:]+)(?::\d+)?$/.exec(host || '')?.[1]?.toLowerCase() ?? null;
 
@@ -89,9 +103,10 @@ function proxiedLocation(location, target) {
 
 function forward(req, res, target, log) {
   const headers = {};
+  const nominated = nominatedHeaders(req.headers);
 
   for (const [name, value] of Object.entries(req.headers)) {
-    if (!DROPPED_REQUEST_HEADERS.has(name)) headers[name] = value;
+    if (!DROPPED_REQUEST_HEADERS.has(name) && !nominated.has(name)) headers[name] = value;
   }
 
   headers.host = target.host;
@@ -100,16 +115,21 @@ function forward(req, res, target, log) {
 
   const upstream = transport.request(target, { method: req.method, headers }, (upstreamRes) => {
     const responseHeaders = {};
+    const nominatedResponse = nominatedHeaders(upstreamRes.headers);
 
     for (const [name, value] of Object.entries(upstreamRes.headers)) {
-      if (DROPPED_RESPONSE_HEADERS.has(name) || name.startsWith('access-control-')) continue;
+      if (DROPPED_RESPONSE_HEADERS.has(name) || nominatedResponse.has(name) || name.startsWith('access-control-')) continue;
       responseHeaders[name] = name === 'location' ? proxiedLocation(value, target) : value;
     }
 
     res.writeHead(upstreamRes.statusCode ?? 502, responseHeaders);
     // Server-Sent Events: the headers go out now, not with the first event.
     res.flushHeaders();
-    upstreamRes.pipe(res);
+    // pipeline, not pipe: a server that drops the body part-way (an event stream it closed) ends the page's response
+    // too, so the page sees the disconnect and reconnects instead of waiting on a response that never ends.
+    pipeline(upstreamRes, res, (error) => {
+      if (error && error.code !== 'ERR_STREAM_PREMATURE_CLOSE') log(`${req.method} ${target.host}: ${error.code || error.message}`);
+    });
   });
 
   upstream.on('error', (error) => {

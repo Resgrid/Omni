@@ -1,6 +1,6 @@
 import { HUB_JOIN_MAX_ATTEMPTS, HUB_JOIN_RETRY_MS, reconnectDelayForAttempt } from '../constants';
 import { type HubJoinInfo, onRealtimeEvent } from '../event-bus';
-import { COMMON_EVENTING_EVENTS, NAVIGATION_ETA_MODULES, resolveRealtimeFeatures, showsNavigationEtas } from '../events';
+import { COMMON_EVENTING_EVENTS, NAVIGATION_ETA_MODULES, resolveRealtimeFeatures, showsNavigationEtas, showsUnitStatusAlerts, UNIT_STATUS_ALERT_MODULES } from '../events';
 import { getWantedHubs, teardownRealtime, useRealtimeStore } from '../realtime-store';
 import { signalRService } from '../signalr-service';
 import { type FakeHubConnection, fakeSignalR } from './fakes/signalr';
@@ -30,9 +30,9 @@ describe('resolveRealtimeFeatures (per-variant event sets)', () => {
 
     [responder, unit, ic, dispatch, bigboard].forEach((features) => expect(features.eventingEvents).toEqual(expect.arrayContaining([...COMMON_EVENTING_EVENTS])));
     expect(responder.eventingEvents).toEqual([...COMMON_EVENTING_EVENTS]);
-    expect(unit.eventingEvents).toEqual([...COMMON_EVENTING_EVENTS]);
+    expect(unit.eventingEvents).toEqual([...COMMON_EVENTING_EVENTS, 'unitStatusAlertUpdated']);
     expect(ic.eventingEvents).toEqual([...COMMON_EVENTING_EVENTS, 'checkInUpdated']);
-    expect(dispatch.eventingEvents).toEqual([...COMMON_EVENTING_EVENTS, 'unitActiveRolesUpdated', 'checkInUpdated', 'outstandingRequirementsUpdated', 'unitNavigationUpdated']);
+    expect(dispatch.eventingEvents).toEqual([...COMMON_EVENTING_EVENTS, 'unitActiveRolesUpdated', 'checkInUpdated', 'outstandingRequirementsUpdated', 'unitStatusAlertUpdated', 'unitNavigationUpdated']);
     expect(bigboard.eventingEvents).toEqual([...COMMON_EVENTING_EVENTS, 'unitStatusAlertUpdated', 'unitNavigationUpdated']);
     expect(COMMON_EVENTING_EVENTS).toEqual(expect.arrayContaining(['weatherAlertReceived', 'weatherAlertUpdated', 'weatherAlertExpired', 'checklistUpdated', 'departmentUpdated']));
   });
@@ -47,6 +47,16 @@ describe('resolveRealtimeFeatures (per-variant event sets)', () => {
     expect(resolveRealtimeFeatures(VARIANTS.ic).eventingEvents).not.toContain('unitNavigationUpdated');
     // A manifest that gains the dashboard module gets the event without any variant check.
     expect(resolveRealtimeFeatures({ ...VARIANTS.responder, modules: [...VARIANTS.responder.modules, 'dashboard'] }).eventingEvents).toContain('unitNavigationUpdated');
+  });
+
+  it('subscribes unit status timer acknowledgements by module (dashboard, dispatch console, unit console), never by app', () => {
+    expect(UNIT_STATUS_ALERT_MODULES).toEqual(['dashboard', 'dispatch-console', 'unit-status']);
+    expect(showsUnitStatusAlerts(['dispatch-console'])).toBe(true);
+    expect(showsUnitStatusAlerts(['unit-status', 'unit-routes'])).toBe(true);
+    expect(showsUnitStatusAlerts(['member-home'])).toBe(false);
+    expect(resolveRealtimeFeatures(VARIANTS.responder).eventingEvents).not.toContain('unitStatusAlertUpdated');
+    expect(resolveRealtimeFeatures(VARIANTS.ic).eventingEvents).not.toContain('unitStatusAlertUpdated');
+    expect(resolveRealtimeFeatures({ ...VARIANTS.responder, modules: [...VARIANTS.responder.modules, 'unit-status'] }).eventingEvents).toContain('unitStatusAlertUpdated');
   });
 
   it('enables the chat hub, watchdog, geo default and coalesced board refresh from capabilities', () => {
@@ -79,8 +89,9 @@ describe('realtime store', () => {
       await state().connectEventingHub();
 
       const connection = fakeSignalR.latest(EVENTING);
-      expect([...connection.handlers.keys()]).toEqual(expect.arrayContaining(['unitActiveRolesUpdated', 'checkInUpdated', 'outstandingRequirementsUpdated', 'unitNavigationUpdated', 'onConnected']));
-      expect(connection.handlers.has('unitStatusAlertUpdated')).toBe(false);
+      expect([...connection.handlers.keys()]).toEqual(
+        expect.arrayContaining(['unitActiveRolesUpdated', 'checkInUpdated', 'outstandingRequirementsUpdated', 'unitStatusAlertUpdated', 'unitNavigationUpdated', 'onConnected'])
+      );
       expect(connection.invocationsOf('Connect')).toEqual([[42]]);
       expect(state().hubs.eventing).toMatchObject({ status: 'connected', joined: true });
       expect(joined).toHaveBeenCalledWith(expect.objectContaining({ hub: 'eventing', rejoin: false }));

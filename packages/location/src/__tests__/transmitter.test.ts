@@ -6,6 +6,7 @@ import { LOCATION_TASK_NAME } from '../constants';
 import { LOCATION_I18N_FALLBACKS } from '../i18n-keys';
 import { getCurrentLocation, getLocationTransmissionStatus, resetLocationStores } from '../location-store';
 import type { LocationEvent } from '../outbox-handlers';
+import { resetSettingsDialogForTests } from '../settings-dialog';
 import { buildTaskOptions } from '../task-options';
 import { resetLocationTaskRuntimeForTests } from '../task-runtime';
 import { type LocationCapability, LocationTransmitter, type LocationTransmitterOptions } from '../transmitter';
@@ -28,7 +29,7 @@ import {
 } from './fakes/expo-location';
 import { __isRegistered, __registerTask, __resetTaskManager, defineTask } from './fakes/expo-task-manager';
 import { __appStateListenerCount, __resetReactNative, __setAppState, AppState, Platform } from './fakes/react-native';
-import { createRecordingOutbox, createSettings, FAR, fixAt, flushPromises, JITTER, MOVED, type MutableSettings, ORIGIN, type RecordingOutbox } from './helpers';
+import { createRecordingOutbox, createSettings, FAR, fixAt, flushPromises, JITTER, locationAccuracyDeclined, MOVED, type MutableSettings, ORIGIN, type RecordingOutbox } from './helpers';
 
 const T0 = Date.UTC(2026, 9, 31, 12, 0, 0);
 const HEARTBEAT_MS = 5 * 60_000;
@@ -90,6 +91,7 @@ beforeEach(() => {
   __resetTaskManager();
   resetLocationTaskRuntimeForTests();
   resetLocationStores();
+  resetSettingsDialogForTests();
   defineTask(LOCATION_TASK_NAME, async () => undefined);
   outbox = createRecordingOutbox();
   settings = createSettings({ realtimeGeolocation: true, backgroundGeolocation: false });
@@ -408,6 +410,25 @@ describe('lifecycle', () => {
     await flushPromises();
     expect(__activeWatchers()).toBe(1);
     expect(requestForegroundPermissionsAsync).not.toHaveBeenCalled();
+  });
+
+  it('watches on device location once Location Accuracy is declined, and does not ask again on return (Android)', async () => {
+    const dialog = (shown: boolean): unknown[] => [expect.objectContaining({ mayShowUserSettingsDialog: shown }), expect.any(Function), expect.any(Function)];
+
+    watchPositionAsync.mockRejectedValueOnce(locationAccuracyDeclined());
+    await create('person').start();
+    await flushPromises();
+    expect(watchPositionAsync).toHaveBeenNthCalledWith(1, ...dialog(true));
+    expect(watchPositionAsync).toHaveBeenLastCalledWith(...dialog(false));
+    expect(__activeWatchers()).toBe(1);
+
+    // Google's dialog is another app's activity: the app went to the background and came back.
+    __setAppState('background');
+    __setAppState('active');
+    await flushPromises();
+    expect(watchPositionAsync).toHaveBeenCalledTimes(3);
+    expect(watchPositionAsync).toHaveBeenLastCalledWith(...dialog(false));
+    expect(__activeWatchers()).toBe(1);
   });
 
   it('discards a watcher that resolves after the app went to the background', async () => {
