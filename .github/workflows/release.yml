@@ -485,10 +485,11 @@ jobs:
       # iOS signing uses the distribution certificate and provisioning profiles stored on the variant's EAS project. CI
       # holds no App Store Connect key (omni-plan §15 #20). Where the EAS project stores one, eas build uses it to register
       # a new App ID (the Live Activity widget's) and sync its capabilities; App Store Connect rejects the capability
-      # requests of eas-cli before 27.3.0. Without one, the stored credentials are used as they are. When a certificate or
+      # requests of eas-cli before 27.3.0. It never syncs the app's own App ID, and no API key assigns an App Group
+      # (docs/build/ci-secrets.md). Without one, the stored credentials are used as they are. When a certificate or
       # profile expires or needs a capability the build cannot add, the build stops; renew it on a Mac with
-      # `APP_VARIANT=<v> eas credentials -p ios` and re-run. CI builds only this App Store IPA (uploaded to TestFlight by
-      # hand through the factory); an ad-hoc IPA is a local build (pnpm ios:adhoc).
+      # `pnpm credentials:ios <v> --setup`, signed in with an Apple ID, and re-run. CI builds only this App Store IPA
+      # (uploaded to TestFlight by hand through the factory); an ad-hoc IPA is a local build (pnpm ios:adhoc).
       - name: Build App Store IPA (eas build --local)
         working-directory: apps/omni
         env:

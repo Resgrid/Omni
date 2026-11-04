@@ -1971,6 +1971,7 @@
     "open_hint": "Opens the note"
   },
   "notifications": {
+    "inbox_unavailable": "Der Benachrichtigungseingang ist hier nicht verfügbar.",
     "additional_info": "Zusätzliche Informationen",
     "confirm_delete_message_one": "Möchten Sie diese Benachrichtigung wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
     "confirm_delete_title": "Löschen bestätigen",
@@ -2541,7 +2542,8 @@
     "discard_draft": "Discard draft",
     "no_call_records": "No Records for this call yet.",
     "remove_attachment": "Remove attachment",
-    "remove_row": "Remove row"
+    "remove_row": "Remove row",
+    "definition_missing": "Dieser Datensatz ist mit keinem Formular verknüpft, daher können seine Felder nicht angezeigt werden."
   },
   "roles": {
     "modal": {

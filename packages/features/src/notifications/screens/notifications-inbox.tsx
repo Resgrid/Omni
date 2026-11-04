@@ -15,6 +15,7 @@ export interface NotificationsInboxScreenProps {
    * placeholder client would fetch for nobody.
    */
   isReady?: boolean;
+  isUnavailable?: boolean;
 }
 
 function InboxContent() {
@@ -92,6 +93,10 @@ function InboxContent() {
  * on an entry whose event code resolves to a safe target opens it like a tapped push (`openInboxItem`); others open the
  * detail sheet. Ids failing `isSafeRouteId` never navigate.
  */
-export default function NotificationsInboxScreen({ isReady = true }: NotificationsInboxScreenProps) {
+export default function NotificationsInboxScreen({ isReady = true, isUnavailable = false }: NotificationsInboxScreenProps) {
+  const { t } = useTranslation();
+
+  if (isUnavailable) return <ZeroState heading={t('notifications.inbox_unavailable')} testID="notifications-inbox-unavailable" />;
+
   return isReady ? <InboxContent /> : <Loading testID="notifications-inbox-pending" />;
 }

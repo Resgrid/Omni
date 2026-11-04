@@ -55,6 +55,20 @@ describe('per-variant offline scope (plan §8.5)', () => {
     expect(resolveDataOfflineScope(manifest('bigboard')).handlers).not.toContain('ic');
   });
 
+  it.each(['responder', 'unit', 'ic'] as const)('%s: registers the saves offered by the deployment editor', (variant) => {
+    const registry = createOutboxHandlerRegistry();
+    registerDataOutboxHandlers(manifest(variant), registry);
+    expect(registry.has('operations.timeEntries.save')).toBe(true);
+    expect(registry.has('operations.expense.save')).toBe(variant !== 'ic');
+  });
+
+  it.each(['responder', 'unit', 'ic', 'dispatch'] as const)('%s: registers the writes offered by the call detail', (variant) => {
+    const registry = createOutboxHandlerRegistry();
+    registerDataOutboxHandlers(manifest(variant), registry);
+    expect(registry.has('calls.note.add')).toBe(true);
+    expect(registry.has('calls.file.upload')).toBe(true);
+  });
+
   it('BigBoard: read-only working set, no write handlers', () => {
     const scope = resolveDataOfflineScope(manifest('bigboard'));
     expect(scope.handlers).toEqual([]);

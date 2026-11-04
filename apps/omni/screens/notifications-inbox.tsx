@@ -1,4 +1,4 @@
-import { useShellInboxReady } from '@resgrid/app-shell';
+import { useShellInboxStatus } from '@resgrid/app-shell';
 import { NotificationsInboxScreen } from '@resgrid/features/notifications';
 import React from 'react';
 
@@ -7,6 +7,7 @@ import React from 'react';
  * credentials; the feature never imports the shell). Route files re-export this.
  */
 export default function NotificationsInboxRoute() {
-  const ready = useShellInboxReady();
-  return <NotificationsInboxScreen isReady={ready} />;
+  const status = useShellInboxStatus();
+
+  return <NotificationsInboxScreen isReady={status === 'ready'} isUnavailable={status === 'unavailable'} />;
 }

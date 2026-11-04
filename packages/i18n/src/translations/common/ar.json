@@ -1971,6 +1971,7 @@
     "open_hint": "Opens the note"
   },
   "notifications": {
+    "inbox_unavailable": "صندوق وارد الإشعارات غير متاح هنا.",
     "additional_info": "معلومات إضافية",
     "confirm_delete_message_one": "هل أنت متأكد من حذف هذا الإشعار؟ لا يمكن التراجع عن هذا الإجراء.",
     "confirm_delete_title": "تأكيد الحذف",
@@ -2541,7 +2542,8 @@
     "discard_draft": "Discard draft",
     "no_call_records": "No Records for this call yet.",
     "remove_attachment": "Remove attachment",
-    "remove_row": "Remove row"
+    "remove_row": "Remove row",
+    "definition_missing": "هذا السجل غير مرتبط بأي نموذج، لذا لا يمكن عرض حقوله."
   },
   "roles": {
     "modal": {

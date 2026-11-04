@@ -1,5 +1,5 @@
-import { useAuthStore } from '@resgrid/auth';
-import { useActiveVariant } from '@resgrid/config';
+import { lockSharedSession, useAuthStore, useSharedSessionStore } from '@resgrid/auth';
+import { useActiveVariant, useCapability } from '@resgrid/config';
 import { Env, getAppVersionInfo, logger } from '@resgrid/core';
 import { ConfirmDialog, pushRoute } from '@resgrid/features/auth-ui';
 import { useTranslation } from '@resgrid/i18n';
@@ -55,6 +55,8 @@ export const AboutSection: React.FC = () => {
 /** Sign out, after a confirmation; a second request joins the one in flight (Responder). */
 export const LogoutSection: React.FC = () => {
   const { t } = useTranslation();
+  const { sharedDevice } = useCapability('auth');
+  const shared = useSharedSessionStore((state) => state.shared);
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const inFlight = useRef<Promise<void> | null>(null);
@@ -78,6 +80,7 @@ export const LogoutSection: React.FC = () => {
 
   return (
     <>
+      {sharedDevice && shared ? <SettingsRow label={t('shared_session.lock')} onPress={() => void lockSharedSession('explicit')} testID="settings-lock-shared-device" /> : null}
       <SettingsRow label={t('settings.logout')} tone="danger" onPress={() => setConfirming(true)} testID="settings-logout" />
       <ConfirmDialog
         isOpen={confirming}

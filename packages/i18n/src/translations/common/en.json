@@ -1971,6 +1971,7 @@
     "open_hint": "Opens the note"
   },
   "notifications": {
+    "inbox_unavailable": "The notification inbox is unavailable here.",
     "additional_info": "Additional Information",
     "confirm_delete_message_one": "Are you sure you want to delete this notification? This action cannot be undone.",
     "confirm_delete_title": "Confirm Delete",
@@ -2541,7 +2542,8 @@
     "discard_draft": "Discard draft",
     "no_call_records": "No Records for this call yet.",
     "remove_attachment": "Remove attachment",
-    "remove_row": "Remove row"
+    "remove_row": "Remove row",
+    "definition_missing": "This Record is not linked to a form, so its fields cannot be shown."
   },
   "roles": {
     "modal": {

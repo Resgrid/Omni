@@ -114,7 +114,7 @@
     "@resgrid/ui": "workspace:*",
     "@resgrid/app-shell": "workspace:*",
     "@resgrid/features": "workspace:*",
-    "expo": "~58.0.22",
+    "expo": "~58.0.23",
     "react": "19.3.0",
     "react-native": "0.88.1"
   },

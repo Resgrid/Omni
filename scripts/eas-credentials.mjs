@@ -41,6 +41,11 @@ const EMITS = {
   'ios-adhoc': { platform: 'ios', distribution: 'internal', label: 'ad-hoc IPA', types: { production: 'internal', internal: 'internal', development: 'development' } },
 };
 
+const APP_GROUPS_ENTITLEMENT = 'com.apple.security.application-groups';
+
+// Any of these makes eas-cli sign in to Apple with an App Store Connect API key instead of asking for an Apple ID.
+const ASC_KEY_ENV = ['EXPO_ASC_API_KEY_PATH', 'EXPO_ASC_KEY_ID', 'EXPO_ASC_ISSUER_ID'];
+
 function fail(message) {
   console.error(message);
   process.exit(1);
@@ -106,6 +111,27 @@ for (const variant of variants) {
   console.log(`  EAS project ${config.extra.eas.projectId}, ${ids.join(', ')}`);
 
   if (emit.platform === 'android') console.log('  If eas-cli offers to generate a keystore for an app already on Google Play, upload its existing upload keystore instead.');
+
+  // eas-cli assigns an App Group to an App ID only in an Apple ID (username and password) session. An App Store Connect
+  // API key switches App Groups on without assigning the group, and CI never syncs the app's own App ID at all
+  // (docs/build/ci-secrets.md), so this is the run that sets them up.
+  const signedTargets = emit.platform === 'ios' ? [{ bundleIdentifier: config.ios.bundleIdentifier, entitlements: config.ios.entitlements }, ...extensions] : [];
+
+  const appGroupTargets = signedTargets.flatMap((target) => {
+    const groups = target.entitlements?.[APP_GROUPS_ENTITLEMENT] ?? [];
+
+    return groups.length ? [{ id: target.bundleIdentifier, groups }] : [];
+  });
+
+  if (appGroupTargets.length) {
+    console.log(`  App Groups: ${appGroupTargets.map((target) => `${target.id} ${target.groups.join(', ')}`).join('; ')}`);
+    console.log('  When eas-cli asks to log in to your Apple account, say yes and sign in with an Apple ID: only that session assigns the App Group.');
+
+    // Only the build-credentials setup syncs App ID capabilities; the interactive manager's sign-in changes nothing.
+    if (!setup) console.log('  Signing in does not assign it on its own: choose "Build Credentials", then "All: Set up all the required credentials", or rerun with --setup.');
+
+    if (ASC_KEY_ENV.some((name) => process.env[name])) console.log(`  ${ASC_KEY_ENV.join(', ')} make eas-cli sign in with an App Store Connect API key, which cannot assign App Groups: unset them for this run.`);
+  }
 
   const args = setup ? ['credentials:configure-build', '--platform', emit.platform, '--profile', profile] : ['credentials', '--platform', emit.platform];
 
