@@ -27,9 +27,10 @@ export function useRouteTab(tabs: readonly Pick<TabItem, 'key'>[], param = 'tab'
   const routeKey = Array.isArray(raw) ? raw[0] : raw;
   const [activeKey, setActiveKey] = useState<string | undefined>(routeKey);
 
-  // A link to this screen with another tab (or Back to an entry that had one) moves the selection.
+  // A link to this screen with another tab (or Back to an entry that had one) moves the selection; one without a tab
+  // goes back to the first.
   useEffect(() => {
-    if (routeKey !== undefined) setActiveKey(routeKey);
+    setActiveKey(routeKey);
   }, [routeKey]);
 
   const selectIndex = useCallback(

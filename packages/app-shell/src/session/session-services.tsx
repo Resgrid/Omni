@@ -86,7 +86,9 @@ export function SessionServices(): null {
   useClearBadgeOnForeground(signedIn);
 
   // Permissions an admin changed (create, close, delete calls…) apply on returning to the app, not only at the next sign-in.
-  useRightsRefreshOnForeground(signedIn && sessionReady);
+  // Armed at sign-in rather than when the bootstrap finishes: the bootstrap reads rights first, and a return to the app
+  // while its later steps run would otherwise go unnoticed (concurrent reads share one request).
+  useRightsRefreshOnForeground(signedIn);
 
   // Personal inactivity lock (Dispatch): only for password sessions on personal devices (isPersonalLockEnabled).
   const personalLockActive = signedIn && variant.capabilities.auth.personalLock && isPersonalLockEnabled();

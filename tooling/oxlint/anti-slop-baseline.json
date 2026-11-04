@@ -2947,7 +2947,6 @@
   "packages/features/src/member-home/__tests__/member-home.test.tsx": {
     "anti-slop/no-chained-type-assertions": 3,
     "anti-slop/no-unsafe-dictionary-type": 1,
-    "anti-slop/require-readable-spacing": 2,
     "anti-slop/require-safety-comment-for-type-assertion": 11
   },
   "packages/features/src/member-home/components/home-status-buttons.tsx": {

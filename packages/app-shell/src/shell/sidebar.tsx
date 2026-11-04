@@ -80,6 +80,13 @@ export function NavMenu({ nav, onNavigate }: SidebarContentProps & { nav: NavReg
 
   const onPress = useCallback(
     (item: NavItem) => {
+      // The section already showing stays as it is (its search, filters and tab); the menu just closes.
+      if (normalizeHref(item.href) === pathname) {
+        onNavigate();
+
+        return;
+      }
+
       // The drawer shells keep the screens under the current one mounted. `navigate` pushes, so a menu hop first goes
       // back to the first screen (normally Home, which keeps its tab and list) and opens the section from there: one
       // mounted screen per open section rather than one per hop. Unit and IC switch tabs as before.
@@ -88,7 +95,7 @@ export function NavMenu({ nav, onNavigate }: SidebarContentProps & { nav: NavReg
       router.navigate(item.href as Href);
       onNavigate();
     },
-    [isDrawerStack, onNavigate, router]
+    [isDrawerStack, onNavigate, pathname, router]
   );
 
   return (

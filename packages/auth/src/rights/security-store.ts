@@ -198,7 +198,7 @@ export const RIGHTS_REFRESH_MIN_INTERVAL_MS = 60_000;
  */
 export function startRightsRefreshOnForeground(minIntervalMs: number = RIGHTS_REFRESH_MIN_INTERVAL_MS, now: () => number = Date.now): () => void {
   let appState: string = AppState.currentState ?? 'active';
-  // The session bootstrap has just read them.
+  // Armed at sign-in, as the session bootstrap starts by reading them.
   let lastRead = now();
 
   const subscription = AppState.addEventListener('change', (next: AppStateStatus) => {
@@ -214,7 +214,7 @@ export function startRightsRefreshOnForeground(minIntervalMs: number = RIGHTS_RE
   return () => subscription.remove();
 }
 
-/** `startRightsRefreshOnForeground` while `enabled` (signed in, session bootstrapped). */
+/** `startRightsRefreshOnForeground` while `enabled` (signed in). */
 export function useRightsRefreshOnForeground(enabled: boolean): void {
   useEffect(() => (enabled ? startRightsRefreshOnForeground() : undefined), [enabled]);
 }

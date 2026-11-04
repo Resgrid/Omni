@@ -51,6 +51,24 @@ describe('SharedTabs brings the selected tab into view', () => {
     expect(scrollTo).not.toHaveBeenCalled();
   });
 
+  it('shows the selected tab again when a resize narrows the bar or moves the tab out of view, but not on a pass that measures the same', async () => {
+    await render(<SharedTabs tabs={tabs} activeIndex={1} />);
+    const scrollView = await measure();
+    expect(scrollTo).not.toHaveBeenCalled();
+
+    // The same width again (a re-layout): the bar stays put.
+    await fireEvent(scrollView, 'layout', { nativeEvent: { layout: { width: 200 } } });
+    expect(scrollTo).not.toHaveBeenCalled();
+
+    // Narrowed to 150: tab 1 (100–190) runs past the edge. Centred: 100 - (150 - 90) / 2.
+    await fireEvent(scrollView, 'layout', { nativeEvent: { layout: { width: 150 } } });
+    expect(scrollTo).toHaveBeenLastCalledWith({ x: 70, animated: false });
+
+    // The tab before it grew and pushed it to 250: 250 - (150 - 90) / 2.
+    await fireEvent(screen.getByTestId('shared-tab-protocols'), 'layout', { nativeEvent: { layout: { x: 250, y: 0, width: 90, height: 40 } } });
+    expect(scrollTo).toHaveBeenLastCalledWith({ x: 220, animated: false });
+  });
+
   it('scrolls (animated, never past the end) to a tab selected without a press', async () => {
     const view = await render(<SharedTabs tabs={tabs} activeIndex={0} />);
     await measure();

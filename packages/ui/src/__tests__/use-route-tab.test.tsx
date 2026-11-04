@@ -44,6 +44,21 @@ describe('useRouteTab', () => {
     expect(result.current.activeIndex).toBe(1);
   });
 
+  it('follows the route when its tab changes or goes, as a link to the same screen without a tab', async () => {
+    jest.mocked(useLocalSearchParams).mockReturnValue({ tab: 'history' });
+    const { result, rerender } = await renderHook(() => useRouteTab(TABS));
+    expect(result.current.activeIndex).toBe(2);
+
+    jest.mocked(useLocalSearchParams).mockReturnValue({ tab: 'command' });
+    await rerender({});
+    expect(result.current.activeKey).toBe('command');
+
+    jest.mocked(useLocalSearchParams).mockReturnValue({});
+    await rerender({});
+    expect(result.current.activeKey).toBeUndefined();
+    expect(result.current.activeIndex).toBe(0);
+  });
+
   it('leaves the route alone when the selected tab is pressed again, and uses the param it is given', async () => {
     jest.mocked(useLocalSearchParams).mockReturnValue({ section: 'history' });
 

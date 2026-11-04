@@ -41,18 +41,26 @@ export interface ScreenHeaderProps {
 }
 
 /**
- * Puts the header into the app bar while its screen is focused: tabs and the drawer shell's stack keep other screens
- * mounted, and only the visible one may title the bar.
+ * Titles the app bar (and gives it `right`) while the calling screen is focused: tabs and the drawer shell's stack keep
+ * other screens mounted, and only the visible one may title the bar. A null title leaves the bar to the shell (its nav
+ * entry's label); so does a screen outside the app shell.
  */
-function AppBarScreenHeader({ slot, title, right }: { slot: AppBarTitleSlot; title: string; right?: React.ReactNode }) {
+export function useAppBarTitle(title: string | null, right?: React.ReactNode): void {
+  const slot = useContext(AppBarTitleSlotContext);
   const owner = useId();
   const isFocused = useIsFocused();
+  const shows = isFocused && title !== null;
 
   useEffect(() => {
-    if (isFocused) slot.show(owner, { title, right });
+    if (slot && isFocused && title !== null) slot.show(owner, { title, right });
   }, [isFocused, owner, right, slot, title]);
 
-  useEffect(() => (isFocused ? () => slot.hide(owner) : undefined), [isFocused, owner, slot]);
+  useEffect(() => (slot && shows ? () => slot.hide(owner) : undefined), [shows, owner, slot]);
+}
+
+/** Puts the header into the app bar while its screen is focused (`useAppBarTitle`). */
+function AppBarScreenHeader({ title, right }: { title: string; right?: React.ReactNode }) {
+  useAppBarTitle(title, right);
 
   return null;
 }
@@ -66,7 +74,7 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({ title, onBack, right
   const appBarShowsBack = useAppBarShowsBack();
   const slot = useContext(AppBarTitleSlotContext);
 
-  if (appBarShowsBack && slot) return <AppBarScreenHeader slot={slot} title={title} right={right} />;
+  if (appBarShowsBack && slot) return <AppBarScreenHeader title={title} right={right} />;
 
   return (
     <HStack className={appBarShowsBack ? 'min-h-12 items-center bg-background-0 px-4 py-1' : 'items-center bg-background-0 px-2 pb-2 pt-1'} space="sm" testID={testID}>

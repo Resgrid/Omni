@@ -13,7 +13,7 @@ import { Text } from 'react-native';
 
 import { registerCallFormHookPoints, resetCallFormHookPointsForTests } from '../hook-points';
 import { createFieldPolicy } from '../lib/field-policy';
-import CallFormScreen from '../screens/call-form';
+import CallFormScreen, { type CallFormScreenProps } from '../screens/call-form';
 import { activateVariant, hidden, makeCall, setRights } from './test-utils';
 
 let mockRules: NewCallFieldRuleData[] = [];
@@ -371,6 +371,33 @@ describe('CallFormScreen: create', () => {
     await act(async () => fireEvent.press(screen.getByTestId('call-form-submit')));
     expect(screen.getByTestId('call-form-longitude-error')).toHaveTextContent(/calls.coordinates_incomplete/);
     expect(mockCreateCall).not.toHaveBeenCalled();
+  });
+
+  it('drops the coordinate errors once the map or a lookup fills in a valid point', async () => {
+    mockRules = [{ Key: 'geolocation', Visible: true, Required: true }];
+    mockLookupAddress.mockResolvedValue({ succeeded: true, place: { latitude: 39.7, longitude: -104.9, address: '1 Main St, Denver' } });
+    activateVariant('dispatch');
+    const mapSlot = jest.fn<React.ReactNode, Parameters<NonNullable<CallFormScreenProps['mapSlot']>>>(() => <Text>Map</Text>);
+    await render(<CallFormScreen mode="create" mapSlot={mapSlot} />);
+
+    // The department requires a location: submitting without one says so on the latitude field.
+    await fillBasics();
+    await act(async () => fireEvent.press(screen.getByTestId('call-form-submit')));
+    expect(screen.getByTestId('call-form-latitude-error')).toHaveTextContent(/calls.validation.required/);
+
+    const onPick = mapSlot.mock.calls.at(-1)?.[1];
+    await act(async () => onPick?.({ latitude: 39.6, longitude: -105.1 }));
+    expect(screen.getByTestId('call-form-latitude').props.value).toBe('39.6');
+    expect(screen.queryByTestId('call-form-latitude-error')).toBeNull();
+
+    await fireEvent.changeText(screen.getByTestId('call-form-longitude'), 'west');
+    await act(async () => fireEvent(screen.getByTestId('call-form-longitude'), 'blur'));
+    expect(screen.getByTestId('call-form-longitude-error')).toHaveTextContent(/calls.longitude_invalid/);
+
+    await fireEvent.changeText(screen.getByTestId('call-form-address'), '1 main');
+    await act(async () => fireEvent.press(screen.getByTestId('call-form-address-search')));
+    expect(screen.getByTestId('call-form-longitude').props.value).toBe('-104.9');
+    expect(screen.queryByTestId('call-form-longitude-error')).toBeNull();
   });
 
   it('picks the call contact from the department contacts (built-in picker)', async () => {

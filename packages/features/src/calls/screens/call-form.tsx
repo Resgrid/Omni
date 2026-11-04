@@ -78,6 +78,9 @@ const NO_WITHHELD_FIELDS = new Set<WithheldEditField>();
 /** Fields a quick create shows even when the policy does not require them. */
 const QUICK_FIELDS = new Set<NewCallFieldKey>([NewCallFieldKeys.Address, NewCallFieldKeys.Geolocation, NewCallFieldKeys.Note]);
 
+/** The errors the latitude and longitude fields show: each value's own, and the department's "location required". */
+const COORDINATE_ERROR_KEYS: readonly CallFormErrorKey[] = ['latitude', 'longitude', NewCallFieldKeys.Geolocation];
+
 type LookupKind = 'address' | 'what3words' | 'plusCode' | 'reverse';
 
 /** Starting values from `initial`, with what the form already holds for a field kept. */
@@ -214,6 +217,18 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
     });
   }, []);
 
+  /** A point the form filled in itself (map, lookup, contact) is a valid one: the coordinate errors no longer apply. */
+  const clearCoordinateErrors = useCallback(() => {
+    setErrors((current) => {
+      if (!COORDINATE_ERROR_KEYS.some((key) => key in current)) return current;
+      const next = { ...current };
+
+      for (const key of COORDINATE_ERROR_KEYS) delete next[key];
+
+      return next;
+    });
+  }, []);
+
   const show = (key: NewCallFieldKey): boolean => policy.isVisible(key) && (isFull || QUICK_FIELDS.has(key) || policy.isRequired(key));
   const req = (key: NewCallFieldKey): string => (policy.isRequired(key) ? ' *' : '');
   const showContactFields = show(NewCallFieldKeys.ContactName) || show(NewCallFieldKeys.ContactInfo);
@@ -262,11 +277,12 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
   const pickLocation = useCallback(
     (picked: CallFormLocation & { address?: string }) => {
       setValues((current) => ({ ...current, ...toCoordinateFields(picked.latitude, picked.longitude), address: current.address || picked.address || '' }));
+      clearCoordinateErrors();
       setHeldMapPoint(null);
 
       if (!picked.address) void fillBlankAddress(picked);
     },
-    [fillBlankAddress]
+    [clearCoordinateErrors, fillBlankAddress]
   );
 
   /** An address, what3words or plus code lookup: the place it found replaces the address, as the dispatcher asked. */
@@ -299,6 +315,7 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
 
       if (place) {
         setValues((current) => ({ ...current, ...toCoordinateFields(place.latitude, place.longitude), address: place.address || current.address }));
+        clearCoordinateErrors();
         setHeldMapPoint(null);
         toast.success(t(messages.found));
       } else {
@@ -319,7 +336,7 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
 
     if (pasted.ok) {
       setValues((current) => ({ ...current, ...toCoordinateFields(pasted.latitude, pasted.longitude) }));
-      setErrors((current) => ({ ...current, latitude: undefined, longitude: undefined }));
+      clearCoordinateErrors();
     } else {
       set(key, text);
     }
@@ -1059,6 +1076,8 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
               // The contact's point fills blank coordinates only, as its address fills a blank address.
               return hasPoint || contact.latitude === undefined || contact.longitude === undefined ? next : { ...next, ...toCoordinateFields(contact.latitude, contact.longitude) };
             });
+
+            if (coordinatesBlank && contact.latitude !== undefined && contact.longitude !== undefined) clearCoordinateErrors();
             setHeldMapPoint(null);
             setOpen(null);
           }}

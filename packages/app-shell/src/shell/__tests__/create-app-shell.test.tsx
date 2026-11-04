@@ -201,6 +201,18 @@ describe('createAppShell', () => {
     expect(jest.mocked(router.dismissAll).mock.invocationCallOrder[0]).toBeLessThan(jest.mocked(router.navigate).mock.invocationCallOrder[0]);
   });
 
+  it('the menu entry of the section already showing keeps that screen (its search and tab) and only closes the menu', async () => {
+    setFormFactor('tabletLandscape');
+    mockNavigationState.canGoBack = true;
+    mockNavigationState.pathname = '/settings';
+    await renderShell('responder');
+
+    await fireEvent.press(screen.getByTestId('nav-settings'));
+
+    expect(router.dismissAll).not.toHaveBeenCalled();
+    expect(router.navigate).not.toHaveBeenCalled();
+  });
+
   it('a menu hop in a tabs shell only switches tabs', async () => {
     setFormFactor('tabletLandscape');
     mockNavigationState.canGoBack = true;

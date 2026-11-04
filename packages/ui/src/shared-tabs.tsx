@@ -155,25 +155,35 @@ export const SharedTabs: React.FC<SharedTabsProps> = ({
   }, []);
 
   // A screen can open on a tab further along (Back to a call on its Command tab): when the measurements arrive, show
-  // that tab instead of the start of the bar. Later layout passes leave a bar the user has scrolled alone.
-  const revealPendingTab = useCallback(() => {
-    if (revealedIndexRef.current !== currentIndex) revealTab(currentIndex, false);
-  }, [currentIndex, revealTab]);
+  // that tab instead of the start of the bar. A resize or rotation that narrows the bar or moves the selected tab
+  // (`moved`) can leave it out of view, so it is shown again; passes that measure the same leave a bar the user has
+  // scrolled alone.
+  const revealPendingTab = useCallback(
+    (moved = false) => {
+      if (moved || revealedIndexRef.current !== currentIndex) revealTab(currentIndex, false);
+    },
+    [currentIndex, revealTab]
+  );
 
   useEffect(() => {
     if (revealedIndexRef.current !== currentIndex) revealTab(currentIndex, revealedIndexRef.current !== null);
   }, [currentIndex, revealTab]);
 
   const handleTabLayout = (index: number, event: LayoutChangeEvent) => {
-    tabLayoutsRef.current.set(index, { x: event.nativeEvent.layout.x, width: event.nativeEvent.layout.width });
-    revealPendingTab();
+    const { x, width } = event.nativeEvent.layout;
+    const previous = tabLayoutsRef.current.get(index);
+
+    tabLayoutsRef.current.set(index, { x, width });
+    revealPendingTab(index === currentIndex && previous !== undefined && (previous.x !== x || previous.width !== width));
   };
 
   const handleScrollViewLayout = useCallback(
     (event: LayoutChangeEvent) => {
+      const previousWidth = scrollMetricsRef.current.viewportWidth;
+
       scrollMetricsRef.current.viewportWidth = event.nativeEvent.layout.width;
       updateOverflowState();
-      revealPendingTab();
+      revealPendingTab(previousWidth !== 0 && previousWidth !== event.nativeEvent.layout.width);
     },
     [revealPendingTab, updateOverflowState]
   );
