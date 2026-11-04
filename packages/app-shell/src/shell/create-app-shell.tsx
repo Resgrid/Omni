@@ -62,6 +62,7 @@ export function RegistryTabs({ nav }: { nav: NavRegistry }) {
 
   return (
     <Tabs
+      backBehavior="history"
       screenListeners={screenListeners}
       screenOptions={{
         headerShown: false,
@@ -88,7 +89,9 @@ export function RegistryTabs({ nav }: { nav: NavRegistry }) {
                     ),
                   }
                 : {}),
-              ...(screen.visible ? {} : { href: null }),
+              // Expo Router 58 treats href: null as an inactive route and redirects away from it.
+              // Hide only the button so drawer and detail routes remain navigable.
+              ...(screen.visible ? {} : { tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }),
             }}
           />
         );

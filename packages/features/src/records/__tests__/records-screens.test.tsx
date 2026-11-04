@@ -270,6 +270,19 @@ describe('RecordNewScreen', () => {
 });
 
 describe('RecordDetailScreen', () => {
+  it('offers retry and withholds edit actions when the definition schema cannot load', async () => {
+    mockFetchRecord.mockResolvedValue(record());
+    const fetchSchema = jest.fn().mockResolvedValueOnce(null).mockResolvedValueOnce(schema);
+    useRecordsStore.setState({ fetchSchema });
+    await render(<RecordDetailScreen recordId="r1" />);
+    await waitFor(() => expect(screen.getByTestId('record-detail-schema-error')).toBeTruthy());
+    expect(screen.queryByTestId('record-save')).toBeNull();
+    expect(screen.queryByTestId('record-submit')).toBeNull();
+    expect(screen.queryByTestId('record-finalize')).toBeNull();
+    await fireEvent.press(screen.getByText('common.retry'));
+    await waitFor(() => expect(screen.getByTestId('record-form')).toBeTruthy());
+  });
+
   it('shows withheld cells as protected and never posts them back', async () => {
     mockFetchRecord.mockResolvedValue(record());
     useRecordsStore.setState({

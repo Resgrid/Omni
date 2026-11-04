@@ -93,15 +93,20 @@ describe('createAppShell', () => {
     expect(StyleSheet.flatten(screen.getByTestId('shell-header-title').props.style).color).toBe(colors.text);
   });
 
-  it('tabs (Unit): tab bar generated from the registry with hidden routes as href: null', async () => {
-    await renderShell('unit');
+  it.each(['unit', 'ic'] as const)('tabs (%s): hides sidebar and detail buttons without disabling their routes', async (variant) => {
+    await renderShell(variant);
     expect(screen.getByTestId('app-shell-tabs')).toBeTruthy();
-    expect(mockNavigationState.tabs?.screens.map((s) => [s.name, s.options.href === null ? 'hidden' : 'tab'])).toEqual([
+    expect(mockNavigationState.tabs?.screens.map((s) => [s.name, s.options.tabBarButton ? 'hidden' : 'tab'])).toEqual([
       ['index', 'tab'],
       ['settings', 'tab'],
       ['chat', 'hidden'],
       ['account-security', 'hidden'],
     ]);
+
+    for (const route of mockNavigationState.tabs?.screens ?? []) {
+      expect(route.options.href).toBeUndefined();
+    }
+
     expect(screen.getByTestId('map-tab')).toHaveTextContent('Map');
     expect(screen.queryByTestId('chat-tab')).toBeNull();
   });

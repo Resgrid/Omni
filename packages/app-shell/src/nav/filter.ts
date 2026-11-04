@@ -52,7 +52,7 @@ export interface TabScreenSpec {
   /** Child route name for `<Tabs.Screen name>`. */
   name: string;
   entryId: string;
-  /** False renders the route without a tab button (`href: null`). */
+  /** False renders the route without a tab button. */
   visible: boolean;
   title: string;
   entry: NavEntry;
@@ -60,7 +60,7 @@ export interface TabScreenSpec {
 
 /**
  * The `Tabs.Screen` list for a tabs shell: every registered route gets a screen so expo-router never invents a tab for
- * it; only available `tab` entries get a button. Sidebar and hidden entries (and gated tabs) are `href: null`.
+ * it; only available `tab` entries get a button. Other entries keep their routes without a button.
  */
 export function buildTabScreens(entries: readonly NavEntry[], context: NavFilterContext, label: (entry: NavEntry) => string): TabScreenSpec[] {
   return entries.map((entry) => ({

@@ -58,7 +58,7 @@ export function Tabs({ children, screenOptions, screenListeners }: { children?: 
   return (
     <View testID="mock-tabs">
       {screens
-        .filter((screen) => screen.options.href !== null)
+        .filter((screen) => screen.options.href !== null && screen.options.tabBarButton === undefined)
         .map((screen) => (
           <Pressable key={screen.name} testID={String(screen.options.tabBarButtonTestID ?? screen.name)}>
             <Text>{String(screen.options.title ?? screen.name)}</Text>

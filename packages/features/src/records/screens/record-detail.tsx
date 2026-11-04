@@ -71,7 +71,7 @@ function RecordDetail({ id, showHeader, recordsTitle }: { id: string; showHeader
   const withheld = useMemo(() => withheldCellKeys(record?.Values), [record]);
   const unsupported = useMemo(() => unsupportedFieldKeys(schema), [schema]);
   const editable = record ? record.State === RmsRecordState.Draft || record.State === RmsRecordState.Returned : false;
-  const canAct = editable && unsupported.length === 0;
+  const canAct = editable && schema !== null && unsupported.length === 0;
 
   // The reveal bar re-reads after a reveal or conceal so withheld cells follow the grant.
   const refresh = useCallback(async (): Promise<void> => {
@@ -85,6 +85,7 @@ function RecordDetail({ id, showHeader, recordsTitle }: { id: string; showHeader
 
   const check = useCallback(
     (forFinalize: boolean): boolean => {
+      if (!schema) return false;
       const found = validate(schema, values, forFinalize, withheld);
       setIssues(found);
       if (found.length > 0) setMessage(t('records.fix_fields'));
@@ -138,7 +139,7 @@ function RecordDetail({ id, showHeader, recordsTitle }: { id: string; showHeader
   }, [record, check, persist, t]);
 
   const submit = useCallback(async () => {
-    if (!record) return;
+    if (!record || !schema) return;
     if (dirty && !check(false)) return;
     setIsBusy(true);
     try {
@@ -151,7 +152,7 @@ function RecordDetail({ id, showHeader, recordsTitle }: { id: string; showHeader
     } finally {
       setIsBusy(false);
     }
-  }, [record, dirty, check, persist, submitForReview, isOnline, reload, commandMessage]);
+  }, [record, schema, dirty, check, persist, submitForReview, isOnline, reload, commandMessage]);
 
   const complete = useCallback(async () => {
     if (!record || !check(true)) return;
@@ -211,7 +212,18 @@ function RecordDetail({ id, showHeader, recordsTitle }: { id: string; showHeader
             </Text>
           ) : null}
 
-          {schema ? <RecordForm schema={schema} values={values} issues={issues} withheld={withheld} readOnly={!canAct} onChange={handleChange} /> : <Loading />}
+          {schema ? (
+            <RecordForm schema={schema} values={values} issues={issues} withheld={withheld} readOnly={!canAct} onChange={handleChange} />
+          ) : isLoading ? (
+            <Loading />
+          ) : (
+            <View testID="record-detail-schema-error">
+              <Text>{t('records.load_failed')}</Text>
+              <Button variant="outline" onPress={() => void reload()}>
+                <ButtonText>{t('common.retry')}</ButtonText>
+              </Button>
+            </View>
+          )}
 
           <RecordAttachments recordId={record.RecordId} allowAttachments={entry?.AllowAttachments !== false} readOnly={!editable} />
 
