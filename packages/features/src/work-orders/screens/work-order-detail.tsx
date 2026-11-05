@@ -4,12 +4,12 @@ import { useWorkOrdersStore } from '@resgrid/data';
 import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import { WorkOrderActivityType, type WorkOrderTransition } from '@resgrid/models';
-import { Button, ButtonSpinner, ButtonText, HStack, Input, InputField, Loading, ScreenHeader, Text, Textarea, TextareaInput, useThemeColors, View, VStack, ZeroState } from '@resgrid/ui';
+import { Button, ButtonSpinner, ButtonText, HStack, Input, InputField, KeyboardAwareScrollView, Loading, ScreenHeader, Text, Textarea, TextareaInput, useThemeColors, View, VStack, ZeroState } from '@resgrid/ui';
 import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { CheckSquare, Square } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 import { WorkOrderFiles } from '../components/work-order-files';
 import { WorkOrderTransitionPanel } from '../components/work-order-transition-panel';
@@ -118,7 +118,7 @@ function WorkOrderDetailContent({ id }: { id: string }) {
   return (
     <View className="flex-1 bg-background-0" testID="work-order-detail-screen">
       <ScreenHeader title={order.Number || title} onBack={() => router.back()} testID="work-order-detail-header" />
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <KeyboardAwareScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <VStack space="md">
           <Text className="text-xl font-bold text-typography-900" accessibilityRole="header">
             {order.Title}
@@ -228,7 +228,7 @@ function WorkOrderDetailContent({ id }: { id: string }) {
             </VStack>
           ) : null}
         </VStack>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </View>
   );
 }

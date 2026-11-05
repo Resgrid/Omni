@@ -2,33 +2,18 @@ import { selectCallById, useCallsStore, useCommandStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import type { ResourceAssignment } from '@resgrid/models';
 import { useIncidentCommandRefresh } from '@resgrid/realtime';
-import { Button, ButtonText, HStack, Pressable, ScrollView, Text, useToast, View, ZeroState } from '@resgrid/ui';
+import { Button, ButtonText, HStack, ScrollView, TabBar, type TabBarItem, useToast, View, ZeroState } from '@resgrid/ui';
 import { router, useFocusEffect } from 'expo-router';
 import { ClipboardList } from 'lucide-react-native';
 import React, { useCallback, useMemo } from 'react';
 import { StyleSheet } from 'react-native';
+import { useShallow } from 'zustand/react/shallow';
 
 import { CommandBoardView } from '../components/command-board-view';
 import { resolveResourcePosition } from '../hooks/resource-position';
 import { useIncidentCommandTier } from '../hooks/use-command-permissions';
 import type { IncidentCommandTier } from '../lib/permissions';
 import { incidentCommandRoutes } from '../routes';
-
-const BoardTab: React.FC<{ callId: string; isActive: boolean; onPress: (callId: string) => void }> = ({ callId, isActive, onPress }) => {
-  const { t } = useTranslation();
-  const number = useCallsStore((state) => selectCallById(state, callId)?.Number);
-  return (
-    <Pressable
-      onPress={() => onPress(callId)}
-      accessibilityRole="tab"
-      accessibilityState={{ selected: isActive }}
-      className={`mr-2 rounded-full px-4 py-2 ${isActive ? 'bg-primary-500' : 'bg-background-200'}`}
-      testID={`command-board-tab-${callId}`}
-    >
-      <Text className={`text-sm font-semibold ${isActive ? 'text-typography-0' : 'text-typography-700'}`}>{t('incident_command.call_number', { number: number || callId })}</Text>
-    </Pressable>
-  );
-};
 
 export interface CommandBoardScreenProps {
   /** Overrides the variant tier (tests). */
@@ -49,6 +34,12 @@ export default function CommandBoardScreen({ tier: tierOverride }: CommandBoardS
   const switchCommand = useCommandStore((state) => state.switchCommand);
   const tracked = useMemo(() => Object.values(boards).filter((entry) => !!entry.board || entry.isProvisional), [boards]);
   const active = activeCallId && tracked.some((entry) => entry.callId === activeCallId) ? activeCallId : (tracked[0]?.callId ?? null);
+  // One tab per incident this commander runs, named by its call number (the call id until the call has loaded).
+  const callNumbers = useCallsStore(useShallow((state) => tracked.map((entry) => selectCallById(state, entry.callId)?.Number)));
+  const boardTabs = useMemo<TabBarItem[]>(
+    () => tracked.map((entry, index) => ({ key: entry.callId, label: t('incident_command.call_number', { number: callNumbers[index] || entry.callId }), testID: `command-board-tab-${entry.callId}` })),
+    [callNumbers, t, tracked]
+  );
 
   useIncidentCommandRefresh(
     {
@@ -102,14 +93,8 @@ export default function CommandBoardScreen({ tier: tierOverride }: CommandBoardS
 
   return (
     <View className="flex-1 bg-background-50" testID="command-board-screen">
+      {tracked.length > 1 ? <TabBar tabs={boardTabs} activeKey={active} onChange={switchCommand} variant="pills" testID="command-board-switcher" /> : null}
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" testID="command-board-scroll">
-        {tracked.length > 1 ? (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} accessibilityRole="tablist" testID="command-board-switcher">
-            {tracked.map((entry) => (
-              <BoardTab key={entry.callId} callId={entry.callId} isActive={entry.callId === active} onPress={switchCommand} />
-            ))}
-          </ScrollView>
-        ) : null}
         <CommandBoardView
           callId={active}
           tier="command"

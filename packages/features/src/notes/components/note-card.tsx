@@ -13,7 +13,8 @@ export interface NoteCardProps {
 
 /**
  * A department note row (Dispatch's note card): title with its category badge, a plain-text preview of the body (no
- * HTML in list rows) and the date. A note colour, when the department set one, edges the card.
+ * HTML in list rows) and the date. A note colour, when the department set one, edges the card. Same raised surface as
+ * the other list cards (protocols, contacts): `bg-background-0` on the screen's `bg-background-50`.
  */
 export const NoteCard: React.FC<NoteCardProps> = ({ note, onPress }) => {
   const { t } = useTranslation();
@@ -29,11 +30,11 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, onPress }) => {
       accessibilityLabel={note.Category ? `${note.Title}, ${note.Category}` : note.Title}
       accessibilityHint={t('notes.open_hint')}
       testID={`note-card-${note.NoteId}`}
-      className="mb-2 rounded-lg border border-outline-200 bg-background-50 p-2"
+      className="mb-2 rounded-xl border border-outline-200 bg-background-0 p-3"
       style={note.Color ? StyleSheet.flatten([styles.edged, { borderLeftColor: readable.mark(note.Color) }]) : undefined}
     >
       <HStack space="sm" className="items-start justify-between">
-        <Text className="flex-1 text-sm font-semibold text-typography-800" numberOfLines={1}>
+        <Text className="flex-1 font-semibold text-typography-900" numberOfLines={1}>
           {note.Title}
         </Text>
         {note.Category ? (
@@ -45,7 +46,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, onPress }) => {
         ) : null}
       </HStack>
       {preview ? (
-        <Text className="mt-1 text-xs text-typography-600" numberOfLines={2}>
+        <Text size="sm" className="mt-1 text-typography-600" numberOfLines={2}>
           {preview}
         </Text>
       ) : null}

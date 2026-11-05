@@ -1,6 +1,6 @@
 import { useNotesStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
-import { Button, ButtonSpinner, ButtonText, HStack, Input, InputField, NativeModal, NativeModalScreen, Pressable, ScrollView, Text, Textarea, TextareaInput, useToast, VStack } from '@resgrid/ui';
+import { Button, ButtonSpinner, ButtonText, HStack, Input, InputField, KeyboardAwareScrollView, NativeModal, NativeModalScreen, Pressable, Text, Textarea, TextareaInput, useToast, VStack } from '@resgrid/ui';
 import { X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -63,7 +63,7 @@ export const AddNoteSheet: React.FC<AddNoteSheetProps> = ({ isOpen, onClose, onN
             </View>
           </Pressable>
         </HStack>
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <KeyboardAwareScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <VStack space="md">
             <VStack space="xs">
               <Text className="text-sm font-medium">{t('dispatch_console.note_title')}</Text>
@@ -102,7 +102,7 @@ export const AddNoteSheet: React.FC<AddNoteSheetProps> = ({ isOpen, onClose, onN
               <ButtonText>{t('common.save')}</ButtonText>
             </Button>
           </VStack>
-        </ScrollView>
+        </KeyboardAwareScrollView>
       </NativeModalScreen>
     </NativeModal>
   );

@@ -29,9 +29,12 @@ export interface AppInitView {
   session: InitStatus;
   /** Startup finished: the gate can decide. */
   isStartupReady: boolean;
-  /** The signed-in bootstrap is running for the first time this session (show the loading overlay). */
+  /** The signed-in bootstrap is on its first attempt this session (the shell's loading chip; nothing is blocked). */
   isSessionLoading: boolean;
-  /** The signed-in bootstrap failed and has never succeeded this session. */
+  /**
+   * The signed-in bootstrap failed and has not succeeded since, including while a retry runs, so the failure banner
+   * stays put instead of flickering with every automatic retry.
+   */
   isSessionFailed: boolean;
   /** Runs whichever phase failed again now. */
   retry: () => void;
@@ -40,6 +43,7 @@ export interface AppInitView {
 const subscribeBoth = (listener: () => void): (() => void) => {
   const a = startupInit.subscribe(listener);
   const b = sessionInit.subscribe(listener);
+
   return () => {
     a();
     b();
@@ -49,23 +53,28 @@ const subscribeBoth = (listener: () => void): (() => void) => {
 const retry = (): void => {
   if (startupInit.getStatus().state === 'failed') {
     void startupInit.retryNow();
+
     return;
   }
+
   if (sessionInit.getStatus().state === 'failed') {
     void sessionInit.retryNow();
   }
 };
 
-/** Init status for the loading overlay and the "Try again" button. The navigator stays mounted under it. */
+/** Init status for the shell's loading chip and failure banner ("Try again"). Neither blocks the screens. */
 export function useAppInit(): AppInitView {
   const startup = useSyncExternalStore(subscribeBoth, startupInit.getStatus, startupInit.getStatus);
   const session = useSyncExternalStore(subscribeBoth, sessionInit.getStatus, sessionInit.getStatus);
+  // A run after the first (attempt > 1) is an automatic retry of a run that failed; "Try again" starts over at 1.
+  const isRetrying = session.state === 'running' && session.attempt > 1;
+
   return {
     startup,
     session,
     isStartupReady: startup.everReady,
-    isSessionLoading: !session.everReady && (session.state === 'running' || session.state === 'idle'),
-    isSessionFailed: !session.everReady && session.state === 'failed',
+    isSessionLoading: !session.everReady && (session.state === 'idle' || (session.state === 'running' && !isRetrying)),
+    isSessionFailed: !session.everReady && (session.state === 'failed' || isRetrying),
     retry,
   };
 }

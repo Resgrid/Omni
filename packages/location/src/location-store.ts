@@ -1,3 +1,4 @@
+import { DEFAULT_MAX_ACCURACY_METERS } from './constants';
 import { createObservableStore } from './observable';
 import type { FixSource, LocationFix, LocationPermissionStatus, TransmissionTarget } from './types';
 
@@ -111,6 +112,32 @@ export function patchTransmissionStatus(patch: Partial<LocationTransmissionStatu
 
 export function getLocationTransmissionStatus(): LocationTransmissionStatus {
   return transmissionStatusStore.getState();
+}
+
+export interface RecentLocationOptions {
+  /** How long ago a fix must have confirmed the position. */
+  maxAgeMs: number;
+  /** Worst accuracy accepted, in meters (default DEFAULT_MAX_ACCURACY_METERS); a fix that reports none is accepted. */
+  maxAccuracyMeters?: number;
+  /** Epoch ms. */
+  now?: number;
+}
+
+/**
+ * The device's own position when a fix confirmed it within `maxAgeMs` and it is accurate enough, else null. A repeated
+ * identical fix does not replace the stored one (setCurrentLocation), but the transmitter still records it as
+ * `lastFixAt`, so a device standing still keeps a recent position.
+ */
+export function getRecentLocation({ maxAgeMs, maxAccuracyMeters = DEFAULT_MAX_ACCURACY_METERS, now = Date.now() }: RecentLocationOptions): CurrentLocation | null {
+  const current = currentLocationStore.getState();
+
+  if (!current) return null;
+
+  if (current.accuracy !== null && current.accuracy > maxAccuracyMeters) return null;
+
+  const confirmedAt = Math.max(current.timestamp, transmissionStatusStore.getState().lastFixAt ?? 0);
+
+  return now - confirmedAt <= maxAgeMs ? current : null;
 }
 
 /** Test helper and sign-out: forget the position and status. */

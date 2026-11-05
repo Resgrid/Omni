@@ -10,11 +10,11 @@ import {
   HStack,
   Input,
   InputField,
+  KeyboardAwareScrollView,
   Loading,
   Progress,
   ProgressFilledTrack,
   ScreenHeader,
-  ScrollView,
   showToast,
   Text,
   useThemeColors,
@@ -218,7 +218,7 @@ export default function CertificationDetailScreen({ certificationId }: Certifica
           </ZeroState>
         )
       ) : (
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets testID="certification-detail">
+        <KeyboardAwareScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" testID="certification-detail">
           <Summary record={detail} expiry={expiryText(detail)} />
 
           {feedbackFor('record')}
@@ -338,7 +338,7 @@ export default function CertificationDetailScreen({ certificationId }: Certifica
               </VStack>
             </View>
           </SectionCard>
-        </ScrollView>
+        </KeyboardAwareScrollView>
       )}
 
       <ConfirmDialog

@@ -2,7 +2,27 @@ import { useCertificationsStore } from '@resgrid/data';
 import { goBackOr, OptionSheet } from '@resgrid/features/auth-ui';
 import { useTranslation } from '@resgrid/i18n';
 import type { Certification, CertificationType } from '@resgrid/models';
-import { Button, ButtonSpinner, ButtonText, DateTimeField, HStack, Image, Input, InputField, Loading, Pressable, ScreenHeader, ScrollView, showToast, Text, useThemeColors, View, VStack, ZeroState } from '@resgrid/ui';
+import {
+  Button,
+  ButtonSpinner,
+  ButtonText,
+  DateTimeField,
+  HStack,
+  Image,
+  Input,
+  InputField,
+  KeyboardAwareScrollView,
+  type KeyboardAwareScrollViewRef,
+  Loading,
+  Pressable,
+  ScreenHeader,
+  showToast,
+  Text,
+  useThemeColors,
+  View,
+  VStack,
+  ZeroState,
+} from '@resgrid/ui';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Camera, ChevronDown, FileCheck, ImagePlus, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -113,7 +133,7 @@ const CertificationForm: React.FC<CertificationFormProps> = ({ existing, title, 
   const [typeRefused, setTypeRefused] = useState(false);
   const [failure, setFailure] = useState<Failure | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
+  const scrollRef = useRef<KeyboardAwareScrollViewRef>(null);
 
   const selectedType: CertificationType | undefined = typeId && !isOther ? types.find((type) => String(type.Id) === typeId) : undefined;
   const validityMonths = selectedType && !selectedType.NeverExpires ? (selectedType.DefaultValidityMonths ?? null) : null;
@@ -230,7 +250,7 @@ const CertificationForm: React.FC<CertificationFormProps> = ({ existing, title, 
   return (
     <View className="flex-1 bg-background-50" testID="certification-edit-screen">
       <ScreenHeader title={title} onBack={onBack} testID="certification-edit-header" />
-      <ScrollView ref={scrollRef} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets testID="certification-edit-form">
+      <KeyboardAwareScrollView ref={scrollRef} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" testID="certification-edit-form">
         <SectionCard testID="certification-section-type">
           <FormField label={t('certifications.form.type')} hint={typeHint || null} error={typeError} last={!isOther} testID="certification-type-field">
             <Pressable
@@ -377,7 +397,7 @@ const CertificationForm: React.FC<CertificationFormProps> = ({ existing, title, 
             <ButtonText>{t('certifications.cancel')}</ButtonText>
           </Button>
         </VStack>
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       <OptionSheet
         isOpen={isTypeSheetOpen}

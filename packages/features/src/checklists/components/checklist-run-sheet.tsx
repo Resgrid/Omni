@@ -2,10 +2,10 @@ import { useAuthStore } from '@resgrid/auth';
 import { toDataError, useChecklistsStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import type { ChecklistAnswer, ChecklistInput, ChecklistItem, ChecklistRun } from '@resgrid/models';
-import { Button, ButtonText, DateTimeField, Image, Input, InputField, NativeModal, NativeModalScreen, Pressable, Text, Textarea, TextareaInput, useFormFactor } from '@resgrid/ui';
+import { Button, ButtonText, DateTimeField, Image, Input, InputField, KeyboardAwareScrollView, NativeModal, NativeModalScreen, Pressable, Text, Textarea, TextareaInput, useFormFactor } from '@resgrid/ui';
 import { X } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import {
   answerChoices,
@@ -141,7 +141,7 @@ function RunBody({ run, onClose, onSaved }: { run: ChecklistRun; onClose: () => 
           <X size={22} color="#6B7280" />
         </Pressable>
       </View>
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
+      <KeyboardAwareScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
         <View style={isPhone ? styles.full : styles.framed}>
           <Text className="text-typography-600">{`${run.Target.Name} · ${t('checklists.labels.Version')} ${run.VersionNumber}`}</Text>
           {run.Form.Instructions ? <Text className="mt-1 text-typography-700">{run.Form.Instructions}</Text> : null}
@@ -325,7 +325,7 @@ function RunBody({ run, onClose, onSaved }: { run: ChecklistRun; onClose: () => 
             <ButtonText>{t('checklists.ui.close')}</ButtonText>
           </Button>
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </NativeModalScreen>
   );
 }

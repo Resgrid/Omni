@@ -8,6 +8,7 @@ import { HtmlRenderer, Text } from '@resgrid/ui';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import { callDisplayText, revealedCallText } from '../../lib/call-display';
 import { resolvePriority } from '../../lib/call-priority';
 import { isScheduledCall, scheduledDispatchUtc } from '../../lib/call-time';
 import { DetailRow } from './detail-row';
@@ -18,7 +19,7 @@ export interface CallInfoPanelProps {
 
 /**
  * Info tab (Dispatch): priority, alarm level once escalated, type, location, destination and its type, contact,
- * references, times (with the scheduled dispatch time while the call waits for it) and the call's note (HtmlRenderer).
+ * references, times (with the scheduled dispatch time while the call waits for it), the full nature and the call's note (HtmlRenderer).
  */
 export const CallInfoPanel: React.FC<CallInfoPanelProps> = ({ call }) => {
   const { t } = useTranslation();
@@ -29,6 +30,7 @@ export const CallInfoPanel: React.FC<CallInfoPanelProps> = ({ call }) => {
   const destination = [call.DestinationName, call.DestinationAddress].filter((part) => !!part?.trim()).join(' — ');
   const coordinates = call.Latitude && call.Longitude ? `${call.Latitude}, ${call.Longitude}` : '';
   const noteProtected = redacted(ProtectedFieldIds.callNotes, call.Note);
+  const protectedLabel = t('data_protection.protected_value');
 
   return (
     <View style={styles.panel} testID="call-info-panel">
@@ -51,6 +53,8 @@ export const CallInfoPanel: React.FC<CallInfoPanelProps> = ({ call }) => {
       ) : (
         <DetailRow label={t('call_detail.info.dispatched_on')} value={formatUtcInDepartmentTime(call.DispatchedOnUtc, timeZone)} />
       )}
+      {/* The whole nature as text: the summary card shows it in a fixed-height box. */}
+      <DetailRow label={t('call_detail.nature')} value={callDisplayText(call, 'Nature', protectedLabel)} isProtected={revealedCallText(call, 'Nature') === null} testID="call-info-nature" />
       {noteProtected ? (
         <DetailRow label={t('call_detail.note')} value={null} isProtected />
       ) : call.Note ? (
@@ -58,7 +62,7 @@ export const CallInfoPanel: React.FC<CallInfoPanelProps> = ({ call }) => {
           <Text size="sm" className="mb-1 text-typography-500">
             {t('call_detail.note')}
           </Text>
-          <HtmlRenderer html={call.Note} style={styles.html} testID="call-info-note-html" />
+          <HtmlRenderer html={call.Note} scrollEnabled showsVerticalScrollIndicator style={styles.html} testID="call-info-note-html" />
         </View>
       ) : null}
     </View>

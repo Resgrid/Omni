@@ -2,7 +2,7 @@ import { useCustomMapsStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import { buildIndoorFloorImageUrl, Camera, IndoorMapFloorLayer, MapView, offlineFloorSourceId, PixelImageMap, styleImageSourceUrl, useMapServices, useMapStyle } from '@resgrid/maps';
 import type { IndoorMapFloorResultData } from '@resgrid/models';
-import { HStack, Loading, Pressable, ScreenHeader, ScrollView, Text, View, ZeroState } from '@resgrid/ui';
+import { HStack, Loading, Pressable, ScreenHeader, ScrollRow, Text, View, ZeroState } from '@resgrid/ui';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Building2 } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -80,7 +80,7 @@ export default function IndoorMapScreen() {
     <View className="flex-1 bg-background-50" testID="indoor-map-screen">
       <ScreenHeader title={title} onBack={back} />
       {floors.length > 1 ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.floors}>
+        <ScrollRow contentContainerStyle={styles.floors} testID="indoor-map-floors">
           <HStack space="sm">
             {floors.map((item) => (
               <Pressable
@@ -98,7 +98,7 @@ export default function IndoorMapScreen() {
               </Pressable>
             ))}
           </HStack>
-        </ScrollView>
+        </ScrollRow>
       ) : null}
       <View style={styles.map}>
         {!floor || mode === 'none' ? (

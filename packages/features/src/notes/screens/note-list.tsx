@@ -2,7 +2,7 @@ import { useTerm } from '@resgrid/auth';
 import { searchNotes, useNotesStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import type { NoteResultData } from '@resgrid/models';
-import { FlatList, Input, InputField, Loading, Pressable, RefreshControl, ScrollView, Text, ZeroState } from '@resgrid/ui';
+import { FlatList, Input, InputField, Loading, Pressable, RefreshControl, ScrollRow, Text, ZeroState } from '@resgrid/ui';
 import { StickyNote } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -35,7 +35,7 @@ export default function NoteListScreen() {
           <InputField value={query} onChangeText={setQuery} placeholder={t('notes.search')} accessibilityLabel={`${title}: ${t('notes.search')}`} testID="note-search" />
         </Input>
         {categories.length > 0 ? (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categories} testID="note-categories">
+          <ScrollRow style={styles.categories} testID="note-categories">
             {[null, ...categories].map((value) => {
               const isSelected = value === category;
               const label = value ?? t('notes.all_categories');
@@ -54,7 +54,7 @@ export default function NoteListScreen() {
                 </Pressable>
               );
             })}
-          </ScrollView>
+          </ScrollRow>
         ) : null}
       </View>
       <FlatList

@@ -13,7 +13,7 @@ import { useNavFilterContext, useNavLabel } from '../nav/use-nav-items';
 import { getShellNav } from '../runtime/shell-config';
 import { ShellUpdateNotice } from '../updates/update-notice';
 import { ShellHeader, useHeaderLeading } from './header';
-import { RegisteredBanners, RegisteredOverlays, SessionInitOverlay, ShellOfflineToast, ShellRealtimeBanner } from './overlays';
+import { RegisteredBanners, RegisteredOverlays, SessionInitFailedBanner, SessionInitIndicator, ShellOfflineToast, ShellRealtimeBanner } from './overlays';
 import { RegisteredProviders } from './registered-providers';
 import { ShellProvider } from './shell-context';
 import { DrawerSidebar, InlineSidebar } from './sidebar';
@@ -116,19 +116,20 @@ function ShellFrame({ variant, nav }: { variant: VariantManifest; nav: NavRegist
   return (
     <View style={StyleSheet.flatten([styles.fill, { backgroundColor: colors.background }])} onStartShouldSetResponderCapture={onTouchCapture} testID={`app-shell-${variant.shell.kind}`}>
       <ShellHeader nav={nav} />
+      <SessionInitFailedBanner />
       <ShellRealtimeBanner />
       <RegisteredBanners />
       <View style={styles.body}>
         <InlineSidebar nav={nav} />
         <View style={styles.content}>
           <AppBarBackContext.Provider value={leading === 'back'}>{variant.shell.kind === 'tabs' ? <RegistryTabs nav={nav} /> : <Stack screenOptions={DRAWER_STACK_OPTIONS} />}</AppBarBackContext.Provider>
+          <SessionInitIndicator />
         </View>
       </View>
       <DrawerSidebar nav={nav} />
       <ShellOfflineToast />
       <ShellUpdateNotice />
       <RegisteredOverlays />
-      <SessionInitOverlay />
     </View>
   );
 }

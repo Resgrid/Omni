@@ -1,6 +1,6 @@
 import { useTranslation } from '@resgrid/i18n';
 import { type PoiTypeResultData } from '@resgrid/models';
-import { HStack, Pressable, ScrollView, Text } from '@resgrid/ui';
+import { HStack, Pressable, ScrollRow, Text } from '@resgrid/ui';
 import React from 'react';
 
 import { type PoiListFilter } from '../lib/poi-filters';
@@ -27,7 +27,7 @@ export const PoiFilterBar: React.FC<PoiFilterBarProps> = ({ filter, onChange, po
 
   return (
     <>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-2" testID="poi-type-chips">
+      <ScrollRow className="mb-2" testID="poi-type-chips">
         <HStack space="sm">
           <Chip label={t('pois.all_types')} selected={!filter.poiTypeId} onPress={() => onChange({ ...filter, poiTypeId: null })} testID="poi-type-all" />
           {poiTypes.map((type) => (
@@ -35,15 +35,15 @@ export const PoiFilterBar: React.FC<PoiFilterBarProps> = ({ filter, onChange, po
           ))}
           <Chip label={t('pois.destinations_only')} selected={filter.destinationOnly} onPress={() => onChange({ ...filter, destinationOnly: !filter.destinationOnly })} testID="poi-destination-only" />
         </HStack>
-      </ScrollView>
+      </ScrollRow>
       {capabilities.length > 0 ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-2" testID="poi-capability-chips">
+        <ScrollRow className="mb-2" testID="poi-capability-chips">
           <HStack space="sm">
             {capabilities.map((capability) => (
               <Chip key={capability} label={capability} selected={filter.capabilities.includes(capability)} onPress={() => toggleCapability(capability)} testID={`poi-capability-${capability}`} />
             ))}
           </HStack>
-        </ScrollView>
+        </ScrollRow>
       ) : null}
     </>
   );

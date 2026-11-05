@@ -1,7 +1,7 @@
 import { type DataError, useCalendarStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import type { CalendarItemResultData } from '@resgrid/models';
-import { Button, ButtonText, FlatList, HStack, Loading, Pressable, RefreshControl, Text, View, ZeroState } from '@resgrid/ui';
+import { Button, ButtonText, FlatList, Loading, RefreshControl, TabBar, type TabBarItem, Text, View, ZeroState } from '@resgrid/ui';
 import { CalendarDays } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet } from 'react-native';
@@ -49,6 +49,8 @@ export default function CalendarScreen({ initialTab = 'today' }: CalendarScreenP
   const isRangeLoading = useCalendarStore((state) => state.loading.range === true);
   const todayError = useCalendarStore((state) => state.errors.today ?? null);
   const upcomingError = useCalendarStore((state) => state.errors.upcoming ?? null);
+
+  const tabItems: TabBarItem<CalendarTab>[] = TABS.map(({ key, labelKey }) => ({ key, label: t(labelKey), testID: `calendar-tab-${key}` }));
 
   const today = todayKey();
   // The range answer can include neighbours of a multi-day item; only what falls on today counts.
@@ -126,20 +128,7 @@ export default function CalendarScreen({ initialTab = 'today' }: CalendarScreenP
 
   return (
     <View className="flex-1 bg-background-50" testID="calendar-screen">
-      <HStack space="sm" className="p-4" accessibilityRole="tablist">
-        {TABS.map(({ key, labelKey }) => (
-          <Pressable
-            key={key}
-            onPress={() => setTab(key)}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: tab === key }}
-            className={`flex-1 items-center rounded-lg px-3 py-2 ${tab === key ? 'bg-primary-500' : 'border border-primary-500 bg-transparent'}`}
-            testID={`calendar-tab-${key}`}
-          >
-            <Text className={`font-semibold ${tab === key ? 'text-typography-0' : 'text-primary-600'}`}>{t(labelKey)}</Text>
-          </Pressable>
-        ))}
-      </HStack>
+      <TabBar tabs={tabItems} activeKey={tab} onChange={setTab} variant="pills" testID="calendar-tabs" />
 
       <View style={styles.flex}>
         {tab === 'today' ? renderList(todayItems, isTodayLoading, todayError, 'calendar.today.empty.title', 'calendar.today.empty.description', 'calendar.loading.today', 'calendar-today-list') : null}

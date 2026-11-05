@@ -1,4 +1,4 @@
-import { Pressable, ScrollView, Text, useFormFactor } from '@resgrid/ui';
+import { Pressable, ScrollRow, Text, useFormFactor } from '@resgrid/ui';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -17,7 +17,7 @@ export interface SegmentOption<V extends string> {
 /** A row of toggle buttons (sections, open/all, report scopes): radio semantics, web/Electron-safe. */
 export function Segments<V extends string>({ options, value, onChange, accessibilityLabel }: { options: readonly SegmentOption<V>[]; value: V | null; onChange: (value: V) => void; accessibilityLabel?: string }) {
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} accessibilityRole="radiogroup" accessibilityLabel={accessibilityLabel} contentContainerStyle={styles.segments}>
+    <ScrollRow accessibilityRole="radiogroup" accessibilityLabel={accessibilityLabel} contentContainerStyle={styles.segments}>
       {options.map((option) => {
         const selected = option.value === value;
         return (
@@ -36,7 +36,7 @@ export function Segments<V extends string>({ options, value, onChange, accessibi
           </Pressable>
         );
       })}
-    </ScrollView>
+    </ScrollRow>
   );
 }
 

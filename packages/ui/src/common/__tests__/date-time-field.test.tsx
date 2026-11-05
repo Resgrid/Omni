@@ -2,6 +2,44 @@ import { fireEvent, render } from '@testing-library/react-native';
 import React from 'react';
 
 import { DateTimeField } from '../date-time-field';
+import { pickerDate } from '../date-time-picker';
+
+it('shows the pending choice in the dialog header and jumps to today without committing', async () => {
+  const onChange = jest.fn();
+  const screen = await render(<DateTimeField value="2024-02-01" label="Issued on" onChange={onChange} testID="date" />);
+  await fireEvent.press(screen.getByTestId('date'));
+  expect(screen.getByTestId('date-dialog')).toBeTruthy();
+  await fireEvent.press(screen.getByTestId('date-day-29'));
+  expect(screen.getByTestId('date-selection')).toHaveTextContent(/29/);
+  expect(screen.getByTestId('date-selection')).toHaveTextContent(/2024/);
+
+  const today = new Date();
+  await fireEvent.press(screen.getByTestId('date-today'));
+  expect(onChange).not.toHaveBeenCalled();
+  expect(screen.getByTestId(`date-day-${today.getDate()}`).props.accessibilityState).toMatchObject({ selected: true });
+  await fireEvent.press(screen.getByTestId('date-done'));
+  expect(onChange).toHaveBeenCalledWith(pickerDate(today));
+  await screen.unmount();
+});
+
+it('closes without committing when the dimmed backdrop is tapped', async () => {
+  const onChange = jest.fn();
+  const screen = await render(<DateTimeField value="2026-09-26" label="Date" onChange={onChange} testID="date" />);
+  await fireEvent.press(screen.getByTestId('date'));
+  await fireEvent.press(screen.getByTestId('date-day-15'));
+  await fireEvent.press(screen.getByTestId('date-backdrop'));
+  expect(screen.queryByTestId('date-dialog')).toBeNull();
+  expect(onChange).not.toHaveBeenCalled();
+  await screen.unmount();
+});
+
+it('offers Today only for calendar modes', async () => {
+  const screen = await render(<DateTimeField mode="time" value="08:00" label="Start" onChange={jest.fn()} testID="time" />);
+  await fireEvent.press(screen.getByTestId('time'));
+  expect(screen.queryByTestId('time-today')).toBeNull();
+  expect(screen.getByTestId('time-selection')).toHaveTextContent('08:00');
+  await screen.unmount();
+});
 
 it('selects a leap day using the calendar and commits only on Done', async () => {
   const onChange = jest.fn();

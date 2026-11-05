@@ -2,7 +2,7 @@ import { useCapability } from '@resgrid/config';
 import { type CallListItem, useCallsStore, useCheckInTimersStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import type { DispatchedEventResultData } from '@resgrid/models';
-import { Button, ButtonText, Fab, FlatList, Loading, Pressable, RefreshControl, Text, useFormFactor, useThemeColors, ZeroState } from '@resgrid/ui';
+import { Button, ButtonText, Fab, FlatList, Loading, RefreshControl, TabBar, type TabBarItem, useFormFactor, useThemeColors, ZeroState } from '@resgrid/ui';
 import { useRouter } from 'expo-router';
 import { Plus } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -61,6 +61,12 @@ export default function CallListScreen({ density, realtime = true, onOpenCall }:
   const source: CallListItem[] = activeTab === 'pending' ? pendingCalls : activeTab === 'scheduled' ? scheduledCalls : activeCalls;
   const visible = useMemo(() => filterCalls(source, filters), [source, filters]);
   const priorities = useMemo(() => priorityOptions(callPriorities), [callPriorities]);
+
+  const tabItems: TabBarItem<CallListTab>[] = tabs.map((key) => {
+    const count = key === 'pending' ? pendingCalls.length : key === 'scheduled' ? scheduledCalls.length : activeCalls.length;
+
+    return { key, label: `${t(TAB_KEYS[key])} (${count})`, testID: `call-list-tab-${key}` };
+  });
 
   // Dispatches drive the ticker and the assignment outline; the store keeps them per call with a TTL (Unit).
   const serverCallIds = useMemo(() => activeCalls.filter((call) => !call.queued).map((call) => call.CallId), [activeCalls]);
@@ -134,29 +140,7 @@ export default function CallListScreen({ density, realtime = true, onOpenCall }:
       {!isOnline ? <OfflineCallBanner context="list" queuedCount={queuedCount} /> : null}
       <SyncedCallNotices onOpenCall={openCallById} />
 
-      {tabs.length > 1 ? (
-        <View style={styles.tabs} accessibilityRole="tablist" testID="call-list-tabs">
-          {tabs.map((key) => {
-            const count = key === 'pending' ? pendingCalls.length : key === 'scheduled' ? scheduledCalls.length : activeCalls.length;
-            const selected = key === activeTab;
-            return (
-              <Pressable
-                key={key}
-                onPress={() => setTab(key)}
-                accessibilityRole="tab"
-                accessibilityState={{ selected }}
-                accessibilityLabel={`${t(TAB_KEYS[key])} (${count})`}
-                testID={`call-list-tab-${key}`}
-                className={`mr-2 rounded-full px-4 py-1.5 ${selected ? 'bg-primary-600' : 'bg-background-200'}`}
-              >
-                <Text size="sm" className={selected ? 'font-semibold text-typography-0' : 'text-typography-700'}>
-                  {`${t(TAB_KEYS[key])} (${count})`}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      ) : null}
+      {tabs.length > 1 ? <TabBar tabs={tabItems} activeKey={activeTab} onChange={setTab} variant="pills" testID="call-list-tabs" /> : null}
 
       <CallFiltersBar filters={filters} onChange={setFilters} priorities={priorities} />
 
@@ -183,7 +167,6 @@ export default function CallListScreen({ density, realtime = true, onOpenCall }:
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  tabs: { flexDirection: 'row', paddingHorizontal: 12, paddingTop: 8 },
   list: { paddingHorizontal: 12, paddingBottom: 24, paddingTop: 8 },
   // Room for the New Call button over the last card.
   listAboveFab: { paddingHorizontal: 12, paddingBottom: 96, paddingTop: 8 },

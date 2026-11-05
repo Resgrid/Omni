@@ -6,7 +6,24 @@ import { useNavigationHandoff } from '@resgrid/features/contacts';
 import { useTranslation } from '@resgrid/i18n';
 import type { CallResultData } from '@resgrid/models';
 import { useRealtimeRefetch } from '@resgrid/realtime';
-import { Button, ButtonText, HtmlRenderer, Loading, Pressable, ScreenHeader, SharedTabs, type TabItem, Text, TypeIcon, useFormFactor, useRouteTab, useThemeColors, useToast, ZeroState } from '@resgrid/ui';
+import {
+  Button,
+  ButtonText,
+  HtmlRenderer,
+  KeyboardAwareScrollView,
+  Loading,
+  Pressable,
+  ScreenHeader,
+  SharedTabs,
+  type TabItem,
+  Text,
+  TypeIcon,
+  useFormFactor,
+  useRouteTab,
+  useThemeColors,
+  useToast,
+  ZeroState,
+} from '@resgrid/ui';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { EllipsisVertical } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -275,7 +292,7 @@ function ServerCallDetail({ callId, mapSlot, menuItems, onMenuAction, onClosed, 
         {nature === null ? (
           <Text className="mt-2 italic text-typography-500">{protectedLabel}</Text>
         ) : nature ? (
-          <HtmlRenderer html={nature} scrollEnabled style={styles.nature} rendererKey={`${call.CallId}-nature`} testID="call-detail-nature" />
+          <HtmlRenderer html={nature} scrollEnabled showsVerticalScrollIndicator style={styles.nature} rendererKey={`${call.CallId}-nature`} testID="call-detail-nature" />
         ) : null}
       </View>
       {isPending || isScheduled ? (
@@ -316,14 +333,14 @@ function ServerCallDetail({ callId, mapSlot, menuItems, onMenuAction, onClosed, 
 
   const tabsView = (
     <View style={styles.card} className="bg-background-0" testID="call-detail-tabs">
-      <SharedTabs tabs={tabs} activeIndex={routeTab.activeIndex} onChange={routeTab.selectIndex} variant="underlined" scrollable size={isWide ? 'lg' : 'md'} tabClassName="min-h-11" />
+      <SharedTabs tabs={tabs} activeIndex={routeTab.activeIndex} onChange={routeTab.selectIndex} variant="underlined" scrollable size={isWide ? 'lg' : 'md'} tabStyle={styles.tab} />
     </View>
   );
 
   return (
     <View style={styles.screen} className="bg-background-50" testID="call-detail-screen">
       {header}
-      <ScrollView contentContainerStyle={styles.content} testID="call-detail-scroll">
+      <KeyboardAwareScrollView contentContainerStyle={styles.content} testID="call-detail-scroll">
         {summary}
         {tabsView}
         {CALL_SHORTCUTS_AVAILABLE && isWide ? (
@@ -331,7 +348,7 @@ function ServerCallDetail({ callId, mapSlot, menuItems, onMenuAction, onClosed, 
             {t('call_detail.keyboard_shortcuts')}
           </Text>
         ) : null}
-      </ScrollView>
+      </KeyboardAwareScrollView>
       <CallNotesModal isOpen={modal === 'notes'} onClose={() => setModal(null)} callId={callId} />
       <CallImagesModal isOpen={modal === 'images'} onClose={() => setModal(null)} callId={callId} />
       <CallFilesModal isOpen={modal === 'files'} onClose={() => setModal(null)} callId={callId} />
@@ -408,4 +425,6 @@ const styles = StyleSheet.create({
   nature: { height: 132, marginTop: 8 },
   map: { height: 200, borderRadius: 12, overflow: 'hidden', marginBottom: 12 },
   actions: { flexDirection: 'row', flexWrap: 'wrap', borderRadius: 12, padding: 8, marginBottom: 12 },
+  // A 44 dp touch target for each tab.
+  tab: { minHeight: 44 },
 });

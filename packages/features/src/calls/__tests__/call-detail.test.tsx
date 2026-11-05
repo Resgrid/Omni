@@ -239,6 +239,32 @@ describe('CallDetailScreen', () => {
   const setCall = (overrides: Parameters<typeof makeCall>[1]) =>
     useCallDetailStore.setState((state) => ({ details: { ...state.details, '10': { ...state.details['10'], call: makeCall('10', { Name: 'House fire', ...overrides }) } } }));
 
+  it('scrolls a long nature in the summary and shows the whole nature as text above the note on the Info tab', async () => {
+    activateVariant('responder');
+    setCall({ Nature: '<p>Smoke showing</p><p>Second floor &amp; attic</p>', Note: '<p>Gate code 1234</p>' });
+    await render(<CallDetailScreen />);
+
+    const summaryNature = screen.getByTestId('call-detail-nature');
+    expect(summaryNature.props.scrollEnabled).toBe(true);
+    expect(summaryNature.props.nestedScrollEnabled).toBe(true);
+    expect(summaryNature.props.showsVerticalScrollIndicator).toBe(true);
+
+    const panel = within(screen.getByTestId('call-info-panel'));
+    expect(panel.getByText('Smoke showing\nSecond floor & attic')).toBeTruthy();
+    // Directly above the note, which scrolls too when it is long.
+    expect(panel.getAllByTestId(/^call-info-(nature|note-html)$/).map((element) => element.props.testID)).toEqual(['call-info-nature', 'call-info-note-html']);
+    expect(screen.getByTestId('call-info-note-html').props.nestedScrollEnabled).toBe(true);
+  });
+
+  it('shows the protected label for a withheld nature on the Info tab, never the sentinel', async () => {
+    activateVariant('responder');
+    setCall({ Nature: 'REDACTED', RedactedFields: ['calls.natureofcall'] });
+    await render(<CallDetailScreen />);
+
+    expect(screen.getByTestId('call-info-nature').props.accessibilityLabel).toBe('call_detail.nature: data_protection.protected_value');
+    expect(screen.queryByText('REDACTED')).toBeNull();
+  });
+
   it('offers dispatch more and delete on an active call, reschedule only while it is scheduled, and no close once closed (Dispatch menu)', async () => {
     activateVariant('ic');
     const { unmount } = await render(<CallDetailScreen />);

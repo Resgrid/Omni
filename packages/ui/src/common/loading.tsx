@@ -20,8 +20,6 @@ const dotDelayStyle = (index: number): ViewStyle | undefined => (Platform.OS ===
 export interface LoadingProps {
   /** Text below the indicator. Defaults to the translated "Loading…"; pass an empty string for none. */
   text?: string;
-  /** Cover the parent with an overlay. */
-  fullscreen?: boolean;
   size?: 'small' | 'large';
   type?: 'spinner' | 'dots' | 'icon';
   /** No backdrop behind the indicator. */
@@ -29,13 +27,17 @@ export interface LoadingProps {
   testID?: string;
 }
 
-/** Loading indicator (IC baseline): spinner, pulsing dots or a spinning icon, optionally full-screen. */
-export const Loading: React.FC<LoadingProps> = ({ text, fullscreen = false, size = 'large', type = 'spinner', transparent = false, testID = 'loading' }) => {
+/**
+ * Loading indicator (IC baseline): spinner, pulsing dots or a spinning icon, drawn in place inside the page or panel
+ * that is loading. There is deliberately no overlay mode: a spinner laid over the app stopped people using it while
+ * startup data loaded (owner decision, 2026-11-04), so loading always sits where the content will appear.
+ */
+export const Loading: React.FC<LoadingProps> = ({ text, size = 'large', type = 'spinner', transparent = false, testID = 'loading' }) => {
   const { t } = useTranslation();
   const colors = useThemeColors();
   const loadingText = text ?? t('common.loading', { defaultValue: 'Loading...' });
 
-  const containerClasses = `items-center justify-center ${fullscreen ? 'absolute inset-0 z-50' : ''} ${transparent ? 'bg-transparent' : 'bg-background-0/80'}`;
+  const containerClasses = `items-center justify-center ${transparent ? 'bg-transparent' : 'bg-background-0/80'}`;
 
   const renderLoadingIndicator = () => {
     switch (type) {

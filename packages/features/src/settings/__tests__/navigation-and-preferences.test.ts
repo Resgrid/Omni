@@ -1,16 +1,21 @@
 import './test-setup';
 
+import { type CurrentLocation, getRecentLocation } from '@resgrid/location';
 import { createMemoryKvBackend, DurableKv } from '@resgrid/offline';
 import { Linking } from 'react-native';
 
 import { setDevicePreferencesKv } from '../../auth-ui/lib/device-kv';
 import { ageParts, formatBytes } from '../lib/format';
 import { getNavigationApp, getNavigationAppOptions, normalizeNavigationApp, setNavigationApp } from '../lib/navigation-app';
-import { buildNavigationAttempts, openMapsWithDirections, toNavigationCoordinates } from '../lib/navigation-handoff';
+import { buildNavigationAttempts, NAVIGATION_ORIGIN_MAX_AGE_MS, openMapsWithDirections, openNavigationTarget, toNavigationCoordinates } from '../lib/navigation-handoff';
 import { getKeepAlivePreference, getLocationPreferences, getThemeMode, subscribePreferences } from '../lib/preferences';
 import { activateTestVariant } from './variant';
 
+jest.mock('@resgrid/location', () => ({ getRecentLocation: jest.fn(() => null) }));
+
 const destination = (overrides: Partial<Parameters<typeof buildNavigationAttempts>[0]> = {}) => ({ coordinates: { latitude: '39.5', longitude: '-119.8' }, address: null, label: 'Station 1', origin: null, ...overrides });
+
+const deviceFix: CurrentLocation = { latitude: 39.6, longitude: -119.7, heading: null, accuracy: 8, speed: null, altitude: null, timestamp: 0, source: 'watcher' };
 
 describe('navigation app preference', () => {
   let kv: DurableKv;
@@ -73,6 +78,47 @@ describe('navigation hand-off', () => {
     expect(openURL).toHaveBeenCalledWith(expect.stringContaining('1%20Main%20St'));
     await expect(openMapsWithDirections(null, null)).resolves.toBe(false);
     openURL.mockRestore();
+  });
+});
+
+describe('navigation hand-off origin', () => {
+  let openURL: jest.SpyInstance;
+
+  beforeEach(() => {
+    setDevicePreferencesKv(new DurableKv(createMemoryKvBackend('prefs')));
+    openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    openURL.mockRestore();
+    jest.mocked(getRecentLocation).mockReturnValue(null);
+    setDevicePreferencesKv(undefined);
+  });
+
+  it('starts the route at a recent device fix, so Organic Maps routes instead of showing a pin', async () => {
+    jest.mocked(getRecentLocation).mockReturnValue(deviceFix);
+    setNavigationApp('organic_maps');
+
+    await expect(openNavigationTarget({ latitude: 39.5, longitude: -119.8, label: 'Station 1' })).resolves.toBe(true);
+
+    expect(getRecentLocation).toHaveBeenCalledWith({ maxAgeMs: NAVIGATION_ORIGIN_MAX_AGE_MS });
+    expect(openURL).toHaveBeenCalledWith('om://route?sll=39.6,-119.7&saddr=&dll=39.5,-119.8&daddr=Station%201&type=vehicle');
+  });
+
+  it('leaves the start to the app when no recent fix is known', async () => {
+    setNavigationApp('organic_maps');
+
+    await openNavigationTarget({ latitude: 39.5, longitude: -119.8, label: 'Station 1' });
+
+    expect(openURL).toHaveBeenCalledWith('om://map?v=1&ll=39.5,-119.8&n=Station%201');
+  });
+
+  it('passes the origin with an address target too', async () => {
+    jest.mocked(getRecentLocation).mockReturnValue(deviceFix);
+
+    await openNavigationTarget({ address: '1 Main St' });
+
+    expect(openURL).toHaveBeenCalledWith('maps://maps.apple.com/?saddr=39.6,-119.7&daddr=1%20Main%20St&dirflg=d');
   });
 });
 

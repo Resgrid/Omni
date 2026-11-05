@@ -909,6 +909,8 @@
     "retry": "Försök igen",
     "route": "Rutt",
     "save": "Spara",
+    "scroll_left": "Rulla åt vänster",
+    "scroll_right": "Rulla åt höger",
     "scroll_tabs_left": "Rulla flikarna åt vänster",
     "scroll_tabs_right": "Rulla flikarna åt höger",
     "search": "Sök",
@@ -1097,7 +1099,8 @@
     "clear": "Rensa",
     "date": "Datum",
     "hour": "Timme",
-    "minute": "Minut"
+    "minute": "Minut",
+    "today": "Idag"
   },
   "form": {
     "invalid_url": "Vänligen ange en giltig URL som börjar med http:// eller https://",
@@ -4140,7 +4143,6 @@
     "everyone": "Everyone",
     "keep_editing": "Keep editing",
     "load_error": "Could not load messages",
-    "no_recipients": "No one matches",
     "not_found": "This message is no longer available.",
     "not_sent": "Not sent",
     "open_hint": "Opens the message",
@@ -4157,7 +4159,6 @@
     "response_sent": "Response sent",
     "response_types_hint": "Recipients answer Yes, Maybe or No, with an optional note.",
     "response_yes": "Yes",
-    "search_recipients": "Search recipients",
     "send_failed": "The message could not be sent. Check it and try again.",
     "send_success": "Message sent",
     "system_sender": "System",

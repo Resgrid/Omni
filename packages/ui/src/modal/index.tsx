@@ -3,8 +3,10 @@ import { createModal } from '@gluestack-ui/core/modal/creator';
 import type { VariantProps } from '@gluestack-ui/utils/nativewind-utils';
 import { tva, useStyleContext, withStyleContext } from '@gluestack-ui/utils/nativewind-utils';
 import React from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { Easing, FadeIn, FadeOut, ZoomIn } from 'react-native-reanimated';
+
+import { BottomAnchoredKeyboardView } from '../keyboard-avoiding-view/bottom-anchored';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 const AnimatedView = Animated.createAnimatedComponent(View);
@@ -80,9 +82,19 @@ type IModalFooterProps = React.ComponentProps<typeof UIModal.Footer> & VariantPr
 
 type IModalCloseButtonProps = React.ComponentProps<typeof UIModal.CloseButton> & VariantProps<typeof modalCloseButtonStyle> & { className?: string };
 
-const Modal = React.forwardRef<React.ComponentRef<typeof UIModal>, IModalProps>(function Modal({ className, size = 'md', ...props }, ref) {
+/**
+ * A dialog over the app (or, with `useRNModal`, in its own native window). Both fill the display, so the content is
+ * centred in the space above the soft keyboard while it is up: a password or search field in the dialog stays in view.
+ */
+const Modal = React.forwardRef<React.ComponentRef<typeof UIModal>, IModalProps>(function Modal({ className, size = 'md', children, testID, ...props }, ref) {
   const contextValue = React.useMemo(() => ({ size }), [size]);
-  return <UIModal ref={ref} {...props} pointerEvents="box-none" className={modalStyle({ size, class: className })} context={contextValue} />;
+  return (
+    <UIModal ref={ref} {...props} testID={testID} pointerEvents="box-none" className={modalStyle({ size, class: className })} context={contextValue}>
+      <BottomAnchoredKeyboardView style={styles.keyboardFrame} pointerEvents="box-none" testID={testID ? `${testID}-keyboard-frame` : undefined}>
+        {children}
+      </BottomAnchoredKeyboardView>
+    </UIModal>
+  );
 });
 
 const ModalBackdrop = React.forwardRef<React.ComponentRef<typeof UIModal.Backdrop>, IModalBackdropProps>(function ModalBackdrop({ className, ...props }, ref) {
@@ -177,5 +189,10 @@ ModalHeader.displayName = 'ModalHeader';
 ModalBody.displayName = 'ModalBody';
 ModalFooter.displayName = 'ModalFooter';
 ModalCloseButton.displayName = 'ModalCloseButton';
+
+const styles = StyleSheet.create({
+  // Fills the modal root (which centres its children) and centres the dialog in what the keyboard leaves.
+  keyboardFrame: { alignSelf: 'stretch', justifyContent: 'center', alignItems: 'center' },
+});
 
 export { Modal, ModalBackdrop, ModalBody, ModalCloseButton, ModalContent, ModalFooter, ModalHeader };

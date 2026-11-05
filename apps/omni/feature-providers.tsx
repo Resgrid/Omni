@@ -9,7 +9,7 @@ import { type NavigationHandoff, NavigationHandoffProvider, type NavigationTarge
 import { useInAppNavigationAvailable } from '@resgrid/features/navigation/hooks/use-in-app-navigation';
 import { navigationRoutes, requestPointNavigation } from '@resgrid/features/navigation/routes';
 import { useOfflineMapsController } from '@resgrid/features/offline-maps';
-import { type ActiveUnitAdapter, getNavigationApp, openMapsWithAddress, openMapsWithDirections, type StorageSyncServices, usePreferencesVersion } from '@resgrid/features/settings';
+import { type ActiveUnitAdapter, getNavigationApp, openNavigationTarget, type StorageSyncServices, usePreferencesVersion } from '@resgrid/features/settings';
 import { StatusProvider } from '@resgrid/features/status';
 import { UnitRoutesMapProvider } from '@resgrid/features/unit-routes';
 import { acquireLocationFix } from '@resgrid/location';
@@ -87,8 +87,8 @@ export function ShellChatIdentityProvider({ children }: ProviderProps) {
   return <ChatIdentityProvider asUnitId={asUnitId}>{children}</ChatIdentityProvider>;
 }
 
-/** The navigation app chosen in Settings (Settings → Preferences → Navigation app). */
-const openExternalNavigation = (target: NavigationTarget): Promise<boolean> => ('address' in target ? openMapsWithAddress(target.address) : openMapsWithDirections(target.latitude, target.longitude, target.label));
+/** The navigation app chosen in Settings (Settings → Preferences → Navigation app), from the device's recent position. */
+const openExternalNavigation = openNavigationTarget;
 
 /** In-app turn-by-turn (MapLibre plan §9.1): a call by id (the server routes to it), any other point handed over in memory. */
 const openInAppNavigation = (target: NavigationTarget): Promise<boolean> => {

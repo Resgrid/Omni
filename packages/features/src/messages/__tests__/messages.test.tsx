@@ -10,7 +10,7 @@ import React from 'react';
 
 import { ComposeMessageSheet } from '../components/compose-message-sheet';
 import { MessageDetails } from '../components/message-details';
-import { buildMessageList, canRespondToMessage, getMessageTypeKey, getResponseKey, isMessageExpired, MessageType, recipientInputType, recipientsForTab } from '../lib/message-format';
+import { buildMessageList, canRespondToMessage, getMessageTypeKey, getResponseKey, isMessageExpired, messageRecipientCount, MessageType, recipientSections, toMessageRecipients } from '../lib/message-format';
 import { messageRoutes } from '../routes';
 import MessageDetailScreen from '../screens/message-detail';
 import MessagesScreen from '../screens/messages';
@@ -103,11 +103,25 @@ describe('message format', () => {
     expect(canRespondToMessage(message('1', { Type: MessageType.Callback, Responded: true }), false)).toBe(false);
   });
 
-  it('maps recipients to tabs and Core input types and never offers units', () => {
-    expect(recipientsForTab(RECIPIENTS, 'groups', '').map((item) => item.Id)).toEqual(['G:1']);
-    expect(recipientsForTab(RECIPIENTS, 'personnel', 'kim').map((item) => item.Id)).toEqual(['P:u1']);
-    expect(RECIPIENTS.map(recipientInputType)).toEqual([0, 2, 3, 1, 1]);
-    expect(['personnel', 'groups', 'roles'].flatMap((tab) => recipientsForTab(RECIPIENTS, tab as never, '')).some((item) => item.Type === 'Unit')).toBe(false);
+  it('maps recipients to picker sections and Core input types and never offers units', () => {
+    const sections = recipientSections(RECIPIENTS, { personnel: 'People', groups: 'Groups', roles: 'Roles' });
+    expect(sections.map((section) => [section.key, section.label, section.entries.map((entry) => entry.id)])).toEqual([
+      ['personnel', 'People', ['P:u1']],
+      ['groups', 'Groups', ['G:1']],
+      ['roles', 'Roles', ['R:2']],
+    ]);
+  });
+
+  it('turns a picker selection into Core recipients: "Everyone" alone, else people, groups and roles by section', () => {
+    expect(toMessageRecipients({ everyone: true, ids: { groups: ['G:1'] } }, RECIPIENTS)).toEqual([{ Id: '0', Type: 0, Name: 'Everyone' }]);
+    expect(toMessageRecipients({ everyone: false, ids: { roles: ['R:2'], personnel: ['P:u1', 'P:gone'], groups: ['G:1'] } }, RECIPIENTS)).toEqual([
+      { Id: 'P:u1', Type: 1, Name: 'Alex Kim' },
+      { Id: 'P:gone', Type: 1, Name: '' },
+      { Id: 'G:1', Type: 2, Name: 'Station 1' },
+      { Id: 'R:2', Type: 3, Name: 'Medics' },
+    ]);
+    expect(messageRecipientCount({ everyone: true, ids: {} })).toBe(1);
+    expect(messageRecipientCount({ everyone: false, ids: { personnel: ['P:u1'], roles: ['R:2'] } })).toBe(2);
   });
 
   it('builds safe routes', () => {
@@ -229,7 +243,13 @@ describe('MessageDetails', () => {
 });
 
 describe('ComposeMessageSheet', () => {
-  it('validates, keeps Everyone exclusive and sends through the outbox', async () => {
+  const pickEveryone = async () => {
+    await fireEvent.press(screen.getByTestId('compose-recipients', q));
+    await fireEvent(screen.getByTestId('compose-recipient-picker-everyone', q), 'valueChange', true);
+    await fireEvent.press(screen.getByTestId('compose-recipient-picker-confirm', q));
+  };
+
+  it('validates, picks recipients in the shared recipient picker and sends through the outbox', async () => {
     const onClose = jest.fn();
     await render(<ComposeMessageSheet isOpen onClose={onClose} />);
     await fireEvent.press(screen.getByTestId('compose-send', q));
@@ -240,13 +260,21 @@ describe('ComposeMessageSheet', () => {
     await fireEvent.changeText(screen.getByTestId('compose-subject', q), ' Drill ');
     await fireEvent.changeText(screen.getByTestId('compose-body', q), 'Tonight 7pm');
     await fireEvent.press(screen.getByTestId('compose-type-2', q));
-    await fireEvent.press(screen.getByTestId('recipient-0', q));
-    await fireEvent.press(screen.getByTestId('compose-tab-groups', q));
-    await fireEvent.press(screen.getByTestId('recipient-G:1', q));
-    expect(screen.getByTestId('compose-recipient-count', q)).toHaveTextContent('messages.recipients_selected:1');
-    await fireEvent.press(screen.getByTestId('compose-tab-roles', q));
-    await fireEvent.press(screen.getByTestId('recipient-R:2', q));
-    expect(screen.queryByTestId('recipient-U:5', q)).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('compose-recipients', q));
+    expect(screen.getByTestId('compose-recipient-picker-personnel', q)).toBeTruthy();
+    expect(screen.queryByText('Engine 5', q)).toBeNull();
+    // "Everyone" clears the picks; a pick after it ends "Everyone".
+    await fireEvent(screen.getByTestId('compose-recipient-picker-everyone', q), 'valueChange', true);
+    await fireEvent.press(screen.getByTestId('recipient-groups-G:1', q));
+    expect(screen.getByTestId('compose-recipient-picker-everyone', q).props.value).toBe(false);
+    await fireEvent.changeText(screen.getByTestId('compose-recipient-picker-search', q), 'med');
+    expect(screen.queryByTestId('recipient-personnel-P:u1', q)).toBeNull();
+    await fireEvent.press(screen.getByTestId('recipient-roles-R:2', q));
+    await fireEvent.press(screen.getByTestId('compose-recipient-picker-confirm', q));
+    expect(screen.queryByTestId('compose-recipients-error', q)).toBeNull();
+    expect(screen.getByTestId('compose-recipient-count', q)).toHaveTextContent('messages.recipients_selected:2');
+    expect(screen.getByTestId('compose-recipient-summary', q)).toHaveTextContent('Station 1, Medics');
 
     await fireEvent.press(screen.getByTestId('compose-send', q));
     await waitFor(() =>
@@ -264,18 +292,46 @@ describe('ComposeMessageSheet', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
+  it('keeps the selection when the picker is closed without Done', async () => {
+    await render(<ComposeMessageSheet isOpen onClose={jest.fn()} />);
+    await fireEvent.press(screen.getByTestId('compose-recipients', q));
+    await fireEvent.press(screen.getByTestId('recipient-personnel-P:u1', q));
+    await fireEvent.press(screen.getByTestId('compose-recipient-picker-close', q));
+    expect(screen.getByTestId('compose-recipient-summary', q)).toHaveTextContent('common.none');
+
+    await pickEveryone();
+    expect(screen.getByTestId('compose-recipient-summary', q)).toHaveTextContent('messages.everyone');
+  });
+
+  it('shows the recipients loading, and offers no "Everyone" switch when Core lists no Everyone row', async () => {
+    useMessagesStore.setState({ recipients: [], loading: { recipients: true } });
+    const { rerender } = await render(<ComposeMessageSheet isOpen onClose={jest.fn()} />);
+    await fireEvent.press(screen.getByTestId('compose-recipients', q));
+    expect(screen.getByTestId('compose-recipient-picker-loading', q)).toBeTruthy();
+
+    await act(async () => useMessagesStore.setState({ recipients: RECIPIENTS.filter((item) => item.Id !== '0'), loading: {} }));
+    await rerender(<ComposeMessageSheet isOpen onClose={jest.fn()} />);
+    expect(screen.queryByTestId('compose-recipient-picker-everyone', q)).toBeNull();
+    expect(screen.getByTestId('recipient-personnel-P:u1', q)).toBeTruthy();
+    await fireEvent.changeText(screen.getByTestId('compose-recipient-picker-search', q), 'nobody');
+    expect(screen.getByTestId('compose-recipient-picker-empty', q)).toBeTruthy();
+  });
+
   it('says a message composed offline will be sent later; a refusal keeps the form', async () => {
     store.sendNewMessage.mockResolvedValueOnce({ outcome: 'queued', id: 'evt-2' }).mockResolvedValueOnce({ outcome: 'rejected', id: 'evt-3' });
     const onClose = jest.fn();
     await render(<ComposeMessageSheet isOpen onClose={onClose} />);
+
     const fill = async () => {
       await fireEvent.changeText(screen.getByTestId('compose-subject', q), 'Drill');
       await fireEvent.changeText(screen.getByTestId('compose-body', q), 'Body');
-      await fireEvent.press(screen.getByTestId('recipient-0', q));
+      await pickEveryone();
     };
+
     await fill();
     await fireEvent.press(screen.getByTestId('compose-send', q));
     await waitFor(() => expect(toasts()).toContain('success:messages.queued_offline'));
+    expect(store.sendNewMessage).toHaveBeenLastCalledWith({ Title: 'Drill', Body: 'Body', Type: 0, Recipients: [{ Id: '0', Type: 0, Name: 'Everyone' }] });
     expect(onClose).toHaveBeenCalledTimes(1);
 
     await fill();

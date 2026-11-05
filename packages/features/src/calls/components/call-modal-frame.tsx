@@ -1,8 +1,8 @@
 import { useTranslation } from '@resgrid/i18n';
-import { NativeModal, NativeModalScreen, Pressable, Text } from '@resgrid/ui';
+import { KeyboardAwareScrollView, NativeModal, NativeModalScreen, Pressable, Text } from '@resgrid/ui';
 import { X } from 'lucide-react-native';
 import React from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 export interface CallModalFrameProps {
   isOpen: boolean;
@@ -30,9 +30,9 @@ export const CallModalFrame: React.FC<CallModalFrameProps> = ({ isOpen, onClose,
           </Pressable>
         </View>
         {scrollable ? (
-          <ScrollView style={styles.body} keyboardShouldPersistTaps="handled">
+          <KeyboardAwareScrollView style={styles.body} keyboardShouldPersistTaps="handled">
             {children}
-          </ScrollView>
+          </KeyboardAwareScrollView>
         ) : (
           <View style={styles.body}>{children}</View>
         )}

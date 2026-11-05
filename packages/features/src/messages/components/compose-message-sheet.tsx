@@ -1,23 +1,17 @@
 import { useMessagesStore } from '@resgrid/data';
+import { emptyRecipientSelection, RecipientPickerModal, summarizeRecipientSelection } from '@resgrid/features/calls';
 import { useTranslation } from '@resgrid/i18n';
-import type { RecipientsResultData } from '@resgrid/models';
-import { Button, ButtonSpinner, ButtonText, CustomBottomSheet, HStack, Input, InputField, Pressable, Spinner, Text, Textarea, TextareaInput, useThemeColors, useToast, VStack } from '@resgrid/ui';
-import { CheckSquare, Square, Users } from 'lucide-react-native';
+import { Button, ButtonSpinner, ButtonText, CustomBottomSheet, HStack, Input, InputField, Pressable, Text, Textarea, TextareaInput, useThemeColors, useToast, VStack } from '@resgrid/ui';
+import { ChevronRight, Users } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
-import { COMPOSABLE_MESSAGE_TYPES, getMessageTypeKey, isEveryoneRecipient, MessageType, recipientInputType, recipientsForTab, type RecipientTab } from '../lib/message-format';
+import { COMPOSABLE_MESSAGE_TYPES, getMessageTypeKey, isEveryoneRecipient, messageRecipientCount, type MessageRecipientSelection, MessageType, recipientSections, toMessageRecipients } from '../lib/message-format';
 
 export interface ComposeMessageSheetProps {
   isOpen: boolean;
   onClose: () => void;
 }
-
-const TABS: readonly { key: RecipientTab; labelKey: string }[] = [
-  { key: 'personnel', labelKey: 'messages.recipient_tabs.personnel' },
-  { key: 'groups', labelKey: 'messages.recipient_tabs.groups' },
-  { key: 'roles', labelKey: 'messages.recipient_tabs.roles' },
-];
 
 interface FormErrors {
   subject?: boolean;
@@ -25,32 +19,11 @@ interface FormErrors {
   recipients?: boolean;
 }
 
-const RecipientRow: React.FC<{ recipient: RecipientsResultData; selected: boolean; onToggle: (recipient: RecipientsResultData) => void }> = ({ recipient, selected, onToggle }) => {
-  const colors = useThemeColors();
-  const Icon = selected ? CheckSquare : Square;
-  return (
-    <Pressable
-      onPress={() => onToggle(recipient)}
-      accessibilityRole="checkbox"
-      accessibilityState={{ checked: selected }}
-      accessibilityLabel={recipient.Name}
-      testID={`recipient-${recipient.Id}`}
-      className={`mb-2 flex-row items-center rounded-lg border px-3 py-2 ${selected ? 'border-primary-500 bg-primary-50' : 'border-outline-200 bg-background-0'}`}
-    >
-      <View style={styles.rowIcon}>
-        <Icon size={18} color={selected ? colors.primary : colors.icon} />
-      </View>
-      <Text size="sm" className="flex-1 text-typography-900">
-        {recipient.Name}
-      </Text>
-    </Pressable>
-  );
-};
-
 /**
  * Compose (Responder): subject, body, type (message / callback / poll) and recipients — everyone, or people, groups and
- * roles. Sending goes through the outbox, so it works offline: the message waits on the device and is sent on
- * reconnect (exactly once). Core does not message units, so they are not offered.
+ * roles, picked in the same recipient picker a call's dispatch uses. Sending goes through the outbox, so it works
+ * offline: the message waits on the device and is sent on reconnect (exactly once). Core does not message units, so
+ * they are not offered.
  */
 export const ComposeMessageSheet: React.FC<ComposeMessageSheetProps> = ({ isOpen, onClose }) => {
   const { t } = useTranslation();
@@ -62,9 +35,8 @@ export const ComposeMessageSheet: React.FC<ComposeMessageSheetProps> = ({ isOpen
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [type, setType] = useState<number>(MessageType.Normal);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [tab, setTab] = useState<RecipientTab>('personnel');
-  const [search, setSearch] = useState('');
+  const [selection, setSelection] = useState<MessageRecipientSelection>(emptyRecipientSelection);
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -73,18 +45,22 @@ export const ComposeMessageSheet: React.FC<ComposeMessageSheetProps> = ({ isOpen
     if (isOpen) void useMessagesStore.getState().fetchRecipients({ includeUnits: false });
   }, [isOpen]);
 
-  const everyone = useMemo(() => recipients.find(isEveryoneRecipient) ?? null, [recipients]);
-  const visible = useMemo(() => recipientsForTab(recipients, tab, search), [recipients, tab, search]);
-  const byId = useMemo(() => new Map(recipients.map((recipient) => [recipient.Id, recipient])), [recipients]);
-  const selectedNames = selectedIds.map((id) => byId.get(id)?.Name).filter((name): name is string => !!name);
-  const isDirty = subject.trim() !== '' || body.trim() !== '' || selectedIds.length > 0 || type !== MessageType.Normal;
+  const hasEveryone = useMemo(() => recipients.some(isEveryoneRecipient), [recipients]);
+
+  const sections = useMemo(
+    () => recipientSections(recipients, { personnel: t('messages.recipient_tabs.personnel'), groups: t('messages.recipient_tabs.groups'), roles: t('messages.recipient_tabs.roles') }),
+    [recipients, t]
+  );
+
+  const recipientCount = messageRecipientCount(selection);
+  const isDirty = subject.trim() !== '' || body.trim() !== '' || recipientCount > 0 || type !== MessageType.Normal;
 
   const reset = () => {
     setSubject('');
     setBody('');
     setType(MessageType.Normal);
-    setSelectedIds([]);
-    setSearch('');
+    setSelection(emptyRecipientSelection());
+    setIsPickerOpen(false);
     setErrors({});
     setConfirmDiscard(false);
   };
@@ -92,41 +68,43 @@ export const ComposeMessageSheet: React.FC<ComposeMessageSheetProps> = ({ isOpen
   const close = () => {
     if (isDirty && !confirmDiscard) {
       setConfirmDiscard(true);
+
       return;
     }
+
     reset();
     onClose();
   };
 
-  // "Everyone" stands alone: it already reaches every member.
-  const toggle = (recipient: RecipientsResultData) => {
-    setErrors((current) => ({ ...current, recipients: false }));
-    setSelectedIds((current) => {
-      if (current.includes(recipient.Id)) return current.filter((id) => id !== recipient.Id);
-      if (isEveryoneRecipient(recipient)) return [recipient.Id];
-      return [...current.filter((id) => !(everyone && id === everyone.Id)), recipient.Id];
-    });
+  const pickRecipients = (next: MessageRecipientSelection) => {
+    setSelection(next);
+    setIsPickerOpen(false);
+
+    if (messageRecipientCount(next) > 0) setErrors((current) => ({ ...current, recipients: false }));
   };
 
   const send = async () => {
-    const next: FormErrors = { subject: !subject.trim(), body: !body.trim(), recipients: selectedIds.length === 0 };
+    const next: FormErrors = { subject: !subject.trim(), body: !body.trim(), recipients: recipientCount === 0 };
     setErrors(next);
+
     if (next.subject || next.body || next.recipients) return;
     setIsSending(true);
+
     const result = await useMessagesStore.getState().sendNewMessage({
       Title: subject.trim(),
       Body: body.trim(),
       Type: type,
-      Recipients: selectedIds.map((id) => {
-        const recipient = byId.get(id);
-        return { Id: id, Type: recipient ? recipientInputType(recipient) : 1, Name: recipient?.Name ?? '' };
-      }),
+      Recipients: toMessageRecipients(selection, recipients),
     });
+
     setIsSending(false);
+
     if (result.outcome === 'rejected') {
       toast.error(t('messages.send_failed'));
+
       return;
     }
+
     toast.success(result.outcome === 'sent' ? t('messages.send_success') : t('messages.queued_offline'));
     reset();
     onClose();
@@ -164,6 +142,7 @@ export const ComposeMessageSheet: React.FC<ComposeMessageSheetProps> = ({ isOpen
             <HStack space="sm" accessibilityRole="radiogroup">
               {COMPOSABLE_MESSAGE_TYPES.map((value) => {
                 const isSelected = type === value;
+
                 return (
                   <Pressable
                     key={value}
@@ -226,59 +205,31 @@ export const ComposeMessageSheet: React.FC<ComposeMessageSheetProps> = ({ isOpen
                 </Text>
               </HStack>
               <Text size="xs" className="text-typography-500" testID="compose-recipient-count">
-                {t('messages.recipients_selected', { count: selectedIds.length })}
+                {t('messages.recipients_selected', { count: recipientCount })}
               </Text>
             </HStack>
-            {selectedNames.length > 0 ? (
-              <Text size="sm" className="text-typography-700" numberOfLines={2} testID="compose-recipient-names">
-                {selectedNames.join(', ')}
-              </Text>
-            ) : null}
+            <Pressable
+              onPress={() => setIsPickerOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel={t('messages.select_recipients')}
+              className={`flex-row items-center rounded-lg border p-3 ${errors.recipients ? 'border-error-600' : 'border-outline-200'}`}
+              testID="compose-recipients"
+            >
+              <View style={styles.pickerText}>
+                <Text className="text-typography-900">{t('messages.select_recipients')}</Text>
+                <Text size="xs" className="text-typography-500" numberOfLines={2} testID="compose-recipient-summary">
+                  {summarizeRecipientSelection(selection, sections, { everyone: t('messages.everyone'), none: t('common.none') })}
+                </Text>
+              </View>
+              <View>
+                <ChevronRight size={18} color={colors.icon} />
+              </View>
+            </Pressable>
             {errors.recipients ? (
               <Text size="xs" className="text-error-600" testID="compose-recipients-error">
                 {t('messages.validation.recipients_required')}
               </Text>
             ) : null}
-
-            {everyone ? <RecipientRow recipient={{ ...everyone, Name: t('messages.everyone') }} selected={selectedIds.includes(everyone.Id)} onToggle={() => toggle(everyone)} /> : null}
-
-            <HStack space="sm" accessibilityRole="tablist">
-              {TABS.map((item) => {
-                const isActive = tab === item.key;
-                return (
-                  <Pressable
-                    key={item.key}
-                    onPress={() => setTab(item.key)}
-                    accessibilityRole="tab"
-                    accessibilityState={{ selected: isActive }}
-                    testID={`compose-tab-${item.key}`}
-                    className={`flex-1 items-center rounded-md border px-2 py-1.5 ${isActive ? 'border-primary-600 bg-primary-600' : 'border-outline-300 bg-background-0'}`}
-                  >
-                    <Text size="sm" className={isActive ? 'font-semibold text-typography-0' : 'text-typography-700'}>
-                      {t(item.labelKey)}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </HStack>
-            <Input variant="outline" size="sm">
-              <InputField value={search} onChangeText={setSearch} placeholder={t('messages.search_recipients')} accessibilityLabel={t('messages.search_recipients')} testID="compose-recipient-search" />
-            </Input>
-            {isRecipientsLoading && recipients.length === 0 ? (
-              <HStack className="justify-center py-4">
-                <Spinner size="small" testID="compose-recipients-loading" />
-              </HStack>
-            ) : visible.length === 0 ? (
-              <Text size="sm" className="py-2 text-typography-500" testID="compose-recipients-empty">
-                {t('messages.no_recipients')}
-              </Text>
-            ) : (
-              <VStack>
-                {visible.map((recipient) => (
-                  <RecipientRow key={recipient.Id} recipient={recipient} selected={selectedIds.includes(recipient.Id)} onToggle={toggle} />
-                ))}
-              </VStack>
-            )}
           </VStack>
 
           <HStack space="sm" className="pt-2">
@@ -292,6 +243,19 @@ export const ComposeMessageSheet: React.FC<ComposeMessageSheetProps> = ({ isOpen
           </HStack>
         </VStack>
       </ScrollView>
+      <RecipientPickerModal
+        isOpen={isPickerOpen}
+        onClose={() => setIsPickerOpen(false)}
+        title={t('messages.select_recipients')}
+        sections={sections}
+        value={selection}
+        onConfirm={pickRecipients}
+        everyoneLabel={hasEveryone ? t('messages.everyone') : null}
+        everyoneName={t('messages.everyone')}
+        isLoading={isRecipientsLoading}
+        testID="compose-recipient-picker"
+        optionTestID="recipient"
+      />
     </CustomBottomSheet>
   );
 };
@@ -299,5 +263,5 @@ export const ComposeMessageSheet: React.FC<ComposeMessageSheetProps> = ({ isOpen
 const styles = StyleSheet.create({
   scroll: { width: '100%' },
   content: { paddingBottom: 40 },
-  rowIcon: { marginRight: 8 },
+  pickerText: { flex: 1, marginRight: 8 },
 });

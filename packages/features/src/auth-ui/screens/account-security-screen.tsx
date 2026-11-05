@@ -18,7 +18,7 @@ import {
 } from '@resgrid/auth';
 import { useActiveVariant, useCapability } from '@resgrid/config';
 import { useTranslation } from '@resgrid/i18n';
-import { Box, Button, ButtonSpinner, ButtonText, Heading, HStack, Input, InputField, RefreshControl, ScrollView, Spinner, Switch, Text, VStack } from '@resgrid/ui';
+import { Box, Button, ButtonSpinner, ButtonText, Heading, HStack, Input, InputField, KeyboardAwareScrollView, RefreshControl, Spinner, Switch, Text, VStack } from '@resgrid/ui';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import { InlineError } from '../components/inline-error';
@@ -190,159 +190,161 @@ export function AccountSecurityScreen() {
 
   return (
     <>
-      <ScrollView className="flex-1 bg-background-0" contentContainerStyle={{ padding: 16 }} refreshControl={<RefreshControl refreshing={loading} onRefresh={() => void load()} />} testID="account-security-screen">
-        <VStack space="lg" className="w-full max-w-3xl self-center">
-          <Heading size="xl" accessibilityRole="header">
-            {t('mfa.account.title')}
-          </Heading>
-          {notice ? (
-            <Text size="sm" className="text-success-600" testID="account-notice" accessibilityLiveRegion="polite">
-              {notice}
-            </Text>
-          ) : null}
-          <InlineError message={errorCode ? mfaErrorText(t, errorCode) : null} testID="account-error" />
+      <Box className="flex-1 bg-background-0">
+        <KeyboardAwareScrollView contentContainerStyle={{ padding: 16 }} refreshControl={<RefreshControl refreshing={loading} onRefresh={() => void load()} />} testID="account-security-screen">
+          <VStack space="lg" className="w-full max-w-3xl self-center">
+            <Heading size="xl" accessibilityRole="header">
+              {t('mfa.account.title')}
+            </Heading>
+            {notice ? (
+              <Text size="sm" className="text-success-600" testID="account-notice" accessibilityLiveRegion="polite">
+                {notice}
+              </Text>
+            ) : null}
+            <InlineError message={errorCode ? mfaErrorText(t, errorCode) : null} testID="account-error" />
 
-          {methods ? (
-            <>
-              <VStack space="sm" testID="account-totp">
-                <Heading size="md">{t('mfa.account.authenticator')}</Heading>
-                <Text size="sm">{methods.Totp.Enrolled ? t('mfa.account.authenticator_on', { time: when(methods.Totp.EnrolledOn) }) : t('mfa.account.authenticator_off')}</Text>
-                {methods.Totp.Enrolled ? (
-                  <Text size="sm" className={methods.Totp.RecoveryCodeWarning ? 'text-warning-600' : ''} testID="account-recovery-codes">
-                    {t('mfa.account.recovery_codes_left', { count: methods.Totp.RecoveryCodesRemaining })}
-                  </Text>
-                ) : null}
-              </VStack>
-
-              {auth.passkeys ? (
-                <VStack space="sm" testID="account-passkeys">
-                  <Heading size="md">{t('mfa.account.passkeys_here')}</Heading>
-                  {ownGroup && ownGroup.Passkeys.length > 0 ? ownGroup.Passkeys.map(renderPasskey) : <Text size="sm">{t('mfa.account.no_passkeys')}</Text>}
-                  {canAddPasskey ? (
-                    <Button action="primary" onPress={addPasskey} isDisabled={busy} accessibilityLabel={t('mfa.account.add_passkey')} testID="account-add-passkey">
-                      {busy ? <ButtonSpinner /> : <ButtonText>{t('mfa.account.add_passkey')}</ButtonText>}
-                    </Button>
-                  ) : null}
-                  {otherGroups.map((group) => (
-                    <Text key={group.Client} size="sm" testID={`account-passkeys-${group.Client}`}>
-                      {t('mfa.account.passkeys_elsewhere', { app: APP_NAMES[group.Client] ?? group.Client, count: group.Passkeys.length })}
+            {methods ? (
+              <>
+                <VStack space="sm" testID="account-totp">
+                  <Heading size="md">{t('mfa.account.authenticator')}</Heading>
+                  <Text size="sm">{methods.Totp.Enrolled ? t('mfa.account.authenticator_on', { time: when(methods.Totp.EnrolledOn) }) : t('mfa.account.authenticator_off')}</Text>
+                  {methods.Totp.Enrolled ? (
+                    <Text size="sm" className={methods.Totp.RecoveryCodeWarning ? 'text-warning-600' : ''} testID="account-recovery-codes">
+                      {t('mfa.account.recovery_codes_left', { count: methods.Totp.RecoveryCodesRemaining })}
                     </Text>
-                  ))}
+                  ) : null}
                 </VStack>
-              ) : null}
 
-              {methods.ApprovalInstallations.length > 0 ? (
-                <VStack space="sm" testID="account-approvals">
-                  <Heading size="md">{t('mfa.account.approvals')}</Heading>
-                  {methods.ApprovalInstallations.map((installation) => (
-                    <HStack key={installation.InstallationId} space="sm" className="items-center justify-between">
+                {auth.passkeys ? (
+                  <VStack space="sm" testID="account-passkeys">
+                    <Heading size="md">{t('mfa.account.passkeys_here')}</Heading>
+                    {ownGroup && ownGroup.Passkeys.length > 0 ? ownGroup.Passkeys.map(renderPasskey) : <Text size="sm">{t('mfa.account.no_passkeys')}</Text>}
+                    {canAddPasskey ? (
+                      <Button action="primary" onPress={addPasskey} isDisabled={busy} accessibilityLabel={t('mfa.account.add_passkey')} testID="account-add-passkey">
+                        {busy ? <ButtonSpinner /> : <ButtonText>{t('mfa.account.add_passkey')}</ButtonText>}
+                      </Button>
+                    ) : null}
+                    {otherGroups.map((group) => (
+                      <Text key={group.Client} size="sm" testID={`account-passkeys-${group.Client}`}>
+                        {t('mfa.account.passkeys_elsewhere', { app: APP_NAMES[group.Client] ?? group.Client, count: group.Passkeys.length })}
+                      </Text>
+                    ))}
+                  </VStack>
+                ) : null}
+
+                {methods.ApprovalInstallations.length > 0 ? (
+                  <VStack space="sm" testID="account-approvals">
+                    <Heading size="md">{t('mfa.account.approvals')}</Heading>
+                    {methods.ApprovalInstallations.map((installation) => (
+                      <HStack key={installation.InstallationId} space="sm" className="items-center justify-between">
+                        <VStack className="flex-1">
+                          <Text size="sm" className="font-semibold">
+                            {installation.Label ?? installation.Platform ?? t('mfa.account.this_device')}
+                            {installation.IsCurrent ? ` · ${t('mfa.account.this_device')}` : ''}
+                          </Text>
+                          <Text size="sm">{installation.ApprovalsOn ? t('mfa.account.approvals_on') : t('mfa.account.approvals_off')}</Text>
+                        </VStack>
+                        {installation.ApprovalsOn ? (
+                          <Button
+                            size="xs"
+                            variant="outline"
+                            action="negative"
+                            isDisabled={busy}
+                            onPress={() => void change(() => stopApprovalInstallations(authUiApi(), installation.InstallationId))}
+                            accessibilityLabel={t('mfa.account.stop_approvals')}
+                            testID={`approval-stop-${installation.InstallationId}`}
+                          >
+                            <ButtonText>{t('mfa.account.stop_approvals')}</ButtonText>
+                          </Button>
+                        ) : null}
+                      </HStack>
+                    ))}
+                  </VStack>
+                ) : null}
+
+                {methods.LinkedIdentities.length > 0 ? (
+                  <VStack space="sm" testID="account-linked">
+                    <Heading size="md">{t('mfa.account.linked')}</Heading>
+                    {methods.LinkedIdentities.map((link) => (
+                      <Text key={link.DepartmentId} size="sm">
+                        {link.DepartmentName ?? String(link.DepartmentId)}
+                        {link.AcceptsProviderStepUp ? ` · ${t('mfa.account.linked_step_up')}` : ''}
+                      </Text>
+                    ))}
+                  </VStack>
+                ) : null}
+
+                <VStack space="sm" testID="account-activity">
+                  <Heading size="md">{t('mfa.account.activity')}</Heading>
+                  {methods.RecentActivity.length === 0 ? <Text size="sm">{t('mfa.account.no_activity')}</Text> : null}
+                  {methods.RecentActivity.map((activity) => (
+                    <HStack key={activity.ActivityId} space="sm" className="items-center justify-between">
                       <VStack className="flex-1">
                         <Text size="sm" className="font-semibold">
-                          {installation.Label ?? installation.Platform ?? t('mfa.account.this_device')}
-                          {installation.IsCurrent ? ` · ${t('mfa.account.this_device')}` : ''}
+                          {t(`mfa.account.activity_${activity.Successful ? 'ok' : 'failed'}`, {
+                            method: t(`mfa.methods.${activity.Method}`, { defaultValue: activity.Method }),
+                            app: (activity.Client ? APP_NAMES[activity.Client] : undefined) ?? '',
+                          })}
                         </Text>
-                        <Text size="sm">{installation.ApprovalsOn ? t('mfa.account.approvals_on') : t('mfa.account.approvals_off')}</Text>
+                        <Text size="sm">{when(activity.OccurredOn)}</Text>
                       </VStack>
-                      {installation.ApprovalsOn ? (
+                      {activity.Successful && !activity.ReportedOn ? (
                         <Button
                           size="xs"
                           variant="outline"
                           action="negative"
                           isDisabled={busy}
-                          onPress={() => void change(() => stopApprovalInstallations(authUiApi(), installation.InstallationId))}
-                          accessibilityLabel={t('mfa.account.stop_approvals')}
-                          testID={`approval-stop-${installation.InstallationId}`}
+                          onPress={() => void change(() => reportActivity(authUiApi(), activity.ActivityId), t('mfa.account.reported'))}
+                          accessibilityLabel={t('mfa.account.not_me')}
+                          testID={`activity-report-${activity.ActivityId}`}
                         >
-                          <ButtonText>{t('mfa.account.stop_approvals')}</ButtonText>
+                          <ButtonText>{t('mfa.account.not_me')}</ButtonText>
                         </Button>
                       ) : null}
                     </HStack>
                   ))}
                 </VStack>
-              ) : null}
+              </>
+            ) : loading ? (
+              <Spinner size="large" />
+            ) : null}
 
-              {methods.LinkedIdentities.length > 0 ? (
-                <VStack space="sm" testID="account-linked">
-                  <Heading size="md">{t('mfa.account.linked')}</Heading>
-                  {methods.LinkedIdentities.map((link) => (
-                    <Text key={link.DepartmentId} size="sm">
-                      {link.DepartmentName ?? String(link.DepartmentId)}
-                      {link.AcceptsProviderStepUp ? ` · ${t('mfa.account.linked_step_up')}` : ''}
-                    </Text>
-                  ))}
-                </VStack>
-              ) : null}
-
-              <VStack space="sm" testID="account-activity">
-                <Heading size="md">{t('mfa.account.activity')}</Heading>
-                {methods.RecentActivity.length === 0 ? <Text size="sm">{t('mfa.account.no_activity')}</Text> : null}
-                {methods.RecentActivity.map((activity) => (
-                  <HStack key={activity.ActivityId} space="sm" className="items-center justify-between">
-                    <VStack className="flex-1">
-                      <Text size="sm" className="font-semibold">
-                        {t(`mfa.account.activity_${activity.Successful ? 'ok' : 'failed'}`, {
-                          method: t(`mfa.methods.${activity.Method}`, { defaultValue: activity.Method }),
-                          app: (activity.Client ? APP_NAMES[activity.Client] : undefined) ?? '',
-                        })}
-                      </Text>
-                      <Text size="sm">{when(activity.OccurredOn)}</Text>
-                    </VStack>
-                    {activity.Successful && !activity.ReportedOn ? (
-                      <Button
-                        size="xs"
-                        variant="outline"
-                        action="negative"
-                        isDisabled={busy}
-                        onPress={() => void change(() => reportActivity(authUiApi(), activity.ActivityId), t('mfa.account.reported'))}
-                        accessibilityLabel={t('mfa.account.not_me')}
-                        testID={`activity-report-${activity.ActivityId}`}
-                      >
-                        <ButtonText>{t('mfa.account.not_me')}</ButtonText>
-                      </Button>
-                    ) : null}
-                  </HStack>
-                ))}
+            {renaming ? (
+              <VStack space="sm" testID="account-rename">
+                <Input variant="outline" size="md" isDisabled={busy}>
+                  <InputField
+                    value={renaming.name}
+                    onChangeText={(name) => setRenaming({ ...renaming, name })}
+                    maxLength={100}
+                    accessibilityLabel={t('mfa.account.rename')}
+                    aria-label={t('mfa.account.rename')}
+                    testID="account-rename-input"
+                  />
+                </Input>
+                <HStack space="sm">
+                  <Button size="sm" variant="outline" action="secondary" onPress={() => setRenaming(null)} accessibilityLabel={t('common.cancel')}>
+                    <ButtonText>{t('common.cancel')}</ButtonText>
+                  </Button>
+                  <Button
+                    size="sm"
+                    action="primary"
+                    isDisabled={busy || renaming.name.trim().length === 0}
+                    onPress={() => {
+                      const { id, name } = renaming;
+                      setRenaming(null);
+                      void change(() => renamePasskey(authUiApi(), id, name.trim()));
+                    }}
+                    accessibilityLabel={t('mfa.account.save')}
+                    testID="account-rename-save"
+                  >
+                    <ButtonText>{t('mfa.account.save')}</ButtonText>
+                  </Button>
+                </HStack>
               </VStack>
-            </>
-          ) : loading ? (
-            <Spinner size="large" />
-          ) : null}
-
-          {renaming ? (
-            <VStack space="sm" testID="account-rename">
-              <Input variant="outline" size="md" isDisabled={busy}>
-                <InputField
-                  value={renaming.name}
-                  onChangeText={(name) => setRenaming({ ...renaming, name })}
-                  maxLength={100}
-                  accessibilityLabel={t('mfa.account.rename')}
-                  aria-label={t('mfa.account.rename')}
-                  testID="account-rename-input"
-                />
-              </Input>
-              <HStack space="sm">
-                <Button size="sm" variant="outline" action="secondary" onPress={() => setRenaming(null)} accessibilityLabel={t('common.cancel')}>
-                  <ButtonText>{t('common.cancel')}</ButtonText>
-                </Button>
-                <Button
-                  size="sm"
-                  action="primary"
-                  isDisabled={busy || renaming.name.trim().length === 0}
-                  onPress={() => {
-                    const { id, name } = renaming;
-                    setRenaming(null);
-                    void change(() => renamePasskey(authUiApi(), id, name.trim()));
-                  }}
-                  accessibilityLabel={t('mfa.account.save')}
-                  testID="account-rename-save"
-                >
-                  <ButtonText>{t('mfa.account.save')}</ButtonText>
-                </Button>
-              </HStack>
-            </VStack>
-          ) : null}
-        </VStack>
-      </ScrollView>
+            ) : null}
+          </VStack>
+        </KeyboardAwareScrollView>
+      </Box>
       <AccountVerifySheet proof={proof} onDone={onProofDone} />
     </>
   );

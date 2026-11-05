@@ -248,7 +248,7 @@ export default function ChecklistsScreen({ occurrenceId: occurrenceProp }: Check
             {t(`checklists.errors.${shownError}`)}
           </Text>
         ) : null}
-        <SharedTabs tabs={tabs} activeIndex={routeTab.activeIndex} onChange={selectTab} scrollable={false} variant="segmented" className="flex-1" tabsContainerClassName="mx-4 mt-3" />
+        <SharedTabs tabs={tabs} activeIndex={routeTab.activeIndex} onChange={selectTab} variant="pills" className="flex-1" />
       </View>
       <ChecklistRunSheet
         run={active}

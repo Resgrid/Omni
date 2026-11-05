@@ -1,5 +1,5 @@
 import { useTranslation } from '@resgrid/i18n';
-import { HStack, Pressable, ScrollView, Text, View } from '@resgrid/ui';
+import { HStack, Pressable, ScrollRow, Text, View } from '@resgrid/ui';
 import { X } from 'lucide-react-native';
 import React from 'react';
 
@@ -29,7 +29,7 @@ export const AddWidgetMenu: React.FC<AddWidgetMenuProps> = ({ usedTypes, onAdd, 
           {t('dashboard.all_widgets_added')}
         </Text>
       ) : (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <ScrollRow testID="dashboard-add-menu-widgets">
           <HStack space="sm">
             {available.map((type) => {
               const Icon = WIDGET_ICONS[type];
@@ -50,7 +50,7 @@ export const AddWidgetMenu: React.FC<AddWidgetMenuProps> = ({ usedTypes, onAdd, 
               );
             })}
           </HStack>
-        </ScrollView>
+        </ScrollRow>
       )}
     </View>
   );

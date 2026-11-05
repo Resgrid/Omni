@@ -13,7 +13,7 @@ const measure = async () => {
     await fireEvent(screen.getByTestId(`shared-tab-${key}`), 'layout', { nativeEvent: { layout: { x: index * 100, y: 0, width: 90, height: 40 } } });
   }
 
-  const scrollView = screen.getByTestId('shared-tabs-scroll-view');
+  const scrollView = screen.getByTestId('shared-tabs-bar-scroll-view');
 
   await fireEvent(scrollView, 'layout', { nativeEvent: { layout: { width: 200 } } });
   await fireEvent(scrollView, 'contentSizeChange', 600, 40);

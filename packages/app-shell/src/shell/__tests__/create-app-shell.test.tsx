@@ -40,6 +40,7 @@ const FORM_FACTORS = {
 const setFormFactor = (name: keyof typeof FORM_FACTORS): FormFactorInfo => {
   const info = computeFormFactor(FORM_FACTORS[name]);
   mockUseFormFactor.mockReturnValue(info);
+
   return info;
 };
 
@@ -55,6 +56,7 @@ async function renderShell(variantId: VariantId) {
   const Shell = createAppShell(variant, { nav });
   await render(<Shell />);
   await act(async () => undefined);
+
   return variant;
 }
 
@@ -259,6 +261,7 @@ describe('createAppShell', () => {
     function UnitStatus(_props: SidebarContentProps) {
       return <Text testID="unit-status">status</Text>;
     }
+
     registerSidebarContent('unit-status', UnitStatus);
     setFormFactor('tabletLandscape');
     await renderShell('unit');
@@ -335,11 +338,66 @@ describe('createAppShell', () => {
     });
   });
 
-  it('keeps the navigator mounted under the loading overlay while the session bootstrap runs', async () => {
+  // Launch never puts a spinner over the app: on Android the session bootstrap's full-screen overlay sat over
+  // Responder's status buttons for seconds on every cold start, and no one could set a status until it went.
+  it('shows the session bootstrap as a chip that takes no touches, with the screens usable underneath', async () => {
     sessionInit.reset();
     await renderShell('dispatch');
     expect(screen.getByTestId('mock-stack')).toBeTruthy();
-    expect(screen.getByTestId('shell-init-loading')).toBeTruthy();
+    expect(screen.getByTestId('shell-init-loading').props.pointerEvents).toBe('none');
+    expect(screen.getByRole('progressbar')).toBeTruthy();
+    expect(screen.queryByTestId('shell-init-failed')).toBeNull();
+  });
+
+  it('reports a failed bootstrap in a banner under the app bar, and keeps it through automatic retries until a run succeeds', async () => {
+    let attempts = 0;
+    let finishRetry: () => void = () => undefined;
+
+    const removeStep = sessionInit.register({
+      id: 'test.flaky',
+      run: () => {
+        attempts += 1;
+
+        if (attempts === 1) throw new Error('offline');
+
+        return new Promise<void>((resolve) => {
+          finishRetry = resolve;
+        });
+      },
+    });
+
+    try {
+      sessionInit.reset();
+      await sessionInit.run();
+      await renderShell('dispatch');
+
+      expect(screen.getByTestId('shell-init-failed')).toBeTruthy();
+      expect(screen.getByTestId('shell-init-retry')).toBeTruthy();
+      expect(screen.getByTestId('mock-stack')).toBeTruthy();
+      expect(screen.queryByTestId('shell-init-loading')).toBeNull();
+
+      // The automatic retry (attempt 2) keeps the banner: no flicker between it and the loading chip.
+      let retry: Promise<unknown> = Promise.resolve();
+      await act(async () => {
+        retry = sessionInit.run();
+      });
+      expect(sessionInit.getStatus()).toMatchObject({ state: 'running', attempt: 2 });
+      expect(screen.getByTestId('shell-init-failed')).toBeTruthy();
+      expect(screen.getByTestId('shell-init-retry')).toBeDisabled();
+      expect(screen.queryByTestId('shell-init-loading')).toBeNull();
+
+      await act(async () => {
+        finishRetry();
+        await retry;
+      });
+      expect(screen.queryByTestId('shell-init-failed')).toBeNull();
+      expect(screen.queryByTestId('shell-init-loading')).toBeNull();
+    } finally {
+      removeStep();
+      await act(async () => {
+        sessionInit.reset();
+      });
+    }
   });
 
   it('is gated: signed out shows the login screen instead of the shell', async () => {
@@ -419,6 +477,7 @@ describe('isTopLevelScreen', () => {
     { id: 'records', href: '/records', placement: 'sidebar', labelKey: 'records.title' },
     { id: 'call-detail', href: '/call/[id]', placement: 'hidden', labelKey: 'call_detail.title' },
   ]);
+
   const topLevel = (path: string) => isTopLevelScreen(findNavEntryForPath(homeNav, path), path);
 
   it('menu entries, the tabs of a nested tab layout and the root are top level; details and hidden entries are not', () => {
@@ -448,9 +507,11 @@ describe('registered providers', () => {
 
   it('wrap the signed-in frame (header and routes), inside the gate', async () => {
     const Marker = React.createContext('none');
+
     function MarkerProbe() {
       return <Text testID="provider-marker">{React.useContext(Marker)}</Text>;
     }
+
     registerShellProvider('marker', ({ children }) => <Marker.Provider value="mounted">{children}</Marker.Provider>);
     registerShellOverlay('marker-probe', MarkerProbe);
 
@@ -463,6 +524,7 @@ describe('registered providers', () => {
     const mounted = jest.fn();
     registerShellProvider('marker', ({ children }) => {
       mounted();
+
       return <>{children}</>;
     });
     await act(() => {

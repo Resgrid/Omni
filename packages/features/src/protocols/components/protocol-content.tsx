@@ -7,8 +7,6 @@ import { type StyleProp, StyleSheet, View, type ViewStyle } from 'react-native';
 
 export interface ProtocolContentProps {
   protocol: Pick<CallProtocolsResultData, 'Id' | 'Name' | 'Code' | 'Description' | 'ProtocolText'>;
-  /** Scroll the protocol text inside its own surface (details sheet) instead of growing with it. */
-  scrollText?: boolean;
   htmlStyle?: StyleProp<ViewStyle>;
   showName?: boolean;
   testID?: string;
@@ -17,10 +15,12 @@ export interface ProtocolContentProps {
 /**
  * A protocol's code, description and text (Unit/IC baseline + Responder extras). The text is server HTML and only ever
  * reaches the screen through `HtmlRenderer` (sanitized; iframe without allow-same-origin on web) — never a raw WebView.
+ * The text grows to fit (up to most of the screen, then scrolls inside its box), in the details sheet and on a call alike.
  */
-export const ProtocolContent: React.FC<ProtocolContentProps> = ({ protocol, scrollText = false, htmlStyle, showName = true, testID = 'protocol-content' }) => {
+export const ProtocolContent: React.FC<ProtocolContentProps> = ({ protocol, htmlStyle, showName = true, testID = 'protocol-content' }) => {
   const { t } = useTranslation();
   const description = useMemo(() => (protocol.Description ? htmlToPlainText(protocol.Description) : ''), [protocol.Description]);
+
   return (
     <View testID={testID}>
       {showName ? (
@@ -45,14 +45,7 @@ export const ProtocolContent: React.FC<ProtocolContentProps> = ({ protocol, scro
       ) : null}
       {protocol.ProtocolText ? (
         <View style={styles.text}>
-          <HtmlRenderer
-            html={protocol.ProtocolText}
-            rendererKey={protocol.Id}
-            scrollEnabled={scrollText}
-            showsVerticalScrollIndicator={scrollText}
-            style={StyleSheet.flatten([scrollText ? styles.scrollHtml : styles.html, htmlStyle])}
-            testID={`${testID}-html`}
-          />
+          <HtmlRenderer html={protocol.ProtocolText} rendererKey={protocol.Id} autoHeight style={htmlStyle} testID={`${testID}-html`} />
         </View>
       ) : null}
     </View>
@@ -63,6 +56,4 @@ const styles = StyleSheet.create({
   code: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
   icon: { marginRight: 4 },
   text: { marginTop: 8 },
-  html: { minHeight: 160 },
-  scrollHtml: { height: 360 },
 });

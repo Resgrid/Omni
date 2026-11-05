@@ -12,7 +12,7 @@ export interface RoutesHomeScreenProps {
   renderPoiMap?: (pois: readonly PoiResultData[]) => React.ReactNode;
 }
 
-/** Unit's Routes tab (`/routes`): route plans and the department's points of interest, side by side as segmented tabs. */
+/** Unit's Routes tab (`/routes`): route plans and the department's points of interest, as the page's tabs. */
 export default function RoutesHomeScreen({ renderPoiMap }: RoutesHomeScreenProps) {
   const openPoi = useCallback((poi: PoiResultData) => router.push(unitRoutesRoutes.poi(poi.PoiId)), []);
   const tabs = useMemo<TabItem[]>(
@@ -35,9 +35,9 @@ export default function RoutesHomeScreen({ renderPoiMap }: RoutesHomeScreenProps
   const routeTab = useRouteTab(tabs);
 
   return (
-    <View className="flex-1 bg-background-50 pt-4" testID="routes-home-screen">
+    <View className="flex-1 bg-background-50" testID="routes-home-screen">
       {/* The POI list pads itself; the plans tab pads in its own wrapper. */}
-      <SharedTabs tabs={tabs} activeIndex={routeTab.activeIndex} onChange={routeTab.selectIndex} scrollable={false} variant="segmented" className="flex-1" tabsContainerClassName="mx-4" />
+      <SharedTabs tabs={tabs} activeIndex={routeTab.activeIndex} onChange={routeTab.selectIndex} variant="pills" className="flex-1" />
     </View>
   );
 }

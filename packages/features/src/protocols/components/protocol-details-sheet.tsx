@@ -4,7 +4,7 @@ import { useTranslation } from '@resgrid/i18n';
 import type { CallProtocolsResultData } from '@resgrid/models';
 import { Button, ButtonText, CustomBottomSheet, Text } from '@resgrid/ui';
 import React from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { ProtocolContent } from './protocol-content';
 
@@ -20,14 +20,15 @@ export const ProtocolDetailsSheet: React.FC<ProtocolDetailsSheetProps> = ({ prot
   const timeZone = useDepartmentTimeZone();
   const isVisible = isOpen ? protocol !== null : false;
   const updated = protocol ? formatUtcInDepartmentTime(protocol.UpdatedOn || protocol.CreatedOn, timeZone) : '';
+
   return (
     <CustomBottomSheet isOpen={isVisible} onClose={onClose} snapPoints={[80]} testID="protocol-details-sheet">
       {protocol ? (
-        <ScrollView style={styles.scroll}>
+        <View style={styles.content}>
           <Text className="mb-2 text-lg font-bold text-typography-900" accessibilityRole="header">
             {t('protocols.details.title')}
           </Text>
-          <ProtocolContent protocol={protocol} scrollText />
+          <ProtocolContent protocol={protocol} />
           {updated ? (
             <Text size="xs" className="mt-3 text-typography-500">
               {`${t('protocols.details.updated')}: ${updated}`}
@@ -38,13 +39,13 @@ export const ProtocolDetailsSheet: React.FC<ProtocolDetailsSheetProps> = ({ prot
               <ButtonText>{t('protocols.details.close')}</ButtonText>
             </Button>
           </View>
-        </ScrollView>
+        </View>
       ) : null}
     </CustomBottomSheet>
   );
 };
 
 const styles = StyleSheet.create({
-  scroll: { width: '100%' },
+  content: { width: '100%' },
   footer: { marginTop: 16, marginBottom: 8 },
 });

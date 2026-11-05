@@ -6,7 +6,7 @@ import { unitsRoutes } from '@resgrid/features/units';
 import { weatherAlertsRoutes } from '@resgrid/features/weather-alerts';
 import { useTranslation } from '@resgrid/i18n';
 import { type CallResultData, WeatherAlertSeverity } from '@resgrid/models';
-import { useFormFactor } from '@resgrid/ui';
+import { BottomAnchoredKeyboardView, useFormFactor, useKeepFocusedInputVisible } from '@resgrid/ui';
 import { type Href, useRouter } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
@@ -84,6 +84,8 @@ export default function DispatchConsoleScreen({ realtime = true, mapHref = '/map
   const [closeCallId, setCloseCallId] = useState<string | null>(null);
   const [addResourcesCall, setAddResourcesCall] = useState<CallResultData | null>(null);
   const [statusTarget, setStatusTarget] = useState<StatusTarget>(null);
+  // The phone column: scrolls the notes card's composer into view once the keyboard is up.
+  const keepFocusedInputVisible = useKeepFocusedInputVisible(layout === 'single-column');
 
   useConsoleData({ realtime });
   useRadioLog(realtime);
@@ -235,7 +237,14 @@ export default function DispatchConsoleScreen({ realtime = true, mapHref = '/map
     }
 
     return (
-      <ScrollView contentContainerStyle={styles.scroll} testID="console-layout-single-column">
+      <ScrollView
+        ref={keepFocusedInputVisible.scrollRef}
+        onScroll={keepFocusedInputVisible.onScroll}
+        scrollEventThrottle={keepFocusedInputVisible.scrollEventThrottle}
+        contentContainerStyle={styles.scroll}
+        keyboardShouldPersistTaps="handled"
+        testID="console-layout-single-column"
+      >
         {callsPanel({ maxHeight: PHONE_PANEL_HEIGHT })}
         {singleList ? notesPanel({ maxHeight: PHONE_PANEL_HEIGHT }) : null}
         {mapPanel({ maxHeight: PHONE_MAP_HEIGHT })}
@@ -264,7 +273,9 @@ export default function DispatchConsoleScreen({ realtime = true, mapHref = '/map
       <UnitTimerActivity />
       {showViewToggles ? <ViewToggles /> : null}
       {filteredCall ? <ActiveCallFilterBanner call={filteredCall} onClearFilter={handleClearFilter} /> : null}
-      <View style={styles.body}>{renderLayout()}</View>
+      {/* The console reaches the bottom of the screen (drawer shell), so while the keyboard is up its panels sit on top of
+          it: a call note typed in the notes card stays in view (the card and the phone column scroll it into view). */}
+      <BottomAnchoredKeyboardView style={styles.body}>{renderLayout()}</BottomAnchoredKeyboardView>
 
       <AddNoteSheet isOpen={isAddNoteOpen} onClose={() => setIsAddNoteOpen(false)} onNoteAdded={() => log({ type: 'system', action: t('dispatch.note_created'), description: t('dispatch.note_added_to_console') })} />
       {notesCallId ? <CallNotesModal isOpen onClose={() => setNotesCallId(null)} callId={notesCallId} /> : null}
