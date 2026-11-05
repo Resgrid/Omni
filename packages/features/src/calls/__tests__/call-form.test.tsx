@@ -226,14 +226,20 @@ describe('CallFormScreen: create', () => {
     ];
     activateVariant('dispatch');
     await render(<CallFormScreen mode="create" />);
+    // "Everyone" picked before the call is made pending does not stay on it.
+    await fireEvent.press(screen.getByTestId('call-form-dispatch'));
+    await fireEvent(screen.getByTestId('dispatch-selection-everyone', hidden), 'valueChange', true);
+    await fireEvent.press(screen.getByTestId('dispatch-selection-confirm', hidden));
+    expect(screen.getByTestId('call-form-dispatch-summary').props.children).toBe('calls.everyone');
     await fireEvent(screen.getByTestId('call-form-pending'), 'valueChange', true);
+    expect(screen.getByTestId('call-form-dispatch-summary').props.children).toBe('common.none');
     expect(screen.getByTestId('call-form-submit').props.accessibilityLabel).toBe('calls.save_pending_call');
     await fireEvent.press(screen.getByTestId('call-form-dispatch'));
     expect(screen.queryByTestId('dispatch-selection-everyone', hidden)).toBeNull();
     await fireEvent.press(screen.getByTestId('dispatch-selection-confirm', hidden));
     await fillBasics();
     await act(async () => fireEvent.press(screen.getByTestId('call-form-submit')));
-    expect(mockCreateCall).toHaveBeenCalledWith(expect.objectContaining({ isPending: true }));
+    expect(mockCreateCall).toHaveBeenCalledWith(expect.objectContaining({ isPending: true, dispatchEveryone: false }));
     expect(lastToast().message).toBe('calls.pending_saved');
     expect(router.replace).toHaveBeenCalledWith('/pending-calls');
   });

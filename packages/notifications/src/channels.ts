@@ -56,6 +56,7 @@ const SOUND_TYPE_CHANNELS: Record<PushSoundTypeName, { key: string; name: string
   ModernWeatherAlert: { key: 'weather_alert', name: 'Weather Alert', kind: 'alert' },
   ModernUnitNotice: { key: 'unit_notice', name: 'Unit Notice', kind: 'notification' },
   ModernResourceOrder: { key: 'resource_order', name: 'Resource Order', kind: 'notification' },
+  ModernCallRenotify: { key: 'call_renotify', name: 'Call Reminder', kind: 'call' },
 };
 
 /** Calls, alerts and custom call tones vibrate; routine notices do not (Unit baseline: `notif`/`message` silent-vibrate). */

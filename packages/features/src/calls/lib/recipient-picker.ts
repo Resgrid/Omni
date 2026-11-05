@@ -23,6 +23,13 @@ export const emptyRecipientSelection = <K extends string>(): RecipientPickerSele
 
 export const everyoneRecipientSelection = <K extends string>(): RecipientPickerSelection<K> => ({ everyone: true, ids: {} });
 
+/**
+ * The selection as a picker may hold it: where "everyone" is not offered (a pending call's dispatch) a selection that
+ * arrives with it loses it, so Done can never send everyone through a switch the user cannot see.
+ */
+export const offeredRecipientSelection = <K extends string>(selection: RecipientPickerSelection<K>, everyoneOffered: boolean): RecipientPickerSelection<K> =>
+  everyoneOffered || !selection.everyone ? selection : { ...selection, everyone: false };
+
 export const pickedIds = <K extends string>(selection: RecipientPickerSelection<K>, key: NoInfer<K>): readonly string[] => selection.ids[key] ?? [];
 
 /** Picks across the given sections; "everyone" is not counted here. */

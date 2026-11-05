@@ -114,6 +114,20 @@ describe('HtmlRenderer (native WebView)', () => {
       expect(html).not.toMatch(/<script>alert|onclick|onerror|javascript:/i);
     });
 
+    it('gives every document a fresh 128-bit nonce from the secure random source', async () => {
+      const nonceOf = () => /script-src 'nonce-([a-z0-9]+)'/i.exec(documentHtml())?.[1];
+      const { rerender } = await render(<HtmlRenderer html="<p>first</p>" autoHeight />);
+      const first = nonceOf();
+
+      expect(first).toMatch(/^[0-9a-f]{32}$/);
+
+      await rerender(<HtmlRenderer html="<p>second</p>" autoHeight />);
+
+      expect(nonceOf()).toMatch(/^[0-9a-f]{32}$/);
+      expect(nonceOf()).not.toBe(first);
+      expect(documentHtml()).toContain(`<script nonce="${nonceOf()}">`);
+    });
+
     it('is off by default: no script, no CSP, no message handler', async () => {
       await render(<HtmlRenderer html="<p>x</p>" />);
 

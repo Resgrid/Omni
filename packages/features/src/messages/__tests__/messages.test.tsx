@@ -341,6 +341,24 @@ describe('ComposeMessageSheet', () => {
     expect(screen.getByTestId('compose-subject', q).props.value).toBe('Drill');
   });
 
+  it('keeps the form and lets it be sent again when the message cannot even be queued', async () => {
+    store.sendNewMessage.mockRejectedValueOnce(new Error('storage unavailable'));
+    const onClose = jest.fn();
+    await render(<ComposeMessageSheet isOpen onClose={onClose} />);
+    await fireEvent.changeText(screen.getByTestId('compose-subject', q), 'Drill');
+    await fireEvent.changeText(screen.getByTestId('compose-body', q), 'Body');
+    await pickEveryone();
+
+    await fireEvent.press(screen.getByTestId('compose-send', q));
+    await waitFor(() => expect(toasts()).toContain('error:messages.send_failed'));
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByTestId('compose-subject', q).props.value).toBe('Drill');
+    expect(screen.getByTestId('compose-send', q).props.accessibilityState).toMatchObject({ disabled: false });
+
+    await fireEvent.press(screen.getByTestId('compose-send', q));
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+  });
+
   it('asks before discarding a draft', async () => {
     const onClose = jest.fn();
     await render(<ComposeMessageSheet isOpen onClose={onClose} />);

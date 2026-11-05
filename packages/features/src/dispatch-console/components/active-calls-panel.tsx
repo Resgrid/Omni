@@ -124,6 +124,7 @@ export const ActiveCallsPanel: React.FC<ActiveCallsPanelProps> = ({ selectedCall
         </View>
       ) : (
         <FlatList
+          nestedScrollEnabled
           testID="active-calls-list"
           data={visible}
           renderItem={renderItem}

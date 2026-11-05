@@ -66,6 +66,7 @@ import {
   type WithheldEditField,
   withheldEditFields,
   withheldFormFields,
+  withPendingCall,
 } from '../lib/call-form';
 import { type GeocodeLookup, isWhat3WordsFormat, lookupAddress, lookupAddressAt, lookupPlusCode, lookupWhat3Words } from '../lib/call-geocoding';
 import { defaultPriorityId, priorityOptions } from '../lib/call-priority';
@@ -1019,7 +1020,12 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
                         {t('calls.scheduling.pending_hint')}
                       </Text>
                     </View>
-                    <Switch value={values.isPending} onValueChange={(pending: boolean) => set('isPending', pending)} accessibilityLabel={t('calls.scheduling.pending')} testID="call-form-pending" />
+                    <Switch
+                      value={values.isPending}
+                      onValueChange={(pending: boolean) => setValues((current) => withPendingCall(current, pending))}
+                      accessibilityLabel={t('calls.scheduling.pending')}
+                      testID="call-form-pending"
+                    />
                   </View>
                 ) : null}
                 {!values.isPending && (isEdit || show(NewCallFieldKeys.DispatchOn)) ? (

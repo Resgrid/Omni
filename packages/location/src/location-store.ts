@@ -18,17 +18,28 @@ export interface CurrentLocation {
 export const currentLocationStore = createObservableStore<CurrentLocation | null>(null);
 
 /**
- * Records a fix locally. iOS ignores `timeInterval` on the watcher, so a stationary device delivers identical fixes
- * many times a second; notifying every subscriber at that rate ended in "Maximum update depth exceeded" (Unit's store
- * fix). A fix that changes nothing but its timestamp is dropped.
+ * When a fix last confirmed the stored position, epoch ms: its own fix time, or a later identical fix's. Kept with the
+ * position (replaced whenever it is), never taken from another fix, so an older cached fix replacing a newer position
+ * cannot pass as recent.
+ */
+let positionConfirmedAt: number | null = null;
+
+/**
+ * Records a fix locally, from every source (watcher, task, browser, on-demand). iOS ignores `timeInterval` on the
+ * watcher, so a stationary device delivers identical fixes many times a second; notifying every subscriber at that rate
+ * ended in "Maximum update depth exceeded" (Unit's store fix). A fix that changes nothing but its timestamp is not
+ * stored again; it only confirms the stored position.
  */
 export function setCurrentLocation(fix: LocationFix, source: FixSource): void {
   const { latitude, longitude, heading, accuracy, speed, altitude } = fix.coords;
   const current = currentLocationStore.getState();
   if (current && current.latitude === latitude && current.longitude === longitude && current.heading === heading && current.accuracy === accuracy && current.speed === speed && current.altitude === altitude) {
+    positionConfirmedAt = Math.max(positionConfirmedAt ?? current.timestamp, fix.timestamp);
+
     return;
   }
   currentLocationStore.setState({ latitude, longitude, heading, accuracy, speed, altitude, timestamp: fix.timestamp, source });
+  positionConfirmedAt = fix.timestamp;
 }
 
 export function getCurrentLocation(): CurrentLocation | null {
@@ -125,8 +136,8 @@ export interface RecentLocationOptions {
 
 /**
  * The device's own position when a fix confirmed it within `maxAgeMs` and it is accurate enough, else null. A repeated
- * identical fix does not replace the stored one (setCurrentLocation), but the transmitter still records it as
- * `lastFixAt`, so a device standing still keeps a recent position.
+ * identical fix does not replace the stored one (setCurrentLocation) but confirms it, so a device standing still keeps a
+ * recent position.
  */
 export function getRecentLocation({ maxAgeMs, maxAccuracyMeters = DEFAULT_MAX_ACCURACY_METERS, now = Date.now() }: RecentLocationOptions): CurrentLocation | null {
   const current = currentLocationStore.getState();
@@ -135,7 +146,7 @@ export function getRecentLocation({ maxAgeMs, maxAccuracyMeters = DEFAULT_MAX_AC
 
   if (current.accuracy !== null && current.accuracy > maxAccuracyMeters) return null;
 
-  const confirmedAt = Math.max(current.timestamp, transmissionStatusStore.getState().lastFixAt ?? 0);
+  const confirmedAt = Math.max(current.timestamp, positionConfirmedAt ?? 0);
 
   return now - confirmedAt <= maxAgeMs ? current : null;
 }
@@ -143,5 +154,6 @@ export function getRecentLocation({ maxAgeMs, maxAccuracyMeters = DEFAULT_MAX_AC
 /** Test helper and sign-out: forget the position and status. */
 export function resetLocationStores(target: TransmissionTarget = 'none'): void {
   currentLocationStore.setState(null);
+  positionConfirmedAt = null;
   transmissionStatusStore.setState(initialTransmissionStatus(target));
 }

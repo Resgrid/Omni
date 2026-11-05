@@ -8,6 +8,11 @@ describe('richTextToPlain', () => {
     expect(richTextToPlain('<p>JUST A TEST!</p>')).toBe('JUST A TEST!');
   });
 
+  it('keeps table cells apart: a tab between the cells of a row, a line per row', () => {
+    expect(richTextToPlain('<table><tr><td>Road</td><td>Closed</td></tr></table>')).toBe('Road\tClosed');
+    expect(richTextToPlain('<table><thead><tr><th>Unit</th>\n<th class="x">Status</th></tr></thead><tbody><tr><td>E1</td><td><b>On scene</b></td></tr></tbody></table>')).toBe('Unit\tStatus\nE1\tOn scene');
+  });
+
   it('decodes entities, including a value that arrives entity-encoded', () => {
     expect(richTextToPlain('<div>Fire &amp; EMS&nbsp;at "Main" St</div>')).toBe('Fire & EMS at "Main" St');
     expect(richTextToPlain('&lt;div&gt;Medical&lt;/div&gt;')).toBe('Medical');

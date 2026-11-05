@@ -6,7 +6,7 @@ const { basename, resolve } = require('path');
 // custom tones only. There are no classic sound files and no modern/classic toggle.
 //
 // - Android: every sound goes to res/raw under its own name. The app creates one channel per id Core can send
-//   (`calls`, "0"–"26", c1–c25, `notif`, `message`) and gives each the modern sound for its meaning
+//   (`calls`, "0"–"27", c1–c25, `notif`, `message`) and gives each the modern sound for its meaning
 //   (@resgrid/notifications `ANDROID_CHANNELS`), so the channel — not the payload — decides what plays.
 // - iOS: the APNs payload names the file to play. Modern types (7+) and custom tones name their own file; classic
 //   types (0–6) name their historical file (NovuProvider.GetSoundFileNameFromType). So the modern sound of the same
@@ -29,6 +29,7 @@ const MODERN_SOUNDS = [
   'moderncallhigh',
   'moderncalllow',
   'moderncallmedium',
+  'moderncallrenotify',
   'moderncallupdated',
   'modernchat',
   'modernmessage',

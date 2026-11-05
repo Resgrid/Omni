@@ -59,23 +59,23 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
   const colors = useThemeColors();
   const { height: windowHeight } = useWindowDimensions();
   const [contentHeight, setContentHeight] = useState<number | null>(null);
-  const [scriptNonce] = useState(createScriptNonce);
   const fitted = autoHeight ? fitHtmlHeight(contentHeight, maxHeight ?? windowHeight * HTML_AUTO_HEIGHT_MAX_WINDOW_SHARE) : null;
   const canScroll = fitted ? fitted.scrollEnabled : scrollEnabled;
 
-  const fullHtml = useMemo(
-    () =>
-      buildHtmlDocument({
-        html,
-        textColor: textColor ?? colors.tokens['typography-800'],
-        backgroundColor: backgroundColor ?? 'transparent',
-        linkColor: linkColor ?? colors.tokens['info-600'],
-        customCSS,
-        scriptNonce: autoHeight ? scriptNonce : undefined,
-        trailingMarkup: autoHeight ? buildHeightReporter('native', scriptNonce) : '',
-      }),
-    [html, textColor, backgroundColor, linkColor, customCSS, colors, autoHeight, scriptNonce]
-  );
+  const fullHtml = useMemo(() => {
+    // Every document gets its own nonce: one that loaded before can never let a script into the next.
+    const scriptNonce = autoHeight ? createScriptNonce() : undefined;
+
+    return buildHtmlDocument({
+      html,
+      textColor: textColor ?? colors.tokens['typography-800'],
+      backgroundColor: backgroundColor ?? 'transparent',
+      linkColor: linkColor ?? colors.tokens['info-600'],
+      customCSS,
+      scriptNonce,
+      trailingMarkup: scriptNonce ? buildHeightReporter('native', scriptNonce) : '',
+    });
+  }, [html, textColor, backgroundColor, linkColor, customCSS, colors, autoHeight]);
 
   const handleMessage = useCallback((event: WebViewMessageEvent) => {
     const height = readHeightMessage(event.nativeEvent.data);

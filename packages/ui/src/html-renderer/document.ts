@@ -1,3 +1,4 @@
+import { getRandomBytes } from 'expo-crypto';
 import type { StyleProp, ViewStyle } from 'react-native';
 
 import { sanitizeHtmlContent } from './html-sanitizer';
@@ -74,8 +75,14 @@ export const fitHtmlHeight = (contentHeight: number | null, maxHeight: number): 
   return { height: Math.max(1, Math.min(contentHeight, max)), scrollEnabled: contentHeight > max };
 };
 
-/** A per-document token for the CSP nonce; letters and digits only, so it can never break out of the attribute. */
-export const createScriptNonce = (): string => `${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`.replace(/[^a-z0-9]/gi, '');
+/** Bits of randomness in a CSP nonce (CSP asks for at least 128). */
+const SCRIPT_NONCE_BYTES = 16;
+
+/**
+ * A fresh CSP nonce for one generated document: 128 bits from the platform's secure random source (expo-crypto), as hex,
+ * so it can never break out of the attribute.
+ */
+export const createScriptNonce = (): string => Array.from(getRandomBytes(SCRIPT_NONCE_BYTES), (byte) => byte.toString(16).padStart(2, '0')).join('');
 
 /**
  * App-authored script that posts the document's height whenever it changes (layout, images loading, rotation).

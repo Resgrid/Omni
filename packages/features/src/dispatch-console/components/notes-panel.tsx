@@ -61,6 +61,7 @@ export const NotesPanel: React.FC<NotesPanelProps> = ({ callId, onNewNote, flex,
         <>
           <PanelSearch value={query} onChange={setQuery} placeholder={t('dispatch_console.search_notes')} testID="notes-search" />
           <FlatList
+            nestedScrollEnabled
             testID="notes-list"
             data={visible}
             renderItem={renderItem}
@@ -88,6 +89,7 @@ const CallNotesScroll: React.FC<{ callId: string }> = ({ callId }) => {
 
   return (
     <ScrollView
+      nestedScrollEnabled
       ref={keepFocusedInputVisible.scrollRef}
       onScroll={keepFocusedInputVisible.onScroll}
       scrollEventThrottle={keepFocusedInputVisible.scrollEventThrottle}

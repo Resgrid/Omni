@@ -238,6 +238,9 @@ const LINE_BREAK = /<br\s*\/?>(?:\r?\n)?/gi;
 const BLOCK_END = /<\/(?:blockquote|div|h[1-6]|li|ol|p|pre|table|tr|ul)>(?:\r?\n)?/gi;
 const LIST_ITEM = /<li(?:\s[^<>]*)?>/gi;
 
+// A cell followed by another in the same row: a tab between them, as a browser's innerText writes it (rows end in `</tr>`).
+const CELL_BOUNDARY = /<\/t[dh]>\s*(?=<t[dh](?:\s[^<>]*)?>)/gi;
+
 /** Whether the value is rich text (it has the editor's formatting tags), entity-encoded or not. */
 export const isRichText = (text: string): boolean => HAS_FORMATTING_TAG.test(decodeHtmlEntitiesIfEncoded(text));
 
@@ -249,7 +252,7 @@ export const richTextToPlain = (text: string): string => {
   const markup = decodeHtmlEntitiesIfEncoded(text);
 
   if (!HAS_FORMATTING_TAG.test(markup)) return decodeHtmlEntities(markup);
-  const plain = markup.replace(LINE_BREAK, '\n').replace(BLOCK_END, '\n').replace(LIST_ITEM, '• ').replace(FORMATTING_TAG, '');
+  const plain = markup.replace(LINE_BREAK, '\n').replace(BLOCK_END, '\n').replace(CELL_BOUNDARY, '\t').replace(LIST_ITEM, '• ').replace(FORMATTING_TAG, '');
 
   return decodeHtmlEntities(plain)
     .replace(/[ \t]+\n/g, '\n')

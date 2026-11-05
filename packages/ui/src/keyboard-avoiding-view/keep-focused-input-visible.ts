@@ -65,8 +65,9 @@ export function useKeepFocusedInputVisible(enabled = true) {
       });
     };
 
-    // `keyboardDidShow` fires once the keyboard (and so the lift) has settled, and again when the focus moves to a field
-    // with a different keyboard. Measuring a frame later reads the layout the lift committed.
+    // `keyboardDidShow` fires once the keyboard (and so the lift) has settled, and again every time the focus moves to
+    // another field while it is up, with the same keyboard or not: iOS posts it then, and keyboard-controller sends it on
+    // Android to match. Measuring a frame later reads the layout the lift (or the newly focused field) committed.
     const subscription = KeyboardEvents.addListener('keyboardDidShow', () => {
       if (frame !== null) cancelAnimationFrame(frame);
 

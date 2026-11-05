@@ -12,6 +12,8 @@ const TEST_SOUNDS: readonly { sound: NotificationSound; key: string }[] = [
   { sound: 'moderncallhigh', key: 'settings.sounds.call_high' },
   { sound: 'moderncallmedium', key: 'settings.sounds.call_medium' },
   { sound: 'moderncalllow', key: 'settings.sounds.call_low' },
+  // The reminder for a dispatch the member has not acknowledged (Dispatch Re-notification), the loudest call sound.
+  { sound: 'moderncallrenotify', key: 'settings.sounds.call_renotify' },
   { sound: 'modernmessage', key: 'settings.sounds.message' },
   { sound: 'modernnotification', key: 'settings.sounds.notification' },
 ];

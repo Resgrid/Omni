@@ -4,7 +4,7 @@ import { Check } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { everyoneRecipientSelection, matchesRecipientQuery, pickedCount, pickedIds, type RecipientPickerSection, type RecipientPickerSelection, toggleRecipient } from '../lib/recipient-picker';
+import { everyoneRecipientSelection, matchesRecipientQuery, offeredRecipientSelection, pickedCount, pickedIds, type RecipientPickerSection, type RecipientPickerSelection, toggleRecipient } from '../lib/recipient-picker';
 import { CallModalFrame } from './call-modal-frame';
 
 export { emptyRecipientSelection, everyoneRecipientSelection, type RecipientPickerEntry, type RecipientPickerSection, type RecipientPickerSelection, summarizeRecipientSelection } from '../lib/recipient-picker';
@@ -16,7 +16,7 @@ export interface RecipientPickerModalProps<K extends string> {
   sections: readonly RecipientPickerSection<K>[];
   value: RecipientPickerSelection<K>;
   onConfirm: (selection: RecipientPickerSelection<K>) => void;
-  /** Label of the "Everyone" switch, which picks everyone and clears the rest; null when everyone may not be picked. */
+  /** Label of the "Everyone" switch, which picks everyone and clears the rest; null when everyone may not be picked (a `value` with it is then confirmed without it). */
   everyoneLabel: string | null;
   /** How the Done button names an "everyone" selection. */
   everyoneName: string;
@@ -47,15 +47,16 @@ export function RecipientPickerModal<K extends string>({
   optionTestID,
 }: RecipientPickerModalProps<K>): React.ReactElement {
   const { t } = useTranslation();
-  const [draft, setDraft] = useState<RecipientPickerSelection<K>>(value);
+  const everyoneOffered = everyoneLabel !== null;
+  const [draft, setDraft] = useState<RecipientPickerSelection<K>>(() => offeredRecipientSelection(value, everyoneOffered));
   const [query, setQuery] = useState('');
 
   useEffect(() => {
     if (isOpen) {
-      setDraft(value);
+      setDraft(offeredRecipientSelection(value, everyoneOffered));
       setQuery('');
     }
-  }, [isOpen, value]);
+  }, [isOpen, value, everyoneOffered]);
 
   const visible = useMemo(
     () => sections.map((section) => ({ ...section, entries: section.entries.filter((entry) => matchesRecipientQuery(entry, query)) })).filter((section) => section.entries.length > 0),
@@ -64,7 +65,7 @@ export function RecipientPickerModal<K extends string>({
 
   const hasEntries = sections.some((section) => section.entries.length > 0);
   const count = pickedCount(draft, sections);
-  const isEveryone = everyoneLabel !== null && draft.everyone;
+  const isEveryone = everyoneOffered && draft.everyone;
 
   return (
     <CallModalFrame
@@ -74,7 +75,7 @@ export function RecipientPickerModal<K extends string>({
       testID={testID}
       footer={
         <View className="border-t border-outline-100 bg-background-0 p-4">
-          <Button onPress={() => onConfirm(draft)} accessibilityLabel={t('common.done')} testID={`${testID}-confirm`}>
+          <Button onPress={() => onConfirm(offeredRecipientSelection(draft, everyoneOffered))} accessibilityLabel={t('common.done')} testID={`${testID}-confirm`}>
             <ButtonText>{isEveryone ? `${t('common.done')} — ${everyoneName}` : `${t('common.done')} (${count} ${t('calls.selected')})`}</ButtonText>
           </Button>
         </View>

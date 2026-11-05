@@ -76,6 +76,7 @@ export const PersonnelPanel: React.FC<PersonnelPanelProps> = ({ callFilter, onSe
     >
       <PanelSearch value={query} onChange={setQuery} placeholder={t('dispatch_console.search_personnel')} testID="personnel-search" />
       <FlatList
+        nestedScrollEnabled
         testID="personnel-list"
         data={visible}
         renderItem={renderItem}

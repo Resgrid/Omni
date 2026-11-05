@@ -92,6 +92,16 @@ export const emptyCallFormValues = (priority: number | null = null): CallFormVal
   unitResponseCodes: '',
 });
 
+/**
+ * The form after the Pending switch changes. A pending call is not offered "Everyone" (the dispatcher who sends it picks
+ * its recipients), so turning the switch on drops an "Everyone" pick instead of saving it with the call.
+ */
+export const withPendingCall = (values: CallFormValues, isPending: boolean): CallFormValues => ({
+  ...values,
+  isPending,
+  dispatch: isPending && values.dispatch.everyone ? EMPTY_DISPATCH_SELECTION : values.dispatch,
+});
+
 export type CoordinateParse = { ok: true; latitude: number; longitude: number } | { ok: false; reason: 'empty' | 'invalid_format' | 'out_of_range' };
 
 /** "lat, lon" (comma or whitespace separated). Accepts 0 on one axis; the API drops 0,0 on its own. */

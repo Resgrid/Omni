@@ -2,6 +2,7 @@ import {
   emptyRecipientSelection,
   everyoneRecipientSelection,
   matchesRecipientQuery,
+  offeredRecipientSelection,
   pickedCount,
   type RecipientPickerSection,
   type RecipientPickerSelection,
@@ -35,6 +36,13 @@ describe('recipient picker selection', () => {
     expect(selection).toEqual({ everyone: false, ids: { people: ['u1'], units: [] } });
     expect(pickedCount(selection, sections)).toBe(1);
     expect(pickedCount(emptyRecipientSelection<Key>(), sections)).toBe(0);
+  });
+
+  it('drops "everyone" from a selection only where the picker does not offer it', () => {
+    const picks: RecipientPickerSelection<Key> = { everyone: false, ids: { units: ['7'] } };
+    expect(offeredRecipientSelection(everyoneRecipientSelection<Key>(), false)).toEqual({ everyone: false, ids: {} });
+    expect(offeredRecipientSelection(everyoneRecipientSelection<Key>(), true)).toEqual({ everyone: true, ids: {} });
+    expect(offeredRecipientSelection(picks, false)).toBe(picks);
   });
 
   it('searches the name and the second line, ignoring case', () => {

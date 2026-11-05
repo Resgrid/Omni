@@ -132,8 +132,10 @@ const osmandAttempts = ({ coordinates, address, label, origin }: NavigationDesti
       ? [{ url: `osmand.api://navigate?dest_lat=${coordinates.latitude}&dest_lon=${coordinates.longitude}${name ? `&dest_name=${name}` : ''}&profile=car` }, routePlanner]
       : [{ url: `osmandmaps://navigate?lat=${coordinates.latitude}&lon=${coordinates.longitude}${name ? `&title=${name}` : ''}` }, routePlanner];
   }
+  // OsmAnd searches the address near the origin; it shows the matches for the user to pick, because without
+  // `show_search_results` it starts navigating to the first one, which for an ambiguous address can be the wrong place.
   return platform === 'android' && origin
-    ? [{ url: `osmand.api://navigate_search?dest_search_query=${encodeURIComponent(address ?? '')}&search_lat=${origin.latitude}&search_lon=${origin.longitude}&profile=car` }]
+    ? [{ url: `osmand.api://navigate_search?dest_search_query=${encodeURIComponent(address ?? '')}&search_lat=${origin.latitude}&search_lon=${origin.longitude}&profile=car&show_search_results=true` }]
     : null;
 };
 

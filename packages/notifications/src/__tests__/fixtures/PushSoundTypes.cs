@@ -1,4 +1,4 @@
-// Verbatim copy of Resgrid Core Core/Resgrid.Model/PushSoundTypes.cs (Core d1ac7a785, 2026-05-27).
+// Verbatim copy of Resgrid Core Core/Resgrid.Model/PushSoundTypes.cs (Core develop, 2026-11-05: ModernCallRenotify = 27).
 // Refresh it whenever Core adds a sound type: channels.test.ts fails until Omni creates a channel for the new value.
 namespace Resgrid.Model
 {
@@ -30,6 +30,13 @@ namespace Resgrid.Model
 		ModernAvailabilityAlert = 23,
 		ModernWeatherAlert = 24,
 		ModernUnitNotice = 25,
-		ModernResourceOrder = 26
+		ModernResourceOrder = 26,
+
+		/// <summary>
+		/// A dispatch re-notification: the reminder sent to a member or unit that has not acknowledged a call (Dispatch
+		/// Re-notification). Its sound is louder and more insistent than the emergency call sound. Sent whatever the call's
+		/// priority and whether or not the department uses modern sounds; an app without the sound plays its default.
+		/// </summary>
+		ModernCallRenotify = 27
 	}
 }

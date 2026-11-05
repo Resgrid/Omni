@@ -90,16 +90,20 @@ export const ComposeMessageSheet: React.FC<ComposeMessageSheetProps> = ({ isOpen
     if (next.subject || next.body || next.recipients) return;
     setIsSending(true);
 
-    const result = await useMessagesStore.getState().sendNewMessage({
-      Title: subject.trim(),
-      Body: body.trim(),
-      Type: type,
-      Recipients: toMessageRecipients(selection, recipients),
-    });
+    // The outbox can also fail to queue it (no session, a storage failure): null, and the sheet stays open to try again.
+    const result = await useMessagesStore
+      .getState()
+      .sendNewMessage({
+        Title: subject.trim(),
+        Body: body.trim(),
+        Type: type,
+        Recipients: toMessageRecipients(selection, recipients),
+      })
+      .catch(() => null);
 
     setIsSending(false);
 
-    if (result.outcome === 'rejected') {
+    if (result === null || result.outcome === 'rejected') {
       toast.error(t('messages.send_failed'));
 
       return;

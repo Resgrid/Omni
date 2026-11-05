@@ -1,8 +1,9 @@
 import { useAuthStore, useSecurity } from '@resgrid/auth';
 import { isSafeRouteId } from '@resgrid/core/utils/route-ids';
-import { useChatStore } from '@resgrid/data';
+import { parseChatEventPayload, useChatStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import { ChatChannelType, ChatMessagePriority, type ChatMessageResultData, ChatMessageType, type GifResultData } from '@resgrid/models';
+import { useRealtimeEvent } from '@resgrid/realtime';
 import { BottomAnchoredKeyboardView, FlatList, Loading, ScreenHeader, useToast, View, ZeroState } from '@resgrid/ui';
 import * as Clipboard from 'expo-clipboard';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -60,6 +61,16 @@ function ChatConversationContent({ channelId, keyboardOffset = 0 }: { channelId:
   useActiveChatChannel(channelId, asUnitId, isResolved && !isChatbot);
   // Core sends chatMessageReceived only to connections in the channel's group.
   useJoinedChatChannel(channelId, asUnitId, isResolved && !isChatbot);
+
+  useRealtimeEvent(
+    'chatMessageReceived',
+    (payload) => {
+      if (parseChatEventPayload(payload)?.ChatChannelId === channelId) {
+        void useChatStore.getState().loadNewerMessages(channelId);
+      }
+    },
+    isResolved && !isChatbot
+  );
 
   useEffect(() => {
     if (!isResolved || isChatbot) return;

@@ -72,6 +72,12 @@ describe('navigation hand-off', () => {
     expect(buildNavigationAttempts(destination({ coordinates: null, address: '1 Main St' }), 'gaia_gps', 'ios')[0].url).toContain('maps://maps.apple.com/?daddr=1%20Main%20St');
   });
 
+  it('lets OsmAnd show its address matches instead of navigating to the first one', () => {
+    const attempts = buildNavigationAttempts(destination({ coordinates: null, address: '1 Main St', origin: { latitude: '39.6', longitude: '-119.7' } }), 'osmand', 'android');
+
+    expect(attempts[0].url).toBe('osmand.api://navigate_search?dest_search_query=1%20Main%20St&search_lat=39.6&search_lon=-119.7&profile=car&show_search_results=true');
+  });
+
   it('opens the first link that works and falls back to the address', async () => {
     const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
     await expect(openMapsWithDirections(0, 0, 'Call', undefined, undefined, '1 Main St')).resolves.toBe(true);
