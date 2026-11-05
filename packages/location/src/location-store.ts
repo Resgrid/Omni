@@ -38,8 +38,9 @@ export function setCurrentLocation(fix: LocationFix, source: FixSource): void {
 
     return;
   }
-  currentLocationStore.setState({ latitude, longitude, heading, accuracy, speed, altitude, timestamp: fix.timestamp, source });
+  // Before the store notifies: a subscriber that asks for the recent position sees this fix's time, not the last one's.
   positionConfirmedAt = fix.timestamp;
+  currentLocationStore.setState({ latitude, longitude, heading, accuracy, speed, altitude, timestamp: fix.timestamp, source });
 }
 
 export function getCurrentLocation(): CurrentLocation | null {

@@ -48,15 +48,18 @@ export function RecipientPickerModal<K extends string>({
 }: RecipientPickerModalProps<K>): React.ReactElement {
   const { t } = useTranslation();
   const everyoneOffered = everyoneLabel !== null;
-  const [draft, setDraft] = useState<RecipientPickerSelection<K>>(() => offeredRecipientSelection(value, everyoneOffered));
+  const [draft, setDraft] = useState<RecipientPickerSelection<K>>(value);
   const [query, setQuery] = useState('');
 
+  // Only opening (or a new `value`) resets the draft. Whether "Everyone" is offered can change while the picker is open
+  // (a message's recipients finish loading), so it is applied where the draft is shown and confirmed, never by a reset
+  // that would throw away the picks and the search.
   useEffect(() => {
     if (isOpen) {
-      setDraft(offeredRecipientSelection(value, everyoneOffered));
+      setDraft(value);
       setQuery('');
     }
-  }, [isOpen, value, everyoneOffered]);
+  }, [isOpen, value]);
 
   const visible = useMemo(
     () => sections.map((section) => ({ ...section, entries: section.entries.filter((entry) => matchesRecipientQuery(entry, query)) })).filter((section) => section.entries.length > 0),

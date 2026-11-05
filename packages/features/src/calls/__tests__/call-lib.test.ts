@@ -197,6 +197,8 @@ describe('call form', () => {
     const shown = { protocols: false, linkedCall: false, udf: false, contact: false, dispatchList: true };
     expect(buildNewCallInput(toCreateCallRequest(values, shown)).DispatchList).toBe(DISPATCH_LIST_NOBODY);
     expect(buildNewCallInput(toCreateCallRequest({ ...values, dispatch: { ...values.dispatch, everyone: true } }, shown)).DispatchList).toBe('0');
+    // A pending call is never saved for everyone; the form keeps the pick for when Pending is turned off.
+    expect(buildNewCallInput(toCreateCallRequest({ ...values, isPending: true, dispatch: { ...values.dispatch, everyone: true } }, shown)).DispatchList).toBe(DISPATCH_LIST_NOBODY);
     const edit = { call: makeCall('9'), storedProtocolCount: 0, initialDispatchOnUtc: '' };
     expect(buildEditCallInput(toUpdateCallRequest('9', values, shown, { edit, isVisible: () => true })).DispatchList).toBe(DISPATCH_LIST_NOBODY);
     // With the list hidden the request is not marked as picked: blank, which EditCall reads as "keep the dispatches".

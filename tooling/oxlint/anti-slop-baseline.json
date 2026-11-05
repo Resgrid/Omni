@@ -1442,9 +1442,6 @@
     "anti-slop/require-readable-spacing": 4,
     "anti-slop/require-safety-comment-for-type-assertion": 3
   },
-  "packages/data/src/core/__tests__/core.test.ts": {
-    "anti-slop/require-readable-spacing": 3
-  },
   "packages/data/src/core/envelope.ts": {
     "anti-slop/no-unknown-parameters": 1,
     "anti-slop/require-readable-spacing": 7,

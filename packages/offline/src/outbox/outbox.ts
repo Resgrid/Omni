@@ -1,7 +1,7 @@
 import { applySchema } from '../db/schema';
 import type { DbOps, DbRow, DurableDb } from '../db/types';
 import { type Clock, generateUuid, type IdGenerator, systemClock } from '../util/ids';
-import { getOfflineLogger } from '../util/logger';
+import { describeError, getOfflineLogger } from '../util/logger';
 import { Mutex } from '../util/mutex';
 import { isSameSession, normalizeServer, type OfflineScope } from '../util/scope';
 import type { PayloadCipher } from './cipher';
@@ -309,7 +309,7 @@ export class Outbox {
       logger.debug({ message: 'Outbox event superseded by a newer queued one, not queued', context: { type: input.type, newerId: result.id } });
     }
 
-    await this.refresh();
+    await this.refreshAfterCommit('enqueue');
     this.wake();
     return result;
   }
@@ -556,9 +556,22 @@ export class Outbox {
   private async finishPass(result: DrainResult): Promise<DrainResult> {
     this.lastDrainAt = this.now();
     this.lastDrainStatus = result.status;
-    await this.refresh();
+    await this.refreshAfterCommit('drain');
     this.scheduleTimer();
     return result;
+  }
+
+  /**
+   * The snapshot after a change that is already stored (a queued write, a finished pass). Failing to read it back must
+   * not fail that change: the caller would report a delivered or queued write as lost, and sending it again queues a
+   * second copy under a new id. The next refresh catches the snapshot up.
+   */
+  private async refreshAfterCommit(after: 'enqueue' | 'drain'): Promise<void> {
+    try {
+      await this.refresh();
+    } catch (error) {
+      getOfflineLogger().warn({ message: 'Outbox snapshot refresh failed after a stored change', context: { after, error: describeError(error) } });
+    }
   }
 
   private setDraining(value: boolean): void {

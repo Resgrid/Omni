@@ -1,4 +1,4 @@
-import { getChatChannels, getChatMessages, sendChatMessage } from '@resgrid/api';
+import { getChatChannels, getChatMessages, getChatMessagesAfter, sendChatMessage } from '@resgrid/api';
 import type { ChatMessageResultData } from '@resgrid/models';
 import { defaultResetRegistry } from '@resgrid/offline';
 
@@ -10,6 +10,7 @@ jest.mock('@resgrid/api', () => ({
   ...jest.requireActual('@resgrid/api'),
   getChatChannels: jest.fn(),
   getChatMessages: jest.fn(),
+  getChatMessagesAfter: jest.fn(),
   sendChatMessage: jest.fn(),
 }));
 
@@ -75,6 +76,61 @@ describe('chat store (IC + Dispatch call filter)', () => {
     await useChatStore.getState().loadInitialMessages('ch-1');
     const list = useChatStore.getState().messagesByChannel['ch-1'];
     expect(list.map((m) => m._localStatus ?? 'server')).toEqual(['server', 'failed']);
+  });
+
+  describe('history and realtime refreshes', () => {
+    // SAFETY: the chat endpoints resolve to this v4 envelope; the store reads only its Data list.
+    const page = (messages: ChatMessageResultData[]) => ok(messages) as never;
+
+    /** A getChatMessages answer that waits until `release` is called. */
+    const heldPage = (messages: ChatMessageResultData[]) => {
+      let release: () => void = () => undefined;
+
+      jest.mocked(getChatMessages).mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            release = () => resolve(page(messages));
+          })
+      );
+
+      return { release: () => release() };
+    };
+
+    beforeEach(() => {
+      jest.mocked(getChatMessages).mockReset();
+      jest.mocked(getChatMessagesAfter).mockReset();
+    });
+
+    it('keeps an older page that lands while a new message is being fetched', async () => {
+      useChatStore.setState({ messagesByChannel: { 'ch-1': [message('m50', 50), message('m51', 51)] }, hasMoreByChannel: { 'ch-1': true } });
+      const olderPage = heldPage([message('m49', 49)]);
+
+      jest.mocked(getChatMessagesAfter).mockResolvedValueOnce(page([message('m52', 52)]));
+
+      const older = useChatStore.getState().loadOlderMessages('ch-1');
+
+      await useChatStore.getState().loadNewerMessages('ch-1');
+      olderPage.release();
+      await older;
+
+      expect(useChatStore.getState().messagesByChannel['ch-1'].map((m) => m.MessageSeq)).toEqual([49, 50, 51, 52]);
+    });
+
+    it('a message arriving while the first page loads fetches the page again once that one lands', async () => {
+      const firstPage = heldPage([message('m1', 1)]);
+
+      jest.mocked(getChatMessages).mockResolvedValueOnce(page([message('m1', 1), message('m2', 2)]));
+
+      const first = useChatStore.getState().loadInitialMessages('ch-1');
+      // Nothing confirmed is cached yet, so the realtime refresh falls back to the first page.
+      const refresh = useChatStore.getState().loadNewerMessages('ch-1');
+
+      firstPage.release();
+      await Promise.all([first, refresh]);
+
+      expect(getChatMessages).toHaveBeenCalledTimes(2);
+      expect(useChatStore.getState().messagesByChannel['ch-1'].map((m) => m.MessageSeq)).toEqual([1, 2]);
+    });
   });
 
   it('imports the legacy chat-outbox-storage queue into the durable outbox, keeping each ClientMessageId', async () => {

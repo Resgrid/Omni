@@ -226,13 +226,16 @@ describe('CallFormScreen: create', () => {
     ];
     activateVariant('dispatch');
     await render(<CallFormScreen mode="create" />);
-    // "Everyone" picked before the call is made pending does not stay on it.
+    // "Everyone" picked before the call is made pending is not sent with it, and comes back when Pending is turned off.
     await fireEvent.press(screen.getByTestId('call-form-dispatch'));
     await fireEvent(screen.getByTestId('dispatch-selection-everyone', hidden), 'valueChange', true);
     await fireEvent.press(screen.getByTestId('dispatch-selection-confirm', hidden));
     expect(screen.getByTestId('call-form-dispatch-summary').props.children).toBe('calls.everyone');
     await fireEvent(screen.getByTestId('call-form-pending'), 'valueChange', true);
     expect(screen.getByTestId('call-form-dispatch-summary').props.children).toBe('common.none');
+    await fireEvent(screen.getByTestId('call-form-pending'), 'valueChange', false);
+    expect(screen.getByTestId('call-form-dispatch-summary').props.children).toBe('calls.everyone');
+    await fireEvent(screen.getByTestId('call-form-pending'), 'valueChange', true);
     expect(screen.getByTestId('call-form-submit').props.accessibilityLabel).toBe('calls.save_pending_call');
     await fireEvent.press(screen.getByTestId('call-form-dispatch'));
     expect(screen.queryByTestId('dispatch-selection-everyone', hidden)).toBeNull();

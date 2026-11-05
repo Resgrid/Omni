@@ -93,14 +93,11 @@ export const emptyCallFormValues = (priority: number | null = null): CallFormVal
 });
 
 /**
- * The form after the Pending switch changes. A pending call is not offered "Everyone" (the dispatcher who sends it picks
- * its recipients), so turning the switch on drops an "Everyone" pick instead of saving it with the call.
+ * Who a new call is dispatched to, as the form shows and saves it. A pending call is not offered "Everyone" (the
+ * dispatcher who sends it picks its recipients), so while the Pending switch is on an "Everyone" pick counts as nobody.
+ * The pick itself stays in the form: turning Pending off again brings it back.
  */
-export const withPendingCall = (values: CallFormValues, isPending: boolean): CallFormValues => ({
-  ...values,
-  isPending,
-  dispatch: isPending && values.dispatch.everyone ? EMPTY_DISPATCH_SELECTION : values.dispatch,
-});
+export const callDispatchSelection = (values: Pick<CallFormValues, 'dispatch' | 'isPending'>): DispatchSelection => (values.isPending && values.dispatch.everyone ? EMPTY_DISPATCH_SELECTION : values.dispatch);
 
 export type CoordinateParse = { ok: true; latitude: number; longitude: number } | { ok: false; reason: 'empty' | 'invalid_format' | 'out_of_range' };
 
@@ -410,6 +407,15 @@ const coordinatesOf = (values: CallFormValues): { latitude?: number; longitude?:
   return parsed.ok ? { latitude: parsed.latitude, longitude: parsed.longitude } : {};
 };
 
+/** The request's dispatch list, field by field. */
+const dispatchRequestFields = (dispatch: DispatchSelection) => ({
+  dispatchEveryone: dispatch.everyone,
+  dispatchUsers: dispatch.users,
+  dispatchGroups: dispatch.groups,
+  dispatchRoles: dispatch.roles,
+  dispatchUnits: dispatch.units,
+});
+
 const commonRequestFields = (values: CallFormValues, pickers: CallFormPickers) => ({
   name: values.name.trim(),
   nature: values.nature.trim(),
@@ -422,11 +428,7 @@ const commonRequestFields = (values: CallFormValues, pickers: CallFormPickers) =
   contactInfo: values.contactInfo,
   ...(pickers.contact ? { contactId: values.contactId } : {}),
   what3words: values.what3words,
-  dispatchEveryone: values.dispatch.everyone,
-  dispatchUsers: values.dispatch.users,
-  dispatchGroups: values.dispatch.groups,
-  dispatchRoles: values.dispatch.roles,
-  dispatchUnits: values.dispatch.units,
+  ...dispatchRequestFields(callDispatchSelection(values)),
   dispatchPicked: pickers.dispatchList,
   ...(pickers.linkedCall ? { linkedCallId: values.linkedCall?.callId ?? '' } : {}),
   ...(pickers.protocols ? { protocolIds: values.protocolIds } : {}),

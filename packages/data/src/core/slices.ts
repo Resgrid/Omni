@@ -30,6 +30,11 @@ export interface RunOptions {
   trailing?: boolean;
   /** Do not flip the loading flag (poll rounds, background prefetch). */
   silent?: boolean;
+  /**
+   * Race-guard lane; defaults to the slice key. The newest request in a lane wins and older answers in it are dropped.
+   * A page merged into a list (older history) takes its own lane, so a refresh of the same slice does not drop it.
+   */
+  raceKey?: string;
 }
 
 export interface SliceRunner<K extends string, S> {
@@ -49,12 +54,13 @@ const metaPatch = <K extends string, S extends SliceMeta<K>>(state: S, key: K, p
 
 /**
  * Runs fetches for a store's slices with loading/error bookkeeping, de-duplication, a per-slice race guard
- * (the newest request for a slice wins — Dispatch video-feed guard, Unit records guards) and a generation
+ * (the newest request for a slice wins — Dispatch video-feed guard, Unit records guards; `raceKey` splits a slice into
+ * lanes) and a generation
  * guard so a response that lands after sign-out is dropped.
  */
 export function createSliceRunner<K extends string, S extends SliceMeta<K>>(storeName: string, set: SetState<S>): SliceRunner<K, S> {
   let generation = 0;
-  const sequences = new Map<K, number>();
+  const sequences = new Map<string, number>();
   const flights = createKeyedFlight();
 
   return {
@@ -63,9 +69,10 @@ export function createSliceRunner<K extends string, S extends SliceMeta<K>>(stor
         options.flightKey ?? key,
         async () => {
           const startedIn = generation;
-          const sequence = (sequences.get(key) ?? 0) + 1;
-          sequences.set(key, sequence);
-          const isCurrent = (): boolean => startedIn === generation && sequences.get(key) === sequence;
+          const lane = options.raceKey ?? key;
+          const sequence = (sequences.get(lane) ?? 0) + 1;
+          sequences.set(lane, sequence);
+          const isCurrent = (): boolean => startedIn === generation && sequences.get(lane) === sequence;
           if (!options.silent) set((state) => metaPatch(state, key, { loading: true, error: null }));
           try {
             const value = await fetcher();

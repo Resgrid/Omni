@@ -1,5 +1,5 @@
 import { DEFAULT_MAX_ACCURACY_METERS } from '../constants';
-import { getRecentLocation, patchTransmissionStatus, resetLocationStores, setCurrentLocation } from '../location-store';
+import { type CurrentLocation, getRecentLocation, patchTransmissionStatus, resetLocationStores, setCurrentLocation, subscribeCurrentLocation } from '../location-store';
 import { FAR, fixAt, ORIGIN } from './helpers';
 
 const NOW = 1_800_000_000_000;
@@ -42,6 +42,17 @@ describe('getRecentLocation', () => {
     setCurrentLocation(fixAt(FAR, NOW - 30 * MINUTE), 'on-demand');
 
     expect(getRecentLocation({ maxAgeMs: 2 * MINUTE, now: NOW })).toBeNull();
+  });
+
+  it('gives a subscriber reading the recent position while it is notified the new fix time', () => {
+    setCurrentLocation(fixAt(ORIGIN, NOW - 10_000), 'watcher');
+    const seen: (CurrentLocation | null)[] = [];
+    const unsubscribe = subscribeCurrentLocation(() => seen.push(getRecentLocation({ maxAgeMs: 2 * MINUTE, now: NOW })));
+
+    setCurrentLocation(fixAt(FAR, NOW - 30 * MINUTE), 'on-demand');
+    unsubscribe();
+
+    expect(seen).toEqual([null]);
   });
 
   it('drops a fix less accurate than the limit and keeps one that reports no accuracy', () => {

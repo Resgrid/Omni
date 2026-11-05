@@ -46,6 +46,7 @@ import { useCallUdfFields } from '../hooks/use-call-udf-fields';
 import { useIsOnline } from '../hooks/use-connectivity';
 import {
   applyCallTemplate,
+  callDispatchSelection,
   type CallFormEditContext,
   type CallFormErrorKey,
   type CallFormPickers,
@@ -66,7 +67,6 @@ import {
   type WithheldEditField,
   withheldEditFields,
   withheldFormFields,
-  withPendingCall,
 } from '../lib/call-form';
 import { type GeocodeLookup, isWhat3WordsFormat, lookupAddress, lookupAddressAt, lookupPlusCode, lookupWhat3Words } from '../lib/call-geocoding';
 import { defaultPriorityId, priorityOptions } from '../lib/call-priority';
@@ -979,7 +979,7 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
                 >
                   <Text className="text-typography-900">{`${t('calls.select_recipients')}${isPendingCall ? '' : req(NewCallFieldKeys.DispatchList)}`}</Text>
                   <Text size="xs" className="text-typography-500" testID="call-form-dispatch-summary">
-                    {summarizeDispatchSelection(values.dispatch, recipients, { everyone: t('calls.everyone'), none: isPendingCall ? t('common.none') : t('calls.dispatch.none_pages_nobody') })}
+                    {summarizeDispatchSelection(callDispatchSelection(values), recipients, { everyone: t('calls.everyone'), none: isPendingCall ? t('common.none') : t('calls.dispatch.none_pages_nobody') })}
                   </Text>
                 </Pressable>
                 {errors.dispatchList ? (
@@ -1020,12 +1020,7 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
                         {t('calls.scheduling.pending_hint')}
                       </Text>
                     </View>
-                    <Switch
-                      value={values.isPending}
-                      onValueChange={(pending: boolean) => setValues((current) => withPendingCall(current, pending))}
-                      accessibilityLabel={t('calls.scheduling.pending')}
-                      testID="call-form-pending"
-                    />
+                    <Switch value={values.isPending} onValueChange={(pending: boolean) => set('isPending', pending)} accessibilityLabel={t('calls.scheduling.pending')} testID="call-form-pending" />
                   </View>
                 ) : null}
                 {!values.isPending && (isEdit || show(NewCallFieldKeys.DispatchOn)) ? (

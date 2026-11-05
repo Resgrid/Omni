@@ -317,6 +317,21 @@ describe('ComposeMessageSheet', () => {
     expect(screen.getByTestId('compose-recipient-picker-empty', q)).toBeTruthy();
   });
 
+  it('keeps the picks and the search when the Everyone row arrives while the picker is open', async () => {
+    useMessagesStore.setState({ recipients: RECIPIENTS.filter((item) => item.Id !== '0'), loading: { recipients: true } });
+    const { rerender } = await render(<ComposeMessageSheet isOpen onClose={jest.fn()} />);
+    await fireEvent.press(screen.getByTestId('compose-recipients', q));
+    await fireEvent.press(screen.getByTestId('recipient-personnel-P:u1', q));
+    await fireEvent.changeText(screen.getByTestId('compose-recipient-picker-search', q), 'alex');
+
+    await act(async () => useMessagesStore.setState({ recipients: RECIPIENTS, loading: {} }));
+    await rerender(<ComposeMessageSheet isOpen onClose={jest.fn()} />);
+
+    expect(screen.getByTestId('compose-recipient-picker-everyone', q)).toBeTruthy();
+    expect(screen.getByTestId('recipient-personnel-P:u1', q).props.accessibilityState).toEqual({ checked: true });
+    expect(screen.getByTestId('compose-recipient-picker-search', q).props.value).toBe('alex');
+  });
+
   it('says a message composed offline will be sent later; a refusal keeps the form', async () => {
     store.sendNewMessage.mockResolvedValueOnce({ outcome: 'queued', id: 'evt-2' }).mockResolvedValueOnce({ outcome: 'rejected', id: 'evt-3' });
     const onClose = jest.fn();
