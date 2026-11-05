@@ -5,11 +5,30 @@ import { useCallDetailStore, useCallsStore } from '@resgrid/data';
 import { ProtectedLabel, ProtectedRevealBar } from '@resgrid/features/data-protection';
 import { useTranslation } from '@resgrid/i18n';
 import { type CallQuickTemplateResultData, type NewCallFieldKey, NewCallFieldKeys, type UdfFieldValueInput } from '@resgrid/models';
-import { Button, ButtonText, DateTimeField, Input, InputField, Loading, Pressable, ScreenHeader, Spinner, Switch, Text, Textarea, TextareaInput, useFormFactor, useThemeColors, useToast, ZeroState } from '@resgrid/ui';
+import {
+  Button,
+  ButtonText,
+  DateTimeField,
+  Input,
+  InputField,
+  KeyboardAwareScrollView,
+  Loading,
+  Pressable,
+  ScreenHeader,
+  Spinner,
+  Switch,
+  Text,
+  Textarea,
+  TextareaInput,
+  useFormFactor,
+  useThemeColors,
+  useToast,
+  ZeroState,
+} from '@resgrid/ui';
 import { useRouter } from 'expo-router';
 import { ChevronDown, LocateFixed, MapPin, Search, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { CallContactPicker } from '../components/call-form/contact-picker';
 import { destinationPoiLabel, DestinationPoiPicker } from '../components/call-form/destination-poi-picker';
@@ -27,6 +46,7 @@ import { useCallUdfFields } from '../hooks/use-call-udf-fields';
 import { useIsOnline } from '../hooks/use-connectivity';
 import {
   applyCallTemplate,
+  callDispatchSelection,
   type CallFormEditContext,
   type CallFormErrorKey,
   type CallFormPickers,
@@ -630,7 +650,7 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
       <ScreenHeader title={title} onBack={() => router.back()} />
       {!isOnline ? isEdit ? <Text className="mx-3 my-2 text-warning-700">{t('calls.edit.offline')}</Text> : <OfflineCallBanner context="form" /> : null}
       {isEdit ? <ProtectedRevealBar onRefresh={() => readDetail({ bypassCache: true })} testID="call-form-reveal-bar" /> : null}
-      <ScrollView contentContainerStyle={StyleSheet.flatten([styles.content, isDesktop ? styles.desktop : null])} keyboardShouldPersistTaps="handled">
+      <KeyboardAwareScrollView contentContainerStyle={StyleSheet.flatten([styles.content, isDesktop ? styles.desktop : null])} keyboardShouldPersistTaps="handled">
         {queuedCall ? (
           <View style={styles.section} className="bg-background-0" testID="call-form-correction">
             <QueuedCallBadge marker={{ localId: queuedCall.localId, state: queuedCall.state }} />
@@ -959,7 +979,7 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
                 >
                   <Text className="text-typography-900">{`${t('calls.select_recipients')}${isPendingCall ? '' : req(NewCallFieldKeys.DispatchList)}`}</Text>
                   <Text size="xs" className="text-typography-500" testID="call-form-dispatch-summary">
-                    {summarizeDispatchSelection(values.dispatch, recipients, { everyone: t('calls.everyone'), none: isPendingCall ? t('common.none') : t('calls.dispatch.none_pages_nobody') })}
+                    {summarizeDispatchSelection(callDispatchSelection(values), recipients, { everyone: t('calls.everyone'), none: isPendingCall ? t('common.none') : t('calls.dispatch.none_pages_nobody') })}
                   </Text>
                 </Pressable>
                 {errors.dispatchList ? (
@@ -1046,7 +1066,7 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
             {isEdit ? t('calls.edit_keyboard_shortcuts') : t('calls.keyboard_shortcuts')}
           </Text>
         ) : null}
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       <DispatchSelectionModal
         isOpen={open === 'dispatch'}

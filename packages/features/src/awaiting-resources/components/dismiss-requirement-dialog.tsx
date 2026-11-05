@@ -1,5 +1,5 @@
 import { useTranslation } from '@resgrid/i18n';
-import { Box, Button, ButtonSpinner, ButtonText, Heading, HStack, Input, InputField, NativeModal, Text, VStack } from '@resgrid/ui';
+import { BottomAnchoredKeyboardView, Box, Button, ButtonSpinner, ButtonText, Heading, HStack, Input, InputField, NativeModal, Text, VStack } from '@resgrid/ui';
 import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 
@@ -35,34 +35,37 @@ export const DismissRequirementDialog: React.FC<DismissRequirementDialogProps> =
   return (
     <NativeModal visible={isOpen} transparent animationType="fade" onRequestClose={dismiss} testID={testID}>
       <Pressable style={styles.backdrop} onPress={dismiss} accessibilityRole="button" accessibilityLabel={t('common.cancel')} testID={`${testID}-backdrop`} />
-      <Box className="flex-1 items-center justify-center p-4" pointerEvents="box-none">
-        <Box className="w-full max-w-md rounded-2xl bg-background-0 p-5" accessibilityViewIsModal>
-          <VStack space="md">
-            <Heading size="md" accessibilityRole="header">
-              {t('awaiting_resources.dismiss_title')}
-            </Heading>
-            <Text>{t('awaiting_resources.dismiss_confirm', { label: requirementLabel ?? '' })}</Text>
-            <Input variant="outline" size="md" isDisabled={isSubmitting}>
-              <InputField
-                testID="dismiss-requirement-note"
-                value={note}
-                onChangeText={setNote}
-                placeholder={t('awaiting_resources.dismiss_note_placeholder')}
-                maxLength={DISMISS_NOTE_MAX_LENGTH}
-                accessibilityLabel={t('awaiting_resources.dismiss_note_placeholder')}
-              />
-            </Input>
-            <HStack space="sm" className="justify-end">
-              <Button variant="outline" action="secondary" onPress={onClose} isDisabled={isSubmitting} testID={`${testID}-cancel`}>
-                <ButtonText>{t('common.cancel')}</ButtonText>
-              </Button>
-              <Button action="negative" onPress={() => onConfirm(note.trim())} isDisabled={isSubmitting} testID={`${testID}-confirm`}>
-                {isSubmitting ? <ButtonSpinner /> : <ButtonText>{t('awaiting_resources.dismiss')}</ButtonText>}
-              </Button>
-            </HStack>
-          </VStack>
+      {/* Centred in the space above the keyboard, so the field and the buttons stay in view while typing. */}
+      <BottomAnchoredKeyboardView pointerEvents="box-none">
+        <Box className="flex-1 items-center justify-center p-4" pointerEvents="box-none">
+          <Box className="w-full max-w-md rounded-2xl bg-background-0 p-5" accessibilityViewIsModal>
+            <VStack space="md">
+              <Heading size="md" accessibilityRole="header">
+                {t('awaiting_resources.dismiss_title')}
+              </Heading>
+              <Text>{t('awaiting_resources.dismiss_confirm', { label: requirementLabel ?? '' })}</Text>
+              <Input variant="outline" size="md" isDisabled={isSubmitting}>
+                <InputField
+                  testID="dismiss-requirement-note"
+                  value={note}
+                  onChangeText={setNote}
+                  placeholder={t('awaiting_resources.dismiss_note_placeholder')}
+                  maxLength={DISMISS_NOTE_MAX_LENGTH}
+                  accessibilityLabel={t('awaiting_resources.dismiss_note_placeholder')}
+                />
+              </Input>
+              <HStack space="sm" className="justify-end">
+                <Button variant="outline" action="secondary" onPress={onClose} isDisabled={isSubmitting} testID={`${testID}-cancel`}>
+                  <ButtonText>{t('common.cancel')}</ButtonText>
+                </Button>
+                <Button action="negative" onPress={() => onConfirm(note.trim())} isDisabled={isSubmitting} testID={`${testID}-confirm`}>
+                  {isSubmitting ? <ButtonSpinner /> : <ButtonText>{t('awaiting_resources.dismiss')}</ButtonText>}
+                </Button>
+              </HStack>
+            </VStack>
+          </Box>
         </Box>
-      </Box>
+      </BottomAnchoredKeyboardView>
     </NativeModal>
   );
 };

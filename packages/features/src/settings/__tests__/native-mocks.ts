@@ -54,4 +54,4 @@ export const realtimeModule = () => ({ useRealtimeStore: mockRealtimeStore });
 
 export const mockTransmitter = { requestBackgroundTracking: jest.fn() };
 
-export const locationModule = () => ({ getLocationTransmitter: () => mockTransmitter });
+export const locationModule = () => ({ getLocationTransmitter: () => mockTransmitter, getRecentLocation: () => null });

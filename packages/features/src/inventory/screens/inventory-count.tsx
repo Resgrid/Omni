@@ -2,7 +2,7 @@ import { selectUnitById, useInventoryStore, useUnitsStore } from '@resgrid/data'
 import { useStatusContext } from '@resgrid/features/status';
 import { useTranslation } from '@resgrid/i18n';
 import { type InventoryCountLine, InventoryCountStatus } from '@resgrid/models';
-import { Button, ButtonSpinner, ButtonText, Loading, ScreenHeader, ScrollView, Text, useFormFactor, useToast, View, VStack, ZeroState } from '@resgrid/ui';
+import { Button, ButtonSpinner, ButtonText, KeyboardAwareScrollView, Loading, ScreenHeader, Text, useFormFactor, useToast, View, VStack, ZeroState } from '@resgrid/ui';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Package } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -175,7 +175,7 @@ export default function InventoryCountScreen({ countId: countIdProp }: Inventory
   return (
     <View className="flex-1 bg-background-0" testID="inventory-count-screen">
       <ScreenHeader title={name} onBack={back} />
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32 }} keyboardShouldPersistTaps="handled">
+      <KeyboardAwareScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32 }} keyboardShouldPersistTaps="handled">
         <VStack space="md">
           <Text className="text-typography-500" testID="inventory-count-summary">
             {[t(`inventory.countStatus.${detail.Count.Status}`), t('inventory.progress', { counted, total: lines.length }), t('inventory.differences', { count: differences.length })].join(' · ')}
@@ -219,7 +219,7 @@ export default function InventoryCountScreen({ countId: countIdProp }: Inventory
             </VStack>
           ) : null}
         </VStack>
-      </ScrollView>
+      </KeyboardAwareScrollView>
       <ConfirmDialog
         isOpen={dialog === 'complete'}
         title={t('inventory.completeTitle')}

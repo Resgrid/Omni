@@ -1,10 +1,12 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import React from 'react';
 import { Pressable as RNPressable, ScrollView, StyleSheet, Text as RNText } from 'react-native';
+import type { JsonElement, JsonNode } from 'test-renderer';
 
 import { FocusAwareStatusBar } from '../focus-aware-status-bar';
 import * as ui from '../index';
 import { SharedTabs, type TabItem } from '../shared-tabs';
+import { lightTokens } from '../theme/tokens';
 
 const { Button, ButtonSpinner, ButtonText, Pressable, Text } = ui;
 
@@ -81,6 +83,30 @@ describe('Button', () => {
   });
 });
 
+/** The rendered subtree whose root carries `testID`. */
+const findJsonNode = (node: JsonElement | null, testID: string): JsonElement | null => {
+  if (!node) return null;
+
+  if (node.props.testID === testID) return node;
+
+  for (const child of node.children) {
+    const found = child instanceof Object ? findJsonNode(child, testID) : null;
+
+    if (found) return found;
+  }
+
+  return null;
+};
+
+/** Every element in the subtree that still carries a className (testID or type, for the failure message). */
+const classedNodes = (node: JsonElement | null): string[] => {
+  if (!node) return [];
+
+  const own = node.props.className === undefined ? [] : [String(node.props.testID ?? node.type)];
+
+  return [...own, ...node.children.flatMap((child: JsonNode) => (child instanceof Object ? classedNodes(child) : []))];
+};
+
 describe('SharedTabs (Responder + Unit)', () => {
   const tabs: TabItem[] = [
     { key: 'details', title: 'call_detail.details', content: <RNText>Details body</RNText> },
@@ -97,12 +123,14 @@ describe('SharedTabs (Responder + Unit)', () => {
     expect(StyleSheet.flatten(screen.getByTestId('shared-tab-details').props.style)).toMatchObject({ flexShrink: 0 });
   });
 
-  it('sizes to its content unless the caller asks it to fill (a flex-1 root inside a ScrollView hid the tab labels on Android)', async () => {
+  it('sizes to its content unless the caller asks it to fill', async () => {
     await render(<SharedTabs tabs={tabs} />);
     expect(String(screen.getByTestId('shared-tabs').props.className ?? '')).not.toMatch(/\bflex-1\b/);
 
     await render(<SharedTabs tabs={tabs} className="flex-1" />);
     expect(screen.getByTestId('shared-tabs').props.className).toContain('flex-1');
+    // The root and the content wrapper may take classes; the bar inside never does (checked per variant below).
+    expect(classedNodes(findJsonNode(screen.toJSON(), 'shared-tabs'))).toContain('shared-tabs');
   });
 
   it('switches content on press and reports the index', async () => {
@@ -172,30 +200,80 @@ describe('SharedTabs (Responder + Unit)', () => {
 
     expect(screen.getByText('5')).toBeTruthy();
     expect(screen.getByText('99+')).toBeTruthy();
-    expect(screen.getByTestId('shared-tab-checkin-badge').props.className).toContain('bg-warning-500');
-    expect(screen.getByTestId('shared-tab-command-badge').props.className).toContain('bg-error-500');
+    expect(StyleSheet.flatten(screen.getByTestId('shared-tab-checkin-badge').props.style)).toMatchObject({ backgroundColor: lightTokens['warning-500'] });
+    expect(StyleSheet.flatten(screen.getByTestId('shared-tab-command-badge').props.style)).toMatchObject({ backgroundColor: lightTokens['error-500'] });
+  });
+
+  // Responder's Status/Staffing bar came up on Android devices, from a cold start, collapsed to its padding with the labels
+  // about 1 px tall: the class layer resolves a label's line height at run time from CSS variables, and the active tab
+  // adds and drops variable-setting classes. The bar is plain styles with fixed metrics instead (BAR LAYOUT).
+  // Page pills keep one readable size (text-sm) in both orientations; the other bars start at text-xs on a portrait phone.
+  it.each([
+    ['segmented', 12, 16],
+    ['pills', 14, 20],
+    ['default', 12, 16],
+    ['underlined', 12, 16],
+  ] as const)('lays out the %s bar from plain styles: no classes, a fixed line height and a height floor', async (variant, fontSize, lineHeight) => {
+    await render(<SharedTabs tabs={tabs} variant={variant} scrollable={false} size="md" />);
+
+    const bar = screen.getByTestId('shared-tabs-bar');
+    const barTree = findJsonNode(screen.toJSON(), 'shared-tabs-bar');
+    expect(barTree).not.toBeNull();
+    expect(classedNodes(barTree)).toEqual([]);
+    expect(StyleSheet.flatten(bar.props.style)).toMatchObject({ flexDirection: 'row', flexShrink: 0 });
+
+    for (const tab of tabs) {
+      const label = StyleSheet.flatten(screen.getByTestId(`shared-tab-${tab.key}-label`).props.style);
+      const button = StyleSheet.flatten(screen.getByTestId(`shared-tab-${tab.key}`).props.style);
+      expect(label).toMatchObject({ fontSize, lineHeight });
+      expect(button).toMatchObject({ flexGrow: 1, flexBasis: 0 });
+      expect(button.minHeight).toBeGreaterThanOrEqual(lineHeight + Number(button.paddingVertical) * 2);
+    }
+  });
+
+  it('keeps the label metrics and only changes colours and weight when the selection moves', async () => {
+    const { rerender } = await render(<SharedTabs tabs={tabs} activeIndex={0} variant="segmented" scrollable={false} />);
+    const before = StyleSheet.flatten(screen.getByTestId('shared-tab-timeline-label').props.style);
+    const beforeTab = StyleSheet.flatten(screen.getByTestId('shared-tab-timeline').props.style);
+
+    await rerender(<SharedTabs tabs={tabs} activeIndex={1} variant="segmented" scrollable={false} />);
+
+    const after = StyleSheet.flatten(screen.getByTestId('shared-tab-timeline-label').props.style);
+    const afterTab = StyleSheet.flatten(screen.getByTestId('shared-tab-timeline').props.style);
+    expect({ fontSize: after.fontSize, lineHeight: after.lineHeight }).toEqual({ fontSize: before.fontSize, lineHeight: before.lineHeight });
+    expect({ minHeight: afterTab.minHeight, paddingVertical: afterTab.paddingVertical }).toEqual({ minHeight: beforeTab.minHeight, paddingVertical: beforeTab.paddingVertical });
+    expect(after).toMatchObject({ fontWeight: '600', color: lightTokens['typography-0'] });
+    expect(before).toMatchObject({ fontWeight: '500', color: lightTokens['typography-600'] });
+    expect(afterTab).toMatchObject({ backgroundColor: lightTokens['primary-600'] });
+  });
+
+  it('takes the caller’s tab and bar styles (touch target, margins)', async () => {
+    await render(<SharedTabs tabs={tabs} variant="segmented" scrollable={false} tabStyle={{ minHeight: 44 }} tabsContainerStyle={{ marginHorizontal: 16 }} />);
+
+    expect(StyleSheet.flatten(screen.getByTestId('shared-tab-details').props.style)).toMatchObject({ minHeight: 44 });
+    expect(StyleSheet.flatten(screen.getByTestId('shared-tabs-bar').props.style)).toMatchObject({ marginHorizontal: 16 });
   });
 
   it('shows overflow indicators based on the horizontal scroll position', async () => {
     await render(<SharedTabs tabs={tabs} />);
-    const scrollView = screen.getByTestId('shared-tabs-scroll-view');
+    const scrollView = screen.getByTestId('shared-tabs-bar-scroll-view');
 
     await fireEvent(scrollView, 'layout', { nativeEvent: { layout: { width: 200 } } });
     await fireEvent(scrollView, 'contentSizeChange', 400, 40);
 
-    expect(screen.queryByTestId('shared-tabs-left-overflow')).toBeNull();
-    expect(screen.getByTestId('shared-tabs-right-overflow')).toBeTruthy();
+    expect(screen.queryByTestId('shared-tabs-bar-left-overflow')).toBeNull();
+    expect(screen.getByTestId('shared-tabs-bar-right-overflow')).toBeTruthy();
 
     await fireEvent.scroll(scrollView, { nativeEvent: { contentOffset: { x: 200, y: 0 } } });
 
-    expect(screen.getByTestId('shared-tabs-left-overflow')).toBeTruthy();
-    expect(screen.queryByTestId('shared-tabs-right-overflow')).toBeNull();
+    expect(screen.getByTestId('shared-tabs-bar-left-overflow')).toBeTruthy();
+    expect(screen.queryByTestId('shared-tabs-bar-right-overflow')).toBeNull();
   });
 
   it('pages the bar towards the hidden tabs when a chevron is pressed (they only hinted before and ignored taps)', async () => {
     const scrollTo = jest.spyOn(ScrollView.prototype, 'scrollTo').mockImplementation(() => undefined);
     await render(<SharedTabs tabs={tabs} />);
-    const scrollView = screen.getByTestId('shared-tabs-scroll-view');
+    const scrollView = screen.getByTestId('shared-tabs-bar-scroll-view');
 
     await fireEvent(scrollView, 'layout', { nativeEvent: { layout: { width: 200 } } });
     await fireEvent(scrollView, 'contentSizeChange', 500, 40);
@@ -206,7 +284,7 @@ describe('SharedTabs (Responder + Unit)', () => {
     expect(scrollTo).toHaveBeenLastCalledWith({ x: 144, animated: true });
 
     await fireEvent.scroll(scrollView, { nativeEvent: { contentOffset: { x: 250, y: 0 } } });
-    await fireEvent.press(screen.getByTestId('shared-tabs-right-overflow'));
+    await fireEvent.press(screen.getByTestId('shared-tabs-bar-right-overflow'));
     // Never past the end of the row.
     expect(scrollTo).toHaveBeenLastCalledWith({ x: 300, animated: true });
 
@@ -214,7 +292,7 @@ describe('SharedTabs (Responder + Unit)', () => {
     expect(scrollTo).toHaveBeenLastCalledWith({ x: 106, animated: true });
 
     await fireEvent.scroll(scrollView, { nativeEvent: { contentOffset: { x: 60, y: 0 } } });
-    await fireEvent.press(screen.getByTestId('shared-tabs-left-overflow'));
+    await fireEvent.press(screen.getByTestId('shared-tabs-bar-left-overflow'));
     // Never before the start.
     expect(scrollTo).toHaveBeenLastCalledWith({ x: 0, animated: true });
 
@@ -223,12 +301,12 @@ describe('SharedTabs (Responder + Unit)', () => {
 
   it('can hide the overflow indicators', async () => {
     await render(<SharedTabs tabs={tabs} showOverflowIndicators={false} />);
-    const scrollView = screen.getByTestId('shared-tabs-scroll-view');
+    const scrollView = screen.getByTestId('shared-tabs-bar-scroll-view');
 
     await fireEvent(scrollView, 'layout', { nativeEvent: { layout: { width: 200 } } });
     await fireEvent(scrollView, 'contentSizeChange', 400, 40);
 
-    expect(screen.queryByTestId('shared-tabs-right-overflow')).toBeNull();
+    expect(screen.queryByTestId('shared-tabs-bar-right-overflow')).toBeNull();
   });
 });
 

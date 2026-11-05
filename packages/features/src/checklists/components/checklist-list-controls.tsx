@@ -1,5 +1,5 @@
 import { useTranslation } from '@resgrid/i18n';
-import { Input, InputField, InputIcon, InputSlot, Pressable, ScrollView, Text } from '@resgrid/ui';
+import { Input, InputField, InputIcon, InputSlot, Pressable, ScrollRow, Text } from '@resgrid/ui';
 import { Search, X } from 'lucide-react-native';
 import React from 'react';
 import { StyleSheet } from 'react-native';
@@ -44,7 +44,7 @@ export interface ChecklistFilterChipsProps<V extends string> {
 export function ChecklistFilterChips<V extends string>({ options, value, onChange, testID }: ChecklistFilterChipsProps<V>) {
   const { t } = useTranslation();
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row} accessibilityRole="radiogroup" accessibilityLabel={t('checklists.ui.filters')} testID={testID}>
+    <ScrollRow contentContainerStyle={styles.row} accessibilityRole="radiogroup" accessibilityLabel={t('checklists.ui.filters')} testID={testID}>
       {options.map((option) => {
         const isSelected = option.value === value;
         return (
@@ -63,7 +63,7 @@ export function ChecklistFilterChips<V extends string>({ options, value, onChang
           </Pressable>
         );
       })}
-    </ScrollView>
+    </ScrollRow>
   );
 }
 

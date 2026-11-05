@@ -1,9 +1,11 @@
 import type { ReactNode } from 'react';
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Animated, Pressable, ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
-import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Animated, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Center } from './center';
+import { BottomAnchoredKeyboardView } from './keyboard-avoiding-view/bottom-anchored';
+import { useKeepFocusedInputVisible } from './keyboard-avoiding-view/keep-focused-input-visible';
 import { NativeModal } from './native-modal';
 import { Spinner } from './spinner';
 import { Text } from './text';
@@ -32,14 +34,23 @@ export const getBottomSheetHeight = (windowHeight: number, snapPoint = 67): numb
 
 /** Backdrop taps are ignored for this long after opening (see below). */
 export const BOTTOM_SHEET_BACKDROP_ARM_DELAY_MS = 300;
+
+/** The least space kept above a sheet the keyboard has pushed up, on a window without a status bar inset. */
+export const BOTTOM_SHEET_TOP_GAP = 20;
+
 const OPEN_DURATION_MS = 250;
 const CLOSE_DURATION_MS = 200;
 const BACKDROP_OPACITY = 0.5;
 
 /**
  * Bottom sheet rendered in a native `Modal`, i.e. its own window above the app (merged from Unit and IC).
- * Toasts shown while it is open render inside that window (NativeModal carries a toast host), all
- * orientations are allowed, and the sheet lifts above the soft keyboard (react-native-keyboard-controller).
+ * Toasts shown while it is open render inside that window (NativeModal carries a toast host) and all
+ * orientations are allowed.
+ *
+ * The soft keyboard never covers it: the sheet sits on top of the keyboard while it is up, shrinks to the
+ * space left above it (never under the status bar), and scrolls the focused field — a status note, a close
+ * reason, a message body — into view. Content inside it scrolls with the sheet's own ScrollView; do not
+ * nest a `KeyboardAwareScrollView`, which would add the keyboard's height a second time.
  *
  * A gluestack overlay (Modal, Actionsheet, Select, Menu, Popover…) opened from inside this sheet
  * must pass `useRNModal` where it supports it. By default those portal to the host at the app root,
@@ -63,6 +74,8 @@ export function CustomBottomSheet({ children, isOpen, onClose, isLoading = false
 
   const translateY = useRef(new Animated.Value(1)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
+  // The sheet gets shorter while the keyboard is up; this scrolls a field left below its visible part back into view.
+  const keepFocusedInputVisible = useKeepFocusedInputVisible(modalVisible);
 
   // Read inside the close-animation callback, which fires after the animation and would otherwise
   // see a stale `isOpen` from the render that started it. Written in a layout effect rather than
@@ -136,11 +149,10 @@ export function CustomBottomSheet({ children, isOpen, onClose, isLoading = false
 
   return (
     <NativeModal visible={modalVisible} transparent animationType="none" statusBarTranslucent onRequestClose={handleClose} testID={testID}>
-      {/* Lifts the bottom-anchored sheet above the soft keyboard so inputs low in the sheet stay visible. */}
-      <KeyboardAvoidingView style={styles.fill} behavior="padding">
+      <View style={styles.fill}>
         {/* Backdrop */}
         <Pressable
-          style={styles.fill}
+          style={styles.backdropArea}
           onPress={backdropEnabled ? handleClose : undefined}
           accessibilityRole="button"
           accessibilityLabel={t('common.close', { defaultValue: 'Close' })}
@@ -150,36 +162,68 @@ export function CustomBottomSheet({ children, isOpen, onClose, isLoading = false
           <Animated.View style={{ ...styles.backdrop, opacity: backdropOpacity }} />
         </Pressable>
 
-        {/* Sheet content */}
-        <Animated.View style={sheetStyle} accessibilityViewIsModal testID={testID ? `${testID}-content` : undefined}>
-          {/* Drag indicator */}
-          <VStack className="w-full items-center py-2">
-            <Center className="h-1 w-16 rounded-full bg-gray-400" />
-          </VStack>
-
-          <ScrollView bounces={false} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" nestedScrollEnabled={true} contentContainerStyle={styles.scrollContent}>
-            <VStack className="w-full flex-1" space="md">
-              {isLoading ? (
-                <Center className="h-32">
-                  <VStack space="sm" className="items-center">
-                    <Spinner size="large" />
-                    {loadingText ? <Text className="text-sm text-typography-500">{loadingText}</Text> : null}
-                  </VStack>
-                </Center>
-              ) : (
-                children
-              )}
+        <SheetKeyboardFrame testID={testID ? `${testID}-keyboard-frame` : undefined}>
+          {/* Sheet content */}
+          <Animated.View style={sheetStyle} accessibilityViewIsModal testID={testID ? `${testID}-content` : undefined}>
+            {/* Drag indicator */}
+            <VStack className="w-full items-center py-2">
+              <Center className="h-1 w-16 rounded-full bg-gray-400" />
             </VStack>
-          </ScrollView>
-        </Animated.View>
-      </KeyboardAvoidingView>
+
+            <ScrollView
+              ref={keepFocusedInputVisible.scrollRef}
+              onScroll={keepFocusedInputVisible.onScroll}
+              scrollEventThrottle={keepFocusedInputVisible.scrollEventThrottle}
+              bounces={false}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              nestedScrollEnabled={true}
+              contentContainerStyle={styles.scrollContent}
+              testID={testID ? `${testID}-sheet-scroll` : undefined}
+            >
+              <VStack className="w-full flex-1" space="md">
+                {isLoading ? (
+                  <Center className="h-32">
+                    <VStack space="sm" className="items-center">
+                      <Spinner size="large" />
+                      {loadingText ? <Text className="text-sm text-typography-500">{loadingText}</Text> : null}
+                    </VStack>
+                  </Center>
+                ) : (
+                  children
+                )}
+              </VStack>
+            </ScrollView>
+          </Animated.View>
+        </SheetKeyboardFrame>
+      </View>
     </NativeModal>
+  );
+}
+
+/**
+ * Holds the sheet at the bottom of the modal window and, while the keyboard is up, on top of it. The sheet is laid out in
+ * this column, not absolutely positioned: an absolute `bottom: 0` child ignores its parent's padding, which is how the
+ * keyboard used to cover a status note. Taps on the empty space above the sheet fall through to the backdrop.
+ * Rendered inside the modal so the safe-area inset is the modal window's.
+ */
+function SheetKeyboardFrame({ children, testID }: { children: ReactNode; testID?: string }) {
+  const insets = useSafeAreaInsets();
+  const frameStyle = useMemo(() => ({ ...styles.frame, paddingTop: Math.max(insets.top, BOTTOM_SHEET_TOP_GAP) }), [insets.top]);
+
+  return (
+    <BottomAnchoredKeyboardView style={frameStyle} pointerEvents="box-none" testID={testID}>
+      {children}
+    </BottomAnchoredKeyboardView>
   );
 }
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
+  backdropArea: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   backdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#000' },
-  sheet: { position: 'absolute', bottom: 0, left: 0, right: 0, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 16, paddingBottom: 24 },
+  frame: { justifyContent: 'flex-end' },
+  // In the frame's column: as tall as its content up to maxHeight, and shorter when the keyboard leaves less room.
+  sheet: { flexShrink: 1, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 16, paddingBottom: 24 },
   scrollContent: { paddingBottom: 8 },
 });

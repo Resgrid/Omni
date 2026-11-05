@@ -11,6 +11,7 @@ export const NOTIFICATION_SOUNDS: NotificationSoundAssets = {
   moderncallhigh: require('./assets/audio/moderncallhigh.wav'),
   moderncalllow: require('./assets/audio/moderncalllow.wav'),
   moderncallmedium: require('./assets/audio/moderncallmedium.wav'),
+  moderncallrenotify: require('./assets/audio/moderncallrenotify.wav'),
   moderncallupdated: require('./assets/audio/moderncallupdated.wav'),
   modernchat: require('./assets/audio/modernchat.wav'),
   modernmessage: require('./assets/audio/modernmessage.wav'),

@@ -251,6 +251,18 @@ describe('ChatConversationScreen', () => {
     }
   });
 
+  it('fetches new messages for the conversation receiving a realtime event', async () => {
+    const loadNewerMessages = jest.fn(async () => undefined);
+    useChatStore.setState({ loadNewerMessages });
+    await render(<ChatConversationScreen channelId="c1" />);
+
+    await act(() => emitRealtimeEvent('chatMessageReceived', JSON.stringify({ ChatChannelId: 'd1' })));
+    expect(loadNewerMessages).not.toHaveBeenCalled();
+
+    await act(() => emitRealtimeEvent('chatMessageReceived', JSON.stringify({ ChatChannelId: 'c1' })));
+    expect(loadNewerMessages).toHaveBeenCalledWith('c1');
+  });
+
   it('passes the unit identity to SetActiveChannel and sends (Unit)', async () => {
     await render(
       <ChatIdentityProvider asUnitId={7}>

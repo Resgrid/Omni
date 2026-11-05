@@ -1,10 +1,10 @@
 import { useTerm } from '@resgrid/auth';
 import { isSafeRouteId } from '@resgrid/core/utils/route-ids';
 import { useTranslation } from '@resgrid/i18n';
-import { ScreenHeader, View, ZeroState } from '@resgrid/ui';
+import { KeyboardAwareScrollView, ScreenHeader, View, ZeroState } from '@resgrid/ui';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
-import { ScrollView, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 import { ShiftDayDetails } from '../components/shift-day-details';
 
@@ -31,9 +31,9 @@ export default function ShiftDayScreen({ shiftDayId, workshift }: ShiftDayScreen
     <View className="flex-1 bg-background-0" testID="shift-day-screen">
       <ScreenHeader title={title} onBack={() => router.back()} testID="shift-day-header" />
       {id ? (
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <KeyboardAwareScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <ShiftDayDetails shiftDayId={id} workshift={isWorkshift} />
-        </ScrollView>
+        </KeyboardAwareScrollView>
       ) : (
         <ZeroState isError heading={t('shifts.errors.not_found')} testID="shift-day-invalid" />
       )}

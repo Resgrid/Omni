@@ -1,11 +1,12 @@
-import React, { useCallback, useEffect, useMemo, useRef } from 'react';
-import { Linking, StyleSheet, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Linking, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { useThemeColors } from '../theme/use-theme-colors';
 import { useTranslation } from '../utils/i18n';
-import { buildHtmlDocument, type HtmlRendererProps, isSafeLink } from './document';
+import { buildHeightReporter, buildHtmlDocument, fitHtmlHeight, HTML_AUTO_HEIGHT_MAX_WINDOW_SHARE, type HtmlRendererProps, isSafeLink, readHeightMessage } from './document';
 
 export type { HtmlRendererProps };
+
 export {
   decodeHtmlEntities,
   decodeHtmlEntitiesIfEncoded,
@@ -44,13 +45,16 @@ const LINK_INTERCEPTOR = `<script>
 /**
  * Server HTML renderer (Unit baseline) — **web & Electron** variant. Renders inside a sandboxed `<iframe>`
  * via `srcDoc` on an opaque origin; input always goes through `sanitizeHtmlContent()`; links open only for
- * http/https/mailto, through `onLinkPress` or a new browser window.
+ * http/https/mailto, through `onLinkPress` or a new browser window. With `autoHeight` the iframe also posts its
+ * document's height, and the container follows it up to `maxHeight`.
  */
 export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
   html,
   style,
   scrollEnabled = false,
   showsVerticalScrollIndicator = false,
+  autoHeight = false,
+  maxHeight,
   textColor,
   backgroundColor,
   linkColor,
@@ -62,6 +66,9 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
   const colors = useThemeColors();
   const { t } = useTranslation();
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const { height: windowHeight } = useWindowDimensions();
+  const [contentHeight, setContentHeight] = useState<number | null>(null);
+  const fitted = autoHeight ? fitHtmlHeight(contentHeight, maxHeight ?? windowHeight * HTML_AUTO_HEIGHT_MAX_WINDOW_SHARE) : null;
 
   const fullHtml = useMemo(
     () =>
@@ -71,13 +78,14 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
         backgroundColor: backgroundColor ?? 'transparent',
         linkColor: linkColor ?? colors.tokens['info-600'],
         customCSS,
-        scrollEnabled,
-        showsVerticalScrollIndicator,
-        trailingMarkup: LINK_INTERCEPTOR,
+        // autoHeight: the iframe is as tall as the content until maxHeight, so overflow only ever shows past it.
+        scrollEnabled: autoHeight || scrollEnabled,
+        showsVerticalScrollIndicator: autoHeight || showsVerticalScrollIndicator,
+        trailingMarkup: autoHeight ? `${LINK_INTERCEPTOR}${buildHeightReporter('web')}` : LINK_INTERCEPTOR,
         includeCharset: true,
         controlOverflow: true,
       }),
-    [html, textColor, backgroundColor, linkColor, customCSS, scrollEnabled, showsVerticalScrollIndicator, colors]
+    [html, textColor, backgroundColor, linkColor, customCSS, scrollEnabled, showsVerticalScrollIndicator, autoHeight, colors]
   );
 
   const handleMessage = useCallback(
@@ -85,25 +93,43 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
       const data = event.data as { type?: unknown; url?: unknown } | null;
       // Only accept messages from our own iframe (its origin is opaque, 'null', so check the source window).
       const frameWindow = iframeRef.current?.contentWindow;
-      if (!data || data.type !== LINK_MESSAGE_TYPE || !frameWindow || event.source !== frameWindow) {
+
+      if (!frameWindow || event.source !== frameWindow) {
         return;
       }
+
+      // Height reports are plain strings; a link message is an object and never matches.
+      const height = readHeightMessage(String(event.data));
+
+      if (height !== null) {
+        if (autoHeight) setContentHeight(height);
+
+        return;
+      }
+
+      if (!data || data.type !== LINK_MESSAGE_TYPE) {
+        return;
+      }
+
       const url = typeof data.url === 'string' ? data.url : '';
+
       // A crafted anchor could otherwise hand us a javascript: or data: URL.
       if (!isSafeLink(url)) {
         return;
       }
+
       if (onLinkPress) {
         onLinkPress(url);
       } else {
         Linking.openURL(url).catch(() => undefined);
       }
     },
-    [onLinkPress]
+    [onLinkPress, autoHeight]
   );
 
   useEffect(() => {
     window.addEventListener('message', handleMessage);
+
     return () => window.removeEventListener('message', handleMessage);
   }, [handleMessage]);
 
@@ -116,7 +142,7 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
   };
 
   return (
-    <View style={StyleSheet.flatten([styles.container, style])} key={rendererKey} testID={testID}>
+    <View style={StyleSheet.flatten([styles.container, style, fitted ? { height: fitted.height } : null])} key={rendererKey} testID={testID}>
       <iframe
         ref={iframeRef}
         srcDoc={fullHtml}

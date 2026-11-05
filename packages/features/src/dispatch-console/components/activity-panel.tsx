@@ -181,7 +181,7 @@ export const ActivityPanel: React.FC<ActivityPanelProps> = ({ selectedCall, call
         return radioLog.length === 0 ? (
           <EmptyState icon={Radio} text={t('dispatch.no_radio_activity')} />
         ) : (
-          <FlatList testID="console-radio-log" data={radioLog} renderItem={renderRadio} keyExtractor={(item: RadioLogEntry) => item.id} contentContainerStyle={styles.list} />
+          <FlatList nestedScrollEnabled testID="console-radio-log" data={radioLog} renderItem={renderRadio} keyExtractor={(item: RadioLogEntry) => item.id} contentContainerStyle={styles.list} />
         );
       case 'actions':
         return <ActionsPanel selectedCall={selectedCall} {...handlers} />;
@@ -192,6 +192,7 @@ export const ActivityPanel: React.FC<ActivityPanelProps> = ({ selectedCall, call
           <EmptyState icon={ShieldCheck} text={t('dispatch_console.no_overdue_check_ins')} />
         ) : (
           <FlatList
+            nestedScrollEnabled
             testID="console-overdue-timers"
             data={overdueTimers}
             renderItem={({ item }: { item: CheckInTimerStatusResultData }) => <CheckInTimerCard timer={item} showCheckInButton={false} />}
@@ -209,12 +210,20 @@ export const ActivityPanel: React.FC<ActivityPanelProps> = ({ selectedCall, call
         return weatherAlerts.length === 0 ? (
           <EmptyState icon={CloudLightning} text={t('dispatch_console.no_weather_alerts')} />
         ) : (
-          <FlatList testID="console-weather-alerts" data={weatherAlerts} renderItem={renderWeather} keyExtractor={(item: WeatherAlertResultData) => item.WeatherAlertId} contentContainerStyle={styles.list} />
+          <FlatList
+            nestedScrollEnabled
+            testID="console-weather-alerts"
+            data={weatherAlerts}
+            renderItem={renderWeather}
+            keyExtractor={(item: WeatherAlertResultData) => item.WeatherAlertId}
+            contentContainerStyle={styles.list}
+          />
         );
       default:
         if (callId && callActivity.length > 0) {
           return (
             <FlatList
+              nestedScrollEnabled
               testID="console-call-activity"
               data={callActivity as DispatchedEventResultData[]}
               renderItem={renderCallActivity}
@@ -227,7 +236,7 @@ export const ActivityPanel: React.FC<ActivityPanelProps> = ({ selectedCall, call
         return filteredLog.length === 0 ? (
           <EmptyState icon={Info} text={callId ? t('dispatch.no_call_activity') : t('dispatch.no_activity')} />
         ) : (
-          <FlatList testID="console-activity-log" data={filteredLog} renderItem={renderActivity} keyExtractor={(item: ActivityLogEntry) => item.id} contentContainerStyle={styles.list} />
+          <FlatList nestedScrollEnabled testID="console-activity-log" data={filteredLog} renderItem={renderActivity} keyExtractor={(item: ActivityLogEntry) => item.id} contentContainerStyle={styles.list} />
         );
     }
   };

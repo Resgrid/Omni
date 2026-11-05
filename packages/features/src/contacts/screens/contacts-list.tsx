@@ -2,7 +2,7 @@ import { useTerm } from '@resgrid/auth';
 import { useContactsStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import { type ContactResultData } from '@resgrid/models';
-import { FlatList, HStack, Input, InputField, InputIcon, InputSlot, Loading, Pressable, RefreshControl, ScrollView, Text, View, ZeroState } from '@resgrid/ui';
+import { FlatList, HStack, Input, InputField, InputIcon, InputSlot, Loading, Pressable, RefreshControl, ScrollRow, Text, View, ZeroState } from '@resgrid/ui';
 import { router } from 'expo-router';
 import { Contact, Search, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -62,7 +62,7 @@ export default function ContactsListScreen({ onSelectContact }: ContactsListScre
         ) : null}
       </Input>
       {categories.length > 0 ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-2" testID="contacts-categories">
+        <ScrollRow className="mb-2" testID="contacts-categories">
           <HStack space="sm">
             {[{ ContactCategoryId: '', Name: t('contacts.all_categories') }, ...categories].map((category) => {
               const selected = (categoryId ?? '') === category.ContactCategoryId;
@@ -80,7 +80,7 @@ export default function ContactsListScreen({ onSelectContact }: ContactsListScre
               );
             })}
           </HStack>
-        </ScrollView>
+        </ScrollRow>
       ) : null}
       {isLoading && !isRefreshing && contacts.length === 0 ? (
         <Loading />

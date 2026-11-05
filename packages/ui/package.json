@@ -13,6 +13,7 @@
     "@resgrid/i18n": "workspace:*",
     "@shopify/flash-list": "catalog:",
     "axios": "catalog:",
+    "expo-crypto": "catalog:",
     "expo-image": "catalog:",
     "expo-navigation-bar": "catalog:",
     "expo-status-bar": "catalog:",

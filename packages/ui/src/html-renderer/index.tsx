@@ -1,11 +1,12 @@
-import React, { useCallback, useMemo } from 'react';
-import { Linking, StyleSheet } from 'react-native';
-import WebView, { type WebViewNavigation } from 'react-native-webview';
+import React, { useCallback, useMemo, useState } from 'react';
+import { Linking, StyleSheet, useWindowDimensions } from 'react-native';
+import WebView, { type WebViewMessageEvent, type WebViewNavigation } from 'react-native-webview';
 
 import { useThemeColors } from '../theme/use-theme-colors';
-import { buildHtmlDocument, type HtmlRendererProps, isSafeLink } from './document';
+import { buildHeightReporter, buildHtmlDocument, createScriptNonce, fitHtmlHeight, HTML_AUTO_HEIGHT_MAX_WINDOW_SHARE, type HtmlRendererProps, isSafeLink, readHeightMessage } from './document';
 
 export type { HtmlRendererProps };
+
 export {
   decodeHtmlEntities,
   decodeHtmlEntitiesIfEncoded,
@@ -34,12 +35,17 @@ const isOwnDocument = (url: string) => url === 'about:blank' || url.startsWith('
  * Server HTML renderer (Unit baseline) — **iOS/Android** variant on react-native-webview. Web and Electron
  * resolve `index.web.tsx` (sandboxed iframe). Input always goes through `sanitizeHtmlContent()`;
  * JavaScript and DOM storage are off by default; links open externally (http/https/mailto only).
+ *
+ * `autoHeight` turns JavaScript on for one app-authored script that reports the document's height; a
+ * Content-Security-Policy with a per-document nonce lets only that script run, never anything in the server HTML.
  */
 export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
   html,
   style,
   scrollEnabled = false,
   showsVerticalScrollIndicator = false,
+  autoHeight = false,
+  maxHeight,
   textColor,
   backgroundColor,
   linkColor,
@@ -51,24 +57,38 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
   testID = 'html-renderer',
 }) => {
   const colors = useThemeColors();
+  const { height: windowHeight } = useWindowDimensions();
+  const [contentHeight, setContentHeight] = useState<number | null>(null);
+  const fitted = autoHeight ? fitHtmlHeight(contentHeight, maxHeight ?? windowHeight * HTML_AUTO_HEIGHT_MAX_WINDOW_SHARE) : null;
+  const canScroll = fitted ? fitted.scrollEnabled : scrollEnabled;
 
-  const fullHtml = useMemo(
-    () =>
-      buildHtmlDocument({
-        html,
-        textColor: textColor ?? colors.tokens['typography-800'],
-        backgroundColor: backgroundColor ?? 'transparent',
-        linkColor: linkColor ?? colors.tokens['info-600'],
-        customCSS,
-      }),
-    [html, textColor, backgroundColor, linkColor, customCSS, colors]
-  );
+  const fullHtml = useMemo(() => {
+    // Every document gets its own nonce: one that loaded before can never let a script into the next.
+    const scriptNonce = autoHeight ? createScriptNonce() : undefined;
+
+    return buildHtmlDocument({
+      html,
+      textColor: textColor ?? colors.tokens['typography-800'],
+      backgroundColor: backgroundColor ?? 'transparent',
+      linkColor: linkColor ?? colors.tokens['info-600'],
+      customCSS,
+      scriptNonce,
+      trailingMarkup: scriptNonce ? buildHeightReporter('native', scriptNonce) : '',
+    });
+  }, [html, textColor, backgroundColor, linkColor, customCSS, colors, autoHeight]);
+
+  const handleMessage = useCallback((event: WebViewMessageEvent) => {
+    const height = readHeightMessage(event.nativeEvent.data);
+
+    if (height !== null) setContentHeight(height);
+  }, []);
 
   const openLink = useCallback(
     (url: string) => {
       if (!isSafeLink(url)) {
         return;
       }
+
       if (onLinkPress) {
         onLinkPress(url);
       } else {
@@ -83,7 +103,9 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
       if (isOwnDocument(request.url)) {
         return true;
       }
+
       openLink(request.url);
+
       return false;
     },
     [openLink]
@@ -93,13 +115,16 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = ({
     <WebView
       key={rendererKey}
       testID={testID}
-      style={StyleSheet.flatten([styles.container, style])}
+      style={StyleSheet.flatten([styles.container, style, fitted ? { height: fitted.height } : null])}
       originWhitelist={HTML_RENDERER_ORIGIN_WHITELIST}
       source={{ html: fullHtml }}
-      scrollEnabled={scrollEnabled}
-      showsVerticalScrollIndicator={showsVerticalScrollIndicator}
+      scrollEnabled={canScroll}
+      // Android: a WebView inside a ScrollView or sheet never gets the drag without this, so long content cannot scroll (iOS nests by default).
+      nestedScrollEnabled={canScroll}
+      showsVerticalScrollIndicator={fitted ? fitted.scrollEnabled || showsVerticalScrollIndicator : showsVerticalScrollIndicator}
       androidLayerType="software"
-      javaScriptEnabled={javaScriptEnabled}
+      javaScriptEnabled={autoHeight || javaScriptEnabled}
+      onMessage={autoHeight ? handleMessage : undefined}
       domStorageEnabled={domStorageEnabled}
       // target="_blank" links (the sanitizer adds it) must stay in this WebView so they reach
       // onShouldStartLoadWithRequest instead of opening a window we do not control.

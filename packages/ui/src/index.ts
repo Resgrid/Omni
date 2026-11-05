@@ -97,6 +97,15 @@ export * from './utils';
 // Tab selection kept in the route, so it survives the screen being rebuilt (Back, a web reload, a link).
 export * from './use-route-tab';
 
+// The tab row alone: SharedTabs' bar, and the strip at the top of a top-level page (edge chevrons when tabs run off).
+export * from './tab-bar';
+
+// A sideways row of chips or filters, with round edge chevrons when chips run off (built on the edge-scroll pieces).
+export * from './scroll-row';
+
+// Edge tracking and chevrons for any other sideways scroller.
+export * from './edge-scroll';
+
 // ─── React Native base components (Responder barrel) ─────────────────
 export { ActivityIndicator, TouchableOpacity } from 'react-native';
 

@@ -34,7 +34,7 @@ export {
   normalizeNavigationApp,
   setNavigationApp,
 } from './lib/navigation-app';
-export { buildNavigationAttempts, openMapsWithAddress, openMapsWithDirections, toNavigationCoordinates } from './lib/navigation-handoff';
+export { buildNavigationAttempts, openMapsWithAddress, openMapsWithDirections, openNavigationTarget, toNavigationCoordinates } from './lib/navigation-handoff';
 export {
   BACKGROUND_GEOLOCATION_KEY,
   getKeepAlivePreference,

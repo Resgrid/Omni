@@ -83,7 +83,7 @@ export const ActionsPanel: React.FC<ActionsPanelProps> = ({ selectedCall, onCrea
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.content} testID="console-actions">
+    <ScrollView nestedScrollEnabled contentContainerStyle={styles.content} testID="console-actions">
       {bulkUnits.length > 0 ? (
         <VStack className="mb-3 rounded-lg border border-primary-200 bg-primary-50 p-3" testID="console-bulk-actions">
           <Text className="font-semibold">{t('dispatch.bulk_unit_actions.selected_count', { count: bulkUnits.length })}</Text>

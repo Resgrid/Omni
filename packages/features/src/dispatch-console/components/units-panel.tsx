@@ -144,6 +144,7 @@ export const UnitsPanel: React.FC<UnitsPanelProps> = ({ callFilter, onSelectUnit
       <PanelSearch value={query} onChange={setQuery} placeholder={t('dispatch_console.search_units')} testID="units-search" />
       {isSelectionMode ? <SelectionBar count={selectedUnitIds.length} onSelectAll={() => useConsoleStore.getState().addUnitsToSelection(visible.map((unit) => unit.UnitId))} /> : null}
       <FlatList
+        nestedScrollEnabled
         testID="units-list"
         data={visible}
         renderItem={renderItem}

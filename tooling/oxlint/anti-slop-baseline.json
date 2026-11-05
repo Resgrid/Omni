@@ -527,9 +527,6 @@
     "anti-slop/require-readable-spacing": 2,
     "anti-slop/require-safety-comment-for-type-assertion": 3
   },
-  "packages/app-shell/src/init/app-init.ts": {
-    "anti-slop/require-readable-spacing": 4
-  },
   "packages/app-shell/src/init/create-app-init.ts": {
     "anti-slop/no-runtime-typeof": 1,
     "anti-slop/no-unknown-parameters": 1,
@@ -638,7 +635,6 @@
   },
   "packages/app-shell/src/shell/__tests__/create-app-shell.test.tsx": {
     "anti-slop/no-chained-type-assertions": 2,
-    "anti-slop/require-readable-spacing": 7,
     "anti-slop/require-safety-comment-for-type-assertion": 6
   },
   "packages/app-shell/src/shell/create-app-shell.tsx": {
@@ -650,9 +646,6 @@
     "anti-slop/no-known-value-widening": 1,
     "anti-slop/require-readable-spacing": 14,
     "anti-slop/require-safety-comment-for-type-assertion": 1
-  },
-  "packages/app-shell/src/shell/overlays.tsx": {
-    "anti-slop/require-readable-spacing": 9
   },
   "packages/app-shell/src/shell/registered-providers.tsx": {
     "anti-slop/require-readable-spacing": 2
@@ -1449,9 +1442,6 @@
     "anti-slop/require-readable-spacing": 4,
     "anti-slop/require-safety-comment-for-type-assertion": 3
   },
-  "packages/data/src/core/__tests__/core.test.ts": {
-    "anti-slop/require-readable-spacing": 3
-  },
   "packages/data/src/core/envelope.ts": {
     "anti-slop/no-unknown-parameters": 1,
     "anti-slop/require-readable-spacing": 7,
@@ -1884,16 +1874,12 @@
   "packages/features/src/calendar/__tests__/calendar.test.tsx": {
     "anti-slop/no-object-parameters": 2,
     "anti-slop/no-unsafe-dictionary-type": 1,
-    "anti-slop/require-readable-spacing": 4,
     "anti-slop/require-safety-comment-for-type-assertion": 2
   },
   "packages/features/src/calendar/__tests__/test-setup.ts": {
     "anti-slop/no-runtime-typeof": 2,
     "anti-slop/no-unknown-parameters": 2,
     "anti-slop/no-unsafe-dictionary-type": 1,
-    "anti-slop/require-readable-spacing": 6
-  },
-  "packages/features/src/calendar/components/calendar-item-details-sheet.tsx": {
     "anti-slop/require-readable-spacing": 6
   },
   "packages/features/src/calendar/components/month-calendar.tsx": {
@@ -2019,10 +2005,6 @@
     "anti-slop/no-known-value-widening": 1,
     "anti-slop/require-readable-spacing": 5
   },
-  "packages/features/src/calls/components/dispatch-selection.tsx": {
-    "anti-slop/require-readable-spacing": 8,
-    "anti-slop/require-safety-comment-for-type-assertion": 1
-  },
   "packages/features/src/calls/components/dispatch-ticker.tsx": {
     "anti-slop/require-readable-spacing": 3
   },
@@ -2094,7 +2076,7 @@
     "anti-slop/require-safety-comment-for-type-assertion": 3
   },
   "packages/features/src/calls/screens/call-list.tsx": {
-    "anti-slop/require-readable-spacing": 6
+    "anti-slop/require-readable-spacing": 5
   },
   "packages/features/src/calls/screens/call-new.tsx": {
     "anti-slop/require-readable-spacing": 1
@@ -2970,11 +2952,7 @@
   },
   "packages/features/src/messages/__tests__/messages.test.tsx": {
     "anti-slop/no-known-value-widening": 1,
-    "anti-slop/require-readable-spacing": 2,
-    "anti-slop/require-safety-comment-for-type-assertion": 11
-  },
-  "packages/features/src/messages/components/compose-message-sheet.tsx": {
-    "anti-slop/require-readable-spacing": 14
+    "anti-slop/require-safety-comment-for-type-assertion": 10
   },
   "packages/features/src/messages/components/confirm-sheet.tsx": {
     "anti-slop/require-readable-spacing": 1
@@ -2991,15 +2969,11 @@
   "packages/features/src/messages/index.ts": {
     "anti-slop/require-readable-spacing": 7
   },
-  "packages/features/src/messages/lib/message-format.ts": {
-    "anti-slop/no-known-value-widening": 1,
-    "anti-slop/require-readable-spacing": 9
-  },
   "packages/features/src/messages/routes.ts": {
     "anti-slop/require-readable-spacing": 1
   },
   "packages/features/src/messages/screens/messages.tsx": {
-    "anti-slop/require-readable-spacing": 11
+    "anti-slop/require-readable-spacing": 10
   },
   "packages/features/src/navigation-eta/__tests__/navigation-eta.test.tsx": {
     "anti-slop/no-unsafe-dictionary-type": 1,
@@ -3045,9 +3019,6 @@
   },
   "packages/features/src/notes/__tests__/notes.test.tsx": {
     "anti-slop/require-safety-comment-for-type-assertion": 1
-  },
-  "packages/features/src/notes/components/note-details-sheet.tsx": {
-    "anti-slop/require-readable-spacing": 1
   },
   "packages/features/src/notes/index.ts": {
     "anti-slop/require-readable-spacing": 4
@@ -3190,12 +3161,6 @@
     "anti-slop/require-safety-comment-for-type-assertion": 1
   },
   "packages/features/src/protocols/components/protocol-card.tsx": {
-    "anti-slop/require-readable-spacing": 1
-  },
-  "packages/features/src/protocols/components/protocol-content.tsx": {
-    "anti-slop/require-readable-spacing": 1
-  },
-  "packages/features/src/protocols/components/protocol-details-sheet.tsx": {
     "anti-slop/require-readable-spacing": 1
   },
   "packages/features/src/protocols/index.ts": {
@@ -3473,9 +3438,6 @@
   "packages/features/src/shifts/components/shift-lists.tsx": {
     "anti-slop/require-readable-spacing": 11
   },
-  "packages/features/src/shifts/components/shift-segment-bar.tsx": {
-    "anti-slop/require-readable-spacing": 2
-  },
   "packages/features/src/shifts/components/shift-select-row.tsx": {
     "anti-slop/require-readable-spacing": 1
   },
@@ -3490,7 +3452,7 @@
     "anti-slop/require-readable-spacing": 3
   },
   "packages/features/src/shifts/index.ts": {
-    "anti-slop/require-readable-spacing": 18
+    "anti-slop/require-readable-spacing": 17
   },
   "packages/features/src/shifts/lib/shift-loaders.ts": {
     "anti-slop/require-readable-spacing": 16,
@@ -3792,7 +3754,7 @@
     "anti-slop/require-safety-comment-for-type-assertion": 2
   },
   "packages/features/src/weather-alerts/components/severity-filter-tabs.tsx": {
-    "anti-slop/require-readable-spacing": 2
+    "anti-slop/require-readable-spacing": 1
   },
   "packages/features/src/weather-alerts/components/weather-alert-banner.tsx": {
     "anti-slop/require-readable-spacing": 1
@@ -4975,7 +4937,6 @@
   },
   "packages/notifications/src/__tests__/channels.test.ts": {
     "anti-slop/no-known-value-widening": 1,
-    "anti-slop/require-readable-spacing": 7,
     "anti-slop/require-safety-comment-for-type-assertion": 1
   },
   "packages/notifications/src/__tests__/deep-links.test.ts": {
@@ -5541,9 +5502,6 @@
   "packages/ui/src/common/__tests__/common.test.tsx": {
     "anti-slop/require-readable-spacing": 1
   },
-  "packages/ui/src/common/date-time-field.tsx": {
-    "anti-slop/require-readable-spacing": 15
-  },
   "packages/ui/src/common/date-time-picker.ts": {
     "anti-slop/require-readable-spacing": 8
   },
@@ -5617,12 +5575,10 @@
     "anti-slop/no-runtime-typeof": 1,
     "anti-slop/no-unknown-parameters": 2,
     "anti-slop/no-unsafe-dictionary-type": 1,
-    "anti-slop/require-readable-spacing": 9,
     "anti-slop/require-safety-comment-for-type-assertion": 7
   },
   "packages/ui/src/html-renderer/document.ts": {
-    "anti-slop/no-runtime-typeof": 1,
-    "anti-slop/require-readable-spacing": 1
+    "anti-slop/no-runtime-typeof": 1
   },
   "packages/ui/src/html-renderer/html-entities.ts": {
     "anti-slop/no-known-value-widening": 2,
@@ -5631,12 +5587,8 @@
   "packages/ui/src/html-renderer/html.ts": {
     "anti-slop/require-readable-spacing": 2
   },
-  "packages/ui/src/html-renderer/index.tsx": {
-    "anti-slop/require-readable-spacing": 4
-  },
   "packages/ui/src/html-renderer/index.web.tsx": {
     "anti-slop/no-runtime-typeof": 1,
-    "anti-slop/require-readable-spacing": 6,
     "anti-slop/require-safety-comment-for-type-assertion": 1
   },
   "packages/ui/src/icon/index.tsx": {
@@ -5664,7 +5616,7 @@
     "anti-slop/require-readable-spacing": 7
   },
   "packages/ui/src/keyboard-avoiding-view/index.tsx": {
-    "anti-slop/require-readable-spacing": 2
+    "anti-slop/require-readable-spacing": 1
   },
   "packages/ui/src/layout/__tests__/use-form-factor.test.tsx": {
     "anti-slop/no-chained-type-assertions": 1,
@@ -5749,8 +5701,7 @@
     "anti-slop/require-safety-comment-for-type-assertion": 23
   },
   "packages/ui/src/shared-tabs.tsx": {
-    "anti-slop/no-runtime-typeof": 1,
-    "anti-slop/require-readable-spacing": 15
+    "anti-slop/no-runtime-typeof": 1
   },
   "packages/ui/src/side-drawer.tsx": {
     "anti-slop/require-readable-spacing": 3

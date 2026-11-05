@@ -5,11 +5,11 @@ import { useIsOnline } from '@resgrid/features/calls';
 import { ProtectedRevealBar } from '@resgrid/features/data-protection';
 import { useTranslation } from '@resgrid/i18n';
 import { type RecordData, RmsRecordState } from '@resgrid/models';
-import { Badge, BadgeText, Button, ButtonText, Heading, Loading, ScreenHeader, Text, ZeroState } from '@resgrid/ui';
+import { Badge, BadgeText, Button, ButtonText, Heading, KeyboardAwareScrollView, Loading, ScreenHeader, Text, ZeroState } from '@resgrid/ui';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { FileText } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { RecordAttachments } from '../components/record-attachments';
 import { RecordForm } from '../components/record-form';
@@ -186,7 +186,7 @@ function RecordDetail({ id, showHeader, recordsTitle }: { id: string; showHeader
     <View style={styles.screen} className="bg-background-0" testID="record-detail-screen">
       {header(record.RecordNumber ?? record.DraftReference ?? recordsTitle)}
       <ProtectedRevealBar onRefresh={refresh} testID="record-protected-bar" />
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <KeyboardAwareScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <ContentFrame>
           <View style={styles.summary}>
             <Heading size="sm">{typeName || recordsTitle}</Heading>
@@ -245,7 +245,7 @@ function RecordDetail({ id, showHeader, recordsTitle }: { id: string; showHeader
             </View>
           ) : null}
         </ContentFrame>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </View>
   );
 }

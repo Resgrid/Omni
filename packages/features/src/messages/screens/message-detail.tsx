@@ -2,10 +2,10 @@ import { useAuthStore } from '@resgrid/auth';
 import { isSafeRouteId } from '@resgrid/core/utils/route-ids';
 import { useMessagesStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
-import { ScreenHeader, View, ZeroState } from '@resgrid/ui';
+import { KeyboardAwareScrollView, ScreenHeader, View, ZeroState } from '@resgrid/ui';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
-import { ScrollView, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 import { MessageDetails } from '../components/message-details';
 
@@ -29,9 +29,9 @@ export default function MessageDetailScreen({ messageId }: MessageDetailScreenPr
     <View className="flex-1 bg-background-0" testID="message-detail-screen">
       <ScreenHeader title={t('messages.title')} onBack={() => router.back()} testID="message-detail-header" />
       {id ? (
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <KeyboardAwareScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <MessageDetails messageId={id} fallback={fallback} isOwn={isOwn} onDeleted={() => router.back()} />
-        </ScrollView>
+        </KeyboardAwareScrollView>
       ) : (
         <ZeroState isError heading={t('messages.not_found')} testID="message-detail-invalid" />
       )}

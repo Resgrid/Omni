@@ -11,6 +11,7 @@ import { createKeyedFlight } from '../keyed-flight';
 import { classifyDataWriteError } from '../outbox';
 import { dataPersistOptions, registerPersistedStore, setDataStorage } from '../persist';
 import { DataNotConfiguredError, defaultIdGenerator, getDataApiContext, resetDataRuntimeForTests, setDataLocationProvider } from '../runtime';
+import { createSliceRunner, emptySliceMeta, type SliceMeta } from '../slices';
 import { gpsFields, statusTimestamps } from '../status-fields';
 
 afterEach(() => resetDataRuntimeForTests());
@@ -57,12 +58,14 @@ describe('keyed flight', () => {
     const flight = createKeyedFlight();
     let calls = 0;
     let release: () => void = () => undefined;
+
     const fn = () =>
       new Promise<number>((resolve) => {
         calls++;
         const n = calls;
         release = () => resolve(n);
       });
+
     const a = flight.run('k', fn);
     const b = flight.run('k', fn);
     const c = flight.run('k', fn, { trailing: true });
@@ -78,11 +81,66 @@ describe('keyed flight', () => {
   });
 });
 
+describe('slice runner race lanes', () => {
+  type State = SliceMeta<'items'> & { applied: string[] };
+
+  const deferred = () => {
+    let resolve: (value: string) => void = () => undefined;
+
+    const promise = new Promise<string>((done) => {
+      resolve = done;
+    });
+
+    return { promise, resolve };
+  };
+
+  const setup = () => {
+    const store = create<State>(() => ({ ...emptySliceMeta<'items'>(), applied: [] }));
+    const runner = createSliceRunner<'items', State>('test', store.setState);
+
+    const run = (fetched: Promise<string>, options: { flightKey: string; raceKey?: string }) =>
+      runner.run(
+        'items',
+        () => fetched,
+        (value, current) => ({ applied: [...current.applied, value] }),
+        options
+      );
+
+    return { applied: () => store.getState().applied, run };
+  };
+
+  it('drops an older answer in the same lane, and keeps one in its own lane', async () => {
+    const { applied, run } = setup();
+    const page = deferred();
+    const refresh = deferred();
+    const sameLane = run(page.promise, { flightKey: 'page' });
+    const newer = run(refresh.promise, { flightKey: 'refresh' });
+
+    page.resolve('page');
+    refresh.resolve('refresh');
+    await expect(sameLane).resolves.toEqual({ ok: false, stale: true });
+    await newer;
+    expect(applied()).toEqual(['refresh']);
+
+    const ownLanePage = deferred();
+    const laterRefresh = deferred();
+    const ownLane = run(ownLanePage.promise, { flightKey: 'older', raceKey: 'older' });
+    const refreshed = run(laterRefresh.promise, { flightKey: 'refresh' });
+
+    ownLanePage.resolve('older page');
+    laterRefresh.resolve('refresh 2');
+    await expect(ownLane).resolves.toEqual({ ok: true, value: 'older page' });
+    await refreshed;
+    expect(applied()).toEqual(['refresh', 'older page', 'refresh 2']);
+  });
+});
+
 describe('late-bound persistence', () => {
   it('writes nothing before storage is set, then rehydrates every registered store from it', async () => {
     const useStore = create<{ value: number; loading: boolean; bump: () => void }>()(
       persist((set) => ({ value: 0, loading: false, bump: () => set((s) => ({ value: s.value + 1, loading: true })) }), dataPersistOptions({ name: 'omni-test', partialize: (s) => ({ value: s.value }) }))
     );
+
     registerPersistedStore('omni-test', useStore);
     const kv = new DurableKv(createMemoryKvBackend('persist-test'));
     kv.set('omni-test', JSON.stringify({ state: { value: 41 }, version: 0 }));

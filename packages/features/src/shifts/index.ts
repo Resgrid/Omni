@@ -16,7 +16,6 @@ export { ShiftDayCard, type ShiftDayCardProps } from './components/shift-day-car
 export { ShiftDayDetails, type ShiftDayDetailsProps } from './components/shift-day-details';
 export { ShiftDayDetailsSheet, type ShiftDayDetailsSheetProps } from './components/shift-day-details-sheet';
 export { ShiftApprovalsList, type ShiftApprovalsListProps, ShiftOnDutyList, type ShiftOnDutyListProps, type ShiftTradesFilter, ShiftTradesList, type ShiftTradesListProps } from './components/shift-lists';
-export { type ShiftSegment, ShiftSegmentBar, type ShiftSegmentBarProps } from './components/shift-segment-bar';
 export { ShiftSelectRow, type ShiftSelectRowProps } from './components/shift-select-row';
 export { ShiftDetailsSheet, type ShiftDetailsSheetProps, ShiftTradeDetailsSheet, type ShiftTradeDetailsSheetProps } from './components/shift-sheets';
 export { ShiftTradeActionButtons, ShiftTradeCard, type ShiftTradeCardProps, ShiftTradeOfferRow } from './components/shift-trade-card';

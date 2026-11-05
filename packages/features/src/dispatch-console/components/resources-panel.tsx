@@ -144,6 +144,7 @@ export const ResourcesPanel: React.FC<ResourcesPanelProps> = ({ callFilter, onSe
     >
       <PanelSearch value={query} onChange={setQuery} placeholder={t('dispatch_console.search_resources')} testID="resources-search" />
       <FlatList
+        nestedScrollEnabled
         testID="resources-list"
         data={rows}
         renderItem={renderItem}

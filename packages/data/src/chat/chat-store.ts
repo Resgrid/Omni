@@ -348,7 +348,7 @@ export const useChatStore = create<ChatState>()(
           if (!result.ok && !result.stale) set((state) => ({ incidentChannelsStatusByCallId: { ...state.incidentChannelsStatusByCallId, [callId]: 'failed' } }));
         },
 
-        loadInitialMessages: async (channelId) => {
+        loadInitialMessages: async (channelId, options) => {
           await runner.run(
             'messages',
             async () => unwrapList(await getChatMessages(getDataApiContext(), { channelId, limit: CHAT_PAGE_SIZE })),
@@ -363,7 +363,8 @@ export const useChatStore = create<ChatState>()(
               },
               hasMoreByChannel: { ...state.hasMoreByChannel, [channelId]: list.length >= CHAT_PAGE_SIZE },
             }),
-            { flightKey: `messages:${channelId}` }
+            // A realtime refresh queues a run after one in flight: the page it shares may predate the new message.
+            { flightKey: `messages:${channelId}`, trailing: options?.bypassCache === true }
           );
         },
 
@@ -378,14 +379,15 @@ export const useChatStore = create<ChatState>()(
               messagesByChannel: { ...state.messagesByChannel, [channelId]: mergeMessages(state.messagesByChannel[channelId] ?? [], list) },
               hasMoreByChannel: { ...state.hasMoreByChannel, [channelId]: list.length >= CHAT_PAGE_SIZE },
             }),
-            { flightKey: `older:${channelId}`, silent: true }
+            // Its own race lane: a message arriving while the page loads must not drop the page as stale (it is merged in).
+            { flightKey: `older:${channelId}`, raceKey: `older:${channelId}`, silent: true }
           );
         },
 
         loadNewerMessages: async (channelId) => {
           const confirmed = (get().messagesByChannel[channelId] ?? []).filter((m) => m.MessageSeq < PENDING_SEQ_BASE);
           const afterSeq = confirmed[confirmed.length - 1]?.MessageSeq;
-          if (afterSeq === undefined) return get().loadInitialMessages(channelId);
+          if (afterSeq === undefined) return get().loadInitialMessages(channelId, { bypassCache: true });
           await runner.run(
             'messages',
             async () => unwrapList(await getChatMessagesAfter(getDataApiContext(), { channelId, afterSeq, limit: CHAT_PAGE_SIZE })),

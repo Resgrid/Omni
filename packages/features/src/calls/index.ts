@@ -38,6 +38,18 @@ export { type ChipOption, OptionChips, type OptionChipsProps } from './component
 export { QUEUED_CALL_COLORS, QueuedCallBadge, type QueuedCallBadgeProps } from './components/queued-call-badge';
 export { SyncedCallNoticeRow, SyncedCallNotices, type SyncedCallNoticesProps } from './components/synced-call-notices';
 
+// Recipient picker: who a call's dispatch or a new message goes to
+export {
+  emptyRecipientSelection,
+  everyoneRecipientSelection,
+  type RecipientPickerEntry,
+  RecipientPickerModal,
+  type RecipientPickerModalProps,
+  type RecipientPickerSection,
+  type RecipientPickerSelection,
+  summarizeRecipientSelection,
+} from './components/recipient-picker';
+
 // Detail tab registry
 export { BUILT_IN_CALL_DETAIL_TABS, CALL_DETAIL_TAB_IDS, registerBuiltInCallDetailTabs } from './detail-tabs/built-in-tabs';
 export { type CallDetailTabContext, type CallDetailTabDefinition, getCallDetailTabs, registerCallDetailTab, resolveCallDetailTabs, unregisterCallDetailTab, useRegisteredCallDetailTabs } from './detail-tabs/registry';

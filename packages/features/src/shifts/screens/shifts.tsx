@@ -2,7 +2,27 @@ import { useTerm } from '@resgrid/auth';
 import { useShiftsStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import type { PendingShiftSignupResultData, ShiftDayResultData, ShiftResultData, ShiftTradeResultData } from '@resgrid/models';
-import { Button, ButtonText, FlatList, HStack, Input, InputField, InputIcon, InputSlot, Loading, Pressable, RefreshControl, ScrollView, Text, useThemeColors, View, VStack, ZeroState } from '@resgrid/ui';
+import {
+  Button,
+  ButtonText,
+  FlatList,
+  HStack,
+  Input,
+  InputField,
+  InputIcon,
+  InputSlot,
+  Loading,
+  Pressable,
+  RefreshControl,
+  ScrollRow,
+  TabBar,
+  type TabBarItem,
+  Text,
+  useThemeColors,
+  View,
+  VStack,
+  ZeroState,
+} from '@resgrid/ui';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { CalendarDays, Info, Search, X } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
@@ -14,7 +34,6 @@ import { ShiftCard } from '../components/shift-card';
 import { ShiftDayCard } from '../components/shift-day-card';
 import { ShiftDayDetailsSheet } from '../components/shift-day-details-sheet';
 import { ShiftApprovalsList, ShiftOnDutyList, type ShiftTradesFilter, ShiftTradesList } from '../components/shift-lists';
-import { type ShiftSegment, ShiftSegmentBar } from '../components/shift-segment-bar';
 import { ShiftDetailsSheet, ShiftTradeDetailsSheet } from '../components/shift-sheets';
 import { useShiftDayLists } from '../hooks/use-shift-day-lists';
 import type { ShiftSheetAction, ShiftTradeAction } from '../lib/shift-action-types';
@@ -92,8 +111,9 @@ export default function ShiftsScreen({ initialView }: ShiftsScreenProps) {
     if (activeView !== 'approvals') void useShiftsStore.getState().fetchPendingApprovals();
   }, [activeView, calendar]);
 
-  const segments = useMemo<ShiftSegment[]>(() => {
-    const list: ShiftSegment[] = [
+  // The page tab strip: pills that scroll on a phone, with edge chevrons while views are off-screen.
+  const segments = useMemo<TabBarItem<ShiftView>[]>(() => {
+    const list: { key: ShiftView; label: string; badge?: number }[] = [
       { key: 'today', label: t('shifts.segments.today') },
       { key: 'mine', label: t('shifts.segments.mine') },
       { key: 'signup', label: t('shifts.segments.signup') },
@@ -102,7 +122,14 @@ export default function ShiftsScreen({ initialView }: ShiftsScreenProps) {
       { key: 'onduty', label: t('shifts.segments.on_duty') },
     ];
     if (isSupervisor) list.push({ key: 'approvals', label: t('shifts.segments.approvals'), badge: pendingSignups.length + pendingTrades.length });
-    return list;
+    return list.map(({ key, label, badge = 0 }) => ({
+      key,
+      label,
+      badge,
+      accessibilityLabel: badge > 0 ? t('shifts.segments.with_count', { label, count: badge }) : label,
+      accessibilityHint: t('shifts.segments.a11y_hint'),
+      testID: `shifts-segment-${key}`,
+    }));
   }, [t, isSupervisor, openTrades, pendingSignups.length, pendingTrades.length]);
 
   // The day sheet, the shift sheet and the trade sheet never stack; a trade action closes the trade sheet first.
@@ -259,10 +286,10 @@ export default function ShiftsScreen({ initialView }: ShiftsScreenProps) {
             ListHeaderComponent={
               <VStack space="sm">
                 <HStack className="items-center pr-4">
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips} accessibilityLabel={t('shifts.calendar_view.filter_a11y')}>
+                  <ScrollRow style={styles.chipRow} contentContainerStyle={styles.chips} accessibilityLabel={t('shifts.calendar_view.filter_a11y')} testID="shifts-calendar-filters">
                     {chip('all', t('shifts.all_shifts'), calendarShiftId === null, () => filterCalendar(null), 'shifts-calendar-filter-all')}
                     {shifts.map((shift) => chip(shift.ShiftId, shift.Name, calendarShiftId === shift.ShiftId, () => filterCalendar(shift.ShiftId), `shifts-calendar-filter-${shift.ShiftId}`))}
-                  </ScrollView>
+                  </ScrollRow>
                   {calendarShiftId ? (
                     <Pressable
                       onPress={() => setOpenShift(shifts.find((shift) => shift.ShiftId === calendarShiftId) ?? null)}
@@ -336,7 +363,7 @@ export default function ShiftsScreen({ initialView }: ShiftsScreenProps) {
 
   return (
     <View className="flex-1 bg-background-50" testID="shifts-screen" accessibilityLabel={title}>
-      <ShiftSegmentBar segments={segments} active={activeView} onChange={changeView} />
+      <TabBar tabs={segments} activeKey={activeView} onChange={changeView} variant="pills" accessibilityLabel={title} testID="shifts-segment-bar" />
       {showSearch ? (
         <View className="px-4 pb-1 pt-3">
           <Input variant="outline" size="md" className="bg-background-0">
@@ -365,5 +392,7 @@ export default function ShiftsScreen({ initialView }: ShiftsScreenProps) {
 const styles = StyleSheet.create({
   list: { paddingHorizontal: 16, paddingBottom: 24 },
   calendar: { paddingBottom: 24 },
+  // The filter row fills what the info button leaves.
+  chipRow: { flexGrow: 1, flexShrink: 1 },
   chips: { paddingLeft: 16, paddingRight: 8, paddingVertical: 4 },
 });

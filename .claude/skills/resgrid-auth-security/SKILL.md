@@ -45,4 +45,5 @@ Omni baselines: `docs/architecture/omni-plan.md` §7.3; API details in the `resg
 ## Rendering untrusted content
 
 - Server HTML (call notes, protocols, messages) renders only through `@resgrid/ui` `HtmlRenderer`, after `sanitizeHtmlContent()` (`sanitize-html` pinned to exactly **2.17.0** — later versions pull ESM-only htmlparser2 that breaks Jest/Hermes). Web uses an iframe **without** `allow-same-origin`; links limited to http/https/mailto. No `originWhitelist={['*']}`.
+- `HtmlRenderer` keeps native WebView JavaScript off, except `autoHeight` (content-fitting text in sheets and panels): it runs one app-authored height reporter under a per-document nonce CSP (`script-src 'nonce-…'`), so server markup still cannot run script. Never turn JavaScript on any other way for server HTML.
 - Deep-link/push ids pass `isSafeRouteId` before routing.

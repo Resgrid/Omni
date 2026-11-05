@@ -64,7 +64,7 @@ describe('ShiftsScreen', () => {
       useShiftsStore.setState({ pendingApprovals: { IsSupervisor: true, Signups: [makeSignup('p1')], Trades: [] } });
     });
     await rerender(<ShiftsScreen />);
-    expect(screen.getByTestId('shifts-segment-badge-approvals')).toHaveTextContent('1');
+    expect(screen.getByTestId('shifts-segment-approvals-badge')).toHaveTextContent('1');
 
     await fireEvent.press(screen.getByTestId('shifts-segment-approvals'));
     await fireEvent.press(screen.getByTestId('signup-approve-p1'));
@@ -151,7 +151,7 @@ describe('ShiftsScreen', () => {
       myShiftDays: [makeDay('mine1', { MySignupId: 'sig1', MyStatus: ShiftDayMyStatus.OnRoster })],
     });
     await render(<ShiftsScreen initialView="trades" />);
-    expect(screen.getByTestId('shifts-segment-badge-trades')).toHaveTextContent('1');
+    expect(screen.getByTestId('shifts-segment-trades-badge')).toHaveTextContent('1');
     await fireEvent.press(screen.getByTestId('trade-apply-t1'));
     await fireEvent.press(screen.getByTestId('swap-option-sig1', q));
     await fireEvent.press(screen.getByTestId('shift-action-confirm', q));

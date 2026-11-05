@@ -4,7 +4,7 @@ import { CallNotesPanel } from '@resgrid/features/calls';
 import { NoteCard, NoteDetailsSheet } from '@resgrid/features/notes';
 import { useTranslation } from '@resgrid/i18n';
 import type { NoteResultData } from '@resgrid/models';
-import { FlatList, Text } from '@resgrid/ui';
+import { FlatList, ScrollView, Text, useKeepFocusedInputVisible } from '@resgrid/ui';
 import { FileText, Plus, RefreshCw } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -56,11 +56,12 @@ export const NotesPanel: React.FC<NotesPanelProps> = ({ callId, onNewNote, flex,
       }
     >
       {callId ? (
-        <CallNotesPanel callId={callId} showSearch={false} />
+        <CallNotesScroll callId={callId} />
       ) : (
         <>
           <PanelSearch value={query} onChange={setQuery} placeholder={t('dispatch_console.search_notes')} testID="notes-search" />
           <FlatList
+            nestedScrollEnabled
             testID="notes-list"
             data={visible}
             renderItem={renderItem}
@@ -76,6 +77,27 @@ export const NotesPanel: React.FC<NotesPanelProps> = ({ callId, onNewNote, flex,
         </>
       )}
     </PanelFrame>
+  );
+};
+
+/**
+ * A call's notes inside the fixed-height card: they scroll there (a long thread no longer pushes the composer out of the
+ * card), and once the console has moved up for the keyboard the composer is scrolled into what is left of the card.
+ */
+const CallNotesScroll: React.FC<{ callId: string }> = ({ callId }) => {
+  const keepFocusedInputVisible = useKeepFocusedInputVisible();
+
+  return (
+    <ScrollView
+      nestedScrollEnabled
+      ref={keepFocusedInputVisible.scrollRef}
+      onScroll={keepFocusedInputVisible.onScroll}
+      scrollEventThrottle={keepFocusedInputVisible.scrollEventThrottle}
+      keyboardShouldPersistTaps="handled"
+      testID="notes-panel-call-scroll"
+    >
+      <CallNotesPanel callId={callId} showSearch={false} />
+    </ScrollView>
   );
 };
 

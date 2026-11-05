@@ -29,9 +29,9 @@ describe('Loading (IC)', () => {
     expect(screen.queryByText('Loading...')).toBeNull();
   });
 
-  it('renders the dots and icon variants and a fullscreen overlay', async () => {
-    const { rerender } = await render(<Loading type="dots" fullscreen />);
-    expect(screen.getByTestId('loading').props.className).toContain('absolute inset-0');
+  it('renders the dots and icon variants in place, never as an overlay over the screen', async () => {
+    const { rerender } = await render(<Loading type="dots" />);
+    expect(screen.getByTestId('loading').props.className).not.toMatch(/\babsolute\b/);
 
     await rerender(<Loading type="icon" transparent />);
     expect(screen.getByTestId('loading').props.className).toContain('bg-transparent');

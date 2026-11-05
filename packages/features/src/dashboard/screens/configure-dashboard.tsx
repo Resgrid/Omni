@@ -1,5 +1,5 @@
 import { useTranslation } from '@resgrid/i18n';
-import { Button, ButtonText, HStack, Pressable, ScrollView, Text, useThemeColors, View, VStack } from '@resgrid/ui';
+import { Button, ButtonText, HStack, Pressable, ScrollRow, ScrollView, Text, useThemeColors, View, VStack } from '@resgrid/ui';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ArrowDown, ArrowUp, LayoutGrid, Plus, RotateCcw, Trash2 } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
@@ -48,7 +48,7 @@ export default function ConfigureDashboardScreen({ initialWidget, onDone }: Conf
   return (
     <View className="flex-1 bg-background-50" testID="configure-dashboard-screen">
       <View className="border-b border-outline-200 bg-background-0">
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabs}>
+        <ScrollRow contentContainerStyle={styles.tabs} testID="configure-dashboard-widgets">
           {WIDGET_TYPES.map((type) => {
             const Icon = WIDGET_ICONS[type];
             const active = type === selected;
@@ -75,7 +75,7 @@ export default function ConfigureDashboardScreen({ initialWidget, onDone }: Conf
               </Pressable>
             );
           })}
-        </ScrollView>
+        </ScrollRow>
       </View>
 
       <ScrollView style={styles.fill} contentContainerStyle={styles.content}>

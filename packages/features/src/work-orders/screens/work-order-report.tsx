@@ -1,10 +1,10 @@
 import { useWorkOrdersStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import { WorkOrderPriority, WorkOrderType } from '@resgrid/models';
-import { Button, ButtonSpinner, ButtonText, HStack, Input, InputField, ScreenHeader, Switch, Text, Textarea, TextareaInput, useToast, View, VStack } from '@resgrid/ui';
+import { Button, ButtonSpinner, ButtonText, HStack, Input, InputField, KeyboardAwareScrollView, ScreenHeader, Switch, Text, Textarea, TextareaInput, useToast, View, VStack } from '@resgrid/ui';
 import { type Href, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 import { WorkOrderChoiceChips, type WorkOrderChoiceOption } from '../components/choice-chips';
 import { WorkOrdersGate } from '../components/work-orders-gate';
@@ -85,7 +85,7 @@ function WorkOrderReportContent() {
   return (
     <View className="flex-1 bg-background-0" testID="work-order-report-screen">
       <ScreenHeader title={t('workOrders.report')} onBack={() => router.back()} testID="work-order-report-header" />
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <KeyboardAwareScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <VStack space="md">
           {!canWrite && access ? (
             <Text className="text-typography-500" testID="work-order-cannot-report">
@@ -165,7 +165,7 @@ function WorkOrderReportContent() {
           </Button>
           <Text className="text-typography-500">{t('workOrders.form.photosAfter')}</Text>
         </VStack>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </View>
   );
 }

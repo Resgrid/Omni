@@ -2,7 +2,7 @@ import { useRecordsStore } from '@resgrid/data';
 import { useIsOnline } from '@resgrid/features/calls';
 import { useTranslation } from '@resgrid/i18n';
 import type { FieldRecordCatalogEntry, RecordDefinitionSchema } from '@resgrid/models';
-import { Badge, BadgeText, Button, ButtonText, Divider, Heading, Loading, Pressable, ScreenHeader, Text } from '@resgrid/ui';
+import { Badge, BadgeText, Button, ButtonText, Divider, Heading, KeyboardAwareScrollView, Loading, Pressable, ScreenHeader, Text } from '@resgrid/ui';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronRight, CloudOff } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -221,7 +221,7 @@ export default function RecordNewScreen({ draftId: draftProp, showHeader = true 
   return (
     <View style={styles.screen} className="bg-background-0" testID="record-new-screen">
       <DefinitionHeader entry={entry} render={header} />
-      <ScrollView contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled">
+      <KeyboardAwareScrollView contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled">
         <ContentFrame>
           {unsupported.length > 0 ? (
             <View className="mb-4 rounded-md border border-warning-300 bg-background-warning p-3" testID="record-new-unsupported">
@@ -272,7 +272,7 @@ export default function RecordNewScreen({ draftId: draftProp, showHeader = true 
             </Button>
           </View>
         </ContentFrame>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </View>
   );
 }

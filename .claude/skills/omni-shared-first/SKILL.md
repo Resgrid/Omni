@@ -59,6 +59,11 @@ Done right in this codebase:
 - `@resgrid/ui` `ScrollView` keeps a horizontal scroller to its content height. It had been patched one screen at a time
   in eight files while nine other horizontal scrollers were not; the primitive now owns it and a source rule rejects a
   horizontal React Native `ScrollView` anywhere else.
+- Tab rows come from `@resgrid/ui` `TabBar` (alone) or `SharedTabs` (bar + panes). Shifts, Calls, Messages and Calendar
+  had each drawn their own, so only `SharedTabs` showed edge chevrons when tabs ran off a phone screen. Every top-level
+  page now uses `variant="pills"`, and a source rule (`ui/src/__tests__/tab-bar.test.tsx`) rejects a hand-made tab row.
+  Chip and filter rows are `ScrollRow` (round edge chevrons, same `useEdgeScroll` tracking); a source rule
+  (`ui/src/__tests__/scroll-row.test.tsx`) rejects any other horizontal `ScrollView` in a screen.
 - `ScreenHeader` drops its own back arrow when the app bar shows one (`AppBarBackContext` from the shell): one change,
   every detail screen in every app.
 - `ZeroState` fills the space its column has left (`w-full flex-1`), not a full screen height that ran past the bottom

@@ -24,7 +24,7 @@ import {
 } from '@resgrid/auth';
 import { useCapability } from '@resgrid/config';
 import { useTranslation } from '@resgrid/i18n';
-import { Box, Button, ButtonSpinner, ButtonText, Heading, Input, InputField, ScrollView, Spinner, Text, useThemeColors, VStack } from '@resgrid/ui';
+import { Box, Button, ButtonSpinner, ButtonText, Heading, Input, InputField, KeyboardAwareScrollView, Spinner, Text, useThemeColors, VStack } from '@resgrid/ui';
 import { Lock } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
@@ -231,89 +231,91 @@ export function SharedDeviceLockScreen() {
   const offersProvider = methods.includes('federated');
 
   return (
-    <ScrollView className="flex-1 bg-background-0" contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 24 }} keyboardShouldPersistTaps="handled" testID="shared-lock-screen">
-      <Box className="w-full max-w-lg self-center">
-        <VStack space="md">
-          <VStack space="xs" className="items-center">
-            <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-              <Lock size={40} color={colors.icon} />
-            </View>
-            <Heading size="lg" className="text-center" accessibilityRole="header">
-              {t('shared_session.locked_title')}
-            </Heading>
-            {options?.Operator ? (
-              <Text className="text-center" testID="shared-lock-operator">
-                {t('shared_session.locked_operator', { operator: options.Operator })}
-              </Text>
-            ) : null}
-          </VStack>
+    <Box className="flex-1 bg-background-0">
+      <KeyboardAwareScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 24 }} keyboardShouldPersistTaps="handled" testID="shared-lock-screen">
+        <Box className="w-full max-w-lg self-center">
+          <VStack space="md">
+            <VStack space="xs" className="items-center">
+              <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+                <Lock size={40} color={colors.icon} />
+              </View>
+              <Heading size="lg" className="text-center" accessibilityRole="header">
+                {t('shared_session.locked_title')}
+              </Heading>
+              {options?.Operator ? (
+                <Text className="text-center" testID="shared-lock-operator">
+                  {t('shared_session.locked_operator', { operator: options.Operator })}
+                </Text>
+              ) : null}
+            </VStack>
 
-          {phase === 'loading' ? <Spinner size="large" /> : null}
+            {phase === 'loading' ? <Spinner size="large" /> : null}
 
-          {phase === 'ready' && !approval ? (
-            <>
-              <Text size="sm" className="text-center" testID={methods.length === 0 ? 'shared-lock-no-methods' : 'shared-lock-body'}>
-                {methods.length === 0 ? t('shared_session.no_unlock') : t('shared_session.locked_body')}
-              </Text>
-              {offersCode ? (
-                <>
-                  <Input variant="outline" size="lg" isDisabled={busy}>
-                    <InputField
-                      testID="shared-lock-code"
-                      value={code}
-                      onChangeText={setCode}
-                      keyboardType="number-pad"
-                      autoComplete="one-time-code"
-                      maxLength={6}
-                      placeholder={t('mfa.login.code_placeholder')}
-                      accessibilityLabel={t('mfa.login.code_placeholder')}
-                      aria-label={t('mfa.login.code_placeholder')}
-                    />
-                  </Input>
-                  <Button action="primary" onPress={unlockWithCode} isDisabled={busy || code.trim().length === 0} accessibilityLabel={t('shared_session.unlock')} testID="shared-lock-unlock">
-                    {busy ? <ButtonSpinner /> : <ButtonText>{t('shared_session.unlock')}</ButtonText>}
+            {phase === 'ready' && !approval ? (
+              <>
+                <Text size="sm" className="text-center" testID={methods.length === 0 ? 'shared-lock-no-methods' : 'shared-lock-body'}>
+                  {methods.length === 0 ? t('shared_session.no_unlock') : t('shared_session.locked_body')}
+                </Text>
+                {offersCode ? (
+                  <>
+                    <Input variant="outline" size="lg" isDisabled={busy}>
+                      <InputField
+                        testID="shared-lock-code"
+                        value={code}
+                        onChangeText={setCode}
+                        keyboardType="number-pad"
+                        autoComplete="one-time-code"
+                        maxLength={6}
+                        placeholder={t('mfa.login.code_placeholder')}
+                        accessibilityLabel={t('mfa.login.code_placeholder')}
+                        aria-label={t('mfa.login.code_placeholder')}
+                      />
+                    </Input>
+                    <Button action="primary" onPress={unlockWithCode} isDisabled={busy || code.trim().length === 0} accessibilityLabel={t('shared_session.unlock')} testID="shared-lock-unlock">
+                      {busy ? <ButtonSpinner /> : <ButtonText>{t('shared_session.unlock')}</ButtonText>}
+                    </Button>
+                  </>
+                ) : null}
+                {offersPasskey ? (
+                  <Button variant="outline" action="secondary" onPress={unlockWithPasskey} isDisabled={busy} accessibilityLabel={t('mfa.login.use_passkey')} testID="shared-lock-passkey">
+                    <ButtonText>{t('mfa.login.use_passkey')}</ButtonText>
                   </Button>
-                </>
-              ) : null}
-              {offersPasskey ? (
-                <Button variant="outline" action="secondary" onPress={unlockWithPasskey} isDisabled={busy} accessibilityLabel={t('mfa.login.use_passkey')} testID="shared-lock-passkey">
-                  <ButtonText>{t('mfa.login.use_passkey')}</ButtonText>
-                </Button>
-              ) : null}
-              {offersApproval ? (
-                <Button variant="outline" action="secondary" onPress={() => void unlockWithApproval()} isDisabled={busy} accessibilityLabel={t('mfa.login.use_approval')} testID="shared-lock-approval">
-                  <ButtonText>{t('mfa.login.use_approval')}</ButtonText>
-                </Button>
-              ) : null}
-              {offersProvider ? (
-                <Button variant="outline" action="secondary" onPress={unlockWithProvider} isDisabled={busy} accessibilityLabel={t('mfa.login.use_provider')} testID="shared-lock-provider">
-                  <ButtonText>{t('mfa.login.use_provider')}</ButtonText>
-                </Button>
-              ) : null}
-            </>
-          ) : null}
+                ) : null}
+                {offersApproval ? (
+                  <Button variant="outline" action="secondary" onPress={() => void unlockWithApproval()} isDisabled={busy} accessibilityLabel={t('mfa.login.use_approval')} testID="shared-lock-approval">
+                    <ButtonText>{t('mfa.login.use_approval')}</ButtonText>
+                  </Button>
+                ) : null}
+                {offersProvider ? (
+                  <Button variant="outline" action="secondary" onPress={unlockWithProvider} isDisabled={busy} accessibilityLabel={t('mfa.login.use_provider')} testID="shared-lock-provider">
+                    <ButtonText>{t('mfa.login.use_provider')}</ButtonText>
+                  </Button>
+                ) : null}
+              </>
+            ) : null}
 
-          {approval ? <ApprovalPanel matchNumber={approval.number} onCancel={cancelApproval} /> : null}
+            {approval ? <ApprovalPanel matchNumber={approval.number} onCancel={cancelApproval} /> : null}
 
-          {phase === 'unavailable' ? (
-            <Button variant="outline" action="secondary" onPress={() => void load()} isDisabled={busy} accessibilityLabel={t('shared_session.retry')} testID="shared-lock-retry">
-              <ButtonText>{t('shared_session.retry')}</ButtonText>
-            </Button>
-          ) : null}
+            {phase === 'unavailable' ? (
+              <Button variant="outline" action="secondary" onPress={() => void load()} isDisabled={busy} accessibilityLabel={t('shared_session.retry')} testID="shared-lock-retry">
+                <ButtonText>{t('shared_session.retry')}</ButtonText>
+              </Button>
+            ) : null}
 
-          <InlineError message={errorCode ? mfaErrorText(t, errorCode) : null} testID="shared-lock-error" className="text-center" />
+            <InlineError message={errorCode ? mfaErrorText(t, errorCode) : null} testID="shared-lock-error" className="text-center" />
 
-          <VStack space="sm" className="mt-4">
-            <Button variant="outline" action="secondary" onPress={() => finishShift(true)} isDisabled={busy} accessibilityLabel={t('shared_session.switch_operator')} testID="shared-lock-switch">
-              <ButtonText>{t('shared_session.switch_operator')}</ButtonText>
-            </Button>
-            <Button variant="outline" action="negative" onPress={() => finishShift(false)} isDisabled={busy} accessibilityLabel={t('shared_session.end_shift')} testID="shared-lock-end-shift">
-              <ButtonText>{t('shared_session.end_shift')}</ButtonText>
-            </Button>
+            <VStack space="sm" className="mt-4">
+              <Button variant="outline" action="secondary" onPress={() => finishShift(true)} isDisabled={busy} accessibilityLabel={t('shared_session.switch_operator')} testID="shared-lock-switch">
+                <ButtonText>{t('shared_session.switch_operator')}</ButtonText>
+              </Button>
+              <Button variant="outline" action="negative" onPress={() => finishShift(false)} isDisabled={busy} accessibilityLabel={t('shared_session.end_shift')} testID="shared-lock-end-shift">
+                <ButtonText>{t('shared_session.end_shift')}</ButtonText>
+              </Button>
+            </VStack>
           </VStack>
-        </VStack>
-      </Box>
-    </ScrollView>
+        </Box>
+      </KeyboardAwareScrollView>
+    </Box>
   );
 }
 

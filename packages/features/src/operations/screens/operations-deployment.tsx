@@ -5,11 +5,11 @@ import { selectMarsItemsForDeployment, useCalOesMarsStore, useOperationsStore } 
 import { useStatusContext } from '@resgrid/features/status';
 import { useTranslation } from '@resgrid/i18n';
 import { DeploymentFinanceMode, type Expense, type ResourceUsage, type TimeReport, TimeReportStatus } from '@resgrid/models';
-import { DateTimeField, Loading, Pressable, ScreenHeader, Text, useFormFactor, ZeroState } from '@resgrid/ui';
+import { DateTimeField, KeyboardAwareScrollView, Loading, Pressable, ScreenHeader, Text, useFormFactor, ZeroState } from '@resgrid/ui';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { BriefcaseBusiness, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { type ExpenseAddOutcome, ExpensesPanel } from '../components/expenses-panel';
 import { MarsPanel } from '../components/mars-panel';
@@ -304,7 +304,7 @@ function DeploymentWorkspace({ id, overrides, showHeader }: { id: string; overri
   return (
     <View style={styles.screen} className="bg-background-0" testID="operations-deployment-screen">
       {header}
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <KeyboardAwareScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <OperationsFrame maxWidth={twoColumns ? 1280 : undefined}>
           {summary}
           {sections.length > 1 ? (
@@ -325,7 +325,7 @@ function DeploymentWorkspace({ id, overrides, showHeader }: { id: string; overri
             </>
           )}
         </OperationsFrame>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </View>
   );
 }

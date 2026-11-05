@@ -21,7 +21,7 @@ function ShellRootLayout() {
 
 /**
  * Root layout shared by every variant (omni-plan §5.4): the provider stack, the init phases and session services, and
- * a header-less Stack. The navigator is always mounted — gates, the signed-in shell and the init overlay live in the
+ * a header-less Stack. The navigator is always mounted — gates, the signed-in shell and its init chip and banner live in the
  * `(app)` group layout (`createAppShell`) — so deep links and cold-start push taps can always land. Wrapped for Sentry
  * (touch breadcrumbs, interaction spans, end of app start) like every legacy root layout.
  */

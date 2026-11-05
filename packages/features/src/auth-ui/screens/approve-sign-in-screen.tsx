@@ -1,7 +1,7 @@
 import { approvePendingRequest, approverEnabled, denyPendingRequest, fetchPendingApproval, parseUtc, type PendingApprovalData } from '@resgrid/auth';
 import { useCapability } from '@resgrid/config';
 import { useTranslation } from '@resgrid/i18n';
-import { Box, Button, ButtonSpinner, ButtonText, Heading, Input, InputField, ScrollView, Spinner, Text, VStack } from '@resgrid/ui';
+import { Box, Button, ButtonSpinner, ButtonText, Heading, Input, InputField, KeyboardAwareScrollView, Spinner, Text, VStack } from '@resgrid/ui';
 import { useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 
@@ -100,65 +100,67 @@ export function ApproveSignInScreen({ onDone }: ApproveSignInScreenProps) {
   const errorText = errorCode === 'approval_number_mismatch' && request ? t('mfa.approve.number_mismatch', { count: request.AttemptsRemaining }) : errorCode ? mfaErrorText(t, errorCode) : null;
 
   return (
-    <ScrollView className="flex-1 bg-background-0" contentContainerStyle={{ padding: 24 }} keyboardShouldPersistTaps="handled" testID="approve-sign-in-screen">
-      <VStack space="md" className="w-full max-w-lg self-center">
-        <Heading size="lg" accessibilityRole="header">
-          {t('mfa.approve.title')}
-        </Heading>
+    <Box className="flex-1 bg-background-0">
+      <KeyboardAwareScrollView contentContainerStyle={{ padding: 24 }} keyboardShouldPersistTaps="handled" testID="approve-sign-in-screen">
+        <VStack space="md" className="w-full max-w-lg self-center">
+          <Heading size="lg" accessibilityRole="header">
+            {t('mfa.approve.title')}
+          </Heading>
 
-        {phase === 'loading' ? <Spinner size="large" /> : null}
+          {phase === 'loading' ? <Spinner size="large" /> : null}
 
-        {phase === 'review' && request ? (
-          <>
-            <Box className="rounded-lg bg-background-50 p-4" testID="approve-details">
-              <VStack space="xs">
-                <Text className="font-semibold">{t(`mfa.approve.purpose.${request.Purpose}`)}</Text>
-                <Text size="sm">{t('mfa.approve.app', { app: (request.RequestingApp ? APP_NAMES[request.RequestingApp] : undefined) ?? t('mfa.approve.unknown_app') })}</Text>
-                {request.InstallationLabel ? <Text size="sm">{t('mfa.approve.installation', { label: request.InstallationLabel })}</Text> : null}
-                {request.Shared ? <Text size="sm">{t('mfa.approve.shared')}</Text> : null}
-                {request.Department ? <Text size="sm">{t('mfa.approve.department', { department: request.Department })}</Text> : null}
-                {request.OriginRegion ? <Text size="sm">{t('mfa.approve.origin', { origin: request.OriginRegion })}</Text> : null}
-                {expiresAt ? <Text size="sm">{t('mfa.approve.expires', { time: new Date(expiresAt).toLocaleTimeString() })}</Text> : null}
-              </VStack>
-            </Box>
-            <Text size="sm">{t('mfa.approve.number_body')}</Text>
-            <Input variant="outline" size="lg" isDisabled={busy}>
-              <InputField
-                testID="approve-number"
-                value={number}
-                onChangeText={setNumber}
-                placeholder={t('mfa.approve.number_placeholder')}
-                keyboardType="number-pad"
-                maxLength={2}
-                accessibilityLabel={t('mfa.approve.number_placeholder')}
-                aria-label={t('mfa.approve.number_placeholder')}
-              />
-            </Input>
-            <Button action="primary" onPress={() => void approve()} isDisabled={busy || number.trim().length !== 2} accessibilityLabel={t('mfa.approve.approve')} testID="approve-confirm">
-              {busy ? <ButtonSpinner /> : <ButtonText>{t('mfa.approve.approve')}</ButtonText>}
+          {phase === 'review' && request ? (
+            <>
+              <Box className="rounded-lg bg-background-50 p-4" testID="approve-details">
+                <VStack space="xs">
+                  <Text className="font-semibold">{t(`mfa.approve.purpose.${request.Purpose}`)}</Text>
+                  <Text size="sm">{t('mfa.approve.app', { app: (request.RequestingApp ? APP_NAMES[request.RequestingApp] : undefined) ?? t('mfa.approve.unknown_app') })}</Text>
+                  {request.InstallationLabel ? <Text size="sm">{t('mfa.approve.installation', { label: request.InstallationLabel })}</Text> : null}
+                  {request.Shared ? <Text size="sm">{t('mfa.approve.shared')}</Text> : null}
+                  {request.Department ? <Text size="sm">{t('mfa.approve.department', { department: request.Department })}</Text> : null}
+                  {request.OriginRegion ? <Text size="sm">{t('mfa.approve.origin', { origin: request.OriginRegion })}</Text> : null}
+                  {expiresAt ? <Text size="sm">{t('mfa.approve.expires', { time: new Date(expiresAt).toLocaleTimeString() })}</Text> : null}
+                </VStack>
+              </Box>
+              <Text size="sm">{t('mfa.approve.number_body')}</Text>
+              <Input variant="outline" size="lg" isDisabled={busy}>
+                <InputField
+                  testID="approve-number"
+                  value={number}
+                  onChangeText={setNumber}
+                  placeholder={t('mfa.approve.number_placeholder')}
+                  keyboardType="number-pad"
+                  maxLength={2}
+                  accessibilityLabel={t('mfa.approve.number_placeholder')}
+                  aria-label={t('mfa.approve.number_placeholder')}
+                />
+              </Input>
+              <Button action="primary" onPress={() => void approve()} isDisabled={busy || number.trim().length !== 2} accessibilityLabel={t('mfa.approve.approve')} testID="approve-confirm">
+                {busy ? <ButtonSpinner /> : <ButtonText>{t('mfa.approve.approve')}</ButtonText>}
+              </Button>
+              <Button variant="outline" action="secondary" onPress={() => void deny('declined')} isDisabled={busy} accessibilityLabel={t('mfa.approve.deny')} testID="approve-deny">
+                <ButtonText>{t('mfa.approve.deny')}</ButtonText>
+              </Button>
+              <Button variant="outline" action="negative" onPress={() => void deny('not_me')} isDisabled={busy} accessibilityLabel={t('mfa.approve.not_me')} testID="approve-not-me">
+                <ButtonText>{t('mfa.approve.not_me')}</ButtonText>
+              </Button>
+            </>
+          ) : null}
+
+          {phase === 'approved' ? <Text testID="approve-approved">{t('mfa.approve.approved')}</Text> : null}
+          {phase === 'denied' ? <Text testID="approve-denied">{t('mfa.approve.denied')}</Text> : null}
+          {phase === 'none' ? <Text testID="approve-none">{t('mfa.approve.none')}</Text> : null}
+
+          <InlineError message={errorText} testID="approve-error" />
+
+          {phase !== 'review' && phase !== 'loading' ? (
+            <Button action="primary" onPress={done} accessibilityLabel={t('mfa.approve.done')} testID="approve-done">
+              <ButtonText>{t('mfa.approve.done')}</ButtonText>
             </Button>
-            <Button variant="outline" action="secondary" onPress={() => void deny('declined')} isDisabled={busy} accessibilityLabel={t('mfa.approve.deny')} testID="approve-deny">
-              <ButtonText>{t('mfa.approve.deny')}</ButtonText>
-            </Button>
-            <Button variant="outline" action="negative" onPress={() => void deny('not_me')} isDisabled={busy} accessibilityLabel={t('mfa.approve.not_me')} testID="approve-not-me">
-              <ButtonText>{t('mfa.approve.not_me')}</ButtonText>
-            </Button>
-          </>
-        ) : null}
-
-        {phase === 'approved' ? <Text testID="approve-approved">{t('mfa.approve.approved')}</Text> : null}
-        {phase === 'denied' ? <Text testID="approve-denied">{t('mfa.approve.denied')}</Text> : null}
-        {phase === 'none' ? <Text testID="approve-none">{t('mfa.approve.none')}</Text> : null}
-
-        <InlineError message={errorText} testID="approve-error" />
-
-        {phase !== 'review' && phase !== 'loading' ? (
-          <Button action="primary" onPress={done} accessibilityLabel={t('mfa.approve.done')} testID="approve-done">
-            <ButtonText>{t('mfa.approve.done')}</ButtonText>
-          </Button>
-        ) : null}
-      </VStack>
-    </ScrollView>
+          ) : null}
+        </VStack>
+      </KeyboardAwareScrollView>
+    </Box>
   );
 }
 

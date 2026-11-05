@@ -41,6 +41,7 @@ const EXPECTED_SOUND_BY_TYPE: Record<number, string> = {
   24: 'modernweatheralert',
   25: 'modernunitnotice',
   26: 'modernresourceorder',
+  27: 'moderncallrenotify',
 };
 
 const audioDir = path.join(REPO_ROOT, 'apps', 'omni', 'assets', 'audio');
@@ -88,6 +89,7 @@ describe('Android channels', () => {
         expect(isModernSound(channel.sound)).toBe(true);
         expect(fs.existsSync(path.join(audioDir, `${channel.sound}.wav`))).toBe(true);
       }
+
       expect(soundForSoundType(channel.id)).toBe(channel.sound);
     }
   });
@@ -107,13 +109,16 @@ describe('Android channels', () => {
 
   it('vibrates for calls, alerts and custom tones only', () => {
     const byId = new Map(ANDROID_CHANNELS.map((channel) => [channel.id, channel]));
-    for (const id of ['calls', '0', '3', '7', '10', '14', '16', '23', '24', 'c1', 'c25']) expect(byId.get(id)?.vibration).toBe(true);
+
+    for (const id of ['calls', '0', '3', '7', '10', '14', '16', '23', '24', '27', 'c1', 'c25']) expect(byId.get(id)?.vibration).toBe(true);
+
     for (const id of ['4', '5', '11', '12', '13', '17', 'notif', 'message']) expect(byId.get(id)?.vibration).toBe(false);
   });
 
   it('names every channel through a translation key with an English fallback, distinct per id', () => {
     const names = ANDROID_CHANNELS.map((channel) => channel.defaultName.replace('{{number}}', String(channel.nameParams?.number ?? '')));
     expect(new Set(names).size).toBe(names.length);
+
     for (const channel of ANDROID_CHANNELS) {
       expect(channel.nameKey).toMatch(/^push_notifications\.channels\.[a-z_]+$/);
     }
@@ -127,11 +132,13 @@ describe('modern sound set', () => {
       .filter((file) => file.endsWith('.wav'))
       .map((file) => file.replace(/\.wav$/, ''))
       .sort();
+
     expect([...MODERN_SOUNDS].sort()).toEqual(files);
   });
 
   it('has 25 custom tones on disk', () => {
     expect(CUSTOM_TONE_COUNT).toBe(25);
+
     for (let tone = 1; tone <= 25; tone++) {
       expect(fs.existsSync(path.join(audioDir, 'custom', `c${tone}.wav`))).toBe(true);
     }
@@ -139,13 +146,75 @@ describe('modern sound set', () => {
 
   it('aliases every classic iOS server sound name to a modern sound', () => {
     expect(Object.keys(IOS_SERVER_SOUND_ALIASES).sort()).toEqual(['6', 'callemergency', 'callhigh', 'calllow', 'callmedium', 'message', 'notification']);
+
     for (const sound of Object.values(IOS_SERVER_SOUND_ALIASES)) {
       expect(isModernSound(sound)).toBe(true);
     }
   });
 
-  it.each(['c0', 'c26', 'c01', 'calls1', '27', '-1', '07', 'callemergency', ''])('knows no sound for %p', (type) => {
+  it.each(['c0', 'c26', 'c01', 'calls1', '28', '-1', '07', 'callemergency', ''])('knows no sound for %p', (type) => {
     expect(soundForSoundType(type)).toBeNull();
+  });
+});
+
+/** Level of a 16-bit PCM WAV: peak, and RMS over the 50 ms windows louder than -40 dBFS (the part that is sounding). */
+const measureWav = (file: string) => {
+  const wav = fs.readFileSync(path.join(audioDir, file));
+  const channels = wav.readUInt16LE(22);
+  const sampleRate = wav.readUInt32LE(24);
+  let offset = 12;
+
+  while (wav.toString('ascii', offset, offset + 4) !== 'data') offset += 8 + wav.readUInt32LE(offset + 4);
+  const dataStart = offset + 8;
+  const frames = wav.readUInt32LE(offset + 4) / (2 * channels);
+
+  const mono = (frame: number): number => {
+    let sum = 0;
+
+    for (let channel = 0; channel < channels; channel++) sum += wav.readInt16LE(dataStart + (frame * channels + channel) * 2);
+
+    return sum / channels / 32768;
+  };
+
+  const window = Math.round(sampleRate * 0.05);
+  let peak = 0;
+  let activeSum = 0;
+  let activeWindows = 0;
+
+  for (let start = 0; start + window <= frames; start += window) {
+    let sum = 0;
+
+    for (let frame = start; frame < start + window; frame++) {
+      const value = mono(frame);
+      peak = Math.max(peak, Math.abs(value));
+      sum += value * value;
+    }
+
+    const rms = Math.sqrt(sum / window);
+
+    if (rms > 0.01) {
+      activeSum += rms * rms;
+      activeWindows++;
+    }
+  }
+
+  const db = (value: number) => 20 * Math.log10(value);
+
+  return { peakDb: db(peak), activeRmsDb: db(Math.sqrt(activeSum / activeWindows)), activeSeconds: activeWindows * 0.05 };
+};
+
+describe('dispatch re-notification sound (ModernCallRenotify, 27)', () => {
+  it('has its own call channel, named Call Reminder, that vibrates', () => {
+    const channel = ANDROID_CHANNELS.find((spec) => spec.id === '27');
+    expect(channel).toMatchObject({ sound: 'moderncallrenotify', kind: 'call', vibration: true, nameKey: 'push_notifications.channels.call_renotify', defaultName: 'Call Reminder' });
+  });
+
+  it('is louder and sounds longer than the emergency call sound, without clipping', () => {
+    const renotify = measureWav('moderncallrenotify.wav');
+    const emergency = measureWav('moderncallemergency.wav');
+    expect(renotify.activeRmsDb).toBeGreaterThan(emergency.activeRmsDb + 6);
+    expect(renotify.activeSeconds).toBeGreaterThan(emergency.activeSeconds);
+    expect(renotify.peakDb).toBeLessThan(-0.4);
   });
 });
 

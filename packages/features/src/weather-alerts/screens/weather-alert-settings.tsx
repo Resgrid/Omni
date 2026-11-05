@@ -2,7 +2,7 @@ import { useCapability } from '@resgrid/config';
 import { useWeatherAlertsStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import { type WeatherAlertSourceResultData, WeatherAlertSourceType, type WeatherAlertZoneResultData } from '@resgrid/models';
-import { Box, Button, ButtonText, Heading, HStack, Pressable, ScreenHeader, ScrollView, Switch, Text, Textarea, TextareaInput, useToast, View, VStack, ZeroState } from '@resgrid/ui';
+import { Box, Button, ButtonText, Heading, HStack, KeyboardAwareScrollView, Pressable, ScreenHeader, Switch, Text, Textarea, TextareaInput, useToast, View, VStack, ZeroState } from '@resgrid/ui';
 import { router } from 'expo-router';
 import { Lock } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
@@ -132,7 +132,7 @@ export default function WeatherAlertSettingsScreen() {
   return (
     <View className="flex-1 bg-background-50" testID="weather-alert-settings-screen">
       <ScreenHeader title={t('weather_alerts.settings_title')} onBack={back} />
-      <ScrollView contentContainerStyle={{ paddingBottom: 32 }} keyboardShouldPersistTaps="handled">
+      <KeyboardAwareScrollView contentContainerStyle={{ paddingBottom: 32 }} keyboardShouldPersistTaps="handled">
         {adminError ? (
           <Text className="mx-4 mt-3 rounded-lg bg-error-50 p-2 text-sm text-error-600" testID="weather-alert-settings-error">
             {t('weather_alerts.settings.load_error')}
@@ -210,7 +210,7 @@ export default function WeatherAlertSettingsScreen() {
             </HStack>
           ))}
         </Box>
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       <WeatherAlertSourceSheet isOpen={sourceSheet.open} onClose={() => setSourceSheet({ open: false, source: null })} source={sourceSheet.source} />
       <WeatherAlertZoneSheet isOpen={zoneSheet.open} onClose={() => setZoneSheet({ open: false, zone: null })} zone={zoneSheet.zone} />

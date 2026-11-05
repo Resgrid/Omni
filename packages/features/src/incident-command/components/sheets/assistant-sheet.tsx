@@ -1,6 +1,6 @@
 import { type AssistantMessage, useIncidentAssistantStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
-import { Badge, BadgeText, HStack, Input, InputField, Pressable, ScrollView, Spinner, Text, VStack } from '@resgrid/ui';
+import { Badge, BadgeText, HStack, Input, InputField, Pressable, ScrollRow, Spinner, Text, VStack } from '@resgrid/ui';
 import { Send, Sparkles, Trash2 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
@@ -55,7 +55,7 @@ export const AssistantSheet: React.FC<AssistantSheetProps> = ({ isOpen, onClose,
         {messages.length > 0 ? <IconPress label={t('incident_command.assistant_clear')} icon={Trash2} onPress={() => useIncidentAssistantStore.getState().clear(callId)} testID="assistant-sheet-clear" /> : null}
       </HStack>
       {suggestions && suggestions.Questions.length > 0 ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-2" testID="assistant-sheet-suggestions">
+        <ScrollRow className="mb-2" testID="assistant-sheet-suggestions">
           <HStack space="sm">
             {suggestions.Questions.map((suggestion) => (
               <Pressable key={suggestion} onPress={() => submit(suggestion)} disabled={!isOnline} accessibilityRole="button" accessibilityLabel={suggestion} className="rounded-full bg-background-100 px-4 py-2">
@@ -63,7 +63,7 @@ export const AssistantSheet: React.FC<AssistantSheetProps> = ({ isOpen, onClose,
               </Pressable>
             ))}
           </HStack>
-        </ScrollView>
+        </ScrollRow>
       ) : null}
       {messages.length === 0 ? (
         <VStack className="items-center py-6" space="xs" testID="assistant-sheet-empty">

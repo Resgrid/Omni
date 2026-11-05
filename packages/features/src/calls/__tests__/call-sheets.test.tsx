@@ -104,6 +104,14 @@ describe('DispatchSelectionModal', () => {
     expect(onConfirm).toHaveBeenCalledWith({ ...EMPTY_DISPATCH_SELECTION, everyone: true });
   });
 
+  it('never confirms "Everyone" where it is not offered (a pending call), even when the selection arrives with it', async () => {
+    const onConfirm = jest.fn();
+    await render(<DispatchSelectionModal isOpen onClose={jest.fn()} recipients={recipients} value={{ ...EMPTY_DISPATCH_SELECTION, everyone: true }} onConfirm={onConfirm} allowEveryone={false} />);
+    expect(screen.queryByTestId('dispatch-selection-everyone', hidden)).toBeNull();
+    await fireEvent.press(screen.getByTestId('dispatch-selection-confirm', hidden));
+    expect(onConfirm).toHaveBeenCalledWith(EMPTY_DISPATCH_SELECTION);
+  });
+
   it('summarizes a selection', () => {
     const labels = { everyone: 'ALL', none: 'NONE' };
     expect(summarizeDispatchSelection(EMPTY_DISPATCH_SELECTION, recipients, labels)).toBe('NONE');

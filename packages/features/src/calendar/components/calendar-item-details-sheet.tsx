@@ -5,7 +5,7 @@ import { ProtectedText } from '@resgrid/features/data-protection';
 import { readableColors } from '@resgrid/features/status';
 import { useTranslation } from '@resgrid/i18n';
 import type { CalendarItemResultData } from '@resgrid/models';
-import { Badge, BadgeText, Box, Button, ButtonSpinner, ButtonText, CustomBottomSheet, Heading, HStack, HtmlRenderer, ScrollView, Text, Textarea, TextareaInput, useToast, VStack } from '@resgrid/ui';
+import { Badge, BadgeText, Box, Button, ButtonSpinner, ButtonText, CustomBottomSheet, Heading, HStack, HtmlRenderer, Text, Textarea, TextareaInput, useToast, VStack } from '@resgrid/ui';
 import { AlertCircle, CalendarDays, CheckCircle, Clock, FileText, MapPin, User, Users } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -28,6 +28,9 @@ const ICON_COLOR = '#6b7280';
  * A calendar item's details (Responder CalendarItemDetailsSheet): date and time in the department's wall clock,
  * location, the description through HtmlRenderer (sanitized), the creator, attendees, and sign-up / cancel attendance.
  * Attendance is online only; a failure keeps the sheet open with the reason. Withheld (ADP) values show the protected label.
+ *
+ * Long items stay readable: the sheet's own ScrollView scrolls the whole item, every text field wraps instead of running
+ * off the edge, and the description grows to fit its text (up to most of the screen, then scrolls inside its box).
  */
 export const CalendarItemDetailsSheet: React.FC<CalendarItemDetailsSheetProps> = ({ item, isOpen, onClose, onAttendanceChanged }) => {
   const { t, i18n } = useTranslation();
@@ -47,8 +50,10 @@ export const CalendarItemDetailsSheet: React.FC<CalendarItemDetailsSheetProps> =
     setNote('');
     setShowNote(false);
     setConfirmCancel(false);
+
     if (!isOpen || !itemId) return;
     void useCalendarStore.getState().fetchCalendarItem(itemId);
+
     if (usePersonnelStore.getState().personnel.length === 0) void usePersonnelStore.getState().fetchPersonnel();
   }, [isOpen, itemId]);
 
@@ -56,8 +61,10 @@ export const CalendarItemDetailsSheet: React.FC<CalendarItemDetailsSheetProps> =
     async (attending: boolean) => {
       if (!current || isSaving) return;
       setIsSaving(true);
+
       try {
         const ok = await useCalendarStore.getState().setAttendance(current.CalendarItemId, attending, attending ? note.trim() : '');
+
         if (ok) {
           toast.success(attending ? t('calendar.attendanceUpdated.signedUp') : t('calendar.attendanceUpdated.unsignedUp'), t('calendar.attendanceUpdated.title'));
           setNote('');
@@ -88,14 +95,17 @@ export const CalendarItemDetailsSheet: React.FC<CalendarItemDetailsSheetProps> =
   const handleSignUp = () => {
     if (current.SignupType >= SIGNUP_WITH_NOTE && !showNote) {
       setShowNote(true);
+
       return;
     }
+
     void changeAttendance(true);
   };
 
   return (
     <CustomBottomSheet isOpen={isOpen} onClose={onClose} snapPoints={[85]} testID="calendar-item-details">
-      <ScrollView style={styles.flex} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      {/* The sheet scrolls its content itself (and keeps the note field above the keyboard); no ScrollView of our own. */}
+      <View style={styles.content}>
         <VStack space="lg">
           <VStack space="sm">
             <HStack className="items-start justify-between" space="sm">
@@ -115,8 +125,10 @@ export const CalendarItemDetailsSheet: React.FC<CalendarItemDetailsSheetProps> =
               ) : null}
             </HStack>
             {current.TypeName ? (
-              <Badge className="self-start" style={{ backgroundColor: typeColors.backgroundColor }}>
-                <BadgeText style={{ color: typeColors.textColor }}>{current.TypeName}</BadgeText>
+              <Badge className="max-w-full self-start" style={{ backgroundColor: typeColors.backgroundColor }}>
+                <BadgeText className="shrink" style={{ color: typeColors.textColor }}>
+                  {current.TypeName}
+                </BadgeText>
               </Badge>
             ) : null}
           </VStack>
@@ -128,7 +140,7 @@ export const CalendarItemDetailsSheet: React.FC<CalendarItemDetailsSheetProps> =
             </HStack>
             <HStack className="items-center" space="sm">
               <Clock size={18} color={ICON_COLOR} />
-              <Text className="text-typography-600" testID="calendar-item-details-time">
+              <Text className="flex-1 text-typography-600" testID="calendar-item-details-time">
                 {timeText}
               </Text>
             </HStack>
@@ -156,7 +168,7 @@ export const CalendarItemDetailsSheet: React.FC<CalendarItemDetailsSheetProps> =
                 </Box>
               ) : (
                 <Box className="rounded-lg bg-background-50 p-1">
-                  <HtmlRenderer html={current.Description} style={styles.html} scrollEnabled testID="calendar-item-details-description" />
+                  <HtmlRenderer html={current.Description} autoHeight rendererKey={current.CalendarItemId} testID="calendar-item-details-description" />
                 </Box>
               )}
             </VStack>
@@ -165,7 +177,7 @@ export const CalendarItemDetailsSheet: React.FC<CalendarItemDetailsSheetProps> =
           {current.CreatorUserId ? (
             <HStack className="items-center" space="sm">
               <User size={18} color={ICON_COLOR} />
-              <Text className="text-typography-600" testID="calendar-item-details-creator">{`${t('calendar.createdBy')}: ${creatorName}`}</Text>
+              <Text className="flex-1 text-typography-600" testID="calendar-item-details-creator">{`${t('calendar.createdBy')}: ${creatorName}`}</Text>
             </HStack>
           ) : null}
 
@@ -238,7 +250,7 @@ export const CalendarItemDetailsSheet: React.FC<CalendarItemDetailsSheetProps> =
             </VStack>
           ) : null}
         </VStack>
-      </ScrollView>
+      </View>
 
       <ConfirmDialog
         isOpen={confirmCancel}
@@ -259,5 +271,4 @@ export const CalendarItemDetailsSheet: React.FC<CalendarItemDetailsSheetProps> =
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   content: { paddingBottom: 16 },
-  html: { minHeight: 120, height: 160 },
 });

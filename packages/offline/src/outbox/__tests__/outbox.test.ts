@@ -86,6 +86,18 @@ describe.each(engines())('Outbox (%s)', (_engine, openDb) => {
       expect(await rows()).toHaveLength(1);
     });
 
+    it('keeps a stored write queued (and delivers it) when the snapshot cannot be read back', async () => {
+      const handler = createTestHandler('status.set');
+
+      registry.register(handler);
+      jest.spyOn(outbox, 'refresh').mockRejectedValueOnce(new Error('disk busy'));
+
+      await expect(outbox.enqueue({ type: 'status.set', payload: {} })).resolves.toMatchObject({ id: 'evt-1', status: 'queued' });
+      expect(await rows()).toHaveLength(1);
+      await outbox.drain();
+      expect(handler.send).toHaveBeenCalledTimes(1);
+    });
+
     it('notifies subscribers', async () => {
       registry.register(createTestHandler('status.set'));
       const listener = jest.fn();
@@ -122,6 +134,17 @@ describe.each(engines())('Outbox (%s)', (_engine, openDb) => {
       expect(handler.afterAck).toHaveBeenCalledTimes(3);
       expect(handler.afterAck).toHaveBeenCalledWith(expect.objectContaining({ id: 'evt-1' }), { saved: true });
       expect(outbox.getSnapshot().counts.unsent).toBe(0);
+    });
+
+    it('still reports a delivered write as sent when the snapshot cannot be read back after the pass', async () => {
+      const handler = createTestHandler('note.add');
+
+      registry.register(handler);
+      await outbox.enqueue({ type: 'note.add', payload: { n: 1 } });
+      jest.spyOn(outbox, 'refresh').mockRejectedValueOnce(new Error('disk busy'));
+
+      await expect(outbox.drain()).resolves.toMatchObject({ status: 'completed', sent: ['evt-1'] });
+      expect(await rows()).toHaveLength(0);
     });
 
     it('keeps insertion order even when the device clock goes backwards', async () => {

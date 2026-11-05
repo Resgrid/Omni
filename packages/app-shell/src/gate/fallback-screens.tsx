@@ -1,7 +1,7 @@
 import { unlockPersonalSession, useAuth, useAuthStore } from '@resgrid/auth';
-import { Button, ButtonText, Heading, Input, InputField, Loading, Text, VStack } from '@resgrid/ui';
+import { Button, ButtonText, Heading, Input, InputField, KeyboardAwareScrollView, Loading, Text, VStack } from '@resgrid/ui';
 import React, { type ReactNode, useCallback, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { useShellTranslation } from '../i18n';
 import type { ShellGateScreenProps, ShellScreens } from '../runtime/slots';
@@ -13,7 +13,7 @@ import type { ShellGateScreenProps, ShellScreens } from '../runtime/slots';
  */
 function GateFrame({ testID, appName, title, children }: { testID: string; appName: string; title?: string; children?: ReactNode }) {
   return (
-    <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" testID={testID}>
+    <KeyboardAwareScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" testID={testID}>
       <VStack space="lg" className="w-full max-w-md self-center">
         <Heading size="2xl" testID="shell-app-name">
           {appName}
@@ -21,7 +21,7 @@ function GateFrame({ testID, appName, title, children }: { testID: string; appNa
         {title ? <Heading size="lg">{title}</Heading> : null}
         {children}
       </VStack>
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 

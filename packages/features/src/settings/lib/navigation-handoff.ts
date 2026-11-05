@@ -1,4 +1,6 @@
 import { logger } from '@resgrid/core';
+import type { NavigationTarget } from '@resgrid/features/contacts';
+import { getRecentLocation } from '@resgrid/location';
 import { Linking, Platform } from 'react-native';
 
 import { type ExternalNavigationApp, getExternalNavigationApp } from './navigation-app';
@@ -130,8 +132,10 @@ const osmandAttempts = ({ coordinates, address, label, origin }: NavigationDesti
       ? [{ url: `osmand.api://navigate?dest_lat=${coordinates.latitude}&dest_lon=${coordinates.longitude}${name ? `&dest_name=${name}` : ''}&profile=car` }, routePlanner]
       : [{ url: `osmandmaps://navigate?lat=${coordinates.latitude}&lon=${coordinates.longitude}${name ? `&title=${name}` : ''}` }, routePlanner];
   }
+  // OsmAnd searches the address near the origin; it shows the matches for the user to pick, because without
+  // `show_search_results` it starts navigating to the first one, which for an ambiguous address can be the wrong place.
   return platform === 'android' && origin
-    ? [{ url: `osmand.api://navigate_search?dest_search_query=${encodeURIComponent(address ?? '')}&search_lat=${origin.latitude}&search_lon=${origin.longitude}&profile=car` }]
+    ? [{ url: `osmand.api://navigate_search?dest_search_query=${encodeURIComponent(address ?? '')}&search_lat=${origin.latitude}&search_lon=${origin.longitude}&profile=car&show_search_results=true` }]
     : null;
 };
 
@@ -223,10 +227,10 @@ const openNavigation = async (destination: NavigationDestination): Promise<boole
   return openFirstAvailable(buildNavigationAttempts(destination, navigationApp, Platform.OS), navigationApp);
 };
 
-/** Starts navigation to an address in the navigation app chosen in Settings. False for a blank address. */
-export const openMapsWithAddress = async (address: string): Promise<boolean> => {
+/** Starts navigation to an address in the navigation app chosen in Settings, from an optional origin. False for a blank address. */
+export const openMapsWithAddress = async (address: string, originLatitude?: number | string, originLongitude?: number | string): Promise<boolean> => {
   const destinationAddress = toNonEmpty(address);
-  return openNavigation({ coordinates: null, address: destinationAddress, label: destinationAddress, origin: null });
+  return openNavigation({ coordinates: null, address: destinationAddress, label: destinationAddress, origin: toNavigationCoordinates(originLatitude, originLongitude) });
 };
 
 /**
@@ -244,4 +248,19 @@ export const openMapsWithDirections = async (
   const coordinates = toNavigationCoordinates(destinationLatitude, destinationLongitude);
   const address = coordinates ? null : toNonEmpty(fallbackAddress);
   return openNavigation({ coordinates, address, label: toNonEmpty(destinationName) ?? address, origin: toNavigationCoordinates(originLatitude, originLongitude) });
+};
+
+/** How recent the device's own fix must be to start the route from it; with an older one the app uses its live position. */
+export const NAVIGATION_ORIGIN_MAX_AGE_MS = 2 * 60_000;
+
+/**
+ * Directions to a call, POI, map pin, route stop or contact in the navigation app chosen in Settings (the shell's
+ * hand-off for every variant). The route starts at the device's position when a recent, accurate fix is known, as
+ * Responder's call and POI screens pass it: Organic Maps needs that start point to route at all, and OsmAnd to search an
+ * address. Without one the app starts from its own live position.
+ */
+export const openNavigationTarget = (target: NavigationTarget): Promise<boolean> => {
+  const origin = getRecentLocation({ maxAgeMs: NAVIGATION_ORIGIN_MAX_AGE_MS });
+
+  return 'address' in target ? openMapsWithAddress(target.address, origin?.latitude, origin?.longitude) : openMapsWithDirections(target.latitude, target.longitude, target.label, origin?.latitude, origin?.longitude);
 };

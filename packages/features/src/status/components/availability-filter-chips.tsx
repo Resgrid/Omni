@@ -1,5 +1,5 @@
 import { useTranslation } from '@resgrid/i18n';
-import { HStack, Pressable, ScrollView, Text } from '@resgrid/ui';
+import { HStack, Pressable, ScrollRow, Text } from '@resgrid/ui';
 import React from 'react';
 
 import { AVAILABILITY_CLASSES, type AvailabilityClass } from '../lib/base-types';
@@ -25,7 +25,7 @@ export const AvailabilityFilterChips: React.FC<AvailabilityFilterChipsProps> = (
   const { t } = useTranslation();
   const options: AvailabilityFilter[] = ['all', ...AVAILABILITY_CLASSES];
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} testID={testID}>
+    <ScrollRow testID={testID}>
       <HStack space="sm" className="py-1">
         {options.map((option) => (
           <Pressable
@@ -40,6 +40,6 @@ export const AvailabilityFilterChips: React.FC<AvailabilityFilterChipsProps> = (
           </Pressable>
         ))}
       </HStack>
-    </ScrollView>
+    </ScrollRow>
   );
 };

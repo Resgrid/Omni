@@ -3,7 +3,7 @@ import { useArchivedCallsStore, useCallsStore } from '@resgrid/data';
 import { callRoutes, priorityOptions } from '@resgrid/features/calls';
 import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
-import { DateTimeField, HStack, Loading, Pressable, ScrollView, Text, ZeroState } from '@resgrid/ui';
+import { DateTimeField, HStack, Loading, Pressable, ScrollRow, Text, ZeroState } from '@resgrid/ui';
 import { type Href, useRouter } from 'expo-router';
 import { Archive, Filter, Search } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -193,11 +193,11 @@ export default function ArchivedCallsScreen({ showHeader = true, now = Date.now 
         </Pressable>
       </View>
       {years.length > 0 ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-3" testID="archived-calls-years">
+        <ScrollRow className="mb-3" testID="archived-calls-years">
           {years.map((year) => (
             <FilterChip key={year} label={year} active={year === selectedYear} onPress={() => void useArchivedCallsStore.getState().selectYear(year)} testID={`archived-year-${year}`} />
           ))}
-        </ScrollView>
+        </ScrollRow>
       ) : null}
       {showFilters ? renderFilters() : null}
       <View className="flex-1">{renderContent()}</View>

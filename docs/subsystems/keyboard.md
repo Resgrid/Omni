@@ -1,0 +1,26 @@
+# Soft keyboard
+
+The soft keyboard never covers the field someone is typing in, in any of the five apps, on iOS or Android. Web and Electron need nothing: the browser scrolls a focused field into view itself. All of it lives in `@resgrid/ui` (`packages/ui/src/keyboard-avoiding-view/`, `bottom-sheet.tsx`, `modal/`), on `react-native-keyboard-controller` (its `KeyboardProvider` sits in `RootProviders`).
+
+The app runs edge to edge on Android (`edgeToEdgeEnabled=true`), so the library reports the keyboard's height measured from the bottom of the display on both platforms, navigation bar included. A container that reaches the bottom of the display therefore owes exactly that height.
+
+## Which primitive
+
+| Where the field is                                                                                                           | Use                                                                                                                                                                                                                                                                   |
+| ---------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A screen or page sheet whose fields scroll: forms (new/edit call, certifications, records, reports), a call's notes, a reply | `KeyboardAwareScrollView` instead of `ScrollView`. It scrolls the focused field above the keyboard and adds the keyboard's height under the last one. It measures positions on screen, so headers, tabs and page sheets need no offset. Pass `style`, not `className` |
+| A composer pinned under a list (chat, chatbot)                                                                               | `BottomAnchoredKeyboardView` around the screen body, with `offset` for chrome below it (a tab bar)                                                                                                                                                                    |
+| A `CustomBottomSheet` (status and staffing notes, close call, compose message, the IC sheets, MFA codes)                     | Nothing. The sheet sits on top of the keyboard, shrinks to the space left (never under the status bar) and scrolls the focused field into view                                                                                                                        |
+| A centred dialog in a transparent `NativeModal`                                                                              | Wrap the centring view in `BottomAnchoredKeyboardView` (see `skip-stop-dialog.tsx`)                                                                                                                                                                                   |
+| The gluestack `Modal` (step-up prompt, role picker)                                                                          | Nothing. Its content is centred in the space above the keyboard                                                                                                                                                                                                       |
+| A scroll view inside something already lifted above the keyboard (the Dispatch console's notes card)                         | `useKeepFocusedInputVisible()` on that ScrollView                                                                                                                                                                                                                     |
+
+Never nest a `KeyboardAwareScrollView` inside a `CustomBottomSheet` (the keyboard's height would be added twice), and leave out `automaticallyAdjustKeyboardInsets` (iOS only; `KeyboardAwareScrollView` covers both platforms). `KeyboardAvoidingView` remains for the sign-in layout only.
+
+## Why the sheet is laid out, not positioned
+
+`CustomBottomSheet` used to pin the sheet with `position: 'absolute', bottom: 0` inside a padding `KeyboardAvoidingView`. Yoga places an absolute child against its parent's border, ignoring padding, so the padding moved nothing and the keyboard covered a status note. The sheet is now the last child of a `justifyContent: 'flex-end'` column whose bottom padding is the keyboard height (`BottomAnchoredKeyboardView`); `flexShrink: 1` lets it give up height when the keyboard leaves less room, and `useKeepFocusedInputVisible` scrolls the field back into what is left once the keyboard has settled.
+
+## Guard
+
+`packages/ui/src/keyboard-avoiding-view/__tests__/keyboard-avoidance-rules.test.ts` fails when a vertical `ScrollView` holds a text field outside a sheet, when a transparent `NativeModal` with a field does not move up, when a `KeyboardAwareScrollView` sits in a sheet, or when `automaticallyAdjustKeyboardInsets` comes back. The rules read one file at a time: a screen whose fields come from child components (call detail's notes tab, the operations deployment panels) is not caught, so use `KeyboardAwareScrollView` there by hand.

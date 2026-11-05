@@ -1,7 +1,7 @@
 import { RouteInstanceStatus, useRoutesStore } from '@resgrid/data';
 import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
-import { Button, ButtonSpinner, ButtonText, HStack, Pressable, ScreenHeader, ScrollView, Text, Textarea, TextareaInput, useFormFactor, useToast, View, VStack, ZeroState } from '@resgrid/ui';
+import { Button, ButtonSpinner, ButtonText, HStack, KeyboardAwareScrollView, Pressable, ScreenHeader, Text, Textarea, TextareaInput, useFormFactor, useToast, View, VStack, ZeroState } from '@resgrid/ui';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ChevronRight, Clock, MapPin, User } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -94,7 +94,7 @@ export default function RouteStopScreen({ stopId: stopIdProp, renderMap }: Route
   return (
     <View className="flex-1 bg-background-50" testID="route-stop-screen">
       <ScreenHeader title={stop.Name || t('routes.stop_detail')} onBack={back} />
-      <ScrollView contentContainerStyle={{ paddingBottom: 24 }} keyboardShouldPersistTaps="handled">
+      <KeyboardAwareScrollView contentContainerStyle={{ paddingBottom: 24 }} keyboardShouldPersistTaps="handled">
         <VStack space="sm" className="bg-background-0 p-4">
           <Text className="text-lg font-bold text-typography-900">{stop.Name}</Text>
           {stop.Address ? <Text className="text-sm text-typography-500">{stop.Address}</Text> : null}
@@ -184,7 +184,7 @@ export default function RouteStopScreen({ stopId: stopIdProp, renderMap }: Route
             testID="route-stop-actions"
           />
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
       <SkipStopDialog
         isOpen={isSkipOpen}
         stopName={stop.Name}

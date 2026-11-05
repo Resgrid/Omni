@@ -2,7 +2,29 @@ import { useSecurity } from '@resgrid/auth';
 import { type QueuedMessage, useMessagesStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import type { MessageResultData } from '@resgrid/models';
-import { Button, ButtonText, Fab, FabIcon, FlatList, HStack, Input, InputField, InputIcon, InputSlot, Loading, Pressable, RefreshControl, Text, useThemeColors, useToast, View, VStack, ZeroState } from '@resgrid/ui';
+import {
+  Button,
+  ButtonText,
+  Fab,
+  FabIcon,
+  FlatList,
+  HStack,
+  Input,
+  InputField,
+  InputIcon,
+  InputSlot,
+  Loading,
+  Pressable,
+  RefreshControl,
+  TabBar,
+  type TabBarItem,
+  Text,
+  useThemeColors,
+  useToast,
+  View,
+  VStack,
+  ZeroState,
+} from '@resgrid/ui';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Mail, MessageSquarePlus, Search, Trash2, X } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
@@ -78,6 +100,13 @@ export default function MessagesScreen({ openCompose }: MessagesScreenProps) {
     [queuedList, items]
   );
   const counts: Record<MessageFilter, number> = { all: buildMessageList(inbox, sent, 'all', '').length, inbox: inbox.length, sent: sent.length };
+  const filterTabs: TabBarItem<MessageFilter>[] = FILTERS.map((option) => ({ key: option.key, label: `${t(option.labelKey)} (${counts[option.key]})`, testID: `messages-filter-${option.key}` }));
+
+  // A selection only makes sense in the list it was made in: switching lists ends it.
+  const changeFilter = (next: MessageFilter) => {
+    setSelection(null);
+    setFilter(next);
+  };
 
   const isRead = (item: MessageListItem): boolean => item.isOwn || readSet.has(item.message.MessageId) || !!item.message.RespondedOn;
 
@@ -111,6 +140,7 @@ export default function MessagesScreen({ openCompose }: MessagesScreenProps) {
 
   return (
     <View className="flex-1 bg-background-50" testID="messages-screen">
+      <TabBar tabs={filterTabs} activeKey={filter} onChange={changeFilter} variant="pills" testID="messages-filters" />
       <VStack space="sm" className="border-b border-outline-200 bg-background-0 p-4">
         <Input variant="outline" size="md">
           <InputSlot className="pl-3">
@@ -148,27 +178,7 @@ export default function MessagesScreen({ openCompose }: MessagesScreenProps) {
               </Button>
             </HStack>
           </HStack>
-        ) : (
-          <HStack space="sm" accessibilityRole="tablist">
-            {FILTERS.map((option) => {
-              const isActive = filter === option.key;
-              return (
-                <Pressable
-                  key={option.key}
-                  onPress={() => setFilter(option.key)}
-                  accessibilityRole="tab"
-                  accessibilityState={{ selected: isActive }}
-                  testID={`messages-filter-${option.key}`}
-                  className={`flex-row items-center rounded-full border px-3 py-1.5 ${isActive ? 'border-primary-600 bg-primary-600' : 'border-outline-300 bg-background-0'}`}
-                >
-                  <Text size="sm" className={isActive ? 'font-semibold text-typography-0' : 'text-typography-700'}>
-                    {`${t(option.labelKey)} (${counts[option.key]})`}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </HStack>
-        )}
+        ) : null}
       </VStack>
 
       {isLoading && rows.length === 0 ? (

@@ -4,8 +4,9 @@ import './test-setup';
 import { useCalendarStore, usePersonnelStore } from '@resgrid/data';
 import { type CalendarItemResultData, type PersonnelInfoResultData } from '@resgrid/models';
 import { useToastStore } from '@resgrid/ui';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import React from 'react';
+import { type StyleProp, StyleSheet, type ViewStyle } from 'react-native';
 
 import { CalendarItemDetailsSheet } from '../components/calendar-item-details-sheet';
 import { buildMarkedDates } from '../components/month-calendar';
@@ -16,10 +17,12 @@ import CalendarScreen from '../screens/calendar';
 jest.mock('react-native-calendars', () => {
   const mockReact = require('react');
   const { View, Pressable, Text } = require('react-native');
+
   const MockCalendar = ({ onDayPress, onMonthChange, markedDates, testID }: { onDayPress: (day: object) => void; onMonthChange: (month: object) => void; markedDates?: Record<string, unknown>; testID?: string }) => {
     const now = new Date();
     const pad = (value: number) => String(value).padStart(2, '0');
     const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+
     return mockReact.createElement(
       View,
       { testID },
@@ -34,6 +37,7 @@ jest.mock('react-native-calendars', () => {
       )
     );
   };
+
   return { Calendar: MockCalendar };
 });
 
@@ -167,6 +171,7 @@ describe('CalendarItemDetailsSheet', () => {
   it('confirms before cancelling attendance and reports a failure', async () => {
     fetchers.setAttendance.mockImplementationOnce(async () => {
       useCalendarStore.setState({ attendanceError: { code: 'network', messageKey: 'errors.data.network' } });
+
       return false;
     });
     await render(<CalendarItemDetailsSheet item={item('4', { SignupType: 1, Attending: true })} isOpen onClose={jest.fn()} />);
@@ -189,6 +194,45 @@ describe('CalendarItemDetailsSheet', () => {
     expect(screen.queryByText('REDACTED', q)).toBeNull();
     expect(screen.queryByTestId('webview-html', q)).toBeNull();
     expect(screen.getAllByText('data_protection.protected_value', q).length).toBe(3);
+  });
+
+  it('shows a long item in full: wrapping text fields and a description that fits its text, then scrolls', async () => {
+    const longTitle = 'Annual live-fire training and apparatus inspection '.repeat(6).trim();
+    const longLocation = 'Training ground, building 4, north lot behind the station '.repeat(5).trim();
+    const longNote = 'I will bring the trailer and two extra SCBA sets. '.repeat(8).trim();
+
+    const detail = item('9', {
+      Title: longTitle,
+      Location: longLocation,
+      TypeName: 'Mandatory department-wide training',
+      CreatorUserId: 'creator',
+      Description: `<p>${'Bring full turnout gear and a water bottle. '.repeat(300)}</p>`,
+      Attendees: [{ CalendarItemId: '9', UserId: 'u2', Name: 'Sam Lee', GroupName: 'Station 2', AttendeeType: 2, Timestamp: '', Note: longNote }],
+    });
+
+    const { container } = await render(<CalendarItemDetailsSheet item={detail} isOpen onClose={jest.fn()} />);
+
+    // The sheet scrolls the whole item itself; a second vertical ScrollView inside it would fight it for the drag.
+    expect(container.queryAll((node) => node.type === 'RCTScrollView')).toHaveLength(1);
+    // Nothing is cut to a line count.
+    [longTitle, longLocation, longNote, 'Mandatory department-wide training', 'calendar.createdBy: Robin Ray'].forEach((text) => expect(screen.getByText(text, q).props.numberOfLines).toBeUndefined());
+
+    const description = () => screen.getByTestId('calendar-item-details-description', q);
+    // SAFETY: HtmlRenderer hands the WebView stand-in one flattened ViewStyle.
+    const descriptionHeight = () => StyleSheet.flatten(description().props.style as StyleProp<ViewStyle>)?.height;
+    const report = async (height: number) => act(async () => description().props.onMessage({ nativeEvent: { data: `html-renderer-height:${height}` } }));
+
+    // A short description fits its box exactly and leaves the drag to the sheet.
+    await report(90);
+    expect(descriptionHeight()).toBe(90);
+    expect(description().props.scrollEnabled).toBe(false);
+
+    // A long one stops at most of the screen and scrolls inside its box, with the indicator showing.
+    await report(20000);
+    expect(descriptionHeight()).toBeLessThan(20000);
+    expect(description().props.scrollEnabled).toBe(true);
+    expect(description().props.nestedScrollEnabled).toBe(true);
+    expect(description().props.showsVerticalScrollIndicator).toBe(true);
   });
 
   it('prefers the fetched detail (attendees) over the list row', async () => {

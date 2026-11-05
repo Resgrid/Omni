@@ -56,6 +56,8 @@ describe('NoteListScreen', () => {
     const html = String(screen.getByTestId('webview-html', hidden).props.children);
     expect(html).toContain('Gate code');
     expect(html).not.toContain('onerror');
+    // The body fits its text (autoHeight) instead of a fixed box; the sheet scrolls the rest.
+    expect(screen.getByTestId('note-details-html', hidden).props.onMessage).toEqual(expect.any(Function));
     await fireEvent.press(screen.getByTestId('note-details-close', hidden));
     expect(screen.queryByTestId('webview-html', hidden)).toBeNull();
   });

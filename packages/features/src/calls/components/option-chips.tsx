@@ -1,4 +1,4 @@
-import { Pressable, ScrollView, Text } from '@resgrid/ui';
+import { Pressable, ScrollRow, Text } from '@resgrid/ui';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -47,9 +47,9 @@ export function OptionChips<V extends string | number>({ options, selected, onTo
   });
 
   return scroll ? (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} accessibilityRole={mode === 'single' ? 'radiogroup' : undefined} accessibilityLabel={accessibilityLabel} testID={testID}>
+    <ScrollRow accessibilityRole={mode === 'single' ? 'radiogroup' : undefined} accessibilityLabel={accessibilityLabel} testID={testID}>
       {chips}
-    </ScrollView>
+    </ScrollRow>
   ) : (
     <View style={styles.wrap} accessibilityRole={mode === 'single' ? 'radiogroup' : undefined} accessibilityLabel={accessibilityLabel} testID={testID}>
       {chips}

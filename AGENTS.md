@@ -80,7 +80,7 @@ Tests enforce the last two and the horizontal `ScrollView` rule. Details, layer 
 - Core v4 API: `/api/v4/{Controller}/{Action}`, PascalCase JSON, envelope with string `Status` — **`not_found` comes back as HTTP 200**. All server changes are additive (old store builds stay in the field). Wire typos stay (`GetMayLayers`, `GetAllCallPriorites`, `ImgagesCount`). → `resgrid-v4-api`
 - SignalR events are id-only pings: refetch bypassing caches; re-invoke hub `Connect` methods after every reconnect. Push codes: first letter drives priority — anything starting with `C` is a critical call alert. → `resgrid-realtime-push`
 - Domain vocabulary (departments, units, statuses, calls, incident command, records, shifts…) → `resgrid-domain`.
-- `router.push` before the root layout mounts is silently dropped — use `routerPushWithRetry`. Android keyboard mode stays `resize`; chat composers use `BottomAnchoredKeyboardView`.
+- `router.push` before the root layout mounts is silently dropped — use `routerPushWithRetry`. Android keyboard mode stays `resize`; a text field must never sit under the soft keyboard — scrolling forms and notes use `KeyboardAwareScrollView`, chat composers `BottomAnchoredKeyboardView`, and `CustomBottomSheet`/`Modal` handle it themselves (`docs/subsystems/keyboard.md`).
 
 ## Skills (`.claude/skills/`, mirrored to `.agents/skills/` by `node scripts/sync-agent-skills.mjs`)
 

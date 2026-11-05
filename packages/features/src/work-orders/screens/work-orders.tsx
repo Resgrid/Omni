@@ -2,7 +2,26 @@ import { useTerm } from '@resgrid/auth';
 import { useWorkOrdersStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import type { WorkOrderSummary } from '@resgrid/models';
-import { Badge, BadgeText, Button, ButtonText, HStack, Input, InputField, InputIcon, InputSlot, Loading, Pressable, RefreshControl, ScrollView, Text, useThemeColors, View, VStack, ZeroState } from '@resgrid/ui';
+import {
+  Badge,
+  BadgeText,
+  Button,
+  ButtonText,
+  HStack,
+  Input,
+  InputField,
+  InputIcon,
+  InputSlot,
+  KeyboardAwareScrollView,
+  Loading,
+  Pressable,
+  RefreshControl,
+  Text,
+  useThemeColors,
+  View,
+  VStack,
+  ZeroState,
+} from '@resgrid/ui';
 import { type Href, useFocusEffect, useRouter } from 'expo-router';
 import { Search, SlidersHorizontal, Wrench, X } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
@@ -58,7 +77,7 @@ function WorkOrdersContent() {
 
   return (
     <View className="flex-1 bg-background-50" testID="work-orders-screen">
-      <ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={false} onRefresh={() => load(undefined, true)} />}>
+      <KeyboardAwareScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={false} onRefresh={() => load(undefined, true)} />}>
         <VStack space="md">
           <HStack className="items-center justify-between" space="sm">
             <Text className="flex-1 text-xl font-bold text-typography-900" accessibilityRole="header">
@@ -171,7 +190,7 @@ function WorkOrdersContent() {
             </Pressable>
           ) : null}
         </VStack>
-      </ScrollView>
+      </KeyboardAwareScrollView>
       <WorkOrderFilterSheet isOpen={isFilterOpen} onClose={() => setIsFilterOpen(false)} filters={filters} onChange={setFilters} />
     </View>
   );

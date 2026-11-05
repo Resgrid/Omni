@@ -65,8 +65,12 @@ describe('protocols', () => {
     await render(<ProtocolContent protocol={protocol('1')} />);
     const html = String(screen.getByTestId('webview-html').props.children);
     expect(html).toContain('<h1>Steps</h1>');
-    expect(html).not.toContain('<script');
+    // The text sizes itself (autoHeight): the only script is the renderer's own nonce-carrying height reporter.
+    expect(html).not.toContain('steal()');
+    expect(html.match(/<script/g)).toHaveLength(1);
+    expect(html).toMatch(/<script nonce="[a-z0-9]+">/i);
     expect(html).not.toContain('javascript:');
+    expect(screen.getByTestId('protocol-content-html').props.javaScriptEnabled).toBe(true);
     expect(screen.getByLabelText('protocols.details.code: P-1')).toBeTruthy();
   });
 
