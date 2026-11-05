@@ -100,12 +100,13 @@ jest.mock('@shopify/flash-list', () => {
 });
 
 jest.mock('expo-router', () => {
-  const mockRouter = { push: jest.fn(), back: jest.fn(), replace: jest.fn(), canGoBack: jest.fn(() => true) };
+  const mockRouter = { push: jest.fn(), back: jest.fn(), replace: jest.fn(), setParams: jest.fn(), canGoBack: jest.fn(() => true) };
   return {
     useIsFocused: jest.fn(() => true),
     router: mockRouter,
     useRouter: () => mockRouter,
     useLocalSearchParams: jest.fn(() => ({})),
+    usePathname: jest.fn(() => '/'),
     useFocusEffect: jest.fn(),
     Redirect: ({ href }: { href: string }) => require('react').createElement(require('react-native').Text, { testID: 'redirect' }, href),
   };

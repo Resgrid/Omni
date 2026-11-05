@@ -200,4 +200,33 @@ describe('CallNotesPanel', () => {
     expect(screen.getByText('data_protection.protected_value')).toBeTruthy();
     expect(screen.queryByText('REDACTED')).toBeNull();
   });
+
+  it('shows each note on its own card, so one note never runs into the next', async () => {
+    const note = { CallId: '5', UserId: '', Source: 0, TimestampFormatted: '', Timestamp: '', TimestampUtc: '', Latitude: null, Longitude: null, FullName: 'Dispatcher' };
+    useCallDetailStore.setState({
+      details: {
+        '5': {
+          call: null,
+          extraData: null,
+          notes: [
+            { ...note, CallNoteId: 'a', Note: 'Command established' },
+            { ...note, CallNoteId: 'b', Note: 'Water supply secured' },
+          ],
+          images: null,
+          files: null,
+          audio: null,
+          fetchedAt: 1,
+        },
+      },
+    });
+    await render(<CallNotesPanel callId="5" />);
+
+    for (const id of ['a', 'b']) {
+      expect(screen.getByTestId(`call-note-${id}`).props.className).toEqual(expect.stringContaining('border'));
+      expect(screen.getByTestId(`call-note-${id}`).props.className).toEqual(expect.stringContaining('rounded-lg'));
+    }
+
+    expect(screen.getByText('Command established')).toBeTruthy();
+    expect(screen.getByText('Water supply secured')).toBeTruthy();
+  });
 });

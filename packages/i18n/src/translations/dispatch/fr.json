@@ -66,7 +66,6 @@
       "none": "Aucun contact disponible",
       "title": "Sélectionner un contact"
     },
-    "coordinates_incomplete": "Saisissez la latitude et la longitude",
     "coordinates_invalid": "Vérifiez la latitude et la longitude : les deux sont requises, en degrés décimaux",
     "dispatch_board": {
       "at_station": "À la caserne",
@@ -103,9 +102,6 @@
       "no_form": "Aucun formulaire d'appel configuré",
       "title": "Formulaire d'appel"
     },
-    "latitude": "Latitude",
-    "latitude_invalid": "Saisissez une latitude en degrés décimaux, entre -90 et 90",
-    "latitude_placeholder": "ex. 39.122639",
     "linked_calls": {
       "change": "Changer l'appel lié",
       "linked": "Lié",
@@ -114,9 +110,6 @@
       "select": "Lier à un appel existant",
       "title": "Appel lié"
     },
-    "longitude": "Longitude",
-    "longitude_invalid": "Saisissez une longitude en degrés décimaux, entre -180 et 180",
-    "longitude_placeholder": "ex. -119.758773",
     "new_call_web_hint": "Remplissez les détails de l'appel ci-dessous. Appuyez sur Ctrl+Entrée pour créer.",
     "no_destination": "Aucune destination",
     "protocols": {

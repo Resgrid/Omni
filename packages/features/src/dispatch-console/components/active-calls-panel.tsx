@@ -1,6 +1,5 @@
-import { useSecurity } from '@resgrid/auth';
 import { useCallsStore, useCheckInTimersStore } from '@resgrid/data';
-import { resolvePriority } from '@resgrid/features/calls';
+import { resolvePriority, useCallPermissionsResolver } from '@resgrid/features/calls';
 import { checkInSeverity } from '@resgrid/features/check-in';
 import { useTranslation } from '@resgrid/i18n';
 import type { CallResultData, DispatchedEventResultData } from '@resgrid/models';
@@ -40,7 +39,8 @@ export interface ActiveCallsPanelProps {
  */
 export const ActiveCallsPanel: React.FC<ActiveCallsPanelProps> = ({ selectedCallId, isFilterActive, onSelectCall, onOpenCall, onNewCall, onAddResources, flex, maxHeight, now = Date.now }) => {
   const { t } = useTranslation();
-  const { canUserCreateCalls } = useSecurity();
+  const permissionsFor = useCallPermissionsResolver();
+  const canCreate = permissionsFor().canCreate;
   const calls = useCallsStore((state) => state.calls);
   const callPriorities = useCallsStore((state) => state.callPriorities);
   const callDispatches = useCallsStore((state) => state.callDispatches);
@@ -93,11 +93,11 @@ export const ActiveCallsPanel: React.FC<ActiveCallsPanelProps> = ({ selectedCall
           now={now()}
           onSelect={onSelectCall}
           onOpenDetails={onOpenCall}
-          onAddResources={canUserCreateCalls ? onAddResources : undefined}
+          onAddResources={permissionsFor(item, now()).canDispatchMore ? onAddResources : undefined}
         />
       );
     },
-    [callDispatches, callPriorities, canUserCreateCalls, isFilterActive, now, onAddResources, onOpenCall, onSelectCall, selectedCallId, timerStatuses]
+    [callDispatches, callPriorities, isFilterActive, now, onAddResources, onOpenCall, onSelectCall, permissionsFor, selectedCallId, timerStatuses]
   );
 
   return (
@@ -113,7 +113,7 @@ export const ActiveCallsPanel: React.FC<ActiveCallsPanelProps> = ({ selectedCall
       right={
         <>
           <PanelIconButton icon={RefreshCw} onPress={refresh} accessibilityLabel={t('common.refresh')} testID="active-calls-refresh" />
-          {canUserCreateCalls && onNewCall ? <PanelIconButton icon={Plus} color="#6366f1" onPress={onNewCall} accessibilityLabel={t('dispatch.new_call')} testID="active-calls-new" /> : null}
+          {canCreate && onNewCall ? <PanelIconButton icon={Plus} color="#6366f1" onPress={onNewCall} accessibilityLabel={t('dispatch.new_call')} testID="active-calls-new" /> : null}
         </>
       }
     >

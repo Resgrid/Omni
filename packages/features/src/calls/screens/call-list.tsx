@@ -1,9 +1,8 @@
-import { useSecurity, useTerm } from '@resgrid/auth';
 import { useCapability } from '@resgrid/config';
 import { type CallListItem, useCallsStore, useCheckInTimersStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import type { DispatchedEventResultData } from '@resgrid/models';
-import { Button, ButtonText, FlatList, Loading, Pressable, RefreshControl, Text, useFormFactor, useThemeColors, ZeroState } from '@resgrid/ui';
+import { Button, ButtonText, Fab, FlatList, Loading, Pressable, RefreshControl, Text, useFormFactor, useThemeColors, ZeroState } from '@resgrid/ui';
 import { useRouter } from 'expo-router';
 import { Plus } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -15,6 +14,7 @@ import { OfflineCallBanner } from '../components/offline-call-banner';
 import { SyncedCallNotices } from '../components/synced-call-notices';
 import { useCallAssignmentContext } from '../hooks/use-call-assignment-context';
 import { useCallList } from '../hooks/use-call-list';
+import { useCallPermissions } from '../hooks/use-call-permissions';
 import { useIsOnline } from '../hooks/use-connectivity';
 import { type CallListFilters, type CallListTab, EMPTY_CALL_FILTERS, filterCalls, hasActiveFilters } from '../lib/call-filters';
 import { priorityOptions, resolvePriority } from '../lib/call-priority';
@@ -27,8 +27,6 @@ export interface CallListScreenProps {
   realtime?: boolean;
   /** Override navigation to a call (e.g. a console opening a side panel instead of a route). */
   onOpenCall?: (callId: string) => void;
-  /** Show the in-content title row (default true; off when the shell header already titles the screen). */
-  showHeader?: boolean;
 }
 
 const TAB_KEYS: Record<CallListTab, string> = { active: 'calls.tabs.active', pending: 'calls.tabs.pending', scheduled: 'calls.tabs.scheduled' };
@@ -38,15 +36,14 @@ const TAB_KEYS: Record<CallListTab, string> = { active: 'calls.tabs.active', pen
  * `capabilities.calls.queues` (Dispatch); this device's queued offline calls come first with their
  * "Queued — not dispatched yet" badge; id-only call pushes refetch bypassing caches.
  */
-export default function CallListScreen({ density, realtime = true, onOpenCall, showHeader = true }: CallListScreenProps) {
+export default function CallListScreen({ density, realtime = true, onOpenCall }: CallListScreenProps) {
   const { t } = useTranslation();
   const colors = useThemeColors();
   const router = useRouter();
   const calls = useCapability('calls');
-  const { canUserCreateCalls } = useSecurity();
+  const { canCreate } = useCallPermissions();
   const { formFactor } = useFormFactor();
   const isOnline = useIsOnline();
-  const title = useTerm('module.calls', t('calls.title'));
   const assignment = useCallAssignmentContext();
   const { activeCalls, pendingCalls, scheduledCalls, isLoading, hasError, refresh } = useCallList({ queues: calls.queues, realtime });
   const callPriorities = useCallsStore((state) => state.callPriorities);
@@ -64,7 +61,6 @@ export default function CallListScreen({ density, realtime = true, onOpenCall, s
   const source: CallListItem[] = activeTab === 'pending' ? pendingCalls : activeTab === 'scheduled' ? scheduledCalls : activeCalls;
   const visible = useMemo(() => filterCalls(source, filters), [source, filters]);
   const priorities = useMemo(() => priorityOptions(callPriorities), [callPriorities]);
-  const canCreate = calls.create !== 'none' && canUserCreateCalls;
 
   // Dispatches drive the ticker and the assignment outline; the store keeps them per call with a TTL (Unit).
   const serverCallIds = useMemo(() => activeCalls.filter((call) => !call.queued).map((call) => call.CallId), [activeCalls]);
@@ -135,22 +131,6 @@ export default function CallListScreen({ density, realtime = true, onOpenCall, s
 
   return (
     <View style={styles.screen} className="bg-background-50" testID="call-list-screen">
-      {showHeader ? (
-        <View style={styles.header}>
-          <Text className="text-xl font-bold text-typography-900" accessibilityRole="header">
-            {title}
-          </Text>
-          {canCreate ? (
-            <Button size="sm" onPress={() => router.push(callNew())} accessibilityLabel={t('calls.new_call')} testID="call-list-new">
-              <View style={styles.buttonIcon}>
-                <Plus size={16} color={colors.textInverse} />
-              </View>
-              <ButtonText>{t('calls.new_call')}</ButtonText>
-            </Button>
-          ) : null}
-        </View>
-      ) : null}
-
       {!isOnline ? <OfflineCallBanner context="list" queuedCount={queuedCount} /> : null}
       <SyncedCallNotices onOpenCall={openCallById} />
 
@@ -184,19 +164,27 @@ export default function CallListScreen({ density, realtime = true, onOpenCall, s
         data={visible}
         keyExtractor={(item: CallListItem) => item.CallId}
         renderItem={renderItem}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={canCreate ? styles.listAboveFab : styles.list}
         ListEmptyComponent={emptyState}
         refreshControl={<RefreshControl refreshing={false} onRefresh={() => void refresh()} />}
         testID="call-list"
       />
+      {/* The shell header titles the screen; New Call floats over the list rather than adding a second header row. */}
+      {canCreate ? (
+        <Fab size="lg" placement="bottom right" onPress={() => router.push(callNew())} accessibilityLabel={t('calls.new_call')} testID="call-list-new">
+          <View>
+            <Plus size={24} color={colors.textInverse} />
+          </View>
+        </Fab>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingTop: 12 },
-  buttonIcon: { marginRight: 4 },
   tabs: { flexDirection: 'row', paddingHorizontal: 12, paddingTop: 8 },
   list: { paddingHorizontal: 12, paddingBottom: 24, paddingTop: 8 },
+  // Room for the New Call button over the last card.
+  listAboveFab: { paddingHorizontal: 12, paddingBottom: 96, paddingTop: 8 },
 });

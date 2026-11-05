@@ -1,11 +1,11 @@
 {
   "rules": "see header of packages/i18n/scripts/merge-legacy-translations.mjs",
   "namespaces": {
-    "common": 3876,
+    "common": 3893,
     "responder": 755,
     "unit": 151,
     "ic": 698,
-    "dispatch": 504,
+    "dispatch": 497,
     "bigboard": 91
   },
   "enConflicts": 69,

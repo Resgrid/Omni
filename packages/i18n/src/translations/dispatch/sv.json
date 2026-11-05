@@ -66,7 +66,6 @@
       "none": "Inga kontakter tillgängliga",
       "title": "Välj kontakt"
     },
-    "coordinates_incomplete": "Ange både latitud och longitud",
     "coordinates_invalid": "Kontrollera latitud och longitud: båda behövs, i decimalgrader",
     "dispatch_board": {
       "at_station": "På stationen",
@@ -103,9 +102,6 @@
       "no_form": "Inget ärendeformulär konfigurerat",
       "title": "Ärendeformulär"
     },
-    "latitude": "Latitud",
-    "latitude_invalid": "Ange en latitud i decimalgrader, mellan -90 och 90",
-    "latitude_placeholder": "t.ex. 39.122639",
     "linked_calls": {
       "change": "Ändra länkat ärende",
       "linked": "Länkat",
@@ -114,9 +110,6 @@
       "select": "Länka till befintligt ärende",
       "title": "Länkat ärende"
     },
-    "longitude": "Longitud",
-    "longitude_invalid": "Ange en longitud i decimalgrader, mellan -180 och 180",
-    "longitude_placeholder": "t.ex. -119.758773",
     "new_call_web_hint": "Fyll i ärendeuppgifterna nedan. Tryck Ctrl+Enter för att skapa.",
     "no_destination": "Ingen destination",
     "protocols": {

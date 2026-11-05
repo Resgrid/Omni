@@ -48,6 +48,11 @@ export class CallResultData {
   /** The run card driving this call's dispatch, or null when no card matched. */
   public ActiveRunCardId: number | null = null;
   public LoggedOnUtc: string = '';
+  /**
+   * The user who logged the call; null when none did (an email or API import), undefined from older servers. Core lets a
+   * department admin or this user edit the call, add resources, reschedule it or dispatch it now.
+   */
+  public ReportingUserId?: string | null;
   /** When the call was closed, in the department's time; null while it is open, undefined from older servers. */
   public ClosedOn?: string | null;
   /** When the call was closed, UTC; null while it is open, undefined from older servers. */

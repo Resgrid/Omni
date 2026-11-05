@@ -1,10 +1,12 @@
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import fs from 'fs';
+import path from 'path';
 import React from 'react';
-import { Animated, Text } from 'react-native';
+import { Animated, StyleSheet, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BOTTOM_SHEET_BACKDROP_ARM_DELAY_MS, CustomBottomSheet, getBottomSheetHeight } from '../bottom-sheet';
-import { ALL_ORIENTATIONS, NativeModal } from '../native-modal';
+import { ALL_ORIENTATIONS, NativeModal, NativeModalScreen } from '../native-modal';
 import { SIDE_DRAWER_BACKDROP_ARM_DELAY_MS, SideDrawer } from '../side-drawer';
 import { useToastStore } from '../toast/store';
 
@@ -38,6 +40,7 @@ describe('NativeModal (Unit)', () => {
         <Text>Sheet content</Text>
       </NativeModal>
     );
+
     expect(useToastStore.getState().modalHosts).toHaveLength(1);
 
     await rerender(
@@ -55,6 +58,7 @@ describe('NativeModal (Unit)', () => {
         <Text>x</Text>
       </NativeModal>
     );
+
     expect(screen.getByTestId('native-modal', query).props.supportedOrientations).toEqual(ALL_ORIENTATIONS);
 
     await rerender(
@@ -63,6 +67,40 @@ describe('NativeModal (Unit)', () => {
       </NativeModal>
     );
     expect(screen.getByTestId('native-modal', query).props.supportedOrientations).toEqual(['portrait']);
+  });
+
+  it('pads a page sheet clear of the status bar, cutout and home indicator, keeping the sheet’s own style', async () => {
+    jest.mocked(useSafeAreaInsets).mockReturnValue({ top: 32, bottom: 24, left: 8, right: 4 });
+    await render(
+      <NativeModal visible presentationStyle="pageSheet">
+        <NativeModalScreen style={{ backgroundColor: '#000000' }} testID="sheet-screen">
+          <Text>Call Notes</Text>
+        </NativeModalScreen>
+      </NativeModal>
+    );
+
+    expect(StyleSheet.flatten(screen.getByTestId('sheet-screen', query).props.style)).toEqual({ flex: 1, paddingTop: 32, paddingBottom: 24, paddingLeft: 8, paddingRight: 4, backgroundColor: '#000000' });
+    jest.mocked(useSafeAreaInsets).mockReturnValue({ top: 0, bottom: 0, left: 0, right: 0 });
+  });
+});
+
+// A page-sheet or full-screen modal fills its window, and on Android that window runs under the status bar. Without a
+// NativeModalScreen root its header and close button sit beneath the status bar, cut off and out of reach of a tap.
+describe('opaque NativeModal source rule', () => {
+  const ROOTS = [path.resolve(__dirname, '../../..'), path.resolve(__dirname, '../../../../apps/omni')];
+  const SKIP = new Set(['node_modules', '__tests__', 'dist', 'ios', 'android', '.metro-cache', '.expo']);
+
+  const walk = (dir: string): string[] =>
+    fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => (entry.isDirectory() ? (SKIP.has(entry.name) ? [] : walk(path.join(dir, entry.name))) : /\.tsx$/.test(entry.name) ? [path.join(dir, entry.name)] : []));
+
+  it('gives every page-sheet and full-screen NativeModal a NativeModalScreen root', () => {
+    const offenders = ROOTS.flatMap(walk).filter((file) => {
+      const text = fs.readFileSync(file, 'utf8');
+
+      return /<NativeModal\b/.test(text) && /presentationStyle=["'](pageSheet|formSheet|fullScreen)["']/.test(text) && !text.includes('<NativeModalScreen');
+    });
+
+    expect(offenders.map((file) => path.relative(path.resolve(__dirname, '../../../..'), file))).toEqual([]);
   });
 });
 
@@ -171,6 +209,7 @@ describe('CustomBottomSheet (Unit + IC)', () => {
           <Text>Sheet body</Text>
         </CustomBottomSheet>
       );
+
       await act(async () => rerender(sheet(false)));
       await act(async () => rerender(sheet(true)));
       await act(() => closeCallback?.({ finished: false }));
@@ -235,6 +274,7 @@ describe('SideDrawer (IC)', () => {
 
   it('unmounts after an interrupted close animation', async () => {
     const { rerender } = await render(drawer(true));
+
     const parallelSpy = jest.spyOn(Animated, 'parallel').mockReturnValue({
       start: (callback?: (result: { finished: boolean }) => void) => callback?.({ finished: false }),
     } as unknown as Animated.CompositeAnimation);

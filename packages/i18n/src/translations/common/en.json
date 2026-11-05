@@ -399,7 +399,7 @@
     "create_not_allowed_description": "Creating calls is not available in this app or for your account.",
     "custom_fields": "Custom Fields",
     "dispatch": {
-      "none_pages_everyone": "No one selected — everyone available will be paged"
+      "none_pages_nobody": "No one selected — no one will be paged"
     },
     "edit": {
       "offline": "Editing a call needs a connection. Your changes have not been saved."
@@ -496,7 +496,21 @@
     "scheduled_on_helper": "Leave empty to dispatch immediately",
     "save_pending_call": "Save Pending Call",
     "keyboard_shortcuts": "Tip: Press Ctrl+Enter to create, Escape to cancel",
-    "edit_keyboard_shortcuts": "Tip: Press Ctrl+S to save, Escape to cancel"
+    "edit_keyboard_shortcuts": "Tip: Press Ctrl+S to save, Escape to cancel",
+    "edit_not_allowed": "You can't edit this call",
+    "edit_not_allowed_description": "A call can be edited while it is active or pending, by a department admin or the member who logged it.",
+    "latitude": "Latitude",
+    "longitude": "Longitude",
+    "latitude_placeholder": "e.g. 39.122639",
+    "longitude_placeholder": "e.g. -119.758773",
+    "latitude_invalid": "Enter a latitude in decimal degrees, between -90 and 90",
+    "longitude_invalid": "Enter a longitude in decimal degrees, between -180 and 180",
+    "coordinates_incomplete": "Enter both latitude and longitude",
+    "place_on_map": "Place on map",
+    "destination_poi_select": "Select a destination",
+    "destination_poi_search": "Search destinations...",
+    "destination_poi_none_found": "No destinations match your search",
+    "destination_poi_clear": "Clear destination"
   },
   "chat": {
     "ack_pending_count": "You have {{count}} urgent messages to acknowledge",
@@ -895,6 +909,8 @@
     "retry": "Retry",
     "route": "Route",
     "save": "Save",
+    "scroll_tabs_left": "Scroll tabs left",
+    "scroll_tabs_right": "Scroll tabs right",
     "search": "Search",
     "select_option": "Select option",
     "selected_location": "Selected Location",
@@ -3246,7 +3262,8 @@
     "update_ready_title": "Update ready",
     "update_ready_message": "Tap to restart now. Otherwise the update installs the next time the app starts.",
     "update_ready_wall_message": "Tap to restart now, or the display restarts by itself after {{minutes}} minutes without use.",
-    "update_restart_failed": "The app could not restart. The update installs the next time the app starts."
+    "update_restart_failed": "The app could not restart. The update installs the next time the app starts.",
+    "notifications_unread": "Notifications, {{count}} unread"
   },
   "access_denied": {
     "back_to_sign_in": "Back to sign in",

@@ -1,11 +1,13 @@
 import { useTerm } from '@resgrid/auth';
 import { useTranslation } from '@resgrid/i18n';
-import { useFormFactor } from '@resgrid/ui';
-import { Tabs } from 'expo-router';
+import { useAppBarTitle, useFormFactor } from '@resgrid/ui';
+import { Tabs, usePathname } from 'expo-router';
 import type { LucideIcon } from 'lucide-react-native';
 import { Car, House, Phone, User } from 'lucide-react-native';
 import React from 'react';
 import { type ColorValue, StyleSheet, View } from 'react-native';
+
+import { MEMBER_HOME_ROUTE_PATTERNS } from '../routes';
 
 export interface MemberHomeTab {
   /** Child route name inside the `home` folder. */
@@ -25,6 +27,14 @@ export const MEMBER_HOME_TABS: readonly MemberHomeTab[] = [
   { name: 'calls', labelKey: 'tabs.calls', termKey: 'module.calls', icon: Phone, testID: 'home-calls-tab' },
 ];
 
+/** Each nested tab's path: the shell's nav knows only `/home`, so it would title every tab "Home". */
+const TAB_PATHS: Record<MemberHomeTab['name'], string> = {
+  index: MEMBER_HOME_ROUTE_PATTERNS.home,
+  personnel: MEMBER_HOME_ROUTE_PATTERNS.personnel,
+  units: MEMBER_HOME_ROUTE_PATTERNS.units,
+  calls: MEMBER_HOME_ROUTE_PATTERNS.calls,
+};
+
 const TabIcon: React.FC<{ icon: LucideIcon; color: ColorValue }> = ({ icon: Icon, color }) => (
   // lucide icons never receive `style` (web/Electron): the box carries the size.
   <View style={styles.icon}>
@@ -34,7 +44,8 @@ const TabIcon: React.FC<{ icon: LucideIcon; color: ColorValue }> = ({ icon: Icon
 
 /**
  * The `home` folder's layout (`variants/responder/app/(app)/home/_layout.tsx` re-exports it): bottom tabs for the member
- * home and the shared personnel, units and calls lists. The parent shell owns the header.
+ * home and the shared personnel, units and calls lists. The parent shell owns the header; the personnel, units and calls
+ * tabs give it their title (the home tab keeps the shell's).
  */
 export function MemberHomeTabsLayout() {
   const { t } = useTranslation();
@@ -43,6 +54,10 @@ export function MemberHomeTabsLayout() {
   const unitsTitle = useTerm('module.units', t('units.title'));
   const callsTitle = useTerm('module.calls', t('tabs.calls'));
   const titles: Record<MemberHomeTab['name'], string> = { index: t('tabs.home'), personnel: personnelTitle, units: unitsTitle, calls: callsTitle };
+  const pathname = usePathname();
+  const focusedTab = MEMBER_HOME_TABS.find((tab) => tab.name !== 'index' && TAB_PATHS[tab.name] === pathname);
+
+  useAppBarTitle(focusedTab ? titles[focusedTab.name] : null);
 
   return (
     <Tabs

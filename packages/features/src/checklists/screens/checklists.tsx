@@ -4,7 +4,7 @@ import { generateDataId, toDataError, useChecklistsStore } from '@resgrid/data';
 import { ProtectedRevealBar } from '@resgrid/features/data-protection';
 import { useTranslation } from '@resgrid/i18n';
 import type { ChecklistRun, ChecklistTarget } from '@resgrid/models';
-import { Loading, SharedTabs, type TabItem, Text, useFormFactor, ZeroState } from '@resgrid/ui';
+import { Loading, SharedTabs, type TabItem, Text, useFormFactor, useRouteTab, ZeroState } from '@resgrid/ui';
 import { useLocalSearchParams } from 'expo-router';
 import { ClipboardCheck } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -29,6 +29,7 @@ const firstParam = (value: string | string[] | undefined): string | undefined =>
 
 type ChecklistTab = 'due' | 'start' | 'history' | 'calendar';
 const TABS: readonly ChecklistTab[] = ['due', 'start', 'history', 'calendar'];
+const TAB_KEYS = TABS.map((key) => ({ key }));
 
 const DUE_FILTER_LABEL: Record<DueFilter, string> = {
   all: 'checklists.ui.filterAll',
@@ -64,7 +65,6 @@ export default function ChecklistsScreen({ occurrenceId: occurrenceProp }: Check
   const access = useChecklistsStore((state) => state.access);
   const fetchAccess = useChecklistsStore((state) => state.fetchAccess);
   const fetchRun = useChecklistsStore((state) => state.fetchRun);
-  const [tab, setTab] = useState<ChecklistTab>('due');
   const [query, setQuery] = useState('');
   const [dueFilter, setDueFilter] = useState<DueFilter>('all');
   const [historyFilter, setHistoryFilter] = useState<HistoryFilter>('all');
@@ -74,6 +74,10 @@ export default function ChecklistsScreen({ occurrenceId: occurrenceProp }: Check
   const enabled = flagStatus === 'enabled' && access?.Enabled !== false;
   const { due, isLoading, isLoadingMore, errorKey, reload, loadMore } = useDueChecklists(enabled, unitId);
   const history = useChecklistHistory(unitId);
+
+  // In the route's params, so the tab survives opening another screen and coming Back.
+  const routeTab = useRouteTab(TAB_KEYS);
+  const tab = TABS[routeTab.activeIndex] ?? 'due';
 
   useEffect(() => {
     if (flagStatus === 'enabled') void fetchAccess({ bypassCache: true });
@@ -109,12 +113,16 @@ export default function ChecklistsScreen({ occurrenceId: occurrenceProp }: Check
 
   const selectTab = useCallback(
     (index: number) => {
-      const next = TABS[index] ?? 'due';
-      setTab(next);
-      if (next === 'history' && !history.loaded && !history.isLoading) void history.reload();
+      routeTab.selectIndex(index);
+      if (TABS[index] === 'history' && !history.loaded && !history.isLoading) void history.reload();
     },
-    [history]
+    [history, routeTab]
   );
+
+  // Back can land on History (the tab is kept in the route): load it as tapping the tab would, once per error.
+  useEffect(() => {
+    if (tab === 'history' && !history.loaded && !history.isLoading && history.errorKey === null) void history.reload();
+  }, [tab, history]);
 
   const refreshAll = useCallback(async () => {
     await reload();
@@ -240,7 +248,7 @@ export default function ChecklistsScreen({ occurrenceId: occurrenceProp }: Check
             {t(`checklists.errors.${shownError}`)}
           </Text>
         ) : null}
-        <SharedTabs tabs={tabs} activeIndex={TABS.indexOf(tab)} onChange={selectTab} scrollable={false} variant="segmented" className="flex-1" tabsContainerClassName="mx-4 mt-3" />
+        <SharedTabs tabs={tabs} activeIndex={routeTab.activeIndex} onChange={selectTab} scrollable={false} variant="segmented" className="flex-1" tabsContainerClassName="mx-4 mt-3" />
       </View>
       <ChecklistRunSheet
         run={active}

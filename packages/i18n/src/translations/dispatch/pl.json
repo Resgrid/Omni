@@ -66,7 +66,6 @@
       "none": "Brak dostępnych kontaktów",
       "title": "Wybierz kontakt"
     },
-    "coordinates_incomplete": "Podaj szerokość i długość geograficzną",
     "coordinates_invalid": "Sprawdź szerokość i długość geograficzną: obie są wymagane, w stopniach dziesiętnych",
     "dispatch_board": {
       "at_station": "W remizie",
@@ -103,9 +102,6 @@
       "no_form": "Nie skonfigurowano formularza zgłoszenia",
       "title": "Formularz zgłoszenia"
     },
-    "latitude": "Szerokość geograficzna",
-    "latitude_invalid": "Podaj szerokość geograficzną w stopniach dziesiętnych, od -90 do 90",
-    "latitude_placeholder": "np. 39.122639",
     "linked_calls": {
       "change": "Zmień powiązane zgłoszenie",
       "linked": "Powiązane",
@@ -114,9 +110,6 @@
       "select": "Powiąż z istniejącym zgłoszeniem",
       "title": "Powiązane zgłoszenie"
     },
-    "longitude": "Długość geograficzna",
-    "longitude_invalid": "Podaj długość geograficzną w stopniach dziesiętnych, od -180 do 180",
-    "longitude_placeholder": "np. -119.758773",
     "new_call_web_hint": "Wypełnij szczegóły zgłoszenia poniżej. Naciśnij Ctrl+Enter, aby utworzyć.",
     "no_destination": "Brak miejsca docelowego",
     "protocols": {

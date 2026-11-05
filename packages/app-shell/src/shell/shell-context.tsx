@@ -1,5 +1,5 @@
 import type { VariantManifest } from '@resgrid/config';
-import { type FormFactorInfo, useFormFactor } from '@resgrid/ui';
+import { type AppBarScreenTitle, type AppBarTitleSlot, AppBarTitleSlotContext, type FormFactorInfo, useFormFactor } from '@resgrid/ui';
 import React, { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 import { resolveSidebarMode, type SidebarMode } from './sidebar-mode';
@@ -27,12 +27,20 @@ export interface ShellContextValue {
 
 const ShellContext = createContext<ShellContextValue | null>(null);
 const HeaderActionsContext = createContext<ReactNode | null>(null);
+const ScreenTitleContext = createContext<AppBarScreenTitle | null>(null);
+
+interface ScreenTitleEntry {
+  owner: string;
+  header: AppBarScreenTitle;
+}
 
 export function useShell(): ShellContextValue {
   const value = useContext(ShellContext);
+
   if (!value) {
     throw new Error('useShell must be used inside the app shell (createAppShell).');
   }
+
   return value;
 }
 
@@ -40,6 +48,12 @@ export const useOptionalShell = (): ShellContextValue | null => useContext(Shell
 
 /** The current header actions (rendered by the shell header). */
 export const useHeaderActionsNode = (): ReactNode | null => useContext(HeaderActionsContext);
+
+/**
+ * The focused screen's own title and actions (its `ScreenHeader`), which replace the nav entry's label in the header so a
+ * detail screen has one header rather than the app bar plus a row of its own. Null when no screen has claimed the bar.
+ */
+export const useScreenTitle = (): AppBarScreenTitle | null => useContext(ScreenTitleContext);
 
 /** Shows `actions` in the header while the calling screen is mounted (BigBoard's gear, Dispatch's view toggles). */
 export function useHeaderActions(actions: ReactNode | null): void {
@@ -49,7 +63,9 @@ export function useHeaderActions(actions: ReactNode | null): void {
     if (!setHeaderActions) {
       return undefined;
     }
+
     setHeaderActions(actions);
+
     return () => setHeaderActions(null);
   }, [actions, setHeaderActions]);
 }
@@ -64,6 +80,7 @@ export function ShellProvider({ variant, children }: ShellProviderProps) {
   const sidebarMode = resolveSidebarMode(variant.shell, formFactor);
   const [isMenuOpen, setMenuOpen] = useState(false);
   const [headerActions, setHeaderActionsState] = useState<ReactNode | null>(null);
+  const [screenTitles, setScreenTitles] = useState<readonly ScreenTitleEntry[]>([]);
 
   // Rotating into a permanent sidebar (or out of the panel) must not leave a modal drawer open over the content
   // (Responder's rotation bug).
@@ -75,6 +92,18 @@ export function ShellProvider({ variant, children }: ShellProviderProps) {
   const closeMenu = useCallback(() => setMenuOpen(false), []);
   const toggleMenu = useCallback(() => setMenuOpen((open) => !open), []);
   const setHeaderActions = useCallback((actions: ReactNode | null) => setHeaderActionsState(actions), []);
+
+  // A screen updates its entry in place on every render (its actions are new elements each time); the newest entry wins.
+  const titleSlot = useMemo<AppBarTitleSlot>(
+    () => ({
+      show: (owner, header) =>
+        setScreenTitles((entries) => (entries.some((entry) => entry.owner === owner) ? entries.map((entry) => (entry.owner === owner ? { owner, header } : entry)) : [...entries, { owner, header }])),
+      hide: (owner) => setScreenTitles((entries) => (entries.some((entry) => entry.owner === owner) ? entries.filter((entry) => entry.owner !== owner) : entries)),
+    }),
+    []
+  );
+
+  const screenTitle = screenTitles.at(-1)?.header ?? null;
 
   const value = useMemo<ShellContextValue>(
     () => ({
@@ -93,7 +122,11 @@ export function ShellProvider({ variant, children }: ShellProviderProps) {
 
   return (
     <ShellContext.Provider value={value}>
-      <HeaderActionsContext.Provider value={headerActions}>{children}</HeaderActionsContext.Provider>
+      <HeaderActionsContext.Provider value={headerActions}>
+        <ScreenTitleContext.Provider value={screenTitle}>
+          <AppBarTitleSlotContext.Provider value={titleSlot}>{children}</AppBarTitleSlotContext.Provider>
+        </ScreenTitleContext.Provider>
+      </HeaderActionsContext.Provider>
     </ShellContext.Provider>
   );
 }

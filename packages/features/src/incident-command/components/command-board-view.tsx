@@ -109,7 +109,7 @@ export const CommandBoardView: React.FC<CommandBoardViewProps> = ({ callId, tier
   const assistantFlag = useFeatureFlag(AI_ASSISTANT_FLAG);
   const nowMs = useNow(60_000);
   const { run } = useCommandActions();
-  const { canUserCreateCalls } = useSecurity();
+  const { canUserCloseCalls } = useSecurity();
 
   const [sheet, setSheet] = useState<Sheet>(null);
   const [editLane, setEditLane] = useState<CommandStructureNode | null>(null);
@@ -541,7 +541,7 @@ export const CommandBoardView: React.FC<CommandBoardViewProps> = ({ callId, tier
           void run(commandDetailsEvent(callId, input), { success: saved });
         }}
       />
-      <EndCommandDialog isOpen={sheet === 'end'} onClose={close} canCloseCall={closeCapability ? canUserCreateCalls : false} onConfirm={(closeCall) => void confirmEnd(closeCall)} />
+      <EndCommandDialog isOpen={sheet === 'end'} onClose={close} canCloseCall={closeCapability ? canUserCloseCalls : false} onConfirm={(closeCall) => void confirmEnd(closeCall)} />
       {assistantFlag ? <AssistantSheet isOpen={sheet === 'assistant'} onClose={close} callId={callId} isOnline={isOnline} /> : null}
     </View>
   );

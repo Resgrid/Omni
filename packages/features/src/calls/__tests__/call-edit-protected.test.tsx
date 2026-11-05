@@ -56,7 +56,7 @@ const revealedCall = (): CallResultData =>
 
 const editOf = (call: CallResultData): CallFormEditContext => ({ call, storedProtocolCount: 0, initialDispatchOnUtc: '' });
 
-const pickers = { protocols: false, linkedCall: false, udf: false, contact: false };
+const pickers = { protocols: false, linkedCall: false, udf: false, contact: false, dispatchList: false };
 
 describe('edit form values for withheld fields (lib)', () => {
   it('lists the withheld fields by the server list, the sentinel only as the fallback', () => {
@@ -69,7 +69,7 @@ describe('edit form values for withheld fields (lib)', () => {
     const values = callToFormValues(withheldCall());
 
     expect(Object.values(values)).not.toContain('REDACTED');
-    expect(values).toEqual(expect.objectContaining({ name: '', nature: '', address: '', coordinates: '', contactName: '', contactInfo: '555-0100', note: 'Gate code 1234' }));
+    expect(values).toEqual(expect.objectContaining({ name: '', nature: '', address: '', latitude: '', longitude: '', contactName: '', contactInfo: '555-0100', note: 'Gate code 1234' }));
   });
 
   it('does not ask for a withheld name or nature, and a withheld point meets a required location', () => {
@@ -88,7 +88,7 @@ describe('edit form values for withheld fields (lib)', () => {
 
   it('saves withheld fields as stored: the sentinel for name and nature, blank text, no point', () => {
     const call = withheldCall();
-    const request = toUpdateCallRequest('42', { ...callToFormValues(call), address: '1 Picked Rd', coordinates: '40, -105' }, pickers, { edit: editOf(call), isVisible: () => true });
+    const request = toUpdateCallRequest('42', { ...callToFormValues(call), address: '1 Picked Rd', latitude: '40', longitude: '-105' }, pickers, { edit: editOf(call), isVisible: () => true });
 
     expect(request).toEqual(expect.objectContaining({ name: 'REDACTED', nature: 'REDACTED', address: '', contactName: '', contactInfo: '555-0100', note: 'Gate code 1234' }));
     expect(request.latitude).toBeUndefined();
@@ -101,10 +101,10 @@ describe('edit form values for withheld fields (lib)', () => {
     const typed = { ...callToFormValues(withheld), note: 'Typed note' };
     const revealed = syncWithheldEditFields(typed, revealedCall(), withheldEditFields(withheld));
 
-    expect(revealed).toEqual(expect.objectContaining({ name: 'Overdose', nature: 'Unresponsive male', address: '9 Elm St', coordinates: '39.1, -104.8', contactName: 'Sam Doe', note: 'Typed note' }));
+    expect(revealed).toEqual(expect.objectContaining({ name: 'Overdose', nature: 'Unresponsive male', address: '9 Elm St', latitude: '39.1', longitude: '-104.8', contactName: 'Sam Doe', note: 'Typed note' }));
     const concealed = syncWithheldEditFields({ ...revealed, name: 'Overdose, second patient' }, withheld, new Set());
 
-    expect(concealed).toEqual(expect.objectContaining({ name: '', nature: '', address: '', coordinates: '', contactName: '', note: 'Typed note' }));
+    expect(concealed).toEqual(expect.objectContaining({ name: '', nature: '', address: '', latitude: '', longitude: '', contactName: '', note: 'Typed note' }));
   });
 });
 
@@ -136,7 +136,7 @@ describe('CallFormScreen: edit with withheld fields', () => {
     await render(<CallFormScreen mode="edit" callId="42" />);
     await waitFor(() => expect(screen.getByTestId('call-form-name-protected')).toBeTruthy());
 
-    for (const field of ['name', 'nature', 'address', 'coordinates', 'contact-name']) {
+    for (const field of ['name', 'nature', 'address', 'latitude', 'longitude', 'contact-name']) {
       expect(screen.getByTestId(`call-form-${field}-protected-label`)).toBeTruthy();
     }
 
@@ -144,6 +144,7 @@ describe('CallFormScreen: edit with withheld fields', () => {
     expect(screen.queryByText(/REDACTED/)).toBeNull();
     // Nothing to pick on: a picked point would be dropped by the save.
     expect(screen.queryByTestId('call-form-pick-location')).toBeNull();
+    expect(screen.queryByTestId('call-form-place-on-map')).toBeNull();
     expect(screen.getByTestId('call-form-contact-info').props.value).toBe('555-0100');
     await act(async () => fireEvent.press(screen.getByTestId('call-form-submit')));
     expect(mockUpdateCall).toHaveBeenCalledWith(expect.objectContaining({ callId: '42', name: 'REDACTED', nature: 'REDACTED', address: '', contactName: '', contactInfo: '555-0100', type: 'Fire' }));

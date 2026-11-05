@@ -50,6 +50,21 @@ describe('calls (Dispatch superset)', () => {
     expect(sent).not.toHaveProperty('DispatchOnUtc');
   });
 
+  it('sends a picked empty dispatch list as "nobody", never blank (Core pages everyone on a blank list)', async () => {
+    const { ctx, adapter } = createTestContext();
+    await api.createCall(ctx, { name: 'A', nature: 'B', priority: 0, dispatchPicked: true });
+    expect(body(lastRequest(adapter))).toMatchObject({ DispatchList: api.DISPATCH_LIST_NOBODY });
+    await api.updateCall(ctx, { callId: '9', name: 'A', nature: 'B', priority: 0, dispatchPicked: true, dispatchUnits: [] });
+    expect(body(lastRequest(adapter))).toMatchObject({ DispatchList: api.DISPATCH_LIST_NOBODY });
+    await api.createCall(ctx, { name: 'A', nature: 'B', priority: 0, dispatchPicked: true, dispatchUnits: ['7'] });
+    expect(body(lastRequest(adapter))).toMatchObject({ DispatchList: 'U:7' });
+    await api.createCall(ctx, { name: 'A', nature: 'B', priority: 0 });
+    expect(body(lastRequest(adapter))).toMatchObject({ DispatchList: '' });
+    // Not blank and not "0", and no entry Core resolves (P:/G:/R:/U:).
+    expect(api.DISPATCH_LIST_NOBODY.trim()).not.toBe('');
+    expect(api.DISPATCH_LIST_NOBODY.split('|').filter(Boolean)).toEqual([]);
+  });
+
   it('edits (EditCall, never UpdateCall) and closes calls', async () => {
     const { ctx, adapter } = createTestContext();
     await api.updateCall(ctx, { callId: '9', name: 'A', nature: 'B', priority: 1 });

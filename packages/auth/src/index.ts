@@ -177,7 +177,20 @@ export {
   useIsRecordsFieldEnabled,
 } from './flags/feature-flags-store';
 export { type AppAccessDecision, checkAppAccess, enforceAppAccess, requiredAppAccessRight } from './rights/app-access';
-export { getActiveDepartmentId, getCurrentRights, resetSecurity, type SecurityState, securityStore, type SecurityView, useSecurity } from './rights/security-store';
+export {
+  canCloseCalls,
+  canDeleteCalls,
+  getActiveDepartmentId,
+  getCurrentRights,
+  resetSecurity,
+  RIGHTS_REFRESH_MIN_INTERVAL_MS,
+  type SecurityState,
+  securityStore,
+  type SecurityView,
+  startRightsRefreshOnForeground,
+  useRightsRefreshOnForeground,
+  useSecurity,
+} from './rights/security-store';
 export { definitionTermKey, getTerm, recordTypeTermKey, type TerminologyState, terminologyStore, type TermKey, TermKeys, useDefinitionTerm, useRecordTypeTerm, useTerm } from './terminology/terminology-store';
 
 // Data protection (ADP)

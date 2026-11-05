@@ -399,7 +399,7 @@
     "create_not_allowed_description": "Creating calls is not available in this app or for your account.",
     "custom_fields": "Custom Fields",
     "dispatch": {
-      "none_pages_everyone": "No one selected — everyone available will be paged"
+      "none_pages_nobody": "No one selected — no one will be paged"
     },
     "edit": {
       "offline": "Editing a call needs a connection. Your changes have not been saved."
@@ -496,7 +496,21 @@
     "scheduled_on_helper": "Leer lassen für sofortige Disposition",
     "save_pending_call": "Ausstehenden Einsatz speichern",
     "keyboard_shortcuts": "Tipp: Strg+Eingabe zum Erstellen, Escape zum Abbrechen",
-    "edit_keyboard_shortcuts": "Tipp: Strg+S zum Speichern, Escape zum Abbrechen"
+    "edit_keyboard_shortcuts": "Tipp: Strg+S zum Speichern, Escape zum Abbrechen",
+    "edit_not_allowed": "You can't edit this call",
+    "edit_not_allowed_description": "A call can be edited while it is active or pending, by a department admin or the member who logged it.",
+    "latitude": "Breitengrad",
+    "longitude": "Längengrad",
+    "latitude_placeholder": "z. B. 39.122639",
+    "longitude_placeholder": "z. B. -119.758773",
+    "latitude_invalid": "Geben Sie einen Breitengrad in Dezimalgrad zwischen -90 und 90 ein",
+    "longitude_invalid": "Geben Sie einen Längengrad in Dezimalgrad zwischen -180 und 180 ein",
+    "coordinates_incomplete": "Geben Sie Breiten- und Längengrad ein",
+    "place_on_map": "Place on map",
+    "destination_poi_select": "Select a destination",
+    "destination_poi_search": "Search destinations...",
+    "destination_poi_none_found": "No destinations match your search",
+    "destination_poi_clear": "Clear destination"
   },
   "chat": {
     "ack_pending_count": "Du hast {{count}} dringende Nachrichten zu bestätigen",
@@ -895,6 +909,8 @@
     "retry": "Erneut versuchen",
     "route": "Route",
     "save": "Speichern",
+    "scroll_tabs_left": "Tabs nach links scrollen",
+    "scroll_tabs_right": "Tabs nach rechts scrollen",
     "search": "Suchen",
     "select_option": "Option auswählen",
     "selected_location": "Ausgewählter Standort",
@@ -3246,7 +3262,8 @@
     "update_ready_title": "Update bereit",
     "update_ready_message": "Tippen Sie, um jetzt neu zu starten. Andernfalls wird das Update beim nächsten Start der App installiert.",
     "update_ready_wall_message": "Tippen Sie, um jetzt neu zu starten. Sonst startet die Anzeige nach {{minutes}} Minuten ohne Nutzung von selbst neu.",
-    "update_restart_failed": "Die App konnte nicht neu gestartet werden. Das Update wird beim nächsten Start der App installiert."
+    "update_restart_failed": "Die App konnte nicht neu gestartet werden. Das Update wird beim nächsten Start der App installiert.",
+    "notifications_unread": "Notifications, {{count}} unread"
   },
   "access_denied": {
     "back_to_sign_in": "Back to sign in",

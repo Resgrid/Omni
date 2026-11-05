@@ -1,7 +1,8 @@
 import { getCurrentUsersRights } from '@resgrid/api';
 import type { DepartmentRightsResultData } from '@resgrid/models';
 import { CONTRACT_KEYS, registerStoreReset } from '@resgrid/offline';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
+import { AppState, type AppStateStatus } from 'react-native';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
@@ -41,44 +42,57 @@ export const securityStore = create<SecurityState>()(
         if (inFlight) {
           return inFlight;
         }
+
         const generation = sessionGeneration;
+
         const run = (async (): Promise<DepartmentRightsResultData | null> => {
           try {
             const response = await getCurrentUsersRights(getAuthApiContext());
+
             if (generation !== sessionGeneration) {
               return null;
             }
+
             const data = response?.Data ?? null;
+
             if (!data) {
               // An empty answer is not a verdict: keep what gated this session so far.
               set({ error: 'invalid_rights_response', isLoaded: true });
+
               return get().rights;
             }
+
             const current = get().rights;
+
             // Only update when the rights changed, so subscribers do not re-render on every refresh.
             if (!current || JSON.stringify(current) !== JSON.stringify(data)) {
               set({ rights: data, error: null, isLoaded: true });
             } else {
               set({ error: null, isLoaded: true });
             }
+
             return data;
           } catch (error) {
             if (generation !== sessionGeneration) {
               return null;
             }
+
             // Offline or a server blip: the persisted rights stay in place rather than blocking the app (Unit).
             const answered = httpFailureOf(error)?.answered === true;
             (answered ? authLogger.error : authLogger.warn)({ message: 'Failed to fetch user rights', context: describeError(error) });
             set({ error: answered ? 'rights_request_failed' : 'network_error', isLoaded: true });
+
             return get().rights;
           }
         })();
+
         inFlight = run;
         void run.finally(() => {
           if (inFlight === run) {
             inFlight = null;
           }
         });
+
         return run;
       },
     }),
@@ -89,6 +103,7 @@ export const securityStore = create<SecurityState>()(
       partialize: (state) => ({ rights: state.rights }),
       merge: (persisted, current) => {
         const rights = (persisted as { rights?: DepartmentRightsResultData | null } | undefined)?.rights ?? null;
+
         return { ...current, rights, isLoaded: rights !== null };
       },
     }
@@ -102,6 +117,7 @@ const departmentIdOf = (rights: DepartmentRightsResultData | null | undefined): 
 // API cache identity embeds the department, so a change drops what the previous department cached.
 securityStore.subscribe((state, previous) => {
   const departmentId = departmentIdOf(state.rights);
+
   if (departmentId !== departmentIdOf(previous.rights)) {
     applyApiCacheScope({ departmentId });
   }
@@ -120,6 +136,16 @@ export const getCurrentRights = (): DepartmentRightsResultData | null => securit
 
 export const getActiveDepartmentId = (): string | null => departmentIdOf(securityStore.getState().rights);
 
+/**
+ * Close Call needs the Call_Update right the Create Call permission grants and the department's Close Call permission
+ * (Core `CanUserCloseCallAsync`). A server that predates `CanCloseCalls` leaves Create Call as the whole answer; the server
+ * still refuses a call the permission does not cover.
+ */
+export const canCloseCalls = (rights: DepartmentRightsResultData | null | undefined): boolean => rights?.CanCreateCalls === true && rights.CanCloseCalls !== false;
+
+/** Delete Call: the Call_Delete right (Create Call permission) and the Delete Call permission, as `canCloseCalls`. */
+export const canDeleteCalls = (rights: DepartmentRightsResultData | null | undefined): boolean => rights?.CanCreateCalls === true && rights.CanDeleteCalls !== false;
+
 export interface SecurityView {
   rights: DepartmentRightsResultData | null;
   error: string | null;
@@ -127,6 +153,10 @@ export interface SecurityView {
   isUserDepartmentAdmin: boolean;
   isUserGroupAdmin: (groupId: number) => boolean;
   canUserCreateCalls: boolean;
+  /** Close Call (and cancelling a pending call), see `canCloseCalls`. */
+  canUserCloseCalls: boolean;
+  /** Delete Call, see `canDeleteCalls`. */
+  canUserDeleteCalls: boolean;
   canUserCreateNotes: boolean;
   canUserCreateMessages: boolean;
   canUserViewPII: boolean;
@@ -138,6 +168,7 @@ export const useSecurity = (): SecurityView => {
   const rights = securityStore((state) => state.rights);
   const error = securityStore((state) => state.error);
   const getRights = securityStore((state) => state.getRights);
+
   return useMemo(
     () => ({
       rights,
@@ -146,6 +177,8 @@ export const useSecurity = (): SecurityView => {
       isUserDepartmentAdmin: rights?.IsAdmin === true,
       isUserGroupAdmin: (groupId: number) => rights?.Groups?.some((right) => right.GroupId === groupId && right.IsGroupAdmin) ?? false,
       canUserCreateCalls: rights?.CanCreateCalls === true,
+      canUserCloseCalls: canCloseCalls(rights),
+      canUserDeleteCalls: canDeleteCalls(rights),
       canUserCreateNotes: rights?.CanAddNote === true,
       canUserCreateMessages: rights?.CanCreateMessage === true,
       canUserViewPII: rights?.CanViewPII === true,
@@ -154,3 +187,34 @@ export const useSecurity = (): SecurityView => {
     [rights, error, getRights]
   );
 };
+
+/** The rights are read again on returning to the app, but not more often than this. */
+export const RIGHTS_REFRESH_MIN_INTERVAL_MS = 60_000;
+
+/**
+ * Re-reads the member's rights each time the app comes back to the foreground (a web tab becoming visible included), at
+ * most once a minute, so a permission a department admin changed (create, close or delete calls…) applies without
+ * signing in again. A failed read keeps the rights as they were (`getRights`). Returns the unsubscribe.
+ */
+export function startRightsRefreshOnForeground(minIntervalMs: number = RIGHTS_REFRESH_MIN_INTERVAL_MS, now: () => number = Date.now): () => void {
+  let appState: string = AppState.currentState ?? 'active';
+  // Armed at sign-in, as the session bootstrap starts by reading them.
+  let lastRead = now();
+
+  const subscription = AppState.addEventListener('change', (next: AppStateStatus) => {
+    const returned = appState !== 'active' && next === 'active';
+    appState = next;
+
+    if (!returned || now() - lastRead < minIntervalMs) return;
+
+    lastRead = now();
+    void securityStore.getState().getRights();
+  });
+
+  return () => subscription.remove();
+}
+
+/** `startRightsRefreshOnForeground` while `enabled` (signed in). */
+export function useRightsRefreshOnForeground(enabled: boolean): void {
+  useEffect(() => (enabled ? startRightsRefreshOnForeground() : undefined), [enabled]);
+}

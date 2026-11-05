@@ -94,6 +94,9 @@ export * from './theme';
 export * from './toast';
 export * from './utils';
 
+// Tab selection kept in the route, so it survives the screen being rebuilt (Back, a web reload, a link).
+export * from './use-route-tab';
+
 // ─── React Native base components (Responder barrel) ─────────────────
 export { ActivityIndicator, TouchableOpacity } from 'react-native';
 

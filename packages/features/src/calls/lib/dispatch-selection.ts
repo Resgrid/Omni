@@ -1,9 +1,10 @@
 import type { UpdateCallRequest } from '@resgrid/api';
 import type { CallResultData, DispatchedEventResultData } from '@resgrid/models';
+import { richTextForSave, richTextToPlain } from '@resgrid/ui';
 
 import { dispatchKind } from './call-dispatch';
 
-/** Who a call goes to, as the dispatch picker produces it. A blank selection pages everyone (never for pending calls). */
+/** Who a call goes to, as the dispatch picker produces it. An empty selection dispatches nobody; "everyone" is its own switch. */
 export interface DispatchSelection {
   everyone: boolean;
   users: string[];
@@ -59,6 +60,14 @@ const coordinatesOf = (call: CallResultData): Pick<UpdateCallRequest, 'latitude'
 };
 
 /**
+ * A call's text sent back as it stands. Core's sanitizer entity-encodes name, nature and note on the way out (`&amp;`),
+ * and sending that back would store the entity: plain text goes back decoded, rich text (the web's nature and note) as
+ * stored.
+ */
+const storedPlainText = (value: string | null | undefined): string => richTextToPlain(value ?? '');
+const storedRichText = (value: string | null | undefined): string => richTextForSave(storedPlainText(value), value);
+
+/**
  * The EditCall request that adds `added` to a call while preserving everything else (Dispatch
  * `buildAddResourcesUpdateRequest`). The picked resources are unioned with the call's CURRENT dispatches, so nothing is
  * un-dispatched and the server notifies only the new resources (RebroadcastCall stays false). Linked call and protocols
@@ -70,9 +79,9 @@ export function buildAddResourcesRequest(call: CallResultData, current: Dispatch
 
   const request: UpdateCallRequest = {
     callId: call.CallId,
-    name: call.Name,
-    nature: call.Nature,
-    note: call.Note,
+    name: storedPlainText(call.Name),
+    nature: storedRichText(call.Nature),
+    note: storedRichText(call.Note),
     address: call.Address,
     ...coordinatesOf(call),
     priority: call.Priority,
@@ -90,6 +99,7 @@ export function buildAddResourcesRequest(call: CallResultData, current: Dispatch
     dispatchRoles: merged.roles,
     dispatchUnits: merged.units,
     dispatchEveryone: merged.everyone,
+    dispatchPicked: true,
   };
 
   if (extras.unitResponseCodes) request.unitResponseCodes = extras.unitResponseCodes;

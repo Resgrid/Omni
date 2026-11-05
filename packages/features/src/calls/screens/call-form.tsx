@@ -1,5 +1,5 @@
 import { isApiError } from '@resgrid/api';
-import { useFeatureFlag, useSecurity } from '@resgrid/auth';
+import { useFeatureFlag } from '@resgrid/auth';
 import { useCapability } from '@resgrid/config';
 import { useCallDetailStore, useCallsStore } from '@resgrid/data';
 import { ProtectedLabel, ProtectedRevealBar } from '@resgrid/features/data-protection';
@@ -7,11 +7,12 @@ import { useTranslation } from '@resgrid/i18n';
 import { type CallQuickTemplateResultData, type NewCallFieldKey, NewCallFieldKeys, type UdfFieldValueInput } from '@resgrid/models';
 import { Button, ButtonText, DateTimeField, Input, InputField, Loading, Pressable, ScreenHeader, Spinner, Switch, Text, Textarea, TextareaInput, useFormFactor, useThemeColors, useToast, ZeroState } from '@resgrid/ui';
 import { useRouter } from 'expo-router';
-import { MapPin, Search } from 'lucide-react-native';
+import { ChevronDown, LocateFixed, MapPin, Search, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { CallContactPicker } from '../components/call-form/contact-picker';
+import { destinationPoiLabel, DestinationPoiPicker } from '../components/call-form/destination-poi-picker';
 import { CallTemplatesModal, LinkedCallModal, ProtocolSelectorModal } from '../components/call-form/form-pickers';
 import { UdfFields } from '../components/call-form/udf-fields';
 import { DispatchSelectionModal, summarizeDispatchSelection } from '../components/dispatch-selection';
@@ -20,25 +21,32 @@ import { OptionChips } from '../components/option-chips';
 import { QueuedCallBadge } from '../components/queued-call-badge';
 import { type ContactPickerProps, useCallFormHookPoints } from '../hook-points';
 import { useCallTemplates, useDispatchRecipients, useNewCallFieldPolicy } from '../hooks/use-call-form-data';
+import { useCallPermissions } from '../hooks/use-call-permissions';
 import { CALL_SHORTCUTS_AVAILABLE, useCallShortcuts } from '../hooks/use-call-shortcuts';
 import { useCallUdfFields } from '../hooks/use-call-udf-fields';
 import { useIsOnline } from '../hooks/use-connectivity';
 import {
+  applyCallTemplate,
   type CallFormEditContext,
   type CallFormErrorKey,
   type CallFormPickers,
   type CallFormValues,
   callToFormValues,
+  coordinateFieldErrors,
   createRequestToFormValues,
   emptyCallFormValues,
-  formatCoordinates,
+  parseCoordinateFields,
   parseCoordinates,
+  parseLatitude,
+  parseLongitude,
   syncWithheldEditFields,
+  toCoordinateFields,
   toCreateCallRequest,
   toUpdateCallRequest,
   validateCallForm,
   type WithheldEditField,
   withheldEditFields,
+  withheldFormFields,
 } from '../lib/call-form';
 import { type GeocodeLookup, isWhat3WordsFormat, lookupAddress, lookupAddressAt, lookupPlusCode, lookupWhat3Words } from '../lib/call-geocoding';
 import { defaultPriorityId, priorityOptions } from '../lib/call-priority';
@@ -70,6 +78,9 @@ const NO_WITHHELD_FIELDS = new Set<WithheldEditField>();
 /** Fields a quick create shows even when the policy does not require them. */
 const QUICK_FIELDS = new Set<NewCallFieldKey>([NewCallFieldKeys.Address, NewCallFieldKeys.Geolocation, NewCallFieldKeys.Note]);
 
+/** The errors the latitude and longitude fields show: each value's own, and the department's "location required". */
+const COORDINATE_ERROR_KEYS: readonly CallFormErrorKey[] = ['latitude', 'longitude', NewCallFieldKeys.Geolocation];
+
 type LookupKind = 'address' | 'what3words' | 'plusCode' | 'reverse';
 
 /** Starting values from `initial`, with what the form already holds for a field kept. */
@@ -97,7 +108,6 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
   const toast = useToast();
   const colors = useThemeColors();
   const calls = useCapability('calls');
-  const { canUserCreateCalls } = useSecurity();
   const runCardsFlag = useFeatureFlag('Dispatch.RunCards');
   const { isDesktop } = useFormFactor();
   const isOnline = useIsOnline();
@@ -118,6 +128,7 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
   const [correctingId, setCorrectingId] = useState<string | undefined>(correctLocalId);
   const queuedCall = useCallsStore((state) => (correctingId ? state.queuedCalls[correctingId] : undefined));
   const detail = useCallDetailStore((state) => (callId ? state.details[callId] : undefined));
+  const permissions = useCallPermissions(isEdit ? detail?.call : null);
   const fetchCallDetail = useCallDetailStore((state) => state.fetchCallDetail);
   const updateCall = useCallDetailStore((state) => state.updateCall);
 
@@ -127,7 +138,7 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
   const [missingUdf, setMissingUdf] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [lookup, setLookup] = useState<LookupKind | null>(null);
-  const [open, setOpen] = useState<null | 'dispatch' | 'templates' | 'linked' | 'protocols' | 'contact' | 'location'>(null);
+  const [open, setOpen] = useState<null | 'dispatch' | 'templates' | 'linked' | 'protocols' | 'contact' | 'location' | 'destination'>(null);
   // Set once the form holds what it starts from (the call, the refused request, or a blank form).
   const [startedFrom, setStartedFrom] = useState<'blank' | 'source' | null>(() => (!isEdit && !correctLocalId ? 'blank' : null));
   const [initialDispatchOnUtc, setInitialDispatchOnUtc] = useState('');
@@ -151,8 +162,8 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
   }, [fetchCallFormData, isEdit, readDetail]);
 
   // Start from the call (edit, hidden fields included) or the refused request (correction) once it is available. An
-  // edit waits for the call's dispatches: EditCall reads a blank dispatch list as "everyone", so a form started without
-  // them would page the whole department on save.
+  // edit waits for the call's dispatches: the form saves its selection as the call's dispatch list, so a form started
+  // without them would un-dispatch everyone on save.
   useEffect(() => {
     if (startedFrom === 'source') return;
 
@@ -174,7 +185,7 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
   // re-reads the call (reveal bar) and the form follows: newly readable fields fill in, newly withheld ones empty again.
   const detailCall = detail?.call;
   const withheld = useMemo(() => (isEdit && detailCall ? withheldEditFields(detailCall) : NO_WITHHELD_FIELDS), [detailCall, isEdit]);
-  const isWithheld = (key: keyof CallFormValues): boolean => [...withheld].some((field) => field === key);
+  const isWithheld = (key: keyof CallFormValues): boolean => [...withheld].some((field) => withheldFormFields(field).some((formField) => formField === key));
   const formWithheld = useRef<ReadonlySet<WithheldEditField> | null>(null);
 
   useEffect(() => {
@@ -206,6 +217,18 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
     });
   }, []);
 
+  /** A point the form filled in itself (map, lookup, contact) is a valid one: the coordinate errors no longer apply. */
+  const clearCoordinateErrors = useCallback(() => {
+    setErrors((current) => {
+      if (!COORDINATE_ERROR_KEYS.some((key) => key in current)) return current;
+      const next = { ...current };
+
+      for (const key of COORDINATE_ERROR_KEYS) delete next[key];
+
+      return next;
+    });
+  }, []);
+
   const show = (key: NewCallFieldKey): boolean => policy.isVisible(key) && (isFull || QUICK_FIELDS.has(key) || policy.isRequired(key));
   const req = (key: NewCallFieldKey): string => (policy.isRequired(key) ? ' *' : '');
   const showContactFields = show(NewCallFieldKeys.ContactName) || show(NewCallFieldKeys.ContactInfo);
@@ -215,13 +238,21 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
     linkedCall: show(NewCallFieldKeys.LinkedCall),
     udf: isFull && udf.fields !== null && udfApplied,
     contact: showContactFields,
+    dispatchList: show(NewCallFieldKeys.DispatchList),
   };
 
+  // The point the latitude and longitude fields give (what the save sends).
   const location = useMemo<CallFormLocation | null>(() => {
-    const parsed = parseCoordinates(values.coordinates);
+    const parsed = parseCoordinateFields(values.latitude, values.longitude);
 
     return parsed.ok ? { latitude: parsed.latitude, longitude: parsed.longitude } : null;
-  }, [values.coordinates]);
+  }, [values.latitude, values.longitude]);
+
+  // Typed coordinates reach the map when the dispatcher places them: while they type, the map holds the point it showed.
+  // A point from a lookup, the map picker, a contact or the call itself goes on the map at once (nothing held).
+  const [heldMapPoint, setHeldMapPoint] = useState<{ point: CallFormLocation | null } | null>(null);
+  const coordinatesBlank = !values.latitude.trim() && !values.longitude.trim();
+  const mapLocation = coordinatesBlank ? null : heldMapPoint ? heldMapPoint.point : location;
 
   /** Fills a blank address for a point (Dispatch: a typed or picked point never overwrites the address the caller gave). */
   const fillBlankAddress = useCallback(
@@ -245,11 +276,13 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
   /** A spot picked on the map: its address only fills a blank one. */
   const pickLocation = useCallback(
     (picked: CallFormLocation & { address?: string }) => {
-      setValues((current) => ({ ...current, coordinates: formatCoordinates(picked.latitude, picked.longitude), address: current.address || picked.address || '' }));
+      setValues((current) => ({ ...current, ...toCoordinateFields(picked.latitude, picked.longitude), address: current.address || picked.address || '' }));
+      clearCoordinateErrors();
+      setHeldMapPoint(null);
 
       if (!picked.address) void fillBlankAddress(picked);
     },
-    [fillBlankAddress]
+    [clearCoordinateErrors, fillBlankAddress]
   );
 
   /** An address, what3words or plus code lookup: the place it found replaces the address, as the dispatcher asked. */
@@ -281,7 +314,9 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
       const place = result.place;
 
       if (place) {
-        setValues((current) => ({ ...current, coordinates: formatCoordinates(place.latitude, place.longitude), address: place.address || current.address }));
+        setValues((current) => ({ ...current, ...toCoordinateFields(place.latitude, place.longitude), address: place.address || current.address }));
+        clearCoordinateErrors();
+        setHeldMapPoint(null);
         toast.success(t(messages.found));
       } else {
         toast.error(t(result.succeeded ? messages.notFound : messages.failed));
@@ -293,19 +328,48 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
     }
   };
 
-  /** Typed coordinates: once they parse, a blank address is looked up for them. */
-  const commitCoordinates = () => {
-    if (location && !values.address.trim()) void fillBlankAddress(location);
+  /** A latitude or longitude being typed: the map keeps its point until they are placed; a pasted "lat, lon" fills both. */
+  const editCoordinate = (key: 'latitude' | 'longitude', text: string) => {
+    const pasted = parseCoordinates(text);
+
+    setHeldMapPoint((held) => held ?? { point: mapLocation });
+
+    if (pasted.ok) {
+      setValues((current) => ({ ...current, ...toCoordinateFields(pasted.latitude, pasted.longitude) }));
+      clearCoordinateErrors();
+    } else {
+      set(key, text);
+    }
+  };
+
+  /** Leaving a coordinate field: a value that is not decimal degrees in range says so (the other field may still be blank). */
+  const checkCoordinate = (key: 'latitude' | 'longitude') => {
+    const parse = key === 'latitude' ? parseLatitude(values.latitude) : parseLongitude(values.longitude);
+    const error = !parse.ok && parse.reason !== 'empty' ? (key === 'latitude' ? 'calls.latitude_invalid' : 'calls.longitude_invalid') : undefined;
+
+    setErrors((current) => ({ ...current, [key]: error }));
+  };
+
+  /** Places the typed point on the map, and looks up its address only when the dispatcher has not given one. */
+  const placeOnMap = () => {
+    const fieldErrors = coordinateFieldErrors(values.latitude, values.longitude);
+
+    setErrors((current) => ({ ...current, latitude: fieldErrors.latitude, longitude: fieldErrors.longitude }));
+
+    if (!location) return;
+    setHeldMapPoint(null);
+
+    if (!values.address.trim()) void fillBlankAddress(location);
   };
 
   const applyTemplate = (template: CallQuickTemplateResultData) => {
-    setValues((current) => ({
-      ...current,
-      name: template.CallName || current.name,
-      nature: template.CallNature || current.nature,
-      type: template.CallType || current.type,
-      priority: priorities.some((priority) => priority.id === template.CallPriority) ? template.CallPriority : current.priority,
-    }));
+    setValues((current) =>
+      applyCallTemplate(
+        current,
+        template,
+        priorities.map((priority) => priority.id)
+      )
+    );
     toast.success(t('calls.templates.applied'));
   };
 
@@ -425,7 +489,7 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
     },
   });
 
-  if (!isEdit && (calls.create === 'none' || !canUserCreateCalls)) {
+  if (!isEdit && !permissions.canCreate) {
     return <ZeroState isError heading={t('calls.create_not_allowed')} description={t('calls.create_not_allowed_description')} testID="call-form-not-allowed" />;
   }
 
@@ -441,8 +505,17 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
     );
   }
 
+  // Opened from a link or a stale screen: the server would refuse the edit (rights, someone else's call, a closed call).
+  if (isEdit && !permissions.canEdit) {
+    return <ZeroState isError heading={t('calls.edit_not_allowed')} description={t('calls.edit_not_allowed_description')} testID="call-form-edit-not-allowed" />;
+  }
+
   const title = isEdit ? t('calls.edit_call') : correctingId ? t('calls.queued.correct_title') : t('calls.new_call');
   const runCardsAvailable = calls.runCards && runCardsFlag && !!hookPoints.RunCardRecommendation;
+  const selectedDestination = values.destinationPoiId === null ? undefined : destinationPois.find((poi) => poi.PoiId === values.destinationPoiId);
+  // A destination no longer on the department's list still shows what the call stores.
+  const destinationError = errors[NewCallFieldKeys.DestinationPoi];
+  const destinationLabel = values.destinationPoiId === null ? null : selectedDestination ? destinationPoiLabel(selectedDestination) : detail?.call?.DestinationName || `#${values.destinationPoiId}`;
   const ContactPicker: React.ComponentType<ContactPickerProps> = hookPoints.ContactPicker ?? CallContactPicker;
   const RunCardRecommendation = hookPoints.RunCardRecommendation;
   const { LocationPicker, StaticLocationMap } = hookPoints;
@@ -483,6 +556,10 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
       /** Enter (and, unless `commitOnBlur` is false, leaving the field). */
       onCommit?: () => void;
       commitOnBlur?: boolean;
+      /** Enter, in place of `onCommit`. */
+      onSubmit?: () => void;
+      /** Replaces setting the value as typed. */
+      onChange?: (text: string) => void;
       action?: React.ReactNode;
     }
   ) => {
@@ -518,9 +595,9 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
             <Input variant="outline" isInvalid={!!error} className="flex-1">
               <InputField
                 value={value}
-                onChangeText={(text: string) => set(key, text as CallFormValues[typeof key])}
+                onChangeText={(text: string) => (options.onChange ? options.onChange(text) : set(key, text as CallFormValues[typeof key]))}
                 onBlur={options.commitOnBlur === false ? undefined : options.onCommit}
-                onSubmitEditing={options.onCommit}
+                onSubmitEditing={options.onSubmit ?? options.onCommit}
                 placeholder={options.placeholder}
                 keyboardType={options.keyboardType ?? 'default'}
                 accessibilityLabel={label}
@@ -632,15 +709,49 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
                   action: lookupButton('address', t('calls.search_address'), values.address, 'call-form-address-search'),
                 })
               : null}
-            {show(NewCallFieldKeys.Geolocation)
-              ? textField('coordinates', `${t('calls.coordinates')}${req(NewCallFieldKeys.Geolocation)}`, {
-                  placeholder: t('calls.coordinates_placeholder'),
-                  errorKey: errors.coordinates ? 'coordinates' : NewCallFieldKeys.Geolocation,
-                  keyboardType: 'numbers-and-punctuation',
-                  testID: 'call-form-coordinates',
-                  onCommit: commitCoordinates,
-                })
-              : null}
+            {show(NewCallFieldKeys.Geolocation) ? (
+              <>
+                <View style={styles.coordinateRow}>
+                  <View style={styles.coordinateCell}>
+                    {textField('latitude', `${t('calls.latitude')}${req(NewCallFieldKeys.Geolocation)}`, {
+                      placeholder: t('calls.latitude_placeholder'),
+                      errorKey: errors.latitude ? 'latitude' : NewCallFieldKeys.Geolocation,
+                      keyboardType: 'numbers-and-punctuation',
+                      testID: 'call-form-latitude',
+                      onChange: (text) => editCoordinate('latitude', text),
+                      onCommit: () => checkCoordinate('latitude'),
+                    })}
+                  </View>
+                  <View style={styles.coordinateCellLast}>
+                    {textField('longitude', `${t('calls.longitude')}${req(NewCallFieldKeys.Geolocation)}`, {
+                      placeholder: t('calls.longitude_placeholder'),
+                      errorKey: 'longitude',
+                      keyboardType: 'numbers-and-punctuation',
+                      testID: 'call-form-longitude',
+                      onChange: (text) => editCoordinate('longitude', text),
+                      onCommit: () => checkCoordinate('longitude'),
+                      onSubmit: placeOnMap,
+                    })}
+                  </View>
+                </View>
+                {isWithheld('latitude') ? null : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mb-2 self-start"
+                    onPress={placeOnMap}
+                    isDisabled={!values.latitude.trim() || !values.longitude.trim() || lookup === 'reverse'}
+                    accessibilityLabel={t('calls.place_on_map')}
+                    testID="call-form-place-on-map"
+                  >
+                    <View style={styles.buttonIcon}>
+                      <LocateFixed size={16} color={colors.primary} />
+                    </View>
+                    <ButtonText>{t('calls.place_on_map')}</ButtonText>
+                  </Button>
+                )}
+              </>
+            ) : null}
             {lookup === 'reverse' ? (
               <Text size="xs" className="mb-2 text-typography-500" testID="call-form-looking-up-address">
                 {t('calls.looking_up_address')}
@@ -661,15 +772,21 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
                   action: lookupButton('plusCode', t('calls.search_plus_code'), values.plusCode, 'call-form-plus-code-search'),
                 })
               : null}
-            {show(NewCallFieldKeys.Geolocation) && !isWithheld('coordinates') ? (
+            {show(NewCallFieldKeys.Geolocation) && !isWithheld('latitude') ? (
               <>
                 {mapSlot ? (
                   <View style={styles.map} testID="call-form-map-slot">
-                    {mapSlot(location, pickLocation)}
+                    {mapSlot(mapLocation, pickLocation)}
                   </View>
-                ) : location && StaticLocationMap ? (
+                ) : mapLocation && StaticLocationMap ? (
                   <View style={styles.map} testID="call-form-map-preview">
-                    <StaticLocationMap latitude={location.latitude} longitude={location.longitude} address={values.address || undefined} height={200} onPress={LocationPicker ? () => setOpen('location') : undefined} />
+                    <StaticLocationMap
+                      latitude={mapLocation.latitude}
+                      longitude={mapLocation.longitude}
+                      address={values.address || undefined}
+                      height={200}
+                      onPress={LocationPicker ? () => setOpen('location') : undefined}
+                    />
                   </View>
                 ) : null}
                 {LocationPicker ? (
@@ -683,17 +800,39 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
               </>
             ) : null}
             {show(NewCallFieldKeys.DestinationPoi) && destinationPois.length > 0 ? (
+              // A department can have hundreds of destinations: a searchable picker, not a row of chips.
               <View style={styles.field}>
                 <Text size="sm" className="mb-1 text-typography-700">
                   {`${t('calls.destination_poi')}${req(NewCallFieldKeys.DestinationPoi)}`}
                 </Text>
-                <OptionChips
-                  options={destinationPois.map((poi) => ({ value: poi.PoiId, label: poi.Name || poi.Address || String(poi.PoiId) }))}
-                  selected={values.destinationPoiId === null ? [] : [values.destinationPoiId]}
-                  onToggle={(id) => set('destinationPoiId', values.destinationPoiId === id ? null : id)}
-                  accessibilityLabel={t('calls.destination_poi')}
-                  testID="call-form-destination"
-                />
+                <View style={styles.inputRow}>
+                  <Pressable
+                    onPress={() => setOpen('destination')}
+                    accessibilityRole="button"
+                    accessibilityLabel={destinationLabel ? `${t('calls.destination_poi')}: ${destinationLabel}` : t('calls.destination_poi_select')}
+                    testID="call-form-destination"
+                    className={`flex-1 flex-row items-center rounded border px-3 py-2 ${destinationError ? 'border-error-600' : 'border-outline-300'}`}
+                  >
+                    <Text className={destinationLabel ? 'flex-1 text-typography-900' : 'flex-1 text-typography-400'} numberOfLines={1}>
+                      {destinationLabel ?? t('calls.destination_poi_select')}
+                    </Text>
+                    <View>
+                      <ChevronDown size={16} color={colors.icon} />
+                    </View>
+                  </Pressable>
+                  {values.destinationPoiId === null ? null : (
+                    <Button variant="outline" size="sm" className="ml-2" onPress={() => set('destinationPoiId', null)} accessibilityLabel={t('calls.destination_poi_clear')} testID="call-form-destination-clear">
+                      <View>
+                        <X size={16} color={colors.icon} />
+                      </View>
+                    </Button>
+                  )}
+                </View>
+                {destinationError ? (
+                  <Text size="xs" className="mt-1 text-error-600" testID="call-form-destination-error">
+                    {t(destinationError)}
+                  </Text>
+                ) : null}
               </View>
             ) : null}
             {!isOnline ? (
@@ -820,7 +959,7 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
                 >
                   <Text className="text-typography-900">{`${t('calls.select_recipients')}${isPendingCall ? '' : req(NewCallFieldKeys.DispatchList)}`}</Text>
                   <Text size="xs" className="text-typography-500" testID="call-form-dispatch-summary">
-                    {summarizeDispatchSelection(values.dispatch, recipients, { everyone: t('calls.everyone'), none: isPendingCall ? t('common.none') : t('calls.dispatch.none_pages_everyone') })}
+                    {summarizeDispatchSelection(values.dispatch, recipients, { everyone: t('calls.everyone'), none: isPendingCall ? t('common.none') : t('calls.dispatch.none_pages_nobody') })}
                   </Text>
                 </Pressable>
                 {errors.dispatchList ? (
@@ -930,18 +1069,30 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
           isOpen={open === 'contact'}
           onClose={() => setOpen(null)}
           onSelect={(contact) => {
-            setValues((current) => ({
-              ...current,
-              contactId: contact.contactId,
-              contactName: contact.name,
-              contactInfo: contact.info ?? current.contactInfo,
-              address: current.address || contact.address || '',
-              coordinates: current.coordinates || (contact.latitude !== undefined && contact.longitude !== undefined ? formatCoordinates(contact.latitude, contact.longitude) : ''),
-            }));
+            setValues((current) => {
+              const next = { ...current, contactId: contact.contactId, contactName: contact.name, contactInfo: contact.info ?? current.contactInfo, address: current.address || contact.address || '' };
+              const hasPoint = !!current.latitude.trim() || !!current.longitude.trim();
+
+              // The contact's point fills blank coordinates only, as its address fills a blank address.
+              return hasPoint || contact.latitude === undefined || contact.longitude === undefined ? next : { ...next, ...toCoordinateFields(contact.latitude, contact.longitude) };
+            });
+
+            if (coordinatesBlank && contact.latitude !== undefined && contact.longitude !== undefined) clearCoordinateErrors();
+            setHeldMapPoint(null);
             setOpen(null);
           }}
         />
       ) : null}
+      <DestinationPoiPicker
+        isOpen={open === 'destination'}
+        onClose={() => setOpen(null)}
+        pois={destinationPois}
+        selectedId={values.destinationPoiId}
+        onSelect={(poiId) => {
+          set('destinationPoiId', poiId);
+          setOpen(null);
+        }}
+      />
       {LocationPicker ? (
         <LocationPicker
           isOpen={open === 'location'}
@@ -964,6 +1115,9 @@ const styles = StyleSheet.create({
   section: { borderRadius: 12, padding: 12, marginBottom: 12 },
   field: { marginBottom: 10 },
   inputRow: { flexDirection: 'row', alignItems: 'center' },
+  coordinateRow: { flexDirection: 'row', alignItems: 'flex-start' },
+  coordinateCell: { flex: 1, marginRight: 8 },
+  coordinateCellLast: { flex: 1 },
   map: { height: 200, borderRadius: 8, overflow: 'hidden', marginBottom: 10 },
   buttonIcon: { marginRight: 4 },
   switchRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },

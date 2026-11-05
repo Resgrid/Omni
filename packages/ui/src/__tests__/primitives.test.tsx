@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import React from 'react';
-import { Pressable as RNPressable, StyleSheet, Text as RNText } from 'react-native';
+import { Pressable as RNPressable, ScrollView, StyleSheet, Text as RNText } from 'react-native';
 
 import { FocusAwareStatusBar } from '../focus-aware-status-bar';
 import * as ui from '../index';
@@ -97,6 +97,14 @@ describe('SharedTabs (Responder + Unit)', () => {
     expect(StyleSheet.flatten(screen.getByTestId('shared-tab-details').props.style)).toMatchObject({ flexShrink: 0 });
   });
 
+  it('sizes to its content unless the caller asks it to fill (a flex-1 root inside a ScrollView hid the tab labels on Android)', async () => {
+    await render(<SharedTabs tabs={tabs} />);
+    expect(String(screen.getByTestId('shared-tabs').props.className ?? '')).not.toMatch(/\bflex-1\b/);
+
+    await render(<SharedTabs tabs={tabs} className="flex-1" />);
+    expect(screen.getByTestId('shared-tabs').props.className).toContain('flex-1');
+  });
+
   it('switches content on press and reports the index', async () => {
     const onChange = jest.fn();
     await render(<SharedTabs tabs={tabs} onChange={onChange} />);
@@ -182,6 +190,35 @@ describe('SharedTabs (Responder + Unit)', () => {
 
     expect(screen.getByTestId('shared-tabs-left-overflow')).toBeTruthy();
     expect(screen.queryByTestId('shared-tabs-right-overflow')).toBeNull();
+  });
+
+  it('pages the bar towards the hidden tabs when a chevron is pressed (they only hinted before and ignored taps)', async () => {
+    const scrollTo = jest.spyOn(ScrollView.prototype, 'scrollTo').mockImplementation(() => undefined);
+    await render(<SharedTabs tabs={tabs} />);
+    const scrollView = screen.getByTestId('shared-tabs-scroll-view');
+
+    await fireEvent(scrollView, 'layout', { nativeEvent: { layout: { width: 200 } } });
+    await fireEvent(scrollView, 'contentSizeChange', 500, 40);
+
+    const right = screen.getByRole('button', { name: 'Scroll tabs right' });
+    await fireEvent.press(right);
+    // One bar width less both 28px chevrons, so the tab cut off at the edge comes fully into view.
+    expect(scrollTo).toHaveBeenLastCalledWith({ x: 144, animated: true });
+
+    await fireEvent.scroll(scrollView, { nativeEvent: { contentOffset: { x: 250, y: 0 } } });
+    await fireEvent.press(screen.getByTestId('shared-tabs-right-overflow'));
+    // Never past the end of the row.
+    expect(scrollTo).toHaveBeenLastCalledWith({ x: 300, animated: true });
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Scroll tabs left' }));
+    expect(scrollTo).toHaveBeenLastCalledWith({ x: 106, animated: true });
+
+    await fireEvent.scroll(scrollView, { nativeEvent: { contentOffset: { x: 60, y: 0 } } });
+    await fireEvent.press(screen.getByTestId('shared-tabs-left-overflow'));
+    // Never before the start.
+    expect(scrollTo).toHaveBeenLastCalledWith({ x: 0, animated: true });
+
+    scrollTo.mockRestore();
   });
 
   it('can hide the overflow indicators', async () => {

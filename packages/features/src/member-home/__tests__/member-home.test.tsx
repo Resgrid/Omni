@@ -5,8 +5,9 @@ import { useAuthStore } from '@resgrid/auth';
 import { setDataSessionScopeProvider, useCallsStore, useCheckInTimersStore, usePersonnelStatusStore, usePersonnelStore, useUnitRolesStore, useWeatherAlertsStore } from '@resgrid/data';
 import { ActionBaseTypes, StaffingBaseTypes, StatusProvider } from '@resgrid/features/status';
 import type { CallResultData, CheckInTimerStatusResultData, PersonnelInfoResultData, StatusesResultData, WeatherAlertResultData } from '@resgrid/models';
+import { AppBarTitleSlotContext } from '@resgrid/ui';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-import { router } from 'expo-router';
+import { router, usePathname } from 'expo-router';
 import React from 'react';
 import { Text } from 'react-native';
 
@@ -38,6 +39,7 @@ const option = (Id: number, Text: string, extra: Partial<StatusesResultData> = {
   Detail: 0,
   ...extra,
 });
+
 const call = (CallId: string, extra: Partial<CallResultData> = {}): CallResultData =>
   ({ CallId, Name: `Call ${CallId}`, Number: CallId, Address: '1 Main St', State: 0, CheckInTimersEnabled: false, ...extra }) as CallResultData;
 
@@ -233,21 +235,50 @@ describe('HomeStatusButtons', () => {
 });
 
 describe('MemberHomeTabsLayout', () => {
-  it('declares the four nested tabs with department terms', async () => {
+  // Tabs stand-in: each screen renders `name:title` under its tab button's test id.
+  beforeEach(() => {
     const expoRouter = jest.requireMock('expo-router') as Record<string, unknown>;
     const { View: RNView, Text: RNText } = require('react-native');
     const MockTabs = ({ children }: { children: React.ReactNode }) => <RNView testID="tabs">{children}</RNView>;
     MockTabs.Screen = function MockTabScreen({ name, options }: { name: string; options: { title: string; tabBarButtonTestID: string } }) {
       return <RNText testID={options.tabBarButtonTestID}>{`${name}:${options.title}`}</RNText>;
     };
-    expoRouter.Tabs = MockTabs;
 
+    expoRouter.Tabs = MockTabs;
+  });
+
+  it('declares the four nested tabs with department terms', async () => {
     await render(<MemberHomeTabsLayout />);
     expect(screen.getByTestId('home-status-tab')).toHaveTextContent('index:tabs.home');
     expect(screen.getByTestId('home-people-tab')).toHaveTextContent('personnel:tabs.personnel');
     expect(screen.getByTestId('home-units-tab')).toHaveTextContent('units:units.title');
     expect(screen.getByTestId('home-calls-tab')).toHaveTextContent('calls:tabs.calls');
     expect(MEMBER_HOME_TABS.map((tab) => tab.name)).toEqual(['index', 'personnel', 'units', 'calls']);
+  });
+
+  it('titles the app bar with the nested tab showing (the shell knows only /home), and leaves the home tab to the shell', async () => {
+    const slot = { show: jest.fn(), hide: jest.fn() };
+
+    const withSlot = () => (
+      <AppBarTitleSlotContext.Provider value={slot}>
+        <MemberHomeTabsLayout />
+      </AppBarTitleSlotContext.Provider>
+    );
+
+    jest.mocked(usePathname).mockReturnValue('/home/calls');
+    const view = await render(withSlot());
+    expect(slot.show).toHaveBeenLastCalledWith(expect.any(String), { title: 'tabs.calls' });
+
+    jest.mocked(usePathname).mockReturnValue('/home/units');
+    await view.rerender(withSlot());
+    expect(slot.show).toHaveBeenLastCalledWith(expect.any(String), { title: 'units.title' });
+    expect(slot.hide).not.toHaveBeenCalled();
+
+    slot.show.mockClear();
+    jest.mocked(usePathname).mockReturnValue('/home');
+    await view.rerender(withSlot());
+    expect(slot.hide).toHaveBeenCalledTimes(1);
+    expect(slot.show).not.toHaveBeenCalled();
   });
 });
 

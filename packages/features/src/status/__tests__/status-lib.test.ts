@@ -1,3 +1,5 @@
+import './test-setup';
+
 import { type CallResultData } from '@resgrid/models';
 
 import { ActionBaseTypes, isStaffingOnDuty, isStatusAvailable, isStatusResponding, StaffingBaseTypes, statusAvailability } from '../lib/base-types';

@@ -6,7 +6,7 @@ import { PersonnelStatusSheet, type StatusPickerTab, useStatusContext } from '@r
 import { WeatherAlertBanner, weatherAlertsRoutes } from '@resgrid/features/weather-alerts';
 import type { CheckInTimerStatusResultData, StatusesResultData } from '@resgrid/models';
 import { useRealtimeEvent } from '@resgrid/realtime';
-import { HStack, RefreshControl, ScrollView, SharedTabs, type TabItem, VStack } from '@resgrid/ui';
+import { HStack, RefreshControl, ScrollView, SharedTabs, type TabItem, useRouteTab, VStack } from '@resgrid/ui';
 import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -126,6 +126,9 @@ export default function MemberHomeScreen({ dueChecks, onClearActiveCall }: Membe
     return items;
   }, [activeCallId, handleSelectStatus, hasActiveCall, holdToConfirm, onClearActiveCall, overdueOnActiveCall, statusCapability.staffing]);
 
+  // In the route's params, so Staffing (or the active call) is still selected after opening a call and coming Back.
+  const routeTab = useRouteTab(tabs);
+
   // The checklists card renders nothing unless the department has Checklists.System.
   const DueChecks = DueChecksCard ?? ChecklistsDueChecksCard;
   const dueChecksContent = dueChecks ?? <DueChecks />;
@@ -158,7 +161,7 @@ export default function MemberHomeScreen({ dueChecks, onClearActiveCall }: Membe
           </VStack>
 
           <VStack className="px-4 pb-4">
-            <SharedTabs tabs={tabs} variant="segmented" size="md" scrollable={false} />
+            <SharedTabs tabs={tabs} activeIndex={routeTab.activeIndex} onChange={routeTab.selectIndex} variant="segmented" size="md" scrollable={false} />
           </VStack>
         </VStack>
       </ScrollView>

@@ -1,4 +1,4 @@
-import { checkSharedSession, getBaseApiUrl, isPersonalLockEnabled, POLL_INTERVAL_MS, securityStore, useAuthStore, useInactivityLock, useSharedSessionStore } from '@resgrid/auth';
+import { checkSharedSession, getBaseApiUrl, isPersonalLockEnabled, POLL_INTERVAL_MS, securityStore, useAuthStore, useInactivityLock, useRightsRefreshOnForeground, useSharedSessionStore } from '@resgrid/auth';
 import { useActiveVariant } from '@resgrid/config';
 import { analyticsService, logger } from '@resgrid/core';
 import { useClearBadgeOnForeground, usePushNotifications } from '@resgrid/notifications';
@@ -53,7 +53,7 @@ export function useInitLifecycle(signedIn: boolean, userId: string | null): void
 /**
  * Signed-in services that live as long as the app (no UI): the init phases, the realtime lifecycle (connect while
  * signed in and in the foreground, reconnect on resume, watchdog where the variant has one), push registration, badge
- * clearing, the personal inactivity lock and shared-device session polling. Mounted once in the root layout.
+ * clearing, the rights re-read on resume, the personal inactivity lock and shared-device session polling. Mounted once in the root layout.
  */
 export function SessionServices(): null {
   const variant = useActiveVariant();
@@ -84,6 +84,11 @@ export function SessionServices(): null {
   });
 
   useClearBadgeOnForeground(signedIn);
+
+  // Permissions an admin changed (create, close, delete calls…) apply on returning to the app, not only at the next sign-in.
+  // Armed at sign-in rather than when the bootstrap finishes: the bootstrap reads rights first, and a return to the app
+  // while its later steps run would otherwise go unnoticed (concurrent reads share one request).
+  useRightsRefreshOnForeground(signedIn);
 
   // Personal inactivity lock (Dispatch): only for password sessions on personal devices (isPersonalLockEnabled).
   const personalLockActive = signedIn && variant.capabilities.auth.personalLock && isPersonalLockEnabled();

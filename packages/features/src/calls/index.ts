@@ -9,8 +9,10 @@
 import { AddResourcesSheet, type AddResourcesSheetProps } from './components/add-resources-sheet';
 import { CallConfirmDialog, type CallConfirmDialogProps } from './components/call-confirm-dialog';
 import { type CallDispatchNowControls, useCallDispatchNow, type UseCallDispatchNowOptions } from './hooks/use-call-dispatch-now';
+import { useCallPermissions, useCallPermissionsResolver, useCallRights } from './hooks/use-call-permissions';
 import { callDisplayName, callDisplayText, type CallTextField, type CallTextFields, revealedCallText } from './lib/call-display';
 import { callDestinationTarget, callLocationTarget, isUsablePoint } from './lib/call-location';
+import { type CallPermissionInput, type CallPermissions, type CallRights, type CallsCapability, isCallReporter, resolveCallPermissions } from './lib/call-permissions';
 import { getScheduledDispatchPrefill, isDispatchTimeTooSoon, MIN_DISPATCH_LEAD_MINUTES, toDispatchOnUtc } from './lib/call-schedule';
 import { buildAddResourcesRequest, dispatchesToSelection, isDispatchSelectionEmpty, mergeDispatchSelections, selectionSize } from './lib/dispatch-selection';
 import { getMissingCallFieldsFromRefusal } from './lib/server-refusal';
@@ -89,7 +91,7 @@ export { createFieldPolicy, describeCallFields, type NewCallFieldPolicy, type Po
 export { callsNav, type FeatureNavEntry } from './nav';
 export { CALL_ROUTE_PATTERNS, callCorrect, callDetail, callEdit, callNew, callRoutes, PENDING_CALLS_ROUTE } from './routes';
 
-// Call actions (Dispatch baseline)
+// Call actions (Dispatch baseline) and who may take them
 export {
   AddResourcesSheet,
   type AddResourcesSheetProps,
@@ -101,19 +103,28 @@ export {
   callDisplayName,
   callDisplayText,
   callLocationTarget,
+  type CallPermissionInput,
+  type CallPermissions,
+  type CallRights,
+  type CallsCapability,
   type CallTextField,
   type CallTextFields,
   dispatchesToSelection,
   getMissingCallFieldsFromRefusal,
   getScheduledDispatchPrefill,
+  isCallReporter,
   isDispatchSelectionEmpty,
   isDispatchTimeTooSoon,
   isUsablePoint,
   mergeDispatchSelections,
   MIN_DISPATCH_LEAD_MINUTES,
+  resolveCallPermissions,
   revealedCallText,
   selectionSize,
   toDispatchOnUtc,
   useCallDispatchNow,
   type UseCallDispatchNowOptions,
+  useCallPermissions,
+  useCallPermissionsResolver,
+  useCallRights,
 };

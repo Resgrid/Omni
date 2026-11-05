@@ -1,12 +1,12 @@
 import { featureFlagsStore, useSecurity } from '@resgrid/auth';
-import { getActiveVariant, useCapability } from '@resgrid/config';
+import { getActiveVariant } from '@resgrid/config';
 import { isSafeRouteId } from '@resgrid/core/utils/route-ids';
 import { type QueuedCall, useCallDetailStore, useCallsStore, useCheckInTimersStore } from '@resgrid/data';
 import { useNavigationHandoff } from '@resgrid/features/contacts';
 import { useTranslation } from '@resgrid/i18n';
 import type { CallResultData } from '@resgrid/models';
 import { useRealtimeRefetch } from '@resgrid/realtime';
-import { Button, ButtonText, HtmlRenderer, Loading, Pressable, ScreenHeader, SharedTabs, type TabItem, Text, TypeIcon, useFormFactor, useThemeColors, useToast, ZeroState } from '@resgrid/ui';
+import { Button, ButtonText, HtmlRenderer, Loading, Pressable, ScreenHeader, SharedTabs, type TabItem, Text, TypeIcon, useFormFactor, useRouteTab, useThemeColors, useToast, ZeroState } from '@resgrid/ui';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { EllipsisVertical } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -26,12 +26,13 @@ import { RescheduleCallSheet } from '../components/reschedule-call-sheet';
 import { registerBuiltInCallDetailTabs } from '../detail-tabs/built-in-tabs';
 import { type CallDetailTabContext, resolveCallDetailTabs, useRegisteredCallDetailTabs } from '../detail-tabs/registry';
 import { useCallDispatchNow } from '../hooks/use-call-dispatch-now';
+import { useCallPermissions } from '../hooks/use-call-permissions';
 import { CALL_SHORTCUTS_AVAILABLE, useCallShortcuts } from '../hooks/use-call-shortcuts';
 import { readableColors } from '../lib/call-colors';
 import { callDisplayName, revealedCallText } from '../lib/call-display';
 import { callLocationTarget } from '../lib/call-location';
 import { resolvePriority } from '../lib/call-priority';
-import { CallState, isClosedCall, isPendingCall, isScheduledCall, scheduledDispatchUtc } from '../lib/call-time';
+import { isPendingCall, isScheduledCall, scheduledDispatchUtc } from '../lib/call-time';
 import { callCorrect, callEdit } from '../routes';
 
 registerBuiltInCallDetailTabs();
@@ -54,6 +55,9 @@ const DETAIL_REFRESH_EVENTS = ['callsUpdated', 'callClosed', 'eventingHubJoined'
 
 /** Check-in timer states that need attention (the check-in tab's own summary: Red = overdue, Yellow = due soon). */
 const ATTENTION_TIMER_STATES = new Set(['Overdue', 'Red', 'Warning', 'Yellow', 'Critical']);
+
+/** Content-width action buttons that grow to share the row (not `flex-1`, which forces fifths and wraps "Images" mid-word on a phone). */
+const ACTION_BUTTON_CLASS = 'm-1 grow px-2';
 
 /** The menu entries that open a sheet or dialog on this screen. */
 const MENU_SHEETS = ['close', 'notes', 'images', 'files', 'reschedule', 'dispatch-more', 'delete'] as const;
@@ -87,7 +91,6 @@ function ServerCallDetail({ callId, mapSlot, menuItems, onMenuAction, onClosed, 
   const toast = useToast();
   const themeColors = useThemeColors();
   const handoff = useNavigationHandoff();
-  const calls = useCapability('calls');
   const security = useSecurity();
   const { formFactor, isDesktop, isLandscapeBoard } = useFormFactor();
   // Subscribed so tab visibility follows department flags as they load (unknown flags = disabled).
@@ -100,7 +103,6 @@ function ServerCallDetail({ callId, mapSlot, menuItems, onMenuAction, onClosed, 
   const attentionCheckIns = useCheckInTimersStore((state) => (state.statusesByCall[callId] ?? []).filter((status) => ATTENTION_TIMER_STATES.has(status.Status)).length);
   const registered = useRegisteredCallDetailTabs();
   const [modal, setModal] = useState<DetailModal>(null);
-  const [activeTab, setActiveTab] = useState(0);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const refresh = useCallback(() => fetchCallDetail(callId, { bypassCache: true }), [callId, fetchCallDetail]);
@@ -116,12 +118,8 @@ function ServerCallDetail({ callId, mapSlot, menuItems, onMenuAction, onClosed, 
   const extraData = detail?.extraData ?? null;
   const isPending = !!call && isPendingCall(call);
   const isScheduled = !!call && isScheduledCall(call, Date.now());
-  const canEdit = calls.create !== 'none' && security.canUserCreateCalls;
-  const canDispatch = calls.dispatch && security.canUserCreateCalls;
-  // An archived (closed) call has nothing to close.
-  const canClose = calls.close && security.canUserCreateCalls && !!call && !isClosedCall(call);
-  const canDispatchMore = canDispatch && call?.State === CallState.Active;
-  const canReschedule = canDispatch && isScheduled;
+  // The member's rights and the call (its state, who logged it) decide every action; the server checks the same rules.
+  const { canEdit, canDispatch, canDispatchMore, canReschedule, canClose, canDelete } = useCallPermissions(call);
 
   const context = useMemo<CallDetailTabContext | null>(() => {
     if (!call) return null;
@@ -159,6 +157,9 @@ function ServerCallDetail({ callId, mapSlot, menuItems, onMenuAction, onClosed, 
     [context, registered]
   );
 
+  // In the route's params, so Back from a chat channel opened on the Command tab lands on Command again.
+  const routeTab = useRouteTab(tabs);
+
   const back = () => router.back();
   const edit = () => router.push(callEdit(callId));
 
@@ -171,7 +172,7 @@ function ServerCallDetail({ callId, mapSlot, menuItems, onMenuAction, onClosed, 
     },
     onEdit: canEdit && modal === null ? edit : undefined,
     onTab: (index) => {
-      if (modal === null && index < tabs.length) setActiveTab(index);
+      if (modal === null && index < tabs.length) routeTab.selectIndex(index);
     },
   });
 
@@ -292,6 +293,7 @@ function ServerCallDetail({ callId, mapSlot, menuItems, onMenuAction, onClosed, 
       ) : (
         <CallMapSection call={call} />
       )}
+      {/* Each button is as wide as its label and grows to fill the row; when the labels (counts, longer languages) don't fit, the row wraps instead of squeezing a word onto two lines. */}
       <View style={styles.actions} className="bg-background-0">
         {(
           [
@@ -301,12 +303,12 @@ function ServerCallDetail({ callId, mapSlot, menuItems, onMenuAction, onClosed, 
             ['audio', t('call_detail.audio'), call.AudioCount],
           ] as const
         ).map(([key, label, count]) => (
-          <Button key={key} variant="outline" size="sm" className="m-1 flex-1" onPress={() => setModal(key)} accessibilityLabel={count ? `${label} (${count})` : label} testID={`call-detail-${key}`}>
-            <ButtonText>{count ? `${label} (${count})` : label}</ButtonText>
+          <Button key={key} variant="outline" size="sm" className={ACTION_BUTTON_CLASS} onPress={() => setModal(key)} accessibilityLabel={count ? `${label} (${count})` : label} testID={`call-detail-${key}`}>
+            <ButtonText numberOfLines={1}>{count ? `${label} (${count})` : label}</ButtonText>
           </Button>
         ))}
-        <Button variant="outline" size="sm" className="m-1 flex-1" onPress={() => void route()} accessibilityLabel={t('common.route')} testID="call-detail-route">
-          <ButtonText>{t('common.route')}</ButtonText>
+        <Button variant="outline" size="sm" className={ACTION_BUTTON_CLASS} onPress={() => void route()} accessibilityLabel={t('common.route')} testID="call-detail-route">
+          <ButtonText numberOfLines={1}>{t('common.route')}</ButtonText>
         </Button>
       </View>
     </View>
@@ -314,7 +316,7 @@ function ServerCallDetail({ callId, mapSlot, menuItems, onMenuAction, onClosed, 
 
   const tabsView = (
     <View style={styles.card} className="bg-background-0" testID="call-detail-tabs">
-      <SharedTabs tabs={tabs} activeIndex={Math.min(activeTab, Math.max(tabs.length - 1, 0))} onChange={setActiveTab} variant="underlined" scrollable size={isWide ? 'lg' : 'md'} tabClassName="min-h-11" />
+      <SharedTabs tabs={tabs} activeIndex={routeTab.activeIndex} onChange={routeTab.selectIndex} variant="underlined" scrollable size={isWide ? 'lg' : 'md'} tabClassName="min-h-11" />
     </View>
   );
 
@@ -337,7 +339,7 @@ function ServerCallDetail({ callId, mapSlot, menuItems, onMenuAction, onClosed, 
       {canClose ? <CloseCallSheet isOpen={modal === 'close'} onClose={() => setModal(null)} callId={callId} onClosed={closedOrDeleted} /> : null}
       {canReschedule ? <RescheduleCallSheet isOpen={modal === 'reschedule'} onClose={() => setModal(null)} callId={callId} /> : null}
       {canDispatchMore ? <AddResourcesSheet call={modal === 'dispatch-more' ? call : null} onClose={() => setModal(null)} onDispatched={() => void refresh()} /> : null}
-      {canEdit ? (
+      {canDelete ? (
         <CallConfirmDialog
           isOpen={modal === 'delete'}
           title={t('call_detail.delete_call')}
@@ -359,7 +361,7 @@ function ServerCallDetail({ callId, mapSlot, menuItems, onMenuAction, onClosed, 
         canClose={canClose}
         canDispatchMore={canDispatchMore}
         canReschedule={canReschedule}
-        canDelete={canEdit}
+        canDelete={canDelete}
         onSelect={onSelect}
         extraItems={menuItems}
       />

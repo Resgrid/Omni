@@ -2,7 +2,7 @@ import { useAuthStore } from '@resgrid/auth';
 import { toDataError, useChecklistsStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import type { ChecklistAnswer, ChecklistInput, ChecklistItem, ChecklistRun } from '@resgrid/models';
-import { Button, ButtonText, DateTimeField, Image, Input, InputField, NativeModal, Pressable, Text, Textarea, TextareaInput, useFormFactor } from '@resgrid/ui';
+import { Button, ButtonText, DateTimeField, Image, Input, InputField, NativeModal, NativeModalScreen, Pressable, Text, Textarea, TextareaInput, useFormFactor } from '@resgrid/ui';
 import { X } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
@@ -132,7 +132,7 @@ function RunBody({ run, onClose, onSaved }: { run: ChecklistRun; onClose: () => 
   const needsCapture = item ? item.Type === ChecklistItemType.Photo || item.Type === ChecklistItemType.Signature || (item.RequirePhotoOnFail && checklistFailed(item, answer)) : false;
 
   return (
-    <View style={styles.screen} className="bg-background-0">
+    <NativeModalScreen className="bg-background-0">
       <View style={styles.header} className="border-outline-100">
         <Text className="flex-1 text-lg font-bold text-typography-900" accessibilityRole="header">
           {run.Form.Name}
@@ -326,12 +326,11 @@ function RunBody({ run, onClose, onSaved }: { run: ChecklistRun; onClose: () => 
           </Button>
         </View>
       </ScrollView>
-    </View>
+    </NativeModalScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8, borderBottomWidth: 1 },
   content: { padding: 16, paddingBottom: 48 },
   full: { width: '100%' },

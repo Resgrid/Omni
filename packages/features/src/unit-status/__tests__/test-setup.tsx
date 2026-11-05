@@ -95,7 +95,7 @@ jest.mock('@shopify/flash-list', () => {
 });
 
 jest.mock('expo-router', () => {
-  const mockRouter = { push: jest.fn(), back: jest.fn(), replace: jest.fn(), navigate: jest.fn(), canGoBack: jest.fn(() => true) };
+  const mockRouter = { push: jest.fn(), back: jest.fn(), replace: jest.fn(), navigate: jest.fn(), setParams: jest.fn(), canGoBack: jest.fn(() => true) };
   return {
     useIsFocused: jest.fn(() => true),
     router: mockRouter,

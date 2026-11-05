@@ -36,6 +36,16 @@ describe('call display text (Advanced Data Protection)', () => {
     expect(callDisplayName({ Name: 'REDACTED', RedactedFields: [] }, LABEL)).toBe('REDACTED');
   });
 
+  it("shows a name or address as text, never the sanitizer's entities, and a rich-text nature as text where a screen shows text", () => {
+    const call = makeCall('1', { Name: 'Smith &amp; Sons &lt;Rear&gt;', Address: '1 Main St &amp; 2nd Ave', Nature: '<p>JUST A TEST!</p><p>Smoke &amp; flames</p>', RedactedFields: [] });
+    expect(callDisplayName(call, LABEL)).toBe('Smith & Sons <Rear>');
+    expect(revealedCallText(call, 'Name')).toBe('Smith & Sons <Rear>');
+    expect(callDisplayText(call, 'Address', LABEL)).toBe('1 Main St & 2nd Ave');
+    expect(callDisplayText(call, 'Nature', LABEL)).toBe('JUST A TEST!\nSmoke & flames');
+    // The call detail renders the nature as rich text, so the stored markup stays available.
+    expect(revealedCallText(call, 'Nature')).toBe('<p>JUST A TEST!</p><p>Smoke &amp; flames</p>');
+  });
+
   it('keeps an empty field empty instead of calling it protected', () => {
     expect(callDisplayName({ Name: '' }, LABEL)).toBe('');
     expect(callDisplayText({ Address: null }, 'Address', LABEL)).toBe('');
@@ -67,7 +77,7 @@ const RAW_CALL_FIELD = /\b[A-Za-z_$]*[cC]all\??\.(Name|Nature|Address|CallName|C
 
 const ALLOWED_RAW_READS = new Map(
   Object.entries({
-    'calls/lib/call-form.ts': { count: 7, reason: 'the edit form starts from the stored value and checks which fields ADP withheld' },
+    'calls/lib/call-form.ts': { count: 8, reason: 'the edit form starts from the stored value, checks which fields ADP withheld and keeps the stored rich-text nature' },
     'calls/lib/dispatch-selection.ts': { count: 3, reason: 'the add-resources EditCall request echoes the stored value' },
     'calls/lib/call-filters.ts': { count: 3, reason: 'search matching, not display' },
     'call-queues/lib/archived-calls.ts': { count: 3, reason: 'search matching, not display' },

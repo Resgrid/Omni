@@ -1,3 +1,5 @@
+import './test-setup';
+
 import { IC_EVENT } from '@resgrid/data';
 import { CommandNodeType, IncidentCapabilities, IncidentCommandStatus, IncidentTimerStatus, ParStatus, ResourceAssignmentKind, TacticalObjectiveOutcome } from '@resgrid/models';
 
@@ -71,6 +73,7 @@ describe('board rules', () => {
       { UserId: 'b', FullName: 'Bob', Status: ParStatus.Critical },
       { UserId: 'c', FullName: 'Cy', Status: ParStatus.Warning },
     ].map((row) => ({ NeedsCheckIn: false, MinutesRemaining: 0, DurationMinutes: 0, WarningThresholdMinutes: 0, ...row }));
+
     expect(accountabilityCounts(rows)).toEqual({ green: 1, warning: 1, critical: 1, total: 3 });
     expect(sortAccountability(rows).map((row) => row.UserId)).toEqual(['b', 'c', 'a']);
   });
@@ -130,12 +133,14 @@ describe('permissions by tier', () => {
 
   it('assist follows the server capabilities and is read-only until they load', () => {
     expect(resolveCommandPermissions({ tier: 'assist', isClosed: false, canCreateCalls: true })).toMatchObject({ canViewBoard: true, canEstablish: true, canManageCommand: false, canAssignResources: false });
+
     const ops = resolveCommandPermissions({
       tier: 'assist',
       capabilities: IncidentCapabilities.ViewBoard | IncidentCapabilities.AssignResources | IncidentCapabilities.ManageObjectives,
       isClosed: false,
       canCreateCalls: false,
     });
+
     expect(ops).toMatchObject({ canEstablish: false, canAssignResources: true, canManageObjectives: true, canManageStructure: false, canManageCommand: false, canAddNotes: true });
   });
 });
@@ -172,6 +177,7 @@ describe('event builders', () => {
 describe('map features', () => {
   it('parses annotations defensively into shapes and labelled points', () => {
     const base = { IncidentCommandId: 'ic-7', DepartmentId: 1, CallId: 7, AnnotationType: 0, CreatedByUserId: 'u1', CreatedOn: '' };
+
     const result = annotationShapes([
       {
         ...base,
@@ -191,6 +197,7 @@ describe('map features', () => {
       { ...base, IncidentMapAnnotationId: 'bad', GeoJson: '{not json' },
       { ...base, IncidentMapAnnotationId: 'deleted', GeoJson: JSON.stringify({ type: 'Point', coordinates: [1, 1] }), DeletedOn: '2026-11-01T10:00:00Z' },
     ]);
+
     expect(result.shapes.features).toHaveLength(1);
     expect(result.shapes.features[0].properties).toMatchObject({ id: 'line', kind: 'line' });
     expect(result.points).toEqual([{ id: 'pt-0', coordinate: [-104.9, 39.5], label: 'Hydrant' }]);

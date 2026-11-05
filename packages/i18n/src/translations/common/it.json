@@ -399,7 +399,7 @@
     "create_not_allowed_description": "Creating calls is not available in this app or for your account.",
     "custom_fields": "Custom Fields",
     "dispatch": {
-      "none_pages_everyone": "No one selected — everyone available will be paged"
+      "none_pages_nobody": "No one selected — no one will be paged"
     },
     "edit": {
       "offline": "Editing a call needs a connection. Your changes have not been saved."
@@ -496,7 +496,21 @@
     "scheduled_on_helper": "Lascia vuoto per inviare immediatamente",
     "save_pending_call": "Salva chiamata in attesa",
     "keyboard_shortcuts": "Suggerimento: Premi Ctrl+Invio per creare, Esc per annullare",
-    "edit_keyboard_shortcuts": "Suggerimento: Premi Ctrl+S per salvare, Esc per annullare"
+    "edit_keyboard_shortcuts": "Suggerimento: Premi Ctrl+S per salvare, Esc per annullare",
+    "edit_not_allowed": "You can't edit this call",
+    "edit_not_allowed_description": "A call can be edited while it is active or pending, by a department admin or the member who logged it.",
+    "latitude": "Latitudine",
+    "longitude": "Longitudine",
+    "latitude_placeholder": "es. 39.122639",
+    "longitude_placeholder": "es. -119.758773",
+    "latitude_invalid": "Inserisci una latitudine in gradi decimali, tra -90 e 90",
+    "longitude_invalid": "Inserisci una longitudine in gradi decimali, tra -180 e 180",
+    "coordinates_incomplete": "Inserisci sia la latitudine sia la longitudine",
+    "place_on_map": "Place on map",
+    "destination_poi_select": "Select a destination",
+    "destination_poi_search": "Search destinations...",
+    "destination_poi_none_found": "No destinations match your search",
+    "destination_poi_clear": "Clear destination"
   },
   "chat": {
     "ack_pending_count": "Hai {{count}} messaggi urgenti da confermare",
@@ -895,6 +909,8 @@
     "retry": "Riprova",
     "route": "Percorso",
     "save": "Salva",
+    "scroll_tabs_left": "Scorri le schede a sinistra",
+    "scroll_tabs_right": "Scorri le schede a destra",
     "search": "Cerca",
     "select_option": "Seleziona opzione",
     "selected_location": "Posizione selezionata",
@@ -3246,7 +3262,8 @@
     "update_ready_title": "Aggiornamento pronto",
     "update_ready_message": "Tocca per riavviare ora. Altrimenti l'aggiornamento verrà installato al prossimo avvio dell'app.",
     "update_ready_wall_message": "Tocca per riavviare ora, altrimenti lo schermo si riavvierà da solo dopo {{minutes}} minuti di inutilizzo.",
-    "update_restart_failed": "Impossibile riavviare l'app. L'aggiornamento verrà installato al prossimo avvio dell'app."
+    "update_restart_failed": "Impossibile riavviare l'app. L'aggiornamento verrà installato al prossimo avvio dell'app.",
+    "notifications_unread": "Notifications, {{count}} unread"
   },
   "access_denied": {
     "back_to_sign_in": "Back to sign in",

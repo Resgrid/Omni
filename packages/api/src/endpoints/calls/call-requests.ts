@@ -34,6 +34,13 @@ export const buildDispatchList = (selection: DispatchListSelection): string => {
 };
 
 /**
+ * A DispatchList that dispatches nobody. Core reads a blank list as "everyone" on an immediate SaveCall and on an
+ * EditCall whose dispatch list the department shows (older clients send none), so a call the dispatcher sends to no one
+ * goes up as a list with no entries: not blank, and nothing in it resolves to a person, group, role or unit.
+ */
+export const DISPATCH_LIST_NOBODY = '|';
+
+/**
  * The `Geolocation` wire value: `"lat,lon"`, or empty when there is no usable fix. Never a bare `","` — the server
  * takes any non-empty value as the location and skips geocoding the typed address. Mirrors Core's coordinate check:
  * both finite, on the globe, and not 0,0 (a single zero is a real place and is kept).
@@ -72,6 +79,12 @@ interface CallRequestBase {
   dispatchRoles?: string[];
   dispatchUnits?: string[];
   dispatchEveryone?: boolean;
+  /**
+   * The dispatcher picked the recipients (the form showed the dispatch list), so an empty selection dispatches nobody
+   * and goes up as DISPATCH_LIST_NOBODY. Unset, an empty selection goes up blank: "everyone" on an immediate create,
+   * and on an edit whose dispatch list the department hides, "keep the call's dispatches".
+   */
+  dispatchPicked?: boolean;
   callFormData?: string;
   /** Linked call (numeric id). Undefined omits it (no picker: the server does not enforce "linked call required"). */
   linkedCallId?: string;
@@ -114,8 +127,11 @@ export interface CloseCallRequest {
   sendNotification?: boolean;
 }
 
-const dispatchListFor = (request: CallRequestBase): string =>
-  buildDispatchList({ everyone: request.dispatchEveryone, users: request.dispatchUsers, groups: request.dispatchGroups, roles: request.dispatchRoles, units: request.dispatchUnits });
+const dispatchListFor = (request: CallRequestBase): string => {
+  const list = buildDispatchList({ everyone: request.dispatchEveryone, users: request.dispatchUsers, groups: request.dispatchGroups, roles: request.dispatchRoles, units: request.dispatchUnits });
+
+  return list || (request.dispatchPicked ? DISPATCH_LIST_NOBODY : '');
+};
 
 const commonFields = (request: CallRequestBase) => ({
   Name: request.name,

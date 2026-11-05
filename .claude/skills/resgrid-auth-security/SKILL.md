@@ -25,6 +25,7 @@ Omni baselines: `docs/architecture/omni-plan.md` §7.3; API details in the `resg
 ## Gating UI
 
 - Gate on the **rights DTO** (`IsAdmin`, `CanViewPII`, `CanCreateCalls`, `CanAddNote`, `CanCreateMessage`, group admin flags…) and **per-module access endpoints** (`Inventory/GetAccess`, `ChecklistRuns/GetChecklistAccess`, `Readiness/GetAccess`, `IncidentRoles/GetMyCapabilities`, deployment `TimeAccess`). Never infer access from raw permissions or roles; the server decides.
+- Call actions go through `useCallPermissions(call)` / `resolveCallPermissions` (`@resgrid/features/calls`), never `canUserCreateCalls` alone: create needs `CanCreateCalls`; close (and cancelling a pending call) `CanCloseCalls`; delete `CanDeleteCalls` (both include Create Call; undefined from older servers = Create Call decides); edit, add resources, reschedule and dispatch now need Create Call **and** being `IsAdmin` or the call's `ReportingUserId` (Core `CanUserEditCallAsync`). The rights are re-read when the app returns to the foreground (`useRightsRefreshOnForeground`).
 - Department feature flags: the shared persisted feature-flag store (`isEnabled`, `useFeatureFlag`); unknown flags are **disabled**; fetched after rights. Do not invent new gating mechanisms. With `Chat.System` off every chat endpoint 404s — hide entries, redirect chat routes home, skip the chat hub.
 - Variant capabilities decide what an app can do at all; flags and rights decide what this department/user may do now.
 - `CanViewPII` false hides personnel on maps and PII fields.

@@ -99,6 +99,50 @@ test.describe('code splitting', () => {
   });
 });
 
+test.describe('offline storage', () => {
+  // The web outbox is kept in IndexedDB (packages/offline/src/db/indexeddb-persistence.ts): what the app reports as queued
+  // survives a reload. Startup writes the schema and outbox tables, so a fresh signed-out page already has a snapshot.
+  test('keeps the offline database in IndexedDB across a reload, with one writer', async ({ page, manifest }) => {
+    const name = `resgrid-offline.${manifest.id}`;
+    const home = new HomePage(page);
+
+    const storedTables = () =>
+      page.evaluate(async (database) => {
+        if (!(await indexedDB.databases()).some((entry) => entry.name === database)) return [];
+
+        const db = await new Promise<IDBDatabase>((resolve, reject) => {
+          const request = indexedDB.open(database);
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+        });
+
+        try {
+          const snapshot = await new Promise<{ tables: object } | undefined>((resolve, reject) => {
+            const request = db.transaction('snapshot', 'readonly').objectStore('snapshot').get('db');
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+          });
+
+          return snapshot ? Object.keys(snapshot.tables) : [];
+        } finally {
+          db.close();
+        }
+      }, name);
+
+    const writers = () => page.evaluate(async (lock) => ((await navigator.locks.query()).held ?? []).filter((entry) => entry.name === lock).length, name);
+
+    await home.open();
+    await home.expectVariant(manifest);
+    await expect.poll(storedTables).toContain('outbox');
+    await expect.poll(writers).toBe(1);
+
+    await page.reload();
+    await home.expectVariant(manifest);
+    await expect.poll(writers).toBe(1);
+    expect(await storedTables()).toContain('outbox');
+  });
+});
+
 test.describe('languages', () => {
   // Only English is in the entry bundle; another language's strings load as a separate chunk when it is chosen.
   test.use({ locale: 'de-DE' });

@@ -15,6 +15,14 @@ export class DepartmentRightsResultData {
   public IsAdmin: boolean = false; // Is Department Admin
   public CanViewPII: boolean = false; // Can View PII
   public CanCreateCalls: boolean = false; // Can Create Calls
+  /**
+   * Whether this user may close calls: the Create Call right and the Close Call permission together (department-wide;
+   * a permission locked to the user's group can still refuse a call that group was not dispatched to). Undefined from
+   * servers that predate the field, where CanCreateCalls is all the app knows.
+   */
+  public CanCloseCalls?: boolean;
+  /** Whether this user may delete calls: the Create Call right and the Delete Call permission together (as CanCloseCalls). */
+  public CanDeleteCalls?: boolean;
   public CanAddNote: boolean = false; // Can Add a Note
   public CanCreateMessage: boolean = false; // Can Add a Message
   /**

@@ -4,7 +4,7 @@ import { type CallNoteListItem, getDataLocationFix, searchCallNotes, useCallDeta
 import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import type { CallNoteResultData } from '@resgrid/models';
-import { Button, ButtonText, Input, InputField, Text, Textarea, TextareaInput, useToast } from '@resgrid/ui';
+import { Button, ButtonText, Card, Input, InputField, Text, Textarea, TextareaInput, useToast } from '@resgrid/ui';
 import React, { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -89,7 +89,7 @@ export const CallNotesPanel: React.FC<CallNotesPanelProps> = ({ callId, showSear
         notes.map((note) => {
           const isProtected = isFieldRedacted(null, ProtectedFieldIds.callNote, note.Note);
           return (
-            <View key={note.CallNoteId} style={styles.note} className="border-outline-100" testID={`call-note-${note.CallNoteId}`}>
+            <Card key={note.CallNoteId} variant="outline" size="sm" className="mb-2 rounded-lg bg-background-50" testID={`call-note-${note.CallNoteId}`}>
               <Text className="text-typography-900">{isProtected ? t('data_protection.protected_value') : note.Note}</Text>
               <View style={styles.meta}>
                 <Text size="xs" className="text-typography-500">
@@ -101,7 +101,7 @@ export const CallNotesPanel: React.FC<CallNotesPanelProps> = ({ callId, showSear
                   </Text>
                 ) : null}
               </View>
-            </View>
+            </Card>
           );
         })
       )}
@@ -124,7 +124,6 @@ export const CallNotesPanel: React.FC<CallNotesPanelProps> = ({ callId, showSear
 
 const styles = StyleSheet.create({
   panel: { padding: 16 },
-  note: { borderBottomWidth: 1, paddingVertical: 8 },
-  meta: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 2 },
-  composer: { marginTop: 12 },
+  meta: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
+  composer: { marginTop: 8 },
 });

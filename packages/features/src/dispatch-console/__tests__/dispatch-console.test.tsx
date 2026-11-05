@@ -302,6 +302,25 @@ describe('DispatchConsoleScreen call filter and actions', () => {
     expect(screen.getByTestId('add-resources-dispatch', hidden)).toBeDisabled();
   });
 
+  it("keeps close to the Close Call permission and add resources to an admin or the call's reporter", async () => {
+    await setWindow(1366, 1024);
+    useCallsStore.setState({ calls: [makeCall('9', { Name: 'Kitchen fire', Number: '26-9', Priority: 1, ReportingUserId: 'someone-else' })] });
+    setRights({ CanViewPII: true, CanCloseCalls: false });
+    const { unmount } = await renderConsole();
+    await fireEvent.press(screen.getByTestId('console-call-9'));
+    expect(screen.queryByTestId('console-action-close-call')).toBeNull();
+    expect(screen.getByTestId('console-action-add-resources')).toBeDisabled();
+    expect(screen.queryByTestId('console-call-9-add-resources')).toBeNull();
+    await unmount();
+
+    // The call stays selected in the console store.
+    setRights({ CanViewPII: true, IsAdmin: true });
+    await renderConsole();
+    expect(screen.getByTestId('console-action-close-call')).not.toBeDisabled();
+    expect(screen.getByTestId('console-action-add-resources')).not.toBeDisabled();
+    expect(screen.getByTestId('console-call-9-add-resources')).toBeTruthy();
+  });
+
   it('sets a unit’s status on behalf with the filtered call as the default destination', async () => {
     await setWindow(1366, 1024);
     await renderConsole();

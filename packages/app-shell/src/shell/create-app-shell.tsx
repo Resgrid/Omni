@@ -2,7 +2,7 @@ import { reportOperatorActivity, updateActivity } from '@resgrid/auth';
 import type { VariantManifest } from '@resgrid/config';
 import { isDev, recordUserActivity } from '@resgrid/core';
 import { AppBarBackContext, useThemeColors } from '@resgrid/ui';
-import { Slot, Tabs } from 'expo-router';
+import { Stack, Tabs } from 'expo-router';
 import React, { type ComponentType, useCallback, useMemo, useRef } from 'react';
 import { type ColorValue, StyleSheet, View } from 'react-native';
 
@@ -100,6 +100,14 @@ export function RegistryTabs({ nav }: { nav: NavRegistry }) {
   );
 }
 
+/**
+ * The drawer shells' routes (Responder, Dispatch, BigBoard): a header-less stack, so the screens below the current one stay
+ * mounted. A Slot rendered only the current route, so opening a call or a chat channel threw away the screen underneath —
+ * Back rebuilt it, and nested layouts (Home's Status / Calls tabs) came back on their first screen. Legacy Responder kept
+ * them mounted by pushing details onto its root stack. No transition: switching screens looks as it did under the Slot.
+ */
+const DRAWER_STACK_OPTIONS = { headerShown: false, animation: 'none' } as const;
+
 function ShellFrame({ variant, nav }: { variant: VariantManifest; nav: NavRegistry }) {
   const colors = useThemeColors();
   const onTouchCapture = useActivityCapture();
@@ -113,7 +121,7 @@ function ShellFrame({ variant, nav }: { variant: VariantManifest; nav: NavRegist
       <View style={styles.body}>
         <InlineSidebar nav={nav} />
         <View style={styles.content}>
-          <AppBarBackContext.Provider value={leading === 'back'}>{variant.shell.kind === 'tabs' ? <RegistryTabs nav={nav} /> : <Slot />}</AppBarBackContext.Provider>
+          <AppBarBackContext.Provider value={leading === 'back'}>{variant.shell.kind === 'tabs' ? <RegistryTabs nav={nav} /> : <Stack screenOptions={DRAWER_STACK_OPTIONS} />}</AppBarBackContext.Provider>
         </View>
       </View>
       <DrawerSidebar nav={nav} />
@@ -137,7 +145,7 @@ export interface CreateAppShellOptions {
  * export default createAppShell(variant);
  * ```
  *
- * `shell.kind` picks the frame — `drawer-slot` (header + Slot: Responder, Dispatch, BigBoard) or `tabs` (header + tab
+ * `shell.kind` picks the frame — `drawer-slot` (header + header-less stack: Responder, Dispatch, BigBoard) or `tabs` (header + tab
  * bar from the nav registry: Unit, IC) — and `shell.sidebar` the sidebar per form factor. Everything inside is gated by
  * ShellGate.
  */
