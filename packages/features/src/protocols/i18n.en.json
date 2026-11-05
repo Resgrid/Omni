@@ -1,3 +1,4 @@
 {
-  "protocols.open_hint": "Opens the protocol details"
+  "protocols.open_hint": "Opens the protocol details",
+  "protocols.not_found": "Protocol not found"
 }

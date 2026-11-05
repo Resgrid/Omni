@@ -6,10 +6,10 @@ import { type ThemeColors, useThemeColors } from './theme/use-theme-colors';
 import { useTranslation } from './utils/i18n';
 
 /**
- * - `pills`: the tab strip at the top of a top-level page (Shifts, Calls, Messages, Calendar, Checklists, Routes, the
- *   member home, IC's command switcher, weather alerts): bordered pills on a full-width strip.
+ * - `pills`: the tab strip at the top of a top-level page (Shifts, Calls, Messages, Calendar, Checklists, Routes, IC's
+ *   command switcher, weather alerts): bordered pills on a full-width strip.
  * - `underlined` / `default`: an underlined row (a detail screen's sections, e.g. a call's tabs).
- * - `segmented`: a filled segmented control.
+ * - `segmented`: a filled segmented control (the member home's Status / Staffing / Call switch, which stays one).
  */
 export type TabBarVariant = 'default' | 'pills' | 'underlined' | 'segmented';
 

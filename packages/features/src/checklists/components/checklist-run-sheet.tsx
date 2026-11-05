@@ -2,7 +2,7 @@ import { useAuthStore } from '@resgrid/auth';
 import { toDataError, useChecklistsStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import type { ChecklistAnswer, ChecklistInput, ChecklistItem, ChecklistRun } from '@resgrid/models';
-import { Button, ButtonText, DateTimeField, Image, Input, InputField, KeyboardAwareScrollView, NativeModal, NativeModalScreen, Pressable, Text, Textarea, TextareaInput, useFormFactor } from '@resgrid/ui';
+import { Button, ButtonText, DateTimeField, Image, ImageViewer, Input, InputField, KeyboardAwareScrollView, NativeModal, NativeModalScreen, Pressable, Text, Textarea, TextareaInput, useFormFactor } from '@resgrid/ui';
 import { X } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -56,6 +56,8 @@ function RunBody({ run, onClose, onSaved }: { run: ChecklistRun; onClose: () => 
   const [notice, setNotice] = useState<string | null>(null);
   const [attestation, setAttestation] = useState('');
   const [evidence, setEvidence] = useState<Record<string, string>>({});
+  const [viewingEvidence, setViewingEvidence] = useState<{ uri: string; name: string } | null>(null);
+  const viewingEvidenceSource = useMemo(() => (viewingEvidence ? { uri: viewingEvidence.uri } : null), [viewingEvidence]);
 
   const items = useMemo(() => visibleChecklistItems(run.Form, input.Answers), [run.Form, input.Answers]);
   const index = Math.min(step, Math.max(0, items.length - 1));
@@ -226,7 +228,15 @@ function RunBody({ run, onClose, onSaved }: { run: ChecklistRun; onClose: () => 
                     <ButtonText>{`${t('checklists.labels.Evidence')}: ${file.Name}`}</ButtonText>
                   </Button>
                   {evidence[file.Id] ? (
-                    <Image source={{ uri: evidence[file.Id] }} accessibilityLabel={t('checklists.labels.Evidence')} style={styles.evidence} contentFit="contain" testID={`checklist-evidence-image-${file.Id}`} />
+                    <Pressable
+                      onPress={() => setViewingEvidence({ uri: evidence[file.Id] ?? '', name: file.Name })}
+                      accessibilityRole="imagebutton"
+                      accessibilityLabel={`${t('checklists.labels.Evidence')}: ${file.Name}`}
+                      className="self-start"
+                      testID={`checklist-evidence-open-${file.Id}`}
+                    >
+                      <Image source={{ uri: evidence[file.Id] }} accessibilityLabel={t('checklists.labels.Evidence')} style={styles.evidence} contentFit="contain" testID={`checklist-evidence-image-${file.Id}`} />
+                    </Pressable>
                   ) : null}
                 </View>
               ))}
@@ -326,6 +336,13 @@ function RunBody({ run, onClose, onSaved }: { run: ChecklistRun; onClose: () => 
           </Button>
         </View>
       </KeyboardAwareScrollView>
+      <ImageViewer
+        source={viewingEvidenceSource}
+        caption={viewingEvidence?.name || undefined}
+        label={viewingEvidence?.name || t('checklists.labels.Evidence')}
+        onClose={() => setViewingEvidence(null)}
+        testID="checklist-evidence-viewer"
+      />
     </NativeModalScreen>
   );
 }

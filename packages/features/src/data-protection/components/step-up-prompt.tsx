@@ -98,6 +98,8 @@ export const StepUpPrompt: React.FC<StepUpPromptProps> = ({ isOpen, onClose, onV
   }, [approval]);
 
   const offersCode = methods == null || methods.includes('totp');
+  // Loaded, and nothing the member has works here (only a passkey, in the desktop app): say so instead of an empty prompt.
+  const noMethodHere = methods !== null && methods.length === 0;
   const errorText = lastError ? t(ERROR_KEYS[lastError] ?? mfaErrorKey(lastError)) : null;
 
   return (
@@ -149,6 +151,11 @@ export const StepUpPrompt: React.FC<StepUpPromptProps> = ({ isOpen, onClose, onV
               <Button variant="outline" action="secondary" onPress={async () => finished(await verifyStepUpFederated())} isDisabled={isVerifying} testID="step-up-provider">
                 <ButtonText>{t('mfa.login.use_provider')}</ButtonText>
               </Button>
+            ) : null}
+            {!approval && noMethodHere ? (
+              <Text size="sm" testID="step-up-no-method">
+                {t('mfa.errors.no_method_here')}
+              </Text>
             ) : null}
             {errorText ? (
               <Text size="sm" className="text-error-600" testID="step-up-error" accessibilityLiveRegion="polite" accessibilityRole="alert">

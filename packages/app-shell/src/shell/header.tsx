@@ -1,7 +1,7 @@
 import { useInboxUnreadCount } from '@resgrid/notifications';
-import { contentOnFill, Text, useThemeColors } from '@resgrid/ui';
+import { contentOnFill, SYNC_NOTICE_DELAY_MS, Text, useSettledFlag, useThemeColors } from '@resgrid/ui';
 import { type Href, usePathname, useRouter } from 'expo-router';
-import { ArrowLeft, Bell, Menu, RefreshCw } from 'lucide-react-native';
+import { ArrowLeft, Bell, Menu, RefreshCw, TriangleAlert, WifiOff } from 'lucide-react-native';
 import React, { useCallback } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -26,6 +26,7 @@ export function resolveHeaderLeading(input: { isTopLevel: boolean; canGoBack: bo
   if (!input.isTopLevel && input.canGoBack) {
     return 'back';
   }
+
   return input.sidebarMode === 'permanent' ? 'none' : 'menu';
 }
 
@@ -38,16 +39,21 @@ const isPatternHref = (href: string): boolean => href.includes('[');
 export function findNavEntryForPath(nav: NavRegistry, pathname: string): { entry: NavEntry; exact: boolean } | null {
   const path = normalizeHref(pathname);
   const exact = nav.findByHref(path) ?? nav.entries.find((entry) => isPatternHref(entry.href) && matchRoutePattern(entry.href, path));
+
   if (exact) {
     return { entry: exact, exact: true };
   }
+
   let best: NavEntry | null = null;
+
   for (const entry of nav.entries) {
     const href = normalizeHref(entry.href);
+
     if (href !== '/' && path.startsWith(`${href}/`) && (!best || href.length > normalizeHref(best.href).length)) {
       best = entry;
     }
   }
+
   return best ? { entry: best, exact: false } : null;
 }
 
@@ -60,6 +66,7 @@ export function isTopLevelScreen(match: { entry: NavEntry; exact: boolean } | nu
   if (normalizeHref(pathname) === '/') {
     return true;
   }
+
   return match !== null && match.entry.placement !== 'hidden' && (match.exact || match.entry.nestedTabs === true);
 }
 
@@ -73,33 +80,66 @@ export function useHeaderLeading(nav: NavRegistry): { leading: HeaderLeading; ma
   const router = useRouter();
   const match = findNavEntryForPath(nav, pathname);
   const leading = resolveHeaderLeading({ isTopLevel: isTopLevelScreen(match, pathname), canGoBack: router.canGoBack(), sidebarMode: shell.sidebarMode });
+
   return { leading, match };
 }
 
-function PendingChangesIndicator() {
+type SyncChipKind = 'attention' | 'offline' | 'waiting';
+
+const SYNC_CHIP_ICONS = { attention: TriangleAlert, offline: WifiOff, waiting: RefreshCw } as const;
+
+/**
+ * The app bar's sync state: changes that need the user, offline, or changes waiting to send — in that order. Each state
+ * shows only once it has itself lasted `SYNC_NOTICE_DELAY_MS`: a write that sends a moment later or a connectivity blip
+ * never flashes the bar, and neither does the moment after reconnecting while the queue drains ("Offline" goes at once;
+ * "Changes waiting" comes only if sending takes a while). It links to the storage screen when there are changes to see.
+ */
+function SyncStatusChip() {
   const unsent = useShellStore((state) => state.unsentChanges);
+  const attention = useShellStore((state) => state.changesNeedingAttention);
+  const isOffline = useShellStore((state) => state.isOffline);
   const href = useHref();
   const router = useRouter();
   const colors = useThemeColors();
   const { t } = useShellTranslation();
   const target = href.settingsStorage();
+  const settle = { delayMs: SYNC_NOTICE_DELAY_MS };
+  const showAttention = useSettledFlag(attention > 0, settle);
+  const showOffline = useSettledFlag(isOffline, settle);
+  const showWaiting = useSettledFlag(!isOffline && unsent > 0, settle);
+  const kind: SyncChipKind | null = showAttention ? 'attention' : showOffline ? 'offline' : showWaiting ? 'waiting' : null;
 
-  if (unsent <= 0) {
+  if (kind === null) {
     return null;
   }
-  const label = t('shell.changes_waiting', { count: unsent });
+
+  const label =
+    kind === 'attention'
+      ? t('shell.changes_need_attention', { count: attention })
+      : kind === 'offline'
+        ? unsent > 0
+          ? t('shell.offline_changes_waiting', { count: unsent })
+          : t('shell.offline')
+        : t('shell.changes_waiting', { count: unsent });
+
+  const fill = kind === 'attention' ? colors.error : colors.warning;
+  const onFill = kind === 'attention' ? contentOnFill(colors.error) : colors.textInverse;
+  const Icon = SYNC_CHIP_ICONS[kind];
+
   const content = (
-    <View style={StyleSheet.flatten([styles.pending, { backgroundColor: colors.warning }])}>
+    <View style={StyleSheet.flatten([styles.pending, { backgroundColor: fill }])}>
       <View>
-        <RefreshCw size={14} color={colors.textInverse} />
+        <Icon size={14} color={onFill} />
       </View>
-      <Text style={StyleSheet.flatten([styles.pendingText, { color: colors.textInverse }])} numberOfLines={1}>
+      <Text style={StyleSheet.flatten([styles.pendingText, { color: onFill }])} numberOfLines={1}>
         {label}
       </Text>
     </View>
   );
-  // Without a storage screen in this variant the count still shows, but it is not a link (links to absent routes hide).
-  return target ? (
+
+  // Offline with nothing queued has nothing to open. Without a storage screen in this variant the chip still shows, but
+  // it is not a link (links to absent routes hide).
+  return target && (attention > 0 || unsent > 0) ? (
     <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityHint={t('shell.changes_waiting_hint')} onPress={() => router.push(target)} testID="shell-pending-changes">
       {content}
     </Pressable>
@@ -186,13 +226,16 @@ export function ShellHeader({ nav }: ShellHeaderProps) {
   const goBack = useCallback(() => {
     if (router.canGoBack()) {
       router.back();
+
       return;
     }
+
     router.replace(href.home() ?? ('/' as Href));
   }, [href, router]);
 
   // The Dispatch app bar: the panel-header surface with body text, a hairline and a soft shadow, in every app.
   const onColor = colors.text;
+
   return (
     <View style={StyleSheet.flatten([styles.header, { paddingTop: insets.top, backgroundColor: colors.surface, borderBottomColor: colors.border }])} testID="shell-header">
       <View style={styles.side}>
@@ -225,7 +268,7 @@ export function ShellHeader({ nav }: ShellHeaderProps) {
         </Text>
       </View>
       <View style={StyleSheet.flatten([styles.side, styles.actions])}>
-        <PendingChangesIndicator />
+        <SyncStatusChip />
         {screenTitle?.right ?? null}
         {actions}
         <InboxBell />
@@ -253,8 +296,10 @@ const styles = StyleSheet.create({
   iconButton: { padding: 8, minWidth: 40, minHeight: 40, alignItems: 'center', justifyContent: 'center' },
   titleBox: { flex: 1, alignItems: 'center', paddingHorizontal: 8 },
   title: { fontSize: 18, fontWeight: '700', letterSpacing: 0.5 },
+  // The Text primitive's default line height (24, from `text-base`) does not shrink with an inline fontSize on native, so
+  // chip and badge text pins its own; the count pill grows (minHeight) instead of clipping with larger system text.
   pending: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, paddingHorizontal: 8, paddingVertical: 4, marginRight: 4 },
-  pendingText: { fontSize: 12, fontWeight: '600', marginLeft: 4 },
-  badge: { position: 'absolute', top: 2, right: 0, minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 4, alignItems: 'center', justifyContent: 'center' },
-  badgeText: { fontSize: 11, fontWeight: '700' },
+  pendingText: { fontSize: 12, lineHeight: 16, fontWeight: '600', marginLeft: 4 },
+  badge: { position: 'absolute', top: 2, right: 0, minWidth: 18, minHeight: 18, borderRadius: 9999, paddingHorizontal: 4, alignItems: 'center', justifyContent: 'center' },
+  badgeText: { fontSize: 11, lineHeight: 14, fontWeight: '700' },
 });

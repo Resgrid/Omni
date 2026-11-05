@@ -1,4 +1,4 @@
-import { completionGrant, loginTransactionFrom } from '../api/connect';
+import { completionGrant, loginTransactionFrom, sendsClientId } from '../api/connect';
 import {
   beginFactorRecovery,
   cancelFactorRecovery,
@@ -25,6 +25,7 @@ import { getPasskeyAssertion } from '../passkeys/passkey';
 import { isPasskeyCeremonyError } from '../passkeys/passkey-errors';
 import { getAuthApiContext } from '../runtime/api-context';
 import { authLogger } from '../runtime/logger';
+import { resgridClientId } from '../runtime/variant';
 import type { AuthResponse } from '../session/types';
 import { runSsoRoundTrip } from '../sso/sso-browser';
 import { type ApprovalWaitResult, waitForApproval } from './approval-wait';
@@ -274,7 +275,8 @@ export const signInWithBrokeredSso = async (host: LoginMfaHost, department: SsoD
   }
 
   try {
-    const redeemed = await ssoRedeem(ctx, trip.trip.ssoTransactionId, trip.trip.ssoCode, trip.trip.codeVerifier);
+    // The same client_id the password grant sends, so an SSO session gets the variant's refresh lifetime too.
+    const redeemed = await ssoRedeem(ctx, trip.trip.ssoTransactionId, trip.trip.ssoCode, trip.trip.codeVerifier, sendsClientId(ctx) ? resgridClientId() : undefined);
     if (redeemed.Outcome === 'completed' && redeemed.Transaction && redeemed.CompletionCode) {
       const tokens = await completionGrant(ctx, redeemed.Transaction, redeemed.CompletionCode);
       try {

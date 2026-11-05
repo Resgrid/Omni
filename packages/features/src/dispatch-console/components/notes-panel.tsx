@@ -1,10 +1,11 @@
 import { useSecurity, useTerm } from '@resgrid/auth';
 import { searchNotes, useNotesStore } from '@resgrid/data';
 import { CallNotesPanel } from '@resgrid/features/calls';
-import { NoteCard, NoteDetailsSheet } from '@resgrid/features/notes';
+import { NoteCard, noteRoutes } from '@resgrid/features/notes';
 import { useTranslation } from '@resgrid/i18n';
 import type { NoteResultData } from '@resgrid/models';
 import { FlatList, ScrollView, Text, useKeepFocusedInputVisible } from '@resgrid/ui';
+import { router } from 'expo-router';
 import { FileText, Plus, RefreshCw } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -21,7 +22,7 @@ export interface NotesPanelProps {
 }
 
 /**
- * The console's notes (Dispatch baseline): department notes (searchable, opening the sanitized note sheet) and, while
+ * The console's notes (Dispatch baseline): department notes (searchable, each opening the note's page) and, while
  * filtered to a call, the call's notes and composer (shared calls notes panel: queued offline, replayed once).
  */
 export const NotesPanel: React.FC<NotesPanelProps> = ({ callId, onNewNote, flex, maxHeight }) => {
@@ -31,10 +32,10 @@ export const NotesPanel: React.FC<NotesPanelProps> = ({ callId, onNewNote, flex,
   const notes = useNotesStore((state) => state.notes);
   const isLoading = useNotesStore((state) => state.loading.notes === true);
   const [query, setQuery] = useState('');
-  const [openNote, setOpenNote] = useState<NoteResultData | null>(null);
   const visible = useMemo(() => searchNotes(notes, query), [notes, query]);
 
-  const renderItem = useCallback(({ item }: { item: NoteResultData }) => <NoteCard note={item} onPress={setOpenNote} />, []);
+  const openNote = useCallback((note: NoteResultData) => router.push(noteRoutes.noteDetail(note.NoteId)), []);
+  const renderItem = useCallback(({ item }: { item: NoteResultData }) => <NoteCard note={item} onPress={openNote} />, [openNote]);
 
   return (
     <PanelFrame
@@ -73,7 +74,6 @@ export const NotesPanel: React.FC<NotesPanelProps> = ({ callId, onNewNote, flex,
               </View>
             }
           />
-          <NoteDetailsSheet note={openNote} isOpen={openNote !== null} onClose={() => setOpenNote(null)} />
         </>
       )}
     </PanelFrame>

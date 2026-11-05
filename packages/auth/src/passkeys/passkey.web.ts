@@ -15,7 +15,9 @@ const secureWebPage = (): boolean => {
   if (typeof window === 'undefined' || !window.isSecureContext) {
     return false;
   }
+
   const { protocol, hostname } = window.location;
+
   return protocol === 'https:' || (protocol === 'http:' && (hostname === 'localhost' || hostname === '127.0.0.1'));
 };
 
@@ -23,31 +25,42 @@ export const passkeysSupported = (): boolean => passkeysEnabledForVariant() && s
 
 const toBuffer = (value: string): ArrayBuffer => {
   const bytes = base64UrlToBytes(value);
+
   return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
 };
 
 const descriptors = (list: unknown): PublicKeyCredentialDescriptor[] | undefined =>
   Array.isArray(list) ? (list as Descriptor[]).map((d) => ({ id: toBuffer(d.id), type: 'public-key', ...(d.transports ? { transports: d.transports as AuthenticatorTransport[] } : {}) })) : undefined;
 
-const failure = (error: unknown): PasskeyCeremonyError => {
+const failure = (error: unknown, ceremony: 'get' | 'create'): PasskeyCeremonyError => {
   const name = (error as { name?: string } | null)?.name;
+
   if (name === 'NotAllowedError' || name === 'AbortError') {
     // The browser uses NotAllowedError for both a cancelled prompt and a timeout; neither is a failed signature.
     return new PasskeyCeremonyError('cancelled');
   }
+
   if (name === 'NotSupportedError' || name === 'SecurityError') {
     return new PasskeyCeremonyError('not_supported');
   }
+
+  if (name === 'InvalidStateError' && ceremony === 'create') {
+    // The authenticator already holds one of the server's excludeCredentials for this account.
+    return new PasskeyCeremonyError('already_registered');
+  }
+
   return new PasskeyCeremonyError('failed');
 };
 
 const credentialJson = (credential: PublicKeyCredential, assertion: boolean): Record<string, unknown> => {
   const toJson = (credential as unknown as { toJSON?: () => Record<string, unknown> }).toJSON;
+
   if (typeof toJson === 'function') {
     return toJson.call(credential);
   }
 
   const response = credential.response as AuthenticatorAssertionResponse & AuthenticatorAttestationResponse;
+
   return {
     id: credential.id,
     rawId: bytesToBase64Url(credential.rawId),
@@ -73,19 +86,23 @@ export const getPasskeyAssertion = async (options: WebAuthnOptions): Promise<Rec
   if (!passkeysSupported()) {
     throw new PasskeyCeremonyError('not_supported');
   }
+
   const publicKey: PublicKeyCredentialRequestOptions = {
     ...(options as unknown as PublicKeyCredentialRequestOptions),
     challenge: toBuffer(String(options.challenge)),
     allowCredentials: descriptors(options.allowCredentials),
   };
+
   try {
     const credential = (await navigator.credentials.get({ publicKey })) as PublicKeyCredential | null;
+
     if (!credential) {
       throw new PasskeyCeremonyError('cancelled');
     }
+
     return credentialJson(credential, true);
   } catch (error) {
-    throw error instanceof PasskeyCeremonyError ? error : failure(error);
+    throw error instanceof PasskeyCeremonyError ? error : failure(error, 'get');
   }
 };
 
@@ -93,20 +110,25 @@ export const createPasskeyCredential = async (options: WebAuthnOptions): Promise
   if (!passkeysSupported()) {
     throw new PasskeyCeremonyError('not_supported');
   }
+
   const user = options.user as { id: string; name: string; displayName: string };
+
   const publicKey: PublicKeyCredentialCreationOptions = {
     ...(options as unknown as PublicKeyCredentialCreationOptions),
     challenge: toBuffer(String(options.challenge)),
     user: { ...user, id: toBuffer(user.id) },
     excludeCredentials: descriptors(options.excludeCredentials),
   };
+
   try {
     const credential = (await navigator.credentials.create({ publicKey })) as PublicKeyCredential | null;
+
     if (!credential) {
       throw new PasskeyCeremonyError('cancelled');
     }
+
     return credentialJson(credential, false);
   } catch (error) {
-    throw error instanceof PasskeyCeremonyError ? error : failure(error);
+    throw error instanceof PasskeyCeremonyError ? error : failure(error, 'create');
   }
 };

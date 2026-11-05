@@ -25,6 +25,7 @@ jest.mock('@resgrid/auth', () => ({
   applySharedSessionStatus: (...args: unknown[]) => mockApply(...args),
   markSharedSessionLocked: jest.fn(),
 }));
+
 jest.mock('../lib/api-context', () => ({ authUiApi: () => ({}), hasAuthUiApi: () => true }));
 
 describe('SharedDeviceLockScreen', () => {
@@ -58,5 +59,20 @@ describe('SharedDeviceLockScreen', () => {
     await fireEvent.press(screen.getByTestId('shared-lock-end-shift'));
     expect(mockEndShift).toHaveBeenCalledWith(false);
     await waitFor(() => expect(screen.getByTestId('shared-lock-end-shift')).not.toBeDisabled());
+  });
+
+  it('says the shift cannot be unlocked here when its only method needs a passkey this device cannot use', async () => {
+    const auth = jest.requireMock<{ passkeysSupported: jest.Mock }>('@resgrid/auth');
+    auth.passkeysSupported.mockReturnValue(false);
+    mockGetUnlockOptions.mockResolvedValue({ Operator: 'J. Doe', LockVersion: 4, Methods: ['passkey'], Preferred: 'passkey', Passkey: { RequestId: 'req-1', Options: {} } });
+
+    try {
+      await render(<SharedDeviceLockScreen />);
+      expect(await screen.findByTestId('shared-lock-no-methods')).toHaveTextContent('shared_session.no_unlock');
+      expect(screen.queryByTestId('shared-lock-passkey')).toBeNull();
+      expect(screen.getByTestId('shared-lock-end-shift')).toBeTruthy();
+    } finally {
+      auth.passkeysSupported.mockReturnValue(true);
+    }
   });
 });

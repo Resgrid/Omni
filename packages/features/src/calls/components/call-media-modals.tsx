@@ -3,7 +3,7 @@ import { CallFileKind, getDataLocationFix, type QueuedCallFile, useCallDetailSto
 import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import type { CallFileResultData } from '@resgrid/models';
-import { Button, ButtonText, Image, Input, InputField, Pressable, Text, useToast } from '@resgrid/ui';
+import { Button, ButtonText, Image, ImageViewer, Input, InputField, Pressable, Text, useToast } from '@resgrid/ui';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -51,9 +51,13 @@ const QueuedFileRow: React.FC<{ file: QueuedCallFile }> = ({ file }) => {
   );
 };
 
+/** The picture of a call image: its signed link, else the bytes the server sent inline; '' when it has neither. */
+const callImageUri = (image: CallFileResultData): string => image.Url || (image.Data ? `data:${image.Mime || 'image/jpeg'};base64,${image.Data}` : '');
+
 /**
- * Images on the call (R images modal UI): thumbnails, and add from the camera or gallery. Uploads are offline-capable
- * (outbox `calls.file.upload`): the picked image is staged and sent when the connection returns.
+ * Images on the call (R images modal UI): thumbnails (tap one to see it full screen), and add from the camera or
+ * gallery. Uploads are offline-capable (outbox `calls.file.upload`): the picked image is staged and sent when the
+ * connection returns.
  */
 export const CallImagesModal: React.FC<ModalProps> = ({ isOpen, onClose, callId }) => {
   const { t } = useTranslation();
@@ -63,6 +67,10 @@ export const CallImagesModal: React.FC<ModalProps> = ({ isOpen, onClose, callId 
   const uploadCallFile = useCallDetailStore((state) => state.uploadCallFile);
   const queued = useQueuedFiles(callId, CallFileKind.Image);
   const [name, setName] = useState('');
+  const [viewing, setViewing] = useState<CallFileResultData | null>(null);
+  const viewingUri = viewing ? callImageUri(viewing) : '';
+  // Kept stable while the viewer is open: expo-image reloads (and the viewer would flash) whenever the source changes.
+  const viewingSource = useMemo(() => (viewingUri ? { uri: viewingUri } : null), [viewingUri]);
 
   useEffect(() => {
     if (isOpen) void fetchCallImages(callId);
@@ -97,7 +105,7 @@ export const CallImagesModal: React.FC<ModalProps> = ({ isOpen, onClose, callId 
       <View style={styles.panel}>
         <View style={styles.grid}>
           {(images ?? []).map((image) => (
-            <ImageTile key={image.Id} image={image} />
+            <ImageTile key={image.Id} image={image} onOpen={setViewing} />
           ))}
         </View>
         {queued.map((file) => (
@@ -110,25 +118,33 @@ export const CallImagesModal: React.FC<ModalProps> = ({ isOpen, onClose, callId 
         <Input variant="outline">
           <InputField value={name} onChangeText={setName} placeholder={t('callImages.image_name')} accessibilityLabel={t('callImages.image_name')} />
         </Input>
-        <View style={styles.actions}>
-          <Button className="mr-2 flex-1" onPress={() => void pick('camera')} accessibilityLabel={t('callImages.take_photo')} testID="call-images-camera">
+        {/* One under the other: side by side, the longer labels ("Select from Gallery", and most translations) wrap. */}
+        <View style={styles.actions} testID="call-images-actions">
+          <Button onPress={() => void pick('camera')} accessibilityLabel={t('callImages.take_photo')} testID="call-images-camera">
             <ButtonText>{t('callImages.take_photo')}</ButtonText>
           </Button>
-          <Button variant="outline" className="flex-1" onPress={() => void pick('gallery')} accessibilityLabel={t('callImages.select_from_gallery')} testID="call-images-gallery">
+          <Button variant="outline" className="mt-2" onPress={() => void pick('gallery')} accessibilityLabel={t('callImages.select_from_gallery')} testID="call-images-gallery">
             <ButtonText>{t('callImages.select_from_gallery')}</ButtonText>
           </Button>
         </View>
       </View>
+      <ImageViewer source={viewingSource} caption={viewing?.Name || undefined} label={viewing?.Name || t('callImages.image_alt')} onClose={() => setViewing(null)} testID="call-image-viewer" />
     </CallModalFrame>
   );
 };
 
-const ImageTile: React.FC<{ image: CallFileResultData }> = ({ image }) => {
+const ImageTile: React.FC<{ image: CallFileResultData; onOpen: (image: CallFileResultData) => void }> = ({ image, onOpen }) => {
   const { t } = useTranslation();
-  const uri = image.Url || (image.Data ? `data:${image.Mime || 'image/jpeg'};base64,${image.Data}` : '');
+  const uri = callImageUri(image);
+  const label = image.Name || t('callImages.image_alt');
+
   return (
     <View style={styles.tile} testID={`call-image-${image.Id}`}>
-      {uri ? <Image source={{ uri }} alt={image.Name || t('callImages.image_alt')} style={styles.thumb} /> : null}
+      {uri ? (
+        <Pressable onPress={() => onOpen(image)} accessibilityRole="imagebutton" accessibilityLabel={label} testID={`call-image-${image.Id}-open`}>
+          <Image source={{ uri }} alt={label} style={styles.thumb} />
+        </Pressable>
+      ) : null}
       <Text size="xs" className="text-typography-600" numberOfLines={1}>
         {image.Name || t('callImages.default_name')}
       </Text>
@@ -223,5 +239,5 @@ const styles = StyleSheet.create({
   thumb: { width: 104, height: 104, borderRadius: 8 },
   row: { flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, paddingVertical: 10 },
   fileBody: { flex: 1 },
-  actions: { flexDirection: 'row', marginTop: 12 },
+  actions: { marginTop: 12 },
 });

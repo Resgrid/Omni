@@ -160,8 +160,8 @@ export default function MemberHomeScreen({ dueChecks, onClearActiveCall }: Membe
             />
           </VStack>
 
-          <VStack className="pb-4">
-            <SharedTabs tabs={tabs} activeIndex={routeTab.activeIndex} onChange={routeTab.selectIndex} variant="pills" contentClassName="px-4 pt-3" />
+          <VStack className="px-4 pb-4">
+            <SharedTabs tabs={tabs} activeIndex={routeTab.activeIndex} onChange={routeTab.selectIndex} variant="segmented" size="md" scrollable={false} />
           </VStack>
         </VStack>
       </ScrollView>

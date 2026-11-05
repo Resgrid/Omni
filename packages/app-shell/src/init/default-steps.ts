@@ -82,7 +82,10 @@ export async function loadDepartmentConfig(options: { forceRefresh?: boolean } =
 function wireOfflineStatus(runtime: OfflineRuntime): void {
   const update = (): void => {
     const online = runtime.connectivity?.isOnline() ?? true;
-    setShellState({ isOffline: !online, unsentChanges: runtime.outbox.getSnapshot().counts.unsent });
+    const { counts } = runtime.outbox.getSnapshot();
+    // A write waiting for confirmation can only be confirmed online, so offline it is not yet the user's to act on.
+    const changesNeedingAttention = counts.dead + (online ? counts.awaitingConfirmation : 0);
+    setShellState({ isOffline: !online, unsentChanges: counts.unsent, changesNeedingAttention });
   };
   update();
   runtime.outbox.subscribe(update);

@@ -24,7 +24,7 @@ Every Omni app works offline: it reads its shift working set from durable storag
 4. **Ordering:** use `dependsOn` for real dependencies (e.g. close call only after close command) and `coalesceKey` for newest-wins streams (location fixes).
 5. **Scope:** every queued event and stored record carries server + department + user (+ unit). Never replay one user's or server's events as another; hold them (7 days) and show them.
 6. **Wipe:** logout, department switch and server switch wipe the working set and queue for that scope (preserved: device prefs like language, theme, server URL). Register stores with the reset registry.
-7. **Show state:** pending items appear in the Pending sync screen (retry/discard), the shell shows an offline banner and "N changes waiting". Never silently drop a failed write.
+7. **Show state:** pending items appear in the Pending sync screen (retry/discard); the app bar's sync chip shows offline, "N changes waiting" and "Needs attention" once the state has lasted `SYNC_NOTICE_DELAY_MS` (5 s), so a write that sends right away or a connectivity blip never flashes. Only changes the user must act on (dead, or awaiting confirmation while online) post a toast (`SyncAttentionToast`); routine sync, cache and offline state never toast. Never silently drop a failed write.
 
 ## Never queue silently
 

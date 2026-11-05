@@ -118,4 +118,18 @@ describe('StepUpPrompt', () => {
     await render(<StepUpPrompt isOpen onClose={jest.fn()} />);
     expect(screen.getByTestId('step-up-error', q)).toHaveTextContent('data_protection.step_up_invalid_code');
   });
+
+  it('says so when none of the member methods works on this device (a passkey in the desktop app)', async () => {
+    // loadStepUpMethods drops a passkey this device cannot use; nothing is left.
+    dataProtectionStore.setState({ stepUpMethods: [] });
+    await render(<StepUpPrompt isOpen onClose={jest.fn()} />);
+    expect(screen.getByTestId('step-up-no-method', q)).toHaveTextContent('mfa.errors.no_method_here');
+    expect(screen.queryByTestId('step-up-code-input', q)).toBeNull();
+  });
+
+  it('shows no such message while the methods load, offering the code', async () => {
+    await render(<StepUpPrompt isOpen onClose={jest.fn()} />);
+    expect(screen.queryByTestId('step-up-no-method', q)).toBeNull();
+    expect(screen.getByTestId('step-up-code-input', q)).toBeTruthy();
+  });
 });

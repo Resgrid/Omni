@@ -10,7 +10,10 @@
   "app": {
     "title": "{{appName}}",
     "realtime_offline_title": "Live updates paused",
-    "realtime_offline_description": "Reconnecting to live updates. Information may be out of date."
+    "realtime_offline_description": "Reconnecting to live updates. Information may be out of date.",
+    "sync_attention_title": "Changes not sent",
+    "sync_attention_message": "Some changes could not be sent and need your attention.",
+    "sync_attention_message_review": "Some changes could not be sent and need your attention. Tap to review them."
   },
   "audio_streams": {
     "buffering": "Mise en mémoire tampon",
@@ -1866,8 +1869,11 @@
       "mfa_transaction_expired": "La connexion a pris trop de temps. Reconnectez-vous.",
       "mfa_transaction_invalid": "Cette connexion n’est plus valide. Reconnectez-vous.",
       "network_error": "Impossible de joindre Resgrid. Vérifiez votre connexion et réessayez.",
+      "no_method_here": "Aucune de vos méthodes de vérification ne fonctionne sur cet appareil. Utilisez un autre appareil ou configurez une application d’authentification.",
+      "passkey_already_registered": "Cet appareil possède déjà une clé d’accès pour votre compte.",
       "passkey_cancelled": "La demande de clé d’accès a été fermée. Réessayez ou utilisez une autre méthode.",
       "passkey_failed": "La clé d’accès n’a pas pu être utilisée. Réessayez ou utilisez une autre méthode.",
+      "passkey_limit_reached": "Vous avez atteint le nombre maximal de clés d’accès pour cette application. Supprimez-en une pour en ajouter une autre.",
       "passkey_no_credentials": "Aucune clé d’accès pour cette application sur cet appareil.",
       "passkey_not_registered_for_client": "Vous n’avez aucune clé d’accès pour cette application.",
       "passkey_not_supported": "Les clés d’accès ne sont pas disponibles sur cet appareil. Utilisez une autre méthode.",
@@ -1987,7 +1993,8 @@
     "search": "Rechercher des notes...",
     "title": "Notes",
     "all_categories": "All",
-    "open_hint": "Opens the note"
+    "open_hint": "Opens the note",
+    "not_found": "Note introuvable"
   },
   "notifications": {
     "inbox_unavailable": "La boîte de réception des notifications est indisponible ici.",
@@ -2324,7 +2331,8 @@
     "emptyDescription": "Aucun protocole n'a encore été créé pour votre département.",
     "search": "Rechercher des protocoles...",
     "title": "Protocoles",
-    "open_hint": "Opens the protocol details"
+    "open_hint": "Opens the protocol details",
+    "not_found": "Protocole introuvable"
   },
   "push_notifications": {
     "close": "Fermer",
@@ -3268,7 +3276,10 @@
     "update_ready_message": "Touchez pour redémarrer maintenant. Sinon, la mise à jour sera installée au prochain démarrage de l'application.",
     "update_ready_wall_message": "Touchez pour redémarrer maintenant, sinon l'écran redémarrera de lui-même après {{minutes}} minutes sans utilisation.",
     "update_restart_failed": "L'application n'a pas pu redémarrer. La mise à jour sera installée au prochain démarrage de l'application.",
-    "notifications_unread": "Notifications, {{count}} unread"
+    "notifications_unread": "Notifications, {{count}} unread",
+    "changes_need_attention": "Needs attention: {{count}}",
+    "offline": "Offline",
+    "offline_changes_waiting": "Offline: {{count}} waiting"
   },
   "access_denied": {
     "back_to_sign_in": "Back to sign in",

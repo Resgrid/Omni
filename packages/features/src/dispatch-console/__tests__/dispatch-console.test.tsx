@@ -228,6 +228,13 @@ describe('DispatchConsoleScreen layout', () => {
     expect(screen.getByTestId('console-unit-1')).toBeTruthy();
   });
 
+  it('opens a department note as its own page', async () => {
+    await setWindow(1366, 1024);
+    await renderConsole();
+    await fireEvent.press(screen.getByTestId('note-card-n1'));
+    expect(router.push).toHaveBeenCalledWith('/notes/n1');
+  });
+
   it('collapses a card and remembers it', async () => {
     await setWindow(1366, 1024);
     await renderConsole();

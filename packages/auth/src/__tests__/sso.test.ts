@@ -8,9 +8,10 @@ import { setDevelopmentBuildForTests } from '../runtime/platform';
 import { refreshEngine, useAuthStore } from '../session/auth-store';
 import { buildOidcRequestConfig, oidcRedirectUri } from '../sso/oidc';
 import { handleSamlCallbackUrl, PENDING_SAML_STATE_TTL_MS, prepareSamlSignIn } from '../sso/saml';
-import { parseSsoReturn, runSsoRoundTrip, ssoReturnTarget } from '../sso/sso-browser';
+import { parseSsoReturn, runSsoRoundTrip, SSO_POPUP_NAME, ssoReturnTarget } from '../sso/sso-browser';
 import { isValidSsoUrl } from '../sso/sso-url';
-import { __resetWebBrowserFake, __setNextAuthSessionResult } from './fakes/expo-web-browser';
+import { __resetWebBrowserFake, __setNextAuthSessionResult, calls as browserCalls } from './fakes/expo-web-browser';
+import { __setPlatformOS } from './fakes/react-native';
 import { v4 } from './helpers/fake-server';
 import { type Harness, setupHarness } from './helpers/harness';
 import { tokenResponse } from './helpers/jwt';
@@ -56,13 +57,17 @@ describe('PKCE and the brokered round trip', () => {
   it('sends only the challenge to the broker and keeps the verifier for redemption', async () => {
     const begin = jest.fn(async (secrets: { codeChallenge: string; state: string; returnTarget: string; platform: string }) => {
       __setNextAuthSessionResult({ type: 'success', url: `${secrets.returnTarget}?sso_code=one-time&state=${secrets.state}` });
+
       return { AuthorizeUrl: 'https://broker/authorize', SsoTransactionId: 'sso-9', ExpiresIn: 300 };
     });
+
     const result = await runSsoRoundTrip(begin, false);
     expect(result.ok).toBe(true);
+
     if (!result.ok) {
       return;
     }
+
     const secrets = begin.mock.calls[0][0];
     const expected = createHash('sha256').update(result.trip.codeVerifier).digest('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     expect(secrets.codeChallenge).toBe(expected);
@@ -80,8 +85,10 @@ describe('PKCE and the brokered round trip', () => {
 
     const denied = await runSsoRoundTrip(async (secrets) => {
       __setNextAuthSessionResult({ type: 'success', url: `${secrets.returnTarget}?error=access_denied&state=${secrets.state}` });
+
       return begin();
     }, false);
+
     expect(denied).toEqual({ ok: false, reason: 'denied', code: 'access_denied' });
   });
 
@@ -96,6 +103,83 @@ describe('PKCE and the brokered round trip', () => {
   it('parses the broker return', () => {
     expect(parseSsoReturn('resgridunit://sso-return?sso_code=a&state=b#frag')).toEqual({ ssoCode: 'a', state: 'b', error: undefined });
     expect(parseSsoReturn('resgridunit://sso-return')).toEqual({ ssoCode: undefined, state: undefined, error: undefined });
+  });
+});
+
+interface FakePopup {
+  closed: boolean;
+  close: jest.Mock;
+}
+
+describe('the brokered round trip in a browser', () => {
+  const originalWindow = Object.getOwnPropertyDescriptor(globalThis, 'window');
+  let popup: FakePopup;
+  let open: jest.Mock;
+  const begin = async () => ({ AuthorizeUrl: 'https://broker/authorize', SsoTransactionId: 'sso-9', ExpiresIn: 300 });
+
+  beforeEach(() => {
+    setupHarness('unit');
+    __resetWebBrowserFake();
+    __setPlatformOS('web');
+    popup = { closed: false, close: jest.fn(() => (popup.closed = true)) };
+    open = jest.fn(() => popup);
+    Object.defineProperty(globalThis, 'window', { configurable: true, value: { open, location: { origin: 'https://unit.resgrid.com' }, screen: { width: 1500, height: 1050 } } });
+  });
+
+  afterEach(() => {
+    __setPlatformOS('ios');
+
+    if (originalWindow) {
+      Object.defineProperty(globalThis, 'window', originalWindow);
+    } else {
+      Reflect.deleteProperty(globalThis, 'window');
+    }
+  });
+
+  it('opens the provider window on the tap, before Sso/Begin answers, and hands that window to the auth session', async () => {
+    const openedBeforeBegin: boolean[] = [];
+
+    const result = await runSsoRoundTrip(async (secrets) => {
+      openedBeforeBegin.push(open.mock.calls.length === 1);
+      __setNextAuthSessionResult({ type: 'success', url: `${secrets.returnTarget}?sso_code=one-time&state=${secrets.state}` });
+
+      return begin();
+    }, false);
+
+    expect(openedBeforeBegin).toEqual([true]);
+    expect(open).toHaveBeenCalledWith('about:blank', SSO_POPUP_NAME, expect.stringContaining('width=500,height=650'));
+    expect(browserCalls[0]).toMatchObject({ authorizeUrl: 'https://broker/authorize', returnUrl: 'https://unit.resgrid.com/sso-return', options: { windowName: SSO_POPUP_NAME } });
+    expect(result).toMatchObject({ ok: true, trip: { ssoCode: 'one-time' } });
+    // The auth session owns (and closes) the window once it has it.
+    expect(popup.close).not.toHaveBeenCalled();
+  });
+
+  it('closes the blank window when the broker refuses to begin', async () => {
+    const refused = await runSsoRoundTrip(async () => {
+      throw Object.assign(new Error('refused'), { response: { status: 400, data: { type: 'return_target_not_allowed' } } });
+    }, false);
+
+    expect(refused).toEqual({ ok: false, reason: 'refused', code: 'return_target_not_allowed' });
+    expect(popup.close).toHaveBeenCalledTimes(1);
+    expect(browserCalls).toHaveLength(0);
+  });
+
+  it('reads a window the member closed during Sso/Begin as cancelled, without opening another', async () => {
+    const result = await runSsoRoundTrip(async () => {
+      popup.closed = true;
+
+      return begin();
+    }, false);
+
+    expect(result).toEqual({ ok: false, reason: 'cancelled' });
+    expect(browserCalls).toHaveLength(0);
+  });
+
+  it('opens no window on iOS and Android (the OS auth session)', async () => {
+    __setPlatformOS('ios');
+    __setNextAuthSessionResult({ type: 'cancel' });
+    await runSsoRoundTrip(begin, false);
+    expect(open).not.toHaveBeenCalled();
   });
 });
 

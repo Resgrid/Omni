@@ -27,13 +27,15 @@ interface StatTileProps {
 }
 
 const StatTile: React.FC<StatTileProps> = ({ label, value, accentClassName, isAlert = false, onPress, testID }) => {
+  // Four tiles share a phone's width, so the label is small, may take two lines and shrinks further on iOS/Android for
+  // long translations; every tile fills the row's height so a two-line label does not make its tile taller than the rest.
   const tile = (
-    <Card className={`rounded-2xl border-0 p-2 ${accentClassName}`} style={isAlert ? styles.alert : undefined} testID={testID}>
+    <Card className={`flex-1 rounded-2xl border-0 p-2 ${accentClassName}`} style={isAlert ? styles.alert : undefined} testID={testID}>
       <VStack space="xs" className="items-center">
         <Text className="text-lg font-bold text-typography-0" testID={`${testID}-value`}>
           {String(value)}
         </Text>
-        <Text className="text-center text-2xs font-semibold uppercase text-typography-0" numberOfLines={1}>
+        <Text className="text-center text-[9px] font-semibold uppercase text-typography-0" numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.75} testID={`${testID}-label`}>
           {label}
         </Text>
       </VStack>

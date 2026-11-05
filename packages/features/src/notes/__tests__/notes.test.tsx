@@ -3,9 +3,11 @@ import '../../calls/__tests__/test-setup';
 import { useNotesStore } from '@resgrid/data';
 import type { NoteResultData } from '@resgrid/models';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { router, useLocalSearchParams } from 'expo-router';
 import React from 'react';
 
 import { hidden } from '../../calls/__tests__/test-utils';
+import NoteDetailScreen from '../screens/note-detail';
 import NoteListScreen from '../screens/note-list';
 
 const note = (NoteId: string, overrides: Partial<NoteResultData> = {}): NoteResultData =>
@@ -21,9 +23,16 @@ const note = (NoteId: string, overrides: Partial<NoteResultData> = {}): NoteResu
     ...overrides,
   }) as NoteResultData;
 
+const mockFetchNotes = jest.fn(async () => undefined);
+
 beforeEach(() => {
   jest.useFakeTimers();
-  useNotesStore.setState({ notes: [note('1'), note('2', { Title: 'Hydrant out', Category: 'Water', Body: 'Hydrant 12 out of service' })], loading: {}, fetchNotes: jest.fn(async () => undefined) });
+  mockFetchNotes.mockClear();
+  jest.mocked(router.push).mockClear();
+  jest.mocked(router.back).mockClear();
+  jest.mocked(router.replace).mockClear();
+  jest.mocked(useLocalSearchParams).mockReturnValue({});
+  useNotesStore.setState({ notes: [note('1'), note('2', { Title: 'Hydrant out', Category: 'Water', Body: 'Hydrant 12 out of service' })], loading: {}, fetchNotes: mockFetchNotes });
 });
 
 afterEach(async () => {
@@ -50,15 +59,10 @@ describe('NoteListScreen', () => {
     expect(screen.getByText('Hydrant out')).toBeTruthy();
   });
 
-  it('opens a note in a sheet and renders its body only through HtmlRenderer, sanitized', async () => {
+  it('opens a note as its own page instead of a sheet', async () => {
     await render(<NoteListScreen />);
-    await fireEvent.press(screen.getByTestId('note-card-1'));
-    const html = String(screen.getByTestId('webview-html', hidden).props.children);
-    expect(html).toContain('Gate code');
-    expect(html).not.toContain('onerror');
-    // The body fits its text (autoHeight) instead of a fixed box; the sheet scrolls the rest.
-    expect(screen.getByTestId('note-details-html', hidden).props.onMessage).toEqual(expect.any(Function));
-    await fireEvent.press(screen.getByTestId('note-details-close', hidden));
+    await fireEvent.press(screen.getByTestId('note-card-2'));
+    expect(router.push).toHaveBeenCalledWith('/notes/2');
     expect(screen.queryByTestId('webview-html', hidden)).toBeNull();
   });
 
@@ -66,5 +70,52 @@ describe('NoteListScreen', () => {
     useNotesStore.setState({ notes: [] });
     await render(<NoteListScreen />);
     expect(screen.getByTestId('note-list-empty')).toBeTruthy();
+  });
+});
+
+describe('NoteDetailScreen', () => {
+  it('renders the note body only through HtmlRenderer, sanitized, with its tags and dates', async () => {
+    useNotesStore.setState({ notes: [note('1', { ExpiresOn: '2026-12-01T10:00:00Z' })] });
+    await render(<NoteDetailScreen noteId="1" />);
+    expect(screen.getAllByText('Note 1').length).toBeGreaterThan(0);
+    expect(screen.getByText('notes.details.tags: Access')).toBeTruthy();
+    const html = String(screen.getByTestId('webview-html', hidden).props.children);
+    expect(html).toContain('Gate code');
+    expect(html).not.toContain('onerror');
+    // The body fits its text (autoHeight) instead of a fixed box; the page scrolls the rest.
+    expect(screen.getByTestId('note-detail-html', hidden).props.onMessage).toEqual(expect.any(Function));
+    expect(screen.getByText(/^notes\.details\.created: /)).toBeTruthy();
+    expect(screen.getByText(/^notes\.details\.expires: /)).toBeTruthy();
+    expect(mockFetchNotes).not.toHaveBeenCalled();
+  });
+
+  it('reads the note id from the route', async () => {
+    jest.mocked(useLocalSearchParams).mockReturnValue({ id: '2' });
+    await render(<NoteDetailScreen />);
+    expect(screen.getAllByText('Hydrant out').length).toBeGreaterThan(0);
+  });
+
+  it('goes back, or to the notes list when there is no history', async () => {
+    await render(<NoteDetailScreen noteId="1" />);
+    await fireEvent.press(screen.getByTestId('back-button'));
+    expect(router.back).toHaveBeenCalledTimes(1);
+    jest.mocked(router.canGoBack).mockReturnValueOnce(false);
+    await fireEvent.press(screen.getByTestId('back-button'));
+    expect(router.replace).toHaveBeenCalledWith('/notes');
+  });
+
+  it('loads the notes when the note is not on the device yet, then says it was not found', async () => {
+    await render(<NoteDetailScreen noteId="9" />);
+    expect(mockFetchNotes).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('note-detail-missing')).toBeTruthy();
+    await act(() => useNotesStore.setState({ notes: [note('9', { Title: 'Late note' })] }));
+    expect(screen.getAllByText('Late note').length).toBeGreaterThan(0);
+  });
+
+  it('rejects an unsafe route id', async () => {
+    jest.mocked(useLocalSearchParams).mockReturnValue({ id: '../settings' });
+    await render(<NoteDetailScreen />);
+    expect(screen.getByTestId('note-detail-missing')).toBeTruthy();
+    expect(mockFetchNotes).not.toHaveBeenCalled();
   });
 });

@@ -8,13 +8,15 @@ import React from 'react';
 import { StyleSheet } from 'react-native';
 
 import { MessageDetails } from '../components/message-details';
+import { isOwnMessage } from '../lib/message-format';
+import { messageRoutes } from '../routes';
 
 export interface MessageDetailScreenProps {
   /** Defaults to the `id` route param. */
   messageId?: string;
 }
 
-/** A message as its own screen (`/messages/[id]`: inbox push notifications and links); the list opens messages in a sheet. */
+/** A message on its own page (`/messages/[id]`): opened from the list, inbox push notifications and links. */
 export default function MessageDetailScreen({ messageId }: MessageDetailScreenProps) {
   const { t } = useTranslation();
   const router = useRouter();
@@ -23,14 +25,16 @@ export default function MessageDetailScreen({ messageId }: MessageDetailScreenPr
   const id = messageId ?? (routeId && isSafeRouteId(routeId) ? routeId : '');
   const userId = useAuthStore((state) => state.userId);
   const fallback = useMessagesStore((state) => state.inboxMessages.find((message) => message.MessageId === id) ?? state.sentMessages.find((message) => message.MessageId === id) ?? null);
-  const isOwn = !!fallback && !!userId && fallback.SendingUserId === userId && !fallback.IsSystem;
+  const isOwn = useMessagesStore((state) => isOwnMessage(id, { inbox: state.inboxMessages, sent: state.sentMessages }, state.messageDetailsById[id], userId));
+
+  const back = () => (router.canGoBack() ? router.back() : router.replace(messageRoutes.list()));
 
   return (
     <View className="flex-1 bg-background-0" testID="message-detail-screen">
-      <ScreenHeader title={t('messages.title')} onBack={() => router.back()} testID="message-detail-header" />
+      <ScreenHeader title={t('messages.title')} onBack={back} testID="message-detail-header" />
       {id ? (
         <KeyboardAwareScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <MessageDetails messageId={id} fallback={fallback} isOwn={isOwn} onDeleted={() => router.back()} />
+          <MessageDetails messageId={id} fallback={fallback} isOwn={isOwn} onDeleted={back} />
         </KeyboardAwareScrollView>
       ) : (
         <ZeroState isError heading={t('messages.not_found')} testID="message-detail-invalid" />

@@ -1,17 +1,33 @@
+import { useSecurity } from '@resgrid/auth';
 import { useMessagesStore } from '@resgrid/data';
 import { emptyRecipientSelection, RecipientPickerModal, summarizeRecipientSelection } from '@resgrid/features/calls';
 import { useTranslation } from '@resgrid/i18n';
-import { Button, ButtonSpinner, ButtonText, CustomBottomSheet, HStack, Input, InputField, Pressable, Text, Textarea, TextareaInput, useThemeColors, useToast, VStack } from '@resgrid/ui';
+import {
+  Button,
+  ButtonSpinner,
+  ButtonText,
+  HStack,
+  Input,
+  InputField,
+  KeyboardAwareScrollView,
+  Pressable,
+  ScreenHeader,
+  Text,
+  Textarea,
+  TextareaInput,
+  useThemeColors,
+  useToast,
+  View,
+  VStack,
+  ZeroState,
+} from '@resgrid/ui';
+import { usePreventRemove, useRouter } from 'expo-router';
 import { ChevronRight, Users } from 'lucide-react-native';
-import React, { useEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { StyleSheet, View as RNView } from 'react-native';
 
 import { COMPOSABLE_MESSAGE_TYPES, getMessageTypeKey, isEveryoneRecipient, messageRecipientCount, type MessageRecipientSelection, MessageType, recipientSections, toMessageRecipients } from '../lib/message-format';
-
-export interface ComposeMessageSheetProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
+import { messageRoutes } from '../routes';
 
 interface FormErrors {
   subject?: boolean;
@@ -20,15 +36,17 @@ interface FormErrors {
 }
 
 /**
- * Compose (Responder): subject, body, type (message / callback / poll) and recipients — everyone, or people, groups and
- * roles, picked in the same recipient picker a call's dispatch uses. Sending goes through the outbox, so it works
- * offline: the message waits on the device and is sent on reconnect (exactly once). Core does not message units, so
- * they are not offered.
+ * Compose (`/messages/new`, Responder): subject, body, type (message / callback / poll) and recipients — everyone, or
+ * people, groups and roles, picked in the same recipient picker a call's dispatch uses. Sending goes through the outbox,
+ * so it works offline: the message waits on the device and is sent on reconnect (exactly once). Core does not message
+ * units, so they are not offered. Leaving with a draft (Cancel, the app bar's back, Android back) asks first.
  */
-export const ComposeMessageSheet: React.FC<ComposeMessageSheetProps> = ({ isOpen, onClose }) => {
+export default function MessageComposeScreen() {
   const { t } = useTranslation();
+  const router = useRouter();
   const colors = useThemeColors();
   const toast = useToast();
+  const { rights, canUserCreateMessages } = useSecurity();
   const recipients = useMessagesStore((state) => state.recipients);
   const isRecipientsLoading = useMessagesStore((state) => state.loading.recipients === true);
 
@@ -40,10 +58,12 @@ export const ComposeMessageSheet: React.FC<ComposeMessageSheetProps> = ({ isOpen
   const [errors, setErrors] = useState<FormErrors>({});
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  /** The navigation a draft held back (back button, gesture), replayed on Discard. */
+  const blockedLeave = useRef<(() => void) | null>(null);
 
   useEffect(() => {
-    if (isOpen) void useMessagesStore.getState().fetchRecipients({ includeUnits: false });
-  }, [isOpen]);
+    void useMessagesStore.getState().fetchRecipients({ includeUnits: false });
+  }, []);
 
   const hasEveryone = useMemo(() => recipients.some(isEveryoneRecipient), [recipients]);
 
@@ -55,25 +75,51 @@ export const ComposeMessageSheet: React.FC<ComposeMessageSheetProps> = ({ isOpen
   const recipientCount = messageRecipientCount(selection);
   const isDirty = subject.trim() !== '' || body.trim() !== '' || recipientCount > 0 || type !== MessageType.Normal;
 
-  const reset = () => {
+  const disablePrevention = usePreventRemove(isDirty, ({ repeat }) => {
+    blockedLeave.current = repeat;
+    setConfirmDiscard(true);
+  });
+
+  const back = () => (router.canGoBack() ? router.back() : router.replace(messageRoutes.list()));
+
+  const clear = () => {
     setSubject('');
     setBody('');
     setType(MessageType.Normal);
     setSelection(emptyRecipientSelection());
-    setIsPickerOpen(false);
     setErrors({});
     setConfirmDiscard(false);
   };
 
-  const close = () => {
-    if (isDirty && !confirmDiscard) {
+  /** Leaves without asking again: after Discard, or once the message is sent or queued. */
+  const leave = () => {
+    const replay = blockedLeave.current;
+    blockedLeave.current = null;
+    clear();
+
+    if (replay) {
+      replay();
+
+      return;
+    }
+
+    disablePrevention();
+    back();
+  };
+
+  const cancel = () => {
+    if (isDirty) {
       setConfirmDiscard(true);
 
       return;
     }
 
-    reset();
-    onClose();
+    back();
+  };
+
+  const keepEditing = () => {
+    blockedLeave.current = null;
+    setConfirmDiscard(false);
   };
 
   const pickRecipients = (next: MessageRecipientSelection) => {
@@ -90,7 +136,7 @@ export const ComposeMessageSheet: React.FC<ComposeMessageSheetProps> = ({ isOpen
     if (next.subject || next.body || next.recipients) return;
     setIsSending(true);
 
-    // The outbox can also fail to queue it (no session, a storage failure): null, and the sheet stays open to try again.
+    // The outbox can also fail to queue it (no session, a storage failure): null, and the page stays to try again.
     const result = await useMessagesStore
       .getState()
       .sendNewMessage({
@@ -110,35 +156,44 @@ export const ComposeMessageSheet: React.FC<ComposeMessageSheetProps> = ({ isOpen
     }
 
     toast.success(result.outcome === 'sent' ? t('messages.send_success') : t('messages.queued_offline'));
-    reset();
-    onClose();
+    blockedLeave.current = null;
+    leave();
   };
 
+  const header = <ScreenHeader title={t('messages.compose_new_message')} onBack={back} testID="message-compose-header" />;
+
+  if (rights !== null && !canUserCreateMessages) {
+    return (
+      <View className="flex-1 bg-background-0" testID="message-compose-screen">
+        {header}
+        <ZeroState isError heading={t('common.permission_denied')} description={t('errors.data.forbidden')} testID="message-compose-not-allowed" />
+      </View>
+    );
+  }
+
   return (
-    <CustomBottomSheet isOpen={isOpen} onClose={close} snapPoints={[92]} testID="compose-message-sheet">
-      <ScrollView style={styles.scroll} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
-        <VStack space="md">
-          <Text className="text-xl font-bold text-typography-900" accessibilityRole="header">
-            {t('messages.compose_new_message')}
+    <View className="flex-1 bg-background-0" testID="message-compose-screen">
+      {header}
+
+      {confirmDiscard ? (
+        <VStack space="sm" className="border-b border-outline-200 bg-background-warning p-4" testID="compose-discard-confirm">
+          <Text className="font-semibold text-typography-900">{t('messages.unsaved_changes')}</Text>
+          <Text size="sm" className="text-typography-700">
+            {t('messages.unsaved_changes_message')}
           </Text>
+          <HStack space="sm">
+            <Button size="sm" variant="outline" action="secondary" onPress={keepEditing} testID="compose-keep-editing">
+              <ButtonText>{t('messages.keep_editing')}</ButtonText>
+            </Button>
+            <Button size="sm" action="negative" onPress={leave} testID="compose-discard">
+              <ButtonText>{t('messages.discard')}</ButtonText>
+            </Button>
+          </HStack>
+        </VStack>
+      ) : null}
 
-          {confirmDiscard ? (
-            <VStack space="sm" className="rounded-lg bg-background-warning p-3" testID="compose-discard-confirm">
-              <Text className="font-semibold text-typography-900">{t('messages.unsaved_changes')}</Text>
-              <Text size="sm" className="text-typography-700">
-                {t('messages.unsaved_changes_message')}
-              </Text>
-              <HStack space="sm">
-                <Button size="sm" variant="outline" action="secondary" onPress={() => setConfirmDiscard(false)} testID="compose-keep-editing">
-                  <ButtonText>{t('messages.keep_editing')}</ButtonText>
-                </Button>
-                <Button size="sm" action="negative" onPress={close} testID="compose-discard">
-                  <ButtonText>{t('messages.discard')}</ButtonText>
-                </Button>
-              </HStack>
-            </VStack>
-          ) : null}
-
+      <KeyboardAwareScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <VStack space="lg">
           <VStack space="xs">
             <Text size="sm" className="font-medium text-typography-700">
               {t('messages.message_type')}
@@ -188,7 +243,7 @@ export const ComposeMessageSheet: React.FC<ComposeMessageSheetProps> = ({ isOpen
             <Text size="sm" className="font-medium text-typography-700">
               {t('messages.message_body')}
             </Text>
-            <Textarea isInvalid={errors.body === true}>
+            <Textarea isInvalid={errors.body === true} className="h-48">
               <TextareaInput value={body} onChangeText={setBody} placeholder={t('messages.enter_message_body')} accessibilityLabel={t('messages.message_body')} testID="compose-body" />
             </Textarea>
             {errors.body ? (
@@ -201,9 +256,9 @@ export const ComposeMessageSheet: React.FC<ComposeMessageSheetProps> = ({ isOpen
           <VStack space="sm">
             <HStack className="items-center justify-between">
               <HStack space="xs" className="items-center">
-                <View>
+                <RNView>
                   <Users size={16} color={colors.icon} />
-                </View>
+                </RNView>
                 <Text size="sm" className="font-medium text-typography-700">
                   {t('messages.recipients')}
                 </Text>
@@ -219,15 +274,15 @@ export const ComposeMessageSheet: React.FC<ComposeMessageSheetProps> = ({ isOpen
               className={`flex-row items-center rounded-lg border p-3 ${errors.recipients ? 'border-error-600' : 'border-outline-200'}`}
               testID="compose-recipients"
             >
-              <View style={styles.pickerText}>
+              <RNView style={styles.pickerText}>
                 <Text className="text-typography-900">{t('messages.select_recipients')}</Text>
                 <Text size="xs" className="text-typography-500" numberOfLines={2} testID="compose-recipient-summary">
                   {summarizeRecipientSelection(selection, sections, { everyone: t('messages.everyone'), none: t('common.none') })}
                 </Text>
-              </View>
-              <View>
+              </RNView>
+              <RNView>
                 <ChevronRight size={18} color={colors.icon} />
-              </View>
+              </RNView>
             </Pressable>
             {errors.recipients ? (
               <Text size="xs" className="text-error-600" testID="compose-recipients-error">
@@ -237,7 +292,7 @@ export const ComposeMessageSheet: React.FC<ComposeMessageSheetProps> = ({ isOpen
           </VStack>
 
           <HStack space="sm" className="pt-2">
-            <Button variant="outline" action="secondary" className="flex-1" onPress={close} isDisabled={isSending} testID="compose-cancel">
+            <Button variant="outline" action="secondary" className="flex-1" onPress={cancel} isDisabled={isSending} testID="compose-cancel">
               <ButtonText>{t('common.cancel')}</ButtonText>
             </Button>
             <Button className="flex-1" onPress={() => void send()} isDisabled={isSending} testID="compose-send">
@@ -246,7 +301,8 @@ export const ComposeMessageSheet: React.FC<ComposeMessageSheetProps> = ({ isOpen
             </Button>
           </HStack>
         </VStack>
-      </ScrollView>
+      </KeyboardAwareScrollView>
+
       <RecipientPickerModal
         isOpen={isPickerOpen}
         onClose={() => setIsPickerOpen(false)}
@@ -260,12 +316,11 @@ export const ComposeMessageSheet: React.FC<ComposeMessageSheetProps> = ({ isOpen
         testID="compose-recipient-picker"
         optionTestID="recipient"
       />
-    </CustomBottomSheet>
+    </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  scroll: { width: '100%' },
-  content: { paddingBottom: 40 },
+  content: { padding: 16, paddingBottom: 40 },
   pickerText: { flex: 1, marginRight: 8 },
 });

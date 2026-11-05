@@ -18,6 +18,11 @@ export interface ShellState {
   /** Outbox items not yet delivered for this session ("N changes waiting"). */
   unsentChanges: number;
   /**
+   * Queued changes only the user can move on: refused by the server, or (while online) waiting for the user to confirm
+   * sending them. The one sync state that gets a toast.
+   */
+  changesNeedingAttention: number;
+  /**
    * `Config/GetConfig` for the signed-in department (EventingUrl, Novu, web push, location thresholds). Interim home:
    * the shared config store belongs in @resgrid/data (persisted `core-storage`).
    */
@@ -32,6 +37,7 @@ const INITIAL: ShellState = {
   accessDeniedNotice: false,
   isOffline: false,
   unsentChanges: 0,
+  changesNeedingAttention: 0,
   departmentConfig: null,
   pushRegistrationArmed: false,
 };

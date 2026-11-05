@@ -93,5 +93,5 @@ const styles = StyleSheet.create({
   currentOutline: { borderWidth: 3, borderColor: CURRENT_OUTLINE, borderRadius: 8 },
   checkbox: { width: 20, height: 20, borderRadius: 4, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
   pill: { backgroundColor: CURRENT_OUTLINE, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 },
-  pillText: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
+  pillText: { color: '#FFFFFF', fontSize: 11, lineHeight: 14, fontWeight: '700' },
 });

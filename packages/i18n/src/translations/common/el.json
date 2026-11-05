@@ -10,7 +10,10 @@
   "app": {
     "title": "{{appName}}",
     "realtime_offline_title": "Live updates paused",
-    "realtime_offline_description": "Reconnecting to live updates. Information may be out of date."
+    "realtime_offline_description": "Reconnecting to live updates. Information may be out of date.",
+    "sync_attention_title": "Changes not sent",
+    "sync_attention_message": "Some changes could not be sent and need your attention.",
+    "sync_attention_message_review": "Some changes could not be sent and need your attention. Tap to review them."
   },
   "audio_streams": {
     "buffering": "Προσωρινή αποθήκευση",
@@ -1866,8 +1869,11 @@
       "mfa_transaction_expired": "Η σύνδεση άργησε πολύ. Συνδεθείτε ξανά.",
       "mfa_transaction_invalid": "Αυτή η σύνδεση δεν ισχύει πλέον. Συνδεθείτε ξανά.",
       "network_error": "Δεν ήταν δυνατή η σύνδεση με το Resgrid. Ελέγξτε τη σύνδεσή σας.",
+      "no_method_here": "Καμία από τις μεθόδους επαλήθευσής σας δεν λειτουργεί σε αυτή τη συσκευή. Χρησιμοποιήστε άλλη συσκευή ή ρυθμίστε μια εφαρμογή ελέγχου ταυτότητας.",
+      "passkey_already_registered": "Αυτή η συσκευή έχει ήδη κλειδί πρόσβασης για τον λογαριασμό σας.",
       "passkey_cancelled": "Το αίτημα κλειδιού έκλεισε. Δοκιμάστε ξανά ή άλλη μέθοδο.",
       "passkey_failed": "Δεν ήταν δυνατή η χρήση του κλειδιού. Δοκιμάστε ξανά ή άλλη μέθοδο.",
+      "passkey_limit_reached": "Έχετε τον μέγιστο αριθμό κλειδιών πρόσβασης για αυτή την εφαρμογή. Αφαιρέστε ένα για να προσθέσετε άλλο.",
       "passkey_no_credentials": "Δεν βρέθηκε κλειδί πρόσβασης για αυτή την εφαρμογή στη συσκευή.",
       "passkey_not_registered_for_client": "Δεν έχετε κλειδί πρόσβασης για αυτή την εφαρμογή.",
       "passkey_not_supported": "Τα κλειδιά πρόσβασης δεν είναι διαθέσιμα σε αυτή τη συσκευή.",
@@ -1987,7 +1993,8 @@
     "search": "Αναζήτηση σημειώσεων...",
     "title": "Σημειώσεις",
     "all_categories": "All",
-    "open_hint": "Opens the note"
+    "open_hint": "Opens the note",
+    "not_found": "Η σημείωση δεν βρέθηκε"
   },
   "notifications": {
     "inbox_unavailable": "Τα εισερχόμενα ειδοποιήσεων δεν είναι διαθέσιμα εδώ.",
@@ -2324,7 +2331,8 @@
     "emptyDescription": "Δεν έχουν δημιουργηθεί ακόμη πρωτόκολλα για το τμήμα σας.",
     "search": "Αναζήτηση πρωτοκόλλων...",
     "title": "Πρωτόκολλα",
-    "open_hint": "Opens the protocol details"
+    "open_hint": "Opens the protocol details",
+    "not_found": "Το πρωτόκολλο δεν βρέθηκε"
   },
   "push_notifications": {
     "close": "Κλείσιμο",
@@ -3268,7 +3276,10 @@
     "update_ready_message": "Πατήστε για επανεκκίνηση τώρα. Διαφορετικά η ενημέρωση θα εγκατασταθεί την επόμενη φορά που θα ξεκινήσει η εφαρμογή.",
     "update_ready_wall_message": "Πατήστε για επανεκκίνηση τώρα, διαφορετικά η οθόνη θα επανεκκινηθεί μόνη της μετά από {{minutes}} λεπτά χωρίς χρήση.",
     "update_restart_failed": "Δεν ήταν δυνατή η επανεκκίνηση της εφαρμογής. Η ενημέρωση θα εγκατασταθεί την επόμενη φορά που θα ξεκινήσει η εφαρμογή.",
-    "notifications_unread": "Notifications, {{count}} unread"
+    "notifications_unread": "Notifications, {{count}} unread",
+    "changes_need_attention": "Needs attention: {{count}}",
+    "offline": "Offline",
+    "offline_changes_waiting": "Offline: {{count}} waiting"
   },
   "access_denied": {
     "back_to_sign_in": "Back to sign in",

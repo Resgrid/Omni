@@ -10,7 +10,10 @@
   "app": {
     "title": "{{appName}}",
     "realtime_offline_title": "Live updates paused",
-    "realtime_offline_description": "Reconnecting to live updates. Information may be out of date."
+    "realtime_offline_description": "Reconnecting to live updates. Information may be out of date.",
+    "sync_attention_title": "Changes not sent",
+    "sync_attention_message": "Some changes could not be sent and need your attention.",
+    "sync_attention_message_review": "Some changes could not be sent and need your attention. Tap to review them."
   },
   "audio_streams": {
     "buffering": "Almacenando en búfer",
@@ -1866,8 +1869,11 @@
       "mfa_transaction_expired": "El inicio de sesión tardó demasiado. Inicie sesión de nuevo.",
       "mfa_transaction_invalid": "Este inicio de sesión ya no es válido. Inicie sesión de nuevo.",
       "network_error": "No se pudo conectar con Resgrid. Compruebe su conexión e inténtelo de nuevo.",
+      "no_method_here": "Ninguno de sus métodos de verificación funciona en este dispositivo. Use otro dispositivo o configure una aplicación de autenticación.",
+      "passkey_already_registered": "Este dispositivo ya tiene una clave de acceso para su cuenta.",
       "passkey_cancelled": "Se cerró la solicitud de la clave de acceso. Inténtelo de nuevo o use otro método.",
       "passkey_failed": "No se pudo usar la clave de acceso. Inténtelo de nuevo o use otro método.",
+      "passkey_limit_reached": "Ya tiene el máximo de claves de acceso que permite esta aplicación. Quite una para añadir otra.",
       "passkey_no_credentials": "No se encontró ninguna clave de acceso para esta aplicación en este dispositivo.",
       "passkey_not_registered_for_client": "No tiene ninguna clave de acceso para esta aplicación.",
       "passkey_not_supported": "Las claves de acceso no están disponibles en este dispositivo. Use otro método.",
@@ -1987,7 +1993,8 @@
     "search": "Buscar notas...",
     "title": "Notas",
     "all_categories": "All",
-    "open_hint": "Opens the note"
+    "open_hint": "Opens the note",
+    "not_found": "Nota no encontrada"
   },
   "notifications": {
     "inbox_unavailable": "La bandeja de notificaciones no está disponible aquí.",
@@ -2324,7 +2331,8 @@
     "emptyDescription": "No se han creado protocolos para tu departamento todavía.",
     "search": "Buscar protocolos...",
     "title": "Protocolos",
-    "open_hint": "Opens the protocol details"
+    "open_hint": "Opens the protocol details",
+    "not_found": "Protocolo no encontrado"
   },
   "push_notifications": {
     "close": "Cerrar",
@@ -3268,7 +3276,10 @@
     "update_ready_message": "Toca para reiniciar ahora. Si no, la actualización se instalará la próxima vez que se inicie la aplicación.",
     "update_ready_wall_message": "Toca para reiniciar ahora; si no, la pantalla se reiniciará sola tras {{minutes}} minutos sin uso.",
     "update_restart_failed": "No se pudo reiniciar la aplicación. La actualización se instalará la próxima vez que se inicie la aplicación.",
-    "notifications_unread": "Notifications, {{count}} unread"
+    "notifications_unread": "Notifications, {{count}} unread",
+    "changes_need_attention": "Needs attention: {{count}}",
+    "offline": "Offline",
+    "offline_changes_waiting": "Offline: {{count}} waiting"
   },
   "access_denied": {
     "back_to_sign_in": "Back to sign in",

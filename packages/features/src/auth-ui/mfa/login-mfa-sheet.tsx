@@ -184,6 +184,9 @@ export const LoginMfaSheet: React.FC<LoginMfaSheetProps> = ({ isOpen, onLostFact
 
   const showsCodeInput = isSetup ? !!setup : mode === 'recovery' || methods.includes('totp');
   const choosing = !approval && !isSetup && mode === 'choose';
+  // Every method this sign-in accepts needs something this device lacks (a passkey in the desktop app, for one): say so
+  // instead of showing an empty sheet.
+  const noMethodHere = choosing && !!challenge && methods.length === 0;
   // Cancelling stays possible while waiting for an approval (it stops the wait), not while a code is being checked.
   const cancelDisabled = busy && !approval;
   const codeLabel = mode === 'recovery' ? t('mfa.login.recovery_placeholder') : t('mfa.login.code_placeholder');
@@ -251,6 +254,12 @@ export const LoginMfaSheet: React.FC<LoginMfaSheetProps> = ({ isOpen, onLostFact
           <Button variant="outline" action="secondary" onPress={() => verifyWith('federated')} isDisabled={busy} accessibilityLabel={t('mfa.login.use_provider')} testID="login-mfa-provider">
             <ButtonText>{t('mfa.login.use_provider')}</ButtonText>
           </Button>
+        ) : null}
+
+        {noMethodHere ? (
+          <Text size="sm" testID="login-mfa-no-method">
+            {t('mfa.errors.no_method_here')}
+          </Text>
         ) : null}
 
         <InlineError message={errorCode ? mfaErrorText(t, errorCode) : null} testID="login-mfa-error" />

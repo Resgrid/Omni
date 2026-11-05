@@ -56,7 +56,9 @@ export const routes = defineRoutes([
   'contacts',
   'contactDetail',
   'notes',
+  'noteDetail',
   'protocols',
+  'protocolDetail',
   'weatherAlerts',
   'weatherAlertDetail',
   'checklists',
@@ -112,6 +114,8 @@ export const nav = defineNav([
   detailNav.callDetail,
   detailNav.callEdit,
   detailNav.contactDetail,
+  detailNav.noteDetail,
+  detailNav.protocolDetail,
   detailNav.weatherAlertDetail,
   detailNav.chatChannel,
 ]);

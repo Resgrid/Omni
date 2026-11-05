@@ -644,7 +644,6 @@
   },
   "packages/app-shell/src/shell/header.tsx": {
     "anti-slop/no-known-value-widening": 1,
-    "anti-slop/require-readable-spacing": 14,
     "anti-slop/require-safety-comment-for-type-assertion": 1
   },
   "packages/app-shell/src/shell/registered-providers.tsx": {
@@ -792,7 +791,6 @@
     "anti-slop/no-unsafe-dictionary-type": 1
   },
   "packages/auth/src/__tests__/sso.test.ts": {
-    "anti-slop/require-readable-spacing": 6,
     "anti-slop/require-safety-comment-for-type-assertion": 2
   },
   "packages/auth/src/__tests__/token-refresh.test.ts": {
@@ -928,7 +926,6 @@
     "anti-slop/no-runtime-typeof": 2,
     "anti-slop/no-unknown-parameters": 2,
     "anti-slop/no-unsafe-dictionary-type": 4,
-    "anti-slop/require-readable-spacing": 17,
     "anti-slop/require-safety-comment-for-type-assertion": 14
   },
   "packages/auth/src/personal-lock/inactivity-monitor.ts": {
@@ -1045,7 +1042,6 @@
     "anti-slop/no-chained-type-assertions": 1,
     "anti-slop/no-known-value-widening": 1,
     "anti-slop/no-runtime-typeof": 1,
-    "anti-slop/require-readable-spacing": 9,
     "anti-slop/require-safety-comment-for-type-assertion": 3
   },
   "packages/auth/src/sso/sso-url.ts": {
@@ -1715,7 +1711,6 @@
     "anti-slop/require-readable-spacing": 4
   },
   "packages/features/src/auth-ui/__tests__/account-security.test.tsx": {
-    "anti-slop/require-readable-spacing": 1,
     "anti-slop/require-safety-comment-for-type-assertion": 1
   },
   "packages/features/src/auth-ui/__tests__/approve-sign-in.test.tsx": {
@@ -1731,18 +1726,12 @@
     "anti-slop/require-readable-spacing": 1,
     "anti-slop/require-safety-comment-for-type-assertion": 2
   },
-  "packages/features/src/auth-ui/__tests__/login-mfa-sheet.test.tsx": {
-    "anti-slop/require-readable-spacing": 1
-  },
   "packages/features/src/auth-ui/__tests__/login-screen.test.tsx": {
     "anti-slop/require-readable-spacing": 2
   },
   "packages/features/src/auth-ui/__tests__/server-url-sheet.test.tsx": {
     "anti-slop/require-readable-spacing": 2,
     "anti-slop/require-safety-comment-for-type-assertion": 2
-  },
-  "packages/features/src/auth-ui/__tests__/shared-device-lock.test.tsx": {
-    "anti-slop/require-readable-spacing": 1
   },
   "packages/features/src/auth-ui/__tests__/sso-sign-in.test.tsx": {
     "anti-slop/require-readable-spacing": 1,
@@ -1974,7 +1963,7 @@
     "anti-slop/require-safety-comment-for-type-assertion": 3
   },
   "packages/features/src/calls/components/call-media-modals.tsx": {
-    "anti-slop/require-readable-spacing": 13
+    "anti-slop/require-readable-spacing": 12
   },
   "packages/features/src/calls/components/call-modal-frame.tsx": {
     "anti-slop/require-readable-spacing": 1
@@ -2952,7 +2941,7 @@
   },
   "packages/features/src/messages/__tests__/messages.test.tsx": {
     "anti-slop/no-known-value-widening": 1,
-    "anti-slop/require-safety-comment-for-type-assertion": 10
+    "anti-slop/require-safety-comment-for-type-assertion": 6
   },
   "packages/features/src/messages/components/confirm-sheet.tsx": {
     "anti-slop/require-readable-spacing": 1
@@ -2967,13 +2956,10 @@
     "anti-slop/require-readable-spacing": 1
   },
   "packages/features/src/messages/index.ts": {
-    "anti-slop/require-readable-spacing": 7
+    "anti-slop/require-readable-spacing": 6
   },
   "packages/features/src/messages/routes.ts": {
     "anti-slop/require-readable-spacing": 1
-  },
-  "packages/features/src/messages/screens/messages.tsx": {
-    "anti-slop/require-readable-spacing": 10
   },
   "packages/features/src/navigation-eta/__tests__/navigation-eta.test.tsx": {
     "anti-slop/no-unsafe-dictionary-type": 1,
@@ -3798,7 +3784,7 @@
     "anti-slop/require-readable-spacing": 1
   },
   "packages/features/src/work-orders/components/work-order-files.tsx": {
-    "anti-slop/require-readable-spacing": 3
+    "anti-slop/require-readable-spacing": 2
   },
   "packages/features/src/work-orders/components/work-order-filter-sheet.tsx": {
     "anti-slop/require-readable-spacing": 1
@@ -5498,9 +5484,6 @@
   "packages/ui/src/checkbox/index.tsx": {
     "anti-slop/no-runtime-typeof": 1,
     "anti-slop/require-readable-spacing": 7
-  },
-  "packages/ui/src/common/__tests__/common.test.tsx": {
-    "anti-slop/require-readable-spacing": 1
   },
   "packages/ui/src/common/date-time-picker.ts": {
     "anti-slop/require-readable-spacing": 8

@@ -97,6 +97,9 @@ export * from './utils';
 // Tab selection kept in the route, so it survives the screen being rebuilt (Back, a web reload, a link).
 export * from './use-route-tab';
 
+// A state shown only once it has lasted, so background work that finishes quickly never flashes on screen.
+export * from './use-settled-flag';
+
 // The tab row alone: SharedTabs' bar, and the strip at the top of a top-level page (edge chevrons when tabs run off).
 export * from './tab-bar';
 
@@ -105,6 +108,9 @@ export * from './scroll-row';
 
 // Edge tracking and chevrons for any other sideways scroller.
 export * from './edge-scroll';
+
+// A picture full screen with pinch and double-tap zoom: the one viewer for every image a screen shows small.
+export * from './image-viewer';
 
 // ─── React Native base components (Responder barrel) ─────────────────
 export { ActivityIndicator, TouchableOpacity } from 'react-native';

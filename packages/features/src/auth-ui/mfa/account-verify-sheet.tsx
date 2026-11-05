@@ -106,6 +106,8 @@ export const AccountVerifySheet: React.FC<{ proof: AccountProof | null; onDone: 
   const offersCode = !reauth && (options?.Methods ?? ['totp']).includes('totp');
   const offersPasskey = !reauth && (options?.Methods ?? []).includes('passkey') && auth.passkeys && passkeysSupported();
   const showsSecret = (reauth && !useProvider) || offersCode;
+  // Account changes accept only a code or this app's passkey; neither may be possible on this device.
+  const noMethodHere = !reauth && options !== null && !offersCode && !offersPasskey;
   const secretLabel = reauth ? t('mfa.account.password_placeholder') : t('mfa.login.code_placeholder');
 
   return (
@@ -140,6 +142,11 @@ export const AccountVerifySheet: React.FC<{ proof: AccountProof | null; onDone: 
           <Button variant="outline" action="secondary" onPress={submitProvider} isDisabled={busy} accessibilityLabel={t('mfa.login.use_provider')} testID="account-verify-provider">
             <ButtonText>{t('mfa.login.use_provider')}</ButtonText>
           </Button>
+        ) : null}
+        {noMethodHere ? (
+          <Text size="sm" testID="account-verify-no-method">
+            {t('mfa.errors.no_method_here')}
+          </Text>
         ) : null}
         <InlineError message={errorCode ? mfaErrorText(t, errorCode) : null} testID="account-verify-error" />
         {showsSecret ? (

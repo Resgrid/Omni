@@ -10,7 +10,10 @@
   "app": {
     "title": "{{appName}}",
     "realtime_offline_title": "Live updates paused",
-    "realtime_offline_description": "Reconnecting to live updates. Information may be out of date."
+    "realtime_offline_description": "Reconnecting to live updates. Information may be out of date.",
+    "sync_attention_title": "Changes not sent",
+    "sync_attention_message": "Some changes could not be sent and need your attention.",
+    "sync_attention_message_review": "Some changes could not be sent and need your attention. Tap to review them."
   },
   "audio_streams": {
     "buffering": "Буферизація",
@@ -1866,8 +1869,11 @@
       "mfa_transaction_expired": "Вхід тривав надто довго. Увійдіть знову.",
       "mfa_transaction_invalid": "Цей вхід уже недійсний. Увійдіть знову.",
       "network_error": "Не вдалося зв’язатися з Resgrid. Перевірте з’єднання.",
+      "no_method_here": "Жоден із ваших способів підтвердження не працює на цьому пристрої. Скористайтеся іншим пристроєм або налаштуйте застосунок автентифікації.",
+      "passkey_already_registered": "На цьому пристрої вже є ключ доступу для вашого облікового запису.",
       "passkey_cancelled": "Запит ключа закрито. Спробуйте ще раз або інший спосіб.",
       "passkey_failed": "Не вдалося використати ключ доступу. Спробуйте ще раз або інший спосіб.",
+      "passkey_limit_reached": "У вас уже максимальна кількість ключів доступу для цього застосунку. Видаліть один, щоб додати інший.",
       "passkey_no_credentials": "На цьому пристрої немає ключа доступу для цього застосунку.",
       "passkey_not_registered_for_client": "У вас немає ключа доступу для цього застосунку.",
       "passkey_not_supported": "Ключі доступу недоступні на цьому пристрої. Скористайтеся іншим способом.",
@@ -1987,7 +1993,8 @@
     "search": "Пошук приміток...",
     "title": "Примітки",
     "all_categories": "All",
-    "open_hint": "Opens the note"
+    "open_hint": "Opens the note",
+    "not_found": "Примітку не знайдено"
   },
   "notifications": {
     "inbox_unavailable": "Вхідні сповіщення тут недоступні.",
@@ -2324,7 +2331,8 @@
     "emptyDescription": "Для вашого підрозділу ще не створено протоколів.",
     "search": "Пошук протоколів...",
     "title": "Протоколи",
-    "open_hint": "Opens the protocol details"
+    "open_hint": "Opens the protocol details",
+    "not_found": "Протокол не знайдено"
   },
   "push_notifications": {
     "close": "Закрити",
@@ -3268,7 +3276,10 @@
     "update_ready_message": "Торкніться, щоб перезапустити зараз. Інакше оновлення буде встановлено під час наступного запуску застосунку.",
     "update_ready_wall_message": "Торкніться, щоб перезапустити зараз, інакше екран перезапуститься сам після {{minutes}} хв без використання.",
     "update_restart_failed": "Не вдалося перезапустити застосунок. Оновлення буде встановлено під час наступного запуску застосунку.",
-    "notifications_unread": "Notifications, {{count}} unread"
+    "notifications_unread": "Notifications, {{count}} unread",
+    "changes_need_attention": "Needs attention: {{count}}",
+    "offline": "Offline",
+    "offline_changes_waiting": "Offline: {{count}} waiting"
   },
   "access_denied": {
     "back_to_sign_in": "Back to sign in",

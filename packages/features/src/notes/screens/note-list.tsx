@@ -3,14 +3,15 @@ import { searchNotes, useNotesStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import type { NoteResultData } from '@resgrid/models';
 import { FlatList, Input, InputField, Loading, Pressable, RefreshControl, ScrollRow, Text, ZeroState } from '@resgrid/ui';
+import { router } from 'expo-router';
 import { StickyNote } from 'lucide-react-native';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { NoteCard } from '../components/note-card';
-import { NoteDetailsSheet } from '../components/note-details-sheet';
+import { noteRoutes } from '../routes';
 
-/** Department notes (Unit/IC list with HtmlRenderer + Responder search); persisted, so it works offline. */
+/** Department notes (Unit/IC list + Responder search); persisted, so it works offline. A note opens as its own page. */
 export default function NoteListScreen() {
   const { t } = useTranslation();
   const title = useTerm('module.notes', t('notes.title'));
@@ -19,7 +20,6 @@ export default function NoteListScreen() {
   const fetchNotes = useNotesStore((state) => state.fetchNotes);
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<string | null>(null);
-  const [selected, setSelected] = useState<NoteResultData | null>(null);
 
   useEffect(() => {
     void fetchNotes();
@@ -27,6 +27,7 @@ export default function NoteListScreen() {
 
   const categories = useMemo(() => [...new Set(notes.map((note) => note.Category).filter((value): value is string => !!value))].sort(), [notes]);
   const visible = useMemo(() => searchNotes(category ? notes.filter((note) => note.Category === category) : notes, query), [notes, category, query]);
+  const open = useCallback((note: NoteResultData) => router.push(noteRoutes.noteDetail(note.NoteId)), []);
 
   return (
     <View style={styles.screen} className="bg-background-50" testID="note-list-screen">
@@ -60,13 +61,12 @@ export default function NoteListScreen() {
       <FlatList
         data={visible}
         keyExtractor={(item: NoteResultData) => item.NoteId}
-        renderItem={({ item }: { item: NoteResultData }) => <NoteCard note={item} onPress={setSelected} />}
+        renderItem={({ item }: { item: NoteResultData }) => <NoteCard note={item} onPress={open} />}
         contentContainerStyle={styles.list}
         refreshControl={<RefreshControl refreshing={false} onRefresh={() => void fetchNotes({ bypassCache: true })} />}
         ListEmptyComponent={isLoading ? <Loading /> : <ZeroState icon={StickyNote} heading={t('notes.empty')} description={t('notes.emptyDescription')} testID="note-list-empty" />}
         testID="note-list"
       />
-      <NoteDetailsSheet note={selected} isOpen={selected !== null} onClose={() => setSelected(null)} />
     </View>
   );
 }

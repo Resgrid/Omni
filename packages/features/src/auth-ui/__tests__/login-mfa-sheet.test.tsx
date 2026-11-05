@@ -25,6 +25,7 @@ const renderSheet = async (value: MfaChallenge = challenge()) => {
   fakeAuthStore.setState({ status: 'mfaRequired', mfaChallenge: value });
   const onLostFactor = jest.fn();
   await render(<LoginMfaSheet isOpen onLostFactor={onLostFactor} />);
+
   return { onLostFactor };
 };
 
@@ -46,6 +47,26 @@ describe('LoginMfaSheet', () => {
     activateTestVariant('bigboard');
     await renderSheet();
     expect(screen.queryByTestId('login-mfa-passkey')).toBeNull();
+  });
+
+  it('says so when no accepted method works on this device instead of showing an empty sheet', async () => {
+    const auth = jest.requireMock<{ passkeysSupported: jest.Mock }>('@resgrid/auth');
+    auth.passkeysSupported.mockReturnValue(false);
+
+    try {
+      await renderSheet(challenge({ methods: ['passkey'], enrolled: ['passkey'], preferred: 'passkey' }));
+      expect(screen.getByTestId('login-mfa-no-method')).toHaveTextContent('mfa.errors.no_method_here');
+      expect(screen.queryByTestId('login-mfa-passkey')).toBeNull();
+      // The member can still recover or cancel.
+      expect(screen.getByTestId('login-mfa-lost')).toBeTruthy();
+    } finally {
+      auth.passkeysSupported.mockReturnValue(true);
+    }
+  });
+
+  it('shows no such message while a method is offered', async () => {
+    await renderSheet();
+    expect(screen.queryByTestId('login-mfa-no-method')).toBeNull();
   });
 
   it('verifies the authenticator code and clears it', async () => {

@@ -357,6 +357,12 @@ describe('WorkOrderDetailScreen', () => {
       useWorkOrdersStore.setState({ imagesById: { f1: 'data:image/jpeg;base64,AAA' } });
     });
     expect(screen.getByTestId('work-order-image-f1')).toBeTruthy();
+
+    // Tapping the photo shows it full screen in the shared viewer.
+    await fireEvent.press(screen.getByTestId('work-order-image-open-f1'));
+    expect(screen.getByTestId('work-order-image-viewer-image', { includeHiddenElements: true }).props.source).toEqual({ uri: 'data:image/jpeg;base64,AAA' });
+    await fireEvent.press(screen.getByTestId('work-order-image-viewer-close', { includeHiddenElements: true }));
+    expect(screen.queryByTestId('work-order-image-viewer-image', { includeHiddenElements: true })).toBeNull();
   });
 
   it('says photo access is off when permission is refused', async () => {

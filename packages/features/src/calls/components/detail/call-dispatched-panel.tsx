@@ -86,9 +86,9 @@ const styles = StyleSheet.create({
   buttonIcon: { marginRight: 6 },
   row: { flexDirection: 'row', alignItems: 'center', borderRadius: 8, padding: 10, marginBottom: 8 },
   badge: { width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', marginRight: 8 },
-  badgeText: { fontSize: 11, fontWeight: '700' },
+  badgeText: { fontSize: 11, lineHeight: 14, fontWeight: '700' },
   icon: { marginRight: 8 },
   body: { flex: 1 },
   code: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
-  codeText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
+  codeText: { color: '#FFFFFF', fontSize: 12, lineHeight: 16, fontWeight: '700' },
 });

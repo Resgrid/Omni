@@ -108,6 +108,7 @@ jest.mock('expo-router', () => {
     useLocalSearchParams: jest.fn(() => ({})),
     usePathname: jest.fn(() => '/'),
     useFocusEffect: jest.fn(),
+    usePreventRemove: jest.fn(() => jest.fn()),
     Redirect: ({ href }: { href: string }) => require('react').createElement(require('react-native').Text, { testID: 'redirect' }, href),
   };
 });
