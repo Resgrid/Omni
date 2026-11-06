@@ -1,18 +1,19 @@
 # Release pipeline for all five apps (omni-plan §6.6.2–6.6.5). NEVER rename this file: its run number is M in every
 # version (Responder 11.M, Unit 8.M, IC 2.M, Dispatch 2.M, BigBoard 4.M; build number = base + M).
 #
-#   push to master        → every variant, channel production: a merge builds the store binaries (release candidates)
-#                           and attaches them to the release. It publishes nothing to users: no OTA update, no Electron
-#                           update feed and no Docker `latest`. The factory reads the release; store uploads (TestFlight,
-#                           Play) are done by hand through the factory, never from GitHub Actions, and an OTA update is
-#                           released with ota.yml.
+#   push to master        → every variant, channel production: a merge always builds the store binaries (release
+#                           candidates), even when the fingerprint is unchanged, attaches them to the release and sends
+#                           the sideload APK to Firebase App Distribution testers. It publishes nothing to users: no OTA
+#                           update, no Electron update feed and no Docker `latest`. The factory reads the release; store
+#                           uploads (TestFlight, Play) are done by hand through the factory, never from GitHub Actions,
+#                           and an OTA update is released with ota.yml.
 #   push tag <variant>-v* → that variant, channel production, published like a dispatch run (OTA for JavaScript-only
 #                           changes, Electron feed, Docker `latest`). The tag is only a trigger: the release itself is
 #                           named <variant>-v<major>.<M> from this run's number (tags created here with GITHUB_TOKEN do
 #                           not re-trigger workflows).
 #   workflow_dispatch     → chosen variants / targets / channel, optional force_native
 #
-# Stage 0  plan → fingerprint (per variant) → decide       versions once; native build only where the fingerprint changed
+# Stage 0  plan → fingerprint (per variant) → decide       versions once; native build where the fingerprint changed (always on a merge)
 # Stage 1  web · android · ios · ota                        AAB + sideload APK (two builds), one App Store IPA; EAS-managed signing;
 #                                                           a CycloneDX SBOM per store package (<AAB|IPA>.cdx.json)
 # Stage 2  docker · electron                                both consume the web-<variant> artifact; nothing rebuilds the app
@@ -110,8 +111,10 @@ jobs:
           elif [ "$REF_TYPE" = tag ]; then
             variants="${REF_NAME%%-v*}"; targets=all; channel=production; force=false
           else
-            # A merge into master: production-channel store binaries, nothing published to users.
-            variants=all; targets=all; channel=production; force=false; merge_build=true
+            # A merge into master: production-channel store binaries, nothing published to users. Always native, so
+            # every merge gives Firebase testers a new APK and the factory a release candidate; a merge publishes no
+            # OTA update, so with an unchanged fingerprint it would otherwise ship nothing installable.
+            variants=all; targets=all; channel=production; force=true; merge_build=true
           fi
           variants="${variants// /}"; targets="${targets// /}"
           {
@@ -200,10 +203,12 @@ jobs:
           PLATFORMS: ${{ needs.plan.outputs.platforms }}
           TAG: ${{ fromJSON(needs.plan.outputs.versions)[matrix.variant].tag }}
           FORCE: ${{ needs.plan.outputs.force_native }}
+          MERGE_BUILD: ${{ needs.plan.outputs.merge_build }}
         run: |
           set -euo pipefail
           args=(decide --variant "$VARIANT" --channel "$CHANNEL" --platforms "$PLATFORMS" --tag "$TAG" --out "decisions/decision-$VARIANT.json")
           if [ "$FORCE" = true ]; then args+=(--force-native); fi
+          if [ "$MERGE_BUILD" = true ]; then args+=(--force-reason 'merge build (every merge to master builds native)'); fi
           node scripts/ci/fingerprint.mjs "${args[@]}"
 
       - name: Remove Firebase config
@@ -245,7 +250,8 @@ jobs:
         env:
           VARIANTS: ${{ needs.plan.outputs.variants }}
           PLATFORMS: ${{ needs.plan.outputs.platforms }}
-          # A merge build publishes no OTA update; JavaScript-only changes wait for ota.yml.
+          # A merge build is always native (plan forces it) and never publishes an OTA update, even for a platform whose
+          # decision came back OTA; JavaScript-only changes reach installed apps through ota.yml.
           PUBLISH_OTA: ${{ needs.plan.outputs.merge_build != 'true' }}
         run: node scripts/ci/fingerprint.mjs merge --dir decisions --variants "$VARIANTS" --platforms "$PLATFORMS" --publish-ota "$PUBLISH_OTA"
 

@@ -92,7 +92,8 @@ async function main() {
     if (r.native && r.binariesRelease === tag) return `| ${p} | native build | \`${short(r.fingerprint)}\` — binaries attached |`;
     if (r.native) return `| ${p} | native build **failed** | re-run the failed job to complete this release |`;
     if (r.carriedFrom) return `| ${p} | unchanged | binaries in ${r.binariesRelease ?? '—'} |`;
-    // A merge build publishes no update: JavaScript changes reach installed apps only when released with ota.yml.
+    // No update recorded (a merge build never publishes one, or the OTA job failed): JavaScript changes reach installed
+    // apps only when released with ota.yml.
     if (!r.update) return `| ${p} | JavaScript only — no update published | binaries in ${r.binariesRelease ?? '—'}; release the update with ota.yml |`;
     return `| ${p} | OTA update (\`${channel}\`) | runtime \`${short(r.fingerprint)}\`; binaries in ${r.binariesRelease}${r.update?.group ? `; update group \`${r.update.group}\`` : ''} |`;
   };

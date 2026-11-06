@@ -8,21 +8,23 @@
 //
 //   decide  release.yml stage 0 — per variant: fingerprint each platform, compare with the newest release of the
 //           same variant and channel (excluding this run's own tag, so re-runs stay native), write a decision file.
+//           --force-native builds native regardless (merge builds on master always pass it); --force-reason is the
+//           reason the summary shows for it.
 //   check   ota.yml — refuse (exit 1) unless every requested platform matches the installed runtime.
 //   merge   release.yml stage 0 — fold the per-variant decision files into the build / OTA matrices. With
 //           --publish-ota false (merge builds on master) a JavaScript-only change publishes no update: an update on
 //           the production channel reaches every installed store build, so it is released deliberately (ota.yml).
 //
 // Usage:
-//   node scripts/ci/fingerprint.mjs decide --variant unit --channel internal --platforms android,ios --tag unit-v8.12 [--force-native] --out decision-unit.json
+//   node scripts/ci/fingerprint.mjs decide --variant unit --channel internal --platforms android,ios --tag unit-v8.12 [--force-native [--force-reason 'merge build']] --out decision-unit.json
 //   node scripts/ci/fingerprint.mjs check  --variant unit --channel production --platforms android,ios [--run-number 12] [--exclude-tag unit-v8.12]
 //   node scripts/ci/fingerprint.mjs merge  --dir decisions --variants '["unit"]' --platforms android,ios [--publish-ota false]
 import path from 'node:path';
 
 import { appendSummary, appEnvForChannel, csv, findPreviousRelease, parseArgs, PLATFORMS, readJsonIfExists, requireArg, resolveRuntimeVersion, setOutputs, VARIANT_IDS, writeJson } from './lib.mjs';
 
-function decidePlatform({ fingerprint, previous, force }) {
-  if (force) return { native: true, reason: 'force_native requested' };
+function decidePlatform({ fingerprint, previous, force, forceReason }) {
+  if (force) return { native: true, reason: forceReason };
   if (!previous) return { native: true, reason: 'no previous release on this channel' };
   if (!previous.binariesRelease) return { native: true, reason: 'previous release has no binaries for this platform' };
   if (!previous.fingerprint || previous.fingerprint !== fingerprint) return { native: true, reason: `fingerprint changed (${short(previous.fingerprint)} → ${short(fingerprint)})` };
@@ -38,6 +40,8 @@ async function decide(args) {
   const platforms = csv(requireArg(args, 'platforms'), PLATFORMS);
   const tag = requireArg(args, 'tag');
   const force = args['force-native'] === true || args['force-native'] === 'true';
+  // parseArgs gives a bare flag the value true; only a given text is a reason.
+  const forceReason = args['force-reason'] && args['force-reason'] !== true ? String(args['force-reason']) : 'force_native requested';
   const out = requireArg(args, 'out');
 
   const prev = await findPreviousRelease({ variant, channel, excludeTag: tag });
@@ -47,7 +51,7 @@ async function decide(args) {
   for (const platform of platforms) {
     const { runtimeVersion, sources } = resolveRuntimeVersion(variant, appEnv, platform);
     const previous = prev.record?.platforms?.[platform] ?? null;
-    const { native, reason } = decidePlatform({ fingerprint: runtimeVersion, previous, force });
+    const { native, reason } = decidePlatform({ fingerprint: runtimeVersion, previous, force, forceReason });
     decision.platforms[platform] = { fingerprint: runtimeVersion, sources, native, reason, previousFingerprint: previous?.fingerprint ?? null, previousBinariesRelease: previous?.binariesRelease ?? null };
     console.log(`${variant}/${platform}: ${native ? 'NATIVE' : 'OTA'} — ${reason}`);
   }
