@@ -6,7 +6,7 @@ import { initializeVoice } from '@resgrid/voice';
 
 import { activateVariant } from '../../__tests__/helpers/variants';
 import { resetShellRuntimeForTests, setShellRuntime } from '../../runtime/runtime-holder';
-import { getShellState, resetShellStateForTests } from '../../runtime/shell-state';
+import { getShellState, resetShellSessionState, resetShellStateForTests, setShellState } from '../../runtime/shell-state';
 import { createAppInit } from '../create-app-init';
 import { createSessionSteps } from '../default-steps';
 
@@ -25,6 +25,7 @@ jest.mock('@resgrid/api', () => ({
 }));
 
 const mockHydrate = jest.fn(async () => ({ fieldReady: true }));
+const mockOutboxRefresh = jest.fn(async () => ({}));
 
 function session(variantId: 'unit' | 'bigboard' = 'unit') {
   const variant = activateVariant(variantId);
@@ -36,16 +37,18 @@ describe('session (signed-in) steps', () => {
     jest.clearAllMocks();
     resetShellStateForTests();
     resetShellRuntimeForTests();
-    setShellRuntime({ auth: { context: {} } as never, offline: { sync: { hydrate: mockHydrate } } as never });
+    setShellRuntime({ auth: { context: {} } as never, offline: { sync: { hydrate: mockHydrate }, outbox: { refresh: mockOutboxRefresh } } as never });
   });
 
-  it('runs gates (+ department config) → working set → realtime hubs → hydration → voice → push', async () => {
+  it('runs gates (+ department config) → outbox recount → working set → realtime hubs → hydration → voice → push', async () => {
     const init = session('unit');
     const status = await init.run();
 
     expect(status.state).toBe('ready');
-    expect(status.completedSteps).toEqual(['session.gates', 'session.working-set', 'session.realtime', 'session.hydration', 'session.voice', 'session.push']);
+    expect(status.completedSteps).toEqual(['session.gates', 'session.outbox', 'session.working-set', 'session.realtime', 'session.hydration', 'session.voice', 'session.push']);
     expect(loadSessionGates).toHaveBeenCalledTimes(1);
+    // Storage opened before the session existed, so its outbox snapshot held every write back: counted again for this user.
+    expect(mockOutboxRefresh).toHaveBeenCalledTimes(1);
     expect(getConfig).toHaveBeenCalledTimes(1);
     expect(getShellState().departmentConfig?.EventingUrl).toBe('https://events.example.com/');
     expect(refreshDataWorkingSet).toHaveBeenCalledTimes(1);
@@ -61,8 +64,9 @@ describe('session (signed-in) steps', () => {
     expect(initializeVoice).not.toHaveBeenCalled();
   });
 
-  it('a failing hub or working-set refresh does not fail the bootstrap (optional steps)', async () => {
+  it('a failing hub, working-set or outbox refresh does not fail the bootstrap (optional steps)', async () => {
     (refreshDataWorkingSet as jest.Mock).mockRejectedValueOnce(new Error('offline'));
+    mockOutboxRefresh.mockRejectedValueOnce(new Error('database busy'));
     (useRealtimeStore.getState().connectAll as jest.Mock).mockRejectedValueOnce(new Error('hub down'));
     const status = await session().run();
     expect(status.state).toBe('ready');
@@ -76,6 +80,7 @@ describe('session (signed-in) steps', () => {
     expect(enforceAppAccess).toHaveBeenCalledTimes(1);
     expect(getShellState().accessDeniedNotice).toBe(true);
     expect(refreshDataWorkingSet).not.toHaveBeenCalled();
+    expect(mockOutboxRefresh).not.toHaveBeenCalled();
   });
 
   it('keeps going when the department config cannot be loaded', async () => {
@@ -83,5 +88,11 @@ describe('session (signed-in) steps', () => {
     const status = await session().run();
     expect(status.state).toBe('ready');
     expect(getShellState().departmentConfig).toBeNull();
+  });
+
+  it('a sign-out drops the ending session’s sync counts and keeps the connection state', () => {
+    setShellState({ isOffline: true, unsentChanges: 3, changesNeedingAttention: 2 });
+    resetShellSessionState();
+    expect(getShellState()).toMatchObject({ isOffline: true, unsentChanges: 0, changesNeedingAttention: 0 });
   });
 });

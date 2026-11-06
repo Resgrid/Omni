@@ -163,14 +163,54 @@ const usePinchZoom = () =>
     };
   }, []);
 
+type PinchZoom = ReturnType<typeof usePinchZoom>;
+
+type ViewerContentProps = Omit<ImageViewerProps, 'testID'> & { testID: string; zoom: PinchZoom };
+
+/**
+ * The viewer's window. It is rendered inside NativeModal so the safe-area insets are the viewer's own full-screen
+ * window: read outside it they were the opener's, and over a page sheet (no top inset) the close button sat under the
+ * status bar and the notch.
+ */
+const ViewerContent: React.FC<ViewerContentProps> = ({ source, placeholder, caption, label, onClose, testID, zoom }) => {
+  const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
+
+  return (
+    <View style={styles.viewer}>
+      <Animated.View style={StyleSheet.flatten([styles.frame, zoom.style])} onLayout={zoom.onLayout} {...zoom.panHandlers} testID={`${testID}-frame`}>
+        {/* The frame takes every touch (and the web's native image drag never starts). */}
+        <View style={styles.passThrough}>
+          {source ? <Image source={source} placeholder={placeholder} placeholderContentFit="contain" contentFit="contain" style={styles.frame} accessibilityLabel={label} testID={`${testID}-image`} /> : null}
+        </View>
+      </Animated.View>
+      {caption ? (
+        <View style={StyleSheet.flatten([styles.caption, { paddingBottom: insets.bottom + 16, paddingLeft: insets.left + 16, paddingRight: insets.right + 16 }])} testID={`${testID}-caption`}>
+          <Text className="text-base text-white">{caption}</Text>
+        </View>
+      ) : null}
+      <View style={StyleSheet.flatten([styles.close, { top: insets.top + 8, right: insets.right + 16 }])}>
+        <Pressable
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.close', { defaultValue: 'Close' })}
+          hitSlop={8}
+          className="size-10 items-center justify-center rounded-full bg-black/50"
+          testID={`${testID}-close`}
+        >
+          <X size={22} color="#ffffff" />
+        </Pressable>
+      </View>
+    </View>
+  );
+};
+
 /**
  * A picture full screen on black, with a close button and an optional caption: pinch or double tap to zoom, drag to
  * look around a zoomed picture. The one viewer for every image a screen shows small (call images, chat images,
  * work-order photos, checklist evidence). Opened over a page sheet it covers the whole screen, not just the sheet.
  */
 export const ImageViewer: React.FC<ImageViewerProps> = ({ source, placeholder = null, caption, label, onClose, testID = 'image-viewer' }) => {
-  const { t } = useTranslation();
-  const insets = useSafeAreaInsets();
   const zoom = usePinchZoom();
   const isOpen = source !== null;
 
@@ -181,31 +221,7 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({ source, placeholder = 
 
   return (
     <NativeModal visible={isOpen} animationType="fade" onRequestClose={onClose} testID={testID}>
-      <View style={styles.viewer}>
-        <Animated.View style={StyleSheet.flatten([styles.frame, zoom.style])} onLayout={zoom.onLayout} {...zoom.panHandlers} testID={`${testID}-frame`}>
-          {/* The frame takes every touch (and the web's native image drag never starts). */}
-          <View style={styles.passThrough}>
-            {source ? <Image source={source} placeholder={placeholder} placeholderContentFit="contain" contentFit="contain" style={styles.frame} accessibilityLabel={label} testID={`${testID}-image`} /> : null}
-          </View>
-        </Animated.View>
-        {caption ? (
-          <View style={StyleSheet.flatten([styles.caption, { paddingBottom: insets.bottom + 16, paddingLeft: insets.left + 16, paddingRight: insets.right + 16 }])} testID={`${testID}-caption`}>
-            <Text className="text-base text-white">{caption}</Text>
-          </View>
-        ) : null}
-        <View style={StyleSheet.flatten([styles.close, { top: insets.top + 8, right: insets.right + 16 }])}>
-          <Pressable
-            onPress={onClose}
-            accessibilityRole="button"
-            accessibilityLabel={t('common.close', { defaultValue: 'Close' })}
-            hitSlop={8}
-            className="size-10 items-center justify-center rounded-full bg-black/50"
-            testID={`${testID}-close`}
-          >
-            <X size={22} color="#ffffff" />
-          </Pressable>
-        </View>
-      </View>
+      <ViewerContent source={source} placeholder={placeholder} caption={caption} label={label} onClose={onClose} testID={testID} zoom={zoom} />
     </NativeModal>
   );
 };

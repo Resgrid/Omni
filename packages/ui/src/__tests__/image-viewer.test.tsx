@@ -1,5 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import React from 'react';
+import { StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ImageViewer } from '../image-viewer';
 import { clampOffset, clampZoom, MAX_ZOOM, MIN_ZOOM, touchDistance } from '../image-viewer/zoom';
@@ -50,6 +52,25 @@ describe('ImageViewer', () => {
 
     expect(frame.props.onStartShouldSetResponder?.()).toBe(true);
     expect(frame.props.onResponderMove).toEqual(expect.any(Function));
+  });
+
+  it('keeps the close button and caption clear of the notch with its own window’s insets, not the page sheet’s it opened over', async () => {
+    // The page sheet the viewer opens from has no top inset; the viewer's full-screen window (NativeModal's own
+    // SafeAreaProvider) has the status bar and the home indicator.
+    const mockInModal = React.createContext(false);
+    const safeArea = jest.requireMock<{ SafeAreaProvider: React.FC<{ children?: React.ReactNode }> }>('react-native-safe-area-context');
+    const provider = jest.spyOn(safeArea, 'SafeAreaProvider').mockImplementation(({ children }) => <mockInModal.Provider value>{children}</mockInModal.Provider>);
+    jest.mocked(useSafeAreaInsets).mockImplementation(() => (React.useContext(mockInModal) ? { top: 47, bottom: 34, left: 0, right: 0 } : { top: 0, bottom: 0, left: 0, right: 0 }));
+
+    try {
+      await render(<ImageViewer source={{ uri: 'https://files.test/scene.jpg' }} caption="Scene" label="Scene" onClose={jest.fn()} testID="viewer" />);
+
+      expect(StyleSheet.flatten(screen.getByTestId('viewer-caption', query).props.style)).toMatchObject({ paddingBottom: 50 });
+      expect(StyleSheet.flatten(screen.getByTestId('viewer-close', query).parent?.props.style)).toMatchObject({ top: 55 });
+    } finally {
+      provider.mockRestore();
+      jest.mocked(useSafeAreaInsets).mockImplementation(() => ({ top: 0, bottom: 0, left: 0, right: 0 }));
+    }
   });
 });
 

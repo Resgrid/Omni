@@ -307,6 +307,16 @@ export function createSessionSteps(config: AppShellConfig): InitStep[] {
       },
     },
     {
+      id: 'session.outbox',
+      optional: true,
+      // The outbox counted its writes when storage opened, before this session existed (the department comes with the
+      // rights the gates just loaded): count them again so the sync chip, the attention toast and Pending sync show this
+      // user's queued, refused and unconfirmed changes from the start.
+      run: async () => {
+        await requireOfflineRuntime().outbox.refresh();
+      },
+    },
+    {
       id: 'session.working-set',
       optional: true,
       run: () => refreshDataWorkingSet(manifest),

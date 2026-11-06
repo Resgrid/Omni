@@ -105,6 +105,12 @@ const INACTIVE_WEIGHT: TextStyle['fontWeight'] = '500';
 const BADGE_TEXT_ON_WARNING = '#111827';
 const BADGE_TEXT_ON_ERROR = '#ffffff';
 
+/**
+ * A fixed bar shares its width equally, so a label longer than its share (a long translation, large system text at
+ * 320 dp) shrinks and wraps onto a second line inside its own tab instead of running over the next one.
+ */
+const FIXED_TAB_LABEL_LINES = 2;
+
 /** Pills and segmented tabs fill the active tab with primary. */
 const isFilledVariant = (variant: TabBarVariant): boolean => variant === 'pills' || variant === 'segmented';
 
@@ -302,6 +308,7 @@ export function TabBar<K extends string>({
 
     const labelStyle = StyleSheet.flatten([
       styles.tabLabel,
+      fill ? styles.fixedTabShrink : null,
       { fontSize: titleMetrics.fontSize, lineHeight: titleMetrics.lineHeight, fontWeight: isActive ? ACTIVE_WEIGHT : INACTIVE_WEIGHT, color: getLabelColor(variant, isActive, colors) },
     ]);
 
@@ -317,9 +324,9 @@ export function TabBar<K extends string>({
         onLayout={fill ? undefined : (event: LayoutChangeEvent) => handleTabLayout(index, event)}
         onPress={() => onChange(tab.key, index)}
       >
-        <View style={styles.tabInner}>
+        <View style={fill ? FIXED_TAB_INNER : styles.tabInner}>
           {tab.icon ? <View style={isLandscape ? styles.iconLandscape : styles.icon}>{renderIcon(tab.icon, index)}</View> : null}
-          <Text numberOfLines={1} style={labelStyle} testID={`${id}-label`}>
+          <Text numberOfLines={fill ? FIXED_TAB_LABEL_LINES : 1} style={labelStyle} testID={`${id}-label`}>
             {tab.label}
           </Text>
         </View>
@@ -393,8 +400,11 @@ const styles = StyleSheet.create({
   icon: { marginRight: 4 },
   iconLandscape: { marginRight: 6 },
   tabLabel: { flexShrink: 0, textAlign: 'center' },
+  fixedTabShrink: { flexShrink: 1 },
   cornerBadge: { position: 'absolute', top: -4, right: -4, minWidth: 18, minHeight: 18, paddingHorizontal: 4, borderRadius: 9999, alignItems: 'center', justifyContent: 'center', zIndex: 1 },
   cornerBadgeText: { fontSize: 10, lineHeight: 14, fontWeight: '700' },
   inlineBadge: { marginLeft: 8, minWidth: 20, paddingHorizontal: 6, borderRadius: 9999, alignItems: 'center', justifyContent: 'center' },
   inlineBadgeText: { fontSize: 12, lineHeight: 16, fontWeight: '700' },
 });
+
+const FIXED_TAB_INNER = StyleSheet.flatten([styles.tabInner, styles.fixedTabShrink]);

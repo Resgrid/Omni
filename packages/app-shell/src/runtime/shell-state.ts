@@ -48,9 +48,12 @@ export const getShellState = (): ShellState => useShellStore.getState();
 
 export const setShellState = (patch: Partial<ShellState>): void => useShellStore.setState(patch);
 
-/** Session-scoped fields go back to their defaults on sign-out (device preferences stay). */
+/**
+ * Session-scoped fields go back to their defaults on sign-out (device preferences and the connection state stay). The
+ * sync counts are the ending session's: a held outbox keeps its writes, but they are no longer this user's to act on.
+ */
 export function resetShellSessionState(): void {
-  useShellStore.setState({ departmentConfig: null, pushRegistrationArmed: false });
+  useShellStore.setState({ departmentConfig: null, pushRegistrationArmed: false, unsentChanges: 0, changesNeedingAttention: 0 });
 }
 
 /** Test helper. Not for app code. */

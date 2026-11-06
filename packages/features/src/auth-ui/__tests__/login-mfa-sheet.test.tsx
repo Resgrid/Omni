@@ -64,6 +64,20 @@ describe('LoginMfaSheet', () => {
     }
   });
 
+  it('offers the recovery code instead of saying nothing works when the member has an authenticator', async () => {
+    const auth = jest.requireMock<{ passkeysSupported: jest.Mock }>('@resgrid/auth');
+    auth.passkeysSupported.mockReturnValue(false);
+
+    try {
+      // The sign-in accepts only a passkey, which this device cannot use, but the member's authenticator has recovery codes.
+      await renderSheet(challenge({ methods: ['passkey'], enrolled: ['totp', 'passkey'], preferred: 'passkey' }));
+      expect(screen.queryByTestId('login-mfa-no-method')).toBeNull();
+      expect(screen.getByTestId('login-mfa-recovery-toggle')).toBeTruthy();
+    } finally {
+      auth.passkeysSupported.mockReturnValue(true);
+    }
+  });
+
   it('shows no such message while a method is offered', async () => {
     await renderSheet();
     expect(screen.queryByTestId('login-mfa-no-method')).toBeNull();

@@ -124,6 +124,31 @@ describe('TabBar', () => {
     expect(scrollTo).toHaveBeenLastCalledWith({ x: 345, animated: false });
     scrollTo.mockRestore();
   });
+
+  // The member home's Status / Staffing / Call bar shares a phone's width three ways: at 320 dp with large system text a
+  // label that could not shrink ran over the tab beside it.
+  it('wraps a fixed bar’s long label inside its own tab, and keeps a scrolling bar’s labels on one line', async () => {
+    const tabs: TabBarItem<View>[] = [
+      { key: 'today', label: 'Status' },
+      { key: 'mine', label: 'Staffing' },
+      { key: 'signup', label: 'Call' },
+    ];
+
+    const { rerender } = await render(<TabBar tabs={tabs} activeKey="today" onChange={jest.fn()} variant="segmented" scrollable={false} />);
+
+    for (const tab of tabs) {
+      const label = screen.getByTestId(`tab-bar-tab-${tab.key}-label`);
+      expect(label.props.numberOfLines).toBe(2);
+      expect(StyleSheet.flatten(label.props.style)).toMatchObject({ flexShrink: 1, textAlign: 'center' });
+      expect(StyleSheet.flatten(label.parent?.props.style)).toMatchObject({ flexShrink: 1 });
+    }
+
+    await rerender(<TabBar tabs={tabs} activeKey="today" onChange={jest.fn()} variant="pills" />);
+
+    const pillLabel = screen.getByTestId('tab-bar-tab-mine-label');
+    expect(pillLabel.props.numberOfLines).toBe(1);
+    expect(StyleSheet.flatten(pillLabel.props.style)).toMatchObject({ flexShrink: 0 });
+  });
 });
 
 // Hand-made tab rows are how the Shifts strip ended up without chevrons while SharedTabs had them. Tab bars come from
