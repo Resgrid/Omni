@@ -84,6 +84,14 @@ describe('conflicts reconciled against Core', () => {
     expect(protocol).not.toHaveProperty('ProtocolId');
   });
 
+  it('ProtocolResultData (the Protocols controller) uses Core ProtocolId and a numeric DepartmentId', () => {
+    const protocol = new models.ProtocolResultData();
+    expect(protocol.ProtocolId).toBe('');
+    expect(protocol).not.toHaveProperty('Id');
+    expect(protocol.DepartmentId).toBe(0);
+    expect(new models.GetProtocolResult().Data).toBeInstanceOf(models.ProtocolResultData);
+  });
+
   it('GroupResultData.TypeId is a string', () => {
     expect(new models.GroupResultData().TypeId).toBe('');
   });

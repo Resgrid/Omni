@@ -1,3 +1,4 @@
+import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { selectCallById, useCallsStore, useCommandStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import type { ResourceAssignment } from '@resgrid/models';
@@ -65,7 +66,7 @@ export default function CommandBoardScreen({ tier: tierOverride }: CommandBoardS
         toast.info(t('incident_command.position_unknown'));
         return;
       }
-      router.push(incidentCommandRoutes.resourceMap({ ...position, title: name }) as never);
+      router.push(incidentCommandRoutes.resourceMap({ ...position, title: name }));
     },
     [t, toast]
   );
@@ -82,7 +83,7 @@ export default function CommandBoardScreen({ tier: tierOverride }: CommandBoardS
             <Button onPress={() => router.push('/calls' as never)} testID="command-go-to-calls">
               <ButtonText>{t('incident_command.go_to_calls')}</ButtonText>
             </Button>
-            <Button variant="outline" onPress={() => router.push(incidentCommandRoutes.incidents() as never)} testID="command-go-to-incidents">
+            <Button variant="outline" onPress={() => router.push(incidentCommandRoutes.incidents())} testID="command-go-to-incidents">
               <ButtonText>{t('incident_command.nav_incidents')}</ButtonText>
             </Button>
           </HStack>
@@ -98,8 +99,8 @@ export default function CommandBoardScreen({ tier: tierOverride }: CommandBoardS
         <CommandBoardView
           callId={active}
           tier="command"
-          onOpenLog={() => router.push(incidentCommandRoutes.log(active) as never)}
-          onOpenMap={() => router.push(incidentCommandRoutes.map(active) as never)}
+          onOpenLog={() => pushRoutePath(router, incidentCommandRoutes.log(active))}
+          onOpenMap={() => pushRoutePath(router, incidentCommandRoutes.map(active))}
           onOpenCheckIns={() => router.push(`/call/${encodeURIComponent(active)}` as never)}
           onShowResourceOnMap={showOnMap}
         />

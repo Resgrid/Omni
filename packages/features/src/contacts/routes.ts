@@ -1,4 +1,4 @@
-import { isSafeRouteId } from '@resgrid/core/utils/route-ids';
+import { routePathWithId } from '@resgrid/core/navigation/route-paths';
 
 /** Contact routes (lists in Responder/Unit/IC/Dispatch/BigBoard; the detail opens as a page or from a call). */
 export const CONTACTS_ROUTE_PATTERNS = {
@@ -6,12 +6,8 @@ export const CONTACTS_ROUTE_PATTERNS = {
   detail: '/contacts/[id]',
 } as const;
 
-const encodeId = (id: string): string => {
-  if (!isSafeRouteId(id)) throw new Error('Unsafe contact route id');
-  return encodeURIComponent(id);
-};
-
 export const contactsRoutes = {
   list: (): string => '/contacts',
-  detail: (contactId: string): string => `/contacts/${encodeId(contactId)}`,
+  /** Null (reported) for a contact id `isSafeRouteId` refuses. */
+  detail: (contactId: string): string | null => routePathWithId('contacts.detail', contactId, (id) => `/contacts/${id}`),
 } as const;

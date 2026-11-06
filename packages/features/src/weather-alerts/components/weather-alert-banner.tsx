@@ -1,3 +1,4 @@
+import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { selectSevereAlerts, useWeatherAlertsStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import { HStack, Pressable, Text, View } from '@resgrid/ui';
@@ -20,7 +21,7 @@ export const WeatherAlertBanner: React.FC = () => {
   return (
     <Pressable
       testID="weather-alert-banner"
-      onPress={() => router.push(severe.length === 1 ? weatherAlertsRoutes.detail(top.WeatherAlertId) : weatherAlertsRoutes.list())}
+      onPress={() => pushRoutePath(router, severe.length === 1 ? weatherAlertsRoutes.detail(top.WeatherAlertId) : weatherAlertsRoutes.list())}
       accessibilityRole="button"
       style={StyleSheet.flatten([styles.banner, { backgroundColor: severityColor(top.Severity) }])}
     >

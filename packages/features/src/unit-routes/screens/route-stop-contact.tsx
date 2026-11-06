@@ -1,4 +1,5 @@
 import { ProtectedFieldIds, REDACTION_VALUE } from '@resgrid/auth';
+import { replaceRoutePath } from '@resgrid/core/navigation/route-paths';
 import { useRoutesStore } from '@resgrid/data';
 import { ContactField, parseCoordinates } from '@resgrid/features/contacts';
 import { useTranslation } from '@resgrid/i18n';
@@ -62,7 +63,7 @@ export default function RouteStopContactScreen({ stopId: stopIdProp, renderMap }
     });
   }, [contact, t]);
 
-  const back = () => (router.canGoBack() ? router.back() : router.replace(unitRoutesRoutes.active()));
+  const back = () => (router.canGoBack() ? router.back() : replaceRoutePath(router, unitRoutesRoutes.active()));
 
   if (!contact) {
     return (

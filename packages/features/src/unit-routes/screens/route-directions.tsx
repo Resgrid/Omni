@@ -1,3 +1,4 @@
+import { pushRoutePath, replaceRoutePath } from '@resgrid/core/navigation/route-paths';
 import { useRoutesStore } from '@resgrid/data';
 import { useNavigationHandoff } from '@resgrid/features/contacts';
 import { useDepartmentTimeZone } from '@resgrid/features/department-config';
@@ -68,7 +69,7 @@ export default function RouteDirectionsScreen({ instanceId: instanceIdProp, rend
     [handoff, t, toast]
   );
 
-  const back = () => (router.canGoBack() ? router.back() : router.replace(unitRoutesRoutes.active(null, instanceId)));
+  const back = () => (router.canGoBack() ? router.back() : replaceRoutePath(router, unitRoutesRoutes.active(null, instanceId)));
 
   if (!directions) {
     return (
@@ -101,7 +102,7 @@ export default function RouteDirectionsScreen({ instanceId: instanceIdProp, rend
             />
           </VStack>
           {inAppNavigation && next && instanceId ? (
-            <Button onPress={() => router.push(navigationRoutes.toRouteStops(instanceId))} testID="route-directions-navigate" style={{ minHeight: 52 }}>
+            <Button onPress={() => pushRoutePath(router, navigationRoutes.toRouteStops(instanceId))} testID="route-directions-navigate" style={{ minHeight: 52 }}>
               <View style={styles.buttonIcon}>
                 <Navigation size={16} color="#ffffff" />
               </View>

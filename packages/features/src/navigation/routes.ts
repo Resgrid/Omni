@@ -1,3 +1,4 @@
+import { isNumericRouteId, routePathWithId } from '@resgrid/core/navigation/route-paths';
 import { isSafeRouteId } from '@resgrid/core/utils/route-ids';
 
 /**
@@ -27,18 +28,12 @@ export const takePointNavigationRequest = (): PointNavigationRequest | null => {
   return point;
 };
 
+/** A refused id (a call id that is not a positive integer, an unsafe route instance id) builds no path (null, reported). */
 export const navigationRoutes = {
   /** Turn-by-turn to a call (the server resolves its location and checks the caller may see it). */
-  toCall: (callId: number | string): string => {
-    const id = Number(callId);
-    if (!Number.isInteger(id) || id <= 0) throw new Error('Unsafe call id');
-    return `/navigate?callId=${id}`;
-  },
+  toCall: (callId: number | string): string | null => routePathWithId('navigation.to_call', callId, (id) => `/navigate?callId=${id}`, isNumericRouteId),
   /** Turn-by-turn through a running route's remaining stops. */
-  toRouteStops: (routeInstanceId: string): string => {
-    if (!isSafeRouteId(routeInstanceId)) throw new Error('Unsafe route instance id');
-    return `/navigate?instanceId=${encodeURIComponent(routeInstanceId)}`;
-  },
+  toRouteStops: (routeInstanceId: string): string | null => routePathWithId('navigation.to_route_stops', routeInstanceId, (id) => `/navigate?instanceId=${id}`),
   /** Turn-by-turn to the point passed to `requestPointNavigation` first. */
   toPoint: (): string => '/navigate',
 };

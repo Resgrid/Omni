@@ -1,4 +1,5 @@
 import { useCapability } from '@resgrid/config';
+import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { type CallListItem, useCallsStore, useCheckInTimersStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import type { DispatchedEventResultData } from '@resgrid/models';
@@ -79,16 +80,16 @@ export default function CallListScreen({ density, realtime = true, onOpenCall }:
   const openCall = useCallback(
     (call: CallListItem) => {
       if (call.queued?.state === 'rejected') {
-        router.push(callCorrect(call.queued.localId));
+        pushRoutePath(router, callCorrect(call.queued.localId));
         return;
       }
       if (onOpenCall) onOpenCall(call.CallId);
-      else router.push(callDetail(call.CallId));
+      else pushRoutePath(router, callDetail(call.CallId));
     },
     [onOpenCall, router]
   );
 
-  const openCallById = useCallback((callId: string) => (onOpenCall ? onOpenCall(callId) : router.push(callDetail(callId))), [onOpenCall, router]);
+  const openCallById = useCallback((callId: string) => (onOpenCall ? onOpenCall(callId) : pushRoutePath(router, callDetail(callId))), [onOpenCall, router]);
 
   const dispatchesFor = useCallback((callId: string): DispatchedEventResultData[] | null => callExtrasById[callId]?.Dispatches ?? callDispatches[callId] ?? null, [callExtrasById, callDispatches]);
 

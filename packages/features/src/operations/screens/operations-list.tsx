@@ -1,4 +1,5 @@
 import { FeatureFlagKeys, useFeatureFlagStatus } from '@resgrid/auth';
+import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { useOperationsStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import type { Deployment } from '@resgrid/models';
@@ -46,7 +47,7 @@ export default function OperationsListScreen() {
     if (flagStatus === 'enabled') void load(filter);
   }, [flagStatus, filter, load]);
 
-  const openDeployment = useCallback((deployment: Deployment) => router.push(operationsDeployment(deployment.Id)), [router]);
+  const openDeployment = useCallback((deployment: Deployment) => pushRoutePath(router, operationsDeployment(deployment.Id)), [router]);
 
   if (flagStatus === 'disabled') return <ZeroState icon={BriefcaseBusiness} heading={t('operations.disabled')} testID="operations-disabled" />;
   if (flagStatus === 'unknown') return <Loading />;

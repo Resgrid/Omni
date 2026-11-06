@@ -1,4 +1,5 @@
 import { useSecurity, useTerm } from '@resgrid/auth';
+import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { searchNotes, useNotesStore } from '@resgrid/data';
 import { CallNotesPanel } from '@resgrid/features/calls';
 import { NoteCard, noteRoutes } from '@resgrid/features/notes';
@@ -34,7 +35,7 @@ export const NotesPanel: React.FC<NotesPanelProps> = ({ callId, onNewNote, flex,
   const [query, setQuery] = useState('');
   const visible = useMemo(() => searchNotes(notes, query), [notes, query]);
 
-  const openNote = useCallback((note: NoteResultData) => router.push(noteRoutes.noteDetail(note.NoteId)), []);
+  const openNote = useCallback((note: NoteResultData) => pushRoutePath(router, noteRoutes.noteDetail(note.NoteId)), []);
   const renderItem = useCallback(({ item }: { item: NoteResultData }) => <NoteCard note={item} onPress={openNote} />, [openNote]);
 
   return (

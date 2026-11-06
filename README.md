@@ -184,10 +184,10 @@ APP_VARIANT=bigboard pnpm --filter @resgrid/desktop dev
 
 ### Choose a server
 
-Development builds connect to Resgrid's QA server by default. To sign in with your account on the hosted service or on your own server, set `BASE_API_URL` before starting the app, or use **Change Server URL** on the sign-in screen:
+Every build, development included, connects to Resgrid's production US West server (`https://api.resgrid.com`) unless `BASE_API_URL` names another one. That is deliberate: a build or deployment that lost its variables still reaches the server members use, and never sends their sessions to QA. To work against QA or your own server, set `BASE_API_URL` before starting the app, or use **Change Server URL** on the sign-in screen:
 
 ```bash
-BASE_API_URL=https://api.resgrid.com pnpm web:unit
+BASE_API_URL=https://qaapi.resgrid.dev pnpm web:unit
 ```
 
 On the web, the dev server passes the app's server requests on for it (`apps/omni/metro/dev-api-proxy.js`): a page on `http://localhost:8081` is on no Resgrid server's CORS allowlist, so the browser would refuse the responses. Any server works without changing its CORS settings. Live updates (SignalR) use Server-Sent Events there, because the dev server carries no WebSockets. Web exports and the desktop app call the servers directly.

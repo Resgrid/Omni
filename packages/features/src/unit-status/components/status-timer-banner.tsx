@@ -3,7 +3,7 @@ import { useStatusContext } from '@resgrid/features/status';
 import { useUnitStatusTimer } from '@resgrid/features/unit-status-alerts';
 import { useTranslation } from '@resgrid/i18n';
 import { HStack, Pressable, Text } from '@resgrid/ui';
-import { type Href, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { ChevronRight, CircleCheck, Timer } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React from 'react';
@@ -31,7 +31,7 @@ const ActiveUnitTimerBanner: React.FC<{ unitId: string; onPress?: () => void }> 
   const colors = timerToneColors(text.tone, isDark);
   const label = [text.headline, text.detail].filter((part) => !!part).join('. ');
   // SAFETY: `/console` is declared by every app with the unit status module, which is the only place this renders.
-  const openConsole = () => router.push(unitStatusRoutes.console() as Href);
+  const openConsole = () => router.push(unitStatusRoutes.console());
 
   return (
     <Pressable

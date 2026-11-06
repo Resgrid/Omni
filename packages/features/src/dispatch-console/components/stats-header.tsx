@@ -47,8 +47,10 @@ const StatTile: React.FC<StatTileProps> = React.memo(({ icon: Icon, label, value
   const isLightWash = contentOnFill(background) !== '#ffffff';
   const color = isLightWash ? tone.color : tone.darkColor;
 
+  // `grow`, not `flex-1`: the tile has no height of its own, and flex-1's zero basis and shrink can squash this row to its
+  // padding on a relayout. `grow` keeps the content height and still fills a taller neighbour's row.
   const content = (
-    <HStack space="sm" className="flex-1 items-center rounded-lg p-2" style={{ backgroundColor: background }}>
+    <HStack space="sm" className="grow items-center rounded-lg p-2" style={{ backgroundColor: background }} testID={`${testID}-body`}>
       <View style={StyleSheet.flatten([styles.icon, { backgroundColor: color }])}>
         <Icon size={16} color="#ffffff" />
       </View>

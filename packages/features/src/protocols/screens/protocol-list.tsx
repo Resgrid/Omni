@@ -1,3 +1,4 @@
+import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { useProtocolsStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import type { CallProtocolsResultData } from '@resgrid/models';
@@ -32,7 +33,7 @@ export default function ProtocolListScreen() {
 
   const visible = useMemo(() => searchProtocols(protocols, query), [protocols, query]);
 
-  const open = useCallback((protocol: CallProtocolsResultData) => router.push(protocolRoutes.protocolDetail(protocol.Id)), []);
+  const open = useCallback((protocol: CallProtocolsResultData) => pushRoutePath(router, protocolRoutes.protocolDetail(protocol.Id)), []);
 
   return (
     <View style={styles.screen} className="bg-background-50" testID="protocol-list-screen">

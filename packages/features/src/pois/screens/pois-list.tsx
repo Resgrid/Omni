@@ -1,3 +1,4 @@
+import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { usePoisStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import { type PoiResultData } from '@resgrid/models';
@@ -39,7 +40,7 @@ export default function PoisListScreen({ onSelectPoi, renderMap }: PoisListScree
 
   const capabilities = useMemo(() => collectPoiCapabilities(pois), [pois]);
   const visible = useMemo(() => filterPois(pois, filter).sort((a, b) => poiLabel(a).localeCompare(poiLabel(b))), [filter, pois]);
-  const select = useCallback((poi: PoiResultData) => (onSelectPoi ? onSelectPoi(poi) : router.push(poisRoutes.detail(poi.PoiId))), [onSelectPoi]);
+  const select = useCallback((poi: PoiResultData) => (onSelectPoi ? onSelectPoi(poi) : pushRoutePath(router, poisRoutes.detail(poi.PoiId))), [onSelectPoi]);
 
   return (
     <View className="flex-1 bg-background-50 px-4 pt-4" testID="pois-list-screen">

@@ -1,9 +1,8 @@
 import { useAuthStore } from '@resgrid/auth';
 import { type RealtimeHubOutage, useRealtimeStore } from '@resgrid/realtime';
-import { Button, ButtonText, HStack, RealtimeStatusBanner, Spinner, SyncAttentionToast, Text, useSettledFlag, useThemeColors, VStack } from '@resgrid/ui';
+import { Button, ButtonText, HStack, RealtimeStatusBanner, SyncAttentionToast, Text, VStack } from '@resgrid/ui';
 import { useRouter } from 'expo-router';
 import React, { useMemo } from 'react';
-import { StyleSheet, View } from 'react-native';
 
 import { useShellTranslation } from '../i18n';
 import { useAppInit } from '../init/app-init';
@@ -41,45 +40,6 @@ export function ShellSyncAttentionToast() {
   const target = href.settingsStorage();
 
   return <SyncAttentionToast attentionCount={attention} onOpenQueue={target ? () => router.push(target) : undefined} />;
-}
-
-/** A bootstrap quicker than this shows no indicator at all; one that shows stays long enough to read. */
-export const SESSION_INIT_INDICATOR_DELAY_MS = 1000;
-export const SESSION_INIT_INDICATOR_MIN_VISIBLE_MS = 1000;
-
-/**
- * The signed-in bootstrap's first run, without blocking anything: launch never puts a spinner over the app (owner
- * decision, 2026-11-04). Rights, flags and terminology are persisted, so every screen works from the last session's
- * copies while the bootstrap refreshes them, and lists show their own loading inside the page. A small chip at the
- * top of the content says so once the run has taken a moment (a quick one would only flash it); it takes no touches
- * and no space, so nothing under a finger moves when it goes.
- */
-export function SessionInitIndicator() {
-  const init = useAppInit();
-  const colors = useThemeColors();
-  const { t } = useShellTranslation();
-  const isVisible = useSettledFlag(init.isSessionLoading, { delayMs: SESSION_INIT_INDICATOR_DELAY_MS, minVisibleMs: SESSION_INIT_INDICATOR_MIN_VISIBLE_MS });
-
-  if (!isVisible) {
-    return null;
-  }
-
-  return (
-    <View pointerEvents="none" style={styles.indicatorHost} testID="shell-init-loading">
-      <View
-        accessible
-        accessibilityRole="progressbar"
-        accessibilityLabel={t('shell.loading')}
-        accessibilityState={{ busy: true }}
-        style={StyleSheet.flatten([styles.indicator, { backgroundColor: colors.surfaceRaised, borderColor: colors.border }])}
-      >
-        <Spinner size="small" color={colors.primary} />
-        <Text size="sm" style={StyleSheet.flatten([styles.indicatorText, { color: colors.textMuted }])}>
-          {t('shell.loading')}
-        </Text>
-      </View>
-    </View>
-  );
 }
 
 /**
@@ -128,13 +88,6 @@ export function RegisteredOverlays() {
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  // Top of the content area, centred; the host spans the width so the chip can centre, and passes every touch through.
-  indicatorHost: { position: 'absolute', top: 8, left: 0, right: 0, alignItems: 'center', zIndex: 10 },
-  indicator: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 9999, borderWidth: 1 },
-  indicatorText: { marginLeft: 8 },
-});
 
 /** Banners registered with `registerShellBanner`, stacked under the app bar in registration order. */
 export function RegisteredBanners() {

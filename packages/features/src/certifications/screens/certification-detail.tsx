@@ -1,3 +1,4 @@
+import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { useCertificationsStore } from '@resgrid/data';
 import { ConfirmDialog, goBackOr } from '@resgrid/features/auth-ui';
 import { useTranslation } from '@resgrid/i18n';
@@ -224,7 +225,7 @@ export default function CertificationDetailScreen({ certificationId }: Certifica
           {feedbackFor('record')}
 
           <HStack space="sm" className="mb-3">
-            <Button variant="outline" className="flex-1 bg-background-0" onPress={() => router.push(certificationsRoutes.edit(detail.Id))} testID="certification-edit">
+            <Button variant="outline" className="flex-1 bg-background-0" onPress={() => pushRoutePath(router, certificationsRoutes.edit(detail.Id))} testID="certification-edit">
               <View style={styles.buttonIcon}>
                 <Pencil size={16} color={colors.primaryStrong} />
               </View>

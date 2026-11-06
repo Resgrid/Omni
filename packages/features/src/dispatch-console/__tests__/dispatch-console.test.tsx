@@ -217,6 +217,17 @@ describe('DispatchConsoleScreen layout', () => {
     expect(router.push).toHaveBeenCalledWith('/scheduled-calls');
   });
 
+  it('lets each stat tile keep its content height (grow) rather than flex-1, which a relayout can squash to its padding', async () => {
+    await setWindow(1366, 1024);
+    await renderConsole();
+
+    for (const id of ['stat-active-calls', 'stat-pending-calls', 'stat-scheduled-calls', 'stat-units-available']) {
+      const className = String(screen.getByTestId(`${id}-body`).props.className ?? '');
+      expect(className).toMatch(/\bgrow\b/);
+      expect(className).not.toMatch(/\bflex-1\b/);
+    }
+  });
+
   it('merges units and personnel into one panel with "Single list" and hides unavailable ones with "Available only"', async () => {
     await setWindow(1366, 1024);
     await renderConsole();

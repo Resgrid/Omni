@@ -149,7 +149,7 @@ describe('message format', () => {
   it('builds safe routes', () => {
     expect(messageRoutes.detail('12')).toBe('/messages/12');
     expect(messageRoutes.compose()).toBe('/messages/new');
-    expect(() => messageRoutes.detail('a/b')).toThrow();
+    expect(messageRoutes.detail('a/b')).toBeNull();
   });
 });
 

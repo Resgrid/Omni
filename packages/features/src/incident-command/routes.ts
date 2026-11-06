@@ -1,9 +1,10 @@
-import { isSafeRouteId } from '@resgrid/core/utils/route-ids';
+import { routePathWithId } from '@resgrid/core/navigation/route-paths';
 
 /**
  * Incident-command routes. IC keeps its legacy paths (`/command`, `/incidents`, `/command-log/[callId]`,
  * `/command-map/[callId]`, `/resource-map`); Dispatch's full-screen board is `/call/[id]/command`. Ids pass
- * `isSafeRouteId` so a value from a push payload or a link can never build a path outside these trees.
+ * `isSafeRouteId` so a value from a push payload or a link can never build a path outside these trees; a refused id
+ * builds no path (null, reported).
  */
 export const INCIDENT_COMMAND_ROUTE_PATTERNS = {
   board: '/command',
@@ -13,11 +14,6 @@ export const INCIDENT_COMMAND_ROUTE_PATTERNS = {
   map: '/command-map/[callId]',
   resourceMap: '/resource-map',
 } as const;
-
-const encodeId = (id: string): string => {
-  if (!isSafeRouteId(id)) throw new Error('Unsafe incident command route id');
-  return encodeURIComponent(id);
-};
 
 export interface ResourceMapTarget {
   latitude: number;
@@ -29,9 +25,9 @@ export interface ResourceMapTarget {
 export const incidentCommandRoutes = {
   board: (): string => '/command',
   incidents: (): string => '/incidents',
-  callBoard: (callId: string): string => `/call/${encodeId(callId)}/command`,
-  log: (callId: string): string => `/command-log/${encodeId(callId)}`,
-  map: (callId: string): string => `/command-map/${encodeId(callId)}`,
+  callBoard: (callId: string): string | null => routePathWithId('incident_command.call_board', callId, (id) => `/call/${id}/command`),
+  log: (callId: string): string | null => routePathWithId('incident_command.log', callId, (id) => `/command-log/${id}`),
+  map: (callId: string): string | null => routePathWithId('incident_command.map', callId, (id) => `/command-map/${id}`),
   resourceMap: ({ latitude, longitude, title, color }: ResourceMapTarget): string => {
     const params = [`latitude=${encodeURIComponent(String(latitude))}`, `longitude=${encodeURIComponent(String(longitude))}`];
     if (title) params.push(`title=${encodeURIComponent(title)}`);

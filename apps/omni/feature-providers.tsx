@@ -4,6 +4,7 @@
 import { getShellApiContext, getShellOfflineRuntime, setActiveCallId, setActiveUnitId, useActiveCallId, useActiveUnitId, useShellStore } from '@resgrid/app-shell';
 import { useActiveVariant } from '@resgrid/config';
 import { logger } from '@resgrid/core';
+import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { ChatIdentityProvider } from '@resgrid/features/chat';
 import { type NavigationHandoff, NavigationHandoffProvider, type NavigationTarget } from '@resgrid/features/contacts';
 import { useInAppNavigationAvailable } from '@resgrid/features/navigation/hooks/use-in-app-navigation';
@@ -94,7 +95,7 @@ const openExternalNavigation = openNavigationTarget;
 const openInAppNavigation = (target: NavigationTarget): Promise<boolean> => {
   if ('address' in target) return openExternalNavigation(target);
   if (target.callId !== undefined) {
-    router.push(navigationRoutes.toCall(target.callId));
+    pushRoutePath(router, navigationRoutes.toCall(target.callId));
   } else {
     requestPointNavigation({ latitude: target.latitude, longitude: target.longitude, name: target.label ?? null });
     router.push(navigationRoutes.toPoint());

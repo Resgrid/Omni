@@ -1,3 +1,4 @@
+import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { useTranslation } from '@resgrid/i18n';
 import { Button, ButtonText, HStack, ScrollView, View, ZeroState } from '@resgrid/ui';
 import { router } from 'expo-router';
@@ -45,7 +46,7 @@ export default function DashboardScreen({ showToolbar = true, onOpenConfigure }:
 
   useDashboardData(types);
 
-  const openConfigure = useCallback((widget: WidgetType | null) => (onOpenConfigure ? onOpenConfigure(widget) : router.push(dashboardRoutes.configure(widget))), [onOpenConfigure]);
+  const openConfigure = useCallback((widget: WidgetType | null) => (onOpenConfigure ? onOpenConfigure(widget) : pushRoutePath(router, dashboardRoutes.configure(widget))), [onOpenConfigure]);
   const handleLayout = useCallback((event: LayoutChangeEvent) => setContainerWidth(Math.round(event.nativeEvent.layout.width)), []);
   const handleAdd = useCallback((type: WidgetType) => void addWidget(type, config), [addWidget, config]);
   const handleMove = useCallback((id: string, cell: { x: number; y: number }) => moveWidget(id, cell, config.numColumns), [config.numColumns, moveWidget]);

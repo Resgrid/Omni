@@ -3,11 +3,12 @@ import type { CallProtocolsResultData } from '@resgrid/models';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-import { unwrapList } from '../core/envelope';
+import { unwrapItem, unwrapList } from '../core/envelope';
 import { dataPersistOptions, registerPersistedStore } from '../core/persist';
 import { registerDataStoreReset } from '../core/reset';
 import { getDataApiContext } from '../core/runtime';
 import { cacheOptions, createSliceRunner, emptySliceMeta, type FetchOptions, type SliceMeta, type SliceRunner } from '../core/slices';
+import { type PersistedProtocolsV0, toCallProtocol } from './protocol-wire';
 
 type ProtocolsSlice = 'protocols' | 'detail';
 
@@ -23,6 +24,20 @@ export interface ProtocolsState extends ProtocolsData {
 
 const initialData = (): ProtocolsData => ({ ...emptySliceMeta<ProtocolsSlice>(), protocols: [], protocolDetailsById: {} });
 
+type PersistedProtocols = Pick<ProtocolsData, 'protocols' | 'protocolDetailsById' | 'fetchedAt'>;
+
+/**
+ * v0 → v1: version 0 kept the `Protocols` controller's raw items (`ProtocolId`, no `Id`), so a protocol could not be
+ * opened until the list was fetched again; they now convert to the screen shape like a fresh answer does.
+ */
+export function migrateProtocolsStorage(persisted: PersistedProtocolsV0 | null): PersistedProtocols {
+  return {
+    protocols: Array.isArray(persisted?.protocols) ? persisted.protocols.map(toCallProtocol) : [],
+    protocolDetailsById: persisted?.protocolDetailsById ?? {},
+    fetchedAt: persisted?.fetchedAt ?? {},
+  };
+}
+
 let runner: SliceRunner<ProtocolsSlice, ProtocolsState>;
 
 export const useProtocolsStore = create<ProtocolsState>()(
@@ -34,7 +49,7 @@ export const useProtocolsStore = create<ProtocolsState>()(
         fetchProtocols: async (options) => {
           await runner.run(
             'protocols',
-            async () => unwrapList(await getAllProtocols(getDataApiContext(), cacheOptions(options))),
+            async () => unwrapList(await getAllProtocols(getDataApiContext(), cacheOptions(options))).map(toCallProtocol),
             (protocols) => ({ protocols }),
             { trailing: options?.bypassCache === true }
           );
@@ -44,7 +59,12 @@ export const useProtocolsStore = create<ProtocolsState>()(
           if (cached && !options?.bypassCache) return cached;
           const result = await runner.run(
             'detail',
-            async () => unwrapList(await getProtocol(getDataApiContext(), { protocolId }))[0] ?? null,
+            // GetProtocol answers one protocol in `Data` (not a list), so reading it as a list never kept a detail.
+            async () => {
+              const protocol = unwrapItem(await getProtocol(getDataApiContext(), { protocolId }));
+
+              return protocol ? toCallProtocol(protocol) : null;
+            },
             (protocol, state) => (protocol ? { protocolDetailsById: { ...state.protocolDetailsById, [protocolId]: protocol } } : {}),
             { flightKey: `detail:${protocolId}` }
           );
@@ -52,9 +72,12 @@ export const useProtocolsStore = create<ProtocolsState>()(
         },
       };
     },
-    dataPersistOptions<ProtocolsState, Pick<ProtocolsData, 'protocols' | 'protocolDetailsById' | 'fetchedAt'>>({
+    dataPersistOptions<ProtocolsState, PersistedProtocols>({
       name: 'omni-protocols-storage',
+      version: 1,
       partialize: (state) => ({ protocols: state.protocols, protocolDetailsById: state.protocolDetailsById, fetchedAt: state.fetchedAt }),
+      // SAFETY: zustand hands over whatever JSON this name held; version 0 is the PersistedProtocolsV0 shape and every field is optional.
+      migrate: (persisted) => migrateProtocolsStorage(persisted as PersistedProtocolsV0 | null),
     })
   )
 );

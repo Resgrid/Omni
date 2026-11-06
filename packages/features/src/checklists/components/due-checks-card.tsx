@@ -1,3 +1,4 @@
+import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { useTranslation } from '@resgrid/i18n';
 import { Button, ButtonText } from '@resgrid/ui';
 import { useRouter } from 'expo-router';
@@ -46,7 +47,7 @@ export const DueChecksCard: React.FC<DueChecksCardProps> = ({ onPress, testID = 
   const label = count == null ? t('checklists.labels.DueChecks') : `${t('checklists.labels.DueChecks')} (${count >= PAGE_SIZE ? `${PAGE_SIZE}+` : count})`;
 
   return (
-    <Button variant="outline" onPress={onPress ?? (() => router.push(checklistsList()))} accessibilityLabel={label} testID={testID}>
+    <Button variant="outline" onPress={onPress ?? (() => pushRoutePath(router, checklistsList()))} accessibilityLabel={label} testID={testID}>
       <View>
         <ClipboardCheck size={16} color="#2563eb" />
       </View>

@@ -1,3 +1,4 @@
+import { pushRoutePath, replaceRoutePath } from '@resgrid/core/navigation/route-paths';
 import { useRoutesStore, useUnitsStore } from '@resgrid/data';
 import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useStatusContext } from '@resgrid/features/status';
@@ -61,7 +62,7 @@ export default function RouteStartScreen({ planId: planIdProp, renderMap }: Rout
   const otherRouteRunning = !!activeInstance && !!plan && !runningHere;
   const canStart = !!plan && canStartPlan(plan.UnitId, activeUnitId) && !activeInstance;
   const back = () => (router.canGoBack() ? router.back() : router.replace(unitRoutesRoutes.list()));
-  const openRunning = () => (plan && activeInstance ? router.replace(unitRoutesRoutes.active(plan.RoutePlanId, activeInstance.RouteInstanceId)) : undefined);
+  const openRunning = () => (plan && activeInstance ? replaceRoutePath(router, unitRoutesRoutes.active(plan.RoutePlanId, activeInstance.RouteInstanceId)) : undefined);
 
   const start = async () => {
     if (!plan || !activeUnitId || isStarting) return;
@@ -75,7 +76,7 @@ export default function RouteStartScreen({ planId: planIdProp, renderMap }: Rout
     const ok = await useRoutesStore.getState().startRouteInstance(plan.RoutePlanId, Number(activeUnitId));
     setIsStarting(false);
     if (ok) {
-      router.replace(unitRoutesRoutes.active(plan.RoutePlanId, useRoutesStore.getState().activeInstance?.RouteInstanceId ?? null));
+      replaceRoutePath(router, unitRoutesRoutes.active(plan.RoutePlanId, useRoutesStore.getState().activeInstance?.RouteInstanceId ?? null));
       return;
     }
     const error = useRoutesStore.getState().actionError;
@@ -126,7 +127,7 @@ export default function RouteStartScreen({ planId: planIdProp, renderMap }: Rout
             ) : null}
             {stop.Notes ? <Text className="text-xs italic text-typography-500">{stop.Notes}</Text> : null}
             {stop.ContactId ? (
-              <Pressable onPress={() => router.push(unitRoutesRoutes.stopContact(stop.RouteStopId))} accessibilityRole="button" testID={`route-start-contact-${stop.RouteStopId}`}>
+              <Pressable onPress={() => pushRoutePath(router, unitRoutesRoutes.stopContact(stop.RouteStopId))} accessibilityRole="button" testID={`route-start-contact-${stop.RouteStopId}`}>
                 <HStack space="xs" className="items-center py-1">
                   <View>
                     <User size={12} color="#2563eb" />
@@ -148,7 +149,7 @@ export default function RouteStartScreen({ planId: planIdProp, renderMap }: Rout
         title={t('routes.view_route')}
         onBack={back}
         right={
-          <Pressable onPress={() => router.push(unitRoutesRoutes.history(plan.RoutePlanId))} accessibilityRole="button" accessibilityLabel={t('routes.history')} testID="route-start-history" className="p-2">
+          <Pressable onPress={() => pushRoutePath(router, unitRoutesRoutes.history(plan.RoutePlanId))} accessibilityRole="button" accessibilityLabel={t('routes.history')} testID="route-start-history" className="p-2">
             <History size={20} color="#2563eb" />
           </Pressable>
         }

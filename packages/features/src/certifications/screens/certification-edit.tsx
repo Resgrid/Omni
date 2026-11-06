@@ -1,3 +1,4 @@
+import { replaceRoutePath } from '@resgrid/core/navigation/route-paths';
 import { useCertificationsStore } from '@resgrid/data';
 import { goBackOr, OptionSheet } from '@resgrid/features/auth-ui';
 import { useTranslation } from '@resgrid/i18n';
@@ -59,7 +60,7 @@ export default function CertificationEditScreen({ certificationId }: Certificati
   // The id whose read has finished. Until then a record the store does not hold is loading, not missing: Core's
   // not_found reply resolves without an error, so the store's error alone cannot tell the two apart.
   const [settledId, setSettledId] = useState<number | null>(null);
-  const goBack = useCallback(() => goBackOr(id ? certificationsRoutes.detail(id) : certificationsRoutes.list()), [id]);
+  const goBack = useCallback(() => goBackOr((id ? certificationsRoutes.detail(id) : null) ?? certificationsRoutes.list()), [id]);
 
   useEffect(() => {
     const store = useCertificationsStore.getState();
@@ -227,7 +228,7 @@ const CertificationForm: React.FC<CertificationFormProps> = ({ existing, title, 
       });
       if (saved) {
         showToast('success', t('certifications.saved'));
-        router.replace(certificationsRoutes.detail(saved.Id));
+        replaceRoutePath(router, certificationsRoutes.detail(saved.Id));
         return;
       }
       const error = useCertificationsStore.getState().actionError;

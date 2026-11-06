@@ -105,7 +105,7 @@ describe('navigation routes', () => {
   it('builds and reads /navigate links and hands a point over in memory', () => {
     expect(navigationRoutes.toCall(12)).toBe('/navigate?callId=12');
     expect(navigationRoutes.toRouteStops('ri-1')).toBe('/navigate?instanceId=ri-1');
-    expect(() => navigationRoutes.toCall(-1)).toThrow();
+    expect(navigationRoutes.toCall(-1)).toBeNull();
     expect(readNavigationParams({ callId: '12' })).toEqual({ kind: 'call', callId: 12 });
     expect(readNavigationParams({ instanceId: 'ri-1' })).toEqual({ kind: 'route', routeInstanceId: 'ri-1' });
     expect(readNavigationParams({ callId: 'abc' })).toBeNull();

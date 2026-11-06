@@ -1,3 +1,4 @@
+import { pushRoutePath, replaceRoutePath } from '@resgrid/core/navigation/route-paths';
 import { RouteInstanceStatus, useRoutesStore } from '@resgrid/data';
 import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
@@ -56,7 +57,7 @@ export default function RouteStopScreen({ stopId: stopIdProp, renderMap }: Route
   const id = stop?.RouteInstanceStopId ?? null;
   const mapStops = useMemo(() => (stop ? instanceMapStops([stop], id) : []), [id, stop]);
   const geofence = useMemo(() => stopGeofence(stop, plan?.GeofenceRadiusMeters), [plan?.GeofenceRadiusMeters, stop]);
-  const back = () => (router.canGoBack() ? router.back() : router.replace(unitRoutesRoutes.active()));
+  const back = () => (router.canGoBack() ? router.back() : replaceRoutePath(router, unitRoutesRoutes.active()));
 
   if (!stop) {
     return (
@@ -140,7 +141,7 @@ export default function RouteStopScreen({ stopId: stopIdProp, renderMap }: Route
         </View>
 
         {hasContact ? (
-          <Pressable onPress={() => router.push(unitRoutesRoutes.stopContact(stop.RouteStopId))} accessibilityRole="button" testID="route-stop-contact" className="mt-2 bg-background-0 p-4">
+          <Pressable onPress={() => pushRoutePath(router, unitRoutesRoutes.stopContact(stop.RouteStopId))} accessibilityRole="button" testID="route-stop-contact" className="mt-2 bg-background-0 p-4">
             <HStack space="md" className="items-center">
               <View style={styles.contactIcon}>
                 <User size={20} color="#3b82f6" />

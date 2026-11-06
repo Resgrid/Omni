@@ -94,7 +94,7 @@ describe('routes and nav', () => {
     expect(dashboardRoutes.home()).toBe('/home');
     expect(dashboardRoutes.configure()).toBe('/configure');
     expect(dashboardRoutes.configure('unit_alerts')).toBe('/configure?widget=unit_alerts');
-    expect(() => dashboardRoutes.configure('../x' as never)).toThrow();
+    expect(dashboardRoutes.configure('../x' as never)).toBeNull();
     expect(parseConfigureWidgetParam(['map'])).toBe('map');
     expect(parseConfigureWidgetParam('nope')).toBeNull();
     expect(dashboardNav.map((entry) => entry.href)).toEqual(['/home', '/configure']);

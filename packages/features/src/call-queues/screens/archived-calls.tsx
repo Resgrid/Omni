@@ -1,10 +1,11 @@
+import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { formatUtcInDepartmentTime } from '@resgrid/core/utils/dates';
 import { useArchivedCallsStore, useCallsStore } from '@resgrid/data';
 import { callRoutes, priorityOptions } from '@resgrid/features/calls';
 import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import { DateTimeField, HStack, Loading, Pressable, ScrollRow, Text, ZeroState } from '@resgrid/ui';
-import { type Href, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Archive, Filter, Search } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -164,7 +165,7 @@ export default function ArchivedCallsScreen({ showHeader = true, now = Date.now 
       <QueueTable
         calls={visible}
         columns={columns}
-        onOpenCall={(call) => router.push(callRoutes.callDetail(call.CallId) as Href)}
+        onOpenCall={(call) => pushRoutePath(router, callRoutes.callDetail(call.CallId))}
         refreshing={isRefreshing}
         onRefresh={handleRefresh}
         testID="archived-calls-table"

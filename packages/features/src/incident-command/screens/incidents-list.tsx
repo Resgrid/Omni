@@ -64,7 +64,7 @@ export default function IncidentsListScreen() {
       if (!store.boards[callId]?.board) await store.refreshBoard(callId, { bypassCache: true });
       if (useCommandStore.getState().boards[callId]?.board) {
         useCommandStore.getState().switchCommand(callId);
-        router.push(incidentCommandRoutes.board() as never);
+        router.push(incidentCommandRoutes.board());
       } else {
         toast.error(t('incident_command.track_failed'));
       }

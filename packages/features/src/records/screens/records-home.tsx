@@ -1,4 +1,5 @@
 import { useSecurity, useTerm } from '@resgrid/auth';
+import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { selectOwnDrafts, selectReturnedRecords, useRecordDeploymentsStore, useRecordsStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import type { FieldRecordContextInput } from '@resgrid/models';
@@ -86,7 +87,7 @@ export default function RecordsHomeScreen({ context: contextProp }: RecordsHomeS
           <EmptyRow text={t('records.no_assignments')} />
         ) : (
           assignments.map((assignment) => (
-            <AssignmentItem key={assignment.AssignmentId} assignment={assignment} onPress={() => router.push(recordDetail(assignment.RecordId))} testID={`records-assignment-${assignment.AssignmentId}`} />
+            <AssignmentItem key={assignment.AssignmentId} assignment={assignment} onPress={() => pushRoutePath(router, recordDetail(assignment.RecordId))} testID={`records-assignment-${assignment.AssignmentId}`} />
           ))
         )}
       </RecordsSection>
@@ -96,10 +97,10 @@ export default function RecordsHomeScreen({ context: contextProp }: RecordsHomeS
         ) : (
           <>
             {pending.map((draft) => (
-              <PendingDraftItem key={draft.clientRecordId} draft={draft} onPress={() => router.push(recordNew(draft.clientRecordId))} testID={`records-pending-${draft.clientRecordId}`} />
+              <PendingDraftItem key={draft.clientRecordId} draft={draft} onPress={() => pushRoutePath(router, recordNew(draft.clientRecordId))} testID={`records-pending-${draft.clientRecordId}`} />
             ))}
             {ownDrafts.map((record) => (
-              <RecordListItem key={record.RecordId} record={record} onPress={() => router.push(recordDetail(record.RecordId))} testID={`records-draft-${record.RecordId}`} />
+              <RecordListItem key={record.RecordId} record={record} onPress={() => pushRoutePath(router, recordDetail(record.RecordId))} testID={`records-draft-${record.RecordId}`} />
             ))}
           </>
         )}
@@ -108,7 +109,7 @@ export default function RecordsHomeScreen({ context: contextProp }: RecordsHomeS
         {returned.length === 0 ? (
           <EmptyRow text={t('records.no_returned')} />
         ) : (
-          returned.map((record) => <RecordListItem key={record.RecordId} record={record} onPress={() => router.push(recordDetail(record.RecordId))} testID={`records-returned-${record.RecordId}`} />)
+          returned.map((record) => <RecordListItem key={record.RecordId} record={record} onPress={() => pushRoutePath(router, recordDetail(record.RecordId))} testID={`records-returned-${record.RecordId}`} />)
         )}
       </RecordsSection>
     </>
@@ -141,7 +142,9 @@ export default function RecordsHomeScreen({ context: contextProp }: RecordsHomeS
         {recent.length === 0 ? (
           <EmptyRow text={t('records.no_recent')} />
         ) : (
-          recent.slice(0, RECENT_LIMIT).map((record) => <RecordListItem key={record.RecordId} record={record} onPress={() => router.push(recordDetail(record.RecordId))} testID={`records-recent-${record.RecordId}`} />)
+          recent
+            .slice(0, RECENT_LIMIT)
+            .map((record) => <RecordListItem key={record.RecordId} record={record} onPress={() => pushRoutePath(router, recordDetail(record.RecordId))} testID={`records-recent-${record.RecordId}`} />)
         )}
       </RecordsSection>
     </>
@@ -199,7 +202,7 @@ export default function RecordsHomeScreen({ context: contextProp }: RecordsHomeS
         </ContentFrame>
       </ScrollView>
       {canCreate ? (
-        <Fab size="lg" placement="bottom right" onPress={() => router.push(recordNew())} accessibilityLabel={t('records.new_record')} testID="records-new-fab">
+        <Fab size="lg" placement="bottom right" onPress={() => pushRoutePath(router, recordNew())} accessibilityLabel={t('records.new_record')} testID="records-new-fab">
           <View>
             <Plus size={24} color="#FFFFFF" />
           </View>

@@ -1,4 +1,5 @@
 import { useSecurity } from '@resgrid/auth';
+import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { isSafeRouteId } from '@resgrid/core/utils/route-ids';
 import { useRecordDeploymentsStore } from '@resgrid/data';
 import { useDepartmentTimeZone } from '@resgrid/features/department-config';
@@ -162,7 +163,7 @@ export default function RecordConnectorDetailScreen({ connectorId: idProp, showH
                   <EmptyRow text={t('records.no_reconciliation')} />
                 ) : (
                   items.map((item, index) => (
-                    <ReconciliationListItem key={reconciliationKey(item, index)} item={item} showOrder onPress={() => router.push(recordDeployment(item.OrderId))} testID={`connector-reconciliation-${index}`} />
+                    <ReconciliationListItem key={reconciliationKey(item, index)} item={item} showOrder onPress={() => pushRoutePath(router, recordDeployment(item.OrderId))} testID={`connector-reconciliation-${index}`} />
                   ))
                 )}
               </RecordsSection>

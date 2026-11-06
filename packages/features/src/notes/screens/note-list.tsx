@@ -1,4 +1,5 @@
 import { useTerm } from '@resgrid/auth';
+import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { searchNotes, useNotesStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import type { NoteResultData } from '@resgrid/models';
@@ -27,7 +28,7 @@ export default function NoteListScreen() {
 
   const categories = useMemo(() => [...new Set(notes.map((note) => note.Category).filter((value): value is string => !!value))].sort(), [notes]);
   const visible = useMemo(() => searchNotes(category ? notes.filter((note) => note.Category === category) : notes, query), [notes, category, query]);
-  const open = useCallback((note: NoteResultData) => router.push(noteRoutes.noteDetail(note.NoteId)), []);
+  const open = useCallback((note: NoteResultData) => pushRoutePath(router, noteRoutes.noteDetail(note.NoteId)), []);
 
   return (
     <View style={styles.screen} className="bg-background-50" testID="note-list-screen">

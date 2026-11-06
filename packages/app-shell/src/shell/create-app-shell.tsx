@@ -13,7 +13,7 @@ import { useNavFilterContext, useNavLabel } from '../nav/use-nav-items';
 import { getShellNav } from '../runtime/shell-config';
 import { ShellUpdateNotice } from '../updates/update-notice';
 import { ShellHeader, useHeaderLeading } from './header';
-import { RegisteredBanners, RegisteredOverlays, SessionInitFailedBanner, SessionInitIndicator, ShellRealtimeBanner, ShellSyncAttentionToast } from './overlays';
+import { RegisteredBanners, RegisteredOverlays, SessionInitFailedBanner, ShellRealtimeBanner, ShellSyncAttentionToast } from './overlays';
 import { RegisteredProviders } from './registered-providers';
 import { ShellProvider } from './shell-context';
 import { DrawerSidebar, InlineSidebar } from './sidebar';
@@ -123,7 +123,6 @@ function ShellFrame({ variant, nav }: { variant: VariantManifest; nav: NavRegist
         <InlineSidebar nav={nav} />
         <View style={styles.content}>
           <AppBarBackContext.Provider value={leading === 'back'}>{variant.shell.kind === 'tabs' ? <RegistryTabs nav={nav} /> : <Stack screenOptions={DRAWER_STACK_OPTIONS} />}</AppBarBackContext.Provider>
-          <SessionInitIndicator />
         </View>
       </View>
       <DrawerSidebar nav={nav} />

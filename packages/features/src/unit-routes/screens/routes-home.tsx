@@ -1,3 +1,4 @@
+import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { PoisListScreen } from '@resgrid/features/pois';
 import { type PoiResultData } from '@resgrid/models';
 import { SharedTabs, type TabItem, useRouteTab, View } from '@resgrid/ui';
@@ -14,7 +15,7 @@ export interface RoutesHomeScreenProps {
 
 /** Unit's Routes tab (`/routes`): route plans and the department's points of interest, as the page's tabs. */
 export default function RoutesHomeScreen({ renderPoiMap }: RoutesHomeScreenProps) {
-  const openPoi = useCallback((poi: PoiResultData) => router.push(unitRoutesRoutes.poi(poi.PoiId)), []);
+  const openPoi = useCallback((poi: PoiResultData) => pushRoutePath(router, unitRoutesRoutes.poi(poi.PoiId)), []);
   const tabs = useMemo<TabItem[]>(
     () => [
       {

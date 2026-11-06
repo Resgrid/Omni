@@ -67,6 +67,8 @@ interface Case {
   field: string;
   fetch: () => Promise<unknown>;
   item: unknown;
+  /** What the store keeps for `item` when it converts the wire shape (defaults to `item`). */
+  stored?: unknown;
 }
 
 const cases: Case[] = [
@@ -101,7 +103,9 @@ const cases: Case[] = [
     slice: 'protocols',
     field: 'protocols',
     fetch: () => useProtocolsStore.getState().fetchProtocols(),
-    item: { Id: 'p1' },
+    // Core's Protocols controller sends ProtocolId; the store keeps the screen shape (Id).
+    item: { ProtocolId: 'p1' },
+    stored: expect.objectContaining({ Id: 'p1' }),
   },
   {
     name: 'notes',
@@ -208,7 +212,7 @@ describe.each(cases)('$name store', (testCase) => {
     endpoint().mockResolvedValue(ok([testCase.item]));
     await testCase.fetch();
     const state = testCase.store.getState();
-    expect(state[testCase.field]).toEqual([testCase.item]);
+    expect(state[testCase.field]).toEqual([testCase.stored ?? testCase.item]);
     expect(state.errors[testCase.slice]).toBeNull();
     expect(state.fetchedAt[testCase.slice]).toBe(runtime.clock.now());
     const blob = persisted(runtime.kv, testCase.persistName);
@@ -224,7 +228,7 @@ describe.each(cases)('$name store', (testCase) => {
     await testCase.fetch();
     const state = testCase.store.getState();
     expect(state.errors[testCase.slice]).toMatchObject({ code: 'server', messageKey: 'errors.data.server' });
-    expect(state[testCase.field]).toEqual([testCase.item]);
+    expect(state[testCase.field]).toEqual([testCase.stored ?? testCase.item]);
   });
 
   it('not_found is an empty answer', async () => {

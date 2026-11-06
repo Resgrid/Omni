@@ -142,7 +142,7 @@ describe('certification format', () => {
     expect(certificationsRoutes.detail(5)).toBe('/certifications/5');
     expect(certificationsRoutes.edit()).toBe('/certifications/edit');
     expect(certificationsRoutes.edit(5)).toBe('/certifications/edit?id=5');
-    expect(() => certificationsRoutes.detail('../calls')).toThrow();
+    expect(certificationsRoutes.detail('../calls')).toBeNull();
     expect(parseCertificationId('12')).toBe(12);
     expect(parseCertificationId('abc')).toBeNull();
     expect(certificationsNav).toEqual([expect.objectContaining({ id: 'certifications', href: '/certifications', requiresModule: 'certifications' })]);

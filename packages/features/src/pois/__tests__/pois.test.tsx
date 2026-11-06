@@ -47,7 +47,7 @@ describe('POI routes', () => {
     expect(parsePoiId('../x')).toBeNull();
     expect(parsePoiId('0')).toBeNull();
     expect(poisRoutes.detail(5)).toBe('/poi/5');
-    expect(() => poisRoutes.detail(-1)).toThrow();
+    expect(poisRoutes.detail(-1)).toBeNull();
   });
 });
 

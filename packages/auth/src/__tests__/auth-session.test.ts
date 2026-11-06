@@ -197,6 +197,24 @@ describe('cold start (restoreSession, offline-safe)', () => {
     expect(useAuthStore.getState().status).toBe('signedIn');
   });
 
+  // A captive portal or proxy answers the token request 200 with its own page. Applied as-is it left no access token,
+  // which the shell shows as the sign-in screen; it is an outage, so the session is kept and the refresh tried again.
+  it('keeps the session and retries when the token endpoint answers 200 without an access token (captive portal)', async () => {
+    jest.useFakeTimers();
+    const stale = accessToken(nowSeconds() - 60);
+    h = setupHarness('unit', { seed: { ResgridUnit: { 'auth-storage': envelope({ accessToken: stale, refreshToken: 'refresh-1', userId: 'user-1' }) } } });
+    h.server.on('POST', '/connect/token', { data: '<html><body>Sign in to the hotel Wi-Fi</body></html>' });
+
+    await hydrateAuthSession();
+    await jest.advanceTimersByTimeAsync(0);
+    expect(useAuthStore.getState()).toMatchObject({ status: 'signedIn', accessToken: stale, refreshToken: 'refresh-1' });
+    expect(h.wipeScope).not.toHaveBeenCalled();
+
+    h.server.reset('POST', '/connect/token').on('POST', '/connect/token', { data: tokenResponse({ refresh_token: 'refresh-2' }) });
+    await jest.advanceTimersByTimeAsync(5_000);
+    expect(useAuthStore.getState().refreshToken).toBe('refresh-2');
+  });
+
   it('signs out (and wipes) only when the token endpoint rejects the refresh token', async () => {
     jest.useFakeTimers();
     h = setupHarness('unit', { seed: { ResgridUnit: { 'auth-storage': envelope({ accessToken: accessToken(nowSeconds() - 60), refreshToken: 'refresh-1', userId: 'user-1' }) } } });

@@ -1,4 +1,4 @@
-import { authRoutes } from '@resgrid/features/auth-ui';
+import { authRoutes } from '@resgrid/features/auth-ui/routes';
 
 /**
  * Approve a sign-in (Responder only, `capabilities.push.approveSignIns`). One canonical path shared with the auth

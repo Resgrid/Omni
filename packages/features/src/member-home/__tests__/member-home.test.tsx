@@ -208,6 +208,16 @@ describe('MemberHomeScreen', () => {
     }
   });
 
+  it('keeps the summary tiles at their content height (grow) so switching the Status/Staffing tab cannot squash them', async () => {
+    await render(<MemberHomeScreen />);
+
+    for (const id of ['summary-active-calls', 'summary-calls-im-on', 'summary-weather-alerts', 'summary-checkins']) {
+      const className = String(screen.getByTestId(id).props.className ?? '');
+      expect(className).toMatch(/\bgrow\b/);
+      expect(className).not.toMatch(/\bflex-1\b/);
+    }
+  });
+
   it('shows the registered due-checks card, and a prop replaces it', async () => {
     const unregister = registerMemberHomeHookPoints({ DueChecksCard: () => <Text>due checks card</Text> });
     const { unmount } = await render(<MemberHomeScreen />);

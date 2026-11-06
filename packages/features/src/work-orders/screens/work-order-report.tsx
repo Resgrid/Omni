@@ -1,8 +1,9 @@
+import { replaceRoutePath } from '@resgrid/core/navigation/route-paths';
 import { useWorkOrdersStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import { WorkOrderPriority, WorkOrderType } from '@resgrid/models';
 import { Button, ButtonSpinner, ButtonText, HStack, Input, InputField, KeyboardAwareScrollView, ScreenHeader, Switch, Text, Textarea, TextareaInput, useToast, View, VStack } from '@resgrid/ui';
-import { type Href, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet } from 'react-native';
 
@@ -78,7 +79,7 @@ function WorkOrderReportContent() {
     toast.success(t('workOrders.reportSent'));
     const created = Object.values(useWorkOrdersStore.getState().ordersById).find((detail) => detail.Input?.RequestId === result.id);
     void useWorkOrdersStore.getState().fetchWorkOrders();
-    if (created) router.replace(workOrderRoutes.detail(created.Order.Id) as Href);
+    if (created) replaceRoutePath(router, workOrderRoutes.detail(created.Order.Id));
     else router.back();
   };
 

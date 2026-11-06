@@ -1832,9 +1832,6 @@
     "anti-slop/no-unsafe-dictionary-type": 1,
     "anti-slop/require-safety-comment-for-type-assertion": 8
   },
-  "packages/features/src/awaiting-resources/components/awaiting-resources-banner.tsx": {
-    "anti-slop/require-safety-comment-for-type-assertion": 1
-  },
   "packages/features/src/awaiting-resources/components/awaiting-resources-host.tsx": {
     "anti-slop/require-readable-spacing": 1
   },
@@ -1842,8 +1839,7 @@
     "anti-slop/require-readable-spacing": 2
   },
   "packages/features/src/awaiting-resources/components/unit-available-alert-host.tsx": {
-    "anti-slop/require-readable-spacing": 3,
-    "anti-slop/require-safety-comment-for-type-assertion": 1
+    "anti-slop/require-readable-spacing": 3
   },
   "packages/features/src/awaiting-resources/hooks/use-awaiting-resources.ts": {
     "anti-slop/no-known-value-widening": 1,
@@ -1856,8 +1852,7 @@
     "anti-slop/require-readable-spacing": 1
   },
   "packages/features/src/awaiting-resources/screens/awaiting-resources.tsx": {
-    "anti-slop/require-readable-spacing": 5,
-    "anti-slop/require-safety-comment-for-type-assertion": 1
+    "anti-slop/require-readable-spacing": 5
   },
   "packages/features/src/calendar/__tests__/calendar.test.tsx": {
     "anti-slop/no-object-parameters": 2,
@@ -1901,15 +1896,6 @@
   },
   "packages/features/src/call-queues/lib/queue-filters.ts": {
     "anti-slop/require-readable-spacing": 1
-  },
-  "packages/features/src/call-queues/screens/archived-calls.tsx": {
-    "anti-slop/require-safety-comment-for-type-assertion": 1
-  },
-  "packages/features/src/call-queues/screens/pending-calls.tsx": {
-    "anti-slop/require-safety-comment-for-type-assertion": 1
-  },
-  "packages/features/src/call-queues/screens/scheduled-calls.tsx": {
-    "anti-slop/require-safety-comment-for-type-assertion": 1
   },
   "packages/features/src/calls/__tests__/call-card.test.tsx": {
     "anti-slop/require-safety-comment-for-type-assertion": 1
@@ -2099,7 +2085,7 @@
     "anti-slop/require-readable-spacing": 15
   },
   "packages/features/src/certifications/routes.ts": {
-    "anti-slop/require-readable-spacing": 4
+    "anti-slop/require-readable-spacing": 2
   },
   "packages/features/src/certifications/screens/certification-detail.tsx": {
     "anti-slop/no-unsafe-dictionary-type": 1,
@@ -2169,12 +2155,6 @@
     "anti-slop/no-unsafe-dictionary-type": 2,
     "anti-slop/require-readable-spacing": 9,
     "anti-slop/require-safety-comment-for-type-assertion": 2
-  },
-  "packages/features/src/chat/routes.ts": {
-    "anti-slop/require-readable-spacing": 1
-  },
-  "packages/features/src/chat/screens/chat-channels.tsx": {
-    "anti-slop/require-safety-comment-for-type-assertion": 1
   },
   "packages/features/src/chat/screens/chat-conversation.tsx": {
     "anti-slop/no-conditional-empty-object-spread": 2,
@@ -2252,9 +2232,6 @@
   "packages/features/src/checklists/lib/checklists-api.ts": {
     "anti-slop/require-readable-spacing": 2
   },
-  "packages/features/src/checklists/routes.ts": {
-    "anti-slop/require-readable-spacing": 2
-  },
   "packages/features/src/checklists/runtime.ts": {
     "anti-slop/require-readable-spacing": 5
   },
@@ -2291,9 +2268,6 @@
   "packages/features/src/contacts/navigation-handoff.tsx": {
     "anti-slop/require-readable-spacing": 7
   },
-  "packages/features/src/contacts/routes.ts": {
-    "anti-slop/require-readable-spacing": 1
-  },
   "packages/features/src/contacts/screens/contacts-list.tsx": {
     "anti-slop/require-readable-spacing": 1
   },
@@ -2318,8 +2292,7 @@
     "anti-slop/require-safety-comment-for-type-assertion": 4
   },
   "packages/features/src/custom-maps/routes.ts": {
-    "anti-slop/no-runtime-typeof": 1,
-    "anti-slop/require-readable-spacing": 4
+    "anti-slop/require-readable-spacing": 2
   },
   "packages/features/src/custom-maps/screens/custom-map.tsx": {
     "anti-slop/require-readable-spacing": 9
@@ -2507,7 +2480,7 @@
     "anti-slop/require-safety-comment-for-type-assertion": 1
   },
   "packages/features/src/dashboard/routes.ts": {
-    "anti-slop/require-readable-spacing": 3
+    "anti-slop/require-readable-spacing": 1
   },
   "packages/features/src/dashboard/screens/configure-dashboard.tsx": {
     "anti-slop/require-readable-spacing": 1
@@ -2555,7 +2528,7 @@
     "anti-slop/require-readable-spacing": 4
   },
   "packages/features/src/dispatch-console/components/activity-panel.tsx": {
-    "anti-slop/require-safety-comment-for-type-assertion": 2
+    "anti-slop/require-safety-comment-for-type-assertion": 1
   },
   "packages/features/src/dispatch-console/components/add-note-sheet.tsx": {
     "anti-slop/require-readable-spacing": 4
@@ -2620,7 +2593,7 @@
   },
   "packages/features/src/dispatch-console/screens/dispatch-console.tsx": {
     "anti-slop/no-conditional-empty-object-spread": 1,
-    "anti-slop/require-safety-comment-for-type-assertion": 8
+    "anti-slop/require-safety-comment-for-type-assertion": 1
   },
   "packages/features/src/incident-command/__tests__/command-board-view.test.tsx": {
     "anti-slop/require-readable-spacing": 1,
@@ -2653,8 +2626,7 @@
     "anti-slop/require-safety-comment-for-type-assertion": 1
   },
   "packages/features/src/incident-command/components/incident-command-tab.tsx": {
-    "anti-slop/require-readable-spacing": 6,
-    "anti-slop/require-safety-comment-for-type-assertion": 5
+    "anti-slop/require-readable-spacing": 6
   },
   "packages/features/src/incident-command/components/log-section.tsx": {
     "anti-slop/require-readable-spacing": 2
@@ -2743,8 +2715,7 @@
     "anti-slop/require-readable-spacing": 1
   },
   "packages/features/src/incident-command/hooks/use-incident-chat.ts": {
-    "anti-slop/require-readable-spacing": 4,
-    "anti-slop/require-safety-comment-for-type-assertion": 2
+    "anti-slop/require-readable-spacing": 4
   },
   "packages/features/src/incident-command/hooks/use-now.ts": {
     "anti-slop/require-readable-spacing": 2
@@ -2781,14 +2752,14 @@
     "anti-slop/require-readable-spacing": 4
   },
   "packages/features/src/incident-command/routes.ts": {
-    "anti-slop/require-readable-spacing": 4
+    "anti-slop/require-readable-spacing": 3
   },
   "packages/features/src/incident-command/screens/call-command.tsx": {
     "anti-slop/require-safety-comment-for-type-assertion": 1
   },
   "packages/features/src/incident-command/screens/command-board.tsx": {
     "anti-slop/require-readable-spacing": 4,
-    "anti-slop/require-safety-comment-for-type-assertion": 6
+    "anti-slop/require-safety-comment-for-type-assertion": 2
   },
   "packages/features/src/incident-command/screens/command-log.tsx": {
     "anti-slop/require-readable-spacing": 1,
@@ -2802,7 +2773,7 @@
   },
   "packages/features/src/incident-command/screens/incidents-list.tsx": {
     "anti-slop/require-readable-spacing": 7,
-    "anti-slop/require-safety-comment-for-type-assertion": 2
+    "anti-slop/require-safety-comment-for-type-assertion": 1
   },
   "packages/features/src/incident-command/screens/resource-map.tsx": {
     "anti-slop/require-safety-comment-for-type-assertion": 1
@@ -2825,7 +2796,7 @@
     "anti-slop/require-safety-comment-for-type-assertion": 1
   },
   "packages/features/src/inventory/routes.ts": {
-    "anti-slop/require-readable-spacing": 3
+    "anti-slop/require-readable-spacing": 2
   },
   "packages/features/src/inventory/screens/inventory-count.tsx": {
     "anti-slop/require-readable-spacing": 18
@@ -2907,9 +2878,6 @@
     "anti-slop/require-readable-spacing": 21,
     "anti-slop/require-safety-comment-for-type-assertion": 1
   },
-  "packages/features/src/map/routes.ts": {
-    "anti-slop/require-readable-spacing": 3
-  },
   "packages/features/src/map/screens/map-screen.tsx": {
     "anti-slop/require-readable-spacing": 30,
     "anti-slop/require-safety-comment-for-type-assertion": 3
@@ -2957,9 +2925,6 @@
   "packages/features/src/messages/index.ts": {
     "anti-slop/require-readable-spacing": 6
   },
-  "packages/features/src/messages/routes.ts": {
-    "anti-slop/require-readable-spacing": 1
-  },
   "packages/features/src/navigation-eta/__tests__/navigation-eta.test.tsx": {
     "anti-slop/no-unsafe-dictionary-type": 1,
     "anti-slop/require-readable-spacing": 2,
@@ -3000,7 +2965,7 @@
     "anti-slop/require-readable-spacing": 4
   },
   "packages/features/src/navigation/routes.ts": {
-    "anti-slop/require-readable-spacing": 7
+    "anti-slop/require-readable-spacing": 4
   },
   "packages/features/src/notes/__tests__/notes.test.tsx": {
     "anti-slop/require-safety-comment-for-type-assertion": 1
@@ -3098,9 +3063,6 @@
     "anti-slop/no-known-value-widening": 1,
     "anti-slop/require-readable-spacing": 34
   },
-  "packages/features/src/operations/routes.ts": {
-    "anti-slop/require-readable-spacing": 1
-  },
   "packages/features/src/operations/screens/operations-deployment.tsx": {
     "anti-slop/require-readable-spacing": 21
   },
@@ -3117,9 +3079,6 @@
   "packages/features/src/personnel/lib/personnel-filters.ts": {
     "anti-slop/require-readable-spacing": 5
   },
-  "packages/features/src/personnel/routes.ts": {
-    "anti-slop/require-readable-spacing": 1
-  },
   "packages/features/src/pois/__tests__/pois.test.tsx": {
     "anti-slop/require-safety-comment-for-type-assertion": 5
   },
@@ -3135,9 +3094,6 @@
   "packages/features/src/pois/lib/poi-filters.ts": {
     "anti-slop/no-runtime-typeof": 1,
     "anti-slop/require-readable-spacing": 7
-  },
-  "packages/features/src/pois/routes.ts": {
-    "anti-slop/require-readable-spacing": 1
   },
   "packages/features/src/pois/screens/poi-detail.tsx": {
     "anti-slop/require-readable-spacing": 1
@@ -3213,9 +3169,6 @@
   },
   "packages/features/src/records/lib/records-api.ts": {
     "anti-slop/require-readable-spacing": 2
-  },
-  "packages/features/src/records/routes.ts": {
-    "anti-slop/require-readable-spacing": 1
   },
   "packages/features/src/records/runtime.ts": {
     "anti-slop/require-readable-spacing": 7
@@ -3451,9 +3404,6 @@
     "anti-slop/no-known-value-widening": 1,
     "anti-slop/require-readable-spacing": 8
   },
-  "packages/features/src/shifts/routes.ts": {
-    "anti-slop/require-readable-spacing": 1
-  },
   "packages/features/src/shifts/screens/shifts.tsx": {
     "anti-slop/no-runtime-typeof": 1,
     "anti-slop/no-unsafe-dictionary-type": 1,
@@ -3600,7 +3550,7 @@
     "anti-slop/require-readable-spacing": 3
   },
   "packages/features/src/unit-routes/routes.ts": {
-    "anti-slop/require-readable-spacing": 5
+    "anti-slop/require-readable-spacing": 2
   },
   "packages/features/src/unit-routes/screens/route-active.tsx": {
     "anti-slop/require-readable-spacing": 8
@@ -3700,9 +3650,6 @@
   "packages/features/src/units/lib/unit-filters.ts": {
     "anti-slop/require-readable-spacing": 3
   },
-  "packages/features/src/units/routes.ts": {
-    "anti-slop/require-readable-spacing": 1
-  },
   "packages/features/src/video-feeds/__tests__/video-feeds.test.tsx": {
     "anti-slop/require-readable-spacing": 2
   },
@@ -3760,9 +3707,6 @@
     "anti-slop/no-known-value-widening": 6,
     "anti-slop/require-readable-spacing": 6
   },
-  "packages/features/src/weather-alerts/routes.ts": {
-    "anti-slop/require-readable-spacing": 1
-  },
   "packages/features/src/weather-alerts/screens/weather-alert-detail.tsx": {
     "anti-slop/require-readable-spacing": 1
   },
@@ -3807,19 +3751,14 @@
   "packages/features/src/work-orders/lib/work-order-rules.ts": {
     "anti-slop/require-readable-spacing": 17
   },
-  "packages/features/src/work-orders/routes.ts": {
-    "anti-slop/require-readable-spacing": 1
-  },
   "packages/features/src/work-orders/screens/work-order-detail.tsx": {
     "anti-slop/require-readable-spacing": 17
   },
   "packages/features/src/work-orders/screens/work-order-report.tsx": {
-    "anti-slop/require-readable-spacing": 10,
-    "anti-slop/require-safety-comment-for-type-assertion": 1
+    "anti-slop/require-readable-spacing": 10
   },
   "packages/features/src/work-orders/screens/work-orders.tsx": {
-    "anti-slop/require-readable-spacing": 1,
-    "anti-slop/require-safety-comment-for-type-assertion": 2
+    "anti-slop/require-readable-spacing": 1
   },
   "packages/i18n/scripts/add-keys.ts": {
     "anti-slop/no-array-filter-map": 1,

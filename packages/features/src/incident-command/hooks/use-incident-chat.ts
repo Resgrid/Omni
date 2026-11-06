@@ -1,3 +1,4 @@
+import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { useChatStore } from '@resgrid/data';
 import { chatRoutes, startDirectConversation, useChatAvailability } from '@resgrid/features/chat';
 import { useTranslation } from '@resgrid/i18n';
@@ -42,7 +43,7 @@ export function useIncidentChat(callId: string | null | undefined): IncidentChat
         toast.info(t('incident_command.chat_unavailable'));
         return;
       }
-      router.push(chatRoutes.conversation(channelId) as never);
+      pushRoutePath(router, chatRoutes.conversation(channelId));
     },
     [t, toast]
   );
@@ -52,7 +53,7 @@ export function useIncidentChat(callId: string | null | undefined): IncidentChat
       if (!userId) return;
       try {
         const channel = await startDirectConversation(userId);
-        if (channel?.ChatChannelId) router.push(chatRoutes.conversation(channel.ChatChannelId) as never);
+        if (channel?.ChatChannelId) pushRoutePath(router, chatRoutes.conversation(channel.ChatChannelId));
         else toast.error(t('incident_command.dm_unavailable'));
       } catch {
         toast.error(t('incident_command.dm_failed'));

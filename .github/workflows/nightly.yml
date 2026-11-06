@@ -63,7 +63,8 @@ jobs:
     needs: plan
     runs-on: ubuntu-latest
     timeout-minutes: 90
-    # Only EXPO_TOKEN is used; dev builds keep the development defaults (QA API, no Firebase, no production keys).
+    # Only EXPO_TOKEN is used; dev builds keep the development settings (QA API, no Firebase, no production keys). The
+    # QA API is named here: an unset BASE_API_URL falls back to production US West (plan §15 #22).
     environment: ${{ matrix.variant }}
     strategy:
       fail-fast: false
@@ -72,6 +73,7 @@ jobs:
     env:
       APP_VARIANT: ${{ matrix.variant }}
       APP_ENV: development
+      BASE_API_URL: https://qaapi.resgrid.dev
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
       NODE_OPTIONS: --max_old_space_size=4096
     steps:
@@ -130,6 +132,8 @@ jobs:
     env:
       APP_VARIANT: ${{ matrix.variant }}
       APP_ENV: development
+      # Metro serves the client settings: QA, as the dev build was made for (an unset value would be production).
+      BASE_API_URL: https://qaapi.resgrid.dev
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-workspace

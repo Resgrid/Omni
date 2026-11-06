@@ -18,7 +18,7 @@ The checklist for the current workflows. Secret names are identical in every var
 
 ### Each variant environment
 
-Required. Without these a release fails, or the app ships with the defaults (QA API, empty keys, no Android push):
+Required. Without these a release fails, or the app ships with the defaults (production US West API, empty keys, no Android push):
 
 - [ ] `EXPO_TOKEN`: robot token with access to the app's EAS project. Builds download the signing credentials with it.
 - [ ] `BASE_API_URL`, `LOGGING_KEY`, `APP_KEY`

@@ -1,4 +1,5 @@
 import { useSecurity } from '@resgrid/auth';
+import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { useRecordDeploymentsStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import { RefreshControl, ScreenHeader, Text, ZeroState } from '@resgrid/ui';
@@ -58,7 +59,7 @@ export default function RecordConnectorsScreen({ showHeader = true }: RecordConn
               <EmptyRow text={t('records.no_connectors')} testID="connectors-empty" />
             ) : (
               connectors.map((connector) => (
-                <ConnectorListItem key={connector.Id} connector={connector} conflicts={counts[connector.Id]} onPress={() => router.push(recordConnector(connector.Id))} testID={`connector-${connector.Id}`} />
+                <ConnectorListItem key={connector.Id} connector={connector} conflicts={counts[connector.Id]} onPress={() => pushRoutePath(router, recordConnector(connector.Id))} testID={`connector-${connector.Id}`} />
               ))
             )}
           </RecordsSection>
@@ -70,7 +71,7 @@ export default function RecordConnectorsScreen({ showHeader = true }: RecordConn
               <EmptyRow text={t('records.no_reconciliation')} />
             ) : (
               reconciliation.items.map((item, index) => (
-                <ReconciliationListItem key={reconciliationKey(item, index)} item={item} showOrder onPress={() => router.push(recordDeployment(item.OrderId))} testID={`reconciliation-${index}`} />
+                <ReconciliationListItem key={reconciliationKey(item, index)} item={item} showOrder onPress={() => pushRoutePath(router, recordDeployment(item.OrderId))} testID={`reconciliation-${index}`} />
               ))
             )}
           </RecordsSection>

@@ -1,3 +1,4 @@
+import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { useCertificationsStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import type { Certification } from '@resgrid/models';
@@ -48,8 +49,8 @@ export default function CertificationsListScreen({ onOpenCertification }: Certif
     }
   }, [load]);
 
-  const open = useCallback((id: number) => (onOpenCertification ? onOpenCertification(id) : router.push(certificationsRoutes.detail(id))), [onOpenCertification]);
-  const add = useCallback(() => router.push(certificationsRoutes.edit()), []);
+  const open = useCallback((id: number) => (onOpenCertification ? onOpenCertification(id) : pushRoutePath(router, certificationsRoutes.detail(id))), [onOpenCertification]);
+  const add = useCallback(() => pushRoutePath(router, certificationsRoutes.edit()), []);
 
   const renderItem = useCallback(({ item }: { item: Certification }) => <CertificationCard certification={item} onPress={open} />, [open]);
 

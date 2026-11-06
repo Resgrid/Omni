@@ -1,3 +1,4 @@
+import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { useRoutesStore, useUnitsStore } from '@resgrid/data';
 import { useStatusContext } from '@resgrid/features/status';
 import { useTranslation } from '@resgrid/i18n';
@@ -54,8 +55,8 @@ export const RoutePlansList: React.FC<{ testID?: string }> = ({ testID = 'route-
 
   const openPlan = useCallback(
     (plan: RoutePlanResultData) => {
-      if (activeInstance && activeInstance.RoutePlanId === plan.RoutePlanId) router.push(unitRoutesRoutes.active(plan.RoutePlanId, activeInstance.RouteInstanceId));
-      else router.push(unitRoutesRoutes.start(plan.RoutePlanId));
+      if (activeInstance && activeInstance.RoutePlanId === plan.RoutePlanId) pushRoutePath(router, unitRoutesRoutes.active(plan.RoutePlanId, activeInstance.RouteInstanceId));
+      else pushRoutePath(router, unitRoutesRoutes.start(plan.RoutePlanId));
     },
     [activeInstance]
   );
@@ -70,7 +71,7 @@ export const RoutePlansList: React.FC<{ testID?: string }> = ({ testID = 'route-
 
   const banner = activeInstance ? (
     <Pressable
-      onPress={() => router.push(unitRoutesRoutes.active(activeInstance.RoutePlanId, activeInstance.RouteInstanceId))}
+      onPress={() => pushRoutePath(router, unitRoutesRoutes.active(activeInstance.RoutePlanId, activeInstance.RouteInstanceId))}
       accessibilityRole="button"
       testID={`${testID}-active-banner`}
       className="mb-3 rounded-xl border-2 border-success-500 bg-success-50 p-4"

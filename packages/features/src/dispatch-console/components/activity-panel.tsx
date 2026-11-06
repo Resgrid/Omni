@@ -1,3 +1,4 @@
+import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { formatUtcInDepartmentTime } from '@resgrid/core/utils/dates';
 import { useCheckInTimersStore, useWeatherAlertsStore } from '@resgrid/data';
 import { checkInSeverity, CheckInTab, CheckInTimerCard } from '@resgrid/features/check-in';
@@ -8,7 +9,7 @@ import { WeatherAlertCard, weatherAlertsRoutes } from '@resgrid/features/weather
 import { useTranslation } from '@resgrid/i18n';
 import type { CallResultData, CheckInTimerStatusResultData, DispatchedEventResultData, WeatherAlertResultData } from '@resgrid/models';
 import { FlatList, HStack, Pressable, Text, useReadableColor, useThemeColors, VStack } from '@resgrid/ui';
-import { type Href, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import type { LucideIcon } from 'lucide-react-native';
 import { AlertTriangle, CloudLightning, Info, Mic, Radio, ShieldCheck, Timer, Truck, User, Zap } from 'lucide-react-native';
 import React, { useCallback, useMemo } from 'react';
@@ -173,7 +174,7 @@ export const ActivityPanel: React.FC<ActivityPanelProps> = ({ selectedCall, call
   const renderActivity = useCallback(({ item }: { item: ActivityLogEntry }) => <ActivityRow entry={item} />, []);
   const renderCallActivity = useCallback(({ item }: { item: DispatchedEventResultData }) => <CallActivityRow event={item} />, []);
   const renderRadio = useCallback(({ item }: { item: RadioLogEntry }) => <RadioRow entry={item} />, []);
-  const renderWeather = useCallback(({ item }: { item: WeatherAlertResultData }) => <WeatherAlertCard alert={item} onPress={() => router.push(weatherAlertsRoutes.detail(item.WeatherAlertId) as Href)} />, [router]);
+  const renderWeather = useCallback(({ item }: { item: WeatherAlertResultData }) => <WeatherAlertCard alert={item} onPress={() => pushRoutePath(router, weatherAlertsRoutes.detail(item.WeatherAlertId))} />, [router]);
 
   const renderContent = () => {
     switch (activeTab) {

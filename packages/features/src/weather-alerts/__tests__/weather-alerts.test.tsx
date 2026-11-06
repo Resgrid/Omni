@@ -117,8 +117,8 @@ describe('WeatherAlertDetailScreen', () => {
   });
 
   it('refuses the reserved and unsafe ids', () => {
-    expect(() => weatherAlertsRoutes.detail('settings')).toThrow();
-    expect(() => weatherAlertsRoutes.detail('a/b')).toThrow();
+    expect(weatherAlertsRoutes.detail('settings')).toBeNull();
+    expect(weatherAlertsRoutes.detail('a/b')).toBeNull();
   });
 });
 

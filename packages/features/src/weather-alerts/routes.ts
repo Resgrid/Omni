@@ -1,3 +1,4 @@
+import { type RouteIdCheck, routePathWithId } from '@resgrid/core/navigation/route-paths';
 import { isSafeRouteId } from '@resgrid/core/utils/route-ids';
 
 /**
@@ -10,13 +11,12 @@ export const WEATHER_ALERTS_ROUTE_PATTERNS = {
   settings: '/weather-alerts/settings',
 } as const;
 
-const encodeId = (id: string): string => {
-  if (!isSafeRouteId(id) || id === 'settings') throw new Error('Unsafe weather alert route id');
-  return encodeURIComponent(id);
-};
+/** An alert id that `isSafeRouteId` accepts and that is not the settings page's segment. */
+const isAlertId: RouteIdCheck = (id) => isSafeRouteId(id) && id !== 'settings';
 
 export const weatherAlertsRoutes = {
   list: (): string => '/weather-alerts',
-  detail: (alertId: string): string => `/weather-alerts/${encodeId(alertId)}`,
+  /** Null (reported) for a refused alert id. */
+  detail: (alertId: string): string | null => routePathWithId('weather_alerts.detail', alertId, (id) => `/weather-alerts/${id}`, isAlertId),
   settings: (): string => '/weather-alerts/settings',
 } as const;

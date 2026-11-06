@@ -1,5 +1,5 @@
 import { useSecurity } from '@resgrid/auth';
-import { isSafeRouteId } from '@resgrid/core/utils/route-ids';
+import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { type QueuedMessage, useMessagesStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import {
@@ -114,7 +114,7 @@ export default function MessagesScreen() {
       return;
     }
 
-    if (isSafeRouteId(item.message.MessageId)) router.push(messageRoutes.detail(item.message.MessageId));
+    pushRoutePath(router, messageRoutes.detail(item.message.MessageId));
   };
 
   const compose = () => router.push(messageRoutes.compose());

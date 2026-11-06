@@ -138,7 +138,7 @@ describe('routes', () => {
   it('builds record routes only from safe ids', () => {
     expect(recordDetail('abc-1')).toBe('/records/abc-1');
     expect(recordNew('d1')).toBe('/records/new?draft=d1');
-    expect(() => recordDetail('../x')).toThrow();
+    expect(recordDetail('../x')).toBeNull();
   });
 });
 
