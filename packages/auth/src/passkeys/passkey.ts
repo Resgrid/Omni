@@ -12,17 +12,23 @@ import { isRelyingPartyAssociated, passkeysEnabledForVariant } from './passkey-p
 // R/U/I/D; gated by `capabilities.auth.passkeys` and checked against the variant's associated domains.
 // ---------------------------------------------------------------------------------------------------------------------
 
+// react-native-passkey's `error` codes (PasskeyError.ts, 3.x). A code it adds later reads as `failed`.
 const reasonFor = (error: unknown): PasskeyCeremonyReason => {
   const code = (error as { error?: string } | null)?.error;
   switch (code) {
     case 'UserCancelled':
     case 'Interrupted':
+    case 'TimedOut':
       return 'cancelled';
     case 'NotSupported':
     case 'BadConfiguration':
+    // Android: no credential provider on the device can store a passkey.
+    case 'NoCreateOption':
       return 'not_supported';
     case 'NoCredentials':
       return 'no_credentials';
+    case 'CredentialAlreadyExists':
+      return 'already_registered';
     default:
       return 'failed';
   }

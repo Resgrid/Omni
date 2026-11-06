@@ -135,6 +135,17 @@ describe('MFA refusals', () => {
     expect(isMfaErrorCode('sso_cancelled')).toBe(true);
     expect(isMfaErrorCode('The username or password is invalid.')).toBe(false);
   });
+
+  it('shows Core codes without a message of their own with the closest one', () => {
+    expect(mfaErrorKey('return_target_not_allowed')).toBe('mfa.errors.sso_unavailable');
+    expect(mfaErrorKey('sso_transaction_expired')).toBe('mfa.errors.mfa_transaction_expired');
+    expect(mfaErrorKey('sso_transaction_invalid')).toBe('mfa.errors.sso_failed');
+    expect(mfaErrorKey('sso_verification_failed')).toBe('mfa.errors.sso_failed');
+    expect(mfaErrorKey('reauthentication_not_fresh')).toBe('mfa.errors.sso_reauthentication_required');
+    expect(isMfaErrorCode('return_target_not_allowed')).toBe(true);
+    // Never a lookup on the object prototype.
+    expect(isMfaErrorCode('constructor')).toBe(false);
+  });
 });
 
 describe('token failure diagnostics never carry secrets', () => {

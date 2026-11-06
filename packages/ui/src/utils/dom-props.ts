@@ -150,10 +150,19 @@ export function toAriaProps(props: Record<string, unknown>): Record<string, unkn
 }
 
 /**
+ * A React Native `lineHeight` is in pixels, but React DOM writes a bare number as a multiple of the font size
+ * (`lineHeight: 14` → 14 lines tall), so a numeric one becomes `14px`.
+ */
+export function withPixelLineHeight(style: React.CSSProperties): React.CSSProperties {
+  return Number.isFinite(style.lineHeight) ? { ...style, lineHeight: `${Number(style.lineHeight)}px` } : style;
+}
+
+/**
  * Converts React Native props into valid DOM props for the web wrappers (`index.web.tsx`):
  * - `testID` → `data-testid`;
  * - accessibility* / `nativeID` → aria-* / `role` / `id` (explicit aria-* and `role` props win);
  * - `numberOfLines` → a CSS line clamp merged into `style`;
+ * - a numeric `lineHeight` → pixels (`withPixelLineHeight`);
  * - style arrays are flattened (a DOM element only takes one object — an array makes React set
  *   style[0] on the CSSStyleDeclaration, which throws and takes the whole screen down);
  * - every other React Native-only prop is dropped so React does not warn about it.
@@ -166,6 +175,11 @@ export function toDomProps<T extends object>(props: T & WithTestID): DomProps<T>
     if (!RN_ONLY_PROPS.has(key)) {
       domProps[key] = key === 'style' && Array.isArray(value) ? StyleSheet.flatten(value) : value;
     }
+  }
+
+  if (domProps.style) {
+    // SAFETY: the web wrappers take a React Native or CSS style object here (an array was flattened above).
+    domProps.style = withPixelLineHeight(domProps.style as React.CSSProperties);
   }
 
   const clamp = lineClampStyle(rest.numberOfLines as number | undefined);

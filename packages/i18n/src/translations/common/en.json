@@ -10,7 +10,10 @@
   "app": {
     "title": "{{appName}}",
     "realtime_offline_title": "Live updates paused",
-    "realtime_offline_description": "Reconnecting to live updates. Information may be out of date."
+    "realtime_offline_description": "Reconnecting to live updates. Information may be out of date.",
+    "sync_attention_title": "Changes not sent",
+    "sync_attention_message": "Some changes could not be sent and need your attention.",
+    "sync_attention_message_review": "Some changes could not be sent and need your attention. Tap to review them."
   },
   "audio_streams": {
     "buffering": "Buffering",
@@ -1866,8 +1869,11 @@
       "mfa_transaction_expired": "The sign-in took too long. Sign in again.",
       "mfa_transaction_invalid": "This sign-in is no longer valid. Sign in again.",
       "network_error": "Could not reach Resgrid. Check your connection and try again.",
+      "no_method_here": "None of your verification methods works on this device. Use another device or set up an authenticator app.",
+      "passkey_already_registered": "This device already has a passkey for your account.",
       "passkey_cancelled": "The passkey prompt was closed. Try again or use another method.",
       "passkey_failed": "The passkey could not be used. Try again or use another method.",
+      "passkey_limit_reached": "You have the most passkeys this app allows. Remove one to add another.",
       "passkey_no_credentials": "No passkey for this app was found on this device.",
       "passkey_not_registered_for_client": "You have no passkey for this app.",
       "passkey_not_supported": "Passkeys are not available on this device. Use another method.",
@@ -1987,7 +1993,8 @@
     "search": "Search notes...",
     "title": "Notes",
     "all_categories": "All",
-    "open_hint": "Opens the note"
+    "open_hint": "Opens the note",
+    "not_found": "Note not found"
   },
   "notifications": {
     "inbox_unavailable": "The notification inbox is unavailable here.",
@@ -2324,7 +2331,8 @@
     "emptyDescription": "No protocols have been created for your department yet.",
     "search": "Search protocols...",
     "title": "Protocols",
-    "open_hint": "Opens the protocol details"
+    "open_hint": "Opens the protocol details",
+    "not_found": "Protocol not found"
   },
   "push_notifications": {
     "close": "Close",
@@ -3268,7 +3276,10 @@
     "update_ready_message": "Tap to restart now. Otherwise the update installs the next time the app starts.",
     "update_ready_wall_message": "Tap to restart now, or the display restarts by itself after {{minutes}} minutes without use.",
     "update_restart_failed": "The app could not restart. The update installs the next time the app starts.",
-    "notifications_unread": "Notifications, {{count}} unread"
+    "notifications_unread": "Notifications, {{count}} unread",
+    "changes_need_attention": "Needs attention: {{count}}",
+    "offline": "Offline",
+    "offline_changes_waiting": "Offline: {{count}} waiting"
   },
   "access_denied": {
     "back_to_sign_in": "Back to sign in",

@@ -82,7 +82,10 @@ export async function loadDepartmentConfig(options: { forceRefresh?: boolean } =
 function wireOfflineStatus(runtime: OfflineRuntime): void {
   const update = (): void => {
     const online = runtime.connectivity?.isOnline() ?? true;
-    setShellState({ isOffline: !online, unsentChanges: runtime.outbox.getSnapshot().counts.unsent });
+    const { counts } = runtime.outbox.getSnapshot();
+    // A write waiting for confirmation can only be confirmed online, so offline it is not yet the user's to act on.
+    const changesNeedingAttention = counts.dead + (online ? counts.awaitingConfirmation : 0);
+    setShellState({ isOffline: !online, unsentChanges: counts.unsent, changesNeedingAttention });
   };
   update();
   runtime.outbox.subscribe(update);
@@ -288,6 +291,15 @@ export function createStartupSteps(config: AppShellConfig): InitStep[] {
 // ---------------------------------------------------------------------------------------------------------------
 // Session phase (signed in)
 
+/** Sends the session's queued writes in the background; a failure leaves them for the outbox's next trigger. */
+async function drainInBackground(outbox: OfflineRuntime['outbox']): Promise<void> {
+  try {
+    await outbox.drain();
+  } catch (error) {
+    logger.warn({ message: 'Outbox drain after sign-in failed', context: { error } });
+  }
+}
+
 export function createSessionSteps(config: AppShellConfig): InitStep[] {
   const manifest = config.variant;
   return [
@@ -304,9 +316,33 @@ export function createSessionSteps(config: AppShellConfig): InitStep[] {
       },
     },
     {
+      id: 'session.outbox',
+      optional: true,
+      // The outbox counted its writes when storage opened, before this session existed (the department comes with the
+      // rights the gates just loaded): count them again so the sync chip, the attention toast and Pending sync show this
+      // user's queued, refused and unconfirmed changes from the start.
+      run: async () => {
+        await requireOfflineRuntime().outbox.refresh();
+      },
+    },
+    {
       id: 'session.working-set',
       optional: true,
       run: () => refreshDataWorkingSet(manifest),
+    },
+    {
+      id: 'session.outbox-drain',
+      optional: true,
+      // Writes this user queued before the launch (or before signing out) reached the outbox's snapshot only with the
+      // recount above, so none of its triggers is set to send them while the connection stays up. Sent after the working
+      // set, as on a reconnect (plan §8.4), without holding up the shell; offline, the reconnect trigger sends them.
+      run: () => {
+        const offline = requireOfflineRuntime();
+
+        if (offline.connectivity?.isOnline() ?? true) {
+          void drainInBackground(offline.outbox);
+        }
+      },
     },
     {
       id: 'session.realtime',

@@ -10,7 +10,10 @@
   "app": {
     "title": "{{appName}}",
     "realtime_offline_title": "Live updates paused",
-    "realtime_offline_description": "Reconnecting to live updates. Information may be out of date."
+    "realtime_offline_description": "Reconnecting to live updates. Information may be out of date.",
+    "sync_attention_title": "Changes not sent",
+    "sync_attention_message": "Some changes could not be sent and need your attention.",
+    "sync_attention_message_review": "Some changes could not be sent and need your attention. Tap to review them."
   },
   "audio_streams": {
     "buffering": "Buforowanie",
@@ -1866,8 +1869,11 @@
       "mfa_transaction_expired": "Logowanie trwało zbyt długo. Zaloguj się ponownie.",
       "mfa_transaction_invalid": "To logowanie jest już nieważne. Zaloguj się ponownie.",
       "network_error": "Nie można połączyć się z Resgrid. Sprawdź połączenie i spróbuj ponownie.",
+      "no_method_here": "Żadna z Twoich metod weryfikacji nie działa na tym urządzeniu. Użyj innego urządzenia lub skonfiguruj aplikację uwierzytelniającą.",
+      "passkey_already_registered": "To urządzenie ma już klucz dostępu do Twojego konta.",
       "passkey_cancelled": "Okno klucza dostępu zostało zamknięte. Spróbuj ponownie lub użyj innej metody.",
       "passkey_failed": "Nie można użyć klucza dostępu. Spróbuj ponownie lub użyj innej metody.",
+      "passkey_limit_reached": "Masz już maksymalną liczbę kluczy dostępu dla tej aplikacji. Usuń jeden, aby dodać kolejny.",
       "passkey_no_credentials": "Na tym urządzeniu nie ma klucza dostępu tej aplikacji.",
       "passkey_not_registered_for_client": "Nie masz klucza dostępu do tej aplikacji.",
       "passkey_not_supported": "Klucze dostępu nie są dostępne na tym urządzeniu. Użyj innej metody.",
@@ -1987,7 +1993,8 @@
     "search": "Szukaj notatek...",
     "title": "Notatki",
     "all_categories": "All",
-    "open_hint": "Opens the note"
+    "open_hint": "Opens the note",
+    "not_found": "Nie znaleziono notatki"
   },
   "notifications": {
     "inbox_unavailable": "Skrzynka powiadomień jest tutaj niedostępna.",
@@ -2324,7 +2331,8 @@
     "emptyDescription": "Nie utworzono jeszcze protokołów dla Twojego działu.",
     "search": "Szukaj protokołów...",
     "title": "Protokoły",
-    "open_hint": "Opens the protocol details"
+    "open_hint": "Opens the protocol details",
+    "not_found": "Nie znaleziono protokołu"
   },
   "push_notifications": {
     "close": "Zamknij",
@@ -3268,7 +3276,10 @@
     "update_ready_message": "Dotknij, aby uruchomić ponownie teraz. W przeciwnym razie aktualizacja zostanie zainstalowana przy następnym uruchomieniu aplikacji.",
     "update_ready_wall_message": "Dotknij, aby uruchomić ponownie teraz. W przeciwnym razie ekran uruchomi się ponownie sam po {{minutes}} min bez użycia.",
     "update_restart_failed": "Nie udało się ponownie uruchomić aplikacji. Aktualizacja zostanie zainstalowana przy następnym uruchomieniu aplikacji.",
-    "notifications_unread": "Notifications, {{count}} unread"
+    "notifications_unread": "Notifications, {{count}} unread",
+    "changes_need_attention": "Needs attention: {{count}}",
+    "offline": "Offline",
+    "offline_changes_waiting": "Offline: {{count}} waiting"
   },
   "access_denied": {
     "back_to_sign_in": "Back to sign in",

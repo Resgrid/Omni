@@ -40,7 +40,7 @@ export * from './api/transaction';
 // Errors
 export { classifyLoginFailure, describeLoginFailure, isLoginErrorCode, isServerLoginReason, type LoginErrorCode, type LoginFailure, type TranslateFn } from './errors/login-errors';
 export { endsTransaction, type MfaProblem, toMfaProblem, TRANSACTION_ENDING_CODES } from './errors/mfa-errors';
-export { isMfaErrorCode, mfaErrorKey } from './errors/mfa-messages';
+export { isMfaErrorCode, MFA_ERROR_CODES, mfaErrorKey } from './errors/mfa-messages';
 
 // Session
 export { type AuthView, useAuth, useAuthStatus, useIsAuthenticated, useIsSharedSessionLocked, useMfaChallenge } from './hooks';

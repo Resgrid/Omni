@@ -198,6 +198,16 @@ describe('MemberHomeScreen', () => {
     expect(router.push).toHaveBeenLastCalledWith('/weather-alerts');
   });
 
+  it('lets the summary tile labels wrap and shrink to fit instead of cutting them off', async () => {
+    await render(<MemberHomeScreen />);
+
+    for (const id of ['summary-active-calls', 'summary-calls-im-on', 'summary-weather-alerts', 'summary-checkins']) {
+      const label = screen.getByTestId(`${id}-label`);
+      expect(label).toHaveProp('numberOfLines', 2);
+      expect(label).toHaveProp('adjustsFontSizeToFit', true);
+    }
+  });
+
   it('shows the registered due-checks card, and a prop replaces it', async () => {
     const unregister = registerMemberHomeHookPoints({ DueChecksCard: () => <Text>due checks card</Text> });
     const { unmount } = await render(<MemberHomeScreen />);

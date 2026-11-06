@@ -33,7 +33,7 @@ The check runs `checkForUpdateAsync`, then `fetchUpdateAsync` when the server ha
 ## How it applies
 
 - By default a downloaded update applies on the next cold start (expo's default).
-- The shell shows a small, dismissible **Update ready** toast (`ShellUpdateNotice`, next to the offline toast). Tapping it restarts now (`reloadAsync`); restarting stays the member's choice. A dismissed notice does not come back for the same update. Settings also shows **Restart to update**.
+- The shell shows a small, dismissible **Update ready** toast (`ShellUpdateNotice`, next to the sync-attention toast). Tapping it restarts now (`reloadAsync`); restarting stays the member's choice. A dismissed notice does not come back for the same update. Settings also shows **Restart to update**.
 - **Wall displays** (`useFormFactor()` = `wall`: wider than 1920 or kiosk mode) also restart by themselves once the update is downloaded and nobody has touched the shell for 5 minutes (`WALL_AUTO_RESTART_IDLE_MS`). The 5 minutes count from the later of the download and the last touch, so the notice is always up for at least that long. Touches are recorded by the shell frame's activity capture (`recordUserActivity`). This uses the form factor, not a manifest capability.
 - **No automatic restart during a voice session:** a restart guard in the shell holds the wall display's automatic restart while LiveKit is connected or connecting (`useLiveKitStore` from `@resgrid/voice`); the wall display tries again every 30 seconds. A person who taps restart (the toast or Settings) restarts at once, voice session or not: they chose to. Department audio streams do not hold a restart. More guards for automatic restarts can be added with `registerAppUpdateRestartGuard(id, guard)`.
 

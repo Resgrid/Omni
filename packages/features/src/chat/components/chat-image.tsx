@@ -3,11 +3,10 @@ import { useAuthStore } from '@resgrid/auth';
 import { getDataApiContext } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import { type ChatMessageResultData } from '@resgrid/models';
-import { HStack, Image, NativeModal, Pressable, Text } from '@resgrid/ui';
-import { ImageOff, X } from 'lucide-react-native';
+import { HStack, Image, ImageViewer, Pressable, Text } from '@resgrid/ui';
+import { ImageOff } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StyleSheet } from 'react-native';
 
 import { imageAttachmentOf } from '../lib/chat-format';
 
@@ -74,39 +73,15 @@ export interface ChatImageViewerProps {
   onClose: () => void;
 }
 
-/** Full-screen view of an image message: the full file, with the cached thumbnail shown while it downloads. */
+/** Full-screen view of an image message (the shared ImageViewer): the full file, with the cached thumbnail shown while it downloads. */
 export const ChatImageViewer: React.FC<ChatImageViewerProps> = ({ message, onClose }) => {
   const { t } = useTranslation();
-  const insets = useSafeAreaInsets();
   const source = useChatImageSource(message, false);
   const thumbnail = useChatImageSource(message, true);
-  const isOpen = message !== null && source !== null;
 
-  return (
-    <NativeModal visible={isOpen} animationType="fade" onRequestClose={onClose} testID="chat-image-viewer">
-      <View style={styles.viewer}>
-        {source ? (
-          <Image source={source} placeholder={thumbnail} placeholderContentFit="contain" style={styles.full} contentFit="contain" accessibilityLabel={message?.Body || t('chat.image')} testID="chat-image-viewer-image" />
-        ) : null}
-        {message?.Body ? (
-          <View style={StyleSheet.flatten([styles.caption, { paddingBottom: insets.bottom + 16 }])}>
-            <Text className="text-base text-white">{message.Body}</Text>
-          </View>
-        ) : null}
-        <View style={StyleSheet.flatten([styles.close, { top: insets.top + 8 }])}>
-          <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel={t('common.close')} className="size-10 items-center justify-center rounded-full bg-black/50" testID="chat-image-viewer-close">
-            <X size={22} color="#ffffff" />
-          </Pressable>
-        </View>
-      </View>
-    </NativeModal>
-  );
+  return <ImageViewer source={message ? source : null} placeholder={thumbnail} caption={message?.Body || undefined} label={message?.Body || t('chat.image')} onClose={onClose} testID="chat-image-viewer" />;
 };
 
 const styles = StyleSheet.create({
   thumbnail: { width: THUMBNAIL_SIZE, height: THUMBNAIL_SIZE, borderRadius: 10 },
-  viewer: { flex: 1, backgroundColor: '#000000' },
-  full: { flex: 1 },
-  caption: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 16, paddingTop: 12, backgroundColor: 'rgba(0,0,0,0.5)' },
-  close: { position: 'absolute', right: 16 },
 });

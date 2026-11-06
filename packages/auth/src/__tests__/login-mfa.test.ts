@@ -196,6 +196,8 @@ describe('brokered single sign-on (preferred SSO path)', () => {
     const begin = h.server.requestsTo('POST', '/Sso/Begin')[0];
     expect(begin.body).toMatchObject({ Purpose: 'login', DepartmentToken: 'dept-token', ReturnTarget: 'resgriddispatch://sso-return', CodeChallengeMethod: 'S256' });
     expect(begin.headers.Authorization).toBeUndefined();
+    // Core sizes the session's refresh token from the client_id stored at redemption, not from the completion grant's.
+    expect(h.server.requestsTo('POST', '/Sso/Redeem')[0].body).toMatchObject({ SsoTransactionId: 'sso-1', SsoCode: 'code-1', ClientId: 'dispatch' });
     expect(useAuthStore.getState()).toMatchObject({ status: 'signedIn', authMethod: 'sso' });
   });
 
@@ -242,7 +244,7 @@ describe('brokered single sign-on (preferred SSO path)', () => {
     saveSharedInstallation({ shared: true, label: 'Dispatch 3' });
     __setNextAuthSessionResult({ type: 'cancel' });
     await useAuthStore.getState().loginWithBrokeredSso({ departmentCode: 'ABC' });
-    expect(browserCalls[0].options).toEqual({ preferEphemeralSession: true });
+    expect(browserCalls[0].options).toMatchObject({ preferEphemeralSession: true });
     expect(h.server.requestsTo('POST', '/Sso/Begin')[0].headers['X-Resgrid-Shared-Installation']).toBe('true');
   });
 });

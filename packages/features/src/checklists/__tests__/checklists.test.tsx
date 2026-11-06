@@ -276,6 +276,22 @@ describe('checklists screen', () => {
     expect(screen.getByTestId('checklist-item-detail', hidden)).toBeTruthy();
   });
 
+  it('loads a piece of evidence on request and shows it full screen when tapped', async () => {
+    mockPreview.mockResolvedValue(run({ Files: [{ Id: 'f1', ItemId: 'lights', Name: 'Left lamp', ContentType: 'image/png', Size: 10, ScanState: 1 }] }));
+    await render(<ChecklistsScreen />);
+    await waitFor(() => expect(screen.getByTestId('checklist-open-occ1')).toBeTruthy());
+    await fireEvent.press(screen.getByTestId('checklist-open-occ1'));
+    await waitFor(() => expect(screen.getByTestId('checklist-evidence-f1', hidden)).toBeTruthy());
+    await fireEvent.press(screen.getByTestId('checklist-evidence-f1', hidden));
+    await waitFor(() => expect(screen.getByTestId('checklist-evidence-open-f1', hidden)).toBeTruthy());
+
+    await fireEvent.press(screen.getByTestId('checklist-evidence-open-f1', hidden));
+    expect(screen.getByTestId('checklist-evidence-viewer-image', hidden).props.source).toEqual({ uri: 'data:image/png;base64,AAA' });
+    expect(screen.getByTestId('checklist-evidence-viewer-caption', hidden)).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('checklist-evidence-viewer-close', hidden));
+    expect(screen.queryByTestId('checklist-evidence-viewer-image', hidden)).toBeNull();
+  });
+
   it('submits through the registered writer after validating required answers', async () => {
     const save = jest.fn(async () => ({ outcome: 'sent' as const, run: run({ State: 2, CanEdit: false, Score: 100 }) }));
     registerChecklistRunWriter({ save });

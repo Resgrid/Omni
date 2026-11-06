@@ -42,6 +42,7 @@ interface DesktopSso {
 
 const desktopSso = (): DesktopSso | null => {
   const bridge = typeof window !== 'undefined' ? (window as unknown as { electronAPI?: Partial<DesktopSso> }).electronAPI : undefined;
+
   return bridge?.ssoListen && bridge.ssoOpen && bridge.ssoCancel ? (bridge as DesktopSso) : null;
 };
 
@@ -50,11 +51,42 @@ export const ssoReturnTarget = (): string => (isWebPlatform() && typeof window !
 
 export const ssoPlatform = (): string => (desktopSso() ? 'electron' : platformOS());
 
+/** The browser window the provider sign-in runs in on the web: opened blank on the tap, then reused by expo-web-browser. */
+export const SSO_POPUP_NAME = 'resgrid-sso';
+
+// expo-web-browser's own popup size, so the window does not change shape when the provider loads.
+const POPUP_WIDTH = 500;
+const POPUP_HEIGHT = 650;
+
+/**
+ * Browsers allow a popup only from the member's tap, and Safari and mobile browsers refuse one opened after a network
+ * round trip — which the provider's address needs (`Sso/Begin`). So on the web the window opens blank right away,
+ * before anything is awaited, and expo-web-browser later navigates that same named window to the provider instead of
+ * opening a new one. Every caller starts the round trip from the tap without awaiting first. Native auth sessions and
+ * the desktop app's system browser need none of this.
+ */
+const openWebPopup = (): Window | null => {
+  if (!isWebPlatform() || typeof window === 'undefined') {
+    return null;
+  }
+
+  const top = Math.max(0, ((window.screen?.height ?? POPUP_HEIGHT) - POPUP_HEIGHT) * 0.5);
+  const left = Math.max(0, ((window.screen?.width ?? POPUP_WIDTH) - POPUP_WIDTH) * 0.5);
+
+  try {
+    return window.open('about:blank', SSO_POPUP_NAME, `toolbar=no,menubar=no,location=yes,resizable=yes,status=no,scrollbars=yes,top=${top},left=${left},width=${POPUP_WIDTH},height=${POPUP_HEIGHT}`);
+  } catch {
+    // Blocked anyway: expo-web-browser tries once more and reports it as a failed round trip.
+    return null;
+  }
+};
+
 /** Parses the broker's return: `?sso_code=…&state=…` or `?error=…&state=…`. */
 export const parseSsoReturn = (url: string): { ssoCode?: string; state?: string; error?: string } => {
   const query = url.includes('?') ? (url.substring(url.indexOf('?') + 1).split('#')[0] ?? '') : '';
   const parsed = new URLSearchParams(query);
   const one = (value: string | null): string | undefined => (typeof value === 'string' && value.length > 0 ? value : undefined);
+
   return { ssoCode: one(parsed.get('sso_code')), state: one(parsed.get('state')), error: one(parsed.get('error')) };
 };
 
@@ -64,15 +96,20 @@ export const parseSsoReturn = (url: string): { ssoCode?: string; state?: string;
  * shared installation so the next operator cannot inherit the last one's provider session.
  */
 export const runSsoRoundTrip = async (begin: (secrets: SsoRoundTripSecrets) => Promise<SsoBeginData>, ephemeral: boolean = ephemeralBrowser()): Promise<SsoRoundTripResult> => {
+  const desktop = desktopSso();
+  // First, while the tap still counts as the member's (see openWebPopup).
+  const popup = desktop ? null : openWebPopup();
+  let popupHandedOver = false;
   const codeVerifier = randomBase64Url(32);
   const state = randomBase64Url(24);
-  const desktop = desktopSso();
   let listener: { id: string; returnTarget: string } | null = null;
+
   try {
     listener = desktop ? await desktop.ssoListen() : null;
     const returnTarget = listener ? listener.returnTarget : ssoReturnTarget();
 
     let begun: SsoBeginData;
+
     try {
       begun = await begin({ returnTarget, state, codeChallenge: await s256Challenge(codeVerifier), platform: ssoPlatform() });
     } catch (error) {
@@ -80,24 +117,45 @@ export const runSsoRoundTrip = async (begin: (secrets: SsoRoundTripSecrets) => P
     }
 
     let returnedUrl: string | null;
+
     if (desktop && listener) {
       // The provider opens in the member's own browser; the loopback listener hands back its one return.
       returnedUrl = await desktop.ssoOpen(listener.id, begun.AuthorizeUrl);
     } else {
-      const result = await WebBrowser.openAuthSessionAsync(begun.AuthorizeUrl, returnTarget, { preferEphemeralSession: ephemeral });
-      returnedUrl = result.type === 'success' && 'url' in result && result.url ? result.url : null;
+      // The member closed the blank window while the provider's address was on its way: a new one would be blocked.
+      if (popup?.closed) {
+        return { ok: false, reason: 'cancelled' };
+      }
+
+      // From here expo-web-browser owns the web popup (it closes it on every outcome it answers); the name is ignored natively.
+      popupHandedOver = true;
+
+      try {
+        const result = await WebBrowser.openAuthSessionAsync(begun.AuthorizeUrl, returnTarget, { preferEphemeralSession: ephemeral, windowName: SSO_POPUP_NAME });
+
+        returnedUrl = result.type === 'success' && 'url' in result && result.url ? result.url : null;
+      } catch (error) {
+        // It can reject after loading the provider into the window (browser storage refusing its session record) without
+        // closing it. Left open, that window would also be reused, unnavigated, by the next attempt: the finally closes it.
+        popupHandedOver = false;
+        throw error;
+      }
     }
+
     if (!returnedUrl) {
       return { ok: false, reason: 'cancelled' };
     }
 
     const returned = parseSsoReturn(returnedUrl);
+
     if (returned.state !== state) {
       return { ok: false, reason: 'state_mismatch' };
     }
+
     if (returned.error) {
       return { ok: false, reason: returned.error === 'access_denied' ? 'denied' : 'failed', code: returned.error };
     }
+
     if (!returned.ssoCode) {
       return { ok: false, reason: 'failed' };
     }
@@ -108,6 +166,11 @@ export const runSsoRoundTrip = async (begin: (secrets: SsoRoundTripSecrets) => P
     // desktop bridge failing): a failed round trip, reported like any other rather than thrown at every caller.
     return { ok: false, reason: 'failed' };
   } finally {
+    // A refused begin never reaches the provider: the blank window goes with it.
+    if (popup && !popupHandedOver && !popup.closed) {
+      popup.close();
+    }
+
     // The listener closes itself after its one return, so this is a no-op then; on every other way out it closes here.
     if (desktop && listener) {
       await desktop.ssoCancel(listener.id).catch(() => undefined);

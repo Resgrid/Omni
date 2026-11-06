@@ -10,7 +10,10 @@
   "app": {
     "title": "{{appName}}",
     "realtime_offline_title": "Live updates paused",
-    "realtime_offline_description": "Reconnecting to live updates. Information may be out of date."
+    "realtime_offline_description": "Reconnecting to live updates. Information may be out of date.",
+    "sync_attention_title": "Changes not sent",
+    "sync_attention_message": "Some changes could not be sent and need your attention.",
+    "sync_attention_message_review": "Some changes could not be sent and need your attention. Tap to review them."
   },
   "audio_streams": {
     "buffering": "التخزين المؤقت",
@@ -1866,8 +1869,11 @@
       "mfa_transaction_expired": "استغرق تسجيل الدخول وقتًا طويلاً. سجّل الدخول مجددًا.",
       "mfa_transaction_invalid": "لم يعد تسجيل الدخول هذا صالحًا. سجّل الدخول مجددًا.",
       "network_error": "تعذر الوصول إلى Resgrid. تحقق من اتصالك وحاول مرة أخرى.",
+      "no_method_here": "لا تعمل أي من طرق التحقق الخاصة بك على هذا الجهاز. استخدم جهازًا آخر أو أعدّ تطبيق المصادقة.",
+      "passkey_already_registered": "يحتوي هذا الجهاز بالفعل على مفتاح مرور لحسابك.",
       "passkey_cancelled": "أُغلق طلب مفتاح المرور. حاول مجددًا أو استخدم طريقة أخرى.",
       "passkey_failed": "تعذر استخدام مفتاح المرور. حاول مجددًا أو استخدم طريقة أخرى.",
+      "passkey_limit_reached": "لديك الحد الأقصى من مفاتيح المرور المسموح به لهذا التطبيق. أزل مفتاحًا لإضافة آخر.",
       "passkey_no_credentials": "لم يُعثر على مفتاح مرور لهذا التطبيق على هذا الجهاز.",
       "passkey_not_registered_for_client": "ليس لديك مفتاح مرور لهذا التطبيق.",
       "passkey_not_supported": "مفاتيح المرور غير متاحة على هذا الجهاز. استخدم طريقة أخرى.",
@@ -1987,7 +1993,8 @@
     "search": "البحث في الملاحظات...",
     "title": "الملاحظات",
     "all_categories": "All",
-    "open_hint": "Opens the note"
+    "open_hint": "Opens the note",
+    "not_found": "لم يتم العثور على الملاحظة"
   },
   "notifications": {
     "inbox_unavailable": "صندوق وارد الإشعارات غير متاح هنا.",
@@ -2324,7 +2331,8 @@
     "emptyDescription": "لم يتم إنشاء أي بروتوكولات لقسمك بعد.",
     "search": "البحث في البروتوكولات...",
     "title": "البروتوكولات",
-    "open_hint": "Opens the protocol details"
+    "open_hint": "Opens the protocol details",
+    "not_found": "لم يتم العثور على البروتوكول"
   },
   "push_notifications": {
     "close": "إغلاق",
@@ -3268,7 +3276,10 @@
     "update_ready_message": "اضغط لإعادة التشغيل الآن. وإلا فسيُثبَّت التحديث عند تشغيل التطبيق في المرة القادمة.",
     "update_ready_wall_message": "اضغط لإعادة التشغيل الآن، وإلا فستُعيد الشاشة التشغيل تلقائيًا بعد {{minutes}} دقائق دون استخدام.",
     "update_restart_failed": "تعذرت إعادة تشغيل التطبيق. سيُثبَّت التحديث عند تشغيل التطبيق في المرة القادمة.",
-    "notifications_unread": "Notifications, {{count}} unread"
+    "notifications_unread": "Notifications, {{count}} unread",
+    "changes_need_attention": "Needs attention: {{count}}",
+    "offline": "Offline",
+    "offline_changes_waiting": "Offline: {{count}} waiting"
   },
   "access_denied": {
     "back_to_sign_in": "Back to sign in",

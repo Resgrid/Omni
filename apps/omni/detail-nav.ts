@@ -12,6 +12,8 @@ export const detailNav = {
   unitDetail: hidden('unit-detail', '/units/[id]', 'units.details', 'Unit Details'),
   personnelDetail: hidden('personnel-detail', '/personnel/[id]', 'personnel.details', 'Member Details'),
   contactDetail: hidden('contact-detail', '/contacts/[id]', 'contacts.details', 'Contact Details'),
+  noteDetail: hidden('note-detail', '/notes/[id]', 'notes.details.title', 'Note Details'),
+  protocolDetail: hidden('protocol-detail', '/protocols/[id]', 'protocols.details.title', 'Protocol Details'),
   poiDetail: hidden('poi-detail', '/poi/[id]', 'pois.title', 'POIs'),
   weatherAlertDetail: hidden('weather-alert-detail', '/weather-alerts/[id]', 'weather_alerts.title', 'Weather Alerts'),
   chatChannel: hidden('chat-channel', '/chat/[channelId]', 'chat.title', 'Chat'),

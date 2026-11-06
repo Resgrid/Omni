@@ -12,13 +12,16 @@ import { resetFakeAuth } from './auth-fake';
 const mockGetAccountMethods = jest.fn();
 const mockRevokePasskey = jest.fn();
 const mockReauthenticate = jest.fn();
+const mockGetStepUpOptions = jest.fn();
 
 jest.mock('@resgrid/auth', () => ({
   ...require('./auth-fake').buildAuthMock(jest.requireActual('@resgrid/auth')),
   getAccountMethods: (...args: unknown[]) => mockGetAccountMethods(...args),
   revokePasskey: (...args: unknown[]) => mockRevokePasskey(...args),
   reauthenticateWithPassword: (...args: unknown[]) => mockReauthenticate(...args),
+  getStepUpOptions: (...args: unknown[]) => mockGetStepUpOptions(...args),
 }));
+
 jest.mock('../lib/api-context', () => ({ authUiApi: () => ({}), hasAuthUiApi: () => true }));
 
 const methods = (): AccountMethodsData => ({
@@ -81,6 +84,23 @@ describe('AccountSecurityScreen', () => {
     await waitFor(() => expect(mockRevokePasskey).toHaveBeenCalledTimes(2));
     expect(mockReauthenticate).toHaveBeenCalledWith({}, 'secret');
     expect(await screen.findByTestId('account-notice')).toHaveTextContent('mfa.account.passkey_removed');
+  });
+
+  it('says so when the step-up an account change needs has no method this device can use', async () => {
+    const auth = jest.requireMock<{ passkeysSupported: jest.Mock }>('@resgrid/auth');
+    auth.passkeysSupported.mockReturnValue(false);
+    mockRevokePasskey.mockRejectedValueOnce({ response: { status: 403, data: { type: 'step_up_required' } } });
+    mockGetStepUpOptions.mockResolvedValue({ Methods: ['passkey'], Preferred: 'passkey', EnrollmentRequired: false, WindowMinutes: 5, Passkey: null });
+
+    try {
+      await render(<AccountSecurityScreen />);
+      await fireEvent.press(await screen.findByTestId('passkey-remove-pk-1'));
+      expect(await screen.findByTestId('account-verify-no-method')).toHaveTextContent('mfa.errors.no_method_here');
+      expect(screen.queryByTestId('account-verify-secret')).toBeNull();
+      expect(screen.queryByTestId('account-verify-passkey')).toBeNull();
+    } finally {
+      auth.passkeysSupported.mockReturnValue(true);
+    }
   });
 
   it('hides passkeys in a variant without them', async () => {

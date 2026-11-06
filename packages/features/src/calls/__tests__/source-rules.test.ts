@@ -16,7 +16,7 @@ describe('calls cluster source rules', () => {
   it('renders server HTML only through HtmlRenderer: no raw WebView outside the video feed page surface', () => {
     const offenders = sources.filter(({ file, text }) => /from 'react-native-webview'/.test(text) && file !== 'video-feeds/components/video-feed-surface.tsx').map(({ file }) => file);
     expect(offenders).toEqual([]);
-    for (const file of ['protocols/components/protocol-content.tsx', 'notes/components/note-details-sheet.tsx', 'calls/components/detail/call-info-panel.tsx', 'calls/screens/call-detail.tsx']) {
+    for (const file of ['protocols/components/protocol-content.tsx', 'notes/screens/note-detail.tsx', 'calls/components/detail/call-info-panel.tsx', 'calls/screens/call-detail.tsx']) {
       expect(sources.find((source) => source.file === file)?.text).toContain('HtmlRenderer');
     }
   });

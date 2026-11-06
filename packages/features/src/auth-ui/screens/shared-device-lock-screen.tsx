@@ -229,6 +229,8 @@ export function SharedDeviceLockScreen() {
   const offersPasskey = methods.includes('passkey') && !!options?.Passkey && auth.passkeys && passkeysSupported();
   const offersApproval = methods.includes('passkey_approval');
   const offersProvider = methods.includes('federated');
+  // A passkey-only unlock in the desktop app offers nothing either.
+  const offersNothing = !offersCode && !offersPasskey && !offersApproval && !offersProvider;
 
   return (
     <Box className="flex-1 bg-background-0">
@@ -253,8 +255,8 @@ export function SharedDeviceLockScreen() {
 
             {phase === 'ready' && !approval ? (
               <>
-                <Text size="sm" className="text-center" testID={methods.length === 0 ? 'shared-lock-no-methods' : 'shared-lock-body'}>
-                  {methods.length === 0 ? t('shared_session.no_unlock') : t('shared_session.locked_body')}
+                <Text size="sm" className="text-center" testID={offersNothing ? 'shared-lock-no-methods' : 'shared-lock-body'}>
+                  {offersNothing ? t('shared_session.no_unlock') : t('shared_session.locked_body')}
                 </Text>
                 {offersCode ? (
                   <>

@@ -107,6 +107,24 @@ export interface MessageListItem {
   isOwn: boolean;
 }
 
+/**
+ * Whether the caller sent a message (no answering), decided the way the list decides it: an inbox copy can be answered
+ * (a message to yourself is in both lists), an outbox-only copy cannot; a message in neither list (opened from a push)
+ * goes by its sender.
+ */
+export const isOwnMessage = (
+  messageId: string,
+  lists: { inbox: readonly MessageResultData[]; sent: readonly MessageResultData[] },
+  loaded: MessageResultData | null | undefined,
+  userId: string | null | undefined
+): boolean => {
+  if (lists.inbox.some((message) => message.MessageId === messageId)) return false;
+
+  if (lists.sent.some((message) => message.MessageId === messageId)) return true;
+
+  return !!loaded && !!userId && loaded.SendingUserId === userId && !loaded.IsSystem;
+};
+
 /** The list for a filter: inbox and/or outbox, newest first, de-duplicated (a message to yourself is in both), searched. */
 export const buildMessageList = (inbox: readonly MessageResultData[], sent: readonly MessageResultData[], filter: MessageFilter, query: string): MessageListItem[] => {
   const items: MessageListItem[] = [];

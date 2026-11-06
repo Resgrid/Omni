@@ -1,4 +1,4 @@
-import { lineClampStyle, toAriaProps, toDomProps } from '../dom-props';
+import { lineClampStyle, toAriaProps, toDomProps, withPixelLineHeight } from '../dom-props';
 
 describe('toDomProps', () => {
   it('maps testID to data-testid and drops React Native only props', () => {
@@ -19,6 +19,13 @@ describe('toDomProps', () => {
     const result = toDomProps({ style } as Record<string, unknown>) as { style: unknown };
 
     expect(result.style).toBe(style);
+  });
+
+  // React DOM writes a bare lineHeight number as a multiple of the font size: a 14px badge line would be 14 lines tall.
+  it('turns a React Native lineHeight (pixels) into a CSS pixel length', () => {
+    const result = toDomProps({ style: [{ fontSize: 11 }, { lineHeight: 14 }] });
+
+    expect(result.style).toEqual({ fontSize: 11, lineHeight: '14px' });
   });
 
   it('turns numberOfLines into a CSS line clamp merged under the caller style', () => {
@@ -90,5 +97,19 @@ describe('lineClampStyle', () => {
 
   it('clamps to the given number of lines', () => {
     expect(lineClampStyle(3)).toMatchObject({ WebkitLineClamp: 3, overflow: 'hidden' });
+  });
+});
+
+describe('withPixelLineHeight', () => {
+  it('gives a numeric line height a px unit and keeps the rest of the style', () => {
+    expect(withPixelLineHeight({ fontSize: 12, lineHeight: 16, color: 'red' })).toEqual({ fontSize: 12, lineHeight: '16px', color: 'red' });
+  });
+
+  it('returns a style without a numeric line height unchanged', () => {
+    const relative = { lineHeight: '1.5' };
+    const none = { fontSize: 12 };
+
+    expect(withPixelLineHeight(relative)).toBe(relative);
+    expect(withPixelLineHeight(none)).toBe(none);
   });
 });

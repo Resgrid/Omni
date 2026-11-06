@@ -18,6 +18,11 @@ export interface ShellState {
   /** Outbox items not yet delivered for this session ("N changes waiting"). */
   unsentChanges: number;
   /**
+   * Queued changes only the user can move on: refused by the server, or (while online) waiting for the user to confirm
+   * sending them. The one sync state that gets a toast.
+   */
+  changesNeedingAttention: number;
+  /**
    * `Config/GetConfig` for the signed-in department (EventingUrl, Novu, web push, location thresholds). Interim home:
    * the shared config store belongs in @resgrid/data (persisted `core-storage`).
    */
@@ -32,6 +37,7 @@ const INITIAL: ShellState = {
   accessDeniedNotice: false,
   isOffline: false,
   unsentChanges: 0,
+  changesNeedingAttention: 0,
   departmentConfig: null,
   pushRegistrationArmed: false,
 };
@@ -42,9 +48,12 @@ export const getShellState = (): ShellState => useShellStore.getState();
 
 export const setShellState = (patch: Partial<ShellState>): void => useShellStore.setState(patch);
 
-/** Session-scoped fields go back to their defaults on sign-out (device preferences stay). */
+/**
+ * Session-scoped fields go back to their defaults on sign-out (device preferences and the connection state stay). The
+ * sync counts are the ending session's: a held outbox keeps its writes, but they are no longer this user's to act on.
+ */
 export function resetShellSessionState(): void {
-  useShellStore.setState({ departmentConfig: null, pushRegistrationArmed: false });
+  useShellStore.setState({ departmentConfig: null, pushRegistrationArmed: false, unsentChanges: 0, changesNeedingAttention: 0 });
 }
 
 /** Test helper. Not for app code. */

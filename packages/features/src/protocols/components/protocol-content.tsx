@@ -15,7 +15,7 @@ export interface ProtocolContentProps {
 /**
  * A protocol's code, description and text (Unit/IC baseline + Responder extras). The text is server HTML and only ever
  * reaches the screen through `HtmlRenderer` (sanitized; iframe without allow-same-origin on web) — never a raw WebView.
- * The text grows to fit (up to most of the screen, then scrolls inside its box), in the details sheet and on a call alike.
+ * The text grows to fit (up to most of the screen, then scrolls inside its box), on the protocol's page and on a call alike.
  */
 export const ProtocolContent: React.FC<ProtocolContentProps> = ({ protocol, htmlStyle, showName = true, testID = 'protocol-content' }) => {
   const { t } = useTranslation();

@@ -2,12 +2,13 @@ import { useProtocolsStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import type { CallProtocolsResultData } from '@resgrid/models';
 import { FlatList, Input, InputField, Loading, RefreshControl, ZeroState } from '@resgrid/ui';
+import { router } from 'expo-router';
 import { BookOpen } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { ProtocolCard } from '../components/protocol-card';
-import { ProtocolDetailsSheet } from '../components/protocol-details-sheet';
+import { protocolRoutes } from '../routes';
 
 /** Protocols search over name, code and description (plain text). */
 export function searchProtocols(protocols: readonly CallProtocolsResultData[], query: string): CallProtocolsResultData[] {
@@ -17,15 +18,13 @@ export function searchProtocols(protocols: readonly CallProtocolsResultData[], q
   return enabled.filter((protocol) => `${protocol.Name} ${protocol.Code} ${protocol.Description}`.toLowerCase().includes(needle));
 }
 
-/** Department protocols (Unit/IC list + Responder extras); read from the persisted store, so it works offline. */
+/** Department protocols (Unit/IC list + Responder extras); read from the persisted store, so it works offline. A protocol opens as its own page. */
 export default function ProtocolListScreen() {
   const { t } = useTranslation();
   const protocols = useProtocolsStore((state) => state.protocols);
   const isLoading = useProtocolsStore((state) => state.loading.protocols === true);
   const fetchProtocols = useProtocolsStore((state) => state.fetchProtocols);
-  const fetchProtocol = useProtocolsStore((state) => state.fetchProtocol);
   const [query, setQuery] = useState('');
-  const [selected, setSelected] = useState<CallProtocolsResultData | null>(null);
 
   useEffect(() => {
     void fetchProtocols();
@@ -33,16 +32,7 @@ export default function ProtocolListScreen() {
 
   const visible = useMemo(() => searchProtocols(protocols, query), [protocols, query]);
 
-  const open = useCallback(
-    (protocol: CallProtocolsResultData) => {
-      setSelected(protocol);
-      // The list may carry a trimmed protocol; the detail read fills in the full text when online.
-      void fetchProtocol(protocol.Id).then((full) => {
-        if (full) setSelected((current) => (current?.Id === full.Id ? full : current));
-      });
-    },
-    [fetchProtocol]
-  );
+  const open = useCallback((protocol: CallProtocolsResultData) => router.push(protocolRoutes.protocolDetail(protocol.Id)), []);
 
   return (
     <View style={styles.screen} className="bg-background-50" testID="protocol-list-screen">
@@ -60,7 +50,6 @@ export default function ProtocolListScreen() {
         ListEmptyComponent={isLoading ? <Loading /> : <ZeroState icon={BookOpen} heading={t('protocols.empty')} description={t('protocols.emptyDescription')} testID="protocol-list-empty" />}
         testID="protocol-list"
       />
-      <ProtocolDetailsSheet protocol={selected} isOpen={selected !== null} onClose={() => setSelected(null)} />
     </View>
   );
 }

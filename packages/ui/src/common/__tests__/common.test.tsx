@@ -5,9 +5,9 @@ import { Text } from 'react-native';
 import { useToastStore } from '../../toast/store';
 import { HeaderBackButton } from '../header-back-button';
 import { CardSkeleton, ListSkeleton, Loading, LoadingSkeleton } from '../loading';
-import { OfflineStatusToast } from '../offline-status-toast';
 import { REALTIME_OUTAGE_GRACE_MS, RealtimeStatusBanner } from '../realtime-status-banner';
 import { AppBarBackContext, ScreenHeader } from '../screen-header';
+import { SYNC_NOTICE_DELAY_MS, SyncAttentionToast } from '../sync-attention-toast';
 import { getTypeIconUrl, getTypeMapIcon, TypeIcon, TypeMapIconProvider } from '../type-icon';
 import { ZeroState } from '../zero-state';
 
@@ -43,6 +43,7 @@ describe('Loading (IC)', () => {
         <Text>Loaded</Text>
       </LoadingSkeleton>
     );
+
     expect(screen.getByTestId('loading-skeleton')).toBeTruthy();
 
     await rerender(
@@ -204,7 +205,9 @@ describe('RealtimeStatusBanner (Responder, props-driven)', () => {
   });
 });
 
-describe('OfflineStatusToast (IC, props-driven)', () => {
+// Routine sync state (offline, changes waiting to send) used to toast on every change, so every queued write flashed a
+// toast at the top of the screen for the moment it took to send. Only changes that need the user toast now.
+describe('SyncAttentionToast', () => {
   beforeEach(() => {
     jest.useFakeTimers();
     useToastStore.getState().clearToasts();
@@ -215,36 +218,68 @@ describe('OfflineStatusToast (IC, props-driven)', () => {
     jest.useRealTimers();
   });
 
-  it('shows a tappable pending-sync toast that opens the queue', async () => {
-    const onOpenQueue = jest.fn();
-    await render(<OfflineStatusToast isOffline={false} pendingCount={2} onOpenQueue={onOpenQueue} />);
+  const advance = async (ms: number) => {
+    await act(async () => {
+      jest.advanceTimersByTime(ms);
+    });
+  };
 
+  it('posts nothing for a state that clears before the delay', async () => {
+    const { rerender } = await render(<SyncAttentionToast attentionCount={1} />);
+    await advance(SYNC_NOTICE_DELAY_MS - 1);
+    await rerender(<SyncAttentionToast attentionCount={0} />);
+    await advance(SYNC_NOTICE_DELAY_MS);
+
+    expect(useToastStore.getState().toasts).toHaveLength(0);
+  });
+
+  it('posts a toast that stays until it is tapped, and opens the queue', async () => {
+    const onOpenQueue = jest.fn();
+    await render(<SyncAttentionToast attentionCount={2} onOpenQueue={onOpenQueue} />);
+    expect(useToastStore.getState().toasts).toHaveLength(0);
+
+    await advance(SYNC_NOTICE_DELAY_MS);
     const [toast] = useToastStore.getState().toasts;
-    expect(toast).toMatchObject({ type: 'info', message: 'View sync queue', title: '2 pending' });
+    expect(toast).toMatchObject({ type: 'error', title: 'Changes not sent', message: 'Some changes could not be sent and need your attention. Tap to review them.' });
+
+    // No auto-dismiss: the user has to see it.
+    await advance(60_000);
+    expect(useToastStore.getState().toasts).toHaveLength(1);
 
     await act(() => toast.onPress?.());
     expect(onOpenQueue).toHaveBeenCalledTimes(1);
   });
 
-  it('shows a warning while offline and replaces it when the state changes', async () => {
-    const { rerender } = await render(<OfflineStatusToast isOffline pendingCount={0} />);
-    expect(useToastStore.getState().toasts).toEqual([expect.objectContaining({ type: 'warning', message: 'You are offline' })]);
+  it('does not come back after a dismissal until more changes need attention, and goes when none do', async () => {
+    const { rerender } = await render(<SyncAttentionToast attentionCount={1} />);
+    await advance(SYNC_NOTICE_DELAY_MS);
+    const first = useToastStore.getState().toasts[0];
+    expect(first.message).toBe('Some changes could not be sent and need your attention.');
 
-    await rerender(<OfflineStatusToast isOffline={false} pendingCount={0} />);
+    await act(() => useToastStore.getState().removeToast(first.id));
+    await rerender(<SyncAttentionToast attentionCount={1} />);
+    expect(useToastStore.getState().toasts).toHaveLength(0);
+
+    await rerender(<SyncAttentionToast attentionCount={2} />);
+    expect(useToastStore.getState().toasts).toHaveLength(1);
+
+    await rerender(<SyncAttentionToast attentionCount={0} />);
     expect(useToastStore.getState().toasts).toHaveLength(0);
   });
 
   it('does not re-post when only the callback identity changes', async () => {
-    const { rerender } = await render(<OfflineStatusToast isOffline={false} pendingCount={1} onOpenQueue={() => undefined} />);
+    const { rerender } = await render(<SyncAttentionToast attentionCount={1} onOpenQueue={() => undefined} />);
+    await advance(SYNC_NOTICE_DELAY_MS);
     const firstId = useToastStore.getState().toasts[0].id;
 
-    await rerender(<OfflineStatusToast isOffline={false} pendingCount={1} onOpenQueue={() => undefined} />);
+    await rerender(<SyncAttentionToast attentionCount={1} onOpenQueue={() => undefined} />);
 
     expect(useToastStore.getState().toasts.map((toast) => toast.id)).toEqual([firstId]);
   });
 
   it('removes its toast on unmount', async () => {
-    const { unmount } = await render(<OfflineStatusToast isOffline pendingCount={3} />);
+    const { unmount } = await render(<SyncAttentionToast attentionCount={3} />);
+    await advance(SYNC_NOTICE_DELAY_MS);
     expect(useToastStore.getState().toasts).toHaveLength(1);
 
     await unmount();

@@ -1,6 +1,6 @@
 import { useAuthStore } from '@resgrid/auth';
 import { type RealtimeHubOutage, useRealtimeStore } from '@resgrid/realtime';
-import { Button, ButtonText, HStack, OfflineStatusToast, RealtimeStatusBanner, Spinner, Text, useThemeColors, VStack } from '@resgrid/ui';
+import { Button, ButtonText, HStack, RealtimeStatusBanner, Spinner, SyncAttentionToast, Text, useSettledFlag, useThemeColors, VStack } from '@resgrid/ui';
 import { useRouter } from 'expo-router';
 import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -30,29 +30,37 @@ export function ShellRealtimeBanner() {
   return <RealtimeStatusBanner outages={defined} />;
 }
 
-/** OfflineStatusToast fed from connectivity and the outbox's unsent count; opens the storage screen when the variant has one. */
-export function ShellOfflineToast() {
-  const isOffline = useShellStore((state) => state.isOffline);
-  const unsent = useShellStore((state) => state.unsentChanges);
+/**
+ * SyncAttentionToast fed from the outbox's changes that need the user; opens the storage screen when the variant has
+ * one. Offline and "changes waiting" are routine and never toast: the app bar's sync chip shows them once they last.
+ */
+export function ShellSyncAttentionToast() {
+  const attention = useShellStore((state) => state.changesNeedingAttention);
   const href = useHref();
   const router = useRouter();
   const target = href.settingsStorage();
 
-  return <OfflineStatusToast isOffline={isOffline} pendingCount={unsent} onOpenQueue={target ? () => router.push(target) : undefined} />;
+  return <SyncAttentionToast attentionCount={attention} onOpenQueue={target ? () => router.push(target) : undefined} />;
 }
+
+/** A bootstrap quicker than this shows no indicator at all; one that shows stays long enough to read. */
+export const SESSION_INIT_INDICATOR_DELAY_MS = 1000;
+export const SESSION_INIT_INDICATOR_MIN_VISIBLE_MS = 1000;
 
 /**
  * The signed-in bootstrap's first run, without blocking anything: launch never puts a spinner over the app (owner
  * decision, 2026-11-04). Rights, flags and terminology are persisted, so every screen works from the last session's
  * copies while the bootstrap refreshes them, and lists show their own loading inside the page. A small chip at the
- * top of the content says so; it takes no touches and no space, so nothing under a finger moves when it goes.
+ * top of the content says so once the run has taken a moment (a quick one would only flash it); it takes no touches
+ * and no space, so nothing under a finger moves when it goes.
  */
 export function SessionInitIndicator() {
   const init = useAppInit();
   const colors = useThemeColors();
   const { t } = useShellTranslation();
+  const isVisible = useSettledFlag(init.isSessionLoading, { delayMs: SESSION_INIT_INDICATOR_DELAY_MS, minVisibleMs: SESSION_INIT_INDICATOR_MIN_VISIBLE_MS });
 
-  if (!init.isSessionLoading) {
+  if (!isVisible) {
     return null;
   }
 

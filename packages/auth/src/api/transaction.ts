@@ -62,8 +62,27 @@ export interface SsoBeginInput {
 
 export const ssoBegin = (ctx: ApiContext, input: SsoBeginInput): Promise<SsoBeginData> => authData(ctx, ssoEndpoints.beginLogin, { body: { ...input, CodeChallengeMethod: 'S256' } });
 
-export const ssoRedeem = (ctx: ApiContext, ssoTransactionId: string, ssoCode: string, codeVerifier: string): Promise<SsoRedeemData> =>
-  authData(ctx, ssoEndpoints.redeemLogin, { body: { SsoTransactionId: ssoTransactionId, SsoCode: ssoCode, CodeVerifier: codeVerifier } });
+/**
+ * `clientId` is the variant's OAuth client_id. Core stores it on the login transaction the redemption starts and sizes the
+ * session's refresh token from it at the completion grant (that grant's own client_id is not used), so an SSO sign-in
+ * without it gets the short non-mobile lifetime.
+ */
+interface SsoRedeemBody {
+  SsoTransactionId: string;
+  SsoCode: string;
+  CodeVerifier: string;
+  ClientId?: string;
+}
+
+export const ssoRedeem = (ctx: ApiContext, ssoTransactionId: string, ssoCode: string, codeVerifier: string, clientId?: string): Promise<SsoRedeemData> => {
+  const body: SsoRedeemBody = { SsoTransactionId: ssoTransactionId, SsoCode: ssoCode, CodeVerifier: codeVerifier };
+
+  if (clientId) {
+    body.ClientId = clientId;
+  }
+
+  return authData(ctx, ssoEndpoints.redeemLogin, { body });
+};
 
 // ---- "I lost my authenticator" (plan sections 5.4 and 6.3) --------------------------------------------------------------
 

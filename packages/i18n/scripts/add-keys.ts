@@ -78,6 +78,9 @@ function platformKeys(): Record<string, string> {
     'app.realtime_offline_title': 'Live updates paused',
     'app.realtime_offline_description': 'Reconnecting to live updates. Information may be out of date.',
     'settings.view_sync_queue': 'View pending changes',
+    'app.sync_attention_title': 'Changes not sent',
+    'app.sync_attention_message': 'Some changes could not be sent and need your attention.',
+    'app.sync_attention_message_review': 'Some changes could not be sent and need your attention. Tap to review them.',
   });
   return keys;
 }

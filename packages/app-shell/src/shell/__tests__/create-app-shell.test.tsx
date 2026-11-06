@@ -2,7 +2,7 @@ import { featureFlagsStore, securityStore, terminologyStore, useAuthStore } from
 import type { VariantId } from '@resgrid/config';
 import type { DepartmentRightsResultData } from '@resgrid/models';
 import { useInboxUnreadCount } from '@resgrid/notifications';
-import { ColorSchemeProvider, computeFormFactor, type FormFactorInfo, getThemeColors, ScreenHeader, useFormFactor } from '@resgrid/ui';
+import { ColorSchemeProvider, computeFormFactor, type FormFactorInfo, getThemeColors, ScreenHeader, SYNC_NOTICE_DELAY_MS, useFormFactor, useToastStore } from '@resgrid/ui';
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 import { MapIcon, MessageCircleIcon, SettingsIcon } from 'lucide-react-native';
 import React from 'react';
@@ -18,6 +18,7 @@ import { resetShellStateForTests, setShellState } from '../../runtime/shell-stat
 import { registerShellOverlay, registerShellProvider, registerSidebarContent, resetShellSlotsForTests, type SidebarContentProps } from '../../runtime/slots';
 import { createAppShell } from '../create-app-shell';
 import { findNavEntryForPath, isTopLevelScreen, resolveHeaderLeading } from '../header';
+import { SESSION_INIT_INDICATOR_DELAY_MS } from '../overlays';
 import { resolveSidebarMode } from '../sidebar-mode';
 
 jest.mock('@resgrid/ui', () => ({ ...jest.requireActual('@resgrid/ui'), useFormFactor: jest.fn() }));
@@ -269,12 +270,88 @@ describe('createAppShell', () => {
     expect(screen.queryByTestId('shell-nav-menu')).toBeNull();
   });
 
-  it('shows "changes waiting" from the outbox count, as a link only when the variant has the storage screen', async () => {
-    setShellState({ unsentChanges: 3 });
-    await renderShell('dispatch');
-    expect(screen.getByTestId('shell-pending-changes')).toHaveTextContent('Changes waiting: 3');
-    await fireEvent.press(screen.getByTestId('shell-pending-changes'));
-    expect(router.push).not.toHaveBeenCalled();
+  // Sync state used to flash at the top of the screen on every queued write and connectivity blip: the app bar shows it
+  // only once it has lasted, and only changes that need the user toast.
+  describe('sync status', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+      useToastStore.getState().clearToasts();
+    });
+
+    afterEach(() => {
+      useToastStore.getState().clearToasts();
+      jest.useRealTimers();
+    });
+
+    const waitForSettle = async () => {
+      await act(async () => {
+        jest.advanceTimersByTime(SYNC_NOTICE_DELAY_MS);
+      });
+    };
+
+    it('shows "changes waiting" once the outbox has held them for a moment, as a link only when the variant has the storage screen', async () => {
+      setShellState({ unsentChanges: 3 });
+      await renderShell('dispatch');
+      expect(screen.queryByTestId('shell-pending-changes')).toBeNull();
+
+      await waitForSettle();
+      expect(screen.getByTestId('shell-pending-changes')).toHaveTextContent('Changes waiting: 3');
+      await fireEvent.press(screen.getByTestId('shell-pending-changes'));
+      expect(router.push).not.toHaveBeenCalled();
+      expect(useToastStore.getState().toasts).toHaveLength(0);
+    });
+
+    it('shows nothing for a write that sends before the delay', async () => {
+      setShellState({ unsentChanges: 1 });
+      await renderShell('responder');
+      await act(async () => {
+        jest.advanceTimersByTime(SYNC_NOTICE_DELAY_MS - 1);
+        setShellState({ unsentChanges: 0 });
+      });
+      await waitForSettle();
+
+      expect(screen.queryByTestId('shell-pending-changes')).toBeNull();
+      expect(useToastStore.getState().toasts).toHaveLength(0);
+    });
+
+    it('shows offline in the app bar instead of a toast', async () => {
+      setShellState({ isOffline: true });
+      await renderShell('responder');
+      await waitForSettle();
+      expect(screen.getByTestId('shell-pending-changes')).toHaveTextContent('Offline');
+
+      await act(async () => {
+        setShellState({ unsentChanges: 2 });
+      });
+      expect(screen.getByTestId('shell-pending-changes')).toHaveTextContent('Offline: 2 waiting');
+      expect(useToastStore.getState().toasts).toHaveLength(0);
+    });
+
+    // Seen in the web app: reconnecting showed "Changes waiting: 1" for half a second while the queue drained.
+    it('drops the offline chip on reconnect and shows "changes waiting" only if sending then takes a while', async () => {
+      setShellState({ isOffline: true, unsentChanges: 1 });
+      await renderShell('responder');
+      await waitForSettle();
+      expect(screen.getByTestId('shell-pending-changes')).toHaveTextContent('Offline: 1 waiting');
+
+      await act(async () => {
+        setShellState({ isOffline: false });
+      });
+      expect(screen.queryByTestId('shell-pending-changes')).toBeNull();
+
+      await waitForSettle();
+      expect(screen.getByTestId('shell-pending-changes')).toHaveTextContent('Changes waiting: 1');
+    });
+
+    it('toasts only for changes that need the user, and marks the app bar chip', async () => {
+      setShellState({ unsentChanges: 1, changesNeedingAttention: 1 });
+      await renderShell('unit');
+      expect(useToastStore.getState().toasts).toHaveLength(0);
+
+      await waitForSettle();
+      expect(screen.getByTestId('shell-pending-changes')).toHaveTextContent('Needs attention: 1');
+      expect(useToastStore.getState().toasts).toEqual([expect.objectContaining({ type: 'error', title: 'Changes not sent' })]);
+    });
   });
 
   describe('notification bell', () => {
@@ -325,6 +402,22 @@ describe('createAppShell', () => {
       expect(screen.getByRole('button', { name: `Notifications, ${count} unread` })).toBeTruthy();
     });
 
+    // The Text primitive's 24px default line (text-base) ignored the badge's inline fontSize on native: in the 18px pill
+    // the white digits sat below the red and read as cut off. The count pins a line that fits and the pill can grow.
+    it('keeps the count on a line that fits inside its pill', async () => {
+      mockInboxStatus = 'ready';
+      mockUseInboxUnreadCount.mockReturnValue(120);
+      await renderShell('responder');
+
+      const badge = screen.getByTestId('shell-notifications-badge');
+      const pill = StyleSheet.flatten(badge.props.style);
+      const digits = StyleSheet.flatten(within(badge).getByText('99+').props.style);
+
+      expect(pill).toEqual(expect.objectContaining({ minHeight: 18 }));
+      expect(pill.height).toBeUndefined();
+      expect(digits).toEqual(expect.objectContaining({ fontSize: 11, lineHeight: 14 }));
+    });
+
     it('hides the badge when nothing is unread and does not reopen the inbox from the inbox', async () => {
       mockInboxStatus = 'ready';
       mockNavigationState.pathname = '/notifications';
@@ -340,13 +433,25 @@ describe('createAppShell', () => {
 
   // Launch never puts a spinner over the app: on Android the session bootstrap's full-screen overlay sat over
   // Responder's status buttons for seconds on every cold start, and no one could set a status until it went.
-  it('shows the session bootstrap as a chip that takes no touches, with the screens usable underneath', async () => {
-    sessionInit.reset();
-    await renderShell('dispatch');
-    expect(screen.getByTestId('mock-stack')).toBeTruthy();
-    expect(screen.getByTestId('shell-init-loading').props.pointerEvents).toBe('none');
-    expect(screen.getByRole('progressbar')).toBeTruthy();
-    expect(screen.queryByTestId('shell-init-failed')).toBeNull();
+  // A quick bootstrap shows no chip at all (it only flashed the top of the screen).
+  it('shows the session bootstrap as a chip that takes no touches once it takes a moment, with the screens usable underneath', async () => {
+    jest.useFakeTimers();
+
+    try {
+      sessionInit.reset();
+      await renderShell('dispatch');
+      expect(screen.getByTestId('mock-stack')).toBeTruthy();
+      expect(screen.queryByTestId('shell-init-loading')).toBeNull();
+
+      await act(async () => {
+        jest.advanceTimersByTime(SESSION_INIT_INDICATOR_DELAY_MS);
+      });
+      expect(screen.getByTestId('shell-init-loading').props.pointerEvents).toBe('none');
+      expect(screen.getByRole('progressbar')).toBeTruthy();
+      expect(screen.queryByTestId('shell-init-failed')).toBeNull();
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('reports a failed bootstrap in a banner under the app bar, and keeps it through automatic retries until a run succeeds', async () => {

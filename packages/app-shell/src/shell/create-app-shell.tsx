@@ -13,7 +13,7 @@ import { useNavFilterContext, useNavLabel } from '../nav/use-nav-items';
 import { getShellNav } from '../runtime/shell-config';
 import { ShellUpdateNotice } from '../updates/update-notice';
 import { ShellHeader, useHeaderLeading } from './header';
-import { RegisteredBanners, RegisteredOverlays, SessionInitFailedBanner, SessionInitIndicator, ShellOfflineToast, ShellRealtimeBanner } from './overlays';
+import { RegisteredBanners, RegisteredOverlays, SessionInitFailedBanner, SessionInitIndicator, ShellRealtimeBanner, ShellSyncAttentionToast } from './overlays';
 import { RegisteredProviders } from './registered-providers';
 import { ShellProvider } from './shell-context';
 import { DrawerSidebar, InlineSidebar } from './sidebar';
@@ -127,7 +127,7 @@ function ShellFrame({ variant, nav }: { variant: VariantManifest; nav: NavRegist
         </View>
       </View>
       <DrawerSidebar nav={nav} />
-      <ShellOfflineToast />
+      <ShellSyncAttentionToast />
       <ShellUpdateNotice />
       <RegisteredOverlays />
     </View>
