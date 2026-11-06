@@ -1,3 +1,4 @@
+import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { useCallsStore, usePersonnelStore, useUnitsStore, useWeatherAlertsStore } from '@resgrid/data';
 import { callQueuesRoutes } from '@resgrid/features/call-queues';
 import { callDisplayName, callDisplayText, CallNotesModal, callRoutes, CloseCallSheet } from '@resgrid/features/calls';
@@ -142,13 +143,13 @@ export default function DispatchConsoleScreen({ realtime = true, mapHref = '/map
   );
 
   const handlers: ConsoleActionHandlers = {
-    onCreateCall: () => router.push(callRoutes.callNew() as Href),
-    onViewCall: (callId) => router.push(callRoutes.callDetail(callId) as Href),
+    onCreateCall: () => router.push(callRoutes.callNew()),
+    onViewCall: (callId) => pushRoutePath(router, callRoutes.callDetail(callId)),
     onAddCallNote: (callId) => setNotesCallId(callId),
     onCloseCall: (callId) => setCloseCallId(callId),
     onAddResources: (call) => setAddResourcesCall(call),
-    onViewUnit: (unitId) => router.push(unitsRoutes.detail(unitId) as Href),
-    onViewPersonnel: (userId) => router.push(personnelRoutes.detail(userId) as Href),
+    onViewUnit: (unitId) => pushRoutePath(router, unitsRoutes.detail(unitId)),
+    onViewPersonnel: (userId) => pushRoutePath(router, personnelRoutes.detail(userId)),
     onStatusSaved: (kind, names) =>
       log({ type: kind === 'unit' ? 'unit' : 'personnel', action: t('dispatch_console.status_saved'), description: names, ...(selectedCallId ? { metadata: { callId: selectedCallId } } : {}) }),
   };
@@ -264,9 +265,9 @@ export default function DispatchConsoleScreen({ realtime = true, mapHref = '/map
         pendingCalls={pendingCount}
         extremeAlerts={extremeAlerts}
         severeAlerts={severeAlerts}
-        onPendingCallsPress={() => router.push(callQueuesRoutes.pending() as Href)}
-        onScheduledCallsPress={() => router.push(callQueuesRoutes.scheduled() as Href)}
-        onWeatherAlertsPress={() => router.push(weatherAlertsRoutes.list() as Href)}
+        onPendingCallsPress={() => router.push(callQueuesRoutes.pending())}
+        onScheduledCallsPress={() => router.push(callQueuesRoutes.scheduled())}
+        onWeatherAlertsPress={() => router.push(weatherAlertsRoutes.list())}
         onUnitTimersPress={() => useConsoleStore.getState().setActiveTab('unit-timers')}
         showClock={showClock}
       />

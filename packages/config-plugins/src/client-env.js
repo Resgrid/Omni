@@ -3,8 +3,11 @@
 // with identical secret names, omni-plan D14), then from the variant's legacy prefix
 // (RESPOND_, UNIT_, IC_, DISPATCH_, BIGBOARD_) so existing .env files and deployments keep working.
 
+// BASE_API_URL falls back to production US West, never QA (owner decision 2026-11-06, plan §15 #22): a build or
+// deployment that lost its variables still reaches the server members sign in to, and never sends their sessions to QA.
+// Work against QA by setting BASE_API_URL=https://qaapi.resgrid.dev. Keep in step with packages/core/src/env/env.ts.
 const DEFAULTS = {
-  BASE_API_URL: 'https://qaapi.resgrid.dev',
+  BASE_API_URL: 'https://api.resgrid.com',
   API_VERSION: 'v4',
   RESGRID_API_URL: '/api/v4',
   CHANNEL_HUB_NAME: 'eventingHub',

@@ -2,13 +2,14 @@ import { useMemo } from 'react';
 
 import type { LoginFailure } from './errors/login-errors';
 import type { MfaChallenge } from './mfa/types';
-import { type AuthState, useAuthStore } from './session/auth-store';
+import { type AuthState, hasSignedInSession, useAuthStore } from './session/auth-store';
 import type { AuthStatus } from './session/types';
 import { useSharedSessionStore } from './shared-session/shared-session-store';
 
 /** The sign-in state the login, MFA and SSO screens render (a stable object while nothing in it changes). */
 export interface AuthView {
   status: AuthStatus;
+  /** A signed-in session (`hasSignedInSession`): an access token, or a refresh token alone after an offline restore. */
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
@@ -25,6 +26,7 @@ export interface AuthView {
 export const useAuth = (): AuthView => {
   const status = useAuthStore((state) => state.status);
   const accessToken = useAuthStore((state) => state.accessToken);
+  const refreshToken = useAuthStore((state) => state.refreshToken);
   const error = useAuthStore((state) => state.error);
   const loginFailure = useAuthStore((state) => state.loginFailure);
   const mfaChallenge = useAuthStore((state) => state.mfaChallenge);
@@ -37,7 +39,7 @@ export const useAuth = (): AuthView => {
   return useMemo(
     () => ({
       status,
-      isAuthenticated: status === 'signedIn' && !!accessToken,
+      isAuthenticated: hasSignedInSession({ status, accessToken, refreshToken }),
       isLoading: status === 'loading',
       error,
       loginFailure,
@@ -49,13 +51,14 @@ export const useAuth = (): AuthView => {
       login,
       logout,
     }),
-    [status, accessToken, error, loginFailure, mfaChallenge, isSsoMfaPending, pendingRecoveryCodes, userId, hydrated, login, logout]
+    [status, accessToken, refreshToken, error, loginFailure, mfaChallenge, isSsoMfaPending, pendingRecoveryCodes, userId, hydrated, login, logout]
   );
 };
 
 export const useAuthStatus = (): AuthStatus => useAuthStore((state) => state.status);
 
-export const useIsAuthenticated = (): boolean => useAuthStore((state) => state.status === 'signedIn' && !!state.accessToken);
+/** Whether a session is signed in (`hasSignedInSession`), the same answer the shell gate opens the app on. */
+export const useIsAuthenticated = (): boolean => useAuthStore(hasSignedInSession);
 
 export const useMfaChallenge = (): MfaChallenge | null => useAuthStore((state) => state.mfaChallenge);
 

@@ -1,7 +1,7 @@
 import { useAwaitingResourcesStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import { HStack, Pressable, Text } from '@resgrid/ui';
-import { type Href, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { ChevronRight, Hourglass } from 'lucide-react-native';
 import React from 'react';
 import { View } from 'react-native';
@@ -33,7 +33,7 @@ export const AwaitingResourcesBanner: React.FC<AwaitingResourcesBannerProps> = (
 
   return (
     <Pressable
-      onPress={onPress ?? (() => router.push(awaitingResourcesRoutes.list() as Href))}
+      onPress={onPress ?? (() => router.push(awaitingResourcesRoutes.list()))}
       accessibilityRole="button"
       accessibilityLabel={t('awaiting_resources.banner', { count })}
       accessibilityHint={t('awaiting_resources.banner_open')}

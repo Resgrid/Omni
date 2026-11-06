@@ -1,3 +1,4 @@
+import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { useRecordsStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import type { FieldRecordContextInput } from '@resgrid/models';
@@ -47,7 +48,7 @@ export const RecordsQuickCreate: React.FC<RecordsQuickCreateProps> = ({ context,
   if (flagStatus !== 'enabled' || count === 0 || !sameContext(storeContext, context)) return null;
 
   return (
-    <Button action="secondary" size={size} variant={variant} onPress={() => router.push(recordNew())} accessibilityLabel={t('records.new_record')} testID={testID}>
+    <Button action="secondary" size={size} variant={variant} onPress={() => pushRoutePath(router, recordNew())} accessibilityLabel={t('records.new_record')} testID={testID}>
       <FilePlus2 size={16} color="#2563eb" />
       <ButtonText>{t('records.new_record')}</ButtonText>
     </Button>

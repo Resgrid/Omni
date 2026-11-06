@@ -11,7 +11,7 @@ Sources (verify there before relying on a detail): Core at `../Core` (`CLAUDE.md
 
 - **Core** (.NET, SQL Server or PostgreSQL, Redis, RabbitMQ/Azure Service Bus): MVC web app (`Resgrid.Web`), v4 REST API (`Resgrid.Web.Services`), SignalR **Eventing** service (`/eventingHub`, `/geolocationHub`, `/chatHub`), workers, TTS, protected-data broker, GPS tracker gateway. Server-side caches are long (Redis, 1 day typical) — a server change may not appear immediately.
 - **Push:** self-hosted Novu only (FCM, APNs, web FCM). **Relay:** tone/scanner and email-to-call gateway.
-- **QA:** `qaapi.resgrid.dev` (Swagger `/swagger/v4/swagger.json`), `qaapp`, `qadispatch`, `qaunit`, `qabigboard`, `qaevents`. The apps' default API URL is QA. qaapi CORS does not allow localhost.
+- **QA:** `qaapi.resgrid.dev` (Swagger `/swagger/v4/swagger.json`), `qaapp`, `qadispatch`, `qaunit`, `qabigboard`, `qaevents`. The apps' default API URL is production US West (`https://api.resgrid.com`), never QA: set `BASE_API_URL=https://qaapi.resgrid.dev` to work against QA (owner decision 2026-11-06, plan §15 #22). qaapi CORS does not allow localhost.
 
 ## The five apps
 

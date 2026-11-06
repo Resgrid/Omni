@@ -197,6 +197,39 @@ describe('cold start (restoreSession, offline-safe)', () => {
     expect(useAuthStore.getState().status).toBe('signedIn');
   });
 
+  // The refresh stops until the unlock, so a restore left in `loading` kept the shell on its loading screen for good.
+  it('leaves loading signed in and locked when that refresh says the shared session is locked, so the lock screen can unlock it', async () => {
+    jest.useFakeTimers();
+    h = setupHarness('unit', { seed: { ResgridUnit: { 'auth-storage': envelope({ refreshToken: 'refresh-1', userId: 'user-1' }) } } });
+    h.server.on('POST', '/connect/token', { status: 400, data: { error: 'invalid_grant', shared_session_locked: true } });
+    await hydrateAuthSession();
+    expect(useAuthStore.getState().status).toBe('loading');
+    await jest.advanceTimersByTimeAsync(0);
+    expect(useAuthStore.getState()).toMatchObject({ status: 'signedIn', refreshToken: 'refresh-1' });
+    expect(useSharedSessionStore.getState().locked).toBe(true);
+    expect(h.wipeScope).not.toHaveBeenCalled();
+    await jest.advanceTimersByTimeAsync(60_000);
+    expect(h.server.requestsTo('POST', '/connect/token')).toHaveLength(1);
+  });
+
+  // A captive portal or proxy answers the token request 200 with its own page. Applied as-is it left no access token,
+  // which the shell shows as the sign-in screen; it is an outage, so the session is kept and the refresh tried again.
+  it('keeps the session and retries when the token endpoint answers 200 without an access token (captive portal)', async () => {
+    jest.useFakeTimers();
+    const stale = accessToken(nowSeconds() - 60);
+    h = setupHarness('unit', { seed: { ResgridUnit: { 'auth-storage': envelope({ accessToken: stale, refreshToken: 'refresh-1', userId: 'user-1' }) } } });
+    h.server.on('POST', '/connect/token', { data: '<html><body>Sign in to the hotel Wi-Fi</body></html>' });
+
+    await hydrateAuthSession();
+    await jest.advanceTimersByTimeAsync(0);
+    expect(useAuthStore.getState()).toMatchObject({ status: 'signedIn', accessToken: stale, refreshToken: 'refresh-1' });
+    expect(h.wipeScope).not.toHaveBeenCalled();
+
+    h.server.reset('POST', '/connect/token').on('POST', '/connect/token', { data: tokenResponse({ refresh_token: 'refresh-2' }) });
+    await jest.advanceTimersByTimeAsync(5_000);
+    expect(useAuthStore.getState().refreshToken).toBe('refresh-2');
+  });
+
   it('signs out (and wipes) only when the token endpoint rejects the refresh token', async () => {
     jest.useFakeTimers();
     h = setupHarness('unit', { seed: { ResgridUnit: { 'auth-storage': envelope({ accessToken: accessToken(nowSeconds() - 60), refreshToken: 'refresh-1', userId: 'user-1' }) } } });

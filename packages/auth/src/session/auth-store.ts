@@ -109,6 +109,13 @@ export interface AuthActions {
 
 export type AuthState = AuthSessionState & AuthActions;
 
+/**
+ * Signed in with a credential the session can go on with: an access token, or a refresh token alone (a restore that could
+ * not reach the token endpoint works offline from the stored data). The shell gate, Settings and every "is someone signed
+ * in" check use this one definition, so the app cannot open on a session that Settings then treats as signed out.
+ */
+export const hasSignedInSession = (state: Pick<AuthSessionState, 'status' | 'accessToken' | 'refreshToken'>): boolean => state.status === 'signedIn' && (!!state.accessToken || !!state.refreshToken);
+
 const INITIAL_SESSION: AuthSessionState = {
   accessToken: null,
   refreshToken: null,
@@ -333,10 +340,7 @@ export const useAuthStore = create<AuthState>()(
 
       refreshAccessToken: () => refreshEngine.refresh(),
 
-      isAuthenticated: () => {
-        const state = get();
-        return state.status === 'signedIn' && state.accessToken !== null;
-      },
+      isAuthenticated: () => hasSignedInSession(get()),
 
       setIsOnboarding: () => set({ status: 'onboarding' }),
     }),
@@ -425,6 +429,15 @@ const ssoHost: LoginMfaHost = {
 
 // ---- Token refresh ---------------------------------------------------------------------------------------------------
 
+/** A cold-start restore with only a refresh token waits in `loading` for its first refresh; this ends the wait signed in. */
+const leaveRestoreWait = (): void => {
+  const { status, refreshToken } = useAuthStore.getState();
+
+  if (status === 'loading' && refreshToken) {
+    useAuthStore.setState({ status: 'signedIn' });
+  }
+};
+
 export const refreshEngine = createTokenRefreshEngine({
   requestRefresh: (refreshToken) => refreshTokenGrant(getAuthApiContext(), refreshToken),
   getRefreshToken: () => useAuthStore.getState().refreshToken,
@@ -448,13 +461,14 @@ export const refreshEngine = createTokenRefreshEngine({
       void useAuthStore.getState().logout(undefined, 'auth-rejected');
     }
   },
-  onSharedSessionLocked: () => markSharedSessionLocked(null),
-  onTransientFailure: () => {
-    // A session restored with only a refresh token waits in `loading`; offline, it carries on signed in with what it has.
-    if (useAuthStore.getState().status === 'loading' && useAuthStore.getState().refreshToken) {
-      useAuthStore.setState({ status: 'signedIn' });
-    }
+  onSharedSessionLocked: () => {
+    markSharedSessionLocked(null);
+    // The refresh stops until the unlock, so a restore still waiting in `loading` would wait forever: the session is
+    // signed in (and locked), which lets the shell show the shared lock screen that unlocks it.
+    leaveRestoreWait();
   },
+  // A session restored with only a refresh token waits in `loading`; offline, it carries on signed in with what it has.
+  onTransientFailure: () => leaveRestoreWait(),
 });
 
 /** True when the stored access token is known to have expired (the HTTP client refreshes before sending). */

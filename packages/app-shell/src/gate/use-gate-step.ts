@@ -1,4 +1,4 @@
-import { checkAppAccess, isPersonalLockEnabled, personalLockStore, securityStore, useAuthStore, useSharedSessionStore } from '@resgrid/auth';
+import { checkAppAccess, hasSignedInSession, isPersonalLockEnabled, personalLockStore, securityStore, useAuthStore, useSharedSessionStore } from '@resgrid/auth';
 import { useActiveVariant } from '@resgrid/config';
 import { getEnv } from '@resgrid/core';
 import { useMemo, useSyncExternalStore } from 'react';
@@ -17,6 +17,7 @@ export function useGateInputs(): GateInputs {
   const startupReady = useSyncExternalStore(startupInit.subscribe, startupReadySnapshot, startupReadySnapshot);
   const status = useAuthStore((state) => state.status);
   const accessToken = useAuthStore((state) => state.accessToken);
+  const refreshToken = useAuthStore((state) => state.refreshToken);
   const authMethod = useAuthStore((state) => state.authMethod);
   const onboardingStored = useShellStore((state) => state.onboardingRequired);
   const accessDeniedNotice = useShellStore((state) => state.accessDeniedNotice);
@@ -26,7 +27,11 @@ export function useGateInputs(): GateInputs {
 
   return useMemo(() => {
     const capabilities = variant.capabilities;
-    const signedIn = status === 'signedIn' && !!accessToken;
+    // Signed in holds a credential the session can go on with. A restore that could not reach the token endpoint (offline)
+    // is signed in on its refresh token alone and works from the stored data; it used to sit on the sign-in screen.
+    const signedIn = hasSignedInSession({ status, accessToken, refreshToken });
+    // Sign-in from the login screen starts signed out (no refresh token), so `loading` with one is a cold-start restore.
+    const restoring = status === 'loading' && !!refreshToken && !accessToken;
     const onboardingPlatform = Platform.OS !== 'web' || getAppShellOptions().onboardingOnWeb === true;
     let maintenance = false;
     try {
@@ -36,6 +41,7 @@ export function useGateInputs(): GateInputs {
     }
     return {
       startupReady,
+      restoring,
       onboardingRequired: capabilities.platform.onboarding && onboardingPlatform && (onboardingStored === true || status === 'onboarding'),
       signedIn,
       accessDeniedNotice,
@@ -45,7 +51,7 @@ export function useGateInputs(): GateInputs {
       appAccess: signedIn ? checkAppAccess(rights) : 'unknown',
       sharedLocked: signedIn && capabilities.auth.sharedDevice && sharedLockedFlag,
     };
-  }, [variant, startupReady, status, accessToken, authMethod, onboardingStored, accessDeniedNotice, personalLockFlag, rights, sharedLockedFlag]);
+  }, [variant, startupReady, status, accessToken, refreshToken, authMethod, onboardingStored, accessDeniedNotice, personalLockFlag, rights, sharedLockedFlag]);
 }
 
 export function useShellGateStep(): GateStep {

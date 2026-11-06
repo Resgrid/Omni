@@ -1,5 +1,5 @@
 import { useInboxUnreadCount } from '@resgrid/notifications';
-import { contentOnFill, SYNC_NOTICE_DELAY_MS, Text, useSettledFlag, useThemeColors } from '@resgrid/ui';
+import { contentOnFill, Spinner, SYNC_NOTICE_DELAY_MS, Text, useSettledFlag, useThemeColors } from '@resgrid/ui';
 import { type Href, usePathname, useRouter } from 'expo-router';
 import { ArrowLeft, Bell, Menu, RefreshCw, TriangleAlert, WifiOff } from 'lucide-react-native';
 import React, { useCallback } from 'react';
@@ -7,6 +7,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useShellTranslation } from '../i18n';
+import { useAppInit } from '../init/app-init';
 import { type NavEntry, type NavRegistry, normalizeHref } from '../nav/define-nav';
 import { useNavLabel } from '../nav/use-nav-items';
 import { useShellInboxStatus } from '../providers/inbox-provider';
@@ -150,6 +151,35 @@ function SyncStatusChip() {
   );
 }
 
+/** A bootstrap quicker than this shows no indicator at all; one that shows stays long enough to see. */
+export const SESSION_INIT_INDICATOR_DELAY_MS = 1000;
+export const SESSION_INIT_INDICATOR_MIN_VISIBLE_MS = 1000;
+
+/**
+ * The signed-in bootstrap's first run, without blocking anything: launch never puts a spinner over the app (owner
+ * decision, 2026-11-04). Rights, flags and terminology are persisted, so every screen works from the last session's
+ * copies while the bootstrap refreshes them, and lists show their own loading inside the page. Once the run has taken a
+ * moment (a quick one would only flash it), a small spinner sits in the app bar just left of the notification bell. It
+ * used to be a "Loading…" chip at the top of the content, where it covered search fields and tab buttons (owner, 2026-11-06).
+ * It takes no touches and holds a fixed slot, so the bell does not move when it goes.
+ */
+function SessionInitSpinner() {
+  const init = useAppInit();
+  const colors = useThemeColors();
+  const { t } = useShellTranslation();
+  const isVisible = useSettledFlag(init.isSessionLoading, { delayMs: SESSION_INIT_INDICATOR_DELAY_MS, minVisibleMs: SESSION_INIT_INDICATOR_MIN_VISIBLE_MS });
+
+  if (!isVisible) {
+    return null;
+  }
+
+  return (
+    <View pointerEvents="none" accessible accessibilityRole="progressbar" accessibilityLabel={t('shell.loading')} accessibilityState={{ busy: true }} style={styles.initSpinner} testID="shell-init-loading">
+      <Spinner size="small" color={colors.primary} />
+    </View>
+  );
+}
+
 const MAX_BADGE_COUNT = 99;
 
 function InboxBellButton({ count, onPress }: { count: number; onPress: () => void }) {
@@ -267,10 +297,11 @@ export function ShellHeader({ nav }: ShellHeaderProps) {
           {title}
         </Text>
       </View>
-      <View style={StyleSheet.flatten([styles.side, styles.actions])}>
+      <View style={StyleSheet.flatten([styles.side, styles.actions])} testID="shell-header-actions">
         <SyncStatusChip />
         {screenTitle?.right ?? null}
         {actions}
+        <SessionInitSpinner />
         <InboxBell />
       </View>
     </View>
@@ -294,6 +325,7 @@ const styles = StyleSheet.create({
   side: { minWidth: 48, flexDirection: 'row', alignItems: 'center' },
   actions: { justifyContent: 'flex-end' },
   iconButton: { padding: 8, minWidth: 40, minHeight: 40, alignItems: 'center', justifyContent: 'center' },
+  initSpinner: { width: 32, height: 40, alignItems: 'center', justifyContent: 'center' },
   titleBox: { flex: 1, alignItems: 'center', paddingHorizontal: 8 },
   title: { fontSize: 18, fontWeight: '700', letterSpacing: 0.5 },
   // The Text primitive's default line height (24, from `text-base`) does not shrink with an inline fontSize on native, so

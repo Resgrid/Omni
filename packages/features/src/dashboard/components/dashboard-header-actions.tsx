@@ -1,3 +1,4 @@
+import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { useTranslation } from '@resgrid/i18n';
 import { Button, ButtonText, HStack, Pressable, Text, View } from '@resgrid/ui';
 import { router } from 'expo-router';
@@ -25,7 +26,7 @@ export const DashboardHeaderActions: React.FC<DashboardHeaderActionsProps> = ({ 
   const toggleEditMode = useDashboardViewStore((state) => state.toggleEditMode);
   const setShowAddMenu = useDashboardViewStore((state) => state.setShowAddMenu);
   const widgetCount = useDashboardStore((state) => state.widgets.length);
-  const handleConfigure = useCallback(() => (onConfigure ? onConfigure() : router.push(dashboardRoutes.configure())), [onConfigure]);
+  const handleConfigure = useCallback(() => (onConfigure ? onConfigure() : pushRoutePath(router, dashboardRoutes.configure())), [onConfigure]);
 
   return (
     <HStack space="sm" className="items-center" testID="dashboard-header-actions">

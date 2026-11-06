@@ -1,3 +1,4 @@
+import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { useCallsStore } from '@resgrid/data';
 import { callDisplayName, callRoutes, revealedCallText } from '@resgrid/features/calls';
 import { CheckInTab } from '@resgrid/features/check-in';
@@ -23,7 +24,7 @@ export const ActiveCallTab: React.FC<ActiveCallTabProps> = ({ callId, onClearAct
   const call = useCallsStore((state) => state.calls.find((candidate) => candidate.CallId === callId));
 
   const openDetails = useCallback(() => {
-    router.push(callRoutes.callDetail(callId));
+    pushRoutePath(router, callRoutes.callDetail(callId));
   }, [callId]);
 
   if (!call) {

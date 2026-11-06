@@ -122,6 +122,6 @@ describe('shift routes', () => {
     expect(shiftRoutes.list('trades')).toBe('/shifts?view=trades');
     expect(shiftRoutes.day('42', { workshift: true })).toBe('/shifts/day/42?workshift=1');
     expect(shiftRoutes.trade('t 1')).toBe('/shifts/trade/t%201');
-    expect(() => shiftRoutes.day('../x')).toThrow();
+    expect(shiftRoutes.day('../x')).toBeNull();
   });
 });

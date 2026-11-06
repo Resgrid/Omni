@@ -1,4 +1,4 @@
-import { isSafeRouteId } from '@resgrid/core/utils/route-ids';
+import { routePathWithId } from '@resgrid/core/navigation/route-paths';
 
 /** Chat routes: `/chat/[channelId]` is canonical for every variant (omni-plan §5.3.4); the assistant has its own `/chatbot`. */
 export const CHAT_ROUTE_PATTERNS = {
@@ -7,14 +7,10 @@ export const CHAT_ROUTE_PATTERNS = {
   chatbot: '/chatbot',
 } as const;
 
-const encodeId = (id: string): string => {
-  if (!isSafeRouteId(id)) throw new Error('Unsafe chat route id');
-  return encodeURIComponent(id);
-};
-
 export const chatRoutes = {
   list: (): string => '/chat',
-  conversation: (channelId: string): string => `/chat/${encodeId(channelId)}`,
+  /** Null (reported) for a channel id `isSafeRouteId` refuses; navigate with `pushRoutePath`. */
+  conversation: (channelId: string): string | null => routePathWithId('chat.conversation', channelId, (id) => `/chat/${id}`),
   /** The assistant (chatbot channel); also where a chat push for the assistant channel lands. */
   chatbot: (): string => '/chatbot',
 } as const;

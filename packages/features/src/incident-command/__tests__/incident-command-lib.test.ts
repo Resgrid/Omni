@@ -219,7 +219,7 @@ describe('routes and nav', () => {
     expect(incidentCommandRoutes.callBoard('7')).toBe('/call/7/command');
     expect(incidentCommandRoutes.log('7')).toBe('/command-log/7');
     expect(incidentCommandRoutes.resourceMap({ latitude: 39.5, longitude: -104.9, title: 'Engine 1', color: '#ef4444' })).toBe('/resource-map?latitude=39.5&longitude=-104.9&title=Engine%201&color=%23ef4444');
-    expect(() => incidentCommandRoutes.map('../etc')).toThrow();
+    expect(incidentCommandRoutes.map('../etc')).toBeNull();
     expect(INCIDENT_COMMAND_ROUTE_PATTERNS.callBoard).toBe('/call/[id]/command');
   });
 

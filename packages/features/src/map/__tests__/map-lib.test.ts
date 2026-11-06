@@ -149,7 +149,7 @@ describe('routes', () => {
     expect(mapRoutes.focusUnit('7')).toBe('/map?unitId=7');
     expect(mapRoutes.focusPersonnel('ab 1')).toBe('/map?userId=ab%201');
     expect(mapRoutes.focusPoi(5)).toBe('/map?poiId=5');
-    expect(() => mapRoutes.focusCall('../x')).toThrow();
-    expect(() => mapRoutes.focusPoi(0)).toThrow();
+    expect(mapRoutes.focusCall('../x')).toBeNull();
+    expect(mapRoutes.focusPoi(0)).toBeNull();
   });
 });

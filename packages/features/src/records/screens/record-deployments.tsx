@@ -1,4 +1,5 @@
 import { useSecurity } from '@resgrid/auth';
+import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { useRecordDeploymentsStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import { Button, ButtonText, Divider, RefreshControl, ScreenHeader, Text } from '@resgrid/ui';
@@ -82,7 +83,7 @@ export default function RecordDeploymentsScreen({ showHeader = true }: RecordDep
                 key={deployment.OrderId}
                 deployment={deployment}
                 conflicts={counts[deployment.OrderId]}
-                onPress={() => router.push(recordDeployment(deployment.OrderId))}
+                onPress={() => pushRoutePath(router, recordDeployment(deployment.OrderId))}
                 testID={`deployment-${deployment.OrderId}`}
               />
             ))

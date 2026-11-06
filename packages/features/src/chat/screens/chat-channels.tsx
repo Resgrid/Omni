@@ -1,9 +1,10 @@
+import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { useChatStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import { type ChatChannelResultData, ChatChannelType } from '@resgrid/models';
 import { useRealtimeEvent } from '@resgrid/realtime';
 import { Fab, FabIcon, Input, InputField, InputIcon, InputSlot, Loading, RefreshControl, ScrollView, Text, View, VStack, ZeroState } from '@resgrid/ui';
-import { type Href, router } from 'expo-router';
+import { router } from 'expo-router';
 import { MessageSquarePlus, MessagesSquare, Search, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -41,7 +42,7 @@ function ChatChannelsContent() {
 
   const open = useCallback((channel: ChatChannelResultData) => {
     // The assistant has its own screen; every other channel opens the conversation.
-    router.push((channel.ChannelType === ChatChannelType.Chatbot ? chatRoutes.chatbot() : chatRoutes.conversation(channel.ChatChannelId)) as Href);
+    pushRoutePath(router, channel.ChannelType === ChatChannelType.Chatbot ? chatRoutes.chatbot() : chatRoutes.conversation(channel.ChatChannelId));
   }, []);
 
   const sections = useMemo(() => groupChannels(channels, query), [channels, query]);
@@ -80,7 +81,7 @@ function ChatChannelsContent() {
       <Fab size="lg" placement="bottom right" onPress={() => setIsNewOpen(true)} testID="chat-new-conversation" accessibilityLabel={t('chat.new_direct_message')}>
         <FabIcon as={MessageSquarePlus} />
       </Fab>
-      <NewConversationSheet isOpen={isNewOpen} onClose={() => setIsNewOpen(false)} onCreated={(channel) => router.push(chatRoutes.conversation(channel.ChatChannelId))} />
+      <NewConversationSheet isOpen={isNewOpen} onClose={() => setIsNewOpen(false)} onCreated={(channel) => pushRoutePath(router, chatRoutes.conversation(channel.ChatChannelId))} />
     </View>
   );
 }

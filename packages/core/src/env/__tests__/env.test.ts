@@ -72,7 +72,8 @@ describe('mergeClientEnv', () => {
   it('falls back to defaults for missing keys and to production for an unknown APP_ENV outside development', () => {
     const env = mergeClientEnv({ APP_ENV: 'qa' }, undefined, 'android');
     expect(env.APP_ENV).toBe('production');
-    expect(env.BASE_API_URL).toBe('https://qaapi.resgrid.dev');
+    // Production US West, never QA, when the build or deployment lost BASE_API_URL (owner, 2026-11-06).
+    expect(env.BASE_API_URL).toBe('https://api.resgrid.com');
     expect(env.CHANNEL_HUB_NAME).toBe('eventingHub');
     expect(env.SENTRY_DSN).toBe('');
   });

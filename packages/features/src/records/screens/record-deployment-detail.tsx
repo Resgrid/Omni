@@ -1,4 +1,5 @@
 import { useSecurity } from '@resgrid/auth';
+import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { isSafeRouteId } from '@resgrid/core/utils/route-ids';
 import { useRecordDeploymentsStore } from '@resgrid/data';
 import { useDepartmentTimeZone } from '@resgrid/features/department-config';
@@ -118,7 +119,7 @@ export default function RecordDeploymentDetailScreen({ orderId: idProp, showHead
 
               <View style={styles.actions}>
                 {deployment.RecordId && isSafeRouteId(deployment.RecordId) ? (
-                  <Button variant="outline" size="sm" className="mr-2" onPress={() => router.push(recordDetail(deployment.RecordId as string))} testID="deployment-open-record">
+                  <Button variant="outline" size="sm" className="mr-2" onPress={() => pushRoutePath(router, recordDetail(deployment.RecordId as string))} testID="deployment-open-record">
                     <ButtonText>{t('records.open_record')}</ButtonText>
                   </Button>
                 ) : null}

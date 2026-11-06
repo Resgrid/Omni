@@ -135,7 +135,7 @@ describe('work order rules', () => {
     expect(parseHours('')).toBeNull();
     expect(formatDueDate('2030-05-12T00:00:00Z', 'en-US')).toBe('May 12, 2030');
     expect(workOrderRoutes.detail('6f1c-1')).toBe('/work-orders/6f1c-1');
-    expect(() => workOrderRoutes.detail('../x')).toThrow();
+    expect(workOrderRoutes.detail('../x')).toBeNull();
   });
 });
 

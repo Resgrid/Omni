@@ -1,10 +1,11 @@
 import { FeatureFlagKeys, useFeatureFlagStatus, useSecurity } from '@resgrid/auth';
+import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { awaitingDismissKey, useAwaitingResourcesStore } from '@resgrid/data';
 import { callRoutes } from '@resgrid/features/calls';
 import { useTranslation } from '@resgrid/i18n';
 import type { AwaitingResourceRequirementData, AwaitingResourcesCallData } from '@resgrid/models';
 import { FlatList, HStack, Loading, Pressable, RefreshControl, Spinner, Text, VStack, ZeroState } from '@resgrid/ui';
-import { type Href, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Hourglass, RefreshCw } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -76,7 +77,7 @@ export default function AwaitingResourcesScreen({ showHeader = true, now = Date.
         busyKey={busyKey}
         responseCodes={allResponseCodes}
         now={now()}
-        onOpenCall={(callId) => router.push(callRoutes.callDetail(String(callId)) as Href)}
+        onOpenCall={(callId) => pushRoutePath(router, callRoutes.callDetail(String(callId)))}
         onDispatch={(callId, unitId) => void dispatchUnit(callId, unitId)}
         onDismiss={(callId, requirement) => setDismissTarget({ callId, requirement })}
       />

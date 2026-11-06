@@ -1,3 +1,4 @@
+import { routePathWithId } from '@resgrid/core/navigation/route-paths';
 import { isSafeRouteId } from '@resgrid/core/utils/route-ids';
 
 /** Unit inventory routes (kept from the Unit app): the unit's inventory and one count. */
@@ -8,10 +9,8 @@ export const INVENTORY_ROUTE_PATTERNS = {
 
 export const inventoryRoutes = {
   list: (): string => '/inventory',
-  count: (countId: string): string => {
-    if (!isSafeRouteId(countId)) throw new Error('Unsafe inventory count route id');
-    return `/inventory/count/${encodeURIComponent(countId)}`;
-  },
+  /** Null (reported) for a count id `isSafeRouteId` refuses. */
+  count: (countId: string): string | null => routePathWithId('inventory.count', countId, (id) => `/inventory/count/${id}`),
 } as const;
 
 /** A route param as a safe id (first value, trimmed); null when missing or unsafe. */

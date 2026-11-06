@@ -1,3 +1,4 @@
+import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { formatUtcInDepartmentTime } from '@resgrid/core/utils/dates';
 import { useCallsStore } from '@resgrid/data';
 import { CALL_LIST_REFRESH_EVENTS, callRoutes, useCallPermissionsResolver, useCallRights } from '@resgrid/features/calls';
@@ -6,7 +7,7 @@ import { useTranslation } from '@resgrid/i18n';
 import type { CallResultData } from '@resgrid/models';
 import { useRealtimeRefetch } from '@resgrid/realtime';
 import { Loading, Text, ZeroState } from '@resgrid/ui';
-import { type Href, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Hourglass, Send, XCircle } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
@@ -113,7 +114,7 @@ export default function PendingCallsScreen({ showHeader = true, realtime = true 
       <QueueTable
         calls={visible}
         columns={columns}
-        onOpenCall={(call) => router.push(callRoutes.callDetail(call.CallId) as Href)}
+        onOpenCall={(call) => pushRoutePath(router, callRoutes.callDetail(call.CallId))}
         renderActions={canCreateCalls ? renderActions : undefined}
         refreshing={isRefreshing}
         onRefresh={handleRefresh}

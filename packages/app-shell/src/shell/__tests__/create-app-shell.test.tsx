@@ -17,8 +17,7 @@ import { setRouteContract } from '../../routes/href';
 import { resetShellStateForTests, setShellState } from '../../runtime/shell-state';
 import { registerShellOverlay, registerShellProvider, registerSidebarContent, resetShellSlotsForTests, type SidebarContentProps } from '../../runtime/slots';
 import { createAppShell } from '../create-app-shell';
-import { findNavEntryForPath, isTopLevelScreen, resolveHeaderLeading } from '../header';
-import { SESSION_INIT_INDICATOR_DELAY_MS } from '../overlays';
+import { findNavEntryForPath, isTopLevelScreen, resolveHeaderLeading, SESSION_INIT_INDICATOR_DELAY_MS } from '../header';
 import { resolveSidebarMode } from '../sidebar-mode';
 
 jest.mock('@resgrid/ui', () => ({ ...jest.requireActual('@resgrid/ui'), useFormFactor: jest.fn() }));
@@ -432,14 +431,17 @@ describe('createAppShell', () => {
   });
 
   // Launch never puts a spinner over the app: on Android the session bootstrap's full-screen overlay sat over
-  // Responder's status buttons for seconds on every cold start, and no one could set a status until it went.
-  // A quick bootstrap shows no chip at all (it only flashed the top of the screen).
-  it('shows the session bootstrap as a chip that takes no touches once it takes a moment, with the screens usable underneath', async () => {
+  // Responder's status buttons for seconds on every cold start, and no one could set a status until it went. The chip that
+  // replaced it still covered the top of the content (search fields, tab buttons), so it is a spinner in the app bar now,
+  // just left of the bell. A quick bootstrap shows nothing at all (it only flashed).
+  it('shows the session bootstrap as an app-bar spinner beside the bell once it takes a moment, with the screens usable underneath', async () => {
     jest.useFakeTimers();
 
     try {
+      mockInboxStatus = 'loading';
+      setRouteContract(defineRoutes(['home', 'notifications']));
       sessionInit.reset();
-      await renderShell('dispatch');
+      await renderShell('responder');
       expect(screen.getByTestId('mock-stack')).toBeTruthy();
       expect(screen.queryByTestId('shell-init-loading')).toBeNull();
 
@@ -447,7 +449,11 @@ describe('createAppShell', () => {
         jest.advanceTimersByTime(SESSION_INIT_INDICATOR_DELAY_MS);
       });
       expect(screen.getByTestId('shell-init-loading').props.pointerEvents).toBe('none');
-      expect(screen.getByRole('progressbar')).toBeTruthy();
+      expect(screen.getByRole('progressbar', { name: 'Loading…' })).toBeTruthy();
+      expect(screen.queryByText('Loading…')).toBeNull();
+      // In the app bar's actions, immediately before the bell — not laid over the content.
+      const actions = within(screen.getByTestId('shell-header-actions'));
+      expect(actions.getAllByTestId(/^shell-(init-loading|notifications-button)$/).map((node) => node.props.testID)).toEqual(['shell-init-loading', 'shell-notifications-button']);
       expect(screen.queryByTestId('shell-init-failed')).toBeNull();
     } finally {
       jest.useRealTimers();

@@ -6,6 +6,11 @@ export type GateStep = 'loading' | 'onboarding' | 'login' | 'maintenance' | 'per
 export interface GateInputs {
   /** Startup finished: storage open, translations and the session restored. */
   startupReady: boolean;
+  /**
+   * A stored session is being renewed before it has an access token (a refresh token only): wait, never show sign-in.
+   * Showing it here read as being signed out, and a sign-in started over a session still being restored could discard it.
+   */
+  restoring: boolean;
   /** Variant has onboarding, the platform shows it, and it has not been completed (`IS_FIRST_TIME`). */
   onboardingRequired: boolean;
   signedIn: boolean;
@@ -37,9 +42,9 @@ const CHECKS: Record<GateCheck, (inputs: GateInputs) => GateStep | null> = {
   'shared-lock': (inputs) => (inputs.sharedLocked ? 'shared-lock' : null),
 };
 
-/** The ShellGate state machine: the first gate that applies, `loading` before startup, else `app`. */
+/** The ShellGate state machine: the first gate that applies, `loading` before startup or while restoring, else `app`. */
 export function resolveGateStep(inputs: GateInputs, order: readonly GateCheck[] = GATE_ORDER): GateStep {
-  if (!inputs.startupReady) {
+  if (!inputs.startupReady || inputs.restoring) {
     return 'loading';
   }
   for (const check of order) {

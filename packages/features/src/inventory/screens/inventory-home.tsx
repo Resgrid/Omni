@@ -1,4 +1,5 @@
 import { TermKeys, useTerm } from '@resgrid/auth';
+import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { formatUtcInDepartmentTime } from '@resgrid/core/utils/dates';
 import { generateDataId, selectUnitById, useInventoryStore, useUnitsStore } from '@resgrid/data';
 import { useDepartmentTimeZone } from '@resgrid/features/department-config';
@@ -99,7 +100,7 @@ export default function InventoryHomeScreen() {
     setIsStarting(false);
     if (detail) {
       if (activeUnitId) void useInventoryStore.getState().fetchCounts(activeUnitId, locationIdsKey.split('|'));
-      router.push(inventoryRoutes.count(detail.Count.Id));
+      pushRoutePath(router, inventoryRoutes.count(detail.Count.Id));
       return;
     }
     toast.error(t(inventoryErrorKey(useInventoryStore.getState().actionError), { defaultValue: t('inventory.errors.retry') }));
@@ -176,7 +177,7 @@ export default function InventoryHomeScreen() {
                 return (
                   <Pressable
                     key={count.Id}
-                    onPress={() => router.push(inventoryRoutes.count(count.Id))}
+                    onPress={() => pushRoutePath(router, inventoryRoutes.count(count.Id))}
                     accessibilityRole="button"
                     testID={`inventory-count-${count.Id}`}
                     className="rounded-lg border border-outline-200 p-3"

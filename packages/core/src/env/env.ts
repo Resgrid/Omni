@@ -53,9 +53,12 @@ const STRING_KEYS = [
 ] as const;
 type StringKey = (typeof STRING_KEYS)[number];
 
+// BASE_API_URL falls back to production US West, never QA (owner decision 2026-11-06, plan §15 #22): a build, Docker
+// deployment or desktop bundle that lost its variables still reaches the server members sign in to, and never sends
+// their sessions to QA. Keep in step with packages/config-plugins/src/client-env.js.
 const DEFAULTS: Record<StringKey, string> = {
   APP_VARIANT: '',
-  BASE_API_URL: 'https://qaapi.resgrid.dev',
+  BASE_API_URL: 'https://api.resgrid.com',
   API_VERSION: 'v4',
   RESGRID_API_URL: '/api/v4',
   CHANNEL_HUB_NAME: 'eventingHub',

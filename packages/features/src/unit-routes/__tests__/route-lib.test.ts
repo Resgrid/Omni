@@ -182,8 +182,8 @@ describe('routes', () => {
   });
 
   it('refuses ids that could leave the routes tree', () => {
-    expect(() => unitRoutesRoutes.stop('../x')).toThrow();
-    expect(() => unitRoutesRoutes.poi(0)).toThrow();
+    expect(unitRoutesRoutes.stop('../x')).toBeNull();
+    expect(unitRoutesRoutes.poi(0)).toBeNull();
     expect(readRouteParam(['abc', 'def'])).toBe('abc');
     expect(readRouteParam('undefined')).toBeNull();
     expect(readRouteParam('a/b')).toBeNull();

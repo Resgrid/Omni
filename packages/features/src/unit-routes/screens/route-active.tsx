@@ -1,3 +1,4 @@
+import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { getDataLocationFix, RouteInstanceStatus, useRoutesStore } from '@resgrid/data';
 import { useInAppNavigationAvailable } from '@resgrid/features/navigation/hooks/use-in-app-navigation';
 import { navigationRoutes } from '@resgrid/features/navigation/routes';
@@ -144,7 +145,7 @@ export default function RouteActiveScreen({ instanceId: instanceIdProp, renderMa
         onBack={back}
         right={
           <Pressable
-            onPress={() => router.push(unitRoutesRoutes.directions(instance.RouteInstanceId))}
+            onPress={() => pushRoutePath(router, unitRoutesRoutes.directions(instance.RouteInstanceId))}
             accessibilityRole="button"
             accessibilityLabel={t('routes.directions')}
             testID="route-active-directions-icon"
@@ -165,7 +166,7 @@ export default function RouteActiveScreen({ instanceId: instanceIdProp, renderMa
           color={color}
           bounds={mapBounds(mapStops, line, getDataLocationFix())}
           showUserLocation
-          onStopPress={(stopId) => router.push(unitRoutesRoutes.stop(stopId))}
+          onStopPress={(stopId) => pushRoutePath(router, unitRoutesRoutes.stop(stopId))}
         />
         <HStack space="sm" className="items-center px-4 pt-3">
           <View className="flex-1 overflow-hidden rounded-full bg-background-200" style={styles.track}>
@@ -190,7 +191,7 @@ export default function RouteActiveScreen({ instanceId: instanceIdProp, renderMa
               stop={current}
               isCurrent={!isPaused}
               onAction={onAction}
-              onPress={(stop) => (stop.RouteInstanceStopId ? router.push(unitRoutesRoutes.stop(stop.RouteInstanceStopId)) : undefined)}
+              onPress={(stop) => (stop.RouteInstanceStopId ? pushRoutePath(router, unitRoutesRoutes.stop(stop.RouteInstanceStopId)) : undefined)}
               isBusy={busyStopId === currentId}
               actionMinHeight={actionHeight}
               testID="route-active-current"
@@ -203,7 +204,7 @@ export default function RouteActiveScreen({ instanceId: instanceIdProp, renderMa
         </VStack>
         {inAppNavigation && !isPaused && current ? (
           <View className="px-4 pb-3">
-            <Button onPress={() => router.push(navigationRoutes.toRouteStops(instance.RouteInstanceId))} testID="route-active-navigate" style={{ minHeight: actionHeight }}>
+            <Button onPress={() => pushRoutePath(router, navigationRoutes.toRouteStops(instance.RouteInstanceId))} testID="route-active-navigate" style={{ minHeight: actionHeight }}>
               <View style={styles.buttonIcon}>
                 <Navigation size={16} color={colors.textInverse} />
               </View>
@@ -212,7 +213,7 @@ export default function RouteActiveScreen({ instanceId: instanceIdProp, renderMa
           </View>
         ) : null}
         <HStack space="sm" className="px-4 pb-3">
-          <Button variant="outline" className="flex-1" onPress={() => router.push(unitRoutesRoutes.directions(instance.RouteInstanceId))} testID="route-active-directions" style={{ minHeight: actionHeight }}>
+          <Button variant="outline" className="flex-1" onPress={() => pushRoutePath(router, unitRoutesRoutes.directions(instance.RouteInstanceId))} testID="route-active-directions" style={{ minHeight: actionHeight }}>
             <View style={styles.buttonIcon}>
               <Navigation size={16} color="#2563eb" />
             </View>
@@ -252,7 +253,7 @@ export default function RouteActiveScreen({ instanceId: instanceIdProp, renderMa
           <Text className="mb-2 text-xs font-semibold uppercase text-typography-500">{t('routes.stops')}</Text>
           {stops.map((stop) => {
             const id = stop.RouteInstanceStopId ?? stop.RouteStopId;
-            return <StopCard key={id} stop={stop} onPress={(row) => (row.RouteInstanceStopId ? router.push(unitRoutesRoutes.stop(row.RouteInstanceStopId)) : undefined)} testID={`route-active-stop-${id}`} />;
+            return <StopCard key={id} stop={stop} onPress={(row) => (row.RouteInstanceStopId ? pushRoutePath(router, unitRoutesRoutes.stop(row.RouteInstanceStopId)) : undefined)} testID={`route-active-stop-${id}`} />;
           })}
         </VStack>
         <VStack space="sm" className="mx-4 mt-4">

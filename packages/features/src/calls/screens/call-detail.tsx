@@ -1,5 +1,6 @@
 import { featureFlagsStore, useSecurity } from '@resgrid/auth';
 import { getActiveVariant } from '@resgrid/config';
+import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { isSafeRouteId } from '@resgrid/core/utils/route-ids';
 import { type QueuedCall, useCallDetailStore, useCallsStore, useCheckInTimersStore } from '@resgrid/data';
 import { useNavigationHandoff } from '@resgrid/features/contacts';
@@ -178,7 +179,7 @@ function ServerCallDetail({ callId, mapSlot, menuItems, onMenuAction, onClosed, 
   const routeTab = useRouteTab(tabs);
 
   const back = () => router.back();
-  const edit = () => router.push(callEdit(callId));
+  const edit = () => pushRoutePath(router, callEdit(callId));
 
   useCallShortcuts({
     // Embedded without its header, the detail is part of another screen, which owns the keyboard.
@@ -406,7 +407,7 @@ function QueuedCallDetail({ queued, showHeader }: { queued: QueuedCall; showHead
             {queued.state === 'rejected' ? t('calls.queued.rejected_explainer') : t('calls.queued.queued_explainer')}
           </Text>
           {queued.state === 'rejected' ? (
-            <Button className="mt-4" onPress={() => router.push(callCorrect(queued.localId))} accessibilityLabel={t('calls.queued.correct')} testID="queued-call-correct">
+            <Button className="mt-4" onPress={() => pushRoutePath(router, callCorrect(queued.localId))} accessibilityLabel={t('calls.queued.correct')} testID="queued-call-correct">
               <ButtonText>{t('calls.queued.correct')}</ButtonText>
             </Button>
           ) : null}

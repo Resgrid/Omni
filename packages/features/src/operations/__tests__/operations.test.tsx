@@ -97,7 +97,7 @@ describe('time helpers', () => {
     expect(operationsErrorKey({ code: 'forbidden', messageKey: '' })).toBe('denied');
     expect(operationsErrorKey({ code: 'rejected', messageKey: '', problemType: 'protected_data_required' })).toBe('locked');
     expect(operationsErrorKey({ code: 'network', messageKey: '' })).toBe('retry');
-    expect(() => operationsDeployment('a/b')).toThrow();
+    expect(operationsDeployment('a/b')).toBeNull();
   });
 
   it('derives what each app may do from its capabilities (no per-app fork)', () => {

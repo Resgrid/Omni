@@ -1,10 +1,11 @@
 import { useSecurity } from '@resgrid/auth';
+import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { awaitingDispatchKey, type AwaitingUnitAlert, useAwaitingResourcesStore } from '@resgrid/data';
 import { callRoutes } from '@resgrid/features/calls';
 import { formatResponseSeconds } from '@resgrid/features/runcards';
 import { useTranslation } from '@resgrid/i18n';
 import { Button, ButtonSpinner, ButtonText, HStack, Pressable, Text, useFormFactor, VStack } from '@resgrid/ui';
-import { type Href, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { BellRing, ExternalLink, Send, X } from 'lucide-react-native';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -67,7 +68,7 @@ const UnitAvailableAlertCard: React.FC<{ alert: AwaitingUnitAlert; canDispatch: 
                   <ButtonText>{t('awaiting_resources.dispatch_to_call', { call: callLabel })}</ButtonText>
                 </Button>
               ) : null}
-              <Button size="xs" variant="outline" onPress={() => router.push(callRoutes.callDetail(String(call.callId)) as Href)} testID={`${testID}-open-${call.callId}`}>
+              <Button size="xs" variant="outline" onPress={() => pushRoutePath(router, callRoutes.callDetail(String(call.callId)))} testID={`${testID}-open-${call.callId}`}>
                 <View>
                   <ExternalLink size={14} color="#2563eb" />
                 </View>

@@ -1,3 +1,4 @@
+import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { useCallsStore } from '@resgrid/data';
 import { revealedCallText } from '@resgrid/features/calls';
 import { useNavigationHandoff } from '@resgrid/features/contacts';
@@ -190,7 +191,7 @@ export default function NavigationScreen({ simulationSpeedMps: simulationProp = 
     destination.kind === 'call' ? (
       <CallArrivalPanel unitId={activeUnitId} onEnd={end} />
     ) : destination.kind === 'route' ? (
-      <StopArrivalPanel unitId={activeUnitId} onEnd={end} onOpenStop={(id) => router.push(unitRoutesRoutes.stop(id))} />
+      <StopArrivalPanel unitId={activeUnitId} onEnd={end} onOpenStop={(id) => pushRoutePath(router, unitRoutesRoutes.stop(id))} />
     ) : (
       <PointArrivalPanel name={destination.name} onEnd={end} />
     );

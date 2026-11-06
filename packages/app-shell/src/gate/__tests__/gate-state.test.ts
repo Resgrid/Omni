@@ -2,6 +2,7 @@ import { type GateInputs, resolveGateStep } from '../gate-state';
 
 const open: GateInputs = {
   startupReady: true,
+  restoring: false,
   onboardingRequired: false,
   signedIn: true,
   accessDeniedNotice: false,
@@ -18,6 +19,10 @@ describe('resolveGateStep (ShellGate state machine)', () => {
 
   it('is loading until startup finished, whatever else is true', () => {
     expect(resolveGateStep({ ...open, startupReady: false, signedIn: false, onboardingRequired: true })).toBe('loading');
+  });
+
+  it('is loading, not sign-in, while a stored session is being restored', () => {
+    expect(resolveGateStep({ ...open, restoring: true, signedIn: false })).toBe('loading');
   });
 
   it.each<[string, Partial<GateInputs>, string]>([

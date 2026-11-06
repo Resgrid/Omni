@@ -1,3 +1,4 @@
+import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { selectCallById, useCallsStore } from '@resgrid/data';
 import { CallCard, callRoutes, resolvePriority } from '@resgrid/features/calls';
 import { useNavigationHandoff } from '@resgrid/features/contacts';
@@ -67,7 +68,7 @@ export const ActiveCallCard: React.FC<ActiveCallCardProps> = ({ activeCallId, on
         labelKey: 'map.view_call_details',
         icon: Eye,
         onPress: () => {
-          router.push(callRoutes.callDetail(call.CallId));
+          pushRoutePath(router, callRoutes.callDetail(call.CallId));
           onNavigate?.();
         },
       },

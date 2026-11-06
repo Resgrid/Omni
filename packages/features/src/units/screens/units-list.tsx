@@ -1,4 +1,5 @@
 import { useTerm } from '@resgrid/auth';
+import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { selectPendingUnitStatus, useUnitsStore, useUnitStatusStore } from '@resgrid/data';
 import { useIsNavigationEtaEnabled, useNavigationEtaSync } from '@resgrid/features/navigation-eta';
 import { AvailabilityFilterChips } from '@resgrid/features/status';
@@ -61,7 +62,7 @@ export default function UnitsListScreen({ onSelectUnit }: UnitsListScreenProps) 
     setIsRefreshing(false);
   }, [load]);
 
-  const handleSelect = useCallback((unit: UnitInfoResultData) => (onSelectUnit ? onSelectUnit(unit) : router.push(unitsRoutes.detail(unit.UnitId))), [onSelectUnit]);
+  const handleSelect = useCallback((unit: UnitInfoResultData) => (onSelectUnit ? onSelectUnit(unit) : pushRoutePath(router, unitsRoutes.detail(unit.UnitId))), [onSelectUnit]);
   const showError = hasError && unitInfos.length === 0;
   const units = useMemo(() => filterUnits(unitInfos, { query, availability }), [availability, query, unitInfos]);
 

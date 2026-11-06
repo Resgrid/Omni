@@ -1,4 +1,5 @@
 import { FeatureFlagKeys, recordsFieldFlagKey } from '@resgrid/auth';
+import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { useRecordsStore } from '@resgrid/data';
 import type { CallDetailTabContext, CallDetailTabDefinition } from '@resgrid/features/calls';
 import { useTranslation } from '@resgrid/i18n';
@@ -48,10 +49,10 @@ export const CallRecordsTab: React.FC<CallRecordsTabProps> = ({ callId }) => {
         <RecordsQuickCreate context={context} testID="call-records-new" />
       </View>
       {pending.map((draft) => (
-        <PendingDraftItem key={draft.clientRecordId} draft={draft} onPress={() => router.push(recordNew(draft.clientRecordId))} testID={`call-records-pending-${draft.clientRecordId}`} />
+        <PendingDraftItem key={draft.clientRecordId} draft={draft} onPress={() => pushRoutePath(router, recordNew(draft.clientRecordId))} testID={`call-records-pending-${draft.clientRecordId}`} />
       ))}
       {linked.map((record) => (
-        <RecordListItem key={record.RecordId} record={record} onPress={() => router.push(recordDetail(record.RecordId))} testID={`call-records-${record.RecordId}`} />
+        <RecordListItem key={record.RecordId} record={record} onPress={() => pushRoutePath(router, recordDetail(record.RecordId))} testID={`call-records-${record.RecordId}`} />
       ))}
       {linked.length === 0 && pending.length === 0 ? <EmptyRow text={t('records.no_call_records')} testID="call-records-empty" /> : null}
     </View>

@@ -1,5 +1,6 @@
 import { type ApiContext, isApiError } from '@resgrid/api';
 import { normalizeServer } from '@resgrid/offline';
+import { z } from 'zod';
 
 import { bodyOf, httpFailureOf } from '../errors/http-shape';
 import { classifyLoginFailure, isServerLoginReason, type LoginFailure } from '../errors/login-errors';
@@ -54,16 +55,39 @@ export function resetClientIdCompatibility(): void {
 /** Whether the next token request to this server carries the variant's client_id. */
 export const sendsClientId = (ctx: ApiContext): boolean => !serversRejectingClientId.has(serverKey(ctx));
 
+/**
+ * A token answer is usable only with an access token. A captive portal's or proxy's 200 page, or an empty body, has none:
+ * stored as-is it left the app "signed in" without an access token, which the shell shows as the sign-in screen. That is
+ * an outage, not a verdict on the session, so it is thrown as a plain error: the refresh engine keeps the tokens and tries
+ * again, and a sign-in reports a failure.
+ */
+const usableTokenAnswerSchema = z.looseObject({ access_token: z.string().min(1) });
+
+export class TokenAnswerUnusableError extends Error {
+  constructor() {
+    super('The token endpoint answered without an access token');
+    this.name = 'TokenAnswerUnusableError';
+  }
+}
+
+const usableTokenAnswer = (answer: AuthResponse): AuthResponse => {
+  if (!usableTokenAnswerSchema.safeParse(answer).success) {
+    throw new TokenAnswerUnusableError();
+  }
+
+  return answer;
+};
+
 const postToken = async (ctx: ApiContext, form: Record<string, string>, endpoint = connectEndpoints.token): Promise<AuthResponse> => {
   const clientId = resgridClientId();
   const withClient = sendsClientId(ctx) && clientId ? { ...form, client_id: clientId } : form;
   try {
-    return await authRequest<AuthResponse>(ctx, endpoint, { body: withClient }, { timeoutMs: TOKEN_REQUEST_TIMEOUT_MS });
+    return usableTokenAnswer(await authRequest<AuthResponse>(ctx, endpoint, { body: withClient }, { timeoutMs: TOKEN_REQUEST_TIMEOUT_MS }));
   } catch (error) {
     if ('client_id' in withClient && isInvalidClient(error)) {
       serversRejectingClientId.add(serverKey(ctx));
       authLogger.warn({ message: 'Server does not accept this app client_id; token requests continue without it (short refresh lifetime)' });
-      return authRequest<AuthResponse>(ctx, endpoint, { body: form }, { timeoutMs: TOKEN_REQUEST_TIMEOUT_MS });
+      return usableTokenAnswer(await authRequest<AuthResponse>(ctx, endpoint, { body: form }, { timeoutMs: TOKEN_REQUEST_TIMEOUT_MS }));
     }
     throw error;
   }

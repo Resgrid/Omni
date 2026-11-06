@@ -411,7 +411,7 @@ describe('routes', () => {
     expect(callEdit('42')).toBe('/call/42/edit');
     expect(callNew()).toBe('/call/new');
     expect(callCorrect('abc-123')).toBe('/call/new?correct=abc-123');
-    expect(() => callDetail('../secrets')).toThrow();
+    expect(callDetail('../secrets')).toBeNull();
   });
 });
 

@@ -1,4 +1,5 @@
 import { useNow } from '@resgrid/core/lifecycle/use-now';
+import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { sortWeatherAlerts, useWeatherAlertsStore } from '@resgrid/data';
 import { alertTimes, SeverityBadge, severityColor, weatherAlertsRoutes } from '@resgrid/features/weather-alerts';
 import { useTranslation } from '@resgrid/i18n';
@@ -98,7 +99,7 @@ export const WeatherAlertsWidget: React.FC<WidgetProps> = ({ isEditMode, onRemov
             <Pressable
               key={alert.WeatherAlertId}
               disabled={isEditMode}
-              onPress={() => router.push(weatherAlertsRoutes.detail(alert.WeatherAlertId))}
+              onPress={() => pushRoutePath(router, weatherAlertsRoutes.detail(alert.WeatherAlertId))}
               accessibilityRole="button"
               accessibilityLabel={alert.Event}
               testID={`weather-alerts-widget-alert-${alert.WeatherAlertId}`}

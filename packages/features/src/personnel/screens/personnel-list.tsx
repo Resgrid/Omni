@@ -1,4 +1,5 @@
 import { useSecurity, useTerm } from '@resgrid/auth';
+import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { selectPendingPersonnelWrite, usePersonnelStatusStore, usePersonnelStore } from '@resgrid/data';
 import { AvailabilityFilterChips } from '@resgrid/features/status';
 import { FilterOptionsSheet, toActiveFilter } from '@resgrid/features/units';
@@ -56,7 +57,7 @@ export default function PersonnelListScreen({ onSelectPerson }: PersonnelListScr
     setIsRefreshing(false);
   }, [load]);
 
-  const select = useCallback((person: PersonnelInfoResultData) => (onSelectPerson ? onSelectPerson(person) : router.push(personnelRoutes.detail(person.UserId))), [onSelectPerson]);
+  const select = useCallback((person: PersonnelInfoResultData) => (onSelectPerson ? onSelectPerson(person) : pushRoutePath(router, personnelRoutes.detail(person.UserId))), [onSelectPerson]);
   const showError = hasError && personnel.length === 0;
   const visible = useMemo(() => sortPersonnel(filterPersonnel(personnel, { query, availability }, canUserViewPII)), [availability, canUserViewPII, personnel, query]);
 

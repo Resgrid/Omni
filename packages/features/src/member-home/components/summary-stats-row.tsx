@@ -29,8 +29,11 @@ interface StatTileProps {
 const StatTile: React.FC<StatTileProps> = ({ label, value, accentClassName, isAlert = false, onPress, testID }) => {
   // Four tiles share a phone's width, so the label is small, may take two lines and shrinks further on iOS/Android for
   // long translations; every tile fills the row's height so a two-line label does not make its tile taller than the rest.
+  // `grow`, not `flex-1`: the tile's column has no height of its own (the row and the page scroll set it), and flex-1's
+  // zero basis and shrink let a relayout (switching the Status/Staffing tab below) squash the card to its padding and
+  // clip the number and label. `grow` keeps the content height as the floor and still stretches to the row.
   const tile = (
-    <Card className={`flex-1 rounded-2xl border-0 p-2 ${accentClassName}`} style={isAlert ? styles.alert : undefined} testID={testID}>
+    <Card className={`grow rounded-2xl border-0 p-2 ${accentClassName}`} style={isAlert ? styles.alert : undefined} testID={testID}>
       <VStack space="xs" className="items-center">
         <Text className="text-lg font-bold text-typography-0" testID={`${testID}-value`}>
           {String(value)}

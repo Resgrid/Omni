@@ -63,11 +63,7 @@ export const usableCenter = (latitude: number | null | undefined, longitude: num
 /** Where a search result opens: the indoor map at its floor, or the custom map at its layer, with the feature selected. */
 export const searchResultRoute = (item: MapFeatureResultData): string | null => {
   if (!item.MapId) return null;
-  try {
-    return item.FeatureType === 'indoor_zone'
-      ? customMapsRoutes.indoor(item.MapId, { floorId: item.FloorOrLayerId || null, featureId: item.Id || null })
-      : customMapsRoutes.custom(item.MapId, { layerId: item.FloorOrLayerId || null, featureId: item.Id || null });
-  } catch {
-    return null;
-  }
+  return item.FeatureType === 'indoor_zone'
+    ? customMapsRoutes.indoor(item.MapId, { floorId: item.FloorOrLayerId || null, featureId: item.Id || null })
+    : customMapsRoutes.custom(item.MapId, { layerId: item.FloorOrLayerId || null, featureId: item.Id || null });
 };

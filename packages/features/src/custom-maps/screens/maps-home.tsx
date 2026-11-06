@@ -1,3 +1,4 @@
+import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { useCustomMapsStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import type { CustomMapResultData, IndoorMapResultData } from '@resgrid/models';
@@ -46,7 +47,7 @@ export default function MapsHomeScreen() {
   const isEmpty = custom.length === 0 && indoor.length === 0;
 
   const renderCustom = (map: CustomMapResultData) => (
-    <Pressable key={map.IndoorMapId} onPress={() => router.push(customMapsRoutes.custom(map.IndoorMapId))} accessibilityRole="button" testID={`maps-custom-${map.IndoorMapId}`}>
+    <Pressable key={map.IndoorMapId} onPress={() => pushRoutePath(router, customMapsRoutes.custom(map.IndoorMapId))} accessibilityRole="button" testID={`maps-custom-${map.IndoorMapId}`}>
       <HStack space="md" className="mb-2 items-center rounded-xl border border-outline-200 bg-background-0 p-3">
         <View style={styles.icon} className="bg-info-100">
           <MapIcon size={20} color="#2563eb" />
@@ -71,7 +72,7 @@ export default function MapsHomeScreen() {
   const renderIndoor = (map: IndoorMapResultData) => {
     const floors = indoorMapById[map.IndoorMapId]?.Floors?.length;
     return (
-      <Pressable key={map.IndoorMapId} onPress={() => router.push(customMapsRoutes.indoor(map.IndoorMapId))} accessibilityRole="button" testID={`maps-indoor-${map.IndoorMapId}`}>
+      <Pressable key={map.IndoorMapId} onPress={() => pushRoutePath(router, customMapsRoutes.indoor(map.IndoorMapId))} accessibilityRole="button" testID={`maps-indoor-${map.IndoorMapId}`}>
         <HStack space="md" className="mb-2 items-center rounded-xl border border-outline-200 bg-background-0 p-3">
           <View style={styles.icon} className="bg-secondary-100">
             <Building2 size={20} color="#7c3aed" />

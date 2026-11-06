@@ -27,7 +27,7 @@ describe('ShellGate', () => {
     resetShellStateForTests();
     resetShellSlotsForTests();
     setShellState({ onboardingRequired: false });
-    useAuthStore.setState({ status: 'signedOut', accessToken: null, userId: null, authMethod: null });
+    useAuthStore.setState({ status: 'signedOut', accessToken: null, refreshToken: null, userId: null, authMethod: null });
     useSharedSessionStore.setState({ locked: false });
     securityStore.setState({ rights: null });
     startupInit.reset();
@@ -39,6 +39,26 @@ describe('ShellGate', () => {
     await renderGate();
     expect(screen.getByTestId('shell-gate-loading')).toBeTruthy();
     expect(screen.queryByTestId('app-content')).toBeNull();
+  });
+
+  // A cold start that holds only a refresh token renews it before it has an access token. The sign-in screen in that gap
+  // looked like being signed out (and a sign-in started there could discard the session being restored).
+  it('waits on the loading screen while a stored session renews, and opens the app when it has', async () => {
+    useAuthStore.setState({ status: 'loading', accessToken: null, refreshToken: 'refresh', userId: 'user-1' });
+    await renderGate();
+    expect(screen.getByTestId('shell-gate-loading')).toBeTruthy();
+    expect(screen.queryByTestId('shell-gate-login')).toBeNull();
+
+    await act(() => signIn());
+
+    expect(screen.getByTestId('app-content')).toBeTruthy();
+  });
+
+  it('keeps a session restored offline (refresh token only) in the app instead of on the sign-in screen', async () => {
+    useAuthStore.setState({ status: 'signedIn', accessToken: null, refreshToken: 'refresh', userId: 'user-1' });
+    await renderGate();
+    expect(screen.queryByTestId('shell-gate-login')).toBeNull();
+    expect(screen.getByTestId('app-content')).toBeTruthy();
   });
 
   it('shows the login fallback (with the app name) when signed out, and the app once signed in', async () => {

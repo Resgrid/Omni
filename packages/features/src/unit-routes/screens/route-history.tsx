@@ -1,3 +1,4 @@
+import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { useRoutesStore } from '@resgrid/data';
 import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
@@ -48,7 +49,12 @@ export default function RouteHistoryScreen({ planId: planIdProp }: RouteHistoryS
       (fact) => fact !== ''
     );
     return (
-      <Pressable onPress={() => router.push(unitRoutesRoutes.instance(item.RouteInstanceId))} accessibilityRole="button" testID={`route-history-${item.RouteInstanceId}`} className="mb-2 rounded-xl bg-background-0 p-4">
+      <Pressable
+        onPress={() => pushRoutePath(router, unitRoutesRoutes.instance(item.RouteInstanceId))}
+        accessibilityRole="button"
+        testID={`route-history-${item.RouteInstanceId}`}
+        className="mb-2 rounded-xl bg-background-0 p-4"
+      >
         <HStack space="sm" className="items-center">
           <VStack className="flex-1" space="xs">
             <Text className="font-semibold text-typography-900">{formatRouteTime(item.ActualStartOn ?? item.AddedOn, timeZone) || t('common.unknown')}</Text>

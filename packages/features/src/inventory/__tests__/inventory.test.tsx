@@ -140,7 +140,7 @@ describe('inventory helpers', () => {
 
   it('builds safe count routes', () => {
     expect(inventoryRoutes.count('ct-1')).toBe('/inventory/count/ct-1');
-    expect(() => inventoryRoutes.count('../x')).toThrow();
+    expect(inventoryRoutes.count('../x')).toBeNull();
     expect(readInventoryParam(['ct-1'])).toBe('ct-1');
     expect(readInventoryParam('a/b')).toBeNull();
   });

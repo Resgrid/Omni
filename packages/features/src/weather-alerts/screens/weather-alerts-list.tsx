@@ -1,4 +1,5 @@
 import { useCapability } from '@resgrid/config';
+import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { sortWeatherAlerts, useWeatherAlertsStore, type WeatherAlertSort } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import { type WeatherAlertResultData } from '@resgrid/models';
@@ -61,7 +62,7 @@ export default function WeatherAlertsListScreen() {
     return sortWeatherAlerts(filtered, sort);
   }, [alerts, query, sort, tab]);
 
-  const open = useCallback((alert: WeatherAlertResultData) => router.push(weatherAlertsRoutes.detail(alert.WeatherAlertId)), []);
+  const open = useCallback((alert: WeatherAlertResultData) => pushRoutePath(router, weatherAlertsRoutes.detail(alert.WeatherAlertId)), []);
 
   return (
     <View className="flex-1 bg-background-50" testID="weather-alerts-list-screen">

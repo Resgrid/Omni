@@ -1,4 +1,5 @@
 import { useTerm } from '@resgrid/auth';
+import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { useContactsStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import { type ContactResultData } from '@resgrid/models';
@@ -46,7 +47,7 @@ export default function ContactsListScreen({ onSelectContact }: ContactsListScre
     [categoryId, contacts, query]
   );
 
-  const select = useCallback((contact: ContactResultData) => (onSelectContact ? onSelectContact(contact) : router.push(contactsRoutes.detail(contact.ContactId))), [onSelectContact]);
+  const select = useCallback((contact: ContactResultData) => (onSelectContact ? onSelectContact(contact) : pushRoutePath(router, contactsRoutes.detail(contact.ContactId))), [onSelectContact]);
 
   return (
     <View className="flex-1 bg-background-50 px-4 pt-4" testID="contacts-list-screen" accessibilityLabel={title}>

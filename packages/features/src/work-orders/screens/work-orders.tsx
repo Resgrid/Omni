@@ -1,4 +1,5 @@
 import { useTerm } from '@resgrid/auth';
+import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { useWorkOrdersStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import type { WorkOrderSummary } from '@resgrid/models';
@@ -22,7 +23,7 @@ import {
   VStack,
   ZeroState,
 } from '@resgrid/ui';
-import { type Href, useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Search, SlidersHorizontal, Wrench, X } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
 import { StyleSheet } from 'react-native';
@@ -64,7 +65,7 @@ function WorkOrdersContent() {
   // persisted access decides, and the server re-checks the queued report.
   const canWrite = access?.MaintenanceEnabled === true && (list.loaded ? list.canWrite : true);
   const queued = useMemo(() => Object.values(queuedReports).sort((a, b) => b.createdAt - a.createdAt), [queuedReports]);
-  const open = (order: WorkOrderSummary) => router.push(workOrderRoutes.detail(order.Id) as Href);
+  const open = (order: WorkOrderSummary) => pushRoutePath(router, workOrderRoutes.detail(order.Id));
   const shown = useMemo(() => filterWorkOrders(list.items, filters), [list.items, filters]);
   const isFiltered = hasWorkOrderFilters(filters);
   const filterCount = activeWorkOrderFilterCount(filters);
@@ -84,7 +85,7 @@ function WorkOrdersContent() {
               {title}
             </Text>
             {canWrite ? (
-              <Button size="sm" onPress={() => router.push(workOrderRoutes.report() as Href)} testID="work-orders-report">
+              <Button size="sm" onPress={() => router.push(workOrderRoutes.report())} testID="work-orders-report">
                 <ButtonText>{t('workOrders.report')}</ButtonText>
               </Button>
             ) : null}

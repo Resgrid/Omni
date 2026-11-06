@@ -1,5 +1,6 @@
 import { useSecurity } from '@resgrid/auth';
 import type { Capabilities } from '@resgrid/config';
+import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { useCommandStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import { IncidentCommandStatus } from '@resgrid/models';
@@ -115,7 +116,7 @@ const AssistTab: React.FC<{ callId: string; fullScreen: boolean }> = ({ callId, 
         tier="assist"
         headerActions={
           fullScreen ? undefined : (
-            <BoardButton label={t('incident_command.open_full_board')} icon={Expand} onPress={() => router.push(incidentCommandRoutes.callBoard(callId) as never)} testID="incident-command-tab-open-full" />
+            <BoardButton label={t('incident_command.open_full_board')} icon={Expand} onPress={() => pushRoutePath(router, incidentCommandRoutes.callBoard(callId))} testID="incident-command-tab-open-full" />
           )
         }
       />
@@ -139,7 +140,7 @@ const CommandTab: React.FC<{ callId: string }> = ({ callId }) => {
 
   const openBoard = useCallback(() => {
     useCommandStore.getState().switchCommand(callId);
-    router.push(incidentCommandRoutes.board() as never);
+    router.push(incidentCommandRoutes.board());
   }, [callId]);
 
   const track = useCallback(async () => {
@@ -170,7 +171,7 @@ const CommandTab: React.FC<{ callId: string }> = ({ callId }) => {
               .getState()
               .startCommand(callId, definitionId)
               .then(
-                () => router.push(incidentCommandRoutes.board() as never),
+                () => router.push(incidentCommandRoutes.board()),
                 () => toast.error(t('incident_command.write_failed'))
               )
           }
@@ -184,8 +185,8 @@ const CommandTab: React.FC<{ callId: string }> = ({ callId }) => {
       <CommandBoardView
         callId={callId}
         tier="command"
-        onOpenLog={() => router.push(incidentCommandRoutes.log(callId) as never)}
-        onOpenMap={() => router.push(incidentCommandRoutes.map(callId) as never)}
+        onOpenLog={() => pushRoutePath(router, incidentCommandRoutes.log(callId))}
+        onOpenMap={() => pushRoutePath(router, incidentCommandRoutes.map(callId))}
         headerActions={<BoardButton label={t('incident_command.open_command_board')} icon={Expand} onPress={openBoard} testID="incident-command-tab-open-board" />}
       />
     </View>

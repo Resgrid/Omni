@@ -50,6 +50,7 @@ export {
   type AuthSessionState,
   type AuthState,
   getAccessTokenExpiryMs,
+  hasSignedInSession,
   isAccessTokenExpired,
   refreshEngine,
   restoreSession,

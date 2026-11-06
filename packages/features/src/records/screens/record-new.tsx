@@ -1,3 +1,4 @@
+import { replaceRoutePath } from '@resgrid/core/navigation/route-paths';
 import { useRecordsStore } from '@resgrid/data';
 import { useIsOnline } from '@resgrid/features/calls';
 import { useTranslation } from '@resgrid/i18n';
@@ -151,7 +152,7 @@ export default function RecordNewScreen({ draftId: draftProp, showHeader = true 
       const outcome = await stageAndSendDraft(draft);
 
       if (outcome.kind === 'sent' && outcome.recordId) {
-        router.replace(recordDetail(outcome.recordId));
+        replaceRoutePath(router, recordDetail(outcome.recordId));
 
         return;
       }
