@@ -4,6 +4,7 @@ import { create } from 'zustand';
 export interface FakeAuthState {
   status: 'idle' | 'loading' | 'signedIn' | 'signedOut' | 'error' | 'onboarding' | 'mfaRequired';
   accessToken: string | null;
+  refreshToken: string | null;
   error: string | null;
   loginFailure: LoginFailure | null;
   mfaChallenge: MfaChallenge | null;
@@ -25,9 +26,13 @@ export interface FakeAuthState {
   beginFactorRecovery: jest.Mock;
 }
 
+/** `hasSignedInSession`: an access token, or a refresh token alone after an offline restore. */
+const signedIn = (state: FakeAuthState): boolean => state.status === 'signedIn' && (!!state.accessToken || !!state.refreshToken);
+
 const initial = (): FakeAuthState => ({
   status: 'signedOut',
   accessToken: null,
+  refreshToken: null,
   error: null,
   loginFailure: null,
   mfaChallenge: null,
@@ -73,7 +78,7 @@ export function buildAuthMock(actual: Record<string, unknown>): Record<string, u
       const state = fakeAuthStore();
       return {
         status: state.status,
-        isAuthenticated: state.status === 'signedIn' && !!state.accessToken,
+        isAuthenticated: signedIn(state),
         isLoading: state.status === 'loading',
         error: state.error,
         loginFailure: state.loginFailure,
@@ -86,7 +91,7 @@ export function buildAuthMock(actual: Record<string, unknown>): Record<string, u
         logout: state.logout,
       };
     },
-    useIsAuthenticated: () => fakeAuthStore((state) => state.status === 'signedIn' && !!state.accessToken),
+    useIsAuthenticated: () => fakeAuthStore(signedIn),
     useSharedInstallation: () => installation,
     readSharedInstallation: () => installation,
     isSharedInstallation: () => installation.shared,

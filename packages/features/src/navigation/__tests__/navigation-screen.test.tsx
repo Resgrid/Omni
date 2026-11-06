@@ -10,7 +10,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import React from 'react';
 
 import { findOnSceneStatus } from '../components/arrival-panels';
-import { navigationRoutes, readNavigationParams, requestPointNavigation, takePointNavigationRequest } from '../routes';
+import { navigateInAppTo, navigationRoutes, readNavigationParams, requestPointNavigation, takePointNavigationRequest } from '../routes';
 import NavigationScreen from '../screens/navigation-screen';
 
 const { mockNavigationAvailability } = jest.requireMock('../hooks/use-in-app-navigation') as { mockNavigationAvailability: { value: boolean } };
@@ -112,6 +112,23 @@ describe('navigation routes', () => {
     requestPointNavigation({ latitude: 1, longitude: 2, name: 'Hydrant' });
     expect(takePointNavigationRequest()).toEqual({ latitude: 1, longitude: 2, name: 'Hydrant' });
     expect(takePointNavigationRequest()).toBeNull();
+  });
+
+  it('opens in-app navigation to a call by id, and to its point when the call id is refused', () => {
+    const navigator = { push: jest.fn() };
+    navigateInAppTo(navigator, { latitude: 1, longitude: 2, label: 'Call 12', callId: 12 });
+    expect(navigator.push).toHaveBeenLastCalledWith('/navigate?callId=12');
+    expect(takePointNavigationRequest()).toBeNull();
+
+    // An unsafe integer (a corrupt id) builds no call route, but the call's location still gets the crew directions.
+    navigateInAppTo(navigator, { latitude: 3, longitude: 4, label: 'Call', callId: 1e21 });
+    expect(navigator.push).toHaveBeenLastCalledWith('/navigate');
+    expect(takePointNavigationRequest()).toEqual({ latitude: 3, longitude: 4, name: 'Call' });
+
+    navigateInAppTo(navigator, { latitude: 5, longitude: 6 });
+    expect(navigator.push).toHaveBeenLastCalledWith('/navigate');
+    expect(takePointNavigationRequest()).toEqual({ latitude: 5, longitude: 6, name: null });
+    expect(navigator.push).toHaveBeenCalledTimes(3);
   });
 
   it('finds the On Scene option in the unit’s own status set', () => {

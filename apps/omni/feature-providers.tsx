@@ -4,11 +4,10 @@
 import { getShellApiContext, getShellOfflineRuntime, setActiveCallId, setActiveUnitId, useActiveCallId, useActiveUnitId, useShellStore } from '@resgrid/app-shell';
 import { useActiveVariant } from '@resgrid/config';
 import { logger } from '@resgrid/core';
-import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { ChatIdentityProvider } from '@resgrid/features/chat';
 import { type NavigationHandoff, NavigationHandoffProvider, type NavigationTarget } from '@resgrid/features/contacts';
 import { useInAppNavigationAvailable } from '@resgrid/features/navigation/hooks/use-in-app-navigation';
-import { navigationRoutes, requestPointNavigation } from '@resgrid/features/navigation/routes';
+import { navigateInAppTo } from '@resgrid/features/navigation/routes';
 import { useOfflineMapsController } from '@resgrid/features/offline-maps';
 import { type ActiveUnitAdapter, getNavigationApp, openNavigationTarget, type StorageSyncServices, usePreferencesVersion } from '@resgrid/features/settings';
 import { StatusProvider } from '@resgrid/features/status';
@@ -94,12 +93,7 @@ const openExternalNavigation = openNavigationTarget;
 /** In-app turn-by-turn (MapLibre plan §9.1): a call by id (the server routes to it), any other point handed over in memory. */
 const openInAppNavigation = (target: NavigationTarget): Promise<boolean> => {
   if ('address' in target) return openExternalNavigation(target);
-  if (target.callId !== undefined) {
-    pushRoutePath(router, navigationRoutes.toCall(target.callId));
-  } else {
-    requestPointNavigation({ latitude: target.latitude, longitude: target.longitude, name: target.label ?? null });
-    router.push(navigationRoutes.toPoint());
-  }
+  navigateInAppTo(router, target);
   return Promise.resolve(true);
 };
 

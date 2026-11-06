@@ -1,4 +1,4 @@
-import { checkAppAccess, isPersonalLockEnabled, personalLockStore, securityStore, useAuthStore, useSharedSessionStore } from '@resgrid/auth';
+import { checkAppAccess, hasSignedInSession, isPersonalLockEnabled, personalLockStore, securityStore, useAuthStore, useSharedSessionStore } from '@resgrid/auth';
 import { useActiveVariant } from '@resgrid/config';
 import { getEnv } from '@resgrid/core';
 import { useMemo, useSyncExternalStore } from 'react';
@@ -29,7 +29,7 @@ export function useGateInputs(): GateInputs {
     const capabilities = variant.capabilities;
     // Signed in holds a credential the session can go on with. A restore that could not reach the token endpoint (offline)
     // is signed in on its refresh token alone and works from the stored data; it used to sit on the sign-in screen.
-    const signedIn = status === 'signedIn' && (!!accessToken || !!refreshToken);
+    const signedIn = hasSignedInSession({ status, accessToken, refreshToken });
     // Sign-in from the login screen starts signed out (no refresh token), so `loading` with one is a cold-start restore.
     const restoring = status === 'loading' && !!refreshToken && !accessToken;
     const onboardingPlatform = Platform.OS !== 'web' || getAppShellOptions().onboardingOnWeb === true;

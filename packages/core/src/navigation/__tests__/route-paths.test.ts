@@ -48,7 +48,7 @@ describe('route paths', () => {
   it('accepts only positive integers as numeric ids', () => {
     for (const id of [1, 12, '12', 9007199254740991]) expect(isNumericRouteId(id)).toBe(true);
 
-    for (const id of [0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, '0', '012', '-1', '1.5', ' 12', '', 'abc', null, undefined]) expect(isNumericRouteId(id)).toBe(false);
+    for (const id of [0, -1, 1.5, 1e21, 9007199254740992, Number.NaN, Number.POSITIVE_INFINITY, '0', '012', '-1', '1.5', ' 12', '', 'abc', null, undefined]) expect(isNumericRouteId(id)).toBe(false);
   });
 
   it('builds a path around an accepted id, or null for a refused one', () => {

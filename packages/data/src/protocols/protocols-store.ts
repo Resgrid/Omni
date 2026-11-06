@@ -8,7 +8,7 @@ import { dataPersistOptions, registerPersistedStore } from '../core/persist';
 import { registerDataStoreReset } from '../core/reset';
 import { getDataApiContext } from '../core/runtime';
 import { cacheOptions, createSliceRunner, emptySliceMeta, type FetchOptions, type SliceMeta, type SliceRunner } from '../core/slices';
-import { type PersistedProtocolsV0, toCallProtocol } from './protocol-wire';
+import { type PersistedProtocolsV0, toCallProtocol, toCallProtocols } from './protocol-wire';
 
 type ProtocolsSlice = 'protocols' | 'detail';
 
@@ -28,11 +28,13 @@ type PersistedProtocols = Pick<ProtocolsData, 'protocols' | 'protocolDetailsById
 
 /**
  * v0 → v1: version 0 kept the `Protocols` controller's raw items (`ProtocolId`, no `Id`), so a protocol could not be
- * opened until the list was fetched again; they now convert to the screen shape like a fresh answer does.
+ * opened until the list was fetched again; they now convert to the screen shape like a fresh answer does. A null entry
+ * or a nested list that is not an array is dropped instead of throwing, so the usable protocols still hydrate (a throw
+ * here left the list empty, offline, until the next fetch).
  */
 export function migrateProtocolsStorage(persisted: PersistedProtocolsV0 | null): PersistedProtocols {
   return {
-    protocols: Array.isArray(persisted?.protocols) ? persisted.protocols.map(toCallProtocol) : [],
+    protocols: toCallProtocols(persisted?.protocols),
     protocolDetailsById: persisted?.protocolDetailsById ?? {},
     fetchedAt: persisted?.fetchedAt ?? {},
   };
@@ -49,7 +51,7 @@ export const useProtocolsStore = create<ProtocolsState>()(
         fetchProtocols: async (options) => {
           await runner.run(
             'protocols',
-            async () => unwrapList(await getAllProtocols(getDataApiContext(), cacheOptions(options))).map(toCallProtocol),
+            async () => toCallProtocols(unwrapList(await getAllProtocols(getDataApiContext(), cacheOptions(options)))),
             (protocols) => ({ protocols }),
             { trailing: options?.bypassCache === true }
           );

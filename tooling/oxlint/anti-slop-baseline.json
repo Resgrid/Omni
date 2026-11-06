@@ -225,7 +225,7 @@
   },
   "apps/omni/feature-providers.tsx": {
     "anti-slop/no-runtime-typeof": 1,
-    "anti-slop/require-readable-spacing": 10
+    "anti-slop/require-readable-spacing": 9
   },
   "apps/omni/map-config-refresh.ts": {
     "anti-slop/require-readable-spacing": 9
@@ -977,7 +977,7 @@
     "anti-slop/no-runtime-typeof": 7,
     "anti-slop/no-unknown-parameters": 2,
     "anti-slop/no-unsafe-dictionary-type": 1,
-    "anti-slop/require-readable-spacing": 36,
+    "anti-slop/require-readable-spacing": 35,
     "anti-slop/require-safety-comment-for-type-assertion": 2
   },
   "packages/auth/src/session/client-headers.ts": {
@@ -2962,9 +2962,6 @@
     "anti-slop/require-readable-spacing": 1
   },
   "packages/features/src/navigation/index.ts": {
-    "anti-slop/require-readable-spacing": 4
-  },
-  "packages/features/src/navigation/routes.ts": {
     "anti-slop/require-readable-spacing": 4
   },
   "packages/features/src/notes/__tests__/notes.test.tsx": {

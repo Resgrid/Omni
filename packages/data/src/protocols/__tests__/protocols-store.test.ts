@@ -4,8 +4,8 @@ import { defaultResetRegistry } from '@resgrid/offline';
 
 import { createDataTestRuntime, type DataTestRuntime, persisted } from '../../__tests__/helpers';
 import { setDataStorage } from '../../core/persist';
-import { toCallProtocol } from '../protocol-wire';
-import { useProtocolsStore } from '../protocols-store';
+import { type PersistedProtocolsV0, toCallProtocol, toCallProtocols } from '../protocol-wire';
+import { migrateProtocolsStorage, useProtocolsStore } from '../protocols-store';
 
 jest.mock('@resgrid/api', () => ({
   ...jest.requireActual('@resgrid/api'),
@@ -77,6 +77,33 @@ describe('toCallProtocol', () => {
     const converted = toCallProtocol(wireProtocol('9'));
     expect(toCallProtocol(converted)).toBe(converted);
   });
+
+  it('drops null entries and lists that are not arrays instead of throwing', () => {
+    // JSON nobody re-checked (an older build's persisted copy, a proxy's answer): one bad part must not throw.
+    const junk: ProtocolResultData[] = JSON.parse(
+      '[null,{"ProtocolId":"10","Name":"Junk","Triggers":{"ProtocolTriggerId":"t"},"Attachments":"a","Questions":[null,{"ProtocolTriggerQuestionId":"q","Question":"Q","Answers":{"Answer":"A"}}]}]'
+    );
+
+    expect(toCallProtocols(junk)).toEqual([expect.objectContaining({ Id: '10', Name: 'Junk', Triggers: [], Attachments: [], Questions: [{ Id: 'q', Question: 'Q', Answers: [] }] })]);
+    expect(toCallProtocols(null)).toEqual([]);
+  });
+});
+
+describe('migrateProtocolsStorage', () => {
+  it('keeps the usable entries of a v0 snapshot holding null ones', () => {
+    expect(migrateProtocolsStorage({ protocols: [null, wireProtocol('11')], protocolDetailsById: null, fetchedAt: null })).toEqual({
+      protocols: [expect.objectContaining({ Id: '11' })],
+      protocolDetailsById: {},
+      fetchedAt: {},
+    });
+  });
+
+  it('starts empty without a snapshot or a protocol list', () => {
+    expect(migrateProtocolsStorage(null)).toEqual({ protocols: [], protocolDetailsById: {}, fetchedAt: {} });
+
+    const notAList: PersistedProtocolsV0 = JSON.parse('{"protocols":{"ProtocolId":"12"}}');
+    expect(migrateProtocolsStorage(notAList).protocols).toEqual([]);
+  });
 });
 
 describe('protocols store', () => {
@@ -110,5 +137,20 @@ describe('protocols store', () => {
     const [protocol] = useProtocolsStore.getState().protocols;
     expect(protocol).toMatchObject({ Id: '5', DepartmentId: '42', Name: 'Protocol 5' });
     expect(useProtocolsStore.getState().fetchedAt.protocols).toBe(1234);
+  });
+
+  it('hydrates a v0 copy holding a null entry instead of failing the rehydrate', async () => {
+    runtime.kv.set('omni-protocols-storage', JSON.stringify({ state: { protocols: [null, wireProtocol('14')], protocolDetailsById: null, fetchedAt: { protocols: 99 } }, version: 0 }));
+    await setDataStorage(runtime.kv);
+    expect(useProtocolsStore.getState().protocols.map((protocol) => protocol.Id)).toEqual(['14']);
+    expect(useProtocolsStore.getState().fetchedAt.protocols).toBe(99);
+  });
+
+  it('a list answer with a null entry keeps the other protocols', async () => {
+    // Core's list can carry a JSON null whatever the model declares: read it the way the wire does.
+    const withNull: ProtocolResultData[] = JSON.parse(JSON.stringify([wireProtocol('15'), null]));
+    jest.mocked(getAllProtocols).mockResolvedValue(listAnswer(withNull));
+    await useProtocolsStore.getState().fetchProtocols();
+    expect(useProtocolsStore.getState().protocols.map((protocol) => protocol.Id)).toEqual(['15']);
   });
 });

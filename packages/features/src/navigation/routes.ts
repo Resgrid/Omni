@@ -1,4 +1,4 @@
-import { isNumericRouteId, routePathWithId } from '@resgrid/core/navigation/route-paths';
+import { isNumericRouteId, routePathWithId, type RoutePushNavigator } from '@resgrid/core/navigation/route-paths';
 import { isSafeRouteId } from '@resgrid/core/utils/route-ids';
 
 /**
@@ -25,6 +25,7 @@ export const requestPointNavigation = (point: PointNavigationRequest): void => {
 export const takePointNavigationRequest = (): PointNavigationRequest | null => {
   const point = pendingPoint;
   pendingPoint = null;
+
   return point;
 };
 
@@ -38,6 +39,32 @@ export const navigationRoutes = {
   toPoint: (): string => '/navigate',
 };
 
+/** A point destination for in-app navigation, with the call it belongs to when it is a call's location. */
+export interface InAppNavigationPoint {
+  latitude: number;
+  longitude: number;
+  label?: string;
+  callId?: number;
+}
+
+/**
+ * Opens in-app turn-by-turn to a point: by call id where the route accepts it (the server resolves the call's location
+ * and checks the caller may see it), else to the point itself, handed over in memory. A call id the route refuses (an
+ * unsafe integer; reported) still has its coordinates, so the crew get directions instead of a dead tap.
+ */
+export const navigateInAppTo = (navigator: RoutePushNavigator, target: InAppNavigationPoint): void => {
+  const callPath = target.callId === undefined ? null : navigationRoutes.toCall(target.callId);
+
+  if (callPath !== null) {
+    navigator.push(callPath);
+
+    return;
+  }
+
+  requestPointNavigation({ latitude: target.latitude, longitude: target.longitude, name: target.label ?? null });
+  navigator.push(navigationRoutes.toPoint());
+};
+
 const first = (value: string | string[] | null | undefined): string => ((Array.isArray(value) ? value[0] : value) ?? '').trim();
 
 export type NavigationRequest = { kind: 'call'; callId: number } | { kind: 'route'; routeInstanceId: string } | { kind: 'point'; point: PointNavigationRequest } | null;
@@ -45,8 +72,11 @@ export type NavigationRequest = { kind: 'call'; callId: number } | { kind: 'rout
 /** What a `/navigate` URL asks for (call or route instance); null when it carries neither (then a pending point applies). */
 export const readNavigationParams = (params: { callId?: string | string[]; instanceId?: string | string[] }): NavigationRequest => {
   const callId = Number(first(params.callId));
+
   if (Number.isInteger(callId) && callId > 0) return { kind: 'call', callId };
   const instanceId = first(params.instanceId);
+
   if (instanceId && isSafeRouteId(instanceId)) return { kind: 'route', routeInstanceId: instanceId };
+
   return null;
 };

@@ -4,9 +4,9 @@ import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { dataProtectionStore } from '../data-protection/grant-store';
 import { useProtectedGrantRefresh } from '../data-protection/use-protected-grant-refresh';
 import { featureFlagsStore, useFeatureFlag, useFeatureFlagStatus } from '../flags/feature-flags-store';
-import { useAuth } from '../hooks';
+import { useAuth, useIsAuthenticated } from '../hooks';
 import { securityStore, useSecurity } from '../rights/security-store';
-import { useAuthStore } from '../session/auth-store';
+import { hasSignedInSession, useAuthStore } from '../session/auth-store';
 import { terminologyStore, useTerm } from '../terminology/terminology-store';
 import { setupHarness } from './helpers/harness';
 
@@ -115,6 +115,30 @@ describe('hooks', () => {
       useAuthStore.setState({ status: 'mfaRequired', mfaChallenge: { kind: 'verify', methods: ['totp'], enrolled: ['totp'], preferred: 'totp', expiresAt: null, source: 'password' } });
     });
     expect(auth.current().mfaChallenge?.kind).toBe('verify');
+  });
+
+  it('counts a session restored offline on its refresh token alone as signed in, like the shell gate does', () => {
+    const authenticated = renderHook(() => useIsAuthenticated());
+    const auth = renderHook(() => useAuth());
+
+    const cases: [Parameters<typeof hasSignedInSession>[0], boolean][] = [
+      [{ status: 'signedIn', accessToken: 'access', refreshToken: 'refresh' }, true],
+      [{ status: 'signedIn', accessToken: null, refreshToken: 'refresh' }, true],
+      [{ status: 'signedIn', accessToken: 'access', refreshToken: null }, true],
+      [{ status: 'signedIn', accessToken: null, refreshToken: null }, false],
+      [{ status: 'loading', accessToken: null, refreshToken: 'refresh' }, false],
+      [{ status: 'signedOut', accessToken: null, refreshToken: null }, false],
+    ];
+
+    for (const [session, expected] of cases) {
+      act(() => {
+        useAuthStore.setState(session);
+      });
+      expect(hasSignedInSession(session)).toBe(expected);
+      expect(authenticated.current()).toBe(expected);
+      expect(auth.current().isAuthenticated).toBe(expected);
+      expect(useAuthStore.getState().isAuthenticated()).toBe(expected);
+    }
   });
 
   it('useProtectedGrantRefresh refreshes when the grant changes and again after it expires (IC)', () => {
