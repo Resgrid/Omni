@@ -620,7 +620,7 @@
   "packages/app-shell/src/runtime/session.ts": {
     "anti-slop/no-conditional-empty-object-spread": 1,
     "anti-slop/no-runtime-typeof": 1,
-    "anti-slop/require-readable-spacing": 13
+    "anti-slop/require-readable-spacing": 12
   },
   "packages/app-shell/src/runtime/shell-config.ts": {
     "anti-slop/require-readable-spacing": 5

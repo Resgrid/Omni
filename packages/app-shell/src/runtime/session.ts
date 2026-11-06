@@ -1,4 +1,4 @@
-import { getActiveDepartmentId, getBaseApiUrl, securityStore, useAuthStore } from '@resgrid/auth';
+import { getActiveDepartmentId, getBaseApiUrl, hasSignedInSession, securityStore, useAuthStore } from '@resgrid/auth';
 import type { DataSessionScope } from '@resgrid/data';
 import type { NotificationsSession } from '@resgrid/notifications';
 import { CONTRACT_KEYS, readLegacyString } from '@resgrid/offline';
@@ -18,9 +18,14 @@ export function setActiveUnitProvider(provider: (() => string | null) | null): v
   activeUnitProvider = provider;
 }
 
+/**
+ * Signed in as the shell gate sees it (`hasSignedInSession`), including a session restored offline on its refresh token
+ * alone: the app is open on it, so the offline scope, the outbox, location queueing and the reconnect sync all carry on
+ * for it. Services that need the network now (session bootstrap, realtime, push registration) wait for an access token
+ * in `SessionServices`.
+ */
 export function isSessionSignedIn(): boolean {
-  const state = useAuthStore.getState();
-  return state.status === 'signedIn' && !!state.accessToken;
+  return hasSignedInSession(useAuthStore.getState());
 }
 
 export function getSessionUserId(): string | null {
