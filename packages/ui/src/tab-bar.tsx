@@ -400,7 +400,9 @@ const styles = StyleSheet.create({
   icon: { marginRight: 4 },
   iconLandscape: { marginRight: 6 },
   tabLabel: { flexShrink: 0, textAlign: 'center' },
-  fixedTabShrink: { flexShrink: 1 },
+  // On the web a flex item will not shrink below its longest word (a two-line label clips rather than scrolls, so the
+  // browser keeps that minimum): minWidth 0 lets a long unbroken word break inside the tab. Native already starts at 0.
+  fixedTabShrink: { flexShrink: 1, minWidth: 0 },
   cornerBadge: { position: 'absolute', top: -4, right: -4, minWidth: 18, minHeight: 18, paddingHorizontal: 4, borderRadius: 9999, alignItems: 'center', justifyContent: 'center', zIndex: 1 },
   cornerBadgeText: { fontSize: 10, lineHeight: 14, fontWeight: '700' },
   inlineBadge: { marginLeft: 8, minWidth: 20, paddingHorizontal: 6, borderRadius: 9999, alignItems: 'center', justifyContent: 'center' },

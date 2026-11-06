@@ -139,8 +139,8 @@ describe('TabBar', () => {
     for (const tab of tabs) {
       const label = screen.getByTestId(`tab-bar-tab-${tab.key}-label`);
       expect(label.props.numberOfLines).toBe(2);
-      expect(StyleSheet.flatten(label.props.style)).toMatchObject({ flexShrink: 1, textAlign: 'center' });
-      expect(StyleSheet.flatten(label.parent?.props.style)).toMatchObject({ flexShrink: 1 });
+      expect(StyleSheet.flatten(label.props.style)).toMatchObject({ flexShrink: 1, minWidth: 0, textAlign: 'center' });
+      expect(StyleSheet.flatten(label.parent?.props.style)).toMatchObject({ flexShrink: 1, minWidth: 0 });
     }
 
     await rerender(<TabBar tabs={tabs} activeKey="today" onChange={jest.fn()} variant="pills" />);

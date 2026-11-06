@@ -520,7 +520,6 @@
     "anti-slop/require-readable-spacing": 8
   },
   "packages/app-shell/src/init/__tests__/session-steps.test.ts": {
-    "anti-slop/require-readable-spacing": 2,
     "anti-slop/require-safety-comment-for-type-assertion": 6
   },
   "packages/app-shell/src/init/__tests__/startup-steps.test.ts": {

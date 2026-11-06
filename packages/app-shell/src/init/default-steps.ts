@@ -291,6 +291,15 @@ export function createStartupSteps(config: AppShellConfig): InitStep[] {
 // ---------------------------------------------------------------------------------------------------------------
 // Session phase (signed in)
 
+/** Sends the session's queued writes in the background; a failure leaves them for the outbox's next trigger. */
+async function drainInBackground(outbox: OfflineRuntime['outbox']): Promise<void> {
+  try {
+    await outbox.drain();
+  } catch (error) {
+    logger.warn({ message: 'Outbox drain after sign-in failed', context: { error } });
+  }
+}
+
 export function createSessionSteps(config: AppShellConfig): InitStep[] {
   const manifest = config.variant;
   return [
@@ -320,6 +329,20 @@ export function createSessionSteps(config: AppShellConfig): InitStep[] {
       id: 'session.working-set',
       optional: true,
       run: () => refreshDataWorkingSet(manifest),
+    },
+    {
+      id: 'session.outbox-drain',
+      optional: true,
+      // Writes this user queued before the launch (or before signing out) reached the outbox's snapshot only with the
+      // recount above, so none of its triggers is set to send them while the connection stays up. Sent after the working
+      // set, as on a reconnect (plan §8.4), without holding up the shell; offline, the reconnect trigger sends them.
+      run: () => {
+        const offline = requireOfflineRuntime();
+
+        if (offline.connectivity?.isOnline() ?? true) {
+          void drainInBackground(offline.outbox);
+        }
+      },
     },
     {
       id: 'session.realtime',

@@ -15,6 +15,7 @@ jest.mock('@resgrid/auth', () => ({
   loadSessionGates: jest.fn(async () => ({ appAccess: 'allowed' })),
   enforceAppAccess: jest.fn(async (onDenied?: () => void) => {
     onDenied?.();
+
     return true;
   }),
 }));
@@ -26,9 +27,12 @@ jest.mock('@resgrid/api', () => ({
 
 const mockHydrate = jest.fn(async () => ({ fieldReady: true }));
 const mockOutboxRefresh = jest.fn(async () => ({}));
+const mockOutboxDrain = jest.fn(async () => ({ status: 'completed' }));
+const mockIsOnline = jest.fn(() => true);
 
 function session(variantId: 'unit' | 'bigboard' = 'unit') {
   const variant = activateVariant(variantId);
+
   return createAppInit({ name: 'session-test', retry: false, steps: createSessionSteps({ variant }) });
 }
 
@@ -37,21 +41,24 @@ describe('session (signed-in) steps', () => {
     jest.clearAllMocks();
     resetShellStateForTests();
     resetShellRuntimeForTests();
-    setShellRuntime({ auth: { context: {} } as never, offline: { sync: { hydrate: mockHydrate }, outbox: { refresh: mockOutboxRefresh } } as never });
+    setShellRuntime({ auth: { context: {} } as never, offline: { sync: { hydrate: mockHydrate }, outbox: { refresh: mockOutboxRefresh, drain: mockOutboxDrain }, connectivity: { isOnline: mockIsOnline } } as never });
   });
 
-  it('runs gates (+ department config) → outbox recount → working set → realtime hubs → hydration → voice → push', async () => {
+  it('runs gates (+ department config) → outbox recount → working set → outbox drain → realtime hubs → hydration → voice → push', async () => {
     const init = session('unit');
     const status = await init.run();
 
     expect(status.state).toBe('ready');
-    expect(status.completedSteps).toEqual(['session.gates', 'session.outbox', 'session.working-set', 'session.realtime', 'session.hydration', 'session.voice', 'session.push']);
+    expect(status.completedSteps).toEqual(['session.gates', 'session.outbox', 'session.working-set', 'session.outbox-drain', 'session.realtime', 'session.hydration', 'session.voice', 'session.push']);
     expect(loadSessionGates).toHaveBeenCalledTimes(1);
     // Storage opened before the session existed, so its outbox snapshot held every write back: counted again for this user.
     expect(mockOutboxRefresh).toHaveBeenCalledTimes(1);
     expect(getConfig).toHaveBeenCalledTimes(1);
     expect(getShellState().departmentConfig?.EventingUrl).toBe('https://events.example.com/');
     expect(refreshDataWorkingSet).toHaveBeenCalledTimes(1);
+    // Nothing else would send the writes it can now see while the connection stays up; sent after the pull, as on a reconnect.
+    expect(mockOutboxDrain).toHaveBeenCalledTimes(1);
+    expect(mockOutboxDrain.mock.invocationCallOrder[0]).toBeGreaterThan(jest.mocked(refreshDataWorkingSet).mock.invocationCallOrder[0] ?? Infinity);
     expect(useRealtimeStore.getState().connectAll).toHaveBeenCalledTimes(1);
     expect(mockHydrate).toHaveBeenCalledTimes(1);
     expect(initializeVoice).toHaveBeenCalledTimes(1);
@@ -64,9 +71,19 @@ describe('session (signed-in) steps', () => {
     expect(initializeVoice).not.toHaveBeenCalled();
   });
 
-  it('a failing hub, working-set or outbox refresh does not fail the bootstrap (optional steps)', async () => {
+  it('leaves queued writes to the reconnect trigger when signing in offline', async () => {
+    mockIsOnline.mockReturnValueOnce(false);
+    const status = await session().run();
+
+    expect(status.completedSteps).toContain('session.outbox-drain');
+    expect(mockOutboxRefresh).toHaveBeenCalledTimes(1);
+    expect(mockOutboxDrain).not.toHaveBeenCalled();
+  });
+
+  it('a failing hub, working-set, outbox refresh or drain does not fail the bootstrap (optional steps)', async () => {
     (refreshDataWorkingSet as jest.Mock).mockRejectedValueOnce(new Error('offline'));
     mockOutboxRefresh.mockRejectedValueOnce(new Error('database busy'));
+    mockOutboxDrain.mockRejectedValueOnce(new Error('database busy'));
     (useRealtimeStore.getState().connectAll as jest.Mock).mockRejectedValueOnce(new Error('hub down'));
     const status = await session().run();
     expect(status.state).toBe('ready');
@@ -81,6 +98,7 @@ describe('session (signed-in) steps', () => {
     expect(getShellState().accessDeniedNotice).toBe(true);
     expect(refreshDataWorkingSet).not.toHaveBeenCalled();
     expect(mockOutboxRefresh).not.toHaveBeenCalled();
+    expect(mockOutboxDrain).not.toHaveBeenCalled();
   });
 
   it('keeps going when the department config cannot be loaded', async () => {

@@ -164,6 +164,18 @@ describe('the brokered round trip in a browser', () => {
     expect(browserCalls).toHaveLength(0);
   });
 
+  it('closes the provider window when the auth session fails to take it over (browser storage refusing its record)', async () => {
+    __setNextAuthSessionResult(() => {
+      throw new Error('QuotaExceededError');
+    });
+
+    const result = await runSsoRoundTrip(begin, false);
+
+    expect(result).toEqual({ ok: false, reason: 'failed' });
+    expect(browserCalls).toHaveLength(1);
+    expect(popup.close).toHaveBeenCalledTimes(1);
+  });
+
   it('reads a window the member closed during Sso/Begin as cancelled, without opening another', async () => {
     const result = await runSsoRoundTrip(async () => {
       popup.closed = true;

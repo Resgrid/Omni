@@ -127,10 +127,19 @@ export const runSsoRoundTrip = async (begin: (secrets: SsoRoundTripSecrets) => P
         return { ok: false, reason: 'cancelled' };
       }
 
-      // From here expo-web-browser owns the web popup (it closes it on every outcome); the name is ignored natively.
+      // From here expo-web-browser owns the web popup (it closes it on every outcome it answers); the name is ignored natively.
       popupHandedOver = true;
-      const result = await WebBrowser.openAuthSessionAsync(begun.AuthorizeUrl, returnTarget, { preferEphemeralSession: ephemeral, windowName: SSO_POPUP_NAME });
-      returnedUrl = result.type === 'success' && 'url' in result && result.url ? result.url : null;
+
+      try {
+        const result = await WebBrowser.openAuthSessionAsync(begun.AuthorizeUrl, returnTarget, { preferEphemeralSession: ephemeral, windowName: SSO_POPUP_NAME });
+
+        returnedUrl = result.type === 'success' && 'url' in result && result.url ? result.url : null;
+      } catch (error) {
+        // It can reject after loading the provider into the window (browser storage refusing its session record) without
+        // closing it. Left open, that window would also be reused, unnavigated, by the next attempt: the finally closes it.
+        popupHandedOver = false;
+        throw error;
+      }
     }
 
     if (!returnedUrl) {
