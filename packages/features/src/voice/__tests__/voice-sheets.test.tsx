@@ -12,6 +12,7 @@ import React from 'react';
 import { activateVariant, hidden } from '../../calls/__tests__/test-utils';
 import { AudioStreamSheet } from '../components/audio-stream-sheet';
 import { VoiceChannelSheet } from '../components/voice-channel-sheet';
+import { VoiceMenuButtons } from '../components/voice-menu-buttons';
 
 interface MockChannel {
   Id: string;
@@ -39,6 +40,7 @@ jest.mock('@resgrid/voice', () => {
     isLoadingSettings: false,
     isConnected: false,
     isConnecting: false,
+    isReconnecting: false,
     isTalking: false,
     isMicrophoneEnabled: false,
     currentRoomInfo: noChannel,
@@ -46,6 +48,7 @@ jest.mock('@resgrid/voice', () => {
     connectToRoom: jest.fn(async () => ({ ok: true })),
     disconnectFromRoom: jest.fn(async () => undefined),
     toggleMicrophone: jest.fn(async () => undefined),
+    ensureMicrophonePermission: jest.fn(async () => 'granted'),
     setIsBottomSheetVisible: jest.fn((visible: boolean) => mockLiveKitStore.setState({ isBottomSheetVisible: visible })),
   }));
 
@@ -59,6 +62,7 @@ jest.mock('@resgrid/voice', () => {
     isPlaying: false,
     isLoading: false,
     isBuffering: false,
+    isReconnecting: false,
     fetchAvailableStreams: jest.fn(async () => undefined),
     playStream: jest.fn(async () => true),
     stopStream: jest.fn(async () => undefined),
@@ -71,6 +75,7 @@ jest.mock('@resgrid/voice', () => {
     return {
       isConnected: state.isConnected,
       isConnecting: state.isConnecting,
+      isReconnecting: state.isReconnecting,
       isTransmitting: state.isMicrophoneEnabled,
       currentChannel: state.currentRoomInfo,
       connect: state.connectToRoom,
@@ -101,11 +106,12 @@ beforeEach(() => {
     isLoadingSettings: false,
     isConnected: false,
     isConnecting: false,
+    isReconnecting: false,
     isTalking: false,
     isMicrophoneEnabled: false,
     currentRoomInfo: null,
   });
-  useAudioStreamStore.setState({ isBottomSheetVisible: false, availableStreams: STREAMS, currentStream: null, isLoadingStreams: false, isPlaying: false, isLoading: false, isBuffering: false });
+  useAudioStreamStore.setState({ isBottomSheetVisible: false, availableStreams: STREAMS, currentStream: null, isLoadingStreams: false, isPlaying: false, isLoading: false, isBuffering: false, isReconnecting: false });
 });
 
 // Toasts arm timers; clearing them lets the worker exit.
@@ -154,6 +160,17 @@ describe('VoiceChannelSheet', () => {
     expect(router.push).toHaveBeenCalledWith('/settings');
   });
 
+  // The channel dropped and the store is rejoining it (the system call stays up): the sheet says so and still lets the member leave.
+  it('shows a channel that is being rejoined, with Disconnect', async () => {
+    useLiveKitStore.setState({ isBottomSheetVisible: true, isReconnecting: true, isConnecting: true, currentRoomInfo: CHANNELS[1] });
+    await render(<VoiceChannelSheet />);
+    expect(screen.getByTestId('voice-channel-sheet-reconnecting', hidden)).toHaveTextContent('Tactical 2', { exact: false });
+    expect(screen.getByTestId('voice-channel-sheet-reconnecting', hidden)).toHaveTextContent('livekit.reconnecting', { exact: false });
+    expect(screen.queryByTestId('voice-channel-sheet-connecting', hidden)).toBeNull();
+    await fireEvent.press(screen.getByTestId('voice-channel-sheet-reconnecting-disconnect', hidden));
+    expect(useLiveKitStore.getState().disconnectFromRoom).toHaveBeenCalled();
+  });
+
   it('renders nothing in an app without push-to-talk', async () => {
     activateVariant('bigboard');
     useLiveKitStore.setState({ isBottomSheetVisible: true });
@@ -186,6 +203,21 @@ describe('AudioStreamSheet', () => {
     expect(useAudioStreamStore.getState().stopStream).toHaveBeenCalled();
   });
 
+  it('says a dropped stream is reconnecting, and lets another stream be picked meanwhile', async () => {
+    useAudioStreamStore.setState({ isBottomSheetVisible: true, currentStream: STREAMS[0], isPlaying: false, isBuffering: true, isReconnecting: true });
+    await render(<AudioStreamSheet />);
+    expect(screen.getByTestId('audio-stream-sheet-status', hidden)).toHaveTextContent('audio_streams.reconnecting_stream:County Fire');
+    expect(screen.getByTestId('audio-stream-sheet-playback', hidden)).toHaveTextContent('audio_streams.reconnecting');
+    await fireEvent.press(screen.getByTestId('audio-stream-sheet-stream-s2', hidden));
+    expect(useAudioStreamStore.getState().playStream).toHaveBeenCalledWith(STREAMS[1]);
+  });
+
+  it('shows a stream paused from the lock screen as Paused, not Stopped', async () => {
+    useAudioStreamStore.setState({ isBottomSheetVisible: true, currentStream: STREAMS[0], isPlaying: false });
+    await render(<AudioStreamSheet />);
+    expect(screen.getByTestId('audio-stream-sheet-playback', hidden)).toHaveTextContent('audio_streams.paused');
+  });
+
   it('loads the streams when it opens without any, offers a refresh, and closes', async () => {
     useAudioStreamStore.setState({ availableStreams: [] });
     await render(<AudioStreamSheet />);
@@ -210,5 +242,43 @@ describe('AudioStreamSheet', () => {
     expect(screen.getByTestId('audio-stream-sheet-stream-none', hidden)).toBeEnabled();
     await fireEvent.press(screen.getByTestId('audio-stream-sheet-stream-none', hidden));
     expect(useAudioStreamStore.getState().stopStream).toHaveBeenCalled();
+  });
+});
+
+// Responder's side menu (legacy `side-menu-ptt-button` / `side-menu-audio-button`): Voice and Stream open the shell's sheets.
+describe('VoiceMenuButtons', () => {
+  beforeEach(() => activateVariant('responder'));
+
+  it('opens the voice channels after asking for the microphone, and the audio streams', async () => {
+    await render(<VoiceMenuButtons />);
+    expect(screen.getByTestId('voice-menu-buttons-voice')).toHaveTextContent('sidebar.ptt');
+    expect(screen.getByTestId('voice-menu-buttons-stream')).toHaveTextContent('sidebar.audio');
+
+    await fireEvent.press(screen.getByTestId('voice-menu-buttons-voice'));
+    await waitFor(() => expect(useLiveKitStore.getState().isBottomSheetVisible).toBe(true));
+    const askedForMicrophone = jest.mocked(useLiveKitStore.getState().ensureMicrophonePermission).mock.invocationCallOrder[0];
+    expect(askedForMicrophone).toBeLessThan(jest.mocked(useLiveKitStore.getState().setIsBottomSheetVisible).mock.invocationCallOrder[0]);
+
+    await fireEvent.press(screen.getByTestId('voice-menu-buttons-stream'));
+    expect(useAudioStreamStore.getState().isBottomSheetVisible).toBe(true);
+  });
+
+  it('fills Voice while a channel is joined and Stream while a stream plays', async () => {
+    await render(<VoiceMenuButtons />);
+    expect(screen.getByTestId('voice-menu-buttons-voice')).not.toBeSelected();
+    expect(screen.getByTestId('voice-menu-buttons-stream')).not.toBeSelected();
+
+    await act(() => useLiveKitStore.setState({ isConnected: true, currentRoomInfo: CHANNELS[0] }));
+    expect(screen.getByTestId('voice-menu-buttons-voice')).toBeSelected();
+
+    await act(() => useAudioStreamStore.setState({ currentStream: STREAMS[0], isPlaying: true }));
+    expect(screen.getByTestId('voice-menu-buttons-stream')).toBeSelected();
+  });
+
+  it('leaves Voice out of an app without push-to-talk', async () => {
+    activateVariant('bigboard');
+    await render(<VoiceMenuButtons />);
+    expect(screen.queryByTestId('voice-menu-buttons-voice')).toBeNull();
+    expect(screen.getByTestId('voice-menu-buttons-stream')).toBeTruthy();
   });
 });

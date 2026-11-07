@@ -14,6 +14,7 @@ import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioManager
 import android.media.SoundPool
+import android.os.Build
 import android.util.Log
 import com.facebook.react.bridge.*
 
@@ -157,6 +158,22 @@ class InCallAudioModule(reactContext: ReactApplicationContext) : ReactContextBas
           promise.reject("SET_AUDIO_ROUTE_FAILED", error.message, error)
         }
       }
+
+    /**
+     * A phone call (cellular or emergency) is ringing or in progress: Telecom puts the device in MODE_IN_CALL /
+     * MODE_RINGTONE for those, while VoIP calls such as the voice channel's use MODE_IN_COMMUNICATION. Needs no permission.
+     */
+    @ReactMethod
+    fun isInPhoneCall(promise: Promise) {
+        val audioManager = reactApplicationContext.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+        if (audioManager == null) {
+            promise.resolve(false)
+            return
+        }
+        val mode = audioManager.mode
+        val screening = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && mode == AudioManager.MODE_CALL_SCREENING
+        promise.resolve(mode == AudioManager.MODE_IN_CALL || mode == AudioManager.MODE_RINGTONE || screening)
+    }
 
     @ReactMethod
     fun cleanup() {

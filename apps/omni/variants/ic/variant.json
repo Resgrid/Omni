@@ -68,7 +68,7 @@
       "ptt": true,
       "callKeep": true,
       "bluetoothPtt": true,
-      "headsetButtonPtt": false,
+      "headsetButtonPtt": true,
       "desktopPtt": false
     },
     "location": {

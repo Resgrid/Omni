@@ -1,5 +1,6 @@
 // Boundary mocks for the L3/L4 packages that wrap device services (push, SignalR, GPS, LiveKit) and the data stores.
 // The shell only composes them; their own suites test the behaviour. Each export is a jest.fn tests can inspect.
+import * as badgeCounts from '@resgrid/data/badge-counts/badge-counts-store';
 import type { ReactNode } from 'react';
 import { create } from 'zustand';
 
@@ -38,6 +39,7 @@ export const realtime = {
     disconnectAll: jest.fn(async () => undefined),
   })),
   useRealtimeLifecycle: jest.fn(),
+  onRealtimeEvent: jest.fn((_event: string, _handler: () => void) => () => undefined),
   configureRealtime: jest.fn(),
   teardownRealtime: jest.fn(async () => undefined),
 };
@@ -45,6 +47,7 @@ export const realtime = {
 export const voice = {
   configureVoice: jest.fn(),
   initializeVoice: jest.fn(async () => undefined),
+  createNotifeeForegroundService: jest.fn(() => ({ start: jest.fn(async () => undefined), stop: jest.fn(async () => undefined) })),
   registerVoiceResets: jest.fn(() => () => undefined),
   // The slice of the LiveKit store the app-update restart guard reads.
   useLiveKitStore: create<{ isConnected: boolean; isConnecting: boolean }>(() => ({ isConnected: false, isConnecting: false })),
@@ -59,4 +62,6 @@ export const data = {
   configureData: jest.fn(async () => () => undefined),
   refreshDataWorkingSet: jest.fn(async () => undefined),
   defaultIdGenerator: jest.fn(() => 'device-uuid-1'),
+  // The real badge counts store: the menu, tabs and bell render from it. Without a data API context it never sends.
+  ...badgeCounts,
 };

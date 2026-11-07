@@ -1,4 +1,5 @@
 import type { Capabilities, FeatureModuleId } from '@resgrid/config';
+import type { NavBadge } from '@resgrid/data';
 import type { LucideIcon } from 'lucide-react-native';
 import { Wrench } from 'lucide-react-native';
 
@@ -20,6 +21,8 @@ export interface FeatureNavEntry {
   requiresCapability?: (capabilities: Capabilities) => boolean;
   /** Feature module the variant must ship (`variant.modules`). */
   requiresModule?: FeatureModuleId;
+  /** Count badge beside the entry (the shell's `NavEntry.badge`). */
+  badge?: NavBadge;
 }
 
 /** Work orders: hidden unless the department has `Maintenance.WorkOrders` (reading needs no Readiness Pro). */
@@ -33,5 +36,7 @@ export const workOrdersNav: readonly FeatureNavEntry[] = [
     icon: Wrench,
     requiresFlag: 'Maintenance.WorkOrders',
     requiresModule: 'work-orders',
+    // Open work orders assigned to the member or a role they hold.
+    badge: 'workOrders',
   },
 ];

@@ -12,6 +12,7 @@ export class FakeAudioPlayer {
   pause = jest.fn();
   remove = jest.fn();
   seekTo = jest.fn(async () => undefined);
+  replace = jest.fn();
   setActiveForLockScreen = jest.fn();
   clearLockScreenControls = jest.fn();
 
@@ -24,6 +25,7 @@ export class FakeAudioPlayer {
 
   addListener(_event: string, listener: StatusListener) {
     this.listeners.push(listener);
+
     return { remove: () => undefined };
   }
 
@@ -38,4 +40,7 @@ export const getRecordingPermissionsAsync = jest.fn(async () => ({ granted: true
 export const requestRecordingPermissionsAsync = jest.fn(async () => ({ granted: true, canAskAgain: true }));
 
 export type AudioPlayer = FakeAudioPlayer;
-export type AudioStatus = { playing: boolean; isBuffering: boolean; error: string | null };
+
+export type AudioStatus = { playing: boolean; isBuffering: boolean; error: string | null; didJustFinish?: boolean };
+
+export type AudioMode = { allowsRecording: boolean; shouldPlayInBackground: boolean; playsInSilentMode: boolean; interruptionMode: string; shouldRouteThroughEarpiece: boolean };

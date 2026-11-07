@@ -3,6 +3,7 @@ import type { MessageResultData, NewMessageInput, RecipientsResultData, RespondT
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+import { refreshBadgeCountsSoon } from '../badge-counts/badge-counts-store';
 import { assertV4Success, unwrapItem, unwrapList } from '../core/envelope';
 import { type DataError, toDataError } from '../core/errors';
 import { defineDataHandler, submitWrite, type WriteResult } from '../core/outbox';
@@ -82,6 +83,7 @@ export const useMessagesStore = create<MessagesState>()(
   persist(
     (set, get) => {
       runner = createSliceRunner<MessagesSlice, MessagesState>('messages', set);
+
       return {
         ...initialData(),
 
@@ -113,13 +115,19 @@ export const useMessagesStore = create<MessagesState>()(
 
         fetchMessageDetails: async (messageId, options) => {
           const cached = get().messageDetailsById[messageId];
+
           if (cached && !options?.bypassCache) return cached;
+
           const result = await runner.run(
             'detail',
             async () => unwrapItem(await getMessage(getDataApiContext(), { messageId })),
             (message, state) => (message ? { messageDetailsById: { ...state.messageDetailsById, [messageId]: message } } : {}),
             { flightKey: `detail:${messageId}` }
           );
+
+          // Core marks the message read when it is fetched: the unread badge moves.
+          if (result.ok) refreshBadgeCountsSoon();
+
           return result.ok ? result.value : (cached ?? null);
         },
 
@@ -127,25 +135,33 @@ export const useMessagesStore = create<MessagesState>()(
 
         deleteMessages: async (messageIds) => {
           set({ writeError: null });
+
           try {
             await Promise.all(messageIds.map(async (messageId) => assertV4Success(await deleteMessage(getDataApiContext(), { messageId }))));
             const removed = new Set(messageIds);
             set((state) => ({ inboxMessages: state.inboxMessages.filter((m) => !removed.has(m.MessageId)), sentMessages: state.sentMessages.filter((m) => !removed.has(m.MessageId)) }));
+            refreshBadgeCountsSoon();
+
             return true;
           } catch (error) {
             set({ writeError: toDataError(error) });
+
             return false;
           }
         },
 
         respondToMessage: async (input) => {
           set({ writeError: null });
+
           try {
             assertV4Success(await respondToMessage(getDataApiContext(), input));
+
             if (input.Id !== undefined) await get().fetchMessageDetails(String(input.Id), { bypassCache: true });
+
             return true;
           } catch (error) {
             set({ writeError: toDataError(error) });
+
             return false;
           }
         },
@@ -157,10 +173,13 @@ export const useMessagesStore = create<MessagesState>()(
         setQueuedMessageState: (localId, messageState) =>
           set((state) => {
             const existing = state.queuedMessages[localId];
+
             if (!existing) return {};
             const queuedMessages = { ...state.queuedMessages };
+
             if (messageState === null) delete queuedMessages[localId];
             else queuedMessages[localId] = { ...existing, state: messageState };
+
             return { queuedMessages };
           }),
       };
@@ -180,6 +199,7 @@ export const useMessagesStore = create<MessagesState>()(
 );
 
 registerPersistedStore('omni-messages-storage', useMessagesStore);
+
 registerDataStoreReset<MessagesState>('messages', useMessagesStore, initialData, () => runner.invalidate());
 
 export const messageSendHandler = defineDataHandler<NewMessageInput, SendMessageResult>({

@@ -1,5 +1,5 @@
 import { logger } from '@resgrid/core';
-import { PermissionsAndroid, Platform } from 'react-native';
+import { NativeModules, PermissionsAndroid, Platform } from 'react-native';
 import RNCallKeep, { AudioSessionCategoryOption, AudioSessionMode } from 'react-native-callkeep';
 
 import { generateUuid } from '../util/async';
@@ -20,6 +20,7 @@ const rtcAudioSession = (): RtcAudioSessionLike | null => {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const webrtc = require('@livekit/react-native-webrtc') as { RTCAudioSession?: RtcAudioSessionLike };
+
     return webrtc.RTCAudioSession ?? null;
   } catch {
     return null;
@@ -30,6 +31,7 @@ const hasTelephony = async (): Promise<boolean> => {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const device = require('expo-device') as { hasPlatformFeatureAsync?: (feature: string) => Promise<boolean> };
+
     return device.hasPlatformFeatureAsync ? await device.hasPlatformFeatureAsync('android.hardware.telephony') : true;
   } catch {
     return true;
@@ -37,7 +39,7 @@ const hasTelephony = async (): Promise<boolean> => {
 };
 
 /**
- * CallKeep for R/U/I (omni-plan §7.8). iOS: Responder's CallKit service (connected report after the call registers,
+ * CallKeep for R/U/I/D (omni-plan §7.8). iOS: Responder's CallKit service (connected report after the call registers,
  * reverse mute sync, mute storm protection, WebRTC audio-session hand-off). Android: Responder's self-managed
  * ConnectionService plus Unit's phone-permission flow (both permissions, telephony check, once per process, 5 s cap).
  */
@@ -47,7 +49,7 @@ export class NativeCallKeepService implements CallKeepService {
   private isCallActive = false;
   private currentCallUUID: string | null = null;
   private muteStateCallback: ((muted: boolean) => void) | null = null;
-  private endCallCallback: (() => void) | null = null;
+  private endCallCallback: ((callUUID: string) => void) | null = null;
   private phonePermissionsAttempted = false;
   private readonly muteFilter: CallKeepMuteFilter;
 
@@ -82,9 +84,11 @@ export class NativeCallKeepService implements CallKeepService {
         foregroundService: config.android.foregroundService,
       },
     });
+
     if (isAndroid && androidVersion >= 23) {
       RNCallKeep.setAvailable(true);
     }
+
     this.setupEventListeners();
     this.isSetup = true;
     logger.info({ message: 'CallKeep setup completed', context: { platform: Platform.OS } });
@@ -92,33 +96,47 @@ export class NativeCallKeepService implements CallKeepService {
 
   async requestPhonePermissions(): Promise<boolean> {
     if (Platform.OS !== 'android') return true;
+
     const check = async (): Promise<boolean> => {
       const [state, numbers] = await Promise.all([PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.READ_PHONE_STATE), PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.READ_PHONE_NUMBERS)]);
+
       return state && numbers;
     };
+
     try {
       if (await check()) return true;
+
       if (this.phonePermissionsAttempted) return false;
       this.phonePermissionsAttempted = true;
+
       const work = async (): Promise<boolean> => {
         if (!(await hasTelephony())) {
           logger.info({ message: 'Device has no telephony; CallKeep phone permissions skipped' });
+
           return false;
         }
+
         await PermissionsAndroid.requestMultiple([PermissionsAndroid.PERMISSIONS.READ_PHONE_STATE, PermissionsAndroid.PERMISSIONS.READ_PHONE_NUMBERS]);
+
         return check();
       };
+
       let timer: ReturnType<typeof setTimeout> | undefined;
+
       const timeout = new Promise<boolean>((resolve) => {
         timer = setTimeout(() => resolve(false), PHONE_PERMISSION_TIMEOUT_MS);
       });
+
       const granted = await Promise.race([work(), timeout]).finally(() => {
         if (timer) clearTimeout(timer);
       });
+
       if (!granted) logger.warn({ message: 'Phone permissions not granted; CallKeep skipped (voice still works)' });
+
       return granted;
     } catch (error) {
       logger.warn({ message: 'Phone permission request failed; CallKeep skipped', context: { error } });
+
       return false;
     }
   }
@@ -126,27 +144,36 @@ export class NativeCallKeepService implements CallKeepService {
   async startCall(roomName: string, handle?: string): Promise<string> {
     if (!this.isSetup) {
       logger.warn({ message: 'CallKeep startCall before setup' });
+
       if (Platform.OS === 'ios') throw new Error('CallKeep not setup. Call setup() first.');
     }
+
     if (this.currentCallUUID) await this.endCall();
 
     const uuid = generateUuid();
     this.currentCallUUID = uuid;
     const callHandle = handle || roomName || 'Voice Channel';
+
     try {
       RNCallKeep.startCall(uuid, callHandle, roomName, 'generic', false);
+
       if (Platform.OS === 'android') {
         RNCallKeep.setCurrentCallActive(uuid);
         this.isCallActive = true;
+
         return uuid;
       }
+
       RNCallKeep.reportConnectingOutgoingCallWithUUID(uuid);
+
       return await new Promise<string>((resolve) => {
         setTimeout(() => {
           if (this.currentCallUUID !== uuid) {
             resolve('');
+
             return;
           }
+
           RNCallKeep.reportConnectedOutgoingCallWithUUID(uuid);
           this.isCallActive = true;
           resolve(uuid);
@@ -161,9 +188,11 @@ export class NativeCallKeepService implements CallKeepService {
 
   async endCall(): Promise<void> {
     const uuid = this.currentCallUUID;
+
     if (!uuid) return;
     this.currentCallUUID = null;
     this.isCallActive = false;
+
     try {
       RNCallKeep.endCall(uuid);
     } catch (error) {
@@ -173,6 +202,7 @@ export class NativeCallKeepService implements CallKeepService {
 
   async setMuted(muted: boolean): Promise<void> {
     if (!this.currentCallUUID) return;
+
     try {
       RNCallKeep.setMutedCall(this.currentCallUUID, muted);
     } catch (error) {
@@ -184,8 +214,32 @@ export class NativeCallKeepService implements CallKeepService {
     this.muteStateCallback = callback;
   }
 
-  setEndCallCallback(callback: (() => void) | null): void {
+  setEndCallCallback(callback: ((callUUID: string) => void) | null): void {
     this.endCallCallback = callback;
+  }
+
+  async isAnotherCallActive(excludeCallUUID: string | null = null): Promise<boolean> {
+    const excluded = excludeCallUUID?.toLowerCase() ?? null;
+
+    try {
+      if (Platform.OS === 'ios') {
+        // CXCallObserver: every call on the device, ours (possibly not yet marked ended) included.
+        const calls = (await RNCallKeep.getCalls()) ?? [];
+
+        return calls.some((call) => !call.hasEnded && call.callUUID.toLowerCase() !== excluded && call.callUUID.toLowerCase() !== this.currentCallUUID?.toLowerCase());
+      }
+
+      // SAFETY: NativeModules is untyped; InCallAudioModule is read as optional and its method is called only if present.
+      const module = (NativeModules as { InCallAudioModule?: { isInPhoneCall?: () => Promise<boolean> } }).InCallAudioModule;
+
+      if (!module?.isInPhoneCall) return true;
+
+      return await module.isInPhoneCall();
+    } catch (error) {
+      logger.warn({ message: 'Could not tell whether another phone call is active', context: { error } });
+
+      return true;
+    }
   }
 
   ignoreMuteEvents(durationMs: number): void {
@@ -211,11 +265,15 @@ export class NativeCallKeepService implements CallKeepService {
   /** System/headset mute action (CallKit UI, AirPods, HFP). Filtered, then forwarded to the LiveKit store. */
   handleMutedCallAction = ({ muted, callUUID }: { muted: boolean; callUUID: string }): void => {
     const decision = this.muteFilter.evaluate();
+
     if (decision !== 'forward') {
       logger.debug({ message: 'Ignored CallKeep mute action', context: { muted, decision } });
+
       return;
     }
+
     if (this.currentCallUUID && callUUID && callUUID !== this.currentCallUUID) return;
+
     try {
       this.muteStateCallback?.(muted);
     } catch (error) {
@@ -227,8 +285,9 @@ export class NativeCallKeepService implements CallKeepService {
     if (callUUID !== this.currentCallUUID) return;
     this.currentCallUUID = null;
     this.isCallActive = false;
+
     try {
-      this.endCallCallback?.();
+      this.endCallCallback?.(callUUID);
     } catch (error) {
       logger.warn({ message: 'CallKeep end call callback failed', context: { error } });
     }
@@ -236,6 +295,7 @@ export class NativeCallKeepService implements CallKeepService {
 
   async cleanup(): Promise<void> {
     await this.endCall();
+
     for (const event of ['didActivateAudioSession', 'didDeactivateAudioSession', 'endCall', 'didPerformSetMutedCallAction'] as const) {
       try {
         RNCallKeep.removeEventListener(event);
@@ -243,6 +303,7 @@ export class NativeCallKeepService implements CallKeepService {
         // Listener was never registered.
       }
     }
+
     this.muteFilter.reset();
     this.isSetup = false;
   }
@@ -252,6 +313,7 @@ export class NativeCallKeepService implements CallKeepService {
       RNCallKeep.addEventListener('didActivateAudioSession', () => rtcAudioSession()?.audioSessionDidActivate?.());
       RNCallKeep.addEventListener('didDeactivateAudioSession', () => rtcAudioSession()?.audioSessionDidDeactivate?.());
     }
+
     RNCallKeep.addEventListener('endCall', this.handleEndCall);
     RNCallKeep.addEventListener('didPerformSetMutedCallAction', this.handleMutedCallAction);
   }

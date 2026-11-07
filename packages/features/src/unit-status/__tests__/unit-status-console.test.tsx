@@ -2,7 +2,7 @@
 import './test-setup';
 
 import { FeatureFlagKeys, featureFlagsStore, useSharedSessionStore } from '@resgrid/auth';
-import { useCallsStore, useCheckInTimersStore, useUnitRolesStore, useUnitsStore, useUnitStatusStore } from '@resgrid/data';
+import { useBadgeCountsStore, useCallsStore, useCheckInTimersStore, useUnitRolesStore, useUnitsStore, useUnitStatusStore } from '@resgrid/data';
 import { NavigationHandoffProvider } from '@resgrid/features/contacts';
 import { useMapLockStore } from '@resgrid/features/map';
 import { ActionBaseTypes, StatusProvider } from '@resgrid/features/status';
@@ -267,6 +267,16 @@ describe('UnitStatusSidebar', () => {
     await fireEvent.press(screen.getByTestId('unit-quick-actions-chat'));
     expect(router.push).toHaveBeenCalledWith('/chat');
     expect(onNavigate).toHaveBeenCalled();
+  });
+
+  // The chat shortcut is Unit's Chat menu entry: it carries the unread chat count as the other apps' menus do.
+  it('shows unread chat messages on the chat shortcut', async () => {
+    featureFlagsStore.setState({ flags: { [FeatureFlagKeys.ChatSystem]: { enabled: true } }, isLoaded: true });
+    useBadgeCountsStore.setState({ counts: { chats: 5 } });
+    await renderSidebar();
+    expect(screen.getByTestId('unit-quick-actions-chat-badge')).toHaveTextContent('5');
+    expect(screen.queryByTestId('unit-quick-actions-assistant-badge')).toBeNull();
+    useBadgeCountsStore.setState({ counts: {} });
   });
 
   it('offers Lock and Switch operator on a shared vehicle session', async () => {

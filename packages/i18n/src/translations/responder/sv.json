@@ -714,10 +714,6 @@
     "you": "Du",
     "you_are_signed_up": "Du är anmäld till det här skiftet"
   },
-  "sidebar": {
-    "audio": "Ström",
-    "ptt": "Röst"
-  },
   "tabs": {
     "units": "Enheter",
     "weatherAlerts": "Vädervarningar"

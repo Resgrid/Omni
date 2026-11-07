@@ -1,5 +1,6 @@
 import { featureFlagsStore, securityStore, terminologyStore, useAuthStore } from '@resgrid/auth';
 import type { VariantId } from '@resgrid/config';
+import { useBadgeCountsStore } from '@resgrid/data';
 import type { DepartmentRightsResultData } from '@resgrid/models';
 import { useInboxUnreadCount } from '@resgrid/notifications';
 import { ColorSchemeProvider, computeFormFactor, type FormFactorInfo, getThemeColors, ScreenHeader, SYNC_NOTICE_DELAY_MS, useFormFactor, useToastStore } from '@resgrid/ui';
@@ -18,7 +19,8 @@ import { resetShellStateForTests, setShellState } from '../../runtime/shell-stat
 import { registerShellOverlay, registerShellProvider, registerSidebarContent, resetShellSlotsForTests, type SidebarContentProps } from '../../runtime/slots';
 import { createAppShell } from '../create-app-shell';
 import { findNavEntryForPath, isTopLevelScreen, resolveHeaderLeading, SESSION_INIT_INDICATOR_DELAY_MS } from '../header';
-import { resolveSidebarMode } from '../sidebar-mode';
+import { NavMenu } from '../sidebar';
+import { permanentSidebarWidth, resolveSidebarMode } from '../sidebar-mode';
 
 jest.mock('@resgrid/ui', () => ({ ...jest.requireActual('@resgrid/ui'), useFormFactor: jest.fn() }));
 
@@ -32,6 +34,7 @@ const mockUseFormFactor = useFormFactor as jest.MockedFunction<typeof useFormFac
 
 const FORM_FACTORS = {
   phone: { width: 390, height: 844, platform: 'ios' as const, isElectron: false },
+  phoneLandscape: { width: 844, height: 390, platform: 'ios' as const, isElectron: false },
   tabletPortrait: { width: 820, height: 1180, platform: 'ios' as const, isElectron: false },
   tabletLandscape: { width: 1180, height: 820, platform: 'ios' as const, isElectron: false },
   desktop: { width: 1440, height: 900, platform: 'web' as const, isElectron: false },
@@ -154,6 +157,18 @@ describe('createAppShell', () => {
     expect(screen.queryByTestId('shell-menu-button')).toBeNull();
   });
 
+  // Legacy Responder showed its menu as a permanent column whenever the screen was wider than tall, phones included.
+  it('phone landscape: Responder keeps the permanent sidebar, Unit and the others use the drawer', async () => {
+    setFormFactor('phoneLandscape');
+    await renderShell('responder');
+    expect(screen.getByTestId('shell-sidebar-permanent')).toBeTruthy();
+    expect(screen.queryByTestId('shell-menu-button')).toBeNull();
+
+    await renderShell('unit');
+    expect(screen.queryByTestId('shell-sidebar-permanent')).toBeNull();
+    expect(screen.getByTestId('shell-menu-button')).toBeTruthy();
+  });
+
   it('tablet portrait: Responder falls back to the drawer', async () => {
     setFormFactor('tabletPortrait');
     await renderShell('responder');
@@ -269,6 +284,26 @@ describe('createAppShell', () => {
     expect(screen.queryByTestId('shell-nav-menu')).toBeNull();
   });
 
+  // Responder's menu is the shared menu with its voice and stream buttons between the profile and the entries (legacy
+  // Responder side menu); IC, Dispatch and BigBoard keep the plain menu (manifest `shell.sidebarContent: "menu"`).
+  it("Responder's sidebar shows the registered member menu: the variant's nav with its actions above the entries", async () => {
+    const received: SidebarContentProps[] = [];
+
+    function MemberMenu(props: SidebarContentProps) {
+      received.push(props);
+
+      return <NavMenu {...props} actions={<Text testID="member-actions">voice</Text>} />;
+    }
+
+    registerSidebarContent('member-menu', MemberMenu);
+    setFormFactor('tabletLandscape');
+    await renderShell('responder');
+    expect(received.at(-1)?.nav).toBe(nav);
+    const menu = screen.getByTestId('shell-nav-menu');
+    expect(within(screen.getByTestId('shell-nav-actions')).getByTestId('member-actions')).toBeTruthy();
+    expect(within(menu).getAllByRole('menuitem').length).toBeGreaterThan(0);
+  });
+
   // Sync state used to flash at the top of the screen on every queued write and connectivity blip: the app bar shows it
   // only once it has lasted, and only changes that need the user toast.
   describe('sync status', () => {
@@ -357,6 +392,8 @@ describe('createAppShell', () => {
     beforeEach(() => {
       mockInboxStatus = 'loading';
       mockUseInboxUnreadCount.mockReturnValue(0);
+      // The bell reads the badge counts store, which the inbox provider's one Novu subscription feeds.
+      useBadgeCountsStore.setState({ unreadNotifications: 0 });
       setRouteContract(defineRoutes(['home', 'notifications']));
     });
 
@@ -376,7 +413,7 @@ describe('createAppShell', () => {
     });
 
     it('shows without a count until the inbox is ready and opens the inbox', async () => {
-      mockUseInboxUnreadCount.mockReturnValue(7);
+      useBadgeCountsStore.setState({ unreadNotifications: 7 });
       await renderShell('responder');
 
       expect(screen.getByRole('button', { name: 'Notifications' })).toBeTruthy();
@@ -394,7 +431,7 @@ describe('createAppShell', () => {
       ['dispatch', 120, '99+'],
     ] as const)('%s: shows the unread count once the inbox is ready', async (variant, count, shown) => {
       mockInboxStatus = 'ready';
-      mockUseInboxUnreadCount.mockReturnValue(count);
+      useBadgeCountsStore.setState({ unreadNotifications: count });
       await renderShell(variant);
 
       expect(screen.getByTestId('shell-notifications-badge')).toHaveTextContent(shown);
@@ -405,7 +442,7 @@ describe('createAppShell', () => {
     // the white digits sat below the red and read as cut off. The count pins a line that fits and the pill can grow.
     it('keeps the count on a line that fits inside its pill', async () => {
       mockInboxStatus = 'ready';
-      mockUseInboxUnreadCount.mockReturnValue(120);
+      useBadgeCountsStore.setState({ unreadNotifications: 120 });
       await renderShell('responder');
 
       const badge = screen.getByTestId('shell-notifications-badge');
@@ -554,6 +591,8 @@ describe('createAppShell', () => {
 describe('resolveSidebarMode', () => {
   it.each<[VariantId, keyof typeof FORM_FACTORS, string]>([
     ['responder', 'phone', 'drawer'],
+    ['responder', 'phoneLandscape', 'permanent'],
+    ['unit', 'phoneLandscape', 'drawer'],
     ['responder', 'tabletLandscape', 'permanent'],
     ['responder', 'tabletPortrait', 'drawer'],
     ['unit', 'tabletLandscape', 'permanent'],
@@ -564,6 +603,13 @@ describe('resolveSidebarMode', () => {
   ])('%s on %s → %s', (variantId, formFactor, expected) => {
     const variant = activateVariant(variantId);
     expect(resolveSidebarMode(variant.shell, computeFormFactor(FORM_FACTORS[formFactor]))).toBe(expected);
+  });
+});
+
+describe('permanentSidebarWidth', () => {
+  it('is a quarter of the window, grown by the left inset it pads (a landscape phone notch)', () => {
+    expect(permanentSidebarWidth(1180, 0)).toBe(295);
+    expect(permanentSidebarWidth(844, 59)).toBe(270);
   });
 });
 
@@ -645,6 +691,79 @@ describe('registered providers', () => {
     await renderShell('dispatch');
     expect(screen.getByTestId('shell-gate')).toBeTruthy();
     expect(mounted).not.toHaveBeenCalled();
+  });
+});
+
+// Menu and tab counts (open calls, unread messages / chats / notifications, severe weather): drawn from the badge counts
+// store, asked for by the shell for the entries it shows (the drawer's rows unmount when it closes).
+describe('badge counts', () => {
+  const badgeNav = defineNav([
+    { id: 'map', href: '/', placement: 'tab', icon: MapIcon, labelKey: 'tabs.map', defaultLabel: 'Map' },
+    { id: 'calls', href: '/calls', placement: 'tab', icon: MapIcon, labelKey: 'tabs.calls', defaultLabel: 'Calls', badge: 'calls' },
+    { id: 'chat', href: '/chat', placement: 'sidebar', icon: MessageCircleIcon, labelKey: 'tabs.chat', defaultLabel: 'Chat', requiresFlag: 'Chat.System', badge: 'chats' },
+    { id: 'notifications', href: '/notifications', placement: 'sidebar', labelKey: 'notifications.title', defaultLabel: 'Notifications', badge: 'notifications' },
+    { id: 'settings', href: '/settings', placement: 'sidebar', icon: SettingsIcon, labelKey: 'tabs.settings', defaultLabel: 'Settings' },
+  ]);
+
+  const renderBadgeShell = async (variantId: VariantId) => {
+    const Shell = createAppShell(activateVariant(variantId), { nav: badgeNav });
+    await render(<Shell />);
+    await act(async () => undefined);
+  };
+
+  beforeEach(async () => {
+    resetMockNavigation();
+    resetShellStateForTests();
+    resetShellSlotsForTests();
+    setRouteContract(defineRoutes(['home']));
+    setShellState({ onboardingRequired: false });
+    featureFlagsStore.setState({ flags: {} });
+    terminologyStore.setState({ names: {} });
+    useAuthStore.setState({ status: 'signedIn', accessToken: 'access', userId: 'user-1', authMethod: 'sso' });
+    useBadgeCountsStore.setState({ counts: {}, wanted: [], unsupported: false, unreadNotifications: 0 });
+    startupInit.reset();
+    await startupInit.run();
+    sessionInit.reset();
+    await sessionInit.run();
+    setFormFactor('tabletLandscape');
+  });
+
+  it('shows each menu entry its count, labelled with it, and none at zero', async () => {
+    featureFlagsStore.setState({ flags: { 'Chat.System': { enabled: true } } });
+    useBadgeCountsStore.setState({ counts: { chats: 4, calls: 0 }, unreadNotifications: 120 });
+    // Responder keeps the menu as a permanent column on a landscape tablet.
+    await renderBadgeShell('responder');
+
+    expect(screen.getByTestId('nav-chat-badge')).toHaveTextContent('4');
+    expect(screen.getByRole('menuitem', { name: 'Chat (4)' })).toBeTruthy();
+    expect(screen.getByTestId('nav-notifications-badge')).toHaveTextContent('99+');
+    expect(screen.queryByTestId('nav-calls-badge')).toBeNull();
+    expect(screen.queryByTestId('nav-settings-badge')).toBeNull();
+  });
+
+  it('asks once the session is ready for the counts of the entries the app shows', async () => {
+    const request = jest.spyOn(useBadgeCountsStore.getState(), 'requestBadgeCounts');
+    await renderBadgeShell('dispatch');
+
+    // Chat is hidden without Chat.System, so its count is not asked for.
+    expect(request).toHaveBeenLastCalledWith(['calls', 'notifications'], { activeUnitId: null });
+
+    featureFlagsStore.setState({ flags: { 'Chat.System': { enabled: true } } });
+    await act(async () => undefined);
+    expect(request).toHaveBeenLastCalledWith(['calls', 'chats', 'notifications'], { activeUnitId: null });
+    request.mockRestore();
+  });
+
+  it('tabs (Unit): a tab shows its count on the tab bar', async () => {
+    useBadgeCountsStore.setState({ counts: { calls: 3 } });
+    await renderBadgeShell('unit');
+
+    const calls = mockNavigationState.tabs?.screens.find((tab) => tab.name === 'calls');
+    const map = mockNavigationState.tabs?.screens.find((tab) => tab.name === 'index');
+
+    expect(calls?.options.tabBarBadge).toBe('3');
+    expect(calls?.options.tabBarAccessibilityLabel).toBe('Calls (3)');
+    expect(map?.options.tabBarBadge).toBeUndefined();
   });
 });
 

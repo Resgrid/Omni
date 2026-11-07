@@ -1,4 +1,4 @@
-import { useTranslation } from '@resgrid/i18n';
+import { translate, useTranslation } from '@resgrid/i18n';
 import { useCallback, useMemo } from 'react';
 
 import strings from './i18n.en.json';
@@ -20,6 +20,9 @@ export interface ShellTranslation {
   /** Any translation key with an explicit fallback (nav labels reuse existing `tabs.*` keys). */
   tk: (key: string, fallback: string, options?: Record<string, unknown>) => string;
 }
+
+/** A shell string outside React (init steps, services), with the same English default as `useShellTranslation`. */
+export const translateShell: ShellTranslate = (key, options) => translate(key, { defaultValue: SHELL_STRINGS[key], ...options });
 
 export function useShellTranslation(): ShellTranslation {
   const { t } = useTranslation();

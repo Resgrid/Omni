@@ -1,5 +1,5 @@
-import { useInboxUnreadCount } from '@resgrid/notifications';
-import { contentOnFill, Spinner, SYNC_NOTICE_DELAY_MS, Text, useSettledFlag, useThemeColors } from '@resgrid/ui';
+import { useBadgeCount } from '@resgrid/data';
+import { contentOnFill, CountBadge, Spinner, SYNC_NOTICE_DELAY_MS, Text, useSettledFlag, useThemeColors } from '@resgrid/ui';
 import { type Href, usePathname, useRouter } from 'expo-router';
 import { ArrowLeft, Bell, Menu, RefreshCw, TriangleAlert, WifiOff } from 'lucide-react-native';
 import React, { useCallback } from 'react';
@@ -180,8 +180,6 @@ function SessionInitSpinner() {
   );
 }
 
-const MAX_BADGE_COUNT = 99;
-
 function InboxBellButton({ count, onPress }: { count: number; onPress: () => void }) {
   const colors = useThemeColors();
   const { t, tk } = useShellTranslation();
@@ -192,20 +190,14 @@ function InboxBellButton({ count, onPress }: { count: number; onPress: () => voi
       <View>
         <Bell size={24} color={colors.text} />
       </View>
-      {count > 0 ? (
-        <View style={StyleSheet.flatten([styles.badge, { backgroundColor: colors.error }])} testID="shell-notifications-badge">
-          <Text style={StyleSheet.flatten([styles.badgeText, { color: contentOnFill(colors.error) }])} numberOfLines={1}>
-            {count > MAX_BADGE_COUNT ? `${MAX_BADGE_COUNT}+` : String(count)}
-          </Text>
-        </View>
-      ) : null}
+      <CountBadge count={count} placement="corner" testID="shell-notifications-badge" />
     </Pressable>
   );
 }
 
-/** Counts unread items; mounted only under a ready inbox provider (against the placeholder client it counts for nobody). */
+/** The unread count from the badge counts store (the inbox provider's one Novu subscription feeds it while ready). */
 function ReadyInboxBell({ onPress }: { onPress: () => void }) {
-  const count = useInboxUnreadCount();
+  const count = useBadgeCount('notifications') ?? 0;
 
   return <InboxBellButton count={count} onPress={onPress} />;
 }
@@ -332,6 +324,4 @@ const styles = StyleSheet.create({
   // chip and badge text pins its own; the count pill grows (minHeight) instead of clipping with larger system text.
   pending: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, paddingHorizontal: 8, paddingVertical: 4, marginRight: 4 },
   pendingText: { fontSize: 12, lineHeight: 16, fontWeight: '600', marginLeft: 4 },
-  badge: { position: 'absolute', top: 2, right: 0, minWidth: 18, minHeight: 18, borderRadius: 9999, paddingHorizontal: 4, alignItems: 'center', justifyContent: 'center' },
-  badgeText: { fontSize: 11, lineHeight: 14, fontWeight: '700' },
 });

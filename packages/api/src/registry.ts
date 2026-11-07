@@ -12,6 +12,7 @@ import { checklistsEndpoints } from './endpoints/checklists/checklists';
 import { communicationTestsEndpoints } from './endpoints/communication-tests/communication-tests';
 import { configEndpoints } from './endpoints/config/config';
 import { contactsEndpoints } from './endpoints/contacts/contacts';
+import { countsEndpoints } from './endpoints/counts/counts';
 import { dataProtectionEndpoints } from './endpoints/data-protection/data-protection';
 import { devicesEndpoints } from './endpoints/devices/devices';
 import { dispatchEndpoints } from './endpoints/dispatch/dispatch';
@@ -58,6 +59,7 @@ export const endpointDomains = {
   'communication-tests': communicationTestsEndpoints,
   config: configEndpoints,
   contacts: contactsEndpoints,
+  counts: countsEndpoints,
   'data-protection': dataProtectionEndpoints,
   devices: devicesEndpoints,
   dispatch: dispatchEndpoints,

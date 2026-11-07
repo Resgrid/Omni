@@ -1,5 +1,6 @@
 // react-native-callkeep fake with an event registry tests can emit into.
 type Handler = (payload: any) => void;
+
 const handlers = new Map<string, Handler>();
 
 export enum AudioSessionCategoryOption {
@@ -24,8 +25,10 @@ const RNCallKeep = {
   setCurrentCallActive: jest.fn(),
   endCall: jest.fn(),
   setMutedCall: jest.fn(),
+  getCalls: jest.fn(async (): Promise<{ callUUID: string; hasConnected: boolean; hasEnded: boolean; onHold: boolean; outgoing: boolean }[]> => []),
   addEventListener: jest.fn((event: string, handler: Handler) => {
     handlers.set(event, handler);
+
     return { remove: () => handlers.delete(event) };
   }),
   removeEventListener: jest.fn((event: string) => {

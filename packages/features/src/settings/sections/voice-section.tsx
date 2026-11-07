@@ -3,10 +3,10 @@ import { logger } from '@resgrid/core';
 import { OptionSheet } from '@resgrid/features/auth-ui';
 import { useTranslation } from '@resgrid/i18n';
 import { Button, ButtonText, CustomBottomSheet, Heading, HStack, Pressable, Spinner, Text, useToast, VStack } from '@resgrid/ui';
-import { type AudioDeviceInfo, BluetoothState, getBluetoothAudioService, SYSTEM_AUDIO_DEVICE, useBluetoothAudioStore } from '@resgrid/voice';
+import { type AudioDeviceInfo, BluetoothState, getBluetoothAudioService, getVoiceCapabilities, setHeadsetButtonPttEnabled, SYSTEM_AUDIO_DEVICE, useBluetoothAudioStore } from '@resgrid/voice';
 import React, { useCallback, useEffect, useState } from 'react';
 
-import { SettingsRow } from '../components/settings-row';
+import { SettingsRow, ToggleRow } from '../components/settings-row';
 
 /**
  * Bluetooth PTT handset selection (Responder `bluetooth-device-selection-bottom-sheet`): scans when opened, lists the
@@ -120,7 +120,10 @@ export const BluetoothDeviceSheet: React.FC<{ isOpen: boolean; onClose: () => vo
 
 type AudioPicker = 'microphone' | 'speaker' | null;
 
-/** Voice: the Bluetooth PTT handset (`capabilities.voice.bluetoothPtt`) and the microphone/speaker for PTT (`voice.ptt`). */
+/**
+ * Voice: the Bluetooth PTT handset (`capabilities.voice.bluetoothPtt`), the microphone/speaker for PTT (`voice.ptt`), and
+ * whether the earbud / headset call button talks (`voice.headsetButtonPtt`, iOS and Android only).
+ */
 export const VoiceSection: React.FC = () => {
   const { t } = useTranslation();
   const voice = useCapability('voice');
@@ -130,6 +133,8 @@ export const VoiceSection: React.FC = () => {
   const selected = useBluetoothAudioStore((state) => state.selectedAudioDevices);
   const setMicrophone = useBluetoothAudioStore((state) => state.setSelectedMicrophone);
   const setSpeaker = useBluetoothAudioStore((state) => state.setSelectedSpeaker);
+  const headsetButtonTalks = useBluetoothAudioStore((state) => state.mediaButtonPTTSettings.enabled);
+  const hasHeadsetButtonPtt = getVoiceCapabilities().headsetButtonPtt;
   const [bluetoothOpen, setBluetoothOpen] = useState(false);
   const [audioPicker, setAudioPicker] = useState<AudioPicker>(null);
 
@@ -165,6 +170,9 @@ export const VoiceSection: React.FC = () => {
             testID="settings-speaker"
           />
         </>
+      ) : null}
+      {hasHeadsetButtonPtt ? (
+        <ToggleRow label={t('settings.headset_button_ptt')} value={headsetButtonTalks} note={t('settings.headset_button_ptt_note')} onValueChange={setHeadsetButtonPttEnabled} testID="settings-headset-button-ptt" />
       ) : null}
       {voice.bluetoothPtt ? <BluetoothDeviceSheet isOpen={bluetoothOpen} onClose={() => setBluetoothOpen(false)} /> : null}
       <OptionSheet

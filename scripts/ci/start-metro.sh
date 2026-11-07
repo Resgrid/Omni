@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Starts Metro for APP_VARIANT in the background (dev-client e2e in nightly.yml) and waits until it serves, then
-# requests the platform bundle once so the first app launch does not wait for a cold transform.
+# requests the platform bundle once so the first app launch does not wait for a cold transform. Fails when Metro
+# reports a bundle build error.
 #
 # Usage: bash scripts/ci/start-metro.sh <android|ios> [log-file]
 set -euo pipefail
@@ -18,6 +19,26 @@ for _ in $(seq 1 120); do
 done
 curl -sf http://localhost:8081/status | grep -q 'packager-status:running' || { echo "::error::Metro did not start"; tail -n 50 "$log"; exit 1; }
 
-if ! curl -sf -o /dev/null --max-time 900 "http://localhost:8081/index.bundle?platform=${platform}&dev=true&minify=false"; then
-  echo "::warning::Bundle pre-warm failed; the app will build it on first open."
+# Pre-warm exactly the bundle the dev client loads: the manifest's launchAsset URL. Its path is relative to the monorepo
+# root Metro serves from (apps/omni/index.ts.bundle), and its query (Hermes transform, the variant's router root) keys
+# Metro's cache, so a hand-built URL either 404s (/index.bundle resolves at the repo root) or warms a different bundle.
+manifest="$(curl -sf --max-time 120 -H "expo-platform: ${platform}" -H 'accept: application/expo+json,application/json' http://localhost:8081/ || true)"
+bundle_url="$(printf '%s' "$manifest" | node -e 'try { process.stdout.write(JSON.parse(require("node:fs").readFileSync(0, "utf8")).launchAsset?.url ?? ""); } catch {}')"
+if [ -z "$bundle_url" ]; then
+  echo "::warning::Metro returned no ${platform} manifest; the app will build its bundle on first open."
+  exit 0
 fi
+
+body="$(mktemp)"
+status="$(curl -s -o "$body" -w '%{http_code}' --max-time 900 "$bundle_url" || true)"
+case "$status" in
+  200) echo "Bundle pre-warmed: ${bundle_url%%\?*}" ;;
+  000) echo "::warning::Bundle pre-warm timed out or lost its connection; the app will build its bundle on first open." ;;
+  *)
+    # Metro answers a build error (unresolved import, syntax error) with its JSON error: the app would get the same.
+    echo "::error::Metro could not build the ${platform} bundle (HTTP ${status})."
+    head -c 4000 "$body"
+    echo
+    exit 1
+    ;;
+esac

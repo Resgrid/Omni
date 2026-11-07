@@ -66,9 +66,9 @@
     },
     "voice": {
       "ptt": true,
-      "callKeep": false,
+      "callKeep": true,
       "bluetoothPtt": true,
-      "headsetButtonPtt": false,
+      "headsetButtonPtt": true,
       "desktopPtt": true
     },
     "location": {
@@ -109,7 +109,7 @@
   },
   "modules": ["dispatch-console", "runcards", "call-queues", "awaiting-resources"],
   "native": {
-    "modules": ["livekit", "ble-manager", "secure-store", "passkey", "maplibre", "sqlite", "notifee"],
+    "modules": ["livekit", "callkeep", "ble-manager", "secure-store", "passkey", "media-button", "in-call-audio", "maplibre", "sqlite", "notifee"],
     "iosBackgroundModes": ["remote-notification", "audio", "bluetooth-central", "voip"],
     "androidPermissions": [
       "android.permission.WAKE_LOCK",
@@ -117,7 +117,12 @@
       "android.permission.CAPTURE_AUDIO_OUTPUT",
       "android.permission.POST_NOTIFICATIONS",
       "android.permission.FOREGROUND_SERVICE",
-      "android.permission.FOREGROUND_SERVICE_MICROPHONE"
+      "android.permission.FOREGROUND_SERVICE_MICROPHONE",
+      "android.permission.FOREGROUND_SERVICE_PHONE_CALL",
+      "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+      "android.permission.READ_PHONE_STATE",
+      "android.permission.READ_PHONE_NUMBERS",
+      "android.permission.MANAGE_OWN_CALLS"
     ],
     "androidBlockedPermissions": ["android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE", "android.permission.ACCESS_BACKGROUND_LOCATION", "android.permission.FOREGROUND_SERVICE_LOCATION"],
     "iosUseStaticFrameworks": false

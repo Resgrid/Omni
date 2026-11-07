@@ -1,6 +1,7 @@
 import { securityStore, useAuthStore } from '@resgrid/auth';
-import { NotificationsInboxProvider, useNovuInboxConfig } from '@resgrid/notifications';
-import React, { createContext, type ReactNode, useContext, useMemo } from 'react';
+import { refreshBadgeCountsSoon, useBadgeCountsStore } from '@resgrid/data';
+import { NotificationsInboxProvider, useInboxUnreadCount, useNovuInboxConfig } from '@resgrid/notifications';
+import React, { createContext, type ReactNode, useContext, useEffect, useMemo, useRef } from 'react';
 import { Platform } from 'react-native';
 
 import { getActiveUnitId, getNotificationsSession } from '../runtime/session';
@@ -18,6 +19,28 @@ const InboxStatusContext = createContext<ShellInboxStatus>('loading');
 export const useShellInboxStatus = (): ShellInboxStatus => useContext(InboxStatusContext);
 
 export const useShellInboxReady = (): boolean => useShellInboxStatus() === 'ready';
+
+/**
+ * The Novu inbox's unread count into the badge counts store, so the app bar bell and the Notifications menu entry share
+ * one Novu subscription (Novu keeps it current over its socket). Mounted only under a ready provider: against the
+ * placeholder client it would count for nobody. A rise means something new arrived — a message, a call, a chat push
+ * all land in the inbox — so the server counts are refreshed too.
+ */
+function InboxUnreadCountBridge() {
+  const count = useInboxUnreadCount();
+  const previous = useRef<number | null>(null);
+
+  useEffect(() => {
+    useBadgeCountsStore.getState().setUnreadNotifications(count);
+
+    if (previous.current !== null && count > previous.current) refreshBadgeCountsSoon();
+    previous.current = count;
+  }, [count]);
+
+  useEffect(() => () => useBadgeCountsStore.getState().setUnreadNotifications(0), []);
+
+  return null;
+}
 
 /**
  * The always-mounted Novu provider (Responder's fix): placeholder credentials until the department config, rights (and
@@ -43,7 +66,10 @@ export function ShellInboxProvider({ children }: { children?: ReactNode }) {
 
   return (
     <NotificationsInboxProvider config={config} enabled={enabled}>
-      <InboxStatusContext.Provider value={inboxStatus}>{children}</InboxStatusContext.Provider>
+      <InboxStatusContext.Provider value={inboxStatus}>
+        {inboxStatus === 'ready' ? <InboxUnreadCountBridge /> : null}
+        {children}
+      </InboxStatusContext.Provider>
     </NotificationsInboxProvider>
   );
 }

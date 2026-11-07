@@ -714,10 +714,6 @@
     "you": "You",
     "you_are_signed_up": "You are signed up for this shift"
   },
-  "sidebar": {
-    "audio": "Stream",
-    "ptt": "Voice"
-  },
   "tabs": {
     "units": "Units",
     "weatherAlerts": "Weather Alerts"

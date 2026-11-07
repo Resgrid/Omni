@@ -35,7 +35,10 @@
     "stream_info": "Stream-Informationen",
     "stream_selected": "Ausgewählt: {{streamName}}",
     "title": "Audiostreams",
-    "type": "Typ"
+    "type": "Typ",
+    "reconnecting": "Verbindung wird wiederhergestellt",
+    "reconnecting_stream": "Verbindung zu {{streamName}} wird wiederhergestellt…",
+    "paused": "Pausiert"
   },
   "bluetooth": {
     "applied": "Angewendet",
@@ -1472,7 +1475,8 @@
     "speaking": "Spricht",
     "title": "Sprachkanäle",
     "unmute": "Stummschaltung aufheben",
-    "join_failed": "Could not join the voice channel. Please try again."
+    "join_failed": "Could not join the voice channel. Please try again.",
+    "reconnecting": "Verbindung wird wiederhergestellt…"
   },
   "loading": {
     "loading": "Laden...",
@@ -2016,7 +2020,14 @@
     "view_chat": "Chat anzeigen",
     "view_reference": "{{type}} anzeigen",
     "mark_all_read": "Mark all as read",
-    "unread": "Unread"
+    "unread": "Unread",
+    "select": "Auswählen",
+    "mark_read": "Als gelesen markieren",
+    "delete": "Löschen",
+    "delete_selected_message": "Die {{count}} ausgewählten Benachrichtigungen löschen? Dies kann nicht rückgängig gemacht werden.",
+    "delete_all_message": "Alle Benachrichtigungen löschen? Dies kann nicht rückgängig gemacht werden.",
+    "deleted": "Benachrichtigungen gelöscht",
+    "mark_read_error": "Benachrichtigungen konnten nicht als gelesen markiert werden"
   },
   "onboarding": {
     "getStarted": "Los geht's",
@@ -2900,7 +2911,9 @@
       "source_embedded": "Integrierte Version",
       "title": "App-Updates",
       "up_to_date": "Auf dem neuesten Stand. Zuletzt geprüft: {{time}}."
-    }
+    },
+    "headset_button_ptt": "Mit der Ohrhörertaste sprechen",
+    "headset_button_ptt_note": "Die Anruftaste von Ohrhörern oder Headset startet und beendet das Sprechen im Sprachkanal, ebenso „Beenden“ auf dem Sperrbildschirm. Den Kanal verlassen Sie in der App. Schalten Sie dies aus, damit die Taste den Kanal verlässt."
   },
   "shared_session": {
     "bar": "Gemeinsames Gerät",
@@ -3280,7 +3293,8 @@
     "notifications_unread": "Notifications, {{count}} unread",
     "changes_need_attention": "Needs attention: {{count}}",
     "offline": "Offline",
-    "offline_changes_waiting": "Offline: {{count}} waiting"
+    "offline_changes_waiting": "Offline: {{count}} waiting",
+    "nav_item_with_count": "{{label}} ({{count}})"
   },
   "access_denied": {
     "back_to_sign_in": "Back to sign in",
@@ -4422,5 +4436,18 @@
     "image_not_offline": "This map image is not saved on this device. It shows again when you are back online.",
     "nothing_to_show": "Nothing to show on this device",
     "nothing_to_show_detail": "This map has no image or map tiles this app can draw. Open it on the website instead."
+  },
+  "sidebar": {
+    "audio": "Stream",
+    "ptt": "Sprache"
+  },
+  "voice_session": {
+    "channel_name": "Sprachkanal",
+    "notification_title": "Sprachkanal aktiv",
+    "notification_body": "Push-to-Talk funktioniert weiter, während die App im Hintergrund läuft.",
+    "phone_account_title": "Berechtigungen erforderlich",
+    "phone_account_description": "{{appName}} benötigt Zugriff auf Ihre Telefonkonten, damit Sprachkanäle im Hintergrund verbunden bleiben.",
+    "call_channel_name": "Sprachanrufe",
+    "call_notification_title": "{{appName}}-Sprachanruf"
   }
 }

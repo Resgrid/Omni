@@ -20,6 +20,8 @@
   "settings.app_updates.up_to_date": "Up to date. Last checked {{time}}.",
   "settings.audio": "Audio",
   "settings.background_geolocation_denied": "Background location needs the \"Allow all the time\" permission. Allow it in your device settings, then turn this on again.",
+  "settings.headset_button_ptt": "Talk with the earbud button",
+  "settings.headset_button_ptt_note": "The call button on earbuds or a headset starts and stops talking in a voice channel, and so does End on the lock screen. Leave the channel from the app. Turn this off to have the button leave the channel.",
   "settings.location": "Location",
   "settings.login_info_description": "Sign in again, for example after changing your password or to switch to another account.",
   "settings.no_units_available_help": "No units are assigned to you. Ask your department administrator to add you to a unit's station group.",

@@ -65,8 +65,8 @@ export { findNavEntryForPath, type HeaderLeading, isTopLevelScreen, resolveHeade
 export { RegisteredProviders } from './shell/registered-providers';
 export { type ShellContextValue, ShellProvider, useHeaderActions, useOptionalShell, useShell } from './shell/shell-context';
 export { ShellStack } from './shell/shell-stack';
-export { NavMenu } from './shell/sidebar';
-export { PANEL_SIDEBAR_WIDTH, PERMANENT_SIDEBAR_WIDTH, resolveSidebarMode, type SidebarMode } from './shell/sidebar-mode';
+export { NavMenu, type NavMenuProps } from './shell/sidebar';
+export { PANEL_SIDEBAR_WIDTH, permanentSidebarWidth, resolveSidebarMode, type SidebarMode } from './shell/sidebar-mode';
 
 // Navigation registry
 export * from './nav';

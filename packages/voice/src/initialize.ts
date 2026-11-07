@@ -10,11 +10,12 @@ import { getBluetoothAudioService } from './bluetooth/bluetooth-service';
 import { getCallKeepService } from './callkeep/callkeep-service';
 import type { CallKeepSetupConfig } from './callkeep/types';
 import { getVoiceCapabilities } from './capabilities';
+import { restoreHeadsetButtonPttPreference } from './headset/headset-ptt-preference';
 import { useLiveKitStore } from './livekit/livekit-store';
 import { VOICE_PRESERVED_KEYS } from './runtime';
 
 export interface InitializeVoiceOptions {
-  /** CallKeep setup (R/U/I); ignored where the variant has no CallKeep. Text must already be translated. */
+  /** CallKeep setup (R/U/I/D); ignored where the variant has no CallKeep. Text must already be translated. */
   callKeep?: CallKeepSetupConfig;
   /** Start Bluetooth PTT (permissions, preferred-device reconnect). Default true; Unit/Responder start it after sign-in. */
   bluetooth?: boolean;
@@ -29,16 +30,22 @@ let globalsRegistered = false;
  */
 export async function initializeVoice(options: InitializeVoiceOptions = {}): Promise<void> {
   const capabilities = getVoiceCapabilities();
+
   if (!capabilities.ptt) return;
+
+  restoreHeadsetButtonPttPreference();
+
   if (!globalsRegistered && Platform.OS !== 'web') {
     registerLiveKitGlobals();
     globalsRegistered = true;
   }
+
   try {
     voiceSounds.initialize();
   } catch (error) {
     logger.warn({ message: 'Voice sounds failed to load', context: { error } });
   }
+
   if (capabilities.callKeep && options.callKeep) {
     try {
       await getCallKeepService().setup(options.callKeep);
@@ -46,6 +53,7 @@ export async function initializeVoice(options: InitializeVoiceOptions = {}): Pro
       logger.error({ message: 'CallKeep setup failed; background voice may stop when the app is backgrounded', context: { error } });
     }
   }
+
   if (options.bluetooth !== false) {
     await getBluetoothAudioService()
       ?.initialize()
@@ -67,6 +75,8 @@ export function registerVoiceResets(registry: Pick<ResetRegistry, 'registerTeard
       useBluetoothAudioStore.getState().clearConnectionError();
     }),
   ];
+
   registry.registerPreservedKeys(VOICE_PRESERVED_KEYS);
+
   return () => unregister.forEach((fn) => fn());
 }

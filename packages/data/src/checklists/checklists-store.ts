@@ -4,6 +4,7 @@ import { ProtectedPayloadError } from '@resgrid/offline';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+import { refreshBadgeCountsSoon } from '../badge-counts/badge-counts-store';
 import { assertV4Success, unwrapItem } from '../core/envelope';
 import { type DataError, toDataError } from '../core/errors';
 import { defineDataHandler, submitWrite, type WriteOutcome } from '../core/outbox';
@@ -68,7 +69,12 @@ export const useChecklistsStore = create<ChecklistsState>()(
       const act = async (fn: () => Promise<ChecklistRun | null>): Promise<ChecklistRun | null> => {
         set({ actionError: null });
         try {
-          return keepRun(await fn());
+          const run = keepRun(await fn());
+
+          // Starting, signing or completing a check moves the due-checklists badge.
+          refreshBadgeCountsSoon();
+
+          return run;
         } catch (error) {
           set({ actionError: toDataError(error) });
           return null;
@@ -110,6 +116,10 @@ export const useChecklistsStore = create<ChecklistsState>()(
               coalesceKey: submit ? undefined : `checklist-run-progress:${run.Id}`,
               protected: true,
             });
+
+            // A submitted check leaves the due list (the badge); a queued one moves it once the outbox sends it.
+            if (submit && outcome === 'sent') refreshBadgeCountsSoon();
+
             return { outcome, run: outcome === 'sent' ? (get().runsById[run.Id] ?? null) : null };
           } catch (error) {
             // No payload cipher (web has no secure key store): answers may be protected, so they are never written to

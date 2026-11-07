@@ -1,6 +1,8 @@
+import type { VariantManifest } from '@resgrid/config';
 import type { ComponentType, ReactNode } from 'react';
 
 import type { GateStep } from '../gate/gate-state';
+import type { NavRegistry } from '../nav/define-nav';
 import { createRegistryStore } from './registry-store';
 
 /** What every gate screen receives. Screens own their behaviour through the auth hooks; the shell only decides which. */
@@ -56,14 +58,18 @@ export const getShellScreens = (): Partial<ShellScreens> => screens.get();
 export const useShellScreens = (): Partial<ShellScreens> => screens.useValue();
 
 // ---------------------------------------------------------------------------------------------------------------
-// Sidebar content (manifest `shell.sidebarContent`). `menu` is built in; `unit-status` is registered by the Unit module.
+// Sidebar content (manifest `shell.sidebarContent`). `menu` is built in; the app layer registers `unit-status` (Unit's
+// status console) and `member-menu` (Responder's menu: the built-in `NavMenu` with the voice and stream buttons).
+// Anything not registered falls back to the menu.
 
 export interface SidebarContentProps {
+  /** The variant's nav registry, for content that renders the menu (`NavMenu`) with something of its own. */
+  nav: NavRegistry;
   /** Close the drawer after navigating (no-op for a permanent sidebar). */
   onNavigate: () => void;
 }
 
-export type SidebarContentKind = 'menu' | 'unit-status';
+export type SidebarContentKind = VariantManifest['shell']['sidebarContent'];
 
 const sidebarContent = createRegistryStore<Partial<Record<SidebarContentKind, ComponentType<SidebarContentProps>>>>({});
 

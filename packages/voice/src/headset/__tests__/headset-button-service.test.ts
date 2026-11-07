@@ -5,6 +5,7 @@ import { activateVariant } from '../../__tests__/helpers/variant';
 import { useBluetoothAudioStore } from '../../bluetooth/bluetooth-audio-store';
 import { resetCallKeepServiceForTests } from '../../callkeep/callkeep-service';
 import { registerMicrophoneController } from '../../ptt/microphone-controller';
+import { configureVoice, resetVoiceRuntimeForTests } from '../../runtime';
 import { getHeadsetButtonService, NativeHeadsetButtonService, resetHeadsetButtonServiceForTests } from '../headset-button-service';
 import { KEYCODE_HEADSETHOOK, KEYCODE_MEDIA_NEXT, KEYCODE_MEDIA_PLAY_PAUSE, mapKeyCode } from '../types';
 
@@ -44,6 +45,25 @@ describe('Android media buttons (MediaButtonModule)', () => {
     service.stopMonitoring('livekit');
     expect(mediaButtonModule.stopListening).toHaveBeenCalledTimes(1);
     expect(service.isMonitoringActive()).toBe(false);
+  });
+
+  // A scanner stream's media session (expo-audio) would otherwise take the headset buttons from push-to-talk.
+  it('re-creates its media session after another one became active, only while monitoring on Android', () => {
+    const service = getHeadsetButtonService();
+    service.reassertMediaSession();
+    expect(mediaButtonModule.startListening).not.toHaveBeenCalled();
+
+    service.startMonitoring('livekit');
+    service.reassertMediaSession();
+    expect(mediaButtonModule.stopListening).toHaveBeenCalledTimes(1);
+    expect(mediaButtonModule.startListening).toHaveBeenCalledTimes(2);
+    expect(service.isMonitoringActive()).toBe(true);
+    service.stopMonitoring('livekit');
+
+    Platform.OS = 'ios';
+    mediaButtonModule.startListening.mockClear();
+    service.reassertMediaSession();
+    expect(mediaButtonModule.startListening).not.toHaveBeenCalled();
   });
 
   it('keeps listening while another owner (a BLE handset) still needs it', () => {
@@ -130,15 +150,16 @@ describe('iOS remote commands', () => {
     expect(mediaButtonModule.startListening).not.toHaveBeenCalled();
   });
 
-  it('listens to MPRemoteCommandCenter events when CallKeep is off', async () => {
+  it('listens to MPRemoteCommandCenter events when CallKeep is off (CallKit restricted in the region)', async () => {
     Platform.OS = 'ios';
-    activateVariant('dispatch');
+    configureVoice({ getApiContext: () => null, restrictCallKit: true });
     resetCallKeepServiceForTests();
     getHeadsetButtonService().startMonitoring();
     expect(mediaButtonModule.startListening).toHaveBeenCalled();
     getNativeModuleEmitter(mediaButtonModule).emit('onMediaButtonToggle', { timestamp: 1 });
     await jest.advanceTimersByTimeAsync(400);
     expect(controller.toggleMicrophone).toHaveBeenCalledWith('headset');
+    resetVoiceRuntimeForTests();
   });
 });
 

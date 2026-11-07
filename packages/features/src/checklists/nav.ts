@@ -1,5 +1,6 @@
 import { FeatureFlagKeys, TermKeys } from '@resgrid/auth';
 import type { Capabilities } from '@resgrid/config';
+import type { NavBadge } from '@resgrid/data';
 import type { LucideIcon } from 'lucide-react-native';
 import { ClipboardCheck } from 'lucide-react-native';
 
@@ -19,6 +20,8 @@ export interface ChecklistsNavEntry {
   /** Department feature flag(s); every one must be enabled. Unknown flags are disabled. */
   requiresFlag?: string | readonly string[];
   requiresCapability?: (capabilities: Capabilities) => boolean;
+  /** Count badge beside the entry (the shell's `NavEntry.badge`). */
+  badge?: NavBadge;
 }
 
 /**
@@ -36,5 +39,6 @@ export const checklistsNav: readonly ChecklistsNavEntry[] = [
     icon: ClipboardCheck,
     requiresFlag: FeatureFlagKeys.ChecklistsSystem,
     requiresCapability: (capabilities) => capabilities.checkIn.self,
+    badge: 'checklists',
   },
 ];

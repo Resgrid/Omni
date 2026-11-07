@@ -1,4 +1,5 @@
 import type { Capabilities } from '@resgrid/config';
+import type { NavBadge } from '@resgrid/data';
 import type { LucideIcon } from 'lucide-react-native';
 import { CloudLightning, Settings2 } from 'lucide-react-native';
 
@@ -18,10 +19,13 @@ export interface FeatureNavEntry {
   /** Department feature flag(s); unknown flags are disabled. */
   requiresFlag?: string | readonly string[];
   requiresCapability?: (capabilities: Capabilities) => boolean;
+  /** Count badge beside the entry (the shell's `NavEntry.badge`). */
+  badge?: NavBadge;
 }
 
 export const weatherAlertsNav: readonly FeatureNavEntry[] = [
-  { id: 'weather-alerts', href: '/weather-alerts', labelKey: 'weather_alerts.title', defaultLabel: 'Weather Alerts', icon: CloudLightning },
+  // The badge counts the department's active Extreme and Severe alerts.
+  { id: 'weather-alerts', href: '/weather-alerts', labelKey: 'weather_alerts.title', defaultLabel: 'Weather Alerts', icon: CloudLightning, badge: 'weather' },
   {
     id: 'weather-alerts-settings',
     href: '/weather-alerts/settings',

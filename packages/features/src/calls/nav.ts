@@ -1,4 +1,5 @@
 import type { Capabilities } from '@resgrid/config';
+import type { NavBadge } from '@resgrid/data';
 import { ClipboardList, PhoneCall } from 'lucide-react-native';
 import type { ComponentType } from 'react';
 
@@ -16,9 +17,11 @@ export interface FeatureNavEntry {
   icon: ComponentType<{ size?: number; color?: string }>;
   /** Shown only when this returns true for the variant's capabilities. */
   isAvailable?: (capabilities: Capabilities) => boolean;
+  /** Count badge beside the entry (the shell's `NavEntry.badge`). */
+  badge?: NavBadge;
 }
 
 export const callsNav: readonly FeatureNavEntry[] = [
-  { id: 'calls', route: 'calls', titleKey: 'calls.title', termKey: 'module.calls', icon: ClipboardList },
+  { id: 'calls', route: 'calls', titleKey: 'calls.title', termKey: 'module.calls', icon: ClipboardList, badge: 'calls' },
   { id: 'call-new', route: 'call/new', titleKey: 'calls.new_call', icon: PhoneCall, isAvailable: (capabilities) => capabilities.calls.create !== 'none' },
 ];

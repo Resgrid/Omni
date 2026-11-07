@@ -9,7 +9,10 @@ export interface StreamPlaybackStatus {
 
 export interface StreamPlayerCallbacks {
   onStatus: (status: StreamPlaybackStatus) => void;
-  /** Playback failed after it started (the handle is already released). */
+  /**
+   * Playback failed after it started (dropped connection, network change, relay error). The handle stays usable:
+   * `reload()` retries the stream in the same player, `stop()` gives up.
+   */
   onError: (error: unknown) => void;
 }
 
@@ -22,6 +25,12 @@ export interface StreamPlayerOptions {
 
 export interface StreamPlayerHandle {
   stop(): void;
+  /**
+   * Connects to the stream again, at its live edge, in the same player: the lock-screen / notification controls and
+   * Android's media playback service stay up, so the app is not suspended or killed while it reconnects in the
+   * background. Throws when the player cannot reload.
+   */
+  reload(): void;
 }
 
 /** Creates and starts a player for one stream; rejects when the stream cannot start. */

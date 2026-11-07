@@ -65,7 +65,7 @@ export {
 // Outbox
 export { createAesGcmPayloadCipher, OUTBOX_KEY_NAME, type PayloadCipher } from './outbox/cipher';
 export { defaultClassify, getHttpStatus, isNetworkError, toOutboxError } from './outbox/classify';
-export { type ConnectivitySource, createManualConnectivitySource, createNetInfoConnectivitySource, isNetInfoOnline, type ManualConnectivitySource } from './outbox/connectivity';
+export { type ConnectivitySource, createManualConnectivitySource, createNetInfoConnectivitySource, isNetInfoOnline, isNetworkHandover, type ManualConnectivitySource } from './outbox/connectivity';
 export { ConfirmationRequiredError, createOutbox, DEFAULT_RETRY_POLICY, FOREIGN_HOLD_MS, Outbox, OutboxNoSessionError, type OutboxOptions, OutboxUnknownTypeError, ProtectedPayloadError } from './outbox/outbox';
 export { createOutboxHandlerRegistry, defaultOutboxHandlerRegistry, type OutboxHandlerRegistry, registerOutboxHandler } from './outbox/registry';
 export { OUTBOX_DROPPED_TABLE, OUTBOX_TABLE, outboxSchemaModule } from './outbox/schema';

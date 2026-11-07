@@ -62,7 +62,30 @@ describe('session (signed-in) steps', () => {
     expect(useRealtimeStore.getState().connectAll).toHaveBeenCalledTimes(1);
     expect(mockHydrate).toHaveBeenCalledTimes(1);
     expect(initializeVoice).toHaveBeenCalledTimes(1);
+    // CallKeep is set up in every app with voice (the legacy apps' text, translated, with the app's name).
+    expect(initializeVoice).toHaveBeenCalledWith({
+      callKeep: expect.objectContaining({ appName: expect.stringMatching(/^Resgrid /), android: expect.objectContaining({ foregroundService: expect.objectContaining({ channelId: 'voice_call' }) }) }),
+    });
     expect(getShellState().pushRegistrationArmed).toBe(true);
+  });
+
+  // The working set is dozens of requests on a slow link: the bootstrap no longer waits for it before connecting the
+  // hubs and arming push; the drain and hydration follow it in the background, as on a reconnect.
+  it('is ready, with hubs and push armed, while the working set is still loading', async () => {
+    let finishPull: () => void = () => undefined;
+    jest.mocked(refreshDataWorkingSet).mockImplementationOnce(() => new Promise<void>((resolve) => (finishPull = resolve)));
+    const status = await session('unit').run();
+
+    expect(status.state).toBe('ready');
+    expect(useRealtimeStore.getState().connectAll).toHaveBeenCalledTimes(1);
+    expect(getShellState().pushRegistrationArmed).toBe(true);
+    expect(mockOutboxDrain).not.toHaveBeenCalled();
+    expect(mockHydrate).not.toHaveBeenCalled();
+
+    finishPull();
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(mockOutboxDrain).toHaveBeenCalledTimes(1);
+    expect(mockHydrate).toHaveBeenCalledTimes(1);
   });
 
   it('skips voice where the variant has no PTT (BigBoard)', async () => {

@@ -1,21 +1,24 @@
 // Capabilities per variant, permissions, sounds, web remote audio, startup and the offline wipe hooks.
 import { resetActiveVariantForTests } from '@resgrid/config';
 
+import { useBluetoothAudioStore } from '../bluetooth/bluetooth-audio-store';
 import { resetCallKeepServiceForTests } from '../callkeep/callkeep-service';
 import { getVoiceCapabilities } from '../capabilities';
+import { restoreHeadsetButtonPttPreference, setHeadsetButtonPttEnabled } from '../headset/headset-ptt-preference';
 import { initializeVoice, registerVoiceResets } from '../initialize';
-import { createNotifeeForegroundService } from '../livekit/foreground-service';
+import { createNotifeeForegroundService, resetVoiceForegroundServiceForTests } from '../livekit/foreground-service';
 import { loadLiveKitClient } from '../livekit/livekit-client';
 import { useLiveKitStore } from '../livekit/livekit-store';
 import { ensureMicrophonePermission } from '../livekit/microphone-permission';
 import { attachRemoteAudio } from '../livekit/remote-audio.web';
-import { configureVoice, resetVoiceRuntimeForTests } from '../runtime';
+import { configureVoice, HEADSET_BUTTON_PTT_ENABLED_KEY, resetVoiceRuntimeForTests } from '../runtime';
 import { getRecordingPermissionsAsync } from './fakes/expo-audio';
 import { Room } from './fakes/livekit-client';
 import { registerGlobals } from './fakes/livekit-react-native';
 import notifee from './fakes/notifee';
 import { NativeModules, PermissionsAndroid, Platform, resetReactNativeFake } from './fakes/react-native';
 import RNCallKeep from './fakes/react-native-callkeep';
+import { createTestStorage } from './helpers/test-doubles';
 import { activateVariant } from './helpers/variant';
 
 jest.mock('@resgrid/api', () => ({ getDepartmentVoiceSettings: jest.fn(), canConnectToVoiceSession: jest.fn(), getDepartmentAudioStreams: jest.fn() }));
@@ -30,13 +33,13 @@ beforeEach(() => {
 });
 
 describe('getVoiceCapabilities', () => {
+  // Background voice is the same in every app with PTT: CallKeep keeps the call alive, headset buttons and BLE handsets talk.
   it('maps each variant on native', () => {
-    activateVariant('unit');
-    expect(getVoiceCapabilities()).toEqual({ ptt: true, callKeep: true, bluetoothPtt: true, headsetButtonPtt: true, desktopPtt: false, backgroundAudio: true });
-    activateVariant('ic');
-    expect(getVoiceCapabilities()).toMatchObject({ callKeep: true, headsetButtonPtt: false });
-    activateVariant('dispatch');
-    expect(getVoiceCapabilities()).toMatchObject({ ptt: true, callKeep: false, bluetoothPtt: true, desktopPtt: false });
+    for (const variant of ['responder', 'unit', 'ic', 'dispatch'] as const) {
+      activateVariant(variant);
+      expect(getVoiceCapabilities()).toEqual({ ptt: true, callKeep: true, bluetoothPtt: true, headsetButtonPtt: true, desktopPtt: false, backgroundAudio: true });
+    }
+
     activateVariant('bigboard');
     expect(getVoiceCapabilities()).toEqual({ ptt: false, callKeep: false, bluetoothPtt: false, headsetButtonPtt: false, desktopPtt: false, backgroundAudio: false });
   });
@@ -49,6 +52,16 @@ describe('getVoiceCapabilities', () => {
     expect(getVoiceCapabilities().bluetoothPtt).toBe(true);
     activateVariant('unit');
     expect(getVoiceCapabilities()).toMatchObject({ callKeep: false, headsetButtonPtt: false, desktopPtt: false });
+  });
+
+  // App Store guideline 5: no CallKit in China. Android's ConnectionService is not restricted.
+  it('drops CallKit on iOS when the device region forbids it, and keeps CallKeep on Android', () => {
+    activateVariant('responder');
+    configureVoice({ getApiContext: () => null, restrictCallKit: true });
+    Platform.OS = 'ios';
+    expect(getVoiceCapabilities()).toMatchObject({ ptt: true, callKeep: false, headsetButtonPtt: true });
+    Platform.OS = 'android';
+    expect(getVoiceCapabilities().callKeep).toBe(true);
   });
 
   it('turns everything off before a variant is active', () => {
@@ -96,10 +109,22 @@ describe('web remote audio', () => {
 });
 
 describe('foreground service', () => {
-  it('shows a microphone-type foreground notification on Android and stops it', async () => {
-    const fgs = createNotifeeForegroundService({ channelId: 'notif', title: 'PTT', body: 'Active' });
+  it('shows one microphone-type foreground notification on a silent channel on Android, and stops it', async () => {
+    resetVoiceForegroundServiceForTests();
+    notifee.registerForegroundService.mockClear();
+    let title = 'PTT';
+    const fgs = createNotifeeForegroundService({ channelId: 'voice_session', text: () => ({ channelName: 'Voice channel', title, body: 'Active' }) });
     await fgs.start();
-    expect(notifee.displayNotification).toHaveBeenCalledWith(expect.objectContaining({ title: 'PTT', android: expect.objectContaining({ channelId: 'notif', asForegroundService: true, foregroundServiceTypes: [128] }) }));
+    expect(notifee.registerForegroundService).toHaveBeenCalledTimes(1);
+    expect(notifee.createChannel).toHaveBeenCalledWith({ id: 'voice_session', name: 'Voice channel', importance: 2, vibration: false });
+    expect(notifee.displayNotification).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'resgrid-voice-session', title: 'PTT', android: expect.objectContaining({ channelId: 'voice_session', asForegroundService: true, foregroundServiceTypes: [128], ongoing: true }) })
+    );
+    // Started again (another session, or after the language changed): the same notification, the runner registered once.
+    title = 'Voix';
+    await fgs.start();
+    expect(notifee.registerForegroundService).toHaveBeenCalledTimes(1);
+    expect(notifee.displayNotification).toHaveBeenLastCalledWith(expect.objectContaining({ id: 'resgrid-voice-session', title: 'Voix' }));
     await fgs.stop();
     expect(notifee.stopForegroundService).toHaveBeenCalled();
     Platform.OS = 'ios';
@@ -138,20 +163,50 @@ describe('registerVoiceResets', () => {
     activateVariant('unit');
     configureVoice({ getApiContext: () => null });
     const teardowns = new Map<string, () => unknown>();
+
     const registry = {
       registerTeardown: jest.fn((name: string, fn: () => unknown) => {
         teardowns.set(name, fn);
+
         return () => teardowns.delete(name);
       }),
       registerStoreReset: jest.fn(() => () => undefined),
       registerPreservedKeys: jest.fn(),
     };
+
     const unregister = registerVoiceResets(registry as unknown as Parameters<typeof registerVoiceResets>[0]);
-    expect(registry.registerPreservedKeys).toHaveBeenCalledWith(['preferredBluetoothDevice']);
+    expect(registry.registerPreservedKeys).toHaveBeenCalledWith(['preferredBluetoothDevice', 'headsetButtonPttEnabled']);
     useLiveKitStore.setState({ availableRooms: [{ Id: '1', Name: 'A', ConferenceNumber: 0, IsDefault: true, Token: 't' }], isVoiceEnabled: true });
     await teardowns.get('voice-livekit')?.();
     expect(useLiveKitStore.getState()).toMatchObject({ availableRooms: [], isVoiceEnabled: false });
     unregister();
     expect(teardowns.size).toBe(0);
+  });
+});
+
+// Settings → Voice → "Talk with the earbud button": kept per device, across restarts and sign-outs.
+describe('headset button preference', () => {
+  afterEach(() => useBluetoothAudioStore.getState().setMediaButtonPTTEnabled(true));
+
+  it('is on by default, saved when changed, and restored when voice starts', async () => {
+    activateVariant('responder');
+    const storage = createTestStorage();
+    configureVoice({ getApiContext: () => null, storage });
+    expect(useBluetoothAudioStore.getState().mediaButtonPTTSettings.enabled).toBe(true);
+
+    setHeadsetButtonPttEnabled(false);
+    expect(useBluetoothAudioStore.getState().mediaButtonPTTSettings.enabled).toBe(false);
+    expect(storage.set).toHaveBeenCalledWith(HEADSET_BUTTON_PTT_ENABLED_KEY, false);
+
+    // A fresh start: the store comes back with the default, then voice startup applies the saved choice.
+    useBluetoothAudioStore.getState().setMediaButtonPTTEnabled(true);
+    await initializeVoice({ bluetooth: false });
+    expect(useBluetoothAudioStore.getState().mediaButtonPTTSettings.enabled).toBe(false);
+  });
+
+  it('keeps the default when nothing was saved', () => {
+    configureVoice({ getApiContext: () => null, storage: createTestStorage() });
+    restoreHeadsetButtonPttPreference();
+    expect(useBluetoothAudioStore.getState().mediaButtonPTTSettings.enabled).toBe(true);
   });
 });

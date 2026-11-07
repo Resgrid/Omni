@@ -1,5 +1,5 @@
 import type { ApiContext } from '@resgrid/api';
-import type { DurableKv } from '@resgrid/offline';
+import type { ConnectivitySource, DurableKv } from '@resgrid/offline';
 
 /**
  * Everything the voice package needs from the app is injected here once at startup (`configureVoice`), so voice never
@@ -7,7 +7,9 @@ import type { DurableKv } from '@resgrid/offline';
  * - the signed-in API context (auth owns the HTTP client and token),
  * - durable storage for device preferences (the preferred Bluetooth device keeps its legacy key),
  * - the PTT/room sound assets (they live in the app bundle),
- * - the Android foreground service that keeps a voice call alive in the background (notifications owns notifee channels).
+ * - the Android foreground service that keeps a voice call alive in the background (notifications owns notifee channels),
+ * - the device's connectivity, so a voice channel or audio stream that dropped reconnects as soon as the network is back
+ *   or the device moved to another network (Wi-Fi ↔ cellular).
  */
 
 /** Asset modules (`require('…mp3')`) or URLs for the PTT sounds. */
@@ -24,7 +26,7 @@ export interface VoiceForegroundService {
 }
 
 /** The subset of `DurableKv` voice uses (device preferences that survive logout). */
-export type VoicePreferenceStorage = Pick<DurableKv, 'getJSON' | 'setJSON' | 'delete'>;
+export type VoicePreferenceStorage = Pick<DurableKv, 'getJSON' | 'setJSON' | 'getBoolean' | 'set' | 'delete'>;
 
 export interface VoiceRuntimeOptions {
   /** The signed-in API context, or null while signed out. Read at call time. */
@@ -32,6 +34,10 @@ export interface VoiceRuntimeOptions {
   storage?: VoicePreferenceStorage | null;
   sounds?: VoiceSoundAssets;
   foregroundService?: VoiceForegroundService | null;
+  /** Online/offline and network handovers (the offline runtime's NetInfo source). Without it, reconnects only back off. */
+  connectivity?: ConnectivitySource | null;
+  /** iOS must not use CallKit here: the device region is one where the App Store rejects it (China, guideline 5). */
+  restrictCallKit?: boolean;
 }
 
 interface VoiceRuntime {
@@ -39,9 +45,11 @@ interface VoiceRuntime {
   storage: VoicePreferenceStorage | null;
   sounds: VoiceSoundAssets;
   foregroundService: VoiceForegroundService | null;
+  connectivity: ConnectivitySource | null;
+  restrictCallKit: boolean;
 }
 
-const DEFAULT_RUNTIME: VoiceRuntime = { getApiContext: () => null, storage: null, sounds: {}, foregroundService: null };
+const DEFAULT_RUNTIME: VoiceRuntime = { getApiContext: () => null, storage: null, sounds: {}, foregroundService: null, connectivity: null, restrictCallKit: false };
 
 let runtime: VoiceRuntime = DEFAULT_RUNTIME;
 
@@ -51,6 +59,8 @@ export function configureVoice(options: VoiceRuntimeOptions): void {
     storage: options.storage ?? null,
     sounds: options.sounds ?? {},
     foregroundService: options.foregroundService ?? null,
+    connectivity: options.connectivity ?? null,
+    restrictCallKit: options.restrictCallKit ?? false,
   };
 }
 
@@ -66,5 +76,8 @@ export function resetVoiceRuntimeForTests(): void {
 /** Legacy storage key (R/U/I `use-preferred-bluetooth-device`), JSON-encoded `{ id, name }`. Never rename. */
 export const PREFERRED_BLUETOOTH_DEVICE_KEY = 'preferredBluetoothDevice';
 
+/** Whether an earbud / headset button talks (Settings → Voice). Omni key (the legacy apps kept it in memory). Never rename. */
+export const HEADSET_BUTTON_PTT_ENABLED_KEY = 'headsetButtonPttEnabled';
+
 /** Keys voice stores that are device preferences and must survive logout/department switch. */
-export const VOICE_PRESERVED_KEYS: readonly string[] = [PREFERRED_BLUETOOTH_DEVICE_KEY];
+export const VOICE_PRESERVED_KEYS: readonly string[] = [PREFERRED_BLUETOOTH_DEVICE_KEY, HEADSET_BUTTON_PTT_ENABLED_KEY];

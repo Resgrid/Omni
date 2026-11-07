@@ -2,7 +2,7 @@
 import '../../status/__tests__/test-setup';
 
 import { useAuthStore } from '@resgrid/auth';
-import { setDataSessionScopeProvider, useCallsStore, useCheckInTimersStore, usePersonnelStatusStore, usePersonnelStore, useUnitRolesStore, useWeatherAlertsStore } from '@resgrid/data';
+import { setDataSessionScopeProvider, useBadgeCountsStore, useCallsStore, useCheckInTimersStore, usePersonnelStatusStore, usePersonnelStore, useUnitRolesStore, useWeatherAlertsStore } from '@resgrid/data';
 import { ActionBaseTypes, StaffingBaseTypes, StatusProvider } from '@resgrid/features/status';
 import type { CallResultData, CheckInTimerStatusResultData, PersonnelInfoResultData, StatusesResultData, WeatherAlertResultData } from '@resgrid/models';
 import { AppBarTitleSlotContext } from '@resgrid/ui';
@@ -78,6 +78,7 @@ beforeEach(() => {
   useCallsStore.setState({ calls: [], callExtrasById: {}, callDispatches: {}, fetchCalls: fetchers.fetchCalls, fetchCallDispatches: fetchers.fetchCallDispatches });
   useWeatherAlertsStore.setState({ alerts: [], fetchActiveAlerts: fetchers.fetchActiveAlerts });
   useUnitRolesStore.setState({ roles: [], fetchRoles: fetchers.fetchRoles });
+  useBadgeCountsStore.setState({ counts: {}, wanted: [], unsupported: false });
   useCheckInTimersStore.setState({
     statusesByCall: {},
     globalOverdueCount: 0,
@@ -105,7 +106,8 @@ describe('MemberHomeScreen', () => {
     expect(fetchers.fetchCurrentStaffing).toHaveBeenCalled();
     expect(fetchers.fetchCalls).toHaveBeenCalled();
     expect(fetchers.fetchActiveAlerts).toHaveBeenCalled();
-    expect(fetchers.fetchRoles).toHaveBeenCalled();
+    // Unit seats only matter to the local "calls I'm on" count; the server counts the cards.
+    expect(fetchers.fetchRoles).not.toHaveBeenCalled();
     // Options are loaded already, so they are not refetched on mount.
     expect(fetchers.fetchStatusOptions).not.toHaveBeenCalled();
 
@@ -175,7 +177,23 @@ describe('MemberHomeScreen', () => {
     expect(onClear).toHaveBeenCalled();
   });
 
-  it('counts open calls, calls the member is on and severe alerts, and links them', async () => {
+  // One counts request (shared with the menu badges) instead of a dispatch and a timer read per open call.
+  it('shows the server counts on the cards without reading every open call', async () => {
+    useCallsStore.setState({ calls: [call('100'), call('101')] });
+    useBadgeCountsStore.setState({ counts: { calls: 7, callsImOn: 3, weather: 2, checkIns: 1 } });
+    await render(<MemberHomeScreen />);
+
+    expect(screen.getByTestId('summary-active-calls-value')).toHaveTextContent('7');
+    expect(screen.getByTestId('summary-calls-im-on-value')).toHaveTextContent('3');
+    expect(screen.getByTestId('summary-weather-alerts-value')).toHaveTextContent('2');
+    expect(screen.getByTestId('summary-checkins-value')).toHaveTextContent('1');
+    expect(useBadgeCountsStore.getState().wanted).toEqual(expect.arrayContaining(['calls', 'callsImOn', 'weather', 'checkIns']));
+    expect(fetchers.fetchCallDispatches).not.toHaveBeenCalled();
+    expect(fetchers.fetchGlobalOverdueCount).not.toHaveBeenCalled();
+  });
+
+  it('counts open calls, calls the member is on and severe alerts locally on a server without counts, and links them', async () => {
+    useBadgeCountsStore.setState({ unsupported: true });
     useCallsStore.setState({
       calls: [call('100'), call('101'), call('102', { State: 1 })],
       callDispatches: { '100': [{ Id: 'me', Type: 'Personnel', Name: 'Pat Lee' }] } as never,
@@ -260,11 +278,30 @@ describe('MemberHomeTabsLayout', () => {
     const expoRouter = jest.requireMock('expo-router') as Record<string, unknown>;
     const { View: RNView, Text: RNText } = require('react-native');
     const MockTabs = ({ children }: { children: React.ReactNode }) => <RNView testID="tabs">{children}</RNView>;
-    MockTabs.Screen = function MockTabScreen({ name, options }: { name: string; options: { title: string; tabBarButtonTestID: string } }) {
-      return <RNText testID={options.tabBarButtonTestID}>{`${name}:${options.title}`}</RNText>;
+    MockTabs.Screen = function MockTabScreen({ name, options }: { name: string; options: { title: string; tabBarButtonTestID: string; tabBarBadge?: string } }) {
+      return (
+        <>
+          <RNText testID={options.tabBarButtonTestID}>{`${name}:${options.title}`}</RNText>
+          {options.tabBarBadge ? <RNText testID={`${options.tabBarButtonTestID}-badge`}>{options.tabBarBadge}</RNText> : null}
+        </>
+      );
     };
 
     expoRouter.Tabs = MockTabs;
+  });
+
+  // The Calls tab carries the open-calls count, as Unit's and IC's Calls tabs do; the layout asks for it itself.
+  it('shows open calls on the Calls tab and asks for that count', async () => {
+    const request = jest.spyOn(useBadgeCountsStore.getState(), 'requestBadgeCounts').mockResolvedValue(undefined);
+
+    useBadgeCountsStore.setState({ counts: { calls: 4 } });
+    await render(<MemberHomeTabsLayout />);
+
+    expect(screen.getByTestId('home-calls-tab-badge')).toHaveTextContent('4');
+    expect(screen.queryByTestId('home-units-tab-badge')).toBeNull();
+    expect(request).toHaveBeenCalledWith(['calls']);
+    request.mockRestore();
+    useBadgeCountsStore.setState({ counts: {} });
   });
 
   it('declares the four nested tabs with department terms', async () => {

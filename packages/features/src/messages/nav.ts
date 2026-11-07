@@ -1,4 +1,5 @@
 import type { Capabilities, FeatureModuleId } from '@resgrid/config';
+import type { NavBadge } from '@resgrid/data';
 import type { LucideIcon } from 'lucide-react-native';
 import { Mail } from 'lucide-react-native';
 
@@ -20,7 +21,9 @@ export interface FeatureNavEntry {
   requiresCapability?: (capabilities: Capabilities) => boolean;
   /** Feature module the variant must ship (`variant.modules`). */
   requiresModule?: FeatureModuleId;
+  /** Count badge beside the entry (the shell's `NavEntry.badge`). */
+  badge?: NavBadge;
 }
 
-/** Messages (the inbox/outbox; chat is its own feature). */
-export const messagesNav: readonly FeatureNavEntry[] = [{ id: 'messages', href: '/messages', labelKey: 'messages.title', defaultLabel: 'Messages', icon: Mail, requiresModule: 'messages' }];
+/** Messages (the inbox/outbox; chat is its own feature). The badge counts unread inbox messages. */
+export const messagesNav: readonly FeatureNavEntry[] = [{ id: 'messages', href: '/messages', labelKey: 'messages.title', defaultLabel: 'Messages', icon: Mail, requiresModule: 'messages', badge: 'messages' }];

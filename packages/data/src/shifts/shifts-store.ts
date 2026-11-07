@@ -41,6 +41,7 @@ import {
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+import { refreshBadgeCountsSoon } from '../badge-counts/badge-counts-store';
 import { unwrapItem, unwrapList } from '../core/envelope';
 import { toDataError } from '../core/errors';
 import { dataPersistOptions, registerPersistedStore } from '../core/persist';
@@ -325,6 +326,8 @@ export const useShiftsStore = create<ShiftsState>()(
           if (scopes.includes('trades')) tasks.push(state.fetchShiftTrades(), state.fetchOpenTrades());
           if (scopes.includes('approvals')) tasks.push(state.fetchPendingApprovals());
           if (scopes.includes('onduty')) tasks.push(state.fetchOnDutyPersonnel());
+          // A signup, withdrawal or trade moves today's shifts or the trade requests on the Shifts badge.
+          refreshBadgeCountsSoon();
           await Promise.all(tasks);
         },
 

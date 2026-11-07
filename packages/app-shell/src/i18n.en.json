@@ -16,6 +16,7 @@
   "shell.offline": "Offline",
   "shell.offline_changes_waiting": "Offline: {{count}} waiting",
   "shell.notifications_unread": "Notifications, {{count}} unread",
+  "shell.nav_item_with_count": "{{label}} ({{count}})",
   "shell.gate.login_title": "Sign in",
   "shell.gate.username": "Username",
   "shell.gate.password": "Password",
@@ -41,5 +42,12 @@
   "shell.update_ready_title": "Update ready",
   "shell.update_ready_message": "Tap to restart now. Otherwise the update installs the next time the app starts.",
   "shell.update_ready_wall_message": "Tap to restart now, or the display restarts by itself after {{minutes}} minutes without use.",
-  "shell.update_restart_failed": "The app could not restart. The update installs the next time the app starts."
+  "shell.update_restart_failed": "The app could not restart. The update installs the next time the app starts.",
+  "voice_session.channel_name": "Voice channel",
+  "voice_session.notification_title": "Voice channel active",
+  "voice_session.notification_body": "Push-to-talk keeps working while the app is in the background.",
+  "voice_session.phone_account_title": "Permissions required",
+  "voice_session.phone_account_description": "{{appName}} needs access to your phone accounts to keep voice channels connected in the background.",
+  "voice_session.call_channel_name": "Voice calls",
+  "voice_session.call_notification_title": "{{appName}} voice call"
 }

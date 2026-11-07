@@ -35,7 +35,10 @@
     "stream_info": "Ströminformation",
     "stream_selected": "Vald: {{streamName}}",
     "title": "Ljudströmmar",
-    "type": "Typ"
+    "type": "Typ",
+    "reconnecting": "Återansluter",
+    "reconnecting_stream": "Återansluter till {{streamName}}…",
+    "paused": "Pausad"
   },
   "bluetooth": {
     "applied": "Tillämpad",
@@ -1472,7 +1475,8 @@
     "speaking": "Talar",
     "title": "Röstkanaler",
     "unmute": "Slå på ljud",
-    "join_failed": "Could not join the voice channel. Please try again."
+    "join_failed": "Could not join the voice channel. Please try again.",
+    "reconnecting": "Återansluter…"
   },
   "loading": {
     "loading": "Laddar...",
@@ -2016,7 +2020,14 @@
     "view_chat": "Visa chatt",
     "view_reference": "Visa {{type}}",
     "mark_all_read": "Mark all as read",
-    "unread": "Unread"
+    "unread": "Unread",
+    "select": "Välj",
+    "mark_read": "Markera som läst",
+    "delete": "Radera",
+    "delete_selected_message": "Radera de {{count}} valda aviseringarna? Det går inte att ångra.",
+    "delete_all_message": "Radera alla aviseringar? Det går inte att ångra.",
+    "deleted": "Aviseringar raderade",
+    "mark_read_error": "Det gick inte att markera aviseringarna som lästa"
   },
   "onboarding": {
     "getStarted": "Kom igång",
@@ -2900,7 +2911,9 @@
       "source_embedded": "Inbyggd version",
       "title": "Appuppdateringar",
       "up_to_date": "Uppdaterad. Senast kontrollerad {{time}}."
-    }
+    },
+    "headset_button_ptt": "Prata med hörlurarnas knapp",
+    "headset_button_ptt_note": "Samtalsknappen på hörlurar eller headset startar och stoppar tal i en röstkanal, liksom Avsluta på låsskärmen. Lämna kanalen i appen. Stäng av detta så lämnar knappen kanalen."
   },
   "shared_session": {
     "bar": "Delad enhet",
@@ -3280,7 +3293,8 @@
     "notifications_unread": "Notifications, {{count}} unread",
     "changes_need_attention": "Needs attention: {{count}}",
     "offline": "Offline",
-    "offline_changes_waiting": "Offline: {{count}} waiting"
+    "offline_changes_waiting": "Offline: {{count}} waiting",
+    "nav_item_with_count": "{{label}} ({{count}})"
   },
   "access_denied": {
     "back_to_sign_in": "Back to sign in",
@@ -4422,5 +4436,18 @@
     "image_not_offline": "This map image is not saved on this device. It shows again when you are back online.",
     "nothing_to_show": "Nothing to show on this device",
     "nothing_to_show_detail": "This map has no image or map tiles this app can draw. Open it on the website instead."
+  },
+  "sidebar": {
+    "audio": "Ström",
+    "ptt": "Röst"
+  },
+  "voice_session": {
+    "channel_name": "Röstkanal",
+    "notification_title": "Röstkanal aktiv",
+    "notification_body": "Push-to-talk fungerar även när appen är i bakgrunden.",
+    "phone_account_title": "Behörigheter krävs",
+    "phone_account_description": "{{appName}} behöver åtkomst till dina telefonkonton för att hålla röstkanaler anslutna i bakgrunden.",
+    "call_channel_name": "Röstsamtal",
+    "call_notification_title": "{{appName}}-röstsamtal"
   }
 }

@@ -1,3 +1,7 @@
 {
-  "livekit.join_failed": "Could not join the voice channel. Please try again."
+  "livekit.join_failed": "Could not join the voice channel. Please try again.",
+  "livekit.reconnecting": "Reconnecting…",
+  "audio_streams.reconnecting": "Reconnecting",
+  "audio_streams.reconnecting_stream": "Reconnecting to {{streamName}}…",
+  "audio_streams.paused": "Paused"
 }

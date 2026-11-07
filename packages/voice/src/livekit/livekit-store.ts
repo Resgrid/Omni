@@ -1,7 +1,7 @@
 import { canConnectToVoiceSession, getDepartmentVoiceSettings } from '@resgrid/api';
 import { logger } from '@resgrid/core';
 import type { DepartmentVoiceChannelResultData } from '@resgrid/models';
-import type { Participant, Room } from 'livekit-client';
+import type { DisconnectReason, Participant, Room } from 'livekit-client';
 import { Platform } from 'react-native';
 import { create } from 'zustand';
 
@@ -16,6 +16,7 @@ import { getHeadsetButtonService } from '../headset/headset-button-service';
 import { type PttInputSource, registerMicrophoneController } from '../ptt/microphone-controller';
 import { getVoiceRuntime } from '../runtime';
 import { delay, errorMessage, errorName, VoiceTimeoutError, withTimeout } from '../util/async';
+import { isVoiceOnline, type NetworkEvent, reconnectDelayMs, subscribeNetworkEvents } from '../util/network';
 import { getLiveKitClient, loadLiveKitClient } from './livekit-client';
 import { ensureMicrophonePermission, type MicrophonePermissionResult } from './microphone-permission';
 import { attachRemoteAudio } from './remote-audio';
@@ -28,10 +29,24 @@ export const CONNECT_OVERALL_TIMEOUT_MS = 30_000;
 export const ROOM_CONNECT_TIMEOUT_MS = 15_000;
 export const PERMISSION_TIMEOUT_MS = 10_000;
 export const AUDIO_SESSION_TIMEOUT_MS = 10_000;
+
 /** CallKit mute actions this soon after a local change are echoes of it (Responder oscillation fix). */
 export const CALLKEEP_MUTE_DEBOUNCE_MS = 500;
+
 /** Let the disconnect chime play before CallKit tears the iOS audio session down (Responder). */
 export const IOS_DISCONNECT_SOUND_DELAY_MS = 800;
+
+/** Waits between automatic rejoins once LiveKit gave up on a dropped channel: quick at first, then easing off. */
+export const REJOIN_DELAYS_MS: readonly number[] = [1_000, 2_000, 4_000, 8_000, 15_000, 30_000];
+
+/** Rejoins before the channel is left for good (about ten minutes); attempts are not spent while the device is offline. */
+export const MAX_REJOIN_ATTEMPTS = 25;
+
+/**
+ * After the system ends the channel's call, wait this long before deciding what it was: a cellular call answered with
+ * "End & Accept", or an emergency call (Android ends self-managed calls to place one), shows up on the device by then.
+ */
+export const SYSTEM_CALL_END_SETTLE_MS = 400;
 
 export interface LiveKitState {
   isConnected: boolean;
@@ -134,11 +149,28 @@ const DISCONNECTED_STATE = { isConnected: false, isReconnecting: false, currentR
  * previous room can never overwrite the current session (room-switch race fix).
  */
 let connectGeneration = 0;
+
 /** Detaches the committed room's web <audio> elements (no-op on native). */
 let detachRemoteAudio: (() => void) | null = null;
 
+/**
+ * Automatic rejoin. While the member has a channel joined (and has not left it), a drop that LiveKit could not recover
+ * itself is rejoined with backoff — at once when the network comes back or changes. The background session stays up
+ * meanwhile: the CallKit call (iOS keeps the app running), the Android foreground service (a microphone service cannot be
+ * started again from the background), headset monitoring and the audio session.
+ */
+let rejoinChannel: VoiceChannel | null = null;
+let rejoinAttempt = 0;
+let rejoinTimer: ReturnType<typeof setTimeout> | null = null;
+let rejoinAwaitingNetwork = false;
+let unsubscribeNetwork: (() => void) | null = null;
+
+/** The Android voice foreground service is up (started once per session, kept across rejoins). */
+let foregroundServiceRunning = false;
+
 const routeTarget = () => {
   const { connectedDevice, selectedAudioDevices } = useBluetoothAudioStore.getState();
+
   return resolveAudioRouteTarget({ connectedDevice, speaker: selectedAudioDevices.speaker });
 };
 
@@ -153,8 +185,11 @@ const quietly = async (label: string, work: () => Promise<unknown> | unknown): P
 const microphoneError = (error: unknown): VoiceError => {
   const name = errorName(error) ?? '';
   const message = errorMessage(error);
+
   if (name === 'NotAllowedError' || /permission/i.test(message)) return { code: 'permission_denied', message, canAskAgain: false };
+
   if (name === 'NotFoundError' || /device not found/i.test(message)) return { code: 'microphone_unavailable', message };
+
   return { code: 'microphone_failed', message };
 };
 
@@ -176,18 +211,190 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => {
     await room.disconnect();
   };
 
-  const handleUnexpectedDisconnect = (room: Room, roomInfo: VoiceChannel): void => {
-    logger.warn({ message: 'Voice channel dropped unexpectedly; resetting call state', context: { roomName: roomInfo.Name } });
+  const clearRejoinTimer = (): void => {
+    if (rejoinTimer) clearTimeout(rejoinTimer);
+    rejoinTimer = null;
+  };
+
+  /** The member left (or the session ended): no more automatic rejoins. */
+  const stopAutoRejoin = (): void => {
+    clearRejoinTimer();
+    rejoinChannel = null;
+    rejoinAttempt = 0;
+    rejoinAwaitingNetwork = false;
+    unsubscribeNetwork?.();
+    unsubscribeNetwork = null;
+  };
+
+  /** Ends what keeps voice alive in the background, after a drop that will not be rejoined. */
+  const endBackgroundSession = (): void => {
+    stopAutoRejoin();
     const callKeep = getCallKeepService();
     callKeep.setMuteStateCallback(null);
     callKeep.setEndCallCallback(null);
     void quietly('CallKeep endCall after drop', () => callKeep.endCall());
     getHeadsetButtonService().stopMonitoring('livekit');
+
+    if (Platform.OS === 'android') {
+      foregroundServiceRunning = false;
+      void quietly('Stop foreground service after drop', () => getVoiceRuntime().foregroundService?.stop());
+    }
+
+    void quietly('Stop audio session after drop', () => stopAudioSession());
+  };
+
+  /** Drops the server meant (kicked, room closed, the same identity joined elsewhere): rejoining would fight it. */
+  const isPermanentDisconnect = (reason: DisconnectReason | undefined): boolean => {
+    if (reason === undefined) return false;
+    const { DisconnectReason: Reason } = getLiveKitClient();
+
+    return [Reason.CLIENT_INITIATED, Reason.DUPLICATE_IDENTITY, Reason.PARTICIPANT_REMOVED, Reason.ROOM_DELETED, Reason.ROOM_CLOSED, Reason.USER_REJECTED].includes(reason);
+  };
+
+  const giveUpRejoin = (roomInfo: VoiceChannel): void => {
+    logger.error({ message: 'Voice channel could not be rejoined; leaving it', context: { roomName: roomInfo.Name, attempts: rejoinAttempt } });
+    endBackgroundSession();
+    set({ ...DISCONNECTED_STATE, lastError: { code: 'disconnected', roomName: roomInfo.Name } });
+  };
+
+  const scheduleRejoin = (roomInfo: VoiceChannel, reason: string): void => {
+    if (rejoinChannel?.Id !== roomInfo.Id || rejoinTimer || rejoinAwaitingNetwork) return;
+
+    if (rejoinAttempt >= MAX_REJOIN_ATTEMPTS) {
+      giveUpRejoin(roomInfo);
+
+      return;
+    }
+
+    set({ isReconnecting: true });
+
+    if (!isVoiceOnline()) {
+      rejoinAwaitingNetwork = true;
+      logger.info({ message: 'Voice channel dropped while offline; rejoining when the network is back', context: { roomName: roomInfo.Name } });
+
+      return;
+    }
+
+    const wait = reconnectDelayMs(rejoinAttempt, REJOIN_DELAYS_MS);
+    rejoinAttempt++;
+    logger.warn({ message: 'Rejoining voice channel', context: { roomName: roomInfo.Name, attempt: rejoinAttempt, delay: wait, reason } });
+    rejoinTimer = setTimeout(() => void rejoinNow(), wait);
+  };
+
+  const rejoinNow = async (): Promise<void> => {
+    clearRejoinTimer();
+    rejoinAwaitingNetwork = false;
+    const target = rejoinChannel;
+
+    if (!target || get().currentRoom || get().isConnecting) return;
+    // Channel tokens expire: fetch fresh ones (offline or failing, the last token is tried anyway).
+    await quietly('Refresh voice settings before rejoining', () => get().fetchVoiceSettings({ forceRefresh: true }));
+
+    if (rejoinChannel?.Id !== target.Id) return;
+    const fresh = get().availableRooms.find((room) => room.Id === target.Id) ?? target;
+    const result = await connect(fresh, fresh.Token, true);
+
+    if (result.ok) {
+      logger.info({ message: 'Voice channel rejoined', context: { roomName: fresh.Name, attempts: rejoinAttempt } });
+      rejoinAttempt = 0;
+
+      return;
+    }
+
+    if (result.error.code !== 'cancelled') scheduleRejoin(target, result.error.code);
+  };
+
+  const handleNetworkEvent = (event: NetworkEvent): void => {
+    // Connected: LiveKit's own resume / reconnect handles a handover. Waiting to rejoin: go now.
+    if (!rejoinChannel || get().currentRoom || !(rejoinTimer || rejoinAwaitingNetwork)) return;
+    logger.info({ message: 'Network is back; rejoining voice channel now', context: { roomName: rejoinChannel.Name, event } });
+    void rejoinNow();
+  };
+
+  /**
+   * The system ended the channel's call while the member is still in the channel. During a call, iOS (CallKit) and
+   * Android (Telecom) turn the call button of wired and Bluetooth earbuds — and an AirPods double press — into "hang up",
+   * so with headset PTT on that is a press to talk: the channel stays, the call is started again (it is what lets the
+   * microphone work in the background) and transmitting toggles. AirPods Pro / 3 / 4 / Max send "mute" instead, handled
+   * by the mute callback. The channel is left as before when another phone call took over (cellular or emergency: talk
+   * must never open over it), when headset PTT is off, or when the call cannot be started again.
+   */
+  const handleSystemEndCall = async (endedCallUUID: string): Promise<void> => {
+    const channel = rejoinChannel;
+
+    if (!channel) return;
+    const capabilities = getVoiceCapabilities();
+    const settings = useBluetoothAudioStore.getState().mediaButtonPTTSettings;
+
+    if (!capabilities.headsetButtonPtt || !settings.enabled) {
+      await get().disconnectFromRoom();
+
+      return;
+    }
+
+    const callKeep = getCallKeepService();
+    const room = get().currentRoom;
+    const wasTransmitting = room?.localParticipant.isMicrophoneEnabled ?? false;
+
+    // Stopping never waits: the microphone closes at once.
+    if (room && wasTransmitting) await get().setMicrophoneEnabled(false, 'headset');
+    await delay(SYSTEM_CALL_END_SETTLE_MS);
+
+    if (rejoinChannel?.Id !== channel.Id) return;
+
+    if (await callKeep.isAnotherCallActive(endedCallUUID)) {
+      logger.info({ message: 'Another phone call ended the voice channel call; leaving the channel', context: { roomName: channel.Name } });
+      await get().disconnectFromRoom();
+
+      return;
+    }
+
+    try {
+      await callKeep.startCall(channel.Name || 'Voice Channel');
+    } catch (error) {
+      logger.warn({ message: 'Voice channel call could not be started again; leaving the channel', context: { roomName: channel.Name, error } });
+      await get().disconnectFromRoom();
+
+      return;
+    }
+
+    if (rejoinChannel?.Id !== channel.Id) {
+      await quietly('CallKeep endCall after leaving', () => callKeep.endCall());
+
+      return;
+    }
+
+    const current = get().currentRoom;
+
+    // Rejoining (no room yet) or a press that stopped talking: the call is back, muted.
+    if (!current || wasTransmitting) {
+      await quietly('CallKeep setMuted after a headset press', () => callKeep.setMuted(true));
+
+      return;
+    }
+
+    logger.info({ message: 'Headset call button: talking', context: { roomName: channel.Name } });
+    await get().setMicrophoneEnabled(true, 'headset');
+  };
+
+  const handleUnexpectedDisconnect = (room: Room, roomInfo: VoiceChannel, reason: DisconnectReason | undefined): void => {
     detachRemoteAudio?.();
     detachRemoteAudio = null;
     room.removeAllListeners();
-    if (Platform.OS === 'android') void quietly('Stop foreground service after drop', () => getVoiceRuntime().foregroundService?.stop());
-    void quietly('Stop audio session after drop', () => stopAudioSession());
+
+    if (rejoinChannel?.Id === roomInfo.Id && !isPermanentDisconnect(reason)) {
+      logger.warn({ message: 'Voice channel dropped; rejoining it', context: { roomName: roomInfo.Name, reason } });
+      const callKeep = getCallKeepService();
+      callKeep.setMuteStateCallback(null);
+      callKeep.setEndCallCallback((callUUID) => void handleSystemEndCall(callUUID));
+      set({ ...DISCONNECTED_STATE, isReconnecting: true, currentRoomInfo: roomInfo });
+      scheduleRejoin(roomInfo, 'dropped');
+
+      return;
+    }
+
+    logger.warn({ message: 'Voice channel dropped unexpectedly; resetting call state', context: { roomName: roomInfo.Name, reason } });
+    endBackgroundSession();
     set({ ...DISCONNECTED_STATE, lastError: { code: 'disconnected', roomName: roomInfo.Name } });
   };
 
@@ -209,15 +416,15 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => {
       void applyAudioRouting(routeTarget());
       getBluetoothAudioService()?.ensurePttInputMonitoring('livekit reconnected');
     });
-    room.on(RoomEvent.Disconnected, () => {
+    room.on(RoomEvent.Disconnected, (reason?: DisconnectReason) => {
       // Fired for drops and for intentional disconnects; intentional paths clear currentRoom first.
       if (!currentRoomIs(room) || !get().isConnected) return;
-      handleUnexpectedDisconnect(room, roomInfo);
+      handleUnexpectedDisconnect(room, roomInfo, reason);
     });
   };
 
   /** Everything after the room is live. Each step is guarded: a failure must not report a connected room as failed. */
-  const afterConnect = async (room: Room, roomInfo: VoiceChannel): Promise<void> => {
+  const afterConnect = async (room: Room, roomInfo: VoiceChannel, rejoin: boolean): Promise<void> => {
     const capabilities = getVoiceCapabilities();
     const callKeep = getCallKeepService();
     const runtime = getVoiceRuntime();
@@ -231,27 +438,37 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => {
       // CallKit → app. Echoes of our own changes (within the debounce) and duplicates are dropped.
       callKeep.setMuteStateCallback((muted) => {
         const state = get();
+
         if (!currentRoomIs(room) || !state.isConnected) return;
+
         if (Date.now() - state.lastLocalMuteChangeTimestamp < CALLKEEP_MUTE_DEBOUNCE_MS) return;
         const shouldBeEnabled = !muted;
+
         if (room.localParticipant.isMicrophoneEnabled !== shouldBeEnabled) void state.setMicrophoneEnabled(shouldBeEnabled, 'callkeep');
       });
-      callKeep.setEndCallCallback(() => {
-        if (currentRoomIs(room)) void get().disconnectFromRoom();
+      callKeep.setEndCallCallback((callUUID) => {
+        if (currentRoomIs(room)) void handleSystemEndCall(callUUID);
       });
     }
 
     await quietly('Audio routing', () => applyAudioRouting(routeTarget()));
     await quietly('Connect sound', () => voiceSounds.play('connectedToAudioRoom'));
 
-    if (Platform.OS === 'android' && runtime.foregroundService && currentRoomIs(room)) {
-      await quietly('Start voice foreground service', () => runtime.foregroundService?.start());
+    if (Platform.OS === 'android' && runtime.foregroundService && currentRoomIs(room) && !foregroundServiceRunning) {
+      await quietly('Start voice foreground service', async () => {
+        await runtime.foregroundService?.start();
+        foregroundServiceRunning = true;
+      });
     }
 
-    if (callKeep.isEnabled && currentRoomIs(room)) {
+    if (callKeep.isEnabled && currentRoomIs(room) && rejoin && callKeep.isCallActiveNow()) {
+      // Rejoined under the call kept up through the drop: just sync its mute state.
+      await quietly('CallKeep setMuted after rejoin', () => callKeep.setMuted(!room.localParticipant.isMicrophoneEnabled));
+    } else if (callKeep.isEnabled && currentRoomIs(room)) {
       await quietly('Start CallKeep call', async () => {
         if (Platform.OS === 'android' && !(await callKeep.requestPhonePermissions())) return;
         await callKeep.startCall(roomInfo.Name || 'Voice Channel');
+
         // The user may have left while CallKit was registering the call: never leave a dangling system call.
         if (!currentRoomIs(room)) await callKeep.endCall();
         else await callKeep.setMuted(!room.localParticipant.isMicrophoneEnabled);
@@ -262,43 +479,55 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => {
     getBluetoothAudioService()?.ensurePttInputMonitoring('livekit connected');
   };
 
-  const runConnect = async (roomInfo: VoiceChannel, token: string, generation: number): Promise<VoiceResult> => {
+  /** `rejoin`: an automatic rejoin under the kept background session (its audio session stays up; failures stay quiet). */
+  const runConnect = async (roomInfo: VoiceChannel, token: string, generation: number, rejoin: boolean): Promise<VoiceResult> => {
     const stale = (): boolean => generation !== connectGeneration;
     const cancelled = (): VoiceResult => voiceFail({ code: 'cancelled', roomName: roomInfo.Name });
+
     const failed = (error: VoiceError): VoiceResult => {
-      if (!stale()) set({ isConnecting: false, lastError: error });
+      if (!stale()) set(rejoin ? { isConnecting: false } : { isConnecting: false, lastError: error });
+
       return voiceFail(error);
     };
 
     let room: Room | null = null;
     let detachAudio: (() => void) | null = null;
     let audioSessionStarted = false;
+
     const discardRoom = async (): Promise<void> => {
       detachAudio?.();
+
       if (room) {
         room.removeAllListeners();
         await room.disconnect().catch(() => undefined);
       }
+
       if (audioSessionStarted) await stopAudioSession().catch(() => undefined);
     };
 
     try {
       const { voipServerWebsocketSslAddress: serverUrl } = get();
+
       if (!serverUrl) return failed({ code: 'no_server', roomName: roomInfo.Name });
+
       if (!token) return failed({ code: 'no_token', roomName: roomInfo.Name });
 
       const permission = await withTimeout(ensureMicrophonePermission(), PERMISSION_TIMEOUT_MS, 'microphone permission');
+
       if (stale()) return cancelled();
+
       if (!permission.granted) return failed({ code: 'permission_denied', canAskAgain: permission.canAskAgain, roomName: roomInfo.Name });
 
       getBluetoothAudioService()?.ensurePttInputMonitoring('livekit connect start');
 
       // Switching channels: leave the current room (CallKeep/FGS stay up for the new one).
       const previous = get().currentRoom;
+
       if (previous) await leaveRoom(previous);
+
       if (stale()) return cancelled();
 
-      if (Platform.OS !== 'web') {
+      if (Platform.OS !== 'web' && !rejoin) {
         try {
           await withTimeout(startAudioSession(), AUDIO_SESSION_TIMEOUT_MS, 'AudioSession.startAudioSession');
           audioSessionStarted = true;
@@ -309,18 +538,23 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => {
 
       // livekit-client loads with the first connection (a separate chunk on web).
       const livekit = await loadLiveKitClient();
+
       if (stale()) {
         await discardRoom();
+
         return cancelled();
       }
+
       room = new livekit.Room();
       bindRoomEvents(room, roomInfo);
       detachAudio = attachRemoteAudio(room);
 
       await withTimeout(room.connect(serverUrl, token), ROOM_CONNECT_TIMEOUT_MS, 'room.connect');
+
       if (stale()) {
         // A disconnect or newer attempt won while this connect was in flight.
         await discardRoom();
+
         return cancelled();
       }
 
@@ -337,16 +571,45 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => {
         lastLocalMuteChangeTimestamp: Date.now(),
         lastError: null,
       });
-      logger.info({ message: 'Voice channel connected', context: { roomName: roomInfo.Name } });
+      logger.info({ message: 'Voice channel connected', context: { roomName: roomInfo.Name, rejoin } });
+      rejoinChannel = roomInfo;
+      unsubscribeNetwork ??= subscribeNetworkEvents(handleNetworkEvent);
 
-      await afterConnect(room, roomInfo);
+      await afterConnect(room, roomInfo, rejoin);
+
       return voiceOk;
     } catch (error) {
       logger.error({ message: 'Failed to connect to voice channel', context: { roomName: roomInfo.Name, error } });
+
       // No room yet (livekit-client failed to load): discardRoom still stops the audio session this attempt started.
       if (!room || get().currentRoom !== room) await discardRoom();
+
       if (stale()) return cancelled();
+
       return failed({ code: error instanceof VoiceTimeoutError ? 'timeout' : 'connect_failed', message: errorMessage(error), roomName: roomInfo.Name });
+    }
+  };
+
+  const connect = async (roomInfo: VoiceChannel, token: string, rejoin: boolean): Promise<VoiceResult> => {
+    const generation = ++connectGeneration;
+    set(rejoin ? { isConnecting: true, selectedRoomId: roomInfo.Id } : { isConnecting: true, lastError: null, selectedRoomId: roomInfo.Id });
+
+    try {
+      return await withTimeout(runConnect(roomInfo, token, generation, rejoin), CONNECT_OVERALL_TIMEOUT_MS, 'connectToRoom');
+    } catch (error) {
+      // Overall timeout: invalidate the attempt so it discards its room whenever it resumes.
+      logger.error({ message: 'Voice connect timed out', context: { roomName: roomInfo.Name, rejoin, error } });
+
+      if (generation === connectGeneration) {
+        connectGeneration++;
+        set({ isConnecting: false });
+      }
+
+      const timeout: VoiceError = { code: 'timeout', roomName: roomInfo.Name };
+
+      if (!rejoin) set({ lastError: timeout });
+
+      return voiceFail(timeout);
     }
   };
 
@@ -355,8 +618,10 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => {
 
     fetchVoiceSettings: async (options = {}) => {
       const ctx = getVoiceRuntime().getApiContext();
+
       if (!ctx) return voiceFail({ code: 'not_configured' });
       set({ isLoadingSettings: true });
+
       try {
         const response = await getDepartmentVoiceSettings(ctx, { forceRefresh: options.forceRefresh });
         const data = response?.Data;
@@ -375,26 +640,32 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => {
           settingsLoaded: true,
           settingsError: null,
         });
+
         return voiceOk;
       } catch (error) {
         logger.error({ message: 'Failed to fetch voice settings', context: { error } });
         const settingsError: VoiceError = { code: 'settings_failed', message: errorMessage(error) };
         set({ isLoadingSettings: false, settingsError });
+
         return voiceFail(settingsError);
       }
     },
 
     fetchCanConnectToVoice: async () => {
       const ctx = getVoiceRuntime().getApiContext();
+
       if (!ctx) return false;
+
       try {
         const response = await canConnectToVoiceSession(ctx, { token: get().canConnectApiToken });
         const canConnect = Boolean(response?.Data?.CanConnect);
         set({ canConnectToVoiceSession: canConnect });
+
         return canConnect;
       } catch (error) {
         logger.error({ message: 'Failed to check voice session capacity', context: { error } });
         set({ canConnectToVoiceSession: false });
+
         return false;
       }
     },
@@ -406,53 +677,66 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => {
 
     connectToRoom: async (roomInfo, token) => {
       const state = get();
+
       if (!getVoiceCapabilities().ptt) return voiceFail({ code: 'voice_disabled', roomName: roomInfo.Name });
+
       if (state.isConnecting) return voiceFail({ code: 'busy', roomName: roomInfo.Name });
+
       if (state.isConnected && state.currentRoomInfo?.Id === roomInfo.Id) return voiceOk;
 
-      const generation = ++connectGeneration;
-      set({ isConnecting: true, lastError: null, selectedRoomId: roomInfo.Id });
-      try {
-        return await withTimeout(runConnect(roomInfo, token ?? roomInfo.Token, generation), CONNECT_OVERALL_TIMEOUT_MS, 'connectToRoom');
-      } catch (error) {
-        // Overall timeout: invalidate the attempt so it discards its room whenever it resumes.
-        logger.error({ message: 'Voice connect timed out', context: { roomName: roomInfo.Name, error } });
-        if (generation === connectGeneration) {
-          connectGeneration++;
-          set({ isConnecting: false });
-        }
-        const timeout: VoiceError = { code: 'timeout', roomName: roomInfo.Name };
-        set({ lastError: timeout });
-        return voiceFail(timeout);
-      }
+      // The member chose a channel themselves: a pending automatic rejoin gives way (its session is reused).
+      clearRejoinTimer();
+      rejoinAwaitingNetwork = false;
+      rejoinAttempt = 0;
+
+      if (!state.currentRoom) set({ isReconnecting: false });
+
+      return connect(roomInfo, token ?? roomInfo.Token, false);
     },
 
     reconnect: async () => {
       const last = get().lastRoomInfo;
+
       if (!last) return voiceFail({ code: 'no_channel' });
       await get().fetchVoiceSettings({ forceRefresh: true });
       const fresh = get().availableRooms.find((room) => room.Id === last.Id) ?? last;
+
       return get().connectToRoom(fresh);
     },
 
     disconnectFromRoom: async () => {
       connectGeneration++;
+      // Waiting to rejoin a dropped channel: there is no room, but the background session is still up.
+      const wasRejoining = rejoinChannel !== null;
+      stopAutoRejoin();
       const { currentRoom } = get();
-      if (!currentRoom) {
-        if (get().isConnecting) set({ isConnecting: false });
+
+      if (!currentRoom && !wasRejoining) {
+        if (get().isConnecting || get().isReconnecting) set({ isConnecting: false, isReconnecting: false });
+
         return;
       }
+
       const callKeep = getCallKeepService();
+
       try {
         getHeadsetButtonService().stopMonitoring('livekit');
-        await quietly('Room disconnect', () => leaveRoom(currentRoom));
+
+        if (currentRoom) await quietly('Room disconnect', () => leaveRoom(currentRoom));
         await quietly('Disconnect sound', () => voiceSounds.play('disconnectedFromAudioRoom'));
+
         if (Platform.OS === 'ios' && callKeep.isEnabled) await delay(IOS_DISCONNECT_SOUND_DELAY_MS);
+
         if (Platform.OS !== 'web') await quietly('Stop audio session', () => stopAudioSession());
         await quietly('CallKeep endCall', () => callKeep.endCall());
         callKeep.setMuteStateCallback(null);
         callKeep.setEndCallCallback(null);
-        if (Platform.OS === 'android') await quietly('Stop voice foreground service', () => getVoiceRuntime().foregroundService?.stop());
+
+        if (Platform.OS === 'android') {
+          foregroundServiceRunning = false;
+          await quietly('Stop voice foreground service', () => getVoiceRuntime().foregroundService?.stop());
+        }
+
         if (Platform.OS !== 'web') await releaseRecordingSession();
       } finally {
         set({ ...DISCONNECTED_STATE, isConnecting: false });
@@ -461,22 +745,31 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => {
 
     setMicrophoneEnabled: async (enabled, source = 'ui') => {
       const room = get().currentRoom;
+
       if (!room) {
         logger.debug({ message: 'Microphone change ignored: no voice channel', context: { enabled, source } });
+
         return;
       }
+
       if (room.state !== getLiveKitClient().ConnectionState.Connected) {
         logger.debug({ message: 'Microphone change ignored: room not connected', context: { enabled, state: room.state } });
+
         return;
       }
+
       if (room.localParticipant.isMicrophoneEnabled === enabled) {
         if (get().isMicrophoneEnabled !== enabled) set({ isMicrophoneEnabled: enabled });
+
         return;
       }
+
       try {
         await room.localParticipant.setMicrophoneEnabled(enabled);
+
         if (!currentRoomIs(room)) return;
         set({ isMicrophoneEnabled: enabled, lastLocalMuteChangeTimestamp: Date.now() });
+
         // App → CallKit (not for changes CallKit itself asked for).
         if (source !== 'callkeep') void quietly('CallKeep setMuted', () => getCallKeepService().setMuted(!enabled));
         await quietly('Transmit sound', () => voiceSounds.play(enabled ? 'startTransmitting' : 'stopTransmitting'));
@@ -488,6 +781,7 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => {
 
     toggleMicrophone: async (source = 'ui') => {
       const room = get().currentRoom;
+
       if (!room) return;
       await get().setMicrophoneEnabled(!room.localParticipant.isMicrophoneEnabled, source);
     },
@@ -502,9 +796,22 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => {
   };
 });
 
+/** Test helper: forgets the automatic-rejoin and foreground-service bookkeeping between tests. Not for app code. */
+export function resetLiveKitSessionForTests(): void {
+  if (rejoinTimer) clearTimeout(rejoinTimer);
+  rejoinTimer = null;
+  rejoinChannel = null;
+  rejoinAttempt = 0;
+  rejoinAwaitingNetwork = false;
+  unsubscribeNetwork?.();
+  unsubscribeNetwork = null;
+  foregroundServiceRunning = false;
+}
+
 registerMicrophoneController({
   isActive: () => {
     const state = useLiveKitStore.getState();
+
     return state.isConnected && state.currentRoom !== null;
   },
   isConnecting: () => useLiveKitStore.getState().isConnecting,
@@ -516,6 +823,7 @@ registerMicrophoneController({
 // Re-route call audio when the Bluetooth device or the speaker selection changes mid-call (Responder).
 useBluetoothAudioStore.subscribe((state, previous) => {
   if (state.selectedAudioDevices === previous.selectedAudioDevices && state.connectedDevice === previous.connectedDevice) return;
+
   if (useLiveKitStore.getState().isConnected) void applyAudioRouting(routeTarget());
 });
 

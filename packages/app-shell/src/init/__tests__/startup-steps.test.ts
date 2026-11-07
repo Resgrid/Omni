@@ -1,5 +1,5 @@
 import { getBaseApiUrl, switchServer, useAuthStore } from '@resgrid/auth';
-import { initI18n } from '@resgrid/i18n';
+import { initI18n, loadLanguage } from '@resgrid/i18n';
 import { configureLocation } from '@resgrid/location';
 import { configureNotifications, type NotificationsDependencies, pushNotificationService } from '@resgrid/notifications';
 import { defaultResetRegistry, secureKeyName } from '@resgrid/offline';
@@ -14,7 +14,7 @@ import { setRouteContract } from '../../routes/href';
 import { getShellRuntime, resetShellRuntimeForTests } from '../../runtime/runtime-holder';
 import { getShellState, resetShellStateForTests } from '../../runtime/shell-state';
 import { createAppInit } from '../create-app-init';
-import { createStartupSteps, resetDefaultStepsForTests } from '../default-steps';
+import { createStartupSteps, LANGUAGE_LOAD_BUDGET_MS, resetDefaultStepsForTests } from '../default-steps';
 
 const LEGACY_KEY = '9f066882-5c07-47a4-9bf3-783074b590d5';
 const DEVICE_KEY = 'DEVICEKEY0123456';
@@ -46,19 +46,49 @@ describe('startup steps', () => {
     getShellRuntime().offline?.dispose();
   });
 
-  it('runs Sentry → analytics → i18n → storage → preferences → auth → platform packages, in order', async () => {
+  it('runs Sentry → analytics → i18n → storage → preferences → auth → platform packages → push, in order', async () => {
     const { init } = startup();
     const status = await init.run();
 
     expect(status.state).toBe('ready');
-    expect(status.completedSteps).toEqual(['startup.sentry', 'startup.analytics', 'startup.i18n', 'startup.offline', 'startup.preferences', 'startup.auth', 'startup.packages']);
+    expect(status.completedSteps).toEqual(['startup.sentry', 'startup.analytics', 'startup.i18n', 'startup.offline', 'startup.preferences', 'startup.auth', 'startup.packages', 'startup.push']);
     expect(initI18n).toHaveBeenCalledWith({ variantResources: undefined });
     expect(getShellRuntime().offline).not.toBeNull();
     expect(getShellRuntime().auth).not.toBeNull();
     expect(configureRealtime).toHaveBeenCalledTimes(1);
     expect(configureLocation).toHaveBeenCalledTimes(1);
     expect(configureVoice).toHaveBeenCalledTimes(1);
+    // Voice keeps channels and streams alive in the background: the Android service, and connectivity for reconnects.
+    expect(configureVoice).toHaveBeenCalledWith(expect.objectContaining({ foregroundService: expect.any(Object), connectivity: getShellRuntime().offline?.connectivity, restrictCallKit: false }));
     expect(pushNotificationService.initialize).toHaveBeenCalledTimes(1);
+  });
+
+  // A push setup that fails (permissions, notifee, a browser without push) used to fail the required packages step and
+  // hold the app on its loading screen through every retry.
+  it('starts without push when its setup fails', async () => {
+    jest.mocked(pushNotificationService.initialize).mockRejectedValueOnce(new Error('notifee unavailable'));
+    const { init } = startup();
+    const status = await init.run();
+
+    expect(status.state).toBe('ready');
+    expect(getShellRuntime().auth).not.toBeNull();
+  });
+
+  // Only English is bundled: a language chunk that never arrives (a stalled web request) shows English after a moment
+  // instead of holding startup for the step timeout.
+  it('waits for the language strings only for a moment', async () => {
+    jest.mocked(loadLanguage).mockImplementationOnce(() => new Promise<boolean>(() => undefined));
+    jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'] });
+
+    try {
+      const { init } = startup();
+      const running = init.run();
+
+      await jest.advanceTimersByTimeAsync(LANGUAGE_LOAD_BUDGET_MS);
+      expect((await running).state).toBe('ready');
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('opens the frozen MMKV instance with its device key from SecureStore and reads device preferences', async () => {

@@ -1,11 +1,12 @@
 import { useCapability } from '@resgrid/config';
 import { useMapLock } from '@resgrid/features/map';
+import { openAudioStreamSheet, openVoiceChannelSheet } from '@resgrid/features/voice/lib/open-voice-sheets';
 import { useTranslation } from '@resgrid/i18n';
 import type { UnitInfoResultData, UnitResultData } from '@resgrid/models';
 import { HStack, Pressable, Text, TypeIcon, View } from '@resgrid/ui';
 import { useAudioStreamStore, useLiveKitStore } from '@resgrid/voice';
 import { Lock, type LucideIcon, Mic, Phone, Radio, Truck, Unlock } from 'lucide-react-native';
-import React, { useCallback } from 'react';
+import React from 'react';
 import { StyleSheet } from 'react-native';
 
 export interface UnitSummaryCardProps {
@@ -75,14 +76,6 @@ export const UnitSummaryCard: React.FC<UnitSummaryCardProps> = ({ unit, unitInfo
   const type = unit?.Type || unitInfo?.Type || '';
   const group = unit?.GroupName || unitInfo?.GroupName || (unit || unitInfo ? '' : t('common.no_unit_selected'));
 
-  const openVoice = useCallback(async () => {
-    // Ask for the microphone before the sheet (its own window) opens: Android hides system dialogs behind modals.
-    await useLiveKitStore.getState().ensureMicrophonePermission();
-    useLiveKitStore.getState().setIsBottomSheetVisible(true);
-  }, []);
-
-  const openAudioStreams = useCallback(() => useAudioStreamStore.getState().setIsBottomSheetVisible(true), []);
-
   return (
     <View className="rounded-xl border border-outline-100 bg-background-50 p-3" style={fill ? styles.fill : undefined} testID={testID}>
       {type ? <Text className="text-sm text-typography-500">{type}</Text> : null}
@@ -126,11 +119,11 @@ export const UnitSummaryCard: React.FC<UnitSummaryCardProps> = ({ unit, unitInfo
           </View>
         ) : null}
         <View style={styles.buttonSlot}>
-          <RoundButton icon={Radio} active={isStreamPlaying} size={buttonSize} iconSize={iconSize} label={t('audio_streams.title')} onPress={openAudioStreams} testID={`${testID}-audio-streams`} />
+          <RoundButton icon={Radio} active={isStreamPlaying} size={buttonSize} iconSize={iconSize} label={t('audio_streams.title')} onPress={openAudioStreamSheet} testID={`${testID}-audio-streams`} />
         </View>
         {voice.ptt ? (
           <View style={styles.buttonSlot}>
-            <RoundButton icon={Phone} active={isConnected} size={buttonSize} iconSize={iconSize} label={t('livekit.title')} onPress={() => void openVoice()} testID={`${testID}-voice`} />
+            <RoundButton icon={Phone} active={isConnected} size={buttonSize} iconSize={iconSize} label={t('livekit.title')} onPress={() => void openVoiceChannelSheet()} testID={`${testID}-voice`} />
           </View>
         ) : null}
       </View>

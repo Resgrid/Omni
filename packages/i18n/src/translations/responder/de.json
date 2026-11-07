@@ -714,10 +714,6 @@
     "you": "Sie",
     "you_are_signed_up": "Sie sind für diese Schicht angemeldet"
   },
-  "sidebar": {
-    "audio": "Stream",
-    "ptt": "Sprache"
-  },
   "tabs": {
     "units": "Einheiten",
     "weatherAlerts": "Wetterwarnungen"

@@ -28,12 +28,14 @@ export const createTestMicrophoneController = (): TestMicrophoneController => {
       controller.enabled = !controller.enabled;
     }),
   };
+
   return controller;
 };
 
 export interface TestStorage extends VoicePreferenceStorage {
   values: Map<string, unknown>;
   setJSON: jest.Mock<boolean, [string, unknown]>;
+  set: jest.Mock<boolean, [string, string | number | boolean]>;
   delete: jest.Mock<void, [string]>;
 }
 
@@ -41,11 +43,23 @@ export interface TestStorage extends VoicePreferenceStorage {
 export const createTestStorage = (): TestStorage => {
   const values = new Map<string, unknown>();
   const getJSON = <T>(key: string): T | null => (values.has(key) ? (values.get(key) as T) : null);
+
   return {
     values,
     getJSON: getJSON as VoicePreferenceStorage['getJSON'],
     setJSON: jest.fn((key: string, value: unknown) => {
       values.set(key, value);
+
+      return true;
+    }),
+    getBoolean: (key: string) => {
+      const value = values.get(key);
+
+      return value === true || value === false ? value : undefined;
+    },
+    set: jest.fn((key: string, value: string | number | boolean) => {
+      values.set(key, value);
+
       return true;
     }),
     delete: jest.fn((key: string) => {

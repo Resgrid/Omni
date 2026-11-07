@@ -6,15 +6,17 @@ let instance: CallKeepService | null = null;
 
 /**
  * The CallKeep service for this app: the native implementation only when the variant declares
- * `capabilities.voice.callKeep` (R/U/I) on iOS/Android; otherwise a no-op, so Dispatch/BigBoard never load
- * react-native-callkeep (it is not linked in those builds).
+ * `capabilities.voice.callKeep` (R/U/I/D) on iOS/Android, and not on iOS in China; otherwise a no-op, so BigBoard
+ * never loads react-native-callkeep (it is not linked there).
  */
 export function getCallKeepService(): CallKeepService {
   if (instance) return instance;
+
   if (!getVoiceCapabilities().callKeep) return noopCallKeepService;
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { createNativeCallKeepService } = require('./callkeep-native') as { createNativeCallKeepService: () => CallKeepService };
   instance = createNativeCallKeepService();
+
   return instance;
 }
 
