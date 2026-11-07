@@ -65,7 +65,7 @@ export default function CommandLogScreen({ callId: callIdProp }: CommandLogScree
               </View>
             )}
             refreshControl={<RefreshControl refreshing={isLoading} onRefresh={load} />}
-            ListEmptyComponent={<ZeroState icon={ScrollText} heading={t('incident_command.no_log')} testID="command-log-empty" />}
+            ListEmptyComponent={<ZeroState icon={ScrollText} heading={t('incident_command.no_log')} onRetry={load} testID="command-log-empty" />}
             testID="command-log-list"
           />
         </>

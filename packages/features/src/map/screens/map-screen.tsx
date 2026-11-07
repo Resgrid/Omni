@@ -41,6 +41,7 @@ import { type MapPinAction, MapPinPanel } from '../components/map-pin-details';
 import { useActiveRouteOverlay } from '../hooks/use-active-route-overlay';
 import { useDepartmentLayers } from '../hooks/use-department-layers';
 import { useLiveMapPins } from '../hooks/use-live-map-pins';
+import { useMapLockStore } from '../hooks/use-map-lock';
 import { useMapViewStore } from '../hooks/use-map-view-store';
 import { TRAFFIC_SURFACES, useTrafficPreference } from '../hooks/use-traffic-preference';
 import { departmentTarget, OWN_LOCATION_ZOOM, pinTarget, resolveHomeTarget } from '../lib/map-camera';
@@ -91,7 +92,8 @@ const isPositiveInt = (value: string): boolean => /^[1-9]\d*$/.test(value);
  *
  * Specialised by capability and form factor, never by app: field devices (`location.transmission`) open on their own
  * position and can make a call the current call; a unit device (`status.subject === 'unit'`) follows the vehicle with
- * the speed-adaptive camera and haloes its unit and the crew's call — with the routes module, also its running route
+ * the speed-adaptive camera (always, with gestures off, while the crew has locked the map to the unit from the sidebar)
+ * and haloes its unit and the crew's call — with the routes module, also its running route
  * (line, remaining numbered stops, check-in radius); wide layouts dock the pin details beside the map.
  * `/map?callId=` (`unitId`, `userId`, `poiId`) frames one pin.
  */
@@ -114,6 +116,8 @@ export default function MapScreen({ links = NO_LINKS, realtime = true }: MapScre
 
   const isUnitDevice = statusCapability.subject === 'unit';
   const isFieldDevice = locationCapability.transmission !== 'none';
+  // Unit's "Lock map to unit" (sidebar): the map follows the unit and ignores gestures until the crew unlocks it.
+  const isMapLocked = useMapLockStore((state) => state.isMapLocked) && isUnitDevice;
   const docked = formFactor.isDesktop || formFactor.isLandscapeBoard;
 
   const callsTerm = useTerm('module.calls', t('maps.legend.calls'));
@@ -173,12 +177,21 @@ export default function MapScreen({ links = NO_LINKS, realtime = true }: MapScre
   const hasUserMovedRef = useRef(false);
   const followZoomAppliedRef = useRef(false);
 
-  // Unit: the speed-adaptive follow-the-unit camera (navigation tilt), until the crew pans the map; quiet while blurred.
+  // Unit: the speed-adaptive follow-the-unit camera (navigation tilt), until the crew pans the map (or always, while the
+  // map is locked to the unit); quiet while blurred.
   useFollowCamera(
     cameraRef,
     isUnitDevice && ownLocation ? { latitude: ownLocation.latitude, longitude: ownLocation.longitude, heading: ownLocation.heading, speed: ownLocation.speed } : null,
-    isUnitDevice && isFollowing && isFocused
+    isUnitDevice && (isFollowing || isMapLocked) && isFocused
   );
+
+  // Locking goes back to following the unit, so unlocking later leaves the map where the lock kept it.
+  useEffect(() => {
+    if (!isMapLocked) return;
+    hasUserMovedRef.current = false;
+    setHasUserMoved(false);
+    setIsFollowing(true);
+  }, [isMapLocked]);
 
   // Other field devices keep their own position centred (zoomed in once) until the member moves the map.
   const ownLatitude = ownPosition?.latitude ?? null;
@@ -236,7 +249,7 @@ export default function MapScreen({ links = NO_LINKS, realtime = true }: MapScre
     cameraRef.current?.setCamera({ ...target, animationDuration: 800 });
   }, []);
 
-  const showRecenter = hasUserMoved || (home.reason === 'own-location' && !isFollowing);
+  const showRecenter = !isMapLocked && (hasUserMoved || (home.reason === 'own-location' && !isFollowing));
 
   // ---- pin details ------------------------------------------------------------------------------------------------
 
@@ -390,9 +403,9 @@ export default function MapScreen({ links = NO_LINKS, realtime = true }: MapScre
 
   // The focused pin (recenter tracks it again), else on field devices the current call (recenter flies there once).
   const banner = focus
-    ? { title: focusPin ? focusPin.Title : t('map.focus_not_found'), detail: focusPin ? kindLabelOf(focusPin) : null, onRecenter: focusPin ? recenter : undefined }
+    ? { title: focusPin ? focusPin.Title : t('map.focus_not_found'), detail: focusPin ? kindLabelOf(focusPin) : null, onRecenter: focusPin && !isMapLocked ? recenter : undefined }
     : isFieldDevice && activeCallPin
-      ? { title: activeCallPin.Title, detail: t('map.current_call'), onRecenter: () => flyToPin(activeCallPin) }
+      ? { title: activeCallPin.Title, detail: t('map.current_call'), onRecenter: isMapLocked ? undefined : () => flyToPin(activeCallPin) }
       : null;
 
   // Controls move to the left while the docked details cover the right edge.
@@ -401,7 +414,17 @@ export default function MapScreen({ links = NO_LINKS, realtime = true }: MapScre
 
   return (
     <View style={styles.container} testID="map-screen">
-      <MapView style={styles.map} compassEnabled onCameraChanged={handleCameraChanged} testID="map-screen-map" unavailableFallback={<MapUnavailable label={t('maps.unavailable')} />}>
+      <MapView
+        style={styles.map}
+        compassEnabled
+        scrollEnabled={!isMapLocked}
+        zoomEnabled={!isMapLocked}
+        rotateEnabled={!isMapLocked}
+        pitchEnabled={!isMapLocked}
+        onCameraChanged={handleCameraChanged}
+        testID="map-screen-map"
+        unavailableFallback={<MapUnavailable label={t('maps.unavailable')} />}
+      >
         <Camera ref={cameraRef} defaultSettings={initialCamera} />
         <TrafficLayer visible={isTrafficOn} idPrefix="map-screen-traffic" />
         {departmentLayers.map((layer) => (layer.isOn && layer.data ? <GeoJsonMapLayer key={layer.id} id={`map-layer-${layer.id}`} data={layer.data} color={layer.color} showLabels /> : null))}

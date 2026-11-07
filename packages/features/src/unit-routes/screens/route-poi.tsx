@@ -62,11 +62,23 @@ export default function RoutePoiScreen({ poiId: poiIdProp, renderMap }: RoutePoi
   const destinationTypes = useMemo(() => new Set(poiTypes.filter((type) => type.IsDestination).map((type) => type.PoiTypeId)), [poiTypes]);
   const back = () => (router.canGoBack() ? router.back() : router.replace(unitRoutesRoutes.list()));
 
+  const reload = async () => {
+    if (!poiId) return;
+
+    const result = await usePoisStore.getState().fetchPoi(poiId, { bypassCache: true });
+
+    if (result) setPoi(result);
+  };
+
   if (!current) {
     return (
       <View className="flex-1 bg-background-50" testID="route-poi-screen">
         <ScreenHeader title={t('routes.poi_detail')} onBack={back} />
-        {isLoading ? <Loading text={t('routes.loading_poi')} /> : <ZeroState icon={MapPinned} heading={t('routes.poi_not_found')} description={t('routes.poi_not_found_description')} testID="route-poi-missing" />}
+        {isLoading ? (
+          <Loading text={t('routes.loading_poi')} />
+        ) : (
+          <ZeroState icon={MapPinned} heading={t('routes.poi_not_found')} description={t('routes.poi_not_found_description')} onRetry={poiId ? reload : undefined} testID="route-poi-missing" />
+        )}
       </View>
     );
   }

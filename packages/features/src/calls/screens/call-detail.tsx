@@ -212,15 +212,7 @@ function ServerCallDetail({ callId, mapSlot, menuItems, onMenuAction, onClosed, 
     return (
       <View style={styles.screen} testID="call-detail-screen">
         {header}
-        {isLoading || (!error && !detail) ? (
-          <Loading text={t('call_detail.loading')} />
-        ) : (
-          <ZeroState isError heading={t('call_detail.not_found')} testID="call-detail-not-found">
-            <Button onPress={() => void refresh()} accessibilityLabel={t('common.retry')}>
-              <ButtonText>{t('common.retry')}</ButtonText>
-            </Button>
-          </ZeroState>
-        )}
+        {isLoading || (!error && !detail) ? <Loading text={t('call_detail.loading')} /> : <ZeroState isError heading={t('call_detail.not_found')} onRetry={refresh} testID="call-detail-not-found" />}
       </View>
     );
   }

@@ -180,7 +180,13 @@ function DeploymentWorkspace({ id, overrides, showHeader }: { id: string; overri
         {access && !access.Enabled ? (
           <ZeroState icon={BriefcaseBusiness} heading={t('operations.disabled')} testID="operations-access-disabled" />
         ) : loadErrorKey && !isLoading ? (
-          <ZeroState icon={BriefcaseBusiness} isError heading={t(`operations.errors.${loadErrorKey}`)} testID="operations-load-error" />
+          <ZeroState
+            icon={BriefcaseBusiness}
+            isError
+            heading={t(`operations.errors.${loadErrorKey}`)}
+            onRetry={() => useOperationsStore.getState().loadDeployment(id, { bypassCache: true })}
+            testID="operations-load-error"
+          />
         ) : (
           <Loading />
         )}

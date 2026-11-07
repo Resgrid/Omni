@@ -102,6 +102,87 @@ describe('ZeroState', () => {
 
     expect(screen.root?.props.className).toBe('p-4');
   });
+
+  it('has no retry button without onRetry', async () => {
+    await render(<ZeroState isError />);
+
+    expect(screen.queryByTestId('zero-state-retry')).toBeNull();
+  });
+
+  it('offers Retry in an error state and Refresh in an empty one', async () => {
+    const onRetry = jest.fn();
+    await render(<ZeroState isError onRetry={onRetry} testID="units-empty" />);
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Retry' }));
+    expect(onRetry).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('units-empty-retry')).toBeTruthy();
+
+    await screen.rerender(<ZeroState onRetry={onRetry} testID="units-empty" />);
+
+    expect(screen.getByRole('button', { name: 'Refresh' })).toBeTruthy();
+  });
+
+  it('puts Retry before a screen’s own action in an error, and Refresh after it in an empty state', async () => {
+    const action = <Text testID="screen-action">Add</Text>;
+    await render(
+      <ZeroState isError onRetry={jest.fn()}>
+        {action}
+      </ZeroState>
+    );
+
+    // The two buttons' order on screen: their positions among every element under the zero state, in tree order.
+    const order = (): string[] => {
+      const all = screen.getByTestId('zero-state').queryAll(() => true);
+
+      return ['zero-state-retry', 'screen-action'].sort((a, b) => all.indexOf(screen.getByTestId(a)) - all.indexOf(screen.getByTestId(b)));
+    };
+
+    expect(order()).toEqual(['zero-state-retry', 'screen-action']);
+
+    await screen.rerender(<ZeroState onRetry={jest.fn()}>{action}</ZeroState>);
+
+    expect(order()).toEqual(['screen-action', 'zero-state-retry']);
+  });
+
+  it('keeps a screen’s own button label and test id', async () => {
+    await render(<ZeroState isError onRetry={jest.fn()} retryLabel="Load again" retryTestID="messages-retry" />);
+
+    expect(screen.getByRole('button', { name: 'Load again' })).toBeTruthy();
+    expect(screen.getByTestId('messages-retry')).toBeTruthy();
+  });
+
+  it('shows the button busy until the refetch settles and ignores presses meanwhile', async () => {
+    let finish: () => void = () => undefined;
+
+    const onRetry = jest.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          finish = resolve;
+        })
+    );
+
+    await render(<ZeroState isError onRetry={onRetry} />);
+
+    await fireEvent.press(screen.getByTestId('zero-state-retry'));
+    await fireEvent.press(screen.getByTestId('zero-state-retry'));
+
+    expect(onRetry).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('zero-state-retry').props.accessibilityState).toEqual(expect.objectContaining({ busy: true, disabled: true }));
+
+    await act(async () => finish());
+
+    expect(screen.getByTestId('zero-state-retry').props.accessibilityState).toEqual(expect.objectContaining({ busy: false, disabled: false }));
+  });
+
+  it('lets the button be pressed again after a refetch fails', async () => {
+    const onRetry = jest.fn().mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce(undefined);
+    await render(<ZeroState isError onRetry={onRetry} />);
+
+    await fireEvent.press(screen.getByTestId('zero-state-retry'));
+    await fireEvent.press(screen.getByTestId('zero-state-retry'));
+
+    expect(onRetry).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe('HeaderBackButton and ScreenHeader', () => {

@@ -60,7 +60,7 @@ export default function PoisListScreen({ onSelectPoi, renderMap }: PoisListScree
       {isLoading && !isRefreshing && pois.length === 0 ? (
         <Loading text={t('pois.loading')} />
       ) : visible.length === 0 ? (
-        <ZeroState icon={MapPinned} heading={t('pois.empty')} description={pois.length === 0 ? t('pois.empty_description') : undefined} testID="pois-empty" />
+        <ZeroState icon={MapPinned} heading={t('pois.empty')} description={pois.length === 0 ? t('pois.empty_description') : undefined} onRetry={handleRefresh} testID="pois-empty" />
       ) : (
         <FlatList
           data={visible}

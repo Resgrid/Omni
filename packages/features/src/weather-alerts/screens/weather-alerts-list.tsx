@@ -102,7 +102,7 @@ export default function WeatherAlertsListScreen() {
         {isLoading && !isRefreshing && alerts.length === 0 ? (
           <Loading text={t('weather_alerts.loading')} />
         ) : visible.length === 0 ? (
-          <ZeroState icon={CloudSun} heading={t('weather_alerts.no_alerts')} description={t('weather_alerts.no_alerts_description')} testID="weather-alerts-empty">
+          <ZeroState icon={CloudSun} heading={t('weather_alerts.no_alerts')} description={t('weather_alerts.no_alerts_description')} onRetry={handleRefresh} testID="weather-alerts-empty">
             {admin ? (
               <Button variant="link" onPress={() => router.push(weatherAlertsRoutes.settings())}>
                 <ButtonText>{t('weather_alerts.settings_title')}</ButtonText>

@@ -515,11 +515,7 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
 
   if (isEdit && startedFrom !== 'source') {
     return detailRead && !(detail?.call && detail.extraData) ? (
-      <ZeroState isError heading={t('calls.edit_load_error')} testID="call-form-load-error">
-        <Button onPress={() => readDetail({ bypassCache: true })} accessibilityLabel={t('common.retry')} testID="call-form-load-retry">
-          <ButtonText>{t('common.retry')}</ButtonText>
-        </Button>
-      </ZeroState>
+      <ZeroState isError heading={t('calls.edit_load_error')} onRetry={() => readDetail({ bypassCache: true })} retryTestID="call-form-load-retry" testID="call-form-load-error" />
     ) : (
       <Loading text={t('call_detail.loading')} />
     );

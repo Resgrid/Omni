@@ -78,7 +78,14 @@ export default function RouteDirectionsScreen({ instanceId: instanceIdProp, rend
         {isLoading ? (
           <Loading text={t('routes.loading_directions')} />
         ) : (
-          <ZeroState icon={MapIcon} isError={!!error} heading={t('routes.no_directions')} description={error ? t(error.messageKey) : undefined} testID="route-directions-none" />
+          <ZeroState
+            icon={MapIcon}
+            isError={!!error}
+            heading={t('routes.no_directions')}
+            description={error ? t(error.messageKey) : undefined}
+            onRetry={instanceId ? () => useRoutesStore.getState().fetchDirections(instanceId) : undefined}
+            testID="route-directions-none"
+          />
         )}
       </View>
     );

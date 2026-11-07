@@ -3,7 +3,7 @@ import { PENDING_SEQ_BASE, useChatStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import { type ChatMessageResultData } from '@resgrid/models';
 import { useRealtimeEvent } from '@resgrid/realtime';
-import { BottomAnchoredKeyboardView, Button, ButtonText, FlatList, HStack, Loading, Pressable, Text, useThemeColors, useToast, View, ZeroState } from '@resgrid/ui';
+import { BottomAnchoredKeyboardView, FlatList, HStack, Loading, Pressable, Text, useThemeColors, useToast, View, ZeroState } from '@resgrid/ui';
 import * as Clipboard from 'expo-clipboard';
 import { useFocusEffect } from 'expo-router';
 import { RefreshCw, Sparkles } from 'lucide-react-native';
@@ -121,6 +121,10 @@ function ChatbotContent({ keyboardOffset = 0 }: ChatbotScreenProps) {
   );
 
   if (!channelId) {
+    const retryInit = async () => {
+      await useChatStore.getState().initChatbot();
+    };
+
     const isUnavailable = initError ? initError.code === 'not_found' || initError.code === 'forbidden' : initFetchedAt > 0;
     if (!initError && !isUnavailable) return <Loading testID="chatbot-loading" />;
     return (
@@ -130,14 +134,10 @@ function ChatbotContent({ keyboardOffset = 0 }: ChatbotScreenProps) {
           iconColor={ASSISTANT_ACCENT}
           heading={t('chatbot.title')}
           description={isUnavailable ? t('chatbot.unavailable') : t('chatbot.load_failed')}
+          onRetry={isUnavailable ? undefined : retryInit}
+          retryTestID="chatbot-retry"
           testID={isUnavailable ? 'chatbot-unavailable' : 'chatbot-load-failed'}
-        >
-          {isUnavailable ? null : (
-            <Button onPress={() => void useChatStore.getState().initChatbot()} className="mt-4" testID="chatbot-retry">
-              <ButtonText>{t('common.retry')}</ButtonText>
-            </Button>
-          )}
-        </ZeroState>
+        />
       </View>
     );
   }

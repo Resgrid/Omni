@@ -40,7 +40,11 @@ export default function NoteDetailScreen({ noteId: noteIdProp }: NoteDetailScree
     return (
       <View className="flex-1 bg-background-50" testID="note-detail-screen">
         <ScreenHeader title={t('notes.details.title')} onBack={back} />
-        {isLoading && noteId ? <Loading /> : <ZeroState icon={StickyNote} heading={t('notes.not_found')} testID="note-detail-missing" />}
+        {isLoading && noteId ? (
+          <Loading />
+        ) : (
+          <ZeroState icon={StickyNote} heading={t('notes.not_found')} onRetry={noteId ? () => useNotesStore.getState().fetchNotes({ bypassCache: true }) : undefined} testID="note-detail-missing" />
+        )}
       </View>
     );
   }

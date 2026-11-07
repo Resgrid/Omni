@@ -83,9 +83,9 @@ export default function ScheduledCallsScreen({ showHeader = true, realtime = tru
   const renderContent = () => {
     if (isLoading && scheduledCalls.length === 0) return <Loading text={t('scheduled_calls.loading')} />;
 
-    if (error && scheduledCalls.length === 0) return <ZeroState heading={t('common.errorOccurred')} description={t(error.messageKey)} isError />;
+    if (error && scheduledCalls.length === 0) return <ZeroState heading={t('common.errorOccurred')} description={t(error.messageKey)} isError onRetry={handleRefresh} />;
 
-    if (visible.length === 0) return <ZeroState heading={t('scheduled_calls.no_scheduled_calls')} description={t('scheduled_calls.no_scheduled_calls_description')} icon={CalendarClock} />;
+    if (visible.length === 0) return <ZeroState heading={t('scheduled_calls.no_scheduled_calls')} description={t('scheduled_calls.no_scheduled_calls_description')} icon={CalendarClock} onRetry={handleRefresh} />;
 
     return (
       <QueueTable

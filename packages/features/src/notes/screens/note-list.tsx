@@ -29,6 +29,7 @@ export default function NoteListScreen() {
   const categories = useMemo(() => [...new Set(notes.map((note) => note.Category).filter((value): value is string => !!value))].sort(), [notes]);
   const visible = useMemo(() => searchNotes(category ? notes.filter((note) => note.Category === category) : notes, query), [notes, category, query]);
   const open = useCallback((note: NoteResultData) => pushRoutePath(router, noteRoutes.noteDetail(note.NoteId)), []);
+  const refresh = useCallback(() => fetchNotes({ bypassCache: true }), [fetchNotes]);
 
   return (
     <View style={styles.screen} className="bg-background-50" testID="note-list-screen">
@@ -64,8 +65,8 @@ export default function NoteListScreen() {
         keyExtractor={(item: NoteResultData) => item.NoteId}
         renderItem={({ item }: { item: NoteResultData }) => <NoteCard note={item} onPress={open} />}
         contentContainerStyle={styles.list}
-        refreshControl={<RefreshControl refreshing={false} onRefresh={() => void fetchNotes({ bypassCache: true })} />}
-        ListEmptyComponent={isLoading ? <Loading /> : <ZeroState icon={StickyNote} heading={t('notes.empty')} description={t('notes.emptyDescription')} testID="note-list-empty" />}
+        refreshControl={<RefreshControl refreshing={false} onRefresh={() => void refresh()} />}
+        ListEmptyComponent={isLoading ? <Loading /> : <ZeroState icon={StickyNote} heading={t('notes.empty')} description={t('notes.emptyDescription')} onRetry={refresh} testID="note-list-empty" />}
         testID="note-list"
       />
     </View>

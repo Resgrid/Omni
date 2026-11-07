@@ -52,12 +52,13 @@ export default function CommandMapScreen({ callId: callIdProp }: CommandMapScree
 
   const back = () => (router.canGoBack() ? router.back() : router.replace('/command' as never));
   const header = <ScreenHeader title={t('incident_command.command_map')} onBack={back} />;
+  const reload = callId ? () => useCommandStore.getState().refreshBoard(callId, { bypassCache: true }) : undefined;
 
   if (!callId || !board) {
     return (
       <View className="flex-1 bg-background-50" testID="command-map-screen">
         {header}
-        <ZeroState icon={MapPin} heading={callId ? t('incident_command.no_command') : t('incident_command.not_found')} testID="command-map-empty" />
+        <ZeroState icon={MapPin} heading={callId ? t('incident_command.no_command') : t('incident_command.not_found')} onRetry={reload} testID="command-map-empty" />
       </View>
     );
   }
@@ -66,7 +67,7 @@ export default function CommandMapScreen({ callId: callIdProp }: CommandMapScree
     return (
       <View className="flex-1 bg-background-50" testID="command-map-screen">
         {header}
-        <ZeroState icon={MapPin} heading={t('incident_command.map_no_positions')} testID="command-map-no-positions" />
+        <ZeroState icon={MapPin} heading={t('incident_command.map_no_positions')} onRetry={reload} testID="command-map-no-positions" />
       </View>
     );
   }

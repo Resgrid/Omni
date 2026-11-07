@@ -104,7 +104,7 @@ export default function IncidentsListScreen() {
         {isLoading && summaries.length === 0 ? (
           <Loading text={t('common.loading')} />
         ) : hasError && summaries.length === 0 ? (
-          <ZeroState heading={t('common.errorOccurred')} description={t('incident_command.incidents_error')} isError testID="incidents-error" />
+          <ZeroState heading={t('common.errorOccurred')} description={t('incident_command.incidents_error')} isError onRetry={refresh} testID="incidents-error" />
         ) : (
           <FlatList<IncidentCommandSummary>
             data={rows}
@@ -113,9 +113,9 @@ export default function IncidentsListScreen() {
             refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => void refresh()} />}
             ListEmptyComponent={
               query.trim() ? (
-                <ZeroState icon={Search} heading={t('common.no_results_found')} description={t('incident_command.no_incident_results')} testID="incidents-no-results" />
+                <ZeroState icon={Search} heading={t('common.no_results_found')} description={t('incident_command.no_incident_results')} onRetry={refresh} testID="incidents-no-results" />
               ) : (
-                <ZeroState icon={LayoutDashboard} heading={t('incident_command.no_incidents')} description={t('incident_command.no_incidents_description')} testID="incidents-empty" />
+                <ZeroState icon={LayoutDashboard} heading={t('incident_command.no_incidents')} description={t('incident_command.no_incidents_description')} onRetry={refresh} testID="incidents-empty" />
               )
             }
             testID="incidents-list"

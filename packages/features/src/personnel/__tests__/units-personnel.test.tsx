@@ -94,6 +94,23 @@ describe('UnitsListScreen', () => {
     expect(useUnitsStore.getState().fetchUnitInfos).toHaveBeenLastCalledWith({ activeFilter: 'G:1', bypassCache: false });
   });
 
+  it('retries a failed load from the error state, without leaving the screen', async () => {
+    useUnitsStore.setState({ unitInfos: [], errors: { unitInfos: { code: 'network', messageKey: 'errors.data.network' } } });
+    await render(<UnitsListScreen />);
+    expect(screen.getByTestId('units-empty')).toHaveTextContent(/common\.errorOccurred/);
+
+    await fireEvent.press(screen.getByTestId('units-empty-retry'));
+    expect(useUnitsStore.getState().fetchUnitInfos).toHaveBeenLastCalledWith({ activeFilter: '', bypassCache: true });
+  });
+
+  it('refetches from the empty state', async () => {
+    useUnitsStore.setState({ unitInfos: [], errors: {} });
+    await render(<UnitsListScreen />);
+
+    await fireEvent.press(screen.getByTestId('units-empty-retry'));
+    expect(useUnitsStore.getState().fetchUnitInfos).toHaveBeenLastCalledWith({ activeFilter: '', bypassCache: true });
+  });
+
   it('marks a unit with a status queued on the device', async () => {
     useUnitStatusStore.setState({ queuedStatuses: { e1: { localId: 'e1', unitId: 'u1', statusType: '3', respondingTo: '', respondingToType: null, note: '', createdAt: 1, state: 'queued' } } });
     await render(<UnitsListScreen />);
@@ -109,10 +126,14 @@ describe('UnitDetailScreen', () => {
     expect(screen.getByTestId('unit-detail-set-status')).toBeTruthy();
   });
 
-  it('shows not found for an unknown unit', async () => {
+  it('shows not found for an unknown unit, with a retry that reloads the units', async () => {
     useUnitsStore.setState({ unitInfos: [] });
     await render(<UnitDetailScreen unitId="missing" />);
     expect(screen.getByTestId('unit-detail-missing')).toBeTruthy();
+
+    jest.mocked(useUnitsStore.getState().fetchUnitInfos).mockClear();
+    await fireEvent.press(screen.getByTestId('unit-detail-missing-retry'));
+    expect(useUnitsStore.getState().fetchUnitInfos).toHaveBeenCalledWith({ bypassCache: true });
   });
 });
 

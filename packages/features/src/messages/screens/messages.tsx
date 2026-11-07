@@ -69,17 +69,17 @@ export default function MessagesScreen() {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const load = useCallback((which: MessageFilter, bypassCache: boolean) => {
+  const load = useCallback(async (which: MessageFilter, bypassCache: boolean) => {
     const store = useMessagesStore.getState();
 
-    if (which !== 'sent') void store.fetchInboxMessages({ bypassCache });
-
-    if (which !== 'inbox') void store.fetchSentMessages({ bypassCache });
+    await Promise.all([which === 'sent' ? undefined : store.fetchInboxMessages({ bypassCache }), which === 'inbox' ? undefined : store.fetchSentMessages({ bypassCache })]);
   }, []);
+
+  const reload = useCallback(() => load(filter, true), [filter, load]);
 
   useFocusEffect(
     useCallback(() => {
-      load(filter, false);
+      void load(filter, false);
     }, [filter, load])
   );
 
@@ -186,11 +186,7 @@ export default function MessagesScreen() {
       {isLoading && rows.length === 0 ? (
         <Loading />
       ) : loadError && rows.length === 0 ? (
-        <ZeroState isError heading={t('messages.load_error')} description={t(loadError.messageKey)} testID="messages-error">
-          <Button onPress={() => load(filter, true)} className="mt-4" testID="messages-retry">
-            <ButtonText>{t('common.retry')}</ButtonText>
-          </Button>
-        </ZeroState>
+        <ZeroState isError heading={t('messages.load_error')} description={t(loadError.messageKey)} onRetry={reload} retryTestID="messages-retry" testID="messages-error" />
       ) : (
         <FlatList
           data={rows}
@@ -204,9 +200,9 @@ export default function MessagesScreen() {
             )
           }
           contentContainerStyle={styles.list}
-          refreshControl={<RefreshControl refreshing={false} onRefresh={() => load(filter, true)} />}
+          refreshControl={<RefreshControl refreshing={false} onRefresh={() => void reload()} />}
           ListEmptyComponent={
-            <ZeroState icon={Mail} heading={t('messages.no_messages')} description={canUserCreateMessages ? t('messages.no_messages_description') : undefined} testID="messages-empty">
+            <ZeroState icon={Mail} heading={t('messages.no_messages')} description={canUserCreateMessages ? t('messages.no_messages_description') : undefined} onRetry={reload} testID="messages-empty">
               {canUserCreateMessages ? (
                 <Button onPress={compose} className="mt-4" testID="messages-empty-compose">
                   <ButtonText>{t('messages.send_first_message')}</ButtonText>

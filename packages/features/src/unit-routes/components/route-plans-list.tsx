@@ -89,7 +89,7 @@ export const RoutePlansList: React.FC<{ testID?: string }> = ({ testID = 'route-
   if (isLoading && !isRefreshing && routePlans.length === 0) return <Loading text={t('routes.loading')} />;
 
   if (error && routePlans.length === 0 && !activeInstance) {
-    return <ZeroState icon={Route} isError heading={t('common.errorOccurred')} description={t(error.messageKey)} testID={`${testID}-error`} />;
+    return <ZeroState icon={Route} isError heading={t('common.errorOccurred')} description={t(error.messageKey)} onRetry={refresh} testID={`${testID}-error`} />;
   }
 
   return (
@@ -116,6 +116,7 @@ export const RoutePlansList: React.FC<{ testID?: string }> = ({ testID = 'route-
             icon={query ? Search : Route}
             heading={query ? t('routes.no_search_results') : t('routes.no_routes')}
             description={query ? t('routes.try_different_search') : t('routes.no_routes_description_all')}
+            onRetry={refresh}
             testID={`${testID}-empty`}
           />
         }

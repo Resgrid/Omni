@@ -172,6 +172,8 @@ export default function ChecklistsScreen({ occurrenceId: occurrenceProp }: Check
         hasMore={due?.HasMoreOccurrences === true}
         isLoadingMore={isLoadingMore}
         onLoadMore={() => void loadMore()}
+        onRefresh={() => void refreshAll()}
+        refreshing={isLoading}
         testID="checklists-due-list"
       />
     </ChecklistTabPanel>
@@ -190,6 +192,8 @@ export default function ChecklistsScreen({ occurrenceId: occurrenceProp }: Check
         hasMore={due?.HasMoreDefinitions === true}
         isLoadingMore={isLoadingMore}
         onLoadMore={() => void loadMore()}
+        onRefresh={() => void refreshAll()}
+        refreshing={isLoading}
         testID="checklists-start-list"
       />
     </ChecklistTabPanel>
@@ -221,6 +225,8 @@ export default function ChecklistsScreen({ occurrenceId: occurrenceProp }: Check
         hasMore={history.hasMore}
         isLoadingMore={history.isLoadingMore}
         onLoadMore={() => void history.loadMore()}
+        onRefresh={() => void history.reload()}
+        refreshing={history.isLoading}
         testID="checklists-history-list"
       />
     </ChecklistTabPanel>

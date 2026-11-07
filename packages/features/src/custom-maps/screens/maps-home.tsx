@@ -105,7 +105,14 @@ export default function MapsHomeScreen() {
         </Pressable>
         {isEmpty && isLoading ? <Loading text={t('maps.loading')} /> : null}
         {isEmpty && !isLoading ? (
-          <ZeroState icon={MapIcon} isError={hasError} heading={hasError ? t('maps.error_loading') : t('maps.no_maps')} description={hasError ? undefined : t('maps.no_maps_description')} testID="maps-home-empty" />
+          <ZeroState
+            icon={MapIcon}
+            isError={hasError}
+            heading={hasError ? t('maps.error_loading') : t('maps.no_maps')}
+            description={hasError ? undefined : t('maps.no_maps_description')}
+            onRetry={refresh}
+            testID="maps-home-empty"
+          />
         ) : null}
         {custom.length > 0 ? (
           <VStack className="mb-2">

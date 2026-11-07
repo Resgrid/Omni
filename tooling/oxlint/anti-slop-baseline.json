@@ -3404,7 +3404,7 @@
   "packages/features/src/shifts/screens/shifts.tsx": {
     "anti-slop/no-runtime-typeof": 1,
     "anti-slop/no-unsafe-dictionary-type": 1,
-    "anti-slop/require-readable-spacing": 26,
+    "anti-slop/require-readable-spacing": 25,
     "anti-slop/require-safety-comment-for-type-assertion": 3
   },
   "packages/features/src/staffing/__tests__/staffing.test.tsx": {
@@ -3609,7 +3609,7 @@
     "anti-slop/require-readable-spacing": 1
   },
   "packages/features/src/unit-status/components/quick-actions.tsx": {
-    "anti-slop/require-readable-spacing": 2,
+    "anti-slop/require-readable-spacing": 1,
     "anti-slop/require-safety-comment-for-type-assertion": 1
   },
   "packages/features/src/unit-status/components/shared-session-card.tsx": {

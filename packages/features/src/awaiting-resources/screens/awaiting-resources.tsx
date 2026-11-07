@@ -88,12 +88,16 @@ export default function AwaitingResourcesScreen({ showHeader = true, now = Date.
   const renderContent = () => {
     if (!isEnabled) {
       // A deep link while flags still resolve shows the loader rather than a "not available" flash.
-      return conditionsStatus === 'unknown' ? <Loading /> : <ZeroState heading={t('awaiting_resources.not_enabled')} description={t('awaiting_resources.not_enabled_description')} icon={Hourglass} />;
+      return conditionsStatus === 'unknown' ? (
+        <Loading />
+      ) : (
+        <ZeroState heading={t('awaiting_resources.not_enabled')} description={t('awaiting_resources.not_enabled_description')} icon={Hourglass} testID="awaiting-resources-disabled" />
+      );
     }
     // Only the first load replaces the list; a refresh from a push keeps the cards on screen.
     if (isLoading && calls.length === 0 && fetchedAt === 0) return <Loading text={t('awaiting_resources.loading')} />;
-    if (error && calls.length === 0) return <ZeroState heading={t('common.errorOccurred')} description={t(error.messageKey)} isError />;
-    if (calls.length === 0) return <ZeroState heading={t('awaiting_resources.empty_title')} description={t('awaiting_resources.empty_description')} icon={Hourglass} />;
+    if (error && calls.length === 0) return <ZeroState heading={t('common.errorOccurred')} description={t(error.messageKey)} isError onRetry={handleRefresh} />;
+    if (calls.length === 0) return <ZeroState heading={t('awaiting_resources.empty_title')} description={t('awaiting_resources.empty_description')} icon={Hourglass} onRetry={handleRefresh} />;
     return (
       <FlatList
         testID="awaiting-resources-list"

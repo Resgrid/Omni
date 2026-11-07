@@ -56,6 +56,10 @@ function InboxContent() {
 
   const isRefreshing = isFetching && !isLoading;
 
+  const reload = async () => {
+    await refetch();
+  };
+
   if (isLoading && items.length === 0) return <Loading />;
 
   return (
@@ -68,9 +72,9 @@ function InboxContent() {
         </HStack>
       ) : null}
       {error && items.length === 0 ? (
-        <ZeroState icon={Bell} isError heading={t('notifications.load_error')} testID="notifications-error" />
+        <ZeroState icon={Bell} isError heading={t('notifications.load_error')} onRetry={reload} testID="notifications-error" />
       ) : items.length === 0 ? (
-        <ZeroState icon={Bell} heading={t('notifications.empty')} testID="notifications-empty" />
+        <ZeroState icon={Bell} heading={t('notifications.empty')} onRetry={reload} testID="notifications-empty" />
       ) : (
         <FlatList
           data={items}

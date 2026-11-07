@@ -88,6 +88,7 @@ export default function RouteHistoryScreen({ planId: planIdProp }: RouteHistoryS
               isError={!!error}
               heading={error ? t('common.errorOccurred') : t('routes.no_history')}
               description={error ? t(error.messageKey) : t('routes.no_history_description')}
+              onRetry={refresh}
               testID="route-history-empty"
             />
           }

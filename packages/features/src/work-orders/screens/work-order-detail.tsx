@@ -62,7 +62,11 @@ function WorkOrderDetailContent({ id }: { id: string }) {
   };
 
   if (!detail) {
-    return isLoading ? <Loading /> : <ZeroState isError heading={t('workOrders.errors.denied')} testID="work-order-missing" />;
+    const reload = async () => {
+      await useWorkOrdersStore.getState().fetchWorkOrder(id, { bypassCache: true });
+    };
+
+    return isLoading ? <Loading /> : <ZeroState isError heading={t('workOrders.errors.denied')} onRetry={reload} testID="work-order-missing" />;
   }
 
   const store = useWorkOrdersStore.getState();

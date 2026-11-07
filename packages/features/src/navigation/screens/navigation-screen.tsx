@@ -149,7 +149,7 @@ export default function NavigationScreen({ simulationSpeedMps: simulationProp = 
     return (
       <View style={styles.root} testID="navigation-screen">
         <ScreenHeader title={t('navigation.title')} onBack={leave} />
-        <ZeroState icon={Navigation} heading={t(destination ? 'navigation.error.unavailable' : 'navigation.error.no_destination')} />
+        <ZeroState icon={Navigation} heading={t(destination ? 'navigation.error.unavailable' : 'navigation.error.no_destination')} testID="navigation-unavailable" />
       </View>
     );
   }

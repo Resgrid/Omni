@@ -61,6 +61,8 @@ function WorkOrdersContent() {
     }, [load])
   );
 
+  const refresh = useCallback(() => load(undefined, true), [load]);
+
   // Reporting needs Readiness Pro maintenance; reading never does. Offline (list not loaded this session) the
   // persisted access decides, and the server re-checks the queued report.
   const canWrite = access?.MaintenanceEnabled === true && (list.loaded ? list.canWrite : true);
@@ -78,7 +80,7 @@ function WorkOrdersContent() {
 
   return (
     <View className="flex-1 bg-background-50" testID="work-orders-screen">
-      <KeyboardAwareScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={false} onRefresh={() => load(undefined, true)} />}>
+      <KeyboardAwareScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={false} onRefresh={refresh} />}>
         <VStack space="md">
           <HStack className="items-center justify-between" space="sm">
             <Text className="flex-1 text-xl font-bold text-typography-900" accessibilityRole="header">
@@ -168,9 +170,9 @@ function WorkOrdersContent() {
           {isLoading && list.items.length === 0 ? (
             <Loading />
           ) : list.items.length === 0 ? (
-            <ZeroState icon={Wrench} heading={list.assignedToMe ? t('workOrders.noneAssigned') : t('workOrders.none')} testID="work-orders-empty" />
+            <ZeroState icon={Wrench} heading={list.assignedToMe ? t('workOrders.noneAssigned') : t('workOrders.none')} onRetry={refresh} testID="work-orders-empty" />
           ) : shown.length === 0 ? (
-            <ZeroState icon={Search} heading={t('workOrders.noMatches')} description={list.hasMore ? t('workOrders.searchMore') : undefined} testID="work-orders-no-matches" />
+            <ZeroState icon={Search} heading={t('workOrders.noMatches')} description={list.hasMore ? t('workOrders.searchMore') : undefined} onRetry={refresh} testID="work-orders-no-matches" />
           ) : (
             <VStack>
               {shown.map((order) => (

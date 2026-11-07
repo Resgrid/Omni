@@ -212,7 +212,15 @@ export default function CertificationDetailScreen({ certificationId }: Certifica
         isLoading ? (
           <Loading />
         ) : (
-          <ZeroState isError heading={t('certifications.loadOneFailed')} description={t(loadError ? certificationErrorKey(loadError) : 'certifications.errors.notFound')} testID="certification-missing">
+          <ZeroState
+            isError
+            heading={t('certifications.loadOneFailed')}
+            description={t(loadError ? certificationErrorKey(loadError) : 'certifications.errors.notFound')}
+            onRetry={async () => {
+              await useCertificationsStore.getState().fetchCertification(id, { bypassCache: true });
+            }}
+            testID="certification-missing"
+          >
             <Button className="mt-4" variant="outline" onPress={goBack} testID="certification-missing-back">
               <ButtonText>{t('certifications.backToList')}</ButtonText>
             </Button>

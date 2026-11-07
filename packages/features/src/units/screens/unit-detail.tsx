@@ -56,7 +56,11 @@ export default function UnitDetailScreen({ unitId: unitIdProp, renderMap }: Unit
     return (
       <View className="flex-1 bg-background-50" testID="unit-detail-screen">
         <ScreenHeader title={t('units.details')} onBack={back} />
-        {isLoading && unitId ? <Loading /> : <ZeroState icon={Truck} heading={t('units.not_found')} testID="unit-detail-missing" />}
+        {isLoading && unitId ? (
+          <Loading />
+        ) : (
+          <ZeroState icon={Truck} heading={t('units.not_found')} onRetry={unitId ? () => useUnitsStore.getState().fetchUnitInfos({ bypassCache: true }) : undefined} testID="unit-detail-missing" />
+        )}
       </View>
     );
   }

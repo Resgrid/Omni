@@ -16,6 +16,11 @@ export interface QuickActionsProps {
   exclude?: readonly QuickActionId[];
   /** Two per row on wide consoles. */
   columns?: number;
+  /**
+   * `grid` (default): `columns` per row, icon and label left-aligned (the full console). `sidebar`: legacy Unit's sidebar
+   * buttons — chat and the assistant side by side, every other action on a row of its own, centred.
+   */
+  arrangement?: 'grid' | 'sidebar';
   buttonMinHeight?: number;
   iconSize?: number;
   testID?: string;
@@ -25,7 +30,7 @@ export interface QuickActionsProps {
  * The console's shortcuts (Unit sidebar buttons), gated by department feature flags (unknown = off), the active unit
  * and the variant's modules; labels follow the department's terminology.
  */
-export const QuickActions: React.FC<QuickActionsProps> = ({ hasActiveUnit, onNavigate, exclude, columns = 2, buttonMinHeight = 48, iconSize = 18, testID = 'unit-quick-actions' }) => {
+export const QuickActions: React.FC<QuickActionsProps> = ({ hasActiveUnit, onNavigate, exclude, columns = 2, arrangement = 'grid', buttonMinHeight = 48, iconSize = 18, testID = 'unit-quick-actions' }) => {
   const { t } = useTranslation();
   const chat = useFeatureFlag(QUICK_ACTION_FLAGS.chat);
   const checklists = useFeatureFlag(QUICK_ACTION_FLAGS.checklists);
@@ -39,6 +44,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({ hasActiveUnit, onNav
     [chat, checklists, deployments, exclude, hasActiveUnit, hasInventory, records]
   );
   const itemStyle = useMemo(() => StyleSheet.flatten([styles.item, { width: `${100 / Math.max(1, columns)}%` as const }]), [columns]);
+  const isSidebar = arrangement === 'sidebar';
 
   const open = (action: QuickAction) => {
     router.push(action.href as Href);
@@ -50,20 +56,21 @@ export const QuickActions: React.FC<QuickActionsProps> = ({ hasActiveUnit, onNav
       {actions.map((action) => {
         const Icon = action.icon;
         const label = (action.termKey ? terms[action.termKey] : undefined) || t(action.labelKey);
+
         return (
-          <View key={action.id} style={itemStyle}>
+          <View key={action.id} style={isSidebar ? (isPaired(action.id) && hasPair(actions) ? styles.half : styles.full) : itemStyle}>
             <Pressable
               onPress={() => open(action)}
               accessibilityRole="button"
               accessibilityLabel={label}
               testID={`${testID}-${action.id}`}
-              className="flex-row items-center rounded-lg border border-outline-200 bg-background-0 px-3"
+              className={`flex-row items-center rounded-lg border border-outline-200 bg-background-0 px-3 ${isSidebar ? 'justify-center' : ''}`}
               style={{ minHeight: buttonMinHeight }}
             >
               <View style={styles.icon}>
-                <Icon size={iconSize} color="#2563eb" />
+                <Icon size={iconSize} color={action.id === 'assistant' ? ASSISTANT_COLOR : ACTION_COLOR} />
               </View>
-              <Text className="flex-1 font-medium text-typography-900" numberOfLines={1}>
+              <Text className={`${isSidebar ? 'flex-shrink' : 'flex-1'} font-medium text-typography-900`} numberOfLines={1}>
                 {label}
               </Text>
             </Pressable>
@@ -74,8 +81,20 @@ export const QuickActions: React.FC<QuickActionsProps> = ({ hasActiveUnit, onNav
   );
 };
 
+const ACTION_COLOR = '#2563eb';
+
+/** Legacy Unit drew the assistant's sparkles in violet. */
+const ASSISTANT_COLOR = '#7c3aed';
+
+/** Chat and the assistant share a row in the sidebar (both or neither show: one Chat.System flag gates them). */
+const isPaired = (id: QuickActionId): boolean => id === 'chat' || id === 'assistant';
+
+const hasPair = (actions: readonly QuickAction[]): boolean => actions.filter((action) => isPaired(action.id)).length === 2;
+
 const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 },
   item: { padding: 4 },
+  half: { width: '50%', padding: 4 },
+  full: { width: '100%', padding: 4 },
   icon: { marginRight: 8 },
 });

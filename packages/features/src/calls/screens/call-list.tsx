@@ -3,7 +3,7 @@ import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { type CallListItem, useCallsStore, useCheckInTimersStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import type { DispatchedEventResultData } from '@resgrid/models';
-import { Button, ButtonText, Fab, FlatList, Loading, RefreshControl, TabBar, type TabBarItem, useFormFactor, useThemeColors, ZeroState } from '@resgrid/ui';
+import { Fab, FlatList, Loading, RefreshControl, TabBar, type TabBarItem, useFormFactor, useThemeColors, ZeroState } from '@resgrid/ui';
 import { useRouter } from 'expo-router';
 import { Plus } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -127,13 +127,14 @@ export default function CallListScreen({ density, realtime = true, onOpenCall }:
   const emptyState = isLoading ? (
     <Loading text={t('calls.loading')} />
   ) : hasError && activeTab === 'active' && visible.length === 0 ? (
-    <ZeroState isError heading={t('errors.data.unknown')} description={t('common.tryAgainLater')} testID="call-list-error">
-      <Button onPress={() => void refresh()} accessibilityLabel={t('common.retry')}>
-        <ButtonText>{t('common.retry')}</ButtonText>
-      </Button>
-    </ZeroState>
+    <ZeroState isError heading={t('errors.data.unknown')} description={t('common.tryAgainLater')} onRetry={refresh} testID="call-list-error" />
   ) : (
-    <ZeroState heading={hasActiveFilters(filters) ? t('common.no_results_found') : t('calls.no_calls')} description={hasActiveFilters(filters) ? undefined : t('calls.no_calls_description')} testID="call-list-empty" />
+    <ZeroState
+      heading={hasActiveFilters(filters) ? t('common.no_results_found') : t('calls.no_calls')}
+      description={hasActiveFilters(filters) ? undefined : t('calls.no_calls_description')}
+      onRetry={refresh}
+      testID="call-list-empty"
+    />
   );
 
   return (

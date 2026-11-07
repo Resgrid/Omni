@@ -69,7 +69,7 @@ export default function ContactDetailScreen({ contactId: contactIdProp, initialT
     return (
       <View className="flex-1 bg-background-50" testID="contact-detail-screen">
         <ScreenHeader title={t('contacts.details')} onBack={back} />
-        {isLoading && contactId ? <Loading /> : <ZeroState icon={Contact} heading={t('contacts.not_found')} testID="contact-detail-missing" />}
+        {isLoading && contactId ? <Loading /> : <ZeroState icon={Contact} heading={t('contacts.not_found')} onRetry={contactId ? refresh : undefined} testID="contact-detail-missing" />}
       </View>
     );
   }

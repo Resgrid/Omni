@@ -35,11 +35,15 @@ export default function ProtocolDetailScreen({ protocolId: protocolIdProp }: Pro
 
   const back = () => (router.canGoBack() ? router.back() : router.replace(protocolRoutes.protocolList()));
 
+  const reload = async () => {
+    if (protocolId) await useProtocolsStore.getState().fetchProtocol(protocolId, { bypassCache: true });
+  };
+
   if (!protocol) {
     return (
       <View className="flex-1 bg-background-50" testID="protocol-detail-screen">
         <ScreenHeader title={t('protocols.details.title')} onBack={back} />
-        {isLoading && protocolId ? <Loading /> : <ZeroState icon={BookOpen} heading={t('protocols.not_found')} testID="protocol-detail-missing" />}
+        {isLoading && protocolId ? <Loading /> : <ZeroState icon={BookOpen} heading={t('protocols.not_found')} onRetry={protocolId ? reload : undefined} testID="protocol-detail-missing" />}
       </View>
     );
   }

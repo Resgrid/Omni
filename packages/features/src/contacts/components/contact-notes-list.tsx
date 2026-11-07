@@ -28,7 +28,18 @@ export const ContactNotesList: React.FC<{ contactId: string }> = ({ contactId })
   }, [contactId]);
 
   if (isLoading && notes.length === 0) return <Spinner testID="contact-notes-loading" />;
-  if (notes.length === 0) return <ZeroState icon={StickyNote} heading={t('contacts.contactNotesEmpty')} description={t('contacts.contactNotesEmptyDescription')} viewClassName="p-4" testID="contact-notes-empty" />;
+  if (notes.length === 0) {
+    return (
+      <ZeroState
+        icon={StickyNote}
+        heading={t('contacts.contactNotesEmpty')}
+        description={t('contacts.contactNotesEmptyDescription')}
+        onRetry={() => useContactsStore.getState().fetchContactNotes(contactId, { bypassCache: true })}
+        viewClassName="p-4"
+        testID="contact-notes-empty"
+      />
+    );
+  }
 
   return (
     <VStack space="sm" testID="contact-notes-list">

@@ -104,12 +104,13 @@ export default function CustomMapScreen() {
 
   const back = () => (router.canGoBack() ? router.back() : router.replace(customMapsRoutes.home()));
   const title = data?.Map.Name ?? t('maps.custom_maps');
+  const reload = mapId ? () => useCustomMapsStore.getState().fetchCustomMap(mapId, { bypassCache: true }) : undefined;
 
   if (!data) {
     return (
       <View className="flex-1 bg-background-50" testID="custom-map-screen">
         <ScreenHeader title={title} onBack={back} />
-        {hasError && !isLoading ? <ZeroState icon={MapIcon} isError heading={t('maps.error_loading')} testID="custom-map-error" /> : <Loading text={t('maps.loading')} />}
+        {hasError && !isLoading ? <ZeroState icon={MapIcon} isError heading={t('maps.error_loading')} onRetry={reload} testID="custom-map-error" /> : <Loading text={t('maps.loading')} />}
       </View>
     );
   }
@@ -124,7 +125,7 @@ export default function CustomMapScreen() {
       <ScreenHeader title={title} onBack={back} />
       <View style={styles.map}>
         {nothingToShow ? (
-          <ZeroState icon={MapIcon} heading={t('custom_maps.nothing_to_show')} description={t('custom_maps.nothing_to_show_detail')} testID="custom-map-nothing" />
+          <ZeroState icon={MapIcon} heading={t('custom_maps.nothing_to_show')} description={t('custom_maps.nothing_to_show_detail')} onRetry={reload} testID="custom-map-nothing" />
         ) : pixelLayer ? (
           <PixelImageMap
             id={`custom-pixel-${pixelLayer.IndoorMapFloorId}`}

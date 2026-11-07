@@ -2,6 +2,7 @@ import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { getDataLocationFix, RouteInstanceStatus, useRoutesStore } from '@resgrid/data';
 import { useInAppNavigationAvailable } from '@resgrid/features/navigation/hooks/use-in-app-navigation';
 import { navigationRoutes } from '@resgrid/features/navigation/routes';
+import { useStatusContext } from '@resgrid/features/status';
 import { useTranslation } from '@resgrid/i18n';
 import type { RouteStopWithDetailsResultData } from '@resgrid/models';
 import { Button, ButtonText, HStack, Loading, Pressable, ScreenHeader, ScrollView, Text, useFormFactor, useThemeColors, useToast, View, VStack, ZeroState } from '@resgrid/ui';
@@ -44,6 +45,7 @@ export default function RouteActiveScreen({ instanceId: instanceIdProp, renderMa
   const { isElectron, isDesktop } = useFormFactor();
   const actionHeight = isElectron || isDesktop ? 64 : 48;
   const params = useLocalSearchParams<{ instanceId?: string | string[]; planId?: string | string[] }>();
+  const { activeUnitId } = useStatusContext();
   const activeInstance = useRoutesStore((state) => state.activeInstance);
   const instanceId = instanceIdProp ?? readRouteParam(params.instanceId) ?? activeInstance?.RouteInstanceId ?? null;
   const instance = activeInstance && activeInstance.RouteInstanceId === instanceId ? activeInstance : null;
@@ -128,7 +130,13 @@ export default function RouteActiveScreen({ instanceId: instanceIdProp, renderMa
         {isLoading ? (
           <Loading text={t('routes.loading')} />
         ) : (
-          <ZeroState icon={Route} heading={t('unit_routes.no_active_route')} description={t('unit_routes.no_active_route_description')} testID="route-active-none">
+          <ZeroState
+            icon={Route}
+            heading={t('unit_routes.no_active_route')}
+            description={t('unit_routes.no_active_route_description')}
+            onRetry={activeUnitId ? () => useRoutesStore.getState().fetchActiveRoute(activeUnitId, { bypassCache: true }) : undefined}
+            testID="route-active-none"
+          >
             <Button onPress={() => router.replace(unitRoutesRoutes.list())} testID="route-active-to-list">
               <ButtonText>{t('routes.all_routes')}</ButtonText>
             </Button>

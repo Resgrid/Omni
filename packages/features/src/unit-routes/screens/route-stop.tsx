@@ -47,6 +47,7 @@ export default function RouteStopScreen({ stopId: stopIdProp, renderMap }: Route
   const plan = useRoutesStore((state) => (stop && state.activePlan?.RoutePlanId === stop.RoutePlanId ? state.activePlan : null));
   const planColor = useRoutesStore((state) => state.routePlans.find((row) => row.RoutePlanId === stop?.RoutePlanId)?.RouteColor ?? null);
   const routeInProgress = useRoutesStore((state) => state.activeInstance?.Status === RouteInstanceStatus.InProgress);
+  const activeInstanceId = useRoutesStore((state) => state.activeInstance?.RouteInstanceId ?? null);
   const { checkIn, checkOut, skip, busyStopId } = useStopActions();
   const [notes, setNotes] = useState(stop?.InstanceNotes ?? '');
   const [isSaving, setIsSaving] = useState(false);
@@ -63,7 +64,13 @@ export default function RouteStopScreen({ stopId: stopIdProp, renderMap }: Route
     return (
       <View className="flex-1 bg-background-50" testID="route-stop-screen">
         <ScreenHeader title={t('routes.stop_detail')} onBack={back} />
-        <ZeroState icon={MapPin} heading={t('routes.no_stops')} description={t('unit_routes.stop_not_on_route')} testID="route-stop-missing" />
+        <ZeroState
+          icon={MapPin}
+          heading={t('routes.no_stops')}
+          description={t('unit_routes.stop_not_on_route')}
+          onRetry={activeInstanceId ? () => useRoutesStore.getState().fetchStopsForInstance(activeInstanceId, { bypassCache: true }) : undefined}
+          testID="route-stop-missing"
+        />
       </View>
     );
   }

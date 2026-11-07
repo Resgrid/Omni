@@ -63,11 +63,17 @@ export default function IndoorMapScreen() {
   const back = () => (router.canGoBack() ? router.back() : router.replace(customMapsRoutes.home()));
   const title = data?.Map.Name ?? t('maps.indoor_maps');
 
+  const reload = async () => {
+    if (!mapId) return;
+
+    await Promise.all([useCustomMapsStore.getState().fetchIndoorMap(mapId, { bypassCache: true }), floorId ? useCustomMapsStore.getState().fetchIndoorFloor(floorId, { bypassCache: true }) : undefined]);
+  };
+
   if (!data) {
     return (
       <View className="flex-1 bg-background-50" testID="indoor-map-screen">
         <ScreenHeader title={title} onBack={back} />
-        {hasError && !isLoading ? <ZeroState icon={Building2} isError heading={t('maps.error_loading')} testID="indoor-map-error" /> : <Loading text={t('maps.loading')} />}
+        {hasError && !isLoading ? <ZeroState icon={Building2} isError heading={t('maps.error_loading')} onRetry={mapId ? reload : undefined} testID="indoor-map-error" /> : <Loading text={t('maps.loading')} />}
       </View>
     );
   }
@@ -102,7 +108,7 @@ export default function IndoorMapScreen() {
       ) : null}
       <View style={styles.map}>
         {!floor || mode === 'none' ? (
-          <ZeroState icon={Building2} heading={t('custom_maps.nothing_to_show')} description={t('custom_maps.nothing_to_show_detail')} testID="indoor-map-nothing" />
+          <ZeroState icon={Building2} heading={t('custom_maps.nothing_to_show')} description={t('custom_maps.nothing_to_show_detail')} onRetry={mapId ? reload : undefined} testID="indoor-map-nothing" />
         ) : mode === 'pixel' ? (
           <PixelImageMap
             id={`indoor-pixel-${floor.IndoorMapFloorId}`}

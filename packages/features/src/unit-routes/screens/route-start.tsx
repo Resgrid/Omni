@@ -90,7 +90,14 @@ export default function RouteStartScreen({ planId: planIdProp, renderMap }: Rout
         {isLoading || (!loadError && !!planId) ? (
           <Loading text={t('routes.loading')} />
         ) : (
-          <ZeroState icon={Route} isError={!!loadError} heading={t('routes.no_routes')} description={loadError ? t(loadError.messageKey) : t('routes.no_routes_description')} testID="route-start-missing" />
+          <ZeroState
+            icon={Route}
+            isError={!!loadError}
+            heading={t('routes.no_routes')}
+            description={loadError ? t(loadError.messageKey) : t('routes.no_routes_description')}
+            onRetry={planId ? () => useRoutesStore.getState().fetchRoutePlan(planId, { bypassCache: true }) : undefined}
+            testID="route-start-missing"
+          />
         )}
       </View>
     );

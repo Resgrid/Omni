@@ -46,7 +46,7 @@ export interface ShiftTradesListProps {
   filter: ShiftTradesFilter;
   onFilterChange: (filter: ShiftTradesFilter) => void;
   isLoading: boolean;
-  onRefresh: () => void;
+  onRefresh: () => Promise<void> | void;
   onAction: (action: ShiftTradeAction) => void;
   onOpenDetails: (trade: ShiftTradeResultData) => void;
 }
@@ -88,7 +88,7 @@ export const ShiftTradesList: React.FC<ShiftTradesListProps> = ({ trades, openTr
         row.type === 'header' ? <SectionHeader title={row.title} /> : <ShiftTradeCard trade={row.item} onAction={onAction} onOpenDetails={onOpenDetails} />
       }
       contentContainerStyle={styles.list}
-      refreshControl={<RefreshControl refreshing={isLoading} onRefresh={onRefresh} />}
+      refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => void onRefresh()} />}
       ListHeaderComponent={
         <HStack className="pb-2 pt-1" accessibilityRole="tablist">
           {chip('open', t('shifts.trade.filter_open', { count: openTrades.length }))}
@@ -97,9 +97,9 @@ export const ShiftTradesList: React.FC<ShiftTradesListProps> = ({ trades, openTr
       }
       ListEmptyComponent={
         filter === 'open' ? (
-          <ZeroState icon={ArrowRightLeft} heading={t('shifts.empty.open_trades_title')} description={t('shifts.empty.open_trades_description')} testID="shift-trades-empty" />
+          <ZeroState icon={ArrowRightLeft} heading={t('shifts.empty.open_trades_title')} description={t('shifts.empty.open_trades_description')} onRetry={onRefresh} testID="shift-trades-empty" />
         ) : (
-          <ZeroState icon={ArrowRightLeft} heading={t('shifts.empty.trades_title')} description={t('shifts.empty.trades_description')} testID="shift-trades-empty" />
+          <ZeroState icon={ArrowRightLeft} heading={t('shifts.empty.trades_title')} description={t('shifts.empty.trades_description')} onRetry={onRefresh} testID="shift-trades-empty" />
         )
       }
       testID="shift-trades-list"
@@ -113,7 +113,7 @@ export interface ShiftApprovalsListProps {
   signups: readonly PendingShiftSignupResultData[];
   trades: readonly ShiftTradeResultData[];
   isLoading: boolean;
-  onRefresh: () => void;
+  onRefresh: () => Promise<void> | void;
   onAction: (action: ShiftSheetAction) => void;
   onOpenTradeDetails: (trade: ShiftTradeResultData) => void;
 }
@@ -187,8 +187,8 @@ export const ShiftApprovalsList: React.FC<ShiftApprovalsListProps> = ({ signups,
         )
       }
       contentContainerStyle={styles.list}
-      refreshControl={<RefreshControl refreshing={isLoading} onRefresh={onRefresh} />}
-      ListEmptyComponent={<ZeroState icon={CalendarCheck} heading={t('shifts.empty.approvals_title')} description={t('shifts.empty.approvals_description')} testID="shift-approvals-empty" />}
+      refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => void onRefresh()} />}
+      ListEmptyComponent={<ZeroState icon={CalendarCheck} heading={t('shifts.empty.approvals_title')} description={t('shifts.empty.approvals_description')} onRetry={onRefresh} testID="shift-approvals-empty" />}
       testID="shift-approvals-list"
     />
   );
@@ -199,7 +199,7 @@ export const ShiftApprovalsList: React.FC<ShiftApprovalsListProps> = ({ signups,
 export interface ShiftOnDutyListProps {
   personnel: readonly OnDutyPersonResultData[];
   isLoading: boolean;
-  onRefresh: () => void;
+  onRefresh: () => Promise<void> | void;
 }
 
 /** Everyone on duty now, grouped by running shift day so each shift reads as one block. */
@@ -253,8 +253,8 @@ export const ShiftOnDutyList: React.FC<ShiftOnDutyListProps> = ({ personnel, isL
         );
       }}
       contentContainerStyle={styles.list}
-      refreshControl={<RefreshControl refreshing={isLoading} onRefresh={onRefresh} />}
-      ListEmptyComponent={<ZeroState icon={UserCheck} heading={t('shifts.empty.on_duty_title')} description={t('shifts.empty.on_duty_description')} testID="shift-on-duty-empty" />}
+      refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => void onRefresh()} />}
+      ListEmptyComponent={<ZeroState icon={UserCheck} heading={t('shifts.empty.on_duty_title')} description={t('shifts.empty.on_duty_description')} onRetry={onRefresh} testID="shift-on-duty-empty" />}
       testID="shift-on-duty-list"
     />
   );
