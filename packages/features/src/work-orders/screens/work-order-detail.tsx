@@ -33,12 +33,16 @@ function WorkOrderDetailContent({ id }: { id: string }) {
   const [hours, setHours] = useState('');
   const [hoursNote, setHoursNote] = useState('');
 
+  /** The order, plus the choices that name its unit, group and asset (and labor's currency) while they are missing; a retry reloads both. */
+  const load = useCallback(async () => {
+    const store = useWorkOrdersStore.getState();
+    await Promise.all([store.fetchWorkOrder(id, { bypassCache: true }), store.choices ? undefined : store.fetchChoices()]);
+  }, [id]);
+
   useFocusEffect(
     useCallback(() => {
-      const store = useWorkOrdersStore.getState();
-      void store.fetchWorkOrder(id, { bypassCache: true });
-      if (!store.choices) void store.fetchChoices();
-    }, [id])
+      void load();
+    }, [load])
   );
 
   const activities = useMemo(() => [...(detail?.Activities ?? [])].sort((a, b) => String(b.CreatedOn).localeCompare(String(a.CreatedOn))), [detail?.Activities]);
@@ -62,11 +66,7 @@ function WorkOrderDetailContent({ id }: { id: string }) {
   };
 
   if (!detail) {
-    const reload = async () => {
-      await useWorkOrdersStore.getState().fetchWorkOrder(id, { bypassCache: true });
-    };
-
-    return isLoading ? <Loading /> : <ZeroState isError heading={t('workOrders.errors.denied')} onRetry={reload} testID="work-order-missing" />;
+    return isLoading ? <Loading /> : <ZeroState isError heading={t('workOrders.errors.denied')} onRetry={load} testID="work-order-missing" />;
   }
 
   const store = useWorkOrdersStore.getState();

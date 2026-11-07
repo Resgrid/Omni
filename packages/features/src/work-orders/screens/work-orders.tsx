@@ -48,16 +48,19 @@ function WorkOrdersContent() {
   const [filters, setFilters] = useState<WorkOrderListFilters>(EMPTY_WORK_ORDER_FILTERS);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
-  const load = useCallback((assignedToMe?: boolean, bypassCache = false) => {
+  /** Loads access, choices and the list together; settles once all of them have, so a Refresh button stays busy until then. */
+  const load = useCallback(async (assignedToMe?: boolean, bypassCache = false) => {
     const store = useWorkOrdersStore.getState();
-    void store.fetchAccess({ bypassCache });
-    if (!store.choices || bypassCache) void store.fetchChoices({ bypassCache });
-    void store.fetchWorkOrders(assignedToMe === undefined ? undefined : { assignedToMe }, { bypassCache });
+    await Promise.all([
+      store.fetchAccess({ bypassCache }),
+      !store.choices || bypassCache ? store.fetchChoices({ bypassCache }) : undefined,
+      store.fetchWorkOrders(assignedToMe === undefined ? undefined : { assignedToMe }, { bypassCache }),
+    ]);
   }, []);
 
   useFocusEffect(
     useCallback(() => {
-      load();
+      void load();
     }, [load])
   );
 

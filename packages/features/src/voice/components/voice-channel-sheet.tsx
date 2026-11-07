@@ -32,9 +32,9 @@ export const VoiceChannelSheet: React.FC<VoiceChannelSheetProps> = ({ testID = '
   const ptt = usePtt('ui');
   const [joiningId, setJoiningId] = useState<string | null>(null);
 
-  // The channel list (and each channel's token) is read again every time the sheet opens.
+  // The channel list (and each channel's token) is read again from the server, past the endpoint cache, every time the sheet opens.
   useEffect(() => {
-    if (isOpen && voice.ptt) void useLiveKitStore.getState().fetchVoiceSettings();
+    if (isOpen && voice.ptt) void useLiveKitStore.getState().fetchVoiceSettings({ forceRefresh: true });
   }, [isOpen, voice.ptt]);
 
   const { connect } = ptt;

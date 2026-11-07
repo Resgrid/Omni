@@ -57,10 +57,12 @@ export default function WeatherAlertDetailScreen({ alertId: alertIdProp, renderM
   const back = () => (router.canGoBack() ? router.back() : router.replace('/weather-alerts'));
   const current = alert ?? cached;
 
+  // The store keeps the alert it fetches, and `cached` reads it for the current id: nothing is written here, so a retry that
+  // settles after the screen moved to another alert cannot show the old one.
   const reload = async () => {
     if (!alertId) return;
 
-    setAlert(await useWeatherAlertsStore.getState().fetchAlertDetail(alertId, { bypassCache: true }));
+    await useWeatherAlertsStore.getState().fetchAlertDetail(alertId, { bypassCache: true });
   };
 
   if (!current) {

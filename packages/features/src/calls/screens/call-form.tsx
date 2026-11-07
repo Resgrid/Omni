@@ -167,10 +167,15 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
   const [detailRead, setDetailRead] = useState(false);
 
   const readDetail = useCallback(
-    (options?: { bypassCache?: boolean }) => {
+    async (options?: { bypassCache?: boolean }) => {
       if (!callId) return;
       setDetailRead(false);
-      void fetchCallDetail(callId, options).finally(() => setDetailRead(true));
+
+      try {
+        await fetchCallDetail(callId, options);
+      } finally {
+        setDetailRead(true);
+      }
     },
     [callId, fetchCallDetail]
   );
@@ -178,7 +183,7 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
   useEffect(() => {
     void fetchCallFormData();
 
-    if (isEdit) readDetail();
+    if (isEdit) void readDetail();
   }, [fetchCallFormData, isEdit, readDetail]);
 
   // Start from the call (edit, hidden fields included) or the refused request (correction) once it is available. An

@@ -35,9 +35,11 @@ export const AudioStreamSheet: React.FC<AudioStreamSheetProps> = ({ testID = 'au
 
   const isBusy = isLoading || isBuffering;
 
+  // While a stream loads or buffers only "None" stays available: a stalled stream can always be stopped (stopStream
+  // supersedes a pending play), and starting another waits for this one to settle.
   const select = useCallback(
     (stream: AudioStream | null) => {
-      if (isBusy) return;
+      if (stream !== null && isBusy) return;
       const store = useAudioStreamStore.getState();
 
       if (stream === null) void store.stopStream();
@@ -87,14 +89,15 @@ export const AudioStreamSheet: React.FC<AudioStreamSheetProps> = ({ testID = 'au
         ) : (
           rows.map((row) => {
             const isSelected = row.id === selectedId;
+            const isDisabled = isBusy && row.stream !== null;
 
             return (
               <Pressable
                 key={row.id}
                 onPress={() => select(row.stream)}
-                disabled={isBusy}
+                disabled={isDisabled}
                 accessibilityRole="radio"
-                accessibilityState={{ checked: isSelected, disabled: isBusy }}
+                accessibilityState={{ checked: isSelected, disabled: isDisabled }}
                 accessibilityLabel={row.name}
                 testID={`${testID}-stream-${row.id}`}
                 className={`rounded-lg border px-3 py-3 ${isSelected ? 'border-primary-500 bg-primary-50' : 'border-outline-200 bg-background-0'}`}

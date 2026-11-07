@@ -117,7 +117,7 @@ describe('VoiceChannelSheet', () => {
     expect(screen.queryByTestId('voice-channel-sheet-channels', hidden)).toBeNull();
 
     await act(() => useLiveKitStore.getState().setIsBottomSheetVisible(true));
-    expect(useLiveKitStore.getState().fetchVoiceSettings).toHaveBeenCalled();
+    expect(useLiveKitStore.getState().fetchVoiceSettings).toHaveBeenCalledWith({ forceRefresh: true });
     expect(screen.getByTestId('voice-channel-sheet-channel-c2', hidden)).toHaveTextContent('Tactical 2', { exact: false });
     await fireEvent.press(screen.getByTestId('voice-channel-sheet-join-c2', hidden));
     expect(useLiveKitStore.getState().connectToRoom).toHaveBeenCalledWith(CHANNELS[1]);
@@ -197,11 +197,18 @@ describe('AudioStreamSheet', () => {
     expect(useAudioStreamStore.getState().isBottomSheetVisible).toBe(false);
   });
 
-  it('holds the picker while a stream is starting', async () => {
+  it('holds the other streams while one is starting or buffering, but None still stops it', async () => {
     useAudioStreamStore.setState({ isBottomSheetVisible: true, currentStream: STREAMS[0], isLoading: true });
     await render(<AudioStreamSheet />);
     expect(screen.getByTestId('audio-stream-sheet-status', hidden)).toHaveTextContent('audio_streams.loading_stream');
+    expect(screen.getByTestId('audio-stream-sheet-stream-s2', hidden)).toBeDisabled();
     await fireEvent.press(screen.getByTestId('audio-stream-sheet-stream-s2', hidden));
     expect(useAudioStreamStore.getState().playStream).not.toHaveBeenCalled();
+
+    // A stream stalled on a weak connection stays buffering: None is the way out.
+    await act(() => useAudioStreamStore.setState({ isLoading: false, isBuffering: true }));
+    expect(screen.getByTestId('audio-stream-sheet-stream-none', hidden)).toBeEnabled();
+    await fireEvent.press(screen.getByTestId('audio-stream-sheet-stream-none', hidden));
+    expect(useAudioStreamStore.getState().stopStream).toHaveBeenCalled();
   });
 });

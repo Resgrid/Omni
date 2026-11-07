@@ -63,13 +63,19 @@ export default function ContactDetailScreen({ contactId: contactIdProp, initialT
     await useContactsStore.getState().fetchContactDetails(contactId);
   }, [contactId]);
 
+  // The contact is missing, but its notes, pre-plan and hazards may be cached for offline use: a retry re-reads only the
+  // contact (always from the server), so a failed retry leaves those caches in place.
+  const retryContact = useCallback(async () => {
+    if (contactId) await useContactsStore.getState().fetchContactDetails(contactId);
+  }, [contactId]);
+
   const back = () => (router.canGoBack() ? router.back() : router.replace('/contacts'));
 
   if (!contact || !contactId) {
     return (
       <View className="flex-1 bg-background-50" testID="contact-detail-screen">
         <ScreenHeader title={t('contacts.details')} onBack={back} />
-        {isLoading && contactId ? <Loading /> : <ZeroState icon={Contact} heading={t('contacts.not_found')} onRetry={contactId ? refresh : undefined} testID="contact-detail-missing" />}
+        {isLoading && contactId ? <Loading /> : <ZeroState icon={Contact} heading={t('contacts.not_found')} onRetry={contactId ? retryContact : undefined} testID="contact-detail-missing" />}
       </View>
     );
   }

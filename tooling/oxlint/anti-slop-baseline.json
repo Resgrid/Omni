@@ -1851,9 +1851,6 @@
   "packages/features/src/awaiting-resources/lib/awaiting-format.ts": {
     "anti-slop/require-readable-spacing": 1
   },
-  "packages/features/src/awaiting-resources/screens/awaiting-resources.tsx": {
-    "anti-slop/require-readable-spacing": 5
-  },
   "packages/features/src/calendar/__tests__/calendar.test.tsx": {
     "anti-slop/no-object-parameters": 2,
     "anti-slop/no-unsafe-dictionary-type": 1,
@@ -3749,13 +3746,10 @@
     "anti-slop/require-readable-spacing": 17
   },
   "packages/features/src/work-orders/screens/work-order-detail.tsx": {
-    "anti-slop/require-readable-spacing": 17
+    "anti-slop/require-readable-spacing": 16
   },
   "packages/features/src/work-orders/screens/work-order-report.tsx": {
     "anti-slop/require-readable-spacing": 10
-  },
-  "packages/features/src/work-orders/screens/work-orders.tsx": {
-    "anti-slop/require-readable-spacing": 1
   },
   "packages/i18n/scripts/add-keys.ts": {
     "anti-slop/no-array-filter-map": 1,

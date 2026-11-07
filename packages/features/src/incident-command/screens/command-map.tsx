@@ -1,12 +1,12 @@
 import { isSafeRouteId } from '@resgrid/core/utils/route-ids';
-import { selectCallById, useCallsStore, useCommandStore } from '@resgrid/data';
+import { selectCallById, useCallsStore, useCommandStore, useUnitsStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import { Camera, FillLayer, LineLayer, MapView, MarkerView, ShapeSource } from '@resgrid/maps';
 import { HStack, ScreenHeader, Text, View, ZeroState } from '@resgrid/ui';
 import { router, useLocalSearchParams } from 'expo-router';
 import type { LucideIcon } from 'lucide-react-native';
 import { Flag, HeartPulse, MapPin, ParkingSquare, Truck } from 'lucide-react-native';
-import React, { useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 
 import { resolveResourcePosition } from '../hooks/resource-position';
@@ -45,14 +45,29 @@ export default function CommandMapScreen({ callId: callIdProp }: CommandMapScree
     if (callId && !entry) void useCommandStore.getState().refreshBoard(callId);
   }, [callId, entry]);
 
+  // Subscribed, not read once: unit markers move (and a map with no positions gets some) when the units store changes.
+  const units = useUnitsStore((state) => state.units);
+  const unitCurrentStatuses = useUnitsStore((state) => state.unitCurrentStatuses);
+
   const sites = useMemo(() => incidentSites(board, call), [board, call]);
-  const resources = useMemo(() => resourceMarkers(board, resolveResourcePosition), [board]);
+  const resources = useMemo(() => resourceMarkers(board, (assignment) => resolveResourcePosition(assignment, { units, unitCurrentStatuses })), [board, units, unitCurrentStatuses]);
   const annotations = useMemo(() => annotationShapes(board?.Annotations), [board?.Annotations]);
   const start = useMemo(() => initialMapCenter(board, sites, resources), [board, resources, sites]);
 
   const back = () => (router.canGoBack() ? router.back() : router.replace('/command' as never));
   const header = <ScreenHeader title={t('incident_command.command_map')} onBack={back} />;
   const reload = callId ? () => useCommandStore.getState().refreshBoard(callId, { bypassCache: true }) : undefined;
+
+  // No positions to show: the call's location and the units' positions come from their own stores, so reload those too.
+  const reloadPositions = useCallback(async () => {
+    if (!callId) return;
+    await Promise.all([
+      useCommandStore.getState().refreshBoard(callId, { bypassCache: true }),
+      useCallsStore.getState().fetchCalls({ bypassCache: true }),
+      useUnitsStore.getState().fetchUnits({ bypassCache: true }),
+      useUnitsStore.getState().fetchUnitStatuses({ bypassCache: true }),
+    ]);
+  }, [callId]);
 
   if (!callId || !board) {
     return (
@@ -67,7 +82,7 @@ export default function CommandMapScreen({ callId: callIdProp }: CommandMapScree
     return (
       <View className="flex-1 bg-background-50" testID="command-map-screen">
         {header}
-        <ZeroState icon={MapPin} heading={t('incident_command.map_no_positions')} onRetry={reload} testID="command-map-no-positions" />
+        <ZeroState icon={MapPin} heading={t('incident_command.map_no_positions')} onRetry={reloadPositions} testID="command-map-no-positions" />
       </View>
     );
   }

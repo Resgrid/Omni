@@ -60,7 +60,8 @@ export default function ArchivedCallsScreen({ showHeader = true, now = Date.now 
 
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
-    void useArchivedCallsStore
+
+    return useArchivedCallsStore
       .getState()
       .fetchArchivedCalls()
       .finally(() => setIsRefreshing(false));

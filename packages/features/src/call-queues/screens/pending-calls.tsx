@@ -51,7 +51,8 @@ export default function PendingCallsScreen({ showHeader = true, realtime = true 
 
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
-    void refresh().finally(() => setIsRefreshing(false));
+
+    return refresh().finally(() => setIsRefreshing(false));
   }, [refresh]);
 
   const visible = useMemo(() => pendingCalls.filter((call) => matchesQueueQuery(call, query)), [pendingCalls, query]);

@@ -39,8 +39,12 @@ export const RoutePlansList: React.FC<{ testID?: string }> = ({ testID = 'route-
 
   const refresh = useCallback(async () => {
     setIsRefreshing(true);
-    await Promise.all([useRoutesStore.getState().fetchAllRoutePlans({ bypassCache: true }), activeUnitId ? useRoutesStore.getState().fetchActiveRoute(activeUnitId, { bypassCache: true }) : Promise.resolve()]);
-    setIsRefreshing(false);
+
+    try {
+      await Promise.all([useRoutesStore.getState().fetchAllRoutePlans({ bypassCache: true }), activeUnitId ? useRoutesStore.getState().fetchActiveRoute(activeUnitId, { bypassCache: true }) : Promise.resolve()]);
+    } finally {
+      setIsRefreshing(false);
+    }
   }, [activeUnitId]);
 
   const unitNames = useMemo(() => new Map(units.map((unit) => [String(unit.UnitId), unit.Name])), [units]);
@@ -112,13 +116,18 @@ export const RoutePlansList: React.FC<{ testID?: string }> = ({ testID = 'route-
         ListHeaderComponent={banner}
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => void refresh()} />}
         ListEmptyComponent={
-          <ZeroState
-            icon={query ? Search : Route}
-            heading={query ? t('routes.no_search_results') : t('routes.no_routes')}
-            description={query ? t('routes.try_different_search') : t('routes.no_routes_description_all')}
-            onRetry={refresh}
-            testID={`${testID}-empty`}
-          />
+          // A retry from the error state clears the error as it starts, landing here: the loader, not an enabled Refresh, until it settles.
+          isLoading ? (
+            <Loading text={t('routes.loading')} />
+          ) : (
+            <ZeroState
+              icon={query ? Search : Route}
+              heading={query ? t('routes.no_search_results') : t('routes.no_routes')}
+              description={query ? t('routes.try_different_search') : t('routes.no_routes_description_all')}
+              onRetry={refresh}
+              testID={`${testID}-empty`}
+            />
+          )
         }
         contentContainerStyle={{ paddingBottom: 20 }}
         testID={`${testID}-list`}

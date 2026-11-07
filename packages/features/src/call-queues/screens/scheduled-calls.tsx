@@ -49,7 +49,8 @@ export default function ScheduledCallsScreen({ showHeader = true, realtime = tru
 
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
-    void refresh().finally(() => setIsRefreshing(false));
+
+    return refresh().finally(() => setIsRefreshing(false));
   }, [refresh]);
 
   const visible = useMemo(() => scheduledCalls.filter((call) => matchesQueueQuery(call, query)), [query, scheduledCalls]);

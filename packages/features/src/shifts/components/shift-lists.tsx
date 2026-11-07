@@ -46,7 +46,8 @@ export interface ShiftTradesListProps {
   filter: ShiftTradesFilter;
   onFilterChange: (filter: ShiftTradesFilter) => void;
   isLoading: boolean;
-  onRefresh: () => Promise<void> | void;
+  /** Refetches the list; the empty state's Refresh button stays busy until the returned promise settles. */
+  onRefresh: () => Promise<void>;
   onAction: (action: ShiftTradeAction) => void;
   onOpenDetails: (trade: ShiftTradeResultData) => void;
 }
@@ -113,7 +114,8 @@ export interface ShiftApprovalsListProps {
   signups: readonly PendingShiftSignupResultData[];
   trades: readonly ShiftTradeResultData[];
   isLoading: boolean;
-  onRefresh: () => Promise<void> | void;
+  /** Refetches the list; the empty state's Refresh button stays busy until the returned promise settles. */
+  onRefresh: () => Promise<void>;
   onAction: (action: ShiftSheetAction) => void;
   onOpenTradeDetails: (trade: ShiftTradeResultData) => void;
 }
@@ -199,7 +201,8 @@ export const ShiftApprovalsList: React.FC<ShiftApprovalsListProps> = ({ signups,
 export interface ShiftOnDutyListProps {
   personnel: readonly OnDutyPersonResultData[];
   isLoading: boolean;
-  onRefresh: () => Promise<void> | void;
+  /** Refetches the list; the empty state's Refresh button stays busy until the returned promise settles. */
+  onRefresh: () => Promise<void>;
 }
 
 /** Everyone on duty now, grouped by running shift day so each shift reads as one block. */

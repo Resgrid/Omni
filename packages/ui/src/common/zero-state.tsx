@@ -26,10 +26,11 @@ export interface ZeroStateProps {
   isError?: boolean;
   /**
    * Loads what this state stands in for again (a list's refetch, bypassing caches). Shows a Retry button in an error state
-   * and a Refresh button in an empty one, with a spinner until a returned promise settles. Every list's empty and error
+   * and a Refresh button in an empty one, with a spinner until the returned promise settles. Every list's empty and error
    * state passes it: the state replaces the list, so pull to refresh is gone with it, and web and Electron have none.
+   * It returns the refetch's promise (never `void fetch()`), so the button stays busy and a second press waits for it.
    */
-  onRetry?: () => Promise<void> | void;
+  onRetry?: () => Promise<void>;
   /** Retry button text; defaults to the translated "Retry" (error) / "Refresh" (empty). */
   retryLabel?: string;
   /** Retry button test id; defaults to `${testID}-retry`. */
@@ -47,8 +48,8 @@ export interface ZeroStateProps {
   testID?: string;
 }
 
-/** Runs `onRetry`, reporting whether a promise it returned is still running; a second press while it runs does nothing. */
-const useRetry = (onRetry: (() => Promise<void> | void) | undefined) => {
+/** Runs `onRetry`, reporting whether the promise it returned is still running; a second press while it runs does nothing. */
+const useRetry = (onRetry: (() => Promise<void>) | undefined) => {
   const [isRetrying, setIsRetrying] = useState(false);
   const isMounted = useRef(true);
   const isRunning = useRef(false);
