@@ -1,4 +1,4 @@
-import { detectDeviceLanguage, resolveInitialLanguage } from '../detect';
+import { detectDeviceLanguage, detectDeviceRegion, resolveInitialLanguage } from '../detect';
 
 jest.mock('expo-localization', () => ({ getLocales: jest.fn(() => []) }));
 
@@ -32,5 +32,18 @@ describe('device language detection (Unit/IC)', () => {
     expect(resolveInitialLanguage('fr', [{ languageCode: 'de' }])).toBe('fr');
     expect(resolveInitialLanguage('pt', [{ languageCode: 'de' }])).toBe('de');
     expect(resolveInitialLanguage(null, [{ languageCode: 'ar' }])).toBe('ar');
+  });
+});
+
+describe('detectDeviceRegion', () => {
+  it('is the first preferred locale region, upper case, or null when the platform gives none', () => {
+    expect(
+      detectDeviceRegion([
+        { languageCode: 'zh', regionCode: 'cn' },
+        { languageCode: 'en', regionCode: 'US' },
+      ])
+    ).toBe('CN');
+    expect(detectDeviceRegion([{ languageCode: 'en', regionCode: null }])).toBeNull();
+    expect(detectDeviceRegion([])).toBeNull();
   });
 });

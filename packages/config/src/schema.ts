@@ -164,7 +164,7 @@ const shellSchema = z.object({
     tablet: z.enum(['drawer', 'permanent-landscape', 'toggle-panel']),
     desktop: z.enum(['drawer', 'permanent-landscape', 'toggle-panel']),
   }),
-  sidebarContent: z.enum(['menu', 'unit-status']),
+  sidebarContent: z.enum(['menu', 'member-menu', 'unit-status']),
   homeRoute: z.string().startsWith('/'),
 });
 

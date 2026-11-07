@@ -1,4 +1,5 @@
 import type { Capabilities, FeatureModuleId } from '@resgrid/config';
+import type { NavBadge } from '@resgrid/data';
 import type { LucideIcon } from 'lucide-react-native';
 import { Award } from 'lucide-react-native';
 
@@ -22,9 +23,11 @@ export interface FeatureNavEntry {
   requiresCapability?: (capabilities: Capabilities) => boolean;
   /** Feature module the variant must ship (`variant.modules`). */
   requiresModule?: FeatureModuleId;
+  /** Count badge beside the entry (the shell's `NavEntry.badge`). */
+  badge?: NavBadge;
 }
 
 /** "My certifications"; the detail and edit screens are reached from the list. */
 export const certificationsNav: readonly FeatureNavEntry[] = [
-  { id: 'certifications', href: certificationsRoutes.list(), labelKey: 'certifications.title', defaultLabel: 'My certifications', icon: Award, requiresModule: 'certifications' },
+  { id: 'certifications', href: certificationsRoutes.list(), labelKey: 'certifications.title', defaultLabel: 'My certifications', icon: Award, requiresModule: 'certifications', badge: 'certifications' },
 ];

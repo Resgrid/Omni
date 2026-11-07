@@ -7,6 +7,7 @@ export { getVoiceCapabilities, type VoiceCapabilities } from './capabilities';
 export { initializeVoice, type InitializeVoiceOptions, registerVoiceResets } from './initialize';
 export {
   configureVoice,
+  HEADSET_BUTTON_PTT_ENABLED_KEY,
   PREFERRED_BLUETOOTH_DEVICE_KEY,
   VOICE_PRESERVED_KEYS,
   type VoiceForegroundService,
@@ -18,7 +19,7 @@ export {
 } from './runtime';
 
 // LiveKit PTT
-export { createNotifeeForegroundService, type NotifeeForegroundServiceOptions } from './livekit/foreground-service';
+export { createNotifeeForegroundService, type NotifeeForegroundServiceOptions, type VoiceSessionText } from './livekit/foreground-service';
 export { createInitialLiveKitState, type LiveKitState, selectSelectedRoom, useLiveKitStore, type VoiceChannel } from './livekit/livekit-store';
 export type { MicrophonePermissionResult } from './livekit/microphone-permission';
 export { type VoiceError, type VoiceErrorCode, type VoiceResult } from './livekit/types';
@@ -35,6 +36,9 @@ export { type CallKeepService, type CallKeepSetupConfig, noopCallKeepService } f
 
 // Headset buttons
 export { getHeadsetButtonService } from './headset/headset-button-service';
+
+// Settings → Voice → "Talk with the earbud button" (a device preference)
+export { restoreHeadsetButtonPttPreference, setHeadsetButtonPttEnabled } from './headset/headset-ptt-preference';
 export type { HeadsetButtonService, HeadsetButtonType, HeadsetMonitorOwner } from './headset/types';
 
 // Bluetooth PTT

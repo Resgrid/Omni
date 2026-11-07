@@ -8,6 +8,7 @@ const webHeadsetButtonService: HeadsetButtonService = {
   isMonitoringActive: () => false,
   handleKeyEvent: (_event: MediaButtonKeyEvent) => undefined,
   handleButton: (_type: HeadsetButtonType, _phase?: 'down' | 'up') => undefined,
+  reassertMediaSession: () => undefined,
   destroy: () => undefined,
 };
 

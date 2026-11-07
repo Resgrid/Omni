@@ -15,6 +15,7 @@ import type { ReadinessAccess, WorkOrderApiResult, WorkOrderChoices, WorkOrderDe
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+import { refreshBadgeCountsSoon } from '../badge-counts/badge-counts-store';
 import { assertV4Success, unwrapItem } from '../core/envelope';
 import { type DataError, toDataError } from '../core/errors';
 import { defineDataHandler, submitWrite, type WriteResult } from '../core/outbox';
@@ -108,6 +109,8 @@ export const useWorkOrdersStore = create<WorkOrdersState>()(
         set({ actionError: null });
         try {
           keep(unwrapItem(assertV4Success(await fn())));
+          // Accepting, moving or closing a work order moves the work orders badge.
+          refreshBadgeCountsSoon();
           return true;
         } catch (error) {
           set({ actionError: toDataError(error) });

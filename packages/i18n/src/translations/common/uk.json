@@ -35,7 +35,10 @@
     "stream_info": "Інформація про потік",
     "stream_selected": "Вибрано: {{streamName}}",
     "title": "Аудіопотоки",
-    "type": "Тип"
+    "type": "Тип",
+    "reconnecting": "Повторне підключення",
+    "reconnecting_stream": "Повторне підключення до {{streamName}}…",
+    "paused": "Призупинено"
   },
   "bluetooth": {
     "applied": "Застосовано",
@@ -1472,7 +1475,8 @@
     "speaking": "Говорить",
     "title": "Голосові канали",
     "unmute": "Увімкнути звук",
-    "join_failed": "Could not join the voice channel. Please try again."
+    "join_failed": "Could not join the voice channel. Please try again.",
+    "reconnecting": "Повторне підключення…"
   },
   "loading": {
     "loading": "Завантаження...",
@@ -2016,7 +2020,14 @@
     "view_chat": "Переглянути чат",
     "view_reference": "Переглянути {{type}}",
     "mark_all_read": "Mark all as read",
-    "unread": "Unread"
+    "unread": "Unread",
+    "select": "Вибрати",
+    "mark_read": "Позначити як прочитане",
+    "delete": "Видалити",
+    "delete_selected_message": "Видалити вибрані сповіщення ({{count}})? Цю дію не можна скасувати.",
+    "delete_all_message": "Видалити всі сповіщення? Цю дію не можна скасувати.",
+    "deleted": "Сповіщення видалено",
+    "mark_read_error": "Не вдалося позначити сповіщення як прочитані"
   },
   "onboarding": {
     "getStarted": "Розпочати",
@@ -2900,7 +2911,9 @@
       "source_embedded": "Вбудована версія",
       "title": "Оновлення застосунку",
       "up_to_date": "Актуальна версія. Остання перевірка: {{time}}."
-    }
+    },
+    "headset_button_ptt": "Говорити кнопкою навушників",
+    "headset_button_ptt_note": "Кнопка виклику на навушниках або гарнітурі вмикає й вимикає мовлення в голосовому каналі, так само як «Завершити» на екрані блокування. Виходьте з каналу в застосунку. Вимкніть це, щоб кнопка виходила з каналу."
   },
   "shared_session": {
     "bar": "Спільний пристрій",
@@ -3280,7 +3293,8 @@
     "notifications_unread": "Notifications, {{count}} unread",
     "changes_need_attention": "Needs attention: {{count}}",
     "offline": "Offline",
-    "offline_changes_waiting": "Offline: {{count}} waiting"
+    "offline_changes_waiting": "Offline: {{count}} waiting",
+    "nav_item_with_count": "{{label}} ({{count}})"
   },
   "access_denied": {
     "back_to_sign_in": "Back to sign in",
@@ -4422,5 +4436,18 @@
     "image_not_offline": "This map image is not saved on this device. It shows again when you are back online.",
     "nothing_to_show": "Nothing to show on this device",
     "nothing_to_show_detail": "This map has no image or map tiles this app can draw. Open it on the website instead."
+  },
+  "sidebar": {
+    "audio": "Потік",
+    "ptt": "Голос"
+  },
+  "voice_session": {
+    "channel_name": "Голосовий канал",
+    "notification_title": "Голосовий канал активний",
+    "notification_body": "Функція «натисни й говори» працює, поки застосунок у фоновому режимі.",
+    "phone_account_title": "Потрібні дозволи",
+    "phone_account_description": "{{appName}} потребує доступу до ваших телефонних облікових записів, щоб голосові канали залишалися підключеними у фоновому режимі.",
+    "call_channel_name": "Голосові виклики",
+    "call_notification_title": "Голосовий виклик {{appName}}"
   }
 }

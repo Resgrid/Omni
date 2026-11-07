@@ -1,5 +1,8 @@
 import { getActiveVariant } from '@resgrid/config';
 import { isNative, isWeb } from '@resgrid/core';
+import { Platform } from 'react-native';
+
+import { getVoiceRuntime } from './runtime';
 
 /**
  * Voice capabilities of the running app: the variant manifest (`capabilities.voice`, omni-plan §5.3) narrowed by what
@@ -9,7 +12,7 @@ import { isNative, isWeb } from '@resgrid/core';
 export interface VoiceCapabilities {
   /** LiveKit push-to-talk channels. */
   ptt: boolean;
-  /** CallKit / ConnectionService call for background audio (R/U/I, iOS and Android only). */
+  /** CallKit / ConnectionService call for background audio (R/U/I/D, iOS and Android only; never CallKit in China). */
   callKeep: boolean;
   /** BLE PTT handsets (Aina, Inrico, HYS): react-native-ble-manager on native, Web Bluetooth on web/Electron. */
   bluetoothPtt: boolean;
@@ -27,18 +30,21 @@ const hasWebBluetooth = (): boolean => typeof navigator !== 'undefined' && navig
 
 export function getVoiceCapabilities(): VoiceCapabilities {
   let manifest: ReturnType<typeof getActiveVariant>;
+
   try {
     manifest = getActiveVariant();
   } catch {
     // No variant yet (tests, early startup): everything off rather than guessing.
     return NONE;
   }
+
   const voice = manifest.capabilities.voice;
   const native = isNative();
   const web = isWeb();
+
   return {
     ptt: voice.ptt,
-    callKeep: voice.ptt && voice.callKeep && native,
+    callKeep: voice.ptt && voice.callKeep && native && !(Platform.OS === 'ios' && getVoiceRuntime().restrictCallKit),
     bluetoothPtt: voice.ptt && voice.bluetoothPtt && (native || (web && hasWebBluetooth())),
     headsetButtonPtt: voice.ptt && voice.headsetButtonPtt && native,
     desktopPtt: voice.ptt && voice.desktopPtt && web,

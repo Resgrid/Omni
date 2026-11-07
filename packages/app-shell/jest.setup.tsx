@@ -80,6 +80,7 @@ jest.mock('@resgrid/i18n', () => {
     initI18n: jest.fn(),
     loadLanguage: jest.fn(() => Promise.resolve(true)),
     getCurrentLanguage: () => 'en',
+    detectDeviceRegion: () => null,
     isSupportedLanguage: (value: unknown) => typeof value === 'string' && ['en', 'ar', 'de', 'el', 'es', 'fr', 'it', 'pl', 'sv', 'uk'].includes(value),
     LEGACY_LANGUAGE_STORAGE_KEY: 'local',
   };

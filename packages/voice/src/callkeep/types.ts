@@ -1,7 +1,7 @@
 /**
  * CallKeep keeps a LiveKit PTT session alive in the background (CallKit on iOS, self-managed ConnectionService on
- * Android) and reports system/headset mute actions back. R/U/I only (`capabilities.voice.callKeep`); every other variant
- * and web get `noopCallKeepService`.
+ * Android) and reports system/headset mute actions back. R/U/I/D (`capabilities.voice.callKeep`); BigBoard, web and
+ * iOS in China (no CallKit there) get `noopCallKeepService`.
  */
 export interface CallKeepSetupConfig {
   appName: string;
@@ -31,7 +31,13 @@ export interface CallKeepService {
   setMuted(muted: boolean): Promise<void>;
   /** Forward sync: system/headset mute actions (CallKit → app). */
   setMuteStateCallback(callback: ((muted: boolean) => void) | null): void;
-  setEndCallCallback(callback: (() => void) | null): void;
+  /** The system ended the current call (call screen, a headset's call button, another call); receives its UUID. */
+  setEndCallCallback(callback: ((callUUID: string) => void) | null): void;
+  /**
+   * Another phone call (cellular, emergency, another app's) is ringing or in progress, besides `excludeCallUUID`. When
+   * the platform cannot tell, it answers true, so callers keep out of the way of a call they cannot see.
+   */
+  isAnotherCallActive(excludeCallUUID?: string | null): Promise<boolean>;
   /** Ignore system mute actions for a while (a BLE PTT press makes HFP fire spurious ones). */
   ignoreMuteEvents(durationMs: number): void;
   /** Stop forwarding mute actions while a specialized PTT handset is connected (prevents oscillation). */
@@ -54,6 +60,7 @@ export const noopCallKeepService: CallKeepService = {
   setMuted: resolved,
   setMuteStateCallback: () => undefined,
   setEndCallCallback: () => undefined,
+  isAnotherCallActive: () => Promise.resolve(false),
   ignoreMuteEvents: () => undefined,
   removeMuteListener: () => undefined,
   restoreMuteListener: () => undefined,

@@ -76,6 +76,11 @@ jobs:
       BASE_API_URL: https://qaapi.resgrid.dev
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
       NODE_OPTIONS: --max_old_space_size=4096
+      # The dev-sim APK runs on emulators: x86_64 for the CI emulator (e2e-android), arm64-v8a for Apple-silicon ones.
+      # This overrides the ARM-only reactNativeArchitectures that @resgrid/config-plugins (custom-gradle) writes to
+      # gradle.properties for store builds; without it libreactnative.so is missing on x86_64 and the app dies at start.
+      # Set here, not in eas.json or the plugin, so no runtime fingerprint changes.
+      ORG_GRADLE_PROJECT_reactNativeArchitectures: x86_64,arm64-v8a
     steps:
       - uses: actions/checkout@v4
       - name: Free disk space and move temp dirs off tmpfs
@@ -134,6 +139,9 @@ jobs:
       APP_ENV: development
       # Metro serves the client settings: QA, as the dev build was made for (an unset value would be production).
       BASE_API_URL: https://qaapi.resgrid.dev
+      # Every adb server this job starts (the emulator runner's, Maestro's) runs without mDNS: adb 37's mDNS bridge can
+      # abort the server, which Maestro sees as "device offline" (apps/omni/e2e/README.md, QA regression).
+      ADB_MDNS: '0'
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-workspace
@@ -178,6 +186,7 @@ jobs:
             maestro-output
             ~/.maestro/tests
             ${{ runner.temp }}/metro.log
+            /tmp/adb.*.log
           retention-days: 7
           if-no-files-found: ignore
 

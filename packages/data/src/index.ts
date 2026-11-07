@@ -193,6 +193,28 @@ export {
   upsertChatMessage,
   useChatStore,
 } from './chat/chat-store';
+
+// Menu and tab badge counts (open calls, unread messages and chats, severe weather; the Novu inbox count joins them).
+export {
+  BADGE_COUNTS_REFRESH_DELAY_MS,
+  BADGE_COUNTS_STALE_MS,
+  type BadgeCountsParams,
+  type BadgeCountsState,
+  badgeKeysOf,
+  isServerBadgeCountKey,
+  type NavBadge,
+  type NavBadgeKey,
+  refreshBadgeCountsIfStale,
+  refreshBadgeCountsSoon,
+  selectBadgeCount,
+  SERVER_BADGE_COUNT_KEYS,
+  type ServerBadgeCountKey,
+  toBadgeCounts,
+  useBadgeCount,
+  useBadgeCountLookup,
+  useBadgeCountsStore,
+  useServerCount,
+} from './badge-counts/badge-counts-store';
 export { MESSAGE_SEND_EVENT, MESSAGES_MAX_ROWS, MESSAGES_RETENTION_MS, messageSendHandler, type MessagesState, type QueuedMessage, retainMessages, useMessagesStore } from './messages/messages-store';
 
 // Member modules

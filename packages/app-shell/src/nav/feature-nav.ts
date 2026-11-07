@@ -1,4 +1,5 @@
 import type { Capabilities, FeatureModuleId, VariantManifest } from '@resgrid/config';
+import type { NavBadge } from '@resgrid/data';
 
 import type { NavEntry, NavIcon, NavPlacement } from './define-nav';
 
@@ -26,6 +27,8 @@ export interface FeatureNavInput {
   requiresModule?: FeatureModuleId;
   order?: number;
   placement?: (manifest: VariantManifest) => NavPlacement | null;
+  /** The entry's count badge (`NavEntry.badge`). */
+  badge?: NavBadge;
 }
 
 /**
@@ -102,6 +105,9 @@ export function featureNav(entries: readonly FeatureNavInput[], placement: Featu
       ...(order !== undefined ? { order } : {}),
       ...options.overrides?.[entry.id],
     };
+
+    // A variant's override (`overrides: { calls: { badge: … } }`) wins over the feature's own badge.
+    if (entry.badge !== undefined && mapped.badge === undefined) mapped.badge = entry.badge;
     out.push(mapped);
   }
   return out;

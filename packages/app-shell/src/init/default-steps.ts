@@ -34,6 +34,29 @@ import type { AppShellConfig } from '../runtime/shell-config';
 import { getShellState, resetShellSessionState, setShellState } from '../runtime/shell-state';
 import { registerAppUpdateSteps } from '../updates/update-steps';
 import type { AppInit, InitStep } from './create-app-init';
+import { createCallKeepSetupConfig, createVoiceForegroundService, isCallKitRestrictedRegion } from './voice-session';
+
+/**
+ * The longest startup waits for the chosen language's strings (a web chunk on a slow network). The load carries on
+ * after it and the strings apply when they land; English shows meanwhile rather than a held loading screen.
+ */
+export const LANGUAGE_LOAD_BUDGET_MS = 4_000;
+
+/** Push setup (listeners, launch tap replay, channels) gets this long; it is optional and never holds up the app. */
+export const PUSH_INIT_TIMEOUT_MS = 10_000;
+
+/** The language load started by `startup.i18n`, awaited (within its budget) once storage says which language is wanted. */
+let pendingLanguageLoad: Promise<boolean> | null = null;
+
+const settleWithin = async (task: Promise<unknown>, budgetMs: number): Promise<void> => {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+
+  try {
+    await Promise.race([task.catch(() => undefined), new Promise<void>((resolve) => (timer = setTimeout(resolve, budgetMs)))]);
+  } finally {
+    clearTimeout(timer);
+  }
+};
 
 /** Legacy device-preference keys (Responder `lib/storage`), read as MMKV booleans. */
 export const REALTIME_GEOLOCATION_KEY = 'REALTIME_GEOLOCATION_ENABLED';
@@ -41,9 +64,11 @@ export const BACKGROUND_GEOLOCATION_KEY = 'BACKGROUND_GEOLOCATION_ENABLED';
 
 const webPushConfigFromDepartment = (): WebPushFirebaseConfig | null => {
   const config = getShellState().departmentConfig;
+
   if (!config?.WebPushApiKey || !config.WebPushProjectId || !config.WebPushMessagingSenderId || !config.WebPushAppId || !config.WebPushVapidKey) {
     return null;
   }
+
   return {
     apiKey: config.WebPushApiKey,
     authDomain: config.WebPushAuthDomain,
@@ -57,6 +82,7 @@ const webPushConfigFromDepartment = (): WebPushFirebaseConfig | null => {
 /** Per-variant cache TTL policy (IC keeps cached data far longer than the others). */
 const cachePolicyFor = (manifest: VariantManifest): ApiCachePolicy => {
   const variantTtl = apiCacheTtlFromManifest(manifest.offline);
+
   return { ttlMs: (_path, defaultTtl) => (manifest.offline.cacheTtl === 'long' ? Math.max(defaultTtl, variantTtl) : defaultTtl) };
 };
 
@@ -67,6 +93,7 @@ const cachePolicyFor = (manifest: VariantManifest): ApiCachePolicy => {
 export async function loadDepartmentConfig(options: { forceRefresh?: boolean } = {}): Promise<void> {
   try {
     const result = await getConfig(requireApiContext(), { key: getEnv().APP_KEY || undefined }, options.forceRefresh ? { forceRefresh: true } : undefined);
+
     if (result?.Data) {
       setShellState({ departmentConfig: result.Data });
     }
@@ -87,15 +114,18 @@ function wireOfflineStatus(runtime: OfflineRuntime): void {
     const changesNeedingAttention = counts.dead + (online ? counts.awaitingConfirmation : 0);
     setShellState({ isOffline: !online, unsentChanges: counts.unsent, changesNeedingAttention });
   };
+
   update();
   runtime.outbox.subscribe(update);
   let wasOffline = !(runtime.connectivity?.isOnline() ?? true);
   runtime.connectivity?.subscribe((online) => {
     update();
+
     // Reconnect sequence (plan §8.4): refresh auth → pull deltas → drain the outbox → resume realtime.
     if (online && wasOffline && isSessionSignedIn()) {
       void runtime.sync.onReconnect().catch((error: unknown) => logger.warn({ message: 'Reconnect sequence failed', context: { error } }));
     }
+
     wasOffline = !online;
   });
 }
@@ -113,6 +143,7 @@ function registerTeardowns(): void {
   if (registrationDisposers) {
     return;
   }
+
   registrationDisposers = [
     // Sockets are torn down while the outgoing tokens are still valid (teardowns run first in the wipe).
     defaultResetRegistry.registerTeardown('realtime', () => teardownRealtime()),
@@ -129,6 +160,7 @@ function registerTeardowns(): void {
 
 export function createStartupSteps(config: AppShellConfig): InitStep[] {
   const manifest = config.variant;
+
   return [
     {
       id: 'startup.sentry',
@@ -150,12 +182,12 @@ export function createStartupSteps(config: AppShellConfig): InitStep[] {
     },
     {
       id: 'startup.i18n',
-      run: async () => {
+      run: () => {
         // configureAppShell already initialised translations before the first render (device language); this keeps the
-        // step order explicit and idempotent. The stored choice is applied once storage is open (startup.preferences).
+        // step order explicit and idempotent. Only English is bundled: the device language's strings start loading now,
+        // while storage opens, and startup.preferences waits for whichever language storage says is wanted.
         initI18n({ variantResources: config.i18nResources });
-        // Only English is bundled: wait for the device language's strings so the first screens do not flash English.
-        await loadLanguage(getCurrentLanguage());
+        pendingLanguageLoad = loadLanguage(getCurrentLanguage());
       },
     },
     {
@@ -164,6 +196,7 @@ export function createStartupSteps(config: AppShellConfig): InitStep[] {
         if (getShellRuntime().offline) {
           return;
         }
+
         // Every native instance is encrypted with a device key from SecureStore; the manifest's storage.carryOver decides
         // which legacy files survive the upgrade (plan D8).
         const runtime = await initOffline({
@@ -172,6 +205,7 @@ export function createStartupSteps(config: AppShellConfig): InitStep[] {
           logger,
           storageManager: { signOut: () => useAuthStore.getState().logout(undefined, 'logout') },
         });
+
         setShellRuntime({ offline: runtime });
         wireOfflineStatus(runtime);
       },
@@ -181,10 +215,15 @@ export function createStartupSteps(config: AppShellConfig): InitStep[] {
       run: async () => {
         const main = requireOfflineRuntime().storage.main;
         const language = readLegacyString(main, LEGACY_LANGUAGE_STORAGE_KEY);
-        if (language && isSupportedLanguage(language)) {
+
+        if (language && isSupportedLanguage(language) && language !== getCurrentLanguage()) {
           initI18n({ language, variantResources: config.i18nResources });
-          await loadLanguage(language);
+          pendingLanguageLoad = loadLanguage(language);
         }
+
+        // The first screens show in the member's language, but a slow or failed load never holds up startup.
+        if (pendingLanguageLoad) await settleWithin(pendingLanguageLoad, LANGUAGE_LOAD_BUDGET_MS);
+
         const theme = readLegacyString(main, CONTRACT_KEYS.selectedTheme);
         setShellState({ themeMode: isThemeMode(theme) ? theme : 'system', onboardingRequired: readStoredBoolean(main, CONTRACT_KEYS.isFirstTime) !== false });
         loadActiveSession();
@@ -196,8 +235,10 @@ export function createStartupSteps(config: AppShellConfig): InitStep[] {
         if (getShellRuntime().auth) {
           return;
         }
+
         const offline = requireOfflineRuntime();
         const env = getEnv();
+
         const auth = await initAuth({
           storage: offline.storage,
           defaultServerUrl: env.BASE_API_URL,
@@ -208,6 +249,7 @@ export function createStartupSteps(config: AppShellConfig): InitStep[] {
           apiCache: createApiCacheBridge(offline.apiCache),
           cachePolicy: cachePolicyFor(manifest),
         });
+
         setShellRuntime({ auth });
       },
     },
@@ -216,9 +258,11 @@ export function createStartupSteps(config: AppShellConfig): InitStep[] {
       run: async () => {
         const offline = requireOfflineRuntime();
         const auth = getShellRuntime().auth;
+
         if (!auth) {
           throw new Error('Auth is not initialized.');
         }
+
         const main = offline.storage.main;
 
         await configureData({ manifest, api: auth.context, getSession: getSessionScope, outbox: offline.outbox, storage: main, sync: offline.sync, logger });
@@ -251,12 +295,14 @@ export function createStartupSteps(config: AppShellConfig): InitStep[] {
           realtimeGeolocation: readStoredBoolean(main, REALTIME_GEOLOCATION_KEY) ?? manifest.capabilities.location.geoHubDefault,
           backgroundGeolocation: readStoredBoolean(main, BACKGROUND_GEOLOCATION_KEY) ?? false,
         });
+
         configureLocation({
           manifest,
           getOutbox: () => offline.outbox,
           isSignedIn: isSessionSignedIn,
           getSession: () => {
             const userId = getSessionUserId();
+
             return userId ? { userId } : null;
           },
           getActiveUnitId,
@@ -267,7 +313,16 @@ export function createStartupSteps(config: AppShellConfig): InitStep[] {
           logger,
         });
 
-        configureVoice({ getApiContext: () => getShellRuntime().auth?.context ?? null, storage: main, sounds: config.options?.voiceSounds });
+        // The background session for voice channels and audio streams: the Android foreground service, connectivity (a drop
+        // rejoins as soon as the network is back or changes) and no CallKit where the App Store forbids it.
+        configureVoice({
+          getApiContext: () => getShellRuntime().auth?.context ?? null,
+          storage: main,
+          sounds: config.options?.voiceSounds,
+          foregroundService: createVoiceForegroundService(manifest),
+          connectivity: offline.connectivity,
+          restrictCallKit: isCallKitRestrictedRegion(),
+        });
 
         registerTeardowns();
         offline.sync.setReconnectSequence({
@@ -280,16 +335,29 @@ export function createStartupSteps(config: AppShellConfig): InitStep[] {
           drainOutbox: () => offline.outbox.drain(),
           resumeRealtime: () => useRealtimeStore.getState().connectAll(),
         });
-
-        // Wires listeners first, replays a launch tap (deep links wait for the router and the session), then channels.
-        await pushNotificationService.initialize();
       },
+    },
+    {
+      id: 'startup.push',
+      // Its own optional step with a short timeout: a push setup that fails or hangs (permissions, notifee, a browser
+      // without push) leaves the app usable without notifications instead of failing startup and retrying it.
+      optional: true,
+      timeoutMs: PUSH_INIT_TIMEOUT_MS,
+      // Wires listeners first, replays a launch tap (deep links wait for the router and the session), then channels.
+      run: () => pushNotificationService.initialize(),
     },
   ];
 }
 
 // ---------------------------------------------------------------------------------------------------------------
 // Session phase (signed in)
+
+/**
+ * The session's data pull (the working set), started by `session.working-set` and not awaited: the drain and the
+ * shift-start hydration chain after it in the background, so realtime, voice and push arm at once and every screen
+ * works from the persisted stores while the pull runs. Never rejects.
+ */
+let workingSetPull: Promise<void> = Promise.resolve();
 
 /** Sends the session's queued writes in the background; a failure leaves them for the outbox's next trigger. */
 async function drainInBackground(outbox: OfflineRuntime['outbox']): Promise<void> {
@@ -302,16 +370,20 @@ async function drainInBackground(outbox: OfflineRuntime['outbox']): Promise<void
 
 export function createSessionSteps(config: AppShellConfig): InitStep[] {
   const manifest = config.variant;
+
   return [
     {
       id: 'session.gates',
       run: async () => {
         // Rights first, then flags + terminology + data protection (loadSessionGates); department config alongside.
         const [gates] = await Promise.all([loadSessionGates(), loadDepartmentConfig()]);
+
         if (gates.appAccess === 'denied') {
           await enforceAppAccess(() => setShellState({ accessDeniedNotice: true }));
+
           return 'stop';
         }
+
         return undefined;
       },
     },
@@ -328,7 +400,17 @@ export function createSessionSteps(config: AppShellConfig): InitStep[] {
     {
       id: 'session.working-set',
       optional: true,
-      run: () => refreshDataWorkingSet(manifest),
+      // Started, not awaited: a pull of the whole working set takes seconds on a slow link, and nothing after it needs
+      // its answers (screens read the persisted stores and refetch for themselves).
+      run: () => {
+        workingSetPull = (async () => {
+          try {
+            await refreshDataWorkingSet(manifest);
+          } catch (error) {
+            logger.warn({ message: 'Working set refresh failed', context: { error } });
+          }
+        })();
+      },
     },
     {
       id: 'session.outbox-drain',
@@ -340,7 +422,7 @@ export function createSessionSteps(config: AppShellConfig): InitStep[] {
         const offline = requireOfflineRuntime();
 
         if (offline.connectivity?.isOnline() ?? true) {
-          void drainInBackground(offline.outbox);
+          void workingSetPull.then(() => drainInBackground(offline.outbox));
         }
       },
     },
@@ -354,17 +436,19 @@ export function createSessionSteps(config: AppShellConfig): InitStep[] {
       id: 'session.hydration',
       optional: true,
       run: () => {
-        // Shift-start hydration (map packs, bundles) reports its own progress; it never holds up the shell.
-        void requireOfflineRuntime()
-          .sync.hydrate()
-          .catch((error: unknown) => logger.warn({ message: 'Hydration failed', context: { error } }));
+        const sync = requireOfflineRuntime().sync;
+
+        // Shift-start hydration (map packs, bundles) reports its own progress; it never holds up the shell. After the
+        // working set, whose fresh stores it then skips, rather than alongside it fetching the same lists twice.
+        void workingSetPull.then(() => sync.hydrate()).catch((error: unknown) => logger.warn({ message: 'Hydration failed', context: { error } }));
       },
     },
     {
       id: 'session.voice',
       optional: true,
       enabled: () => manifest.capabilities.voice.ptt,
-      run: () => initializeVoice(config.options?.callKeep ? { callKeep: config.options.callKeep } : {}),
+      // CallKeep is set up for every variant with voice.callKeep (the voice package skips it otherwise).
+      run: () => initializeVoice({ callKeep: config.options?.callKeep ?? createCallKeepSetupConfig(manifest) }),
     },
     {
       id: 'session.push',
@@ -382,11 +466,13 @@ export function registerDefaultInitSteps(startup: AppInit, session: AppInit, con
   if (defaultStepsRegistered) {
     return;
   }
+
   defaultStepsRegistered = true;
   createStartupSteps(config).forEach((step) => startup.register(step));
   createSessionSteps(config).forEach((step) => session.register(step));
   // In-app OTA updates: the launch report and foreground checks after Sentry, a background check after the bootstrap.
   registerAppUpdateSteps(startup, session);
+
   try {
     // Completes a web SSO popup that loaded the app (expo-auth-session); a no-op everywhere else.
     WebBrowser.maybeCompleteAuthSession();

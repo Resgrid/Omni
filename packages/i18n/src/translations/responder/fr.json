@@ -714,10 +714,6 @@
     "you": "Vous",
     "you_are_signed_up": "Vous êtes inscrit(e) à ce quart"
   },
-  "sidebar": {
-    "audio": "Flux",
-    "ptt": "Voix"
-  },
   "tabs": {
     "units": "Unités",
     "weatherAlerts": "Alertes Météo"

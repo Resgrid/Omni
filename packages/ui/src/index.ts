@@ -100,6 +100,9 @@ export * from './use-route-tab';
 // A state shown only once it has lasted, so background work that finishes quickly never flashes on screen.
 export * from './use-settled-flag';
 
+// The red count pill of the app bar bell, the side menu and the tab bars.
+export * from './count-badge';
+
 // The tab row alone: SharedTabs' bar, and the strip at the top of a top-level page (edge chevrons when tabs run off).
 export * from './tab-bar';
 

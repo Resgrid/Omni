@@ -24,8 +24,10 @@ describe('useVoiceChannels', () => {
   it('fetches settings on mount once and exposes the selected and default channels', async () => {
     const fetchVoiceSettings = jest.fn(async () => {
       useLiveKitStore.setState({ settingsLoaded: true, isVoiceEnabled: true, availableRooms: [channel('1'), channel('2', { IsDefault: true })], selectedRoomId: '2' });
+
       return { ok: true as const };
     });
+
     useLiveKitStore.setState({ fetchVoiceSettings });
 
     const { result } = await renderHook(() => useVoiceChannels());
@@ -114,22 +116,30 @@ describe('useVoiceStatus', () => {
     expect(deriveVoiceStatus({ ...base, pttCapable: false })).toBe('unavailable');
     expect(deriveVoiceStatus({ ...base, isConnecting: true })).toBe('connecting');
     expect(deriveVoiceStatus({ ...base, isConnected: true, isReconnecting: true })).toBe('reconnecting');
+    // Rejoining a dropped channel: no room, attempts connecting in the background.
+    expect(deriveVoiceStatus({ ...base, isReconnecting: true })).toBe('reconnecting');
+    expect(deriveVoiceStatus({ ...base, isConnecting: true, isReconnecting: true })).toBe('reconnecting');
   });
 });
 
 describe('useAudioStreams', () => {
   it('fetches on mount and toggles a stream', async () => {
     const stream = { Id: 's1', Name: 'Scanner', Type: 'mp3', Url: 'https://a/s1' };
+
     const fetchAvailableStreams = jest.fn(async () => {
       useAudioStreamStore.setState({ availableStreams: [stream] });
     });
+
     const playStream = jest.fn(async () => {
       useAudioStreamStore.setState({ currentStream: stream, isPlaying: true });
+
       return true;
     });
+
     const stopStream = jest.fn(async () => {
       useAudioStreamStore.setState({ currentStream: null, isPlaying: false });
     });
+
     useAudioStreamStore.setState({ fetchAvailableStreams, playStream, stopStream, currentStream: null, availableStreams: [] });
 
     const { result } = await renderHook(() => useAudioStreams());

@@ -35,7 +35,10 @@
     "stream_info": "Información de Transmisión",
     "stream_selected": "Seleccionado: {{streamName}}",
     "title": "Transmisiones de Audio",
-    "type": "Tipo"
+    "type": "Tipo",
+    "reconnecting": "Reconectando",
+    "reconnecting_stream": "Reconectando con {{streamName}}…",
+    "paused": "En pausa"
   },
   "bluetooth": {
     "applied": "Aplicado",
@@ -1472,7 +1475,8 @@
     "speaking": "Hablando",
     "title": "Canales de voz",
     "unmute": "Activar sonido",
-    "join_failed": "Could not join the voice channel. Please try again."
+    "join_failed": "Could not join the voice channel. Please try again.",
+    "reconnecting": "Reconectando…"
   },
   "loading": {
     "loading": "Cargando...",
@@ -2016,7 +2020,14 @@
     "view_chat": "Ver chat",
     "view_reference": "Ver {{type}}",
     "mark_all_read": "Mark all as read",
-    "unread": "Unread"
+    "unread": "Unread",
+    "select": "Seleccionar",
+    "mark_read": "Marcar como leído",
+    "delete": "Eliminar",
+    "delete_selected_message": "¿Eliminar las {{count}} notificaciones seleccionadas? Esta acción no se puede deshacer.",
+    "delete_all_message": "¿Eliminar todas las notificaciones? Esta acción no se puede deshacer.",
+    "deleted": "Notificaciones eliminadas",
+    "mark_read_error": "No se pudieron marcar las notificaciones como leídas"
   },
   "onboarding": {
     "getStarted": "Empecemos",
@@ -2900,7 +2911,9 @@
       "source_embedded": "Versión integrada",
       "title": "Actualizaciones de la aplicación",
       "up_to_date": "Actualizada. Última comprobación: {{time}}."
-    }
+    },
+    "headset_button_ptt": "Hablar con el botón de los auriculares",
+    "headset_button_ptt_note": "El botón de llamada de los auriculares inicia y detiene el habla en un canal de voz, igual que Finalizar en la pantalla de bloqueo. Sal del canal desde la aplicación. Desactívalo para que el botón salga del canal."
   },
   "shared_session": {
     "bar": "Dispositivo compartido",
@@ -3280,7 +3293,8 @@
     "notifications_unread": "Notifications, {{count}} unread",
     "changes_need_attention": "Needs attention: {{count}}",
     "offline": "Offline",
-    "offline_changes_waiting": "Offline: {{count}} waiting"
+    "offline_changes_waiting": "Offline: {{count}} waiting",
+    "nav_item_with_count": "{{label}} ({{count}})"
   },
   "access_denied": {
     "back_to_sign_in": "Back to sign in",
@@ -4422,5 +4436,18 @@
     "image_not_offline": "This map image is not saved on this device. It shows again when you are back online.",
     "nothing_to_show": "Nothing to show on this device",
     "nothing_to_show_detail": "This map has no image or map tiles this app can draw. Open it on the website instead."
+  },
+  "sidebar": {
+    "audio": "Transmisión",
+    "ptt": "Voz"
+  },
+  "voice_session": {
+    "channel_name": "Canal de voz",
+    "notification_title": "Canal de voz activo",
+    "notification_body": "Pulsar para hablar sigue funcionando mientras la aplicación está en segundo plano.",
+    "phone_account_title": "Permisos necesarios",
+    "phone_account_description": "{{appName}} necesita acceder a sus cuentas telefónicas para mantener los canales de voz conectados en segundo plano.",
+    "call_channel_name": "Llamadas de voz",
+    "call_notification_title": "Llamada de voz de {{appName}}"
   }
 }

@@ -1,5 +1,16 @@
 import { useCapability } from '@resgrid/config';
-import { selectActiveCalls, useCallsStore, useCheckInTimersStore, usePersonnelStatusStore, usePersonnelStore, useUnitRolesStore, useWeatherAlertsStore } from '@resgrid/data';
+import {
+  refreshBadgeCountsIfStale,
+  refreshBadgeCountsSoon,
+  selectActiveCalls,
+  useBadgeCountsStore,
+  useCallsStore,
+  useCheckInTimersStore,
+  usePersonnelStatusStore,
+  usePersonnelStore,
+  useUnitRolesStore,
+  useWeatherAlertsStore,
+} from '@resgrid/data';
 import { DueChecksCard as ChecklistsDueChecksCard } from '@resgrid/features/checklists';
 import { StaffingButtons, UserStaffingCard } from '@resgrid/features/staffing';
 import { PersonnelStatusSheet, type StatusPickerTab, useStatusContext } from '@resgrid/features/status';
@@ -16,6 +27,7 @@ import { HomeStatusButtons } from '../components/home-status-buttons';
 import { SummaryStatsRow } from '../components/summary-stats-row';
 import { UserStatusCard } from '../components/user-status-card';
 import { useMemberHomeHookPoints } from '../hook-points';
+import { countsSummariesLocally } from '../lib/summary-counts';
 import { memberHomeRoutes } from '../routes';
 
 export interface MemberHomeScreenProps {
@@ -54,15 +66,23 @@ export default function MemberHomeScreen({ dueChecks, onClearActiveCall }: Membe
   const load = useCallback(async (bypassCache: boolean) => {
     const personnel = usePersonnelStore.getState();
     const own = usePersonnelStatusStore.getState();
+
     const tasks: Promise<void>[] = [
       personnel.fetchPersonnel({ bypassCache }),
       own.fetchCurrentStatus({ bypassCache }),
       own.fetchCurrentStaffing({ bypassCache }),
       useCallsStore.getState().fetchCalls({ bypassCache }),
+      // The severe-weather banner shows the alerts themselves.
       useWeatherAlertsStore.getState().fetchActiveAlerts({ bypassCache }),
-      // Unit seats decide which unit dispatches count as "calls I'm on".
-      useUnitRolesStore.getState().fetchRoles({ bypassCache }),
     ];
+
+    // Unit seats decide which unit dispatches count as "calls I'm on" — only when the cards count locally. The effect
+    // below reads them when that starts (on mount, or once the counts turn out unavailable); a pull to refresh reads again.
+    if (bypassCache && countsSummariesLocally(useBadgeCountsStore.getState())) tasks.push(useUnitRolesStore.getState().fetchRoles({ bypassCache }));
+
+    // The cards' numbers: one counts request, shared with the menu badges.
+    if (bypassCache) refreshBadgeCountsSoon(0);
+
     if (bypassCache || personnel.statusOptions.length === 0 || personnel.staffingOptions.length === 0) tasks.push(personnel.fetchStatusOptions({ bypassCache }));
     await Promise.allSettled(tasks);
   }, []);
@@ -71,20 +91,40 @@ export default function MemberHomeScreen({ dueChecks, onClearActiveCall }: Membe
     void load(false);
   }, [load]);
 
-  // The open calls drive the missed check-ins count and the dispatches behind "calls I'm on".
+  // The server counts the summary cards (calls I'm on, missed check-ins) in one request; the per-call dispatch and
+  // check-in timer reads they used to need — one request per open call — are only made on a server without the counts,
+  // or while those counts have never come in and the request for them fails.
+  const countsLocally = useBadgeCountsStore(countsSummariesLocally);
   const openCalls = useMemo(() => selectActiveCalls({ calls }), [calls]);
   const openCallsKey = openCalls.map((call) => `${call.CallId}:${call.CheckInTimersEnabled ? 1 : 0}`).join(',');
+
   const refreshCallSummaries = useCallback(() => {
+    const badgeCounts = useBadgeCountsStore.getState();
+
+    // Timers turn from warning to overdue with the clock: read the counts again whenever the home is shown (unless the
+    // shell just did).
+    if (!badgeCounts.unsupported) refreshBadgeCountsIfStale();
+
+    if (!countsSummariesLocally(badgeCounts)) return;
+
     const open = selectActiveCalls(useCallsStore.getState());
+
     if (open.length === 0) return;
     void useCheckInTimersStore.getState().fetchGlobalOverdueCount(open);
     void useCallsStore.getState().fetchCallDispatches(open.map((call) => call.CallId));
   }, []);
+
   useEffect(() => {
-    refreshCallSummaries();
+    // Only the local "calls I'm on" count needs the unit seats; load() could not know at mount that it would be needed.
+    if (countsLocally) void useUnitRolesStore.getState().fetchRoles({ bypassCache: false });
+  }, [countsLocally]);
+
+  useEffect(() => {
+    // With server counts the realtime pings already refresh them; the open calls only matter for the local fallback.
+    if (countsLocally) refreshCallSummaries();
     // Keyed on the open calls (ids and timer flags), not the array identity: every refetch builds a new array.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [openCallsKey]);
+  }, [openCallsKey, countsLocally]);
   // Read on focus through getState: depending on the calls array would re-run on every refetch while focused.
   useFocusEffect(refreshCallSummaries);
 
@@ -94,12 +134,14 @@ export default function MemberHomeScreen({ dueChecks, onClearActiveCall }: Membe
     void own.fetchCurrentStaffing({ bypassCache: true });
     void usePersonnelStore.getState().fetchPersonnel({ bypassCache: true });
   }, []);
+
   useRealtimeEvent('personnelStatusUpdated', refreshOwn);
   useRealtimeEvent('personnelStaffingUpdated', refreshOwn);
   useRealtimeEvent('callsUpdated', () => void useCallsStore.getState().fetchCalls({ bypassCache: true }));
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
+
     try {
       await load(true);
     } finally {
@@ -112,9 +154,12 @@ export default function MemberHomeScreen({ dueChecks, onClearActiveCall }: Membe
   const handleSelectStatus = useCallback((status: StatusesResultData, held: boolean) => openSheet('status', status.Id, held), [openSheet]);
 
   const overdueOnActiveCall = useMemo(() => activeCallTimers.filter((timer) => timer.Status === 'Overdue').length, [activeCallTimers]);
+
   const tabs = useMemo<TabItem[]>(() => {
     const items: TabItem[] = [{ key: 'status', title: 'home.tabs.status', content: <HomeStatusButtons holdToConfirm={holdToConfirm} onSelectStatus={handleSelectStatus} /> }];
+
     if (statusCapability.staffing) items.push({ key: 'staffing', title: 'home.tabs.staffing', content: <StaffingButtons /> });
+
     if (activeCallId && hasActiveCall) {
       items.push({
         key: 'call',
@@ -123,6 +168,7 @@ export default function MemberHomeScreen({ dueChecks, onClearActiveCall }: Membe
         content: <ActiveCallTab callId={activeCallId} onClearActiveCall={onClearActiveCall} />,
       });
     }
+
     return items;
   }, [activeCallId, handleSelectStatus, hasActiveCall, holdToConfirm, onClearActiveCall, overdueOnActiveCall, statusCapability.staffing]);
 

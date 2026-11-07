@@ -1,4 +1,5 @@
 import type { Capabilities } from '@resgrid/config';
+import type { NavBadge } from '@resgrid/data';
 import type { LucideIcon } from 'lucide-react-native';
 import { Bell } from 'lucide-react-native';
 
@@ -18,9 +19,19 @@ export interface FeatureNavEntry {
   /** Department feature flag(s); unknown flags are disabled. */
   requiresFlag?: string | readonly string[];
   requiresCapability?: (capabilities: Capabilities) => boolean;
+  /** Count badge beside the entry (the shell's `NavEntry.badge`). */
+  badge?: NavBadge;
 }
 
-/** The inbox exists where the variant has a push subject (BigBoard has none). */
+/** The inbox exists where the variant has a push subject (BigBoard has none). The badge counts unread inbox items. */
 export const notificationsNav: readonly FeatureNavEntry[] = [
-  { id: 'notifications', href: '/notifications', labelKey: 'notifications.title', defaultLabel: 'Notifications', icon: Bell, requiresCapability: (capabilities) => capabilities.push.subject !== 'none' },
+  {
+    id: 'notifications',
+    href: '/notifications',
+    labelKey: 'notifications.title',
+    defaultLabel: 'Notifications',
+    icon: Bell,
+    requiresCapability: (capabilities) => capabilities.push.subject !== 'none',
+    badge: 'notifications',
+  },
 ];

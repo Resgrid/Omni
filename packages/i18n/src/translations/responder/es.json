@@ -714,10 +714,6 @@
     "you": "Tú",
     "you_are_signed_up": "Estás inscrito en este turno"
   },
-  "sidebar": {
-    "audio": "Transmisión",
-    "ptt": "Voz"
-  },
   "tabs": {
     "units": "Unidades",
     "weatherAlerts": "Alertas Meteorológicas"

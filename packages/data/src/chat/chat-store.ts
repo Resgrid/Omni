@@ -21,6 +21,7 @@ import { ChatMessagePriority, ChatMessageType, ChatParticipantType } from '@resg
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+import { refreshBadgeCountsSoon } from '../badge-counts/badge-counts-store';
 import { assertV4Success, unwrapItem, unwrapList } from '../core/envelope';
 import { type DataError, toDataError } from '../core/errors';
 import { defineDataHandler, submitWrite, type WriteResult } from '../core/outbox';
@@ -37,6 +38,7 @@ export const CHAT_PAGE_SIZE = 50;
 
 /** Core never sends `chatbotTyping` false: the "thinking" row clears on the assistant's reply or after this long. */
 export const CHATBOT_TYPING_TIMEOUT_MS = 30_000;
+
 /** While a reply is awaited, pull newer messages this often in case the hub missed it (channel not joined, hub down). */
 export const CHATBOT_REPLY_POLL_MS = 8_000;
 
@@ -161,8 +163,10 @@ const withCollections = (incoming: ChatMessageResultData, existing?: ChatMessage
 export const upsertChatMessage = (list: ChatMessageResultData[], incoming: ChatMessageResultData): ChatMessageResultData[] => {
   const next = list.slice();
   const index = next.findIndex((m) => m.ChatMessageId === incoming.ChatMessageId || (!!incoming.ClientMessageId && !!m.ClientMessageId && m.ClientMessageId === incoming.ClientMessageId));
+
   if (index >= 0) next[index] = withCollections({ ...next[index], ...incoming }, next[index]);
   else next.push(withCollections(incoming));
+
   return next.sort(compareMessages);
 };
 
@@ -170,6 +174,7 @@ const mergeMessages = (existing: ChatMessageResultData[], incoming: ChatMessageR
 
 const optimisticMessage = (clientMessageId: string, payload: ChatSendPayload, createdAt: number): ChatMessageResultData => {
   const session = getDataSessionScope();
+
   return {
     ChatMessageId: clientMessageId,
     ChatChannelId: payload.channelId,
@@ -196,6 +201,7 @@ const optimisticMessage = (clientMessageId: string, payload: ChatSendPayload, cr
 /** A chat hub payload as an object: Core sends most chat events as a JSON string, some as already-parsed objects. */
 export const parseChatEventPayload = (payload: unknown): Record<string, unknown> | null => {
   let value = payload;
+
   if (typeof value === 'string') {
     try {
       value = JSON.parse(value) as unknown;
@@ -203,6 +209,7 @@ export const parseChatEventPayload = (payload: unknown): Record<string, unknown>
       return null;
     }
   }
+
   return value !== null && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
 };
 
@@ -214,6 +221,7 @@ const highestConfirmedSeq = (list: readonly ChatMessageResultData[] | undefined)
 
 const optimisticChatbotMessage = (clientMessageId: string, channelId: string, body: string, createdAt: number): ChatMessageResultData => {
   const session = getDataSessionScope();
+
   return {
     ChatMessageId: clientMessageId,
     ChatChannelId: channelId,
@@ -241,11 +249,13 @@ const optimisticChatbotMessage = (clientMessageId: string, channelId: string, bo
 let chatbotTypingTimer: ReturnType<typeof setTimeout> | null = null;
 let chatbotPollTimer: ReturnType<typeof setInterval> | null = null;
 let chatbotAwaiting = false;
+
 /** Highest confirmed sequence before the newest question; an assistant message above it is the reply. */
 let chatbotReplyBaseline = 0;
 
 const clearChatbotTimers = (): void => {
   if (chatbotTypingTimer) clearTimeout(chatbotTypingTimer);
+
   if (chatbotPollTimer) clearInterval(chatbotPollTimer);
   chatbotTypingTimer = null;
   chatbotPollTimer = null;
@@ -263,13 +273,17 @@ export const useChatStore = create<ChatState>()(
   persist(
     (set, get) => {
       runner = createSliceRunner<ChatSlice, ChatState>('chat', set);
+
       const act = async (fn: () => Promise<unknown>): Promise<boolean> => {
         set({ actionError: null });
+
         try {
           await fn();
+
           return true;
         } catch (error) {
           set({ actionError: toDataError(error) });
+
           return false;
         }
       };
@@ -278,12 +292,14 @@ export const useChatStore = create<ChatState>()(
 
       const stopAwaitingReply = (): void => {
         resetChatbotRuntime();
+
         if (get().chatbotTyping) set({ chatbotTyping: false });
       };
 
       /** Pulls messages newer than the newest confirmed one (the realtime fallback) and settles the wait on a reply. */
       const refreshChatbot = async (channelId: string): Promise<void> => {
         await get().loadNewerMessages(channelId);
+
         if (chatbotAwaiting && hasChatbotReply(channelId)) stopAwaitingReply();
       };
 
@@ -291,6 +307,7 @@ export const useChatStore = create<ChatState>()(
         if (!chatbotAwaiting) chatbotReplyBaseline = highestConfirmedSeq(get().messagesByChannel[channelId]);
         chatbotAwaiting = true;
         clearChatbotTimers();
+
         if (!get().chatbotTyping) set({ chatbotTyping: true });
         chatbotPollTimer = setInterval(() => void refreshChatbot(channelId), CHATBOT_REPLY_POLL_MS);
         chatbotTypingTimer = setTimeout(() => {
@@ -301,12 +318,16 @@ export const useChatStore = create<ChatState>()(
 
       const deliverChatbotMessage = async (channelId: string, clientMessageId: string, body: string): Promise<ChatbotSendResult> => {
         startAwaitingReply(channelId);
+
         try {
           const result = assertV4Success(await postChatbotMessage(getDataApiContext(), { Text: body, ClientMessageId: clientMessageId }));
           const sent = result.Data;
           const current = (get().messagesByChannel[channelId] ?? []).find((m) => m.ClientMessageId === clientMessageId);
+
           if (sent && sent.MessageSeq > chatbotReplyBaseline && sent.MessageSeq < PENDING_SEQ_BASE) chatbotReplyBaseline = sent.MessageSeq;
+
           if (current) get().upsertMessage({ ...current, ...(sent ? { ChatMessageId: sent.ChatMessageId, MessageSeq: sent.MessageSeq, SentOn: sent.SentOn } : {}), _localStatus: 'sent' });
+
           return { ok: true };
         } catch (error) {
           const dataError = toDataError(error);
@@ -314,6 +335,7 @@ export const useChatStore = create<ChatState>()(
           get().setLocalStatus(channelId, clientMessageId, 'failed');
           // Never the question text: it can carry anything the user typed.
           getDataLogger().warn({ message: 'Assistant message not sent', context: { code: dataError.code, status: dataError.status } });
+
           return { ok: false, error: dataError };
         }
       };
@@ -334,17 +356,20 @@ export const useChatStore = create<ChatState>()(
 
         loadIncidentChannels: async (callId) => {
           set((state) => ({ incidentChannelsStatusByCallId: { ...state.incidentChannelsStatusByCallId, [callId]: 'loading' } }));
+
           const result = await runner.run(
             'incidentChannels',
             async () => {
               const numericCallId = parseInt(callId, 10);
               const list = unwrapList(await getChatChannels(getDataApiContext(), { includeArchived: true, callId: numericCallId }));
+
               // callId narrows the list server-side; the local filter stays as a safety net (Dispatch).
               return list.filter((channel) => channel.CallId === numericCallId);
             },
             (list, state) => ({ incidentChannelsByCallId: { ...state.incidentChannelsByCallId, [callId]: list }, incidentChannelsStatusByCallId: { ...state.incidentChannelsStatusByCallId, [callId]: 'loaded' } }),
             { flightKey: `incident:${callId}` }
           );
+
           if (!result.ok && !result.stale) set((state) => ({ incidentChannelsStatusByCallId: { ...state.incidentChannelsStatusByCallId, [callId]: 'failed' } }));
         },
 
@@ -371,6 +396,7 @@ export const useChatStore = create<ChatState>()(
         loadOlderMessages: async (channelId) => {
           const confirmed = (get().messagesByChannel[channelId] ?? []).filter((m) => m.MessageSeq < PENDING_SEQ_BASE);
           const beforeSeq = confirmed[0]?.MessageSeq;
+
           if (beforeSeq === undefined || get().hasMoreByChannel[channelId] === false) return;
           await runner.run(
             'messages',
@@ -387,6 +413,7 @@ export const useChatStore = create<ChatState>()(
         loadNewerMessages: async (channelId) => {
           const confirmed = (get().messagesByChannel[channelId] ?? []).filter((m) => m.MessageSeq < PENDING_SEQ_BASE);
           const afterSeq = confirmed[confirmed.length - 1]?.MessageSeq;
+
           if (afterSeq === undefined) return get().loadInitialMessages(channelId, { bypassCache: true });
           await runner.run(
             'messages',
@@ -439,6 +466,7 @@ export const useChatStore = create<ChatState>()(
             const result = await editChatMessage(getDataApiContext(), { messageId }, { Body: body });
             const message = assertV4Success(result).Data;
             const existing = (get().messagesByChannel[channelId] ?? []).find((m) => m.ChatMessageId === messageId);
+
             if (message) get().upsertMessage(message);
             else if (existing) get().upsertMessage({ ...existing, Body: body });
           }),
@@ -461,9 +489,13 @@ export const useChatStore = create<ChatState>()(
         markChannelRead: async (channelId, asUnitId) => {
           const confirmed = (get().messagesByChannel[channelId] ?? []).filter((m) => m.MessageSeq < PENDING_SEQ_BASE);
           const seq = confirmed[confirmed.length - 1]?.MessageSeq;
+
           if (seq === undefined) return;
+
           try {
             await markChatRead(getDataApiContext(), { channelId }, { Seq: seq, ...(asUnitId !== undefined ? { AsUnitId: asUnitId } : {}) });
+            // The chat badge counts the read pointer just moved.
+            refreshBadgeCountsSoon();
           } catch {
             // Read receipts are best-effort.
           }
@@ -481,72 +513,94 @@ export const useChatStore = create<ChatState>()(
             async () => unwrapItem(await getChatbotChannel(getDataApiContext())),
             (channel) => ({ chatbotChannelId: channel?.ChatChannelId ?? null })
           );
+
           const channelId = result.ok ? (result.value?.ChatChannelId ?? null) : get().chatbotChannelId;
+
           if (channelId) await get().loadInitialMessages(channelId);
+
           return channelId;
         },
 
         sendChatbotMessage: async (text) => {
           const channelId = get().chatbotChannelId;
           const body = text.trim();
+
           if (!channelId || !body) return { ok: false };
           const clientMessageId = generateDataId();
           get().upsertMessage(optimisticChatbotMessage(clientMessageId, channelId, body, dataNow()));
+
           return deliverChatbotMessage(channelId, clientMessageId, body);
         },
 
         retryChatbotMessage: async (clientMessageId) => {
           const channelId = get().chatbotChannelId;
           const failed = channelId ? (get().messagesByChannel[channelId] ?? []).find((m) => m.ClientMessageId === clientMessageId && m._localStatus === 'failed') : undefined;
+
           if (!channelId || !failed?.Body) return { ok: false };
           get().setLocalStatus(channelId, clientMessageId, 'pending');
+
           return deliverChatbotMessage(channelId, clientMessageId, failed.Body);
         },
 
         newChatbotSession: async () => {
           const ok = await act(async () => {
             const result = assertV4Success(await postNewChatbotSession(getDataApiContext()));
+
             if (result?.Success === false) throw new Error('Assistant session was not reset');
           });
+
           const channelId = get().chatbotChannelId;
+
           // Core posts its confirmation into the channel before answering; pull it in case the hub misses it.
           if (ok && channelId) void get().loadNewerMessages(channelId);
+
           return ok;
         },
 
         handleChatbotMessageReceived: (payload) => {
           const channelId = get().chatbotChannelId;
           const record = parseChatEventPayload(payload);
+
           if (!channelId || !record || record.ChatChannelId !== channelId) return false;
+
           if (typeof record.ChatMessageId !== 'string' || typeof record.MessageSeq !== 'number' || record.BodyTruncated === true) {
             // Not a whole message (the hub trims bodies over 64 KB): fetch the stored copy instead.
             void refreshChatbot(channelId);
+
             return true;
           }
+
           const message = record as unknown as ChatMessageResultData;
           get().upsertMessage({ ...message, _localStatus: 'sent' });
+
           if (isChatbotReply(message) && message.MessageSeq > chatbotReplyBaseline) stopAwaitingReply();
+
           return true;
         },
 
         handleChatbotTyping: (payload) => {
           const channelId = get().chatbotChannelId;
           const record = parseChatEventPayload(payload);
+
           if (!channelId || !record) return;
           const eventChannelId = record.ChatChannelId ?? record.chatChannelId;
+
           if (typeof eventChannelId === 'string' && eventChannelId !== channelId) return;
           const isTyping = record.IsTyping ?? record.isTyping;
+
           if (isTyping === true) startAwaitingReply(channelId);
           else if (isTyping === false) stopAwaitingReply();
         },
 
         importLegacyOutbox: async () => {
           const items = get().outbox;
+
           // Signed out: leave the items for whoever signs in (they are scoped to the session that queued them).
           if (items.length === 0 || !hasDataOutbox() || !getDataSessionScope()) return 0;
           const outbox = getDataOutbox();
           let imported = 0;
           const kept: ChatOutboxItem[] = [];
+
           for (const item of items) {
             try {
               await outbox.enqueue<ChatSendPayload>({
@@ -575,7 +629,9 @@ export const useChatStore = create<ChatState>()(
               getDataLogger().warn({ message: 'Legacy chat outbox item could not be imported', context: { type: CHAT_MESSAGE_SEND_EVENT } });
             }
           }
+
           set({ outbox: kept });
+
           return imported;
         },
 
@@ -588,6 +644,7 @@ export const useChatStore = create<ChatState>()(
           set((state) => {
             const list = state.messagesByChannel[channelId] ?? [];
             const next = status === null ? list.filter((m) => m.ClientMessageId !== clientMessageId) : list.map((m) => (m.ClientMessageId === clientMessageId ? { ...m, _localStatus: status } : m));
+
             return { messagesByChannel: { ...state.messagesByChannel, [channelId]: next } };
           }),
       };
@@ -598,6 +655,7 @@ export const useChatStore = create<ChatState>()(
       partialize: (state) => ({ outbox: state.outbox, channels: state.channels }),
       merge: (persisted, current) => {
         const value = (persisted ?? {}) as Partial<Pick<ChatData, 'outbox' | 'channels'>>;
+
         return { ...current, outbox: Array.isArray(value.outbox) ? value.outbox : [], channels: Array.isArray(value.channels) ? value.channels : current.channels };
       },
     })
@@ -605,6 +663,7 @@ export const useChatStore = create<ChatState>()(
 );
 
 registerPersistedStore('chat-outbox-storage', useChatStore);
+
 registerDataStoreReset<ChatState>('chat', useChatStore, initialData, () => {
   runner.invalidate();
   resetChatbotRuntime();
@@ -616,6 +675,7 @@ export const chatMessageSendHandler = defineDataHandler<ChatSendPayload, ChatMes
   optimisticApply: (event) => useChatStore.getState().upsertMessage(optimisticMessage(event.id, event.payload, event.createdAt)),
   send: async (event, context) => {
     const result = assertV4Success(await sendChatMessage(getDataApiContext(), { channelId: event.payload.channelId }, { ...event.payload.input, ClientMessageId: context.idempotencyKey }));
+
     return result.Data ?? null;
   },
   afterAck: (event, message) => {

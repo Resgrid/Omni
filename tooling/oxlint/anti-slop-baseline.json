@@ -533,8 +533,7 @@
     "anti-slop/require-readable-spacing": 36
   },
   "packages/app-shell/src/init/default-steps.ts": {
-    "anti-slop/no-unknown-parameters": 2,
-    "anti-slop/require-readable-spacing": 26
+    "anti-slop/no-unknown-parameters": 2
   },
   "packages/app-shell/src/nav/__tests__/nav.test.ts": {
     "anti-slop/no-shape-in-symbol-names": 11,
@@ -547,7 +546,7 @@
   "packages/app-shell/src/nav/feature-nav.ts": {
     "anti-slop/no-conditional-empty-object-spread": 7,
     "anti-slop/no-runtime-typeof": 2,
-    "anti-slop/require-readable-spacing": 12
+    "anti-slop/require-readable-spacing": 11
   },
   "packages/app-shell/src/nav/filter.ts": {
     "anti-slop/no-runtime-typeof": 1,
@@ -639,7 +638,7 @@
   "packages/app-shell/src/shell/create-app-shell.tsx": {
     "anti-slop/no-conditional-empty-object-spread": 2,
     "anti-slop/no-runtime-typeof": 1,
-    "anti-slop/require-readable-spacing": 10
+    "anti-slop/require-readable-spacing": 9
   },
   "packages/app-shell/src/shell/header.tsx": {
     "anti-slop/no-known-value-widening": 1,
@@ -648,11 +647,7 @@
   "packages/app-shell/src/shell/registered-providers.tsx": {
     "anti-slop/require-readable-spacing": 2
   },
-  "packages/app-shell/src/shell/sidebar-mode.ts": {
-    "anti-slop/require-readable-spacing": 3
-  },
   "packages/app-shell/src/shell/sidebar.tsx": {
-    "anti-slop/require-readable-spacing": 9,
     "anti-slop/require-safety-comment-for-type-assertion": 1
   },
   "packages/app-shell/src/testing/__tests__/route-contract.test.ts": {
@@ -1422,11 +1417,10 @@
     "anti-slop/no-unknown-parameters": 3,
     "anti-slop/no-unknown-returns": 1,
     "anti-slop/no-unsafe-dictionary-type": 2,
-    "anti-slop/require-readable-spacing": 57,
     "anti-slop/require-safety-comment-for-type-assertion": 6
   },
   "packages/data/src/checklists/checklists-store.ts": {
-    "anti-slop/require-readable-spacing": 14
+    "anti-slop/require-readable-spacing": 13
   },
   "packages/data/src/configure.ts": {
     "anti-slop/require-readable-spacing": 1
@@ -1542,8 +1536,7 @@
     "anti-slop/require-readable-spacing": 11
   },
   "packages/data/src/messages/messages-store.ts": {
-    "anti-slop/no-array-filter-map": 1,
-    "anti-slop/require-readable-spacing": 15
+    "anti-slop/no-array-filter-map": 1
   },
   "packages/data/src/navigation/__tests__/navigation-eta-store.test.ts": {
     "anti-slop/no-unknown-parameters": 2,
@@ -2887,9 +2880,6 @@
   "packages/features/src/member-home/components/home-status-buttons.tsx": {
     "anti-slop/require-readable-spacing": 1
   },
-  "packages/features/src/member-home/components/summary-stats-row.tsx": {
-    "anti-slop/require-readable-spacing": 4
-  },
   "packages/features/src/member-home/hook-points.ts": {
     "anti-slop/require-readable-spacing": 3,
     "anti-slop/require-safety-comment-for-type-assertion": 1
@@ -2899,9 +2889,6 @@
   },
   "packages/features/src/member-home/index.ts": {
     "anti-slop/require-readable-spacing": 10
-  },
-  "packages/features/src/member-home/screens/member-home.tsx": {
-    "anti-slop/require-readable-spacing": 11
   },
   "packages/features/src/messages/__tests__/messages.test.tsx": {
     "anti-slop/no-known-value-widening": 1,
@@ -2973,11 +2960,7 @@
   "packages/features/src/notifications/__tests__/notifications.test.tsx": {
     "anti-slop/no-object-parameters": 1,
     "anti-slop/no-unknown-parameters": 2,
-    "anti-slop/no-unsafe-dictionary-type": 1,
-    "anti-slop/require-readable-spacing": 5
-  },
-  "packages/features/src/notifications/components/notification-row.tsx": {
-    "anti-slop/require-readable-spacing": 1
+    "anti-slop/no-unsafe-dictionary-type": 1
   },
   "packages/features/src/notifications/components/push-notification-modal.tsx": {
     "anti-slop/require-readable-spacing": 2
@@ -2988,9 +2971,6 @@
   "packages/features/src/notifications/lib/inbox-item.ts": {
     "anti-slop/no-runtime-typeof": 4,
     "anti-slop/no-unsafe-dictionary-type": 2
-  },
-  "packages/features/src/notifications/screens/notifications-inbox.tsx": {
-    "anti-slop/require-readable-spacing": 5
   },
   "packages/features/src/offline-maps/__tests__/fake-controller.ts": {
     "anti-slop/require-readable-spacing": 3
@@ -3785,9 +3765,6 @@
     "anti-slop/no-unsafe-dictionary-type": 2,
     "anti-slop/require-readable-spacing": 11,
     "anti-slop/require-safety-comment-for-type-assertion": 3
-  },
-  "packages/i18n/src/detect.ts": {
-    "anti-slop/require-readable-spacing": 4
   },
   "packages/i18n/src/i18n.ts": {
     "anti-slop/no-known-value-widening": 2,
@@ -5176,9 +5153,6 @@
     "anti-slop/require-readable-spacing": 12,
     "anti-slop/require-safety-comment-for-type-assertion": 1
   },
-  "packages/offline/src/outbox/connectivity.ts": {
-    "anti-slop/require-readable-spacing": 3
-  },
   "packages/offline/src/outbox/outbox.ts": {
     "anti-slop/no-conditional-empty-object-spread": 13,
     "anti-slop/no-known-value-widening": 1,
@@ -5737,20 +5711,17 @@
   },
   "packages/voice/src/__tests__/fakes/expo-audio.ts": {
     "anti-slop/no-unknown-parameters": 4,
-    "anti-slop/no-unsafe-dictionary-type": 1,
-    "anti-slop/require-readable-spacing": 2
+    "anti-slop/no-unsafe-dictionary-type": 1
   },
   "packages/voice/src/__tests__/fakes/livekit-client.ts": {
-    "anti-slop/no-unknown-parameters": 1,
-    "anti-slop/require-readable-spacing": 9
+    "anti-slop/no-unknown-parameters": 1
   },
   "packages/voice/src/__tests__/fakes/react-native-ble-manager.ts": {
     "anti-slop/no-unknown-parameters": 1,
     "anti-slop/require-readable-spacing": 6
   },
   "packages/voice/src/__tests__/fakes/react-native-callkeep.ts": {
-    "anti-slop/no-unknown-parameters": 1,
-    "anti-slop/require-readable-spacing": 2
+    "anti-slop/no-unknown-parameters": 1
   },
   "packages/voice/src/__tests__/fakes/react-native.ts": {
     "anti-slop/no-known-value-widening": 1,
@@ -5761,7 +5732,6 @@
   },
   "packages/voice/src/__tests__/helpers/test-doubles.ts": {
     "anti-slop/no-unknown-parameters": 1,
-    "anti-slop/require-readable-spacing": 3,
     "anti-slop/require-safety-comment-for-type-assertion": 2
   },
   "packages/voice/src/__tests__/helpers/variant.ts": {
@@ -5772,7 +5742,6 @@
     "anti-slop/no-chained-type-assertions": 1,
     "anti-slop/no-unknown-parameters": 1,
     "anti-slop/no-unknown-returns": 2,
-    "anti-slop/require-readable-spacing": 3,
     "anti-slop/require-safety-comment-for-type-assertion": 3
   },
   "packages/voice/src/__tests__/web-platform.test.ts": {
@@ -5785,15 +5754,6 @@
     "anti-slop/require-readable-spacing": 1,
     "anti-slop/require-safety-comment-for-type-assertion": 2
   },
-  "packages/voice/src/audio-streams/audio-stream-store.ts": {
-    "anti-slop/require-readable-spacing": 15
-  },
-  "packages/voice/src/audio-streams/stream-player.ts": {
-    "anti-slop/require-readable-spacing": 9
-  },
-  "packages/voice/src/audio-streams/stream-player.web.ts": {
-    "anti-slop/require-readable-spacing": 1
-  },
   "packages/voice/src/audio-streams/stream-source.ts": {
     "anti-slop/require-readable-spacing": 3
   },
@@ -5804,7 +5764,6 @@
     "anti-slop/require-readable-spacing": 3
   },
   "packages/voice/src/audio/audio-session.ts": {
-    "anti-slop/require-readable-spacing": 6,
     "anti-slop/require-safety-comment-for-type-assertion": 3
   },
   "packages/voice/src/audio/voice-sounds.ts": {
@@ -5857,23 +5816,14 @@
     "anti-slop/require-readable-spacing": 46,
     "anti-slop/require-safety-comment-for-type-assertion": 12
   },
-  "packages/voice/src/callkeep/__tests__/callkeep.test.ts": {
-    "anti-slop/require-readable-spacing": 1
-  },
   "packages/voice/src/callkeep/callkeep-native.ts": {
     "anti-slop/no-conditional-empty-object-spread": 1,
-    "anti-slop/require-readable-spacing": 38,
     "anti-slop/require-safety-comment-for-type-assertion": 2
   },
   "packages/voice/src/callkeep/callkeep-service.ts": {
-    "anti-slop/require-readable-spacing": 2,
     "anti-slop/require-safety-comment-for-type-assertion": 1
   },
-  "packages/voice/src/callkeep/mute-filter.ts": {
-    "anti-slop/require-readable-spacing": 6
-  },
   "packages/voice/src/capabilities.ts": {
-    "anti-slop/require-readable-spacing": 3,
     "anti-slop/require-safety-comment-for-type-assertion": 1
   },
   "packages/voice/src/desktop/__tests__/desktop-ptt-controller.test.ts": {
@@ -5888,7 +5838,6 @@
     "anti-slop/require-safety-comment-for-type-assertion": 1
   },
   "packages/voice/src/headset/headset-button-service.ts": {
-    "anti-slop/require-readable-spacing": 18,
     "anti-slop/require-safety-comment-for-type-assertion": 1
   },
   "packages/voice/src/hooks/__tests__/use-desktop-ptt.test.tsx": {
@@ -5898,8 +5847,7 @@
     "anti-slop/require-safety-comment-for-type-assertion": 1
   },
   "packages/voice/src/hooks/__tests__/voice-hooks.test.tsx": {
-    "anti-slop/no-object-parameters": 1,
-    "anti-slop/require-readable-spacing": 7
+    "anti-slop/no-object-parameters": 1
   },
   "packages/voice/src/hooks/use-audio-streams.ts": {
     "anti-slop/require-readable-spacing": 3
@@ -5916,23 +5864,16 @@
   "packages/voice/src/hooks/use-voice-channels.ts": {
     "anti-slop/require-readable-spacing": 2
   },
-  "packages/voice/src/hooks/use-voice-status.ts": {
-    "anti-slop/require-readable-spacing": 6
-  },
   "packages/voice/src/index.ts": {
     "anti-slop/require-readable-spacing": 19
   },
   "packages/voice/src/initialize.ts": {
-    "anti-slop/no-unknown-parameters": 1,
-    "anti-slop/require-readable-spacing": 7
+    "anti-slop/no-unknown-parameters": 1
   },
   "packages/voice/src/livekit/__tests__/livekit-store.test.ts": {
-    "anti-slop/require-readable-spacing": 1,
     "anti-slop/require-safety-comment-for-type-assertion": 3
   },
   "packages/voice/src/livekit/foreground-service.ts": {
-    "anti-slop/no-unknown-parameters": 1,
-    "anti-slop/require-readable-spacing": 4,
     "anti-slop/require-safety-comment-for-type-assertion": 1
   },
   "packages/voice/src/livekit/livekit-client.ts": {
@@ -5942,7 +5883,6 @@
   "packages/voice/src/livekit/livekit-store.ts": {
     "anti-slop/no-unknown-parameters": 1,
     "anti-slop/no-unknown-returns": 1,
-    "anti-slop/require-readable-spacing": 69,
     "anti-slop/require-safety-comment-for-type-assertion": 1
   },
   "packages/voice/src/livekit/microphone-permission.ts": {
@@ -6088,8 +6028,5 @@
     "anti-slop/no-known-value-widening": 1,
     "anti-slop/require-readable-spacing": 12,
     "anti-slop/require-safety-comment-for-type-assertion": 1
-  },
-  "scripts/web-export.mjs": {
-    "anti-slop/require-readable-spacing": 5
   }
 }

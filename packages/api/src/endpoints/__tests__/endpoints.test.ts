@@ -254,6 +254,16 @@ describe('incident command (IC + Dispatch templates/reports)', () => {
   });
 });
 
+describe('badge counts', () => {
+  it('asks for the named counts in one request, the unit only when there is one', async () => {
+    const { ctx, adapter } = createTestContext();
+    await api.getBadgeCounts(ctx, { include: ['calls', 'chats', 'weather'], activeUnitId: 12 });
+    expect(lastRequest(adapter)).toMatchObject({ method: 'get', url: '/Counts/GetBadgeCounts?include=calls%2Cchats%2Cweather&activeUnitId=12' });
+    await api.getBadgeCounts(ctx, { include: ['messages'], activeUnitId: null });
+    expect(lastRequest(adapter).url).toBe('/Counts/GetBadgeCounts?include=messages');
+  });
+});
+
 describe('inbox, records, images', () => {
   it('deletes inbox messages (Unit)', async () => {
     const { ctx, adapter } = createTestContext();

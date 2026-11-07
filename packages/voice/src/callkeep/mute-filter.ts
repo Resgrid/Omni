@@ -33,17 +33,23 @@ export class CallKeepMuteFilter {
   evaluate(): MuteFilterDecision {
     if (!this.enabled) return 'gate-closed';
     const now = this.now();
+
     if (now < this.ignoreUntil) return 'locked';
     const sinceLast = now - this.lastEventAt;
     this.lastEventAt = now;
+
     if (sinceLast < MUTE_STORM_INTERVAL_MS) {
       this.stormEndsAt = now + MUTE_STORM_COOLDOWN_MS;
+
       return 'storm';
     }
+
     if (now < this.stormEndsAt) {
       this.stormEndsAt = now + MUTE_STORM_COOLDOWN_MS;
+
       return 'storm-cooldown';
     }
+
     return 'forward';
   }
 

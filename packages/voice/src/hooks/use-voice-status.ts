@@ -22,10 +22,16 @@ export interface VoiceStatus {
 
 export const deriveVoiceStatus = (input: { pttCapable: boolean; isVoiceEnabled: boolean; isConnecting: boolean; isConnected: boolean; isReconnecting: boolean; isMicrophoneEnabled: boolean }): VoiceConnectionStatus => {
   if (!input.pttCapable) return 'unavailable';
+
+  // LiveKit resuming a live room, or the store rejoining a dropped channel (no room meanwhile, attempts connecting).
+  if (input.isReconnecting) return 'reconnecting';
+
   if (input.isConnecting) return 'connecting';
-  if (input.isConnected && input.isReconnecting) return 'reconnecting';
+
   if (input.isConnected && input.isMicrophoneEnabled) return 'transmitting';
+
   if (input.isConnected) return 'connected';
+
   return input.isVoiceEnabled ? 'idle' : 'unavailable';
 };
 
@@ -44,6 +50,7 @@ export function useVoiceStatus(): VoiceStatus {
       error: s.lastError,
     }))
   );
+
   const bluetoothDeviceName = useBluetoothAudioStore((s) => s.connectedDevice?.name ?? null);
   const capabilities = useMemo(() => getVoiceCapabilities(), []);
 

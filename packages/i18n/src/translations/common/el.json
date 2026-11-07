@@ -35,7 +35,10 @@
     "stream_info": "Πληροφορίες Ροής",
     "stream_selected": "Επιλεγμένη: {{streamName}}",
     "title": "Ροές Ήχου",
-    "type": "Τύπος"
+    "type": "Τύπος",
+    "reconnecting": "Επανασύνδεση",
+    "reconnecting_stream": "Επανασύνδεση στο {{streamName}}…",
+    "paused": "Σε παύση"
   },
   "bluetooth": {
     "applied": "Εφαρμόστηκε",
@@ -1472,7 +1475,8 @@
     "speaking": "Ομιλία",
     "title": "Φωνητικά Κανάλια",
     "unmute": "Κατάργηση σίγασης",
-    "join_failed": "Could not join the voice channel. Please try again."
+    "join_failed": "Could not join the voice channel. Please try again.",
+    "reconnecting": "Επανασύνδεση…"
   },
   "loading": {
     "loading": "Φόρτωση...",
@@ -2016,7 +2020,14 @@
     "view_chat": "Προβολή συνομιλίας",
     "view_reference": "Προβολή {{type}}",
     "mark_all_read": "Mark all as read",
-    "unread": "Unread"
+    "unread": "Unread",
+    "select": "Επιλογή",
+    "mark_read": "Σήμανση ως αναγνωσμένο",
+    "delete": "Διαγραφή",
+    "delete_selected_message": "Διαγραφή των {{count}} επιλεγμένων ειδοποιήσεων; Η ενέργεια δεν είναι αναστρέψιμη.",
+    "delete_all_message": "Διαγραφή όλων των ειδοποιήσεων; Η ενέργεια δεν είναι αναστρέψιμη.",
+    "deleted": "Οι ειδοποιήσεις διαγράφηκαν",
+    "mark_read_error": "Δεν ήταν δυνατή η σήμανση των ειδοποιήσεων ως αναγνωσμένων"
   },
   "onboarding": {
     "getStarted": "Ας Ξεκινήσουμε",
@@ -2900,7 +2911,9 @@
       "source_embedded": "Ενσωματωμένη έκδοση",
       "title": "Ενημερώσεις εφαρμογής",
       "up_to_date": "Ενημερωμένη. Τελευταίος έλεγχος {{time}}."
-    }
+    },
+    "headset_button_ptt": "Ομιλία με το κουμπί των ακουστικών",
+    "headset_button_ptt_note": "Το κουμπί κλήσης των ακουστικών ξεκινά και σταματά την ομιλία στο φωνητικό κανάλι, όπως και το «Τέλος» στην οθόνη κλειδώματος. Αποχωρήστε από το κανάλι μέσα από την εφαρμογή. Απενεργοποιήστε το για να αποχωρεί το κουμπί από το κανάλι."
   },
   "shared_session": {
     "bar": "Κοινόχρηστη συσκευή",
@@ -3280,7 +3293,8 @@
     "notifications_unread": "Notifications, {{count}} unread",
     "changes_need_attention": "Needs attention: {{count}}",
     "offline": "Offline",
-    "offline_changes_waiting": "Offline: {{count}} waiting"
+    "offline_changes_waiting": "Offline: {{count}} waiting",
+    "nav_item_with_count": "{{label}} ({{count}})"
   },
   "access_denied": {
     "back_to_sign_in": "Back to sign in",
@@ -4422,5 +4436,18 @@
     "image_not_offline": "This map image is not saved on this device. It shows again when you are back online.",
     "nothing_to_show": "Nothing to show on this device",
     "nothing_to_show_detail": "This map has no image or map tiles this app can draw. Open it on the website instead."
+  },
+  "sidebar": {
+    "audio": "Ροή",
+    "ptt": "Φωνή"
+  },
+  "voice_session": {
+    "channel_name": "Φωνητικό κανάλι",
+    "notification_title": "Ενεργό φωνητικό κανάλι",
+    "notification_body": "Το push-to-talk συνεχίζει να λειτουργεί ενώ η εφαρμογή είναι στο παρασκήνιο.",
+    "phone_account_title": "Απαιτούνται άδειες",
+    "phone_account_description": "Η εφαρμογή {{appName}} χρειάζεται πρόσβαση στους λογαριασμούς τηλεφώνου σας για να παραμένουν συνδεδεμένα τα φωνητικά κανάλια στο παρασκήνιο.",
+    "call_channel_name": "Φωνητικές κλήσεις",
+    "call_notification_title": "Φωνητική κλήση {{appName}}"
   }
 }

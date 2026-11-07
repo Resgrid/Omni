@@ -78,7 +78,17 @@ export const VoiceChannelSheet: React.FC<VoiceChannelSheetProps> = ({ testID = '
       <Text className="text-xl font-bold text-typography-900" accessibilityRole="header">
         {t('livekit.title')}
       </Text>
-      {ptt.isConnecting ? (
+      {ptt.isReconnecting && !isConnected ? (
+        // The channel dropped and is being rejoined (the call stays up meanwhile): leaving is still one tap away.
+        <VStack space="md" className="items-center py-8" testID={`${testID}-reconnecting`}>
+          <Spinner size="large" />
+          <Text className="text-center text-lg font-medium text-typography-900">{ptt.currentChannel?.Name ?? ''}</Text>
+          <Text className="text-center font-medium text-typography-500">{t('livekit.reconnecting')}</Text>
+          <Button variant="outline" action="negative" onPress={() => void ptt.disconnect()} testID={`${testID}-reconnecting-disconnect`}>
+            <ButtonText>{t('livekit.disconnect')}</ButtonText>
+          </Button>
+        </VStack>
+      ) : ptt.isConnecting ? (
         <VStack space="sm" className="items-center py-8" testID={`${testID}-connecting`}>
           <Spinner size="large" />
           <Text className="text-center font-medium text-typography-500">{t('livekit.connecting')}</Text>
@@ -90,7 +100,11 @@ export const VoiceChannelSheet: React.FC<VoiceChannelSheetProps> = ({ testID = '
             <Text className="text-center text-lg font-medium text-typography-900" testID={`${testID}-channel`}>
               {ptt.currentChannel?.Name ?? ''}
             </Text>
-            {isTalking ? (
+            {ptt.isReconnecting ? (
+              <Text className="text-center text-warning-600" testID={`${testID}-connection-reconnecting`}>
+                {t('livekit.reconnecting')}
+              </Text>
+            ) : isTalking ? (
               <Text className="text-center text-success-600" testID={`${testID}-speaking`}>
                 {t('livekit.speaking')}
               </Text>

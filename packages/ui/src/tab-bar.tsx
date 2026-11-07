@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef } from 'react';
 import { type LayoutChangeEvent, Pressable, ScrollView, type StyleProp, StyleSheet, Text, type TextStyle, useWindowDimensions, View, type ViewStyle } from 'react-native';
 
+import { formatBadgeCount } from './count-badge';
 import { EdgeChevrons, useEdgeScroll } from './edge-scroll';
 import { type ThemeColors, useThemeColors } from './theme/use-theme-colors';
 import { useTranslation } from './utils/i18n';
@@ -53,8 +54,6 @@ export interface TabBarProps<K extends string = string> {
   /** The bar; its scroller and chevrons add `-scroll-view`, `-left-overflow` and `-right-overflow`. */
   testID?: string;
 }
-
-const MAX_BADGE = 99;
 
 /*
  * BAR LAYOUT: the tab bar is plain React Native styles, with no className anywhere inside it. Through the class layer
@@ -294,7 +293,7 @@ export function TabBar<K extends string>({
     return (
       <View testID={`${tabTestID(tab)}-badge`} style={StyleSheet.flatten([isPills ? styles.inlineBadge : styles.cornerBadge, { backgroundColor: badgeColors.background }])}>
         <Text numberOfLines={1} style={StyleSheet.flatten([isPills ? styles.inlineBadgeText : styles.cornerBadgeText, { color: badgeColors.text }])}>
-          {tab.badge > MAX_BADGE ? `${MAX_BADGE}+` : tab.badge}
+          {formatBadgeCount(tab.badge)}
         </Text>
       </View>
     );

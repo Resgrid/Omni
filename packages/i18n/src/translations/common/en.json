@@ -35,7 +35,10 @@
     "stream_info": "Stream Information",
     "stream_selected": "Selected: {{streamName}}",
     "title": "Audio Streams",
-    "type": "Type"
+    "type": "Type",
+    "reconnecting": "Reconnecting",
+    "reconnecting_stream": "Reconnecting to {{streamName}}…",
+    "paused": "Paused"
   },
   "bluetooth": {
     "applied": "Applied",
@@ -1472,7 +1475,8 @@
     "speaking": "Speaking",
     "title": "Voice Channels",
     "unmute": "Unmute",
-    "join_failed": "Could not join the voice channel. Please try again."
+    "join_failed": "Could not join the voice channel. Please try again.",
+    "reconnecting": "Reconnecting…"
   },
   "loading": {
     "loading": "Loading...",
@@ -2016,7 +2020,14 @@
     "view_chat": "View Chat",
     "view_reference": "View {{type}}",
     "mark_all_read": "Mark all as read",
-    "unread": "Unread"
+    "unread": "Unread",
+    "select": "Select",
+    "mark_read": "Mark as read",
+    "delete": "Delete",
+    "delete_selected_message": "Delete the {{count}} selected notifications? This cannot be undone.",
+    "delete_all_message": "Delete all notifications? This cannot be undone.",
+    "deleted": "Notifications deleted",
+    "mark_read_error": "Could not mark notifications as read"
   },
   "onboarding": {
     "getStarted": "Let's Get Started",
@@ -2900,7 +2911,9 @@
       "source_embedded": "Built-in version",
       "title": "App updates",
       "up_to_date": "Up to date. Last checked {{time}}."
-    }
+    },
+    "headset_button_ptt": "Talk with the earbud button",
+    "headset_button_ptt_note": "The call button on earbuds or a headset starts and stops talking in a voice channel, and so does End on the lock screen. Leave the channel from the app. Turn this off to have the button leave the channel."
   },
   "shared_session": {
     "bar": "Shared device",
@@ -3280,7 +3293,8 @@
     "notifications_unread": "Notifications, {{count}} unread",
     "changes_need_attention": "Needs attention: {{count}}",
     "offline": "Offline",
-    "offline_changes_waiting": "Offline: {{count}} waiting"
+    "offline_changes_waiting": "Offline: {{count}} waiting",
+    "nav_item_with_count": "{{label}} ({{count}})"
   },
   "access_denied": {
     "back_to_sign_in": "Back to sign in",
@@ -4422,5 +4436,18 @@
     "image_not_offline": "This map image is not saved on this device. It shows again when you are back online.",
     "nothing_to_show": "Nothing to show on this device",
     "nothing_to_show_detail": "This map has no image or map tiles this app can draw. Open it on the website instead."
+  },
+  "sidebar": {
+    "audio": "Stream",
+    "ptt": "Voice"
+  },
+  "voice_session": {
+    "channel_name": "Voice channel",
+    "notification_title": "Voice channel active",
+    "notification_body": "Push-to-talk keeps working while the app is in the background.",
+    "phone_account_title": "Permissions required",
+    "phone_account_description": "{{appName}} needs access to your phone accounts to keep voice channels connected in the background.",
+    "call_channel_name": "Voice calls",
+    "call_notification_title": "{{appName}} voice call"
   }
 }

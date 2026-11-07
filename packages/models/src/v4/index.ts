@@ -22,6 +22,9 @@ export * from './configs';
 export * from './contactFiles';
 export * from './contacts';
 export * from './costRecovery';
+
+// Menu and tab badge counts (Counts/GetBadgeCounts); the domains stay alphabetical across this break.
+export * from './counts';
 export * from './customStatuses';
 export * from './dataProtection';
 export * from './deployments';

@@ -35,7 +35,10 @@
     "stream_info": "معلومات البث",
     "stream_selected": "مختار: {{streamName}}",
     "title": "البثوث الصوتية",
-    "type": "النوع"
+    "type": "النوع",
+    "reconnecting": "إعادة الاتصال",
+    "reconnecting_stream": "جارٍ إعادة الاتصال بـ {{streamName}}…",
+    "paused": "متوقف مؤقتًا"
   },
   "bluetooth": {
     "applied": "مطبق",
@@ -1472,7 +1475,8 @@
     "speaking": "يتحدث",
     "title": "القنوات الصوتية",
     "unmute": "إلغاء الكتم",
-    "join_failed": "Could not join the voice channel. Please try again."
+    "join_failed": "Could not join the voice channel. Please try again.",
+    "reconnecting": "جارٍ إعادة الاتصال…"
   },
   "loading": {
     "loading": "جاري التحميل...",
@@ -2016,7 +2020,14 @@
     "view_chat": "عرض المحادثة",
     "view_reference": "عرض {{type}}",
     "mark_all_read": "Mark all as read",
-    "unread": "Unread"
+    "unread": "Unread",
+    "select": "تحديد",
+    "mark_read": "تعليم كمقروء",
+    "delete": "حذف",
+    "delete_selected_message": "حذف الإشعارات المحددة ({{count}})؟ لا يمكن التراجع عن هذا الإجراء.",
+    "delete_all_message": "حذف جميع الإشعارات؟ لا يمكن التراجع عن هذا الإجراء.",
+    "deleted": "تم حذف الإشعارات",
+    "mark_read_error": "تعذر تعليم الإشعارات كمقروءة"
   },
   "onboarding": {
     "getStarted": "لنبدأ",
@@ -2900,7 +2911,9 @@
       "source_embedded": "الإصدار المدمج",
       "title": "تحديثات التطبيق",
       "up_to_date": "محدّث. آخر فحص: {{time}}."
-    }
+    },
+    "headset_button_ptt": "التحدث بزر سماعات الأذن",
+    "headset_button_ptt_note": "يبدأ زر المكالمة في سماعات الأذن أو سماعة الرأس التحدث في القناة الصوتية ويوقفه، وكذلك زر الإنهاء على شاشة القفل. غادر القناة من التطبيق. أوقف هذا الخيار ليغادر الزر القناة."
   },
   "shared_session": {
     "bar": "جهاز مشترك",
@@ -3280,7 +3293,8 @@
     "notifications_unread": "Notifications, {{count}} unread",
     "changes_need_attention": "Needs attention: {{count}}",
     "offline": "Offline",
-    "offline_changes_waiting": "Offline: {{count}} waiting"
+    "offline_changes_waiting": "Offline: {{count}} waiting",
+    "nav_item_with_count": "{{label}} ({{count}})"
   },
   "access_denied": {
     "back_to_sign_in": "Back to sign in",
@@ -4422,5 +4436,18 @@
     "image_not_offline": "This map image is not saved on this device. It shows again when you are back online.",
     "nothing_to_show": "Nothing to show on this device",
     "nothing_to_show_detail": "This map has no image or map tiles this app can draw. Open it on the website instead."
+  },
+  "sidebar": {
+    "audio": "تدفق",
+    "ptt": "صوت"
+  },
+  "voice_session": {
+    "channel_name": "القناة الصوتية",
+    "notification_title": "القناة الصوتية نشطة",
+    "notification_body": "يستمر الضغط للتحدث في العمل أثناء وجود التطبيق في الخلفية.",
+    "phone_account_title": "الأذونات مطلوبة",
+    "phone_account_description": "يحتاج {{appName}} إلى الوصول إلى حسابات الهاتف لإبقاء القنوات الصوتية متصلة في الخلفية.",
+    "call_channel_name": "المكالمات الصوتية",
+    "call_notification_title": "مكالمة صوتية من {{appName}}"
   }
 }

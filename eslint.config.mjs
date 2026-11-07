@@ -100,6 +100,11 @@ export default [
     languageOptions: { globals: { ...globals.node } },
   },
   {
+    // The web push service worker runs in the browser's service worker scope, not Node.
+    files: ['apps/omni/public/service-worker.js'],
+    languageOptions: { globals: { ...globals.serviceworker } },
+  },
+  {
     // A standalone package (pnpm install --ignore-workspace), installed only when the artwork is regenerated, so CI lints
     // it without its dependencies. An ignore rather than a disable comment: that would be reported unused once installed.
     files: ['scripts/brand-assets/**'],

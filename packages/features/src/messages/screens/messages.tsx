@@ -132,6 +132,10 @@ export default function MessagesScreen() {
 
     if (!ok) {
       toast.error(t('messages.delete_failed'));
+      // Some may have gone through: they left the lists, so only the ones still listed stay selected for a retry.
+      const { inboxMessages, sentMessages } = useMessagesStore.getState();
+      const listed = new Set([...inboxMessages, ...sentMessages].map((message) => message.MessageId));
+      setSelection((current) => current?.filter((id) => listed.has(id)) ?? null);
 
       return;
     }

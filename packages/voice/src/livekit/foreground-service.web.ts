@@ -1,9 +1,15 @@
 import type { VoiceForegroundService } from '../runtime';
 
-export interface NotifeeForegroundServiceOptions {
-  channelId: string;
+/** Translated texts of the ongoing-call notification and its channel. */
+export interface VoiceSessionText {
+  channelName: string;
   title: string;
   body: string;
+}
+
+export interface NotifeeForegroundServiceOptions {
+  channelId: string;
+  text: () => VoiceSessionText;
   smallIcon?: string;
 }
 

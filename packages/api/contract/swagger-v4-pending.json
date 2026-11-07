@@ -3,9 +3,18 @@
     "source": "Core develop f3b2fd24 + 34949e2d (RG-T152, MapLibre plan v1.7 §23); not on the QA API as of 2026-11-02",
     "addedAt": "2026-11-01",
     "checkedAt": "2026-11-02",
-    "note": "Core v4 routes and parameters Omni calls before they reach the QA Swagger snapshot. The contract test overlays these on swagger-v4.json and fails once the snapshot has an entry, so remove each entry after refreshing the snapshot. Hand-written from Web/Resgrid.Web.Services/Controllers/v4/{RoutingController,RoutesController,MappingController}.cs."
+    "note": "Core v4 routes and parameters Omni calls before they reach the QA Swagger snapshot. Counts/GetBadgeCounts: Core develop working tree, 2026-11-07 (Web/Resgrid.Web.Services/Controllers/v4/CountsController.cs). The contract test overlays these on swagger-v4.json and fails once the snapshot has an entry, so remove each entry after refreshing the snapshot. Hand-written from Web/Resgrid.Web.Services/Controllers/v4/{RoutingController,RoutesController,MappingController}.cs."
   },
   "paths": {
+    "/api/v{VersionId}/Counts/GetBadgeCounts": {
+      "get": {
+        "parameters": [
+          { "name": "include", "in": "query", "schema": { "type": "string" } },
+          { "name": "activeUnitId", "in": "query", "schema": { "type": "integer", "format": "int32" } },
+          { "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ]
+      }
+    },
     "/api/v{VersionId}/Mapping/SignMapResourceUrls": {
       "post": {
         "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SignMapResourceUrlsInput" } } } }

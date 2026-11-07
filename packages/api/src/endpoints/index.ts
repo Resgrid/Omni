@@ -11,6 +11,9 @@ export * from './checklists';
 export * from './communication-tests';
 export * from './config';
 export * from './contacts';
+
+// Counts for menu and tab badges in one request (Counts/GetBadgeCounts); the rest of the domains follow alphabetically.
+export * from './counts';
 export * from './data-protection';
 export * from './devices';
 export * from './dispatch';

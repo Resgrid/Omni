@@ -1,5 +1,6 @@
 import { FeatureFlagKeys } from '@resgrid/auth';
 import type { Capabilities } from '@resgrid/config';
+import type { NavBadge } from '@resgrid/data';
 import type { LucideIcon } from 'lucide-react-native';
 import { BriefcaseBusiness } from 'lucide-react-native';
 
@@ -19,6 +20,8 @@ export interface OperationsNavEntry {
   /** Department feature flag(s); every one must be enabled. Unknown flags are disabled. */
   requiresFlag?: string | readonly string[];
   requiresCapability?: (capabilities: Capabilities) => boolean;
+  /** Count badge beside the entry (the shell's `NavEntry.badge`). */
+  badge?: NavBadge;
 }
 
 /**
@@ -33,5 +36,6 @@ export const operationsNav: readonly OperationsNavEntry[] = [
     defaultLabel: 'Deployments',
     icon: BriefcaseBusiness,
     requiresFlag: FeatureFlagKeys.Deployments,
+    badge: 'deployments',
   },
 ];

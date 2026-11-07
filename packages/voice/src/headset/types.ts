@@ -20,6 +20,11 @@ export interface HeadsetButtonService {
   handleKeyEvent(event: MediaButtonKeyEvent): void;
   /** Feed a decoded button (iOS remote commands, tests). */
   handleButton(type: HeadsetButtonType, phase?: 'down' | 'up'): void;
+  /**
+   * Another media session of the app became active (a scanner stream started): take the headset buttons back while
+   * monitoring. Android sends them to the most recently activated session, so the PTT session is re-created after it.
+   */
+  reassertMediaSession(): void;
   destroy(): void;
 }
 

@@ -18,12 +18,14 @@ jest.mock('@resgrid/core', () => ({
 const mockOpenInboxItem = jest.fn(async (_item: unknown) => true);
 const mockNavigate = jest.fn(async (_target: NotificationTarget) => true);
 const mockResolveRoute = jest.fn((target: NotificationTarget) => (target.kind === 'call' ? `/call/${target.id}` : null));
+
 // The real event-code parser and inbox target resolver (the safe-id rules under test); native push plumbing stubbed.
 jest.mock('@resgrid/notifications', () => {
   const codes = jest.requireActual('@resgrid/notifications/event-codes');
   const novu = jest.requireActual('@resgrid/notifications/novu');
   // eslint-disable-next-line @typescript-eslint/no-require-imports -- jest.mock factories run before imports resolve
   const { create } = require('zustand');
+
   const store = create((set: (state: object) => void) => ({
     isOpen: false,
     notification: null,
@@ -31,6 +33,7 @@ jest.mock('@resgrid/notifications', () => {
       set({ isOpen: true, notification: { ...codes.parseEventCode(input.eventCode), title: input.title, body: input.body, receivedAt: 0 } }),
     hideNotificationModal: () => set({ isOpen: false, notification: null }),
   }));
+
   return {
     ...codes,
     inboxItemTarget: novu.inboxItemTarget,
@@ -42,12 +45,18 @@ jest.mock('@resgrid/notifications', () => {
 });
 
 const mockRecordPushResponse = jest.fn();
+
 jest.mock('@resgrid/api', () => ({ recordPushResponse: (...args: unknown[]) => mockRecordPushResponse(...args) }));
 
 const mockUseNotifications = jest.fn();
-jest.mock('@novu/react-native', () => ({ useNotifications: (...args: unknown[]) => mockUseNotifications(...args) }));
+const mockDeleteAll = jest.fn(async () => ({}));
+
+jest.mock('@novu/react-native', () => ({ useNotifications: (...args: unknown[]) => mockUseNotifications(...args), useNovu: () => ({ notifications: { deleteAll: mockDeleteAll } }) }));
 
 const q = { includeHiddenElements: true } as const;
+
+/** While selecting, each row is a checkbox: whether it is ticked. */
+const isChecked = (id: string): boolean => screen.getByTestId(`notification-row-${id}`).props.accessibilityState?.checked === true;
 
 const novuItem = (id: string, eventCode: string | undefined, extra: Record<string, unknown> = {}) => ({
   id,
@@ -56,7 +65,8 @@ const novuItem = (id: string, eventCode: string | undefined, extra: Record<strin
   isRead: false,
   createdAt: '2026-10-31T10:00:00Z',
   data: eventCode ? { eventCode, unit: 'E1' } : {},
-  read: jest.fn(async () => undefined),
+  read: jest.fn(async () => ({})),
+  delete: jest.fn(async () => ({})),
   ...extra,
 });
 
@@ -76,8 +86,26 @@ describe('inbox items', () => {
 });
 
 describe('NotificationsInboxScreen', () => {
-  const setInbox = (items: ReturnType<typeof novuItem>[]) =>
-    mockUseNotifications.mockReturnValue({ notifications: items, isLoading: false, isFetching: false, hasMore: false, fetchMore: jest.fn(), refetch: jest.fn(), readAll: jest.fn(async () => ({})), error: undefined });
+  const setInbox = (items: ReturnType<typeof novuItem>[], options: { hasMore?: boolean } = {}) => {
+    const inbox = {
+      notifications: items,
+      isLoading: false,
+      isFetching: false,
+      hasMore: options.hasMore ?? false,
+      fetchMore: jest.fn(),
+      refetch: jest.fn(async () => undefined),
+      readAll: jest.fn(async () => ({})),
+      error: undefined,
+    };
+
+    mockUseNotifications.mockReturnValue(inbox);
+
+    return inbox;
+  };
+
+  beforeEach(() => {
+    mockDeleteAll.mockClear();
+  });
 
   it('opens an item with a safe target like a tapped push and marks it read', async () => {
     const call = novuItem('n1', 'C1234');
@@ -110,6 +138,103 @@ describe('NotificationsInboxScreen', () => {
     await render(<NotificationsInboxScreen isReady={false} isUnavailable />);
     expect(screen.getByTestId('notifications-inbox-unavailable')).toBeTruthy();
     expect(screen.queryByTestId('notifications-inbox-pending')).toBeNull();
+  });
+
+  it('a long press starts selecting; a press then toggles rows instead of opening them', async () => {
+    const first = novuItem('n1', 'C1');
+    const second = novuItem('n2', 'C2');
+    setInbox([first, second]);
+    await render(<NotificationsInboxScreen />);
+
+    await fireEvent(screen.getByTestId('notification-row-n1'), 'longPress');
+    expect(screen.getByTestId('notifications-selection-bar')).toBeTruthy();
+    expect([isChecked('n1'), isChecked('n2')]).toEqual([true, false]);
+
+    await fireEvent.press(screen.getByTestId('notification-row-n2'));
+    expect([isChecked('n1'), isChecked('n2')]).toEqual([true, true]);
+    expect(mockOpenInboxItem).not.toHaveBeenCalled();
+
+    await fireEvent.press(screen.getByTestId('notification-row-n1'));
+    expect([isChecked('n1'), isChecked('n2')]).toEqual([false, true]);
+
+    await fireEvent.press(screen.getByTestId('notifications-exit-selection'));
+    expect(screen.queryByTestId('notifications-selection-bar')).toBeNull();
+  });
+
+  it('marks only the selected unread notifications read', async () => {
+    const unread = novuItem('n1', 'C1');
+    const read = novuItem('n2', 'C2', { isRead: true });
+    const other = novuItem('n3', 'C3');
+    setInbox([unread, read, other]);
+    await render(<NotificationsInboxScreen />);
+
+    await fireEvent.press(screen.getByTestId('notifications-select'));
+    await fireEvent.press(screen.getByTestId('notification-row-n1'));
+    await fireEvent.press(screen.getByTestId('notification-row-n2'));
+    await fireEvent.press(screen.getByTestId('notifications-read-selected'));
+
+    await waitFor(() => expect(screen.queryByTestId('notifications-selection-bar')).toBeNull());
+    expect(unread.read).toHaveBeenCalledTimes(1);
+    expect(read.read).not.toHaveBeenCalled();
+    expect(other.read).not.toHaveBeenCalled();
+  });
+
+  it('deletes the selected notifications after confirming', async () => {
+    const first = novuItem('n1', 'C1');
+    const second = novuItem('n2', 'C2');
+    const inbox = setInbox([first, second]);
+    await render(<NotificationsInboxScreen />);
+
+    await fireEvent(screen.getByTestId('notification-row-n2'), 'longPress');
+    await fireEvent.press(screen.getByTestId('notifications-delete-selected'));
+    expect(second.delete).not.toHaveBeenCalled();
+
+    await fireEvent.press(screen.getByTestId('notifications-confirm-delete-confirm', q));
+
+    await waitFor(() => expect(second.delete).toHaveBeenCalledTimes(1));
+    expect(first.delete).not.toHaveBeenCalled();
+    expect(mockDeleteAll).not.toHaveBeenCalled();
+    expect(inbox.refetch).toHaveBeenCalled();
+  });
+
+  it('select all deletes the whole inbox (pages not loaded yet included) and marks everything read in one call', async () => {
+    const first = novuItem('n1', 'C1');
+    const second = novuItem('n2', 'C2');
+    const inbox = setInbox([first, second], { hasMore: true });
+    await render(<NotificationsInboxScreen />);
+
+    await fireEvent.press(screen.getByTestId('notifications-select'));
+    await fireEvent.press(screen.getByTestId('notifications-select-all'));
+    expect([isChecked('n1'), isChecked('n2')]).toEqual([true, true]);
+
+    await fireEvent.press(screen.getByTestId('notifications-read-selected'));
+    await waitFor(() => expect(inbox.readAll).toHaveBeenCalledTimes(1));
+    expect(first.read).not.toHaveBeenCalled();
+
+    await fireEvent.press(screen.getByTestId('notifications-select'));
+    await fireEvent.press(screen.getByTestId('notifications-select-all'));
+    await fireEvent.press(screen.getByTestId('notifications-delete-selected'));
+    await fireEvent.press(screen.getByTestId('notifications-confirm-delete-confirm', q));
+
+    await waitFor(() => expect(mockDeleteAll).toHaveBeenCalledTimes(1));
+    expect(first.delete).not.toHaveBeenCalled();
+  });
+
+  it('deselecting one row after select all falls back to deleting just the rest', async () => {
+    const first = novuItem('n1', 'C1');
+    const second = novuItem('n2', 'C2');
+    setInbox([first, second]);
+    await render(<NotificationsInboxScreen />);
+
+    await fireEvent.press(screen.getByTestId('notifications-select'));
+    await fireEvent.press(screen.getByTestId('notifications-select-all'));
+    await fireEvent.press(screen.getByTestId('notification-row-n1'));
+    await fireEvent.press(screen.getByTestId('notifications-delete-selected'));
+    await fireEvent.press(screen.getByTestId('notifications-confirm-delete-confirm', q));
+
+    await waitFor(() => expect(second.delete).toHaveBeenCalledTimes(1));
+    expect(first.delete).not.toHaveBeenCalled();
+    expect(mockDeleteAll).not.toHaveBeenCalled();
   });
 
   it('shows the empty state', async () => {

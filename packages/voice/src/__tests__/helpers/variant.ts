@@ -4,8 +4,8 @@ import { resetActiveVariantForTests, setActiveVariant, type VariantId, type Vari
 export const VOICE_BY_VARIANT: Record<VariantId, { voice: VariantManifest['capabilities']['voice']; iosBackgroundModes: string[] }> = {
   responder: { voice: { ptt: true, callKeep: true, bluetoothPtt: true, headsetButtonPtt: true, desktopPtt: false }, iosBackgroundModes: ['remote-notification', 'audio', 'bluetooth-central', 'voip', 'location'] },
   unit: { voice: { ptt: true, callKeep: true, bluetoothPtt: true, headsetButtonPtt: true, desktopPtt: false }, iosBackgroundModes: ['remote-notification', 'audio', 'bluetooth-central', 'voip', 'location'] },
-  ic: { voice: { ptt: true, callKeep: true, bluetoothPtt: true, headsetButtonPtt: false, desktopPtt: false }, iosBackgroundModes: ['remote-notification', 'audio', 'bluetooth-central', 'voip'] },
-  dispatch: { voice: { ptt: true, callKeep: false, bluetoothPtt: true, headsetButtonPtt: false, desktopPtt: true }, iosBackgroundModes: ['remote-notification', 'audio', 'bluetooth-central', 'voip'] },
+  ic: { voice: { ptt: true, callKeep: true, bluetoothPtt: true, headsetButtonPtt: true, desktopPtt: false }, iosBackgroundModes: ['remote-notification', 'audio', 'bluetooth-central', 'voip'] },
+  dispatch: { voice: { ptt: true, callKeep: true, bluetoothPtt: true, headsetButtonPtt: true, desktopPtt: true }, iosBackgroundModes: ['remote-notification', 'audio', 'bluetooth-central', 'voip'] },
   bigboard: { voice: { ptt: false, callKeep: false, bluetoothPtt: false, headsetButtonPtt: false, desktopPtt: false }, iosBackgroundModes: ['remote-notification'] },
 };
 

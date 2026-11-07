@@ -35,7 +35,10 @@
     "stream_info": "Informations sur le flux",
     "stream_selected": "Sélectionné : {{streamName}}",
     "title": "Flux audio",
-    "type": "Type"
+    "type": "Type",
+    "reconnecting": "Reconnexion",
+    "reconnecting_stream": "Reconnexion à {{streamName}}…",
+    "paused": "En pause"
   },
   "bluetooth": {
     "applied": "Appliqué",
@@ -1472,7 +1475,8 @@
     "speaking": "En train de parler",
     "title": "Canaux vocaux",
     "unmute": "Réactiver le son",
-    "join_failed": "Could not join the voice channel. Please try again."
+    "join_failed": "Could not join the voice channel. Please try again.",
+    "reconnecting": "Reconnexion…"
   },
   "loading": {
     "loading": "Chargement...",
@@ -2016,7 +2020,14 @@
     "view_chat": "Voir la discussion",
     "view_reference": "Voir {{type}}",
     "mark_all_read": "Mark all as read",
-    "unread": "Unread"
+    "unread": "Unread",
+    "select": "Sélectionner",
+    "mark_read": "Marquer comme lu",
+    "delete": "Supprimer",
+    "delete_selected_message": "Supprimer les {{count}} notifications sélectionnées ? Cette action est irréversible.",
+    "delete_all_message": "Supprimer toutes les notifications ? Cette action est irréversible.",
+    "deleted": "Notifications supprimées",
+    "mark_read_error": "Impossible de marquer les notifications comme lues"
   },
   "onboarding": {
     "getStarted": "C'est parti",
@@ -2900,7 +2911,9 @@
       "source_embedded": "Version intégrée",
       "title": "Mises à jour de l'application",
       "up_to_date": "À jour. Dernière vérification : {{time}}."
-    }
+    },
+    "headset_button_ptt": "Parler avec le bouton des écouteurs",
+    "headset_button_ptt_note": "Le bouton d'appel des écouteurs ou du casque démarre et arrête la prise de parole dans un canal vocal, tout comme Raccrocher sur l'écran verrouillé. Quittez le canal depuis l'application. Désactivez cette option pour que le bouton quitte le canal."
   },
   "shared_session": {
     "bar": "Appareil partagé",
@@ -3280,7 +3293,8 @@
     "notifications_unread": "Notifications, {{count}} unread",
     "changes_need_attention": "Needs attention: {{count}}",
     "offline": "Offline",
-    "offline_changes_waiting": "Offline: {{count}} waiting"
+    "offline_changes_waiting": "Offline: {{count}} waiting",
+    "nav_item_with_count": "{{label}} ({{count}})"
   },
   "access_denied": {
     "back_to_sign_in": "Back to sign in",
@@ -4422,5 +4436,18 @@
     "image_not_offline": "This map image is not saved on this device. It shows again when you are back online.",
     "nothing_to_show": "Nothing to show on this device",
     "nothing_to_show_detail": "This map has no image or map tiles this app can draw. Open it on the website instead."
+  },
+  "sidebar": {
+    "audio": "Flux",
+    "ptt": "Voix"
+  },
+  "voice_session": {
+    "channel_name": "Canal vocal",
+    "notification_title": "Canal vocal actif",
+    "notification_body": "Le push-to-talk continue de fonctionner lorsque l'application est en arrière-plan.",
+    "phone_account_title": "Autorisations requises",
+    "phone_account_description": "{{appName}} a besoin d'accéder à vos comptes téléphoniques pour garder les canaux vocaux connectés en arrière-plan.",
+    "call_channel_name": "Appels vocaux",
+    "call_notification_title": "Appel vocal {{appName}}"
   }
 }

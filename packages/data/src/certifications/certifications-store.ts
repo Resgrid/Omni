@@ -3,6 +3,7 @@ import type { AddCertificationCreditInput, Certification, CertificationCredit, C
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+import { refreshBadgeCountsSoon } from '../badge-counts/badge-counts-store';
 import { assertV4Success, unwrapItem, unwrapList } from '../core/envelope';
 import { type DataError, toDataError } from '../core/errors';
 import { dataPersistOptions, registerPersistedStore } from '../core/persist';
@@ -44,7 +45,12 @@ export const useCertificationsStore = create<CertificationsState>()(
       const act = async <T>(fn: () => Promise<T>): Promise<T | null> => {
         set({ actionError: null });
         try {
-          return await fn();
+          const result = await fn();
+
+          // Saving, renewing or removing a record moves the expiring-certifications badge.
+          refreshBadgeCountsSoon();
+
+          return result;
         } catch (error) {
           set({ actionError: toDataError(error) });
           return null;

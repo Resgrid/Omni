@@ -1,7 +1,8 @@
 import { terminologyStore, useFeatureFlag, useIsRecordsFieldEnabled } from '@resgrid/auth';
 import { useHasModule } from '@resgrid/config';
+import { useBadgeCountLookup } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
-import { Pressable, Text, View } from '@resgrid/ui';
+import { CountBadge, Pressable, Text, View } from '@resgrid/ui';
 import { type Href, router } from 'expo-router';
 import React, { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
@@ -38,6 +39,8 @@ export const QuickActions: React.FC<QuickActionsProps> = ({ hasActiveUnit, onNav
   const records = useIsRecordsFieldEnabled();
   const hasInventory = useHasModule('inventory');
   const terms = terminologyStore((state) => state.names);
+  // The shell asks for the counts of the app's nav entries, chat among them.
+  const badgeCount = useBadgeCountLookup();
 
   const actions = useMemo(
     () => visibleQuickActions({ chat, checklists, deployments, records, inventory: hasActiveUnit && hasInventory }, exclude),
@@ -56,13 +59,14 @@ export const QuickActions: React.FC<QuickActionsProps> = ({ hasActiveUnit, onNav
       {actions.map((action) => {
         const Icon = action.icon;
         const label = (action.termKey ? terms[action.termKey] : undefined) || t(action.labelKey);
+        const count = badgeCount(action.badge);
 
         return (
           <View key={action.id} style={isSidebar ? (isPaired(action.id) && hasPair(actions) ? styles.half : styles.full) : itemStyle}>
             <Pressable
               onPress={() => open(action)}
               accessibilityRole="button"
-              accessibilityLabel={label}
+              accessibilityLabel={count ? t('shell.nav_item_with_count', { label, count }) : label}
               testID={`${testID}-${action.id}`}
               className={`flex-row items-center rounded-lg border border-outline-200 bg-background-0 px-3 ${isSidebar ? 'justify-center' : ''}`}
               style={{ minHeight: buttonMinHeight }}
@@ -73,6 +77,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({ hasActiveUnit, onNav
               <Text className={`${isSidebar ? 'flex-shrink' : 'flex-1'} font-medium text-typography-900`} numberOfLines={1}>
                 {label}
               </Text>
+              <CountBadge count={count} testID={`${testID}-${action.id}-badge`} />
             </Pressable>
           </View>
         );

@@ -1,4 +1,5 @@
 import type { Capabilities, FeatureModuleId } from '@resgrid/config';
+import type { NavBadge } from '@resgrid/data';
 import type { LucideIcon } from 'lucide-react-native';
 import { CalendarClock } from 'lucide-react-native';
 
@@ -20,7 +21,11 @@ export interface FeatureNavEntry {
   requiresCapability?: (capabilities: Capabilities) => boolean;
   /** Feature module the variant must ship (`variant.modules`). */
   requiresModule?: FeatureModuleId;
+  /** Count badge beside the entry (the shell's `NavEntry.badge`). */
+  badge?: NavBadge;
 }
 
 /** Shifts and trades (Responder module `shifts`); a department can rename the module (`module.shifts`). */
-export const shiftsNav: readonly FeatureNavEntry[] = [{ id: 'shifts', href: '/shifts', labelKey: 'shifts.title', defaultLabel: 'Shifts', termKey: 'module.shifts', icon: CalendarClock, requiresModule: 'shifts' }];
+export const shiftsNav: readonly FeatureNavEntry[] = [
+  { id: 'shifts', href: '/shifts', labelKey: 'shifts.title', defaultLabel: 'Shifts', termKey: 'module.shifts', icon: CalendarClock, requiresModule: 'shifts', badge: ['shifts', 'shiftTrades'] },
+];

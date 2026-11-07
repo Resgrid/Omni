@@ -1,4 +1,4 @@
-import { isOverdueOrWarning, selectActiveCalls, selectSevereAlerts, useCallsStore, useCheckInTimersStore, useWeatherAlertsStore } from '@resgrid/data';
+import { isOverdueOrWarning, selectActiveCalls, selectSevereAlerts, useBadgeCountsStore, useCallsStore, useCheckInTimersStore, useServerCount, useWeatherAlertsStore } from '@resgrid/data';
 import { isCurrentUserOnCall, useCallAssignmentContext } from '@resgrid/features/calls';
 import { useTranslation } from '@resgrid/i18n';
 import type { CheckInTimerStatusResultData } from '@resgrid/models';
@@ -44,6 +44,7 @@ const StatTile: React.FC<StatTileProps> = ({ label, value, accentClassName, isAl
       </VStack>
     </Card>
   );
+
   return onPress ? (
     <Pressable onPress={onPress} style={styles.tile} accessibilityRole="button" accessibilityLabel={`${label}: ${value}`} testID={`${testID}-press`}>
       {tile}
@@ -59,7 +60,9 @@ const EMPTY: readonly CheckInTimerStatusResultData[] = [];
 
 /**
  * The member home's summary row (Responder): open calls, calls the member is dispatched on (personnel, group, role or a
- * unit they ride), active severe weather alerts and overdue/warning check-in timers across the open calls.
+ * unit they ride), active severe weather alerts and overdue/warning check-in timers across the open calls. The numbers
+ * come from the server's badge counts (one `Counts/GetBadgeCounts` request, shared with the menu); until they are known,
+ * or on a server without them, each card counts from the persisted lists instead.
  */
 export const SummaryStatsRow: React.FC<SummaryStatsRowProps> = ({ activeCallId, onPressActiveCalls, onPressCallsImOn, onPressWeatherAlerts, onPressCheckIns, testID = 'summary-stats-row' }) => {
   const { t } = useTranslation();
@@ -70,25 +73,43 @@ export const SummaryStatsRow: React.FC<SummaryStatsRowProps> = ({ activeCallId, 
   const globalOverdueCount = useCheckInTimersStore((state) => state.globalOverdueCount);
   const activeCallTimers = useCheckInTimersStore((state) => (activeCallId ? (state.statusesByCall[activeCallId] ?? EMPTY) : EMPTY));
   const assignment = useCallAssignmentContext();
+  const serverCalls = useServerCount('calls');
+  const serverCallsImOn = useServerCount('callsImOn');
+  const serverWeather = useServerCount('weather');
+  const serverCheckIns = useServerCount('checkIns');
+  // An older Core without the counts: the cards count locally, as they always did.
+  const isCounted = useBadgeCountsStore((state) => !state.unsupported);
 
   const activeCalls = useMemo(() => selectActiveCalls({ calls }), [calls]);
+
   const callsImOn = useMemo(
     () =>
       activeCalls.filter((call) => {
         const dispatches = callExtrasById[call.CallId]?.Dispatches ?? callDispatches[call.CallId];
+
         return isCurrentUserOnCall(dispatches ? { Dispatches: dispatches } : null, assignment);
       }).length,
     [activeCalls, assignment, callDispatches, callExtrasById]
   );
+
   const severeAlerts = useMemo(() => selectSevereAlerts({ alerts }).length, [alerts]);
   // The aggregate across every open call when it is in; otherwise the active call's own timers.
-  const missedCheckIns = globalOverdueCount > 0 ? globalOverdueCount : activeCallTimers.filter(isOverdueOrWarning).length;
+  const localMissedCheckIns = globalOverdueCount > 0 ? globalOverdueCount : activeCallTimers.filter(isOverdueOrWarning).length;
+
+  const shown = {
+    activeCalls: (isCounted ? serverCalls : null) ?? activeCalls.length,
+    callsImOn: (isCounted ? serverCallsImOn : null) ?? callsImOn,
+    severeAlerts: (isCounted ? serverWeather : null) ?? severeAlerts,
+    missedCheckIns: (isCounted ? serverCheckIns : null) ?? localMissedCheckIns,
+  };
+
+  const missedCheckIns = shown.missedCheckIns;
 
   return (
     <HStack space="xs" testID={testID}>
-      <StatTile label={t('home.summary.active_calls')} value={activeCalls.length} accentClassName="bg-info-600" onPress={onPressActiveCalls} testID="summary-active-calls" />
-      <StatTile label={t('home.summary.calls_im_on')} value={callsImOn} accentClassName="bg-success-600" onPress={onPressCallsImOn} testID="summary-calls-im-on" />
-      <StatTile label={t('home.summary.active_severe_weather_alerts')} value={severeAlerts} accentClassName="bg-warning-600" onPress={onPressWeatherAlerts} testID="summary-weather-alerts" />
+      <StatTile label={t('home.summary.active_calls')} value={shown.activeCalls} accentClassName="bg-info-600" onPress={onPressActiveCalls} testID="summary-active-calls" />
+      <StatTile label={t('home.summary.calls_im_on')} value={shown.callsImOn} accentClassName="bg-success-600" onPress={onPressCallsImOn} testID="summary-calls-im-on" />
+      <StatTile label={t('home.summary.active_severe_weather_alerts')} value={shown.severeAlerts} accentClassName="bg-warning-600" onPress={onPressWeatherAlerts} testID="summary-weather-alerts" />
       <StatTile
         label={t('home.summary.pending_missed_checkins')}
         value={missedCheckIns}

@@ -5,7 +5,7 @@
 import './call-file-reader';
 
 import type { ShellGateScreenProps, SidebarContentProps } from '@resgrid/app-shell';
-import { getShellOfflineRuntime, registerInitStep, registerShellBanner, registerShellOverlay, registerShellProvider, registerShellScreens, registerSidebarContent, useShellStore } from '@resgrid/app-shell';
+import { getShellOfflineRuntime, NavMenu, registerInitStep, registerShellBanner, registerShellOverlay, registerShellProvider, registerShellScreens, registerSidebarContent, useShellStore } from '@resgrid/app-shell';
 import { getActiveVariant } from '@resgrid/config';
 import { configureAppUpdates } from '@resgrid/core';
 import { PendingApprovalWatcher } from '@resgrid/features/approve-sign-in';
@@ -22,7 +22,7 @@ import { CALL_RECORDS_TAB, configureRecords, registerRecordsContextHook } from '
 import { registerRunCardCallDetailTab, registerRunCardHookPoints } from '@resgrid/features/runcards';
 import { configureSettings } from '@resgrid/features/settings';
 import { StatusTimerBanner, StatusTimerNotifications, unitStatusRoutes, UnitStatusSidebar } from '@resgrid/features/unit-status';
-import { AudioStreamSheet, VoiceChannelSheet } from '@resgrid/features/voice';
+import { AudioStreamSheet, VoiceChannelSheet, VoiceMenuButtons } from '@resgrid/features/voice';
 import { FullScreenLocationPicker, StaticMap } from '@resgrid/maps';
 import { configureNotificationSounds } from '@resgrid/notifications';
 import { playAudioClip } from '@resgrid/voice';
@@ -64,8 +64,13 @@ function UnitTimerBanner() {
 }
 
 /** Unit's landscape sidebar (manifest shell.sidebarContent 'unit-status'): the status console. */
-function UnitSidebar(props: SidebarContentProps) {
-  return <UnitStatusSidebar {...props} onClearActiveCall={clearActiveCall} />;
+function UnitSidebar({ onNavigate }: SidebarContentProps) {
+  return <UnitStatusSidebar onNavigate={onNavigate} onClearActiveCall={clearActiveCall} />;
+}
+
+/** Responder's side menu (manifest shell.sidebarContent 'member-menu'): the menu with the voice and stream buttons under the profile. */
+function MemberMenu({ nav, onNavigate }: SidebarContentProps) {
+  return <NavMenu nav={nav} onNavigate={onNavigate} actions={<VoiceMenuButtons />} />;
 }
 
 /** The call form's full-screen map picker (the address of the picked point comes from the server). */
@@ -101,7 +106,7 @@ registerShellOverlay('step-up-prompt', StepUpPromptHost);
 // Opens the approve screen when a sign-in request is waiting (inert without capabilities.push.approveSignIns).
 registerShellOverlay('pending-approval', PendingApprovalWatcher);
 
-// The voice channels and audio streams sheets, opened through their stores from any button (Unit's sidebar): mounted
+// The voice channels and audio streams sheets, opened through their stores from any button (Unit's sidebar, Responder's menu): mounted
 // once here so two can never stack. The voice sheet renders nothing without capabilities.voice.ptt.
 registerShellOverlay('voice-channels', VoiceChannelSheet);
 
@@ -120,6 +125,9 @@ registerShellOverlay('unit-status-timer-notifications', StatusTimerNotifications
 
 // Unit's status console in the sidebar (only read where shell.sidebarContent is 'unit-status').
 registerSidebarContent('unit-status', UnitSidebar);
+
+// Responder's menu with its voice and stream buttons (only read where shell.sidebarContent is 'member-menu').
+registerSidebarContent('member-menu', MemberMenu);
 
 // Around the signed-in frame, outermost first: maps (style, services, offline packs), then the session facts the
 // feature sheets read.

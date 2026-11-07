@@ -28,6 +28,7 @@ export const AudioStreamSheet: React.FC<AudioStreamSheetProps> = ({ testID = 'au
   const isPlaying = useAudioStreamStore((state) => state.isPlaying);
   const isLoading = useAudioStreamStore((state) => state.isLoading);
   const isBuffering = useAudioStreamStore((state) => state.isBuffering);
+  const isReconnecting = useAudioStreamStore((state) => state.isReconnecting);
 
   useEffect(() => {
     if (isOpen && useAudioStreamStore.getState().availableStreams.length === 0) void useAudioStreamStore.getState().fetchAvailableStreams();
@@ -36,33 +37,41 @@ export const AudioStreamSheet: React.FC<AudioStreamSheetProps> = ({ testID = 'au
   const isBusy = isLoading || isBuffering;
 
   // While a stream loads or buffers only "None" stays available: a stalled stream can always be stopped (stopStream
-  // supersedes a pending play), and starting another waits for this one to settle.
+  // supersedes a pending play), and starting another waits for this one to settle. A stream that is reconnecting can be
+  // swapped for another at once.
   const select = useCallback(
     (stream: AudioStream | null) => {
-      if (stream !== null && isBusy) return;
+      if (stream !== null && isBusy && !isReconnecting) return;
       const store = useAudioStreamStore.getState();
 
       if (stream === null) void store.stopStream();
       else if (store.currentStream?.Id !== stream.Id) void store.playStream(stream);
     },
-    [isBusy]
+    [isBusy, isReconnecting]
   );
 
   const statusLine = isLoading
     ? t('audio_streams.loading_stream')
-    : isBuffering
-      ? t('audio_streams.buffering_stream')
-      : currentStream
-        ? isPlaying
-          ? t('audio_streams.currently_playing', { streamName: currentStream.Name })
-          : t('audio_streams.stream_selected', { streamName: currentStream.Name })
-        : t('audio_streams.no_stream_playing');
+    : isReconnecting && currentStream
+      ? t('audio_streams.reconnecting_stream', { streamName: currentStream.Name })
+      : isBuffering
+        ? t('audio_streams.buffering_stream')
+        : currentStream
+          ? isPlaying
+            ? t('audio_streams.currently_playing', { streamName: currentStream.Name })
+            : t('audio_streams.stream_selected', { streamName: currentStream.Name })
+          : t('audio_streams.no_stream_playing');
 
-  const playback = isBusy
-    ? { label: isLoading ? t('audio_streams.loading') : t('audio_streams.buffering'), className: 'text-primary-600' }
-    : isPlaying
-      ? { label: t('audio_streams.playing'), className: 'text-success-600' }
-      : { label: t('audio_streams.stopped'), className: 'text-error-600' };
+  // A stream paused from the lock screen / notification keeps its place: Paused, not Stopped.
+  const playback = isReconnecting
+    ? { label: t('audio_streams.reconnecting'), className: 'text-warning-600' }
+    : isBusy
+      ? { label: isLoading ? t('audio_streams.loading') : t('audio_streams.buffering'), className: 'text-primary-600' }
+      : isPlaying
+        ? { label: t('audio_streams.playing'), className: 'text-success-600' }
+        : currentStream
+          ? { label: t('audio_streams.paused'), className: 'text-warning-600' }
+          : { label: t('audio_streams.stopped'), className: 'text-error-600' };
 
   const rows: { id: string; name: string; stream: AudioStream | null }[] = [{ id: NONE_ID, name: t('audio_streams.none'), stream: null }, ...streams.map((stream) => ({ id: stream.Id, name: stream.Name, stream }))];
   const selectedId = currentStream?.Id ?? NONE_ID;
@@ -89,7 +98,7 @@ export const AudioStreamSheet: React.FC<AudioStreamSheetProps> = ({ testID = 'au
         ) : (
           rows.map((row) => {
             const isSelected = row.id === selectedId;
-            const isDisabled = isBusy && row.stream !== null;
+            const isDisabled = isBusy && !isReconnecting && row.stream !== null;
 
             return (
               <Pressable

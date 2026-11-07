@@ -19,6 +19,26 @@ export enum ConnectionState {
 
 export const Track = { Kind: { Audio: 'audio', Video: 'video' } };
 
+/** livekit-client's `DisconnectReason` (protobuf enum values). */
+export enum DisconnectReason {
+  UNKNOWN_REASON = 0,
+  CLIENT_INITIATED = 1,
+  DUPLICATE_IDENTITY = 2,
+  SERVER_SHUTDOWN = 3,
+  PARTICIPANT_REMOVED = 4,
+  ROOM_DELETED = 5,
+  STATE_MISMATCH = 6,
+  JOIN_FAILURE = 7,
+  MIGRATION = 8,
+  SIGNAL_CLOSE = 9,
+  ROOM_CLOSED = 10,
+  USER_UNAVAILABLE = 11,
+  USER_REJECTED = 12,
+  SIP_TRUNK_FAILURE = 13,
+  CONNECTION_TIMEOUT = 14,
+  MEDIA_FAILURE = 15,
+}
+
 type Handler = (...args: any[]) => void;
 
 export class FakeLocalParticipant {
@@ -43,7 +63,9 @@ export class Room {
 
   connect = jest.fn((_url: string, _token: string) => {
     const behaviour = Room.nextConnect.shift() ?? 'resolve';
+
     if (behaviour instanceof Error) return Promise.reject(behaviour);
+
     if (behaviour === 'hold') {
       return new Promise<void>((resolve, reject) => {
         this.pending = {
@@ -55,7 +77,9 @@ export class Room {
         };
       });
     }
+
     this.state = ConnectionState.Connected;
+
     return Promise.resolve();
   });
 
@@ -81,16 +105,19 @@ export class Room {
     const set = this.handlers.get(event) ?? new Set<Handler>();
     set.add(handler);
     this.handlers.set(event, set);
+
     return this;
   }
 
   off(event: string, handler: Handler): this {
     this.handlers.get(event)?.delete(handler);
+
     return this;
   }
 
   removeAllListeners(): this {
     this.handlers.clear();
+
     return this;
   }
 
@@ -110,5 +137,7 @@ export class Room {
 }
 
 export type Participant = { sid: string; identity: string };
+
 export type RemoteTrack = { kind: string; sid: string; attach: () => any; detach: () => any[] };
+
 export type RemoteTrackPublication = { trackSid: string };

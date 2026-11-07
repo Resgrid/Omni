@@ -1,17 +1,20 @@
 import { reportOperatorActivity, updateActivity } from '@resgrid/auth';
 import type { VariantManifest } from '@resgrid/config';
 import { isDev, recordUserActivity } from '@resgrid/core';
-import { AppBarBackContext, useThemeColors } from '@resgrid/ui';
+import { useBadgeCountLookup } from '@resgrid/data';
+import { AppBarBackContext, contentOnFill, formatBadgeCount, useThemeColors } from '@resgrid/ui';
 import { Stack, Tabs } from 'expo-router';
 import React, { type ComponentType, useCallback, useMemo, useRef } from 'react';
 import { type ColorValue, StyleSheet, View } from 'react-native';
 
 import { ShellGate } from '../gate/shell-gate';
+import { useShellTranslation } from '../i18n';
 import type { NavRegistry } from '../nav/define-nav';
 import { buildTabScreens, findUnregisteredRoutes } from '../nav/filter';
 import { useNavFilterContext, useNavLabel } from '../nav/use-nav-items';
 import { getShellNav } from '../runtime/shell-config';
 import { ShellUpdateNotice } from '../updates/update-notice';
+import { ShellBadgeCounts } from './badge-counts';
 import { ShellHeader, useHeaderLeading } from './header';
 import { RegisteredBanners, RegisteredOverlays, SessionInitFailedBanner, ShellRealtimeBanner, ShellSyncAttentionToast } from './overlays';
 import { RegisteredProviders } from './registered-providers';
@@ -44,7 +47,10 @@ export function RegistryTabs({ nav }: { nav: NavRegistry }) {
   const context = useNavFilterContext();
   const label = useNavLabel();
   const colors = useThemeColors();
+  const { t } = useShellTranslation();
   const screens = useMemo(() => buildTabScreens(nav.entries, context, label), [nav, context, label]);
+  // Tab badges (open calls, severe weather alerts…): ShellBadgeCounts asks for every visible entry's count.
+  const badgeCount = useBadgeCountLookup();
 
   // Dev-time registry check: an (app) route without a nav entry would become an unlabeled tab.
   const screenListeners = useCallback(
@@ -73,6 +79,8 @@ export function RegistryTabs({ nav }: { nav: NavRegistry }) {
     >
       {screens.map((screen) => {
         const Icon = screen.entry.icon;
+        const badge = badgeCount(screen.entry.badge);
+
         return (
           <Tabs.Screen
             key={screen.name}
@@ -80,6 +88,9 @@ export function RegistryTabs({ nav }: { nav: NavRegistry }) {
             options={{
               title: screen.title,
               tabBarButtonTestID: screen.entry.testID ?? `${screen.entry.id}-tab`,
+              tabBarBadge: badge ? formatBadgeCount(badge) : undefined,
+              tabBarBadgeStyle: { backgroundColor: colors.error, color: contentOnFill(colors.error) },
+              tabBarAccessibilityLabel: badge ? t('shell.nav_item_with_count', { label: screen.title, count: badge }) : screen.title,
               ...(Icon
                 ? {
                     tabBarIcon: ({ color, size }: { color: ColorValue; size: number }) => (
@@ -126,6 +137,7 @@ function ShellFrame({ variant, nav }: { variant: VariantManifest; nav: NavRegist
         </View>
       </View>
       <DrawerSidebar nav={nav} />
+      <ShellBadgeCounts nav={nav} />
       <ShellSyncAttentionToast />
       <ShellUpdateNotice />
       <RegisteredOverlays />

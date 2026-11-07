@@ -14,9 +14,15 @@ export const mockVoiceStore = create(() => ({
     { id: 'default-speaker', name: 'Default Speaker', type: 'speaker', isAvailable: true },
   ],
   selectedAudioDevices: { microphone: null as unknown, speaker: null as unknown },
+  mediaButtonPTTSettings: { enabled: true },
   setSelectedMicrophone: jest.fn(),
   setSelectedSpeaker: jest.fn(),
 }));
+
+/** The platform-narrowed voice capabilities the voice section reads; tests flip `headsetButtonPtt` (web has none). */
+export const mockVoiceCapabilities = { headsetButtonPtt: true };
+
+export const mockSetHeadsetButtonPttEnabled = jest.fn((enabled: boolean) => mockVoiceStore.setState({ mediaButtonPTTSettings: { enabled } }));
 
 export const mockBluetoothService = {
   startScanning: jest.fn(async () => undefined),
@@ -29,6 +35,8 @@ export const voiceModule = () => ({
   useBluetoothAudioStore: mockVoiceStore,
   getBluetoothAudioService: () => mockBluetoothService,
   SYSTEM_AUDIO_DEVICE: { id: 'system-audio', name: 'System Audio' },
+  getVoiceCapabilities: () => mockVoiceCapabilities,
+  setHeadsetButtonPttEnabled: mockSetHeadsetButtonPttEnabled,
   BluetoothState: { Unknown: 'unknown', PoweredOff: 'poweredOff', PoweredOn: 'poweredOn', Unauthorized: 'unauthorized' },
 });
 

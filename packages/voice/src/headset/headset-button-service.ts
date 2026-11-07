@@ -48,6 +48,7 @@ export class NativeHeadsetButtonService implements HeadsetButtonService {
   startMonitoring(owner: HeadsetMonitorOwner = 'livekit'): void {
     const wasActive = this.owners.size > 0;
     this.owners.add(owner);
+
     if (wasActive) return;
     this.subscribe();
     logger.info({ message: 'Headset button monitoring started', context: { owner } });
@@ -73,6 +74,7 @@ export class NativeHeadsetButtonService implements HeadsetButtonService {
   handleButton(type: HeadsetButtonType, phase: 'down' | 'up' = 'down'): void {
     if (!this.isMonitoringActive()) return;
     const settings = useBluetoothAudioStore.getState().mediaButtonPTTSettings;
+
     if (!settings.enabled || !settings.usePlayPauseForPTT || !isPttCapableButton(type)) return;
 
     if (phase === 'down') {
@@ -86,15 +88,33 @@ export class NativeHeadsetButtonService implements HeadsetButtonService {
           if (this.press.isPressed()) this.press.release();
           else this.press.press('media');
         }
+
         return;
       }
+
       if (phase === 'down') this.press.press('media');
       else this.press.release();
+
       return;
     }
 
     if (phase === 'up') return;
     this.countClick(type, settings.doubleTapTimeoutMs, settings.doubleTapAction);
+  }
+
+  reassertMediaSession(): void {
+    // iOS: the module only runs without CallKeep, and its remote commands are shared with the stream's Now Playing.
+    if (Platform.OS !== 'android' || !this.nativeListening) return;
+
+    const module = mediaButtonModule();
+
+    try {
+      module?.stopListening?.();
+      module?.startListening?.();
+      logger.debug({ message: 'Headset button media session re-activated' });
+    } catch (error) {
+      logger.warn({ message: 'Failed to re-activate the headset button media session', context: { error } });
+    }
   }
 
   destroy(): void {
@@ -109,6 +129,7 @@ export class NativeHeadsetButtonService implements HeadsetButtonService {
     this.pressCount = now - this.lastPressAt < thresholdMs ? this.pressCount + 1 : 1;
     this.lastPressAt = now;
     this.lastPressType = type;
+
     if (this.clickTimer) clearTimeout(this.clickTimer);
     this.clickTimer = setTimeout(() => {
       this.clickTimer = null;
@@ -121,10 +142,13 @@ export class NativeHeadsetButtonService implements HeadsetButtonService {
 
   private async executeClick(type: HeadsetButtonType, count: number, doubleTapAction: 'none' | 'toggle_mute'): Promise<void> {
     const controller = getMicrophoneController();
+
     if (!controller?.isActive()) {
       logger.debug({ message: 'Headset button ignored: no active voice channel', context: { type, count } });
+
       return;
     }
+
     try {
       if (count === 1) {
         if (type === 'play') await controller.setMicrophoneEnabled(true, 'headset');
@@ -140,22 +164,28 @@ export class NativeHeadsetButtonService implements HeadsetButtonService {
 
   private subscribe(): void {
     const module = mediaButtonModule();
+
     if (Platform.OS === 'android') {
       this.subscriptions.push(DeviceEventEmitter.addListener('onMediaButtonEvent', (event: MediaButtonKeyEvent) => this.handleKeyEvent(event)));
       this.startNative(module);
+
       return;
     }
+
     if (Platform.OS === 'ios' && module && !getCallKeepService().isEnabled) {
       const emitter = new NativeEventEmitter(module);
+
       for (const [name, type] of IOS_EVENTS) {
         this.subscriptions.push(emitter.addListener(name, () => this.handleButton(type, 'down')));
       }
+
       this.startNative(module);
     }
   }
 
   private startNative(module: MediaButtonModuleLike | null): void {
     if (!module?.startListening) return;
+
     try {
       module.startListening();
       this.nativeListening = true;
@@ -167,8 +197,10 @@ export class NativeHeadsetButtonService implements HeadsetButtonService {
   private unsubscribe(): void {
     this.subscriptions.forEach((subscription) => subscription.remove());
     this.subscriptions = [];
+
     if (!this.nativeListening) return;
     this.nativeListening = false;
+
     try {
       mediaButtonModule()?.stopListening?.();
     } catch (error) {
@@ -187,6 +219,7 @@ let instance: NativeHeadsetButtonService | null = null;
 
 export function getHeadsetButtonService(): HeadsetButtonService {
   if (!instance) instance = new NativeHeadsetButtonService();
+
   return instance;
 }
 

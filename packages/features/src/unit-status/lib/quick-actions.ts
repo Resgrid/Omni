@@ -1,4 +1,5 @@
 import { FeatureFlagKeys } from '@resgrid/auth';
+import type { NavBadgeKey } from '@resgrid/data';
 import type { LucideIcon } from 'lucide-react-native';
 import { Briefcase, ClipboardCheck, FileText, MessagesSquare, Package, Settings, Sparkles } from 'lucide-react-native';
 
@@ -24,6 +25,8 @@ export interface QuickAction {
   icon: LucideIcon;
   /** Gate it depends on; omitted = always shown. */
   gate?: keyof QuickActionGates;
+  /** Count shown on the button, like the same entry's in the other apps' menus (unread chats, due checks, deployments). */
+  badge?: NavBadgeKey;
 }
 
 /**
@@ -32,10 +35,10 @@ export interface QuickAction {
  * app's child flag). Settings is always offered so a crew without an active unit can pick one.
  */
 export const QUICK_ACTIONS: readonly QuickAction[] = [
-  { id: 'chat', href: '/chat', labelKey: 'tabs.chat', icon: MessagesSquare, gate: 'chat' },
+  { id: 'chat', href: '/chat', labelKey: 'tabs.chat', icon: MessagesSquare, gate: 'chat', badge: 'chats' },
   { id: 'assistant', href: '/chatbot', labelKey: 'tabs.assistant', icon: Sparkles, gate: 'chat' },
-  { id: 'checklists', href: '/checklists', labelKey: 'checklists.labels.Checklists', termKey: 'module.checklists', icon: ClipboardCheck, gate: 'checklists' },
-  { id: 'operations', href: '/operations', labelKey: 'operations.title', icon: Briefcase, gate: 'deployments' },
+  { id: 'checklists', href: '/checklists', labelKey: 'checklists.labels.Checklists', termKey: 'module.checklists', icon: ClipboardCheck, gate: 'checklists', badge: 'checklists' },
+  { id: 'operations', href: '/operations', labelKey: 'operations.title', icon: Briefcase, gate: 'deployments', badge: 'deployments' },
   { id: 'inventory', href: '/inventory', labelKey: 'inventory.title', termKey: 'module.inventory', icon: Package, gate: 'inventory' },
   { id: 'records', href: '/records', labelKey: 'tabs.records', termKey: 'module.records', icon: FileText, gate: 'records' },
   { id: 'settings', href: '/settings', labelKey: 'settings.title', icon: Settings },

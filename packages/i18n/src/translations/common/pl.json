@@ -35,7 +35,10 @@
     "stream_info": "Informacje o strumieniu",
     "stream_selected": "Wybrano: {{streamName}}",
     "title": "Strumienie audio",
-    "type": "Typ"
+    "type": "Typ",
+    "reconnecting": "Ponowne łączenie",
+    "reconnecting_stream": "Ponowne łączenie z {{streamName}}…",
+    "paused": "Wstrzymano"
   },
   "bluetooth": {
     "applied": "Zastosowano",
@@ -1472,7 +1475,8 @@
     "speaking": "Mówi",
     "title": "Kanały głosowe",
     "unmute": "Wyłącz wyciszenie",
-    "join_failed": "Could not join the voice channel. Please try again."
+    "join_failed": "Could not join the voice channel. Please try again.",
+    "reconnecting": "Ponowne łączenie…"
   },
   "loading": {
     "loading": "Ładowanie...",
@@ -2016,7 +2020,14 @@
     "view_chat": "Zobacz czat",
     "view_reference": "Zobacz {{type}}",
     "mark_all_read": "Mark all as read",
-    "unread": "Unread"
+    "unread": "Unread",
+    "select": "Zaznacz",
+    "mark_read": "Oznacz jako przeczytane",
+    "delete": "Usuń",
+    "delete_selected_message": "Usunąć zaznaczone powiadomienia ({{count}})? Tej operacji nie można cofnąć.",
+    "delete_all_message": "Usunąć wszystkie powiadomienia? Tej operacji nie można cofnąć.",
+    "deleted": "Powiadomienia usunięte",
+    "mark_read_error": "Nie udało się oznaczyć powiadomień jako przeczytanych"
   },
   "onboarding": {
     "getStarted": "Zaczynajmy",
@@ -2900,7 +2911,9 @@
       "source_embedded": "Wersja wbudowana",
       "title": "Aktualizacje aplikacji",
       "up_to_date": "Aplikacja jest aktualna. Ostatnie sprawdzenie: {{time}}."
-    }
+    },
+    "headset_button_ptt": "Mów przyciskiem słuchawek",
+    "headset_button_ptt_note": "Przycisk połączenia w słuchawkach rozpoczyna i kończy mówienie na kanale głosowym, podobnie jak Zakończ na ekranie blokady. Kanał opuszczasz w aplikacji. Wyłącz tę opcję, aby przycisk opuszczał kanał."
   },
   "shared_session": {
     "bar": "Urządzenie współdzielone",
@@ -3280,7 +3293,8 @@
     "notifications_unread": "Notifications, {{count}} unread",
     "changes_need_attention": "Needs attention: {{count}}",
     "offline": "Offline",
-    "offline_changes_waiting": "Offline: {{count}} waiting"
+    "offline_changes_waiting": "Offline: {{count}} waiting",
+    "nav_item_with_count": "{{label}} ({{count}})"
   },
   "access_denied": {
     "back_to_sign_in": "Back to sign in",
@@ -4422,5 +4436,18 @@
     "image_not_offline": "This map image is not saved on this device. It shows again when you are back online.",
     "nothing_to_show": "Nothing to show on this device",
     "nothing_to_show_detail": "This map has no image or map tiles this app can draw. Open it on the website instead."
+  },
+  "sidebar": {
+    "audio": "Strumień",
+    "ptt": "Głos"
+  },
+  "voice_session": {
+    "channel_name": "Kanał głosowy",
+    "notification_title": "Kanał głosowy aktywny",
+    "notification_body": "Funkcja push-to-talk działa nadal, gdy aplikacja jest w tle.",
+    "phone_account_title": "Wymagane uprawnienia",
+    "phone_account_description": "{{appName}} potrzebuje dostępu do kont telefonicznych, aby kanały głosowe pozostawały połączone w tle.",
+    "call_channel_name": "Połączenia głosowe",
+    "call_notification_title": "Połączenie głosowe {{appName}}"
   }
 }

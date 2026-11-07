@@ -1,4 +1,5 @@
 import type { Capabilities, FeatureModuleId } from '@resgrid/config';
+import type { NavBadge } from '@resgrid/data';
 import type { ComponentType } from 'react';
 
 /**
@@ -43,6 +44,12 @@ export interface NavEntry {
    * are top-level screens too, so the header shows the menu button there rather than back.
    */
   nestedTabs?: boolean;
+  /**
+   * The count beside the entry in the menu and on its tab (open calls, unread messages / chats / notifications, severe
+   * weather alerts, expiring certifications…), from `@resgrid/data`'s badge counts store; several keys show their sum.
+   * Hidden at zero.
+   */
+  badge?: NavBadge;
 }
 
 export interface NavRegistry {
