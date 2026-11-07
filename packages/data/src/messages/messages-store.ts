@@ -45,7 +45,7 @@ export interface MessagesState extends MessagesData {
   fetchMessageDetails: (messageId: string, options?: FetchOptions) => Promise<MessageResultData | null>;
   /** Offline-capable compose (Responder message compose, plan §8.5). */
   sendNewMessage: (input: NewMessageInput) => Promise<WriteResult>;
-  /** Online only. */
+  /** Online only. False when any delete failed; the ones the server took leave the lists either way. */
   deleteMessages: (messageIds: string[]) => Promise<boolean>;
   /** Online only (poll/callback answers are time-sensitive). */
   respondToMessage: (input: RespondToMessageInput) => Promise<boolean>;
@@ -136,18 +136,22 @@ export const useMessagesStore = create<MessagesState>()(
         deleteMessages: async (messageIds) => {
           set({ writeError: null });
 
-          try {
-            await Promise.all(messageIds.map(async (messageId) => assertV4Success(await deleteMessage(getDataApiContext(), { messageId }))));
-            const removed = new Set(messageIds);
+          // Every delete settles before the list changes: when some fail, the ones the server took still leave the list
+          // and move the unread badge.
+          const results = await Promise.allSettled(messageIds.map(async (messageId) => assertV4Success(await deleteMessage(getDataApiContext(), { messageId }))));
+          const removed = new Set(messageIds.filter((_, index) => results[index]?.status === 'fulfilled'));
+
+          if (removed.size > 0) {
             set((state) => ({ inboxMessages: state.inboxMessages.filter((m) => !removed.has(m.MessageId)), sentMessages: state.sentMessages.filter((m) => !removed.has(m.MessageId)) }));
             refreshBadgeCountsSoon();
-
-            return true;
-          } catch (error) {
-            set({ writeError: toDataError(error) });
-
-            return false;
           }
+
+          const failure = results.find((result): result is PromiseRejectedResult => result.status === 'rejected');
+
+          if (!failure) return true;
+          set({ writeError: toDataError(failure.reason) });
+
+          return false;
         },
 
         respondToMessage: async (input) => {

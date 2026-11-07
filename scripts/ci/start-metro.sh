@@ -23,7 +23,8 @@ curl -sf http://localhost:8081/status | grep -q 'packager-status:running' || { e
 # root Metro serves from (apps/omni/index.ts.bundle), and its query (Hermes transform, the variant's router root) keys
 # Metro's cache, so a hand-built URL either 404s (/index.bundle resolves at the repo root) or warms a different bundle.
 manifest="$(curl -sf --max-time 120 -H "expo-platform: ${platform}" -H 'accept: application/expo+json,application/json' http://localhost:8081/ || true)"
-bundle_url="$(printf '%s' "$manifest" | node -e 'try { process.stdout.write(JSON.parse(require("node:fs").readFileSync(0, "utf8")).launchAsset?.url ?? ""); } catch {}')"
+# An answer that is not JSON says why on stderr (the CI log) and leaves the URL empty: the warning below follows.
+bundle_url="$(printf '%s' "$manifest" | node -e 'const input = require("node:fs").readFileSync(0, "utf8"); try { process.stdout.write(JSON.parse(input).launchAsset?.url ?? ""); } catch (error) { if (input) console.error(`Metro manifest is not JSON: ${error.message}`); }')"
 if [ -z "$bundle_url" ]; then
   echo "::warning::Metro returned no ${platform} manifest; the app will build its bundle on first open."
   exit 0

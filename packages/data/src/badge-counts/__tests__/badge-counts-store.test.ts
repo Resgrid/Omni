@@ -1,12 +1,14 @@
-import { getBadgeCounts, getMessage } from '@resgrid/api';
-import { BadgeCountResultData, BadgeCountsResult, MessageResult, MessageResultData } from '@resgrid/models';
+import { type ApiError, completeChecklistRun, deleteMessage, getBadgeCounts, getMessage } from '@resgrid/api';
+import { BadgeCountResultData, BadgeCountsResult, DeleteMessageResult, MessageResult, MessageResultData } from '@resgrid/models';
 import { defaultResetRegistry } from '@resgrid/offline';
+import { createTestPayloadCipher } from '@resgrid/offline/testing';
 
-import { createDataTestRuntime, type DataTestRuntime, httpError, persisted } from '../../__tests__/helpers';
+import { createDataTestRuntime, type DataTestRuntime, flush, httpError, ok, persisted } from '../../__tests__/helpers';
+import { checklistRunSaveHandler, useChecklistsStore } from '../../checklists/checklists-store';
 import { useMessagesStore } from '../../messages/messages-store';
 import { BADGE_COUNTS_REFRESH_DELAY_MS, BADGE_COUNTS_STALE_MS, refreshBadgeCountsIfStale, refreshBadgeCountsSoon, selectBadgeCount, toBadgeCounts, useBadgeCountsStore } from '../badge-counts-store';
 
-jest.mock('@resgrid/api', () => ({ ...jest.requireActual('@resgrid/api'), getBadgeCounts: jest.fn(), getMessage: jest.fn() }));
+jest.mock('@resgrid/api', () => ({ ...jest.requireActual('@resgrid/api'), getBadgeCounts: jest.fn(), getMessage: jest.fn(), deleteMessage: jest.fn(), completeChecklistRun: jest.fn() }));
 
 const mockGetBadgeCounts = jest.mocked(getBadgeCounts);
 
@@ -104,6 +106,28 @@ describe('badge counts store', () => {
     expect(mockGetBadgeCounts).toHaveBeenCalledTimes(1);
   });
 
+  // A request still out at sign-out (or a server switch) answers for the old server: it must not stop this session's.
+  it('ignores a not_found that lands after the store was reset', async () => {
+    let rejectLate: (error: ApiError) => void = () => undefined;
+    mockGetBadgeCounts.mockImplementationOnce(
+      () =>
+        new Promise((_resolve, reject) => {
+          rejectLate = reject;
+        })
+    );
+    const late = useBadgeCountsStore.getState().requestBadgeCounts(['calls']);
+    await flush();
+
+    await defaultResetRegistry.getStoreResets().get('data.badge-counts')?.('logout');
+    rejectLate(httpError(404));
+    await late;
+    expect(useBadgeCountsStore.getState().unsupported).toBe(false);
+
+    mockGetBadgeCounts.mockResolvedValueOnce(counted({ calls: 2 }));
+    await useBadgeCountsStore.getState().requestBadgeCounts(['calls']);
+    expect(useBadgeCountsStore.getState().counts).toEqual({ calls: 2 });
+  });
+
   it('keeps the last counts when a refresh fails for another reason', async () => {
     mockGetBadgeCounts.mockResolvedValueOnce(counted({ chats: 6 }));
     await useBadgeCountsStore.getState().requestBadgeCounts(['chats']);
@@ -152,6 +176,51 @@ describe('badge counts store', () => {
     await useMessagesStore.getState().fetchMessageDetails('m1', { bypassCache: true });
     jest.advanceTimersByTime(BADGE_COUNTS_REFRESH_DELAY_MS);
 
+    expect(mockGetBadgeCounts).toHaveBeenCalledTimes(1);
+  });
+
+  it('a checklist submit queued offline refreshes the counts once the outbox delivers it', async () => {
+    runtime = await createDataTestRuntime({ variant: 'unit', handlers: [checklistRunSaveHandler], cipher: createTestPayloadCipher() });
+    mockGetBadgeCounts.mockResolvedValue(counted({ checklists: 1 }));
+    await useBadgeCountsStore.getState().requestBadgeCounts(['checklists']);
+    mockGetBadgeCounts.mockClear();
+    jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+
+    runtime.connectivity.setOnline(false);
+    // SAFETY: a save reads only the run's id; the answers are queued as they are.
+    const saved = await useChecklistsStore.getState().saveRun({ Id: 'run-1', Revision: 1 } as never, { Revision: 1, Answers: [] }, true);
+    expect(saved.outcome).toBe('queued');
+    jest.advanceTimersByTime(BADGE_COUNTS_REFRESH_DELAY_MS);
+    expect(mockGetBadgeCounts).not.toHaveBeenCalled();
+
+    // SAFETY: a CompleteChecklistRun envelope with only the run fields the store keeps (its id and revision).
+    jest.mocked(completeChecklistRun).mockResolvedValue(ok({ Id: 'run-1', Revision: 2 }) as never);
+    runtime.connectivity.setOnline(true);
+    await runtime.outbox.drain();
+    await flush();
+    jest.advanceTimersByTime(BADGE_COUNTS_REFRESH_DELAY_MS);
+
+    expect(mockGetBadgeCounts).toHaveBeenCalledTimes(1);
+  });
+
+  it('deleting messages refreshes the counts and drops the deleted ones even when another delete fails', async () => {
+    mockGetBadgeCounts.mockResolvedValue(counted({ messages: 2 }));
+    await useBadgeCountsStore.getState().requestBadgeCounts(['messages']);
+    mockGetBadgeCounts.mockClear();
+    const listed = (MessageId: string): MessageResultData => Object.assign(new MessageResultData(), { MessageId, Subject: MessageId });
+    useMessagesStore.setState({ inboxMessages: [listed('m1'), listed('m2')], writeError: null });
+    jest.mocked(deleteMessage).mockImplementation(async (_ctx, { messageId }) => {
+      if (messageId === 'm2') throw httpError(500);
+
+      return Object.assign(new DeleteMessageResult(), { Status: 'success' });
+    });
+    jest.useFakeTimers();
+
+    expect(await useMessagesStore.getState().deleteMessages(['m1', 'm2'])).toBe(false);
+    jest.advanceTimersByTime(BADGE_COUNTS_REFRESH_DELAY_MS);
+
+    expect(useMessagesStore.getState().inboxMessages.map((message) => message.MessageId)).toEqual(['m2']);
+    expect(useMessagesStore.getState().writeError).not.toBeNull();
     expect(mockGetBadgeCounts).toHaveBeenCalledTimes(1);
   });
 

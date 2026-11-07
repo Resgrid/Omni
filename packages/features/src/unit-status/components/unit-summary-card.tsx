@@ -1,6 +1,6 @@
 import { useCapability } from '@resgrid/config';
 import { useMapLock } from '@resgrid/features/map';
-import { openAudioStreamSheet, openVoiceChannelSheet } from '@resgrid/features/voice/lib/open-voice-sheets';
+import { openAudioStreamSheet, openVoiceChannelSheet } from '@resgrid/features/voice';
 import { useTranslation } from '@resgrid/i18n';
 import type { UnitInfoResultData, UnitResultData } from '@resgrid/models';
 import { HStack, Pressable, Text, TypeIcon, View } from '@resgrid/ui';

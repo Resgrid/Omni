@@ -691,7 +691,17 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => {
 
       if (!state.currentRoom) set({ isReconnecting: false });
 
-      return connect(roomInfo, token ?? roomInfo.Token, false);
+      const result = await connect(roomInfo, token ?? roomInfo.Token, false);
+
+      // The join failed with no channel left — it replaced a pending rejoin, or it left the previous channel before it
+      // failed: nothing will rejoin, so the earlier channel's background session (CallKit call, foreground service,
+      // headset monitoring, audio session) must not stay up with no channel behind it.
+      if (!result.ok && result.error.code !== 'cancelled' && rejoinChannel !== null && !get().currentRoom) {
+        endBackgroundSession();
+        set(DISCONNECTED_STATE);
+      }
+
+      return result;
     },
 
     reconnect: async () => {

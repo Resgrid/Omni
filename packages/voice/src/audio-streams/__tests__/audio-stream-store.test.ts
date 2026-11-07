@@ -261,6 +261,24 @@ describe('reconnect', () => {
     expect(player.replace).toHaveBeenCalledTimes(1);
   });
 
+  // The web player's 'waiting' event reports playing (not paused) and buffering together when the network goes.
+  it('reconnects a stream that stalls while its player still reports playing, and counts it back only once audio runs', async () => {
+    const player = await playing();
+    player.emitStatus({ playing: true, isBuffering: true });
+    expect(useAudioStreamStore.getState()).toMatchObject({ isPlaying: true, isBuffering: true, isReconnecting: false });
+
+    await jest.advanceTimersByTimeAsync(STREAM_STALL_TIMEOUT_MS);
+    expect(useAudioStreamStore.getState().isReconnecting).toBe(true);
+    await jest.advanceTimersByTimeAsync(1_000);
+    expect(player.replace).toHaveBeenCalledTimes(1);
+
+    player.emitStatus({ playing: true, isBuffering: true });
+    expect(useAudioStreamStore.getState()).toMatchObject({ isReconnecting: true, isPlaying: false, isBuffering: true });
+
+    player.emitStatus({ playing: true });
+    expect(useAudioStreamStore.getState()).toMatchObject({ isReconnecting: false, isPlaying: true, isBuffering: false });
+  });
+
   it('waits for the network while offline, then reconnects as soon as it is back', async () => {
     const player = await playing();
     connectivity.setOnline(false);

@@ -192,7 +192,9 @@ export const useAudioStreamStore = create<AudioStreamState>((set, get) => {
   };
 
   const handleStatus = (handle: StreamPlayerHandle, playing: boolean, buffering: boolean): void => {
-    if (playing) {
+    // A player that reports playing while it buffers (the web 'waiting' event mid-stream) has not recovered: it is a
+    // stall like any other, so the timer stays armed and a reconnect in progress counts until audio actually runs.
+    if (playing && !buffering) {
       clearStallTimer();
 
       if (get().isReconnecting) logger.info({ message: 'Audio stream reconnected', context: { streamName: get().currentStream?.Name, attempts: reconnectAttempt } });
@@ -214,7 +216,8 @@ export const useAudioStreamStore = create<AudioStreamState>((set, get) => {
 
     if (buffering) {
       armStallTimer(handle);
-      set({ isPlaying: false, isBuffering: true, isLoading: false });
+      // A running stream refilling its buffer still counts as playing; a reconnecting one does not until audio runs.
+      set({ isPlaying: playing && !get().isReconnecting, isBuffering: true, isLoading: false });
 
       return;
     }

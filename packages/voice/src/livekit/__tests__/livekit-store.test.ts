@@ -400,6 +400,46 @@ describe('drops and reconnect', () => {
       expect(foregroundService.stop).toHaveBeenCalled();
     });
 
+    it("ends the background session when the member's own join fails while a dropped channel waits to rejoin", async () => {
+      await useLiveKitStore.getState().connectToRoom(channel('1', 'Fireground'));
+      lastRoom().emit(RoomEvent.Disconnected, DisconnectReason.SIGNAL_CLOSE);
+      await flush();
+      jest.mocked(RNCallKeep.endCall).mockClear();
+      foregroundService.stop.mockClear();
+      FakeRoom.nextConnect = [new Error('ws closed')];
+
+      const result = await useLiveKitStore.getState().connectToRoom(channel('2', 'Command'));
+
+      expect(result.ok).toBe(false);
+      expect(useLiveKitStore.getState()).toMatchObject({ isConnected: false, isReconnecting: false, currentRoom: null, currentRoomInfo: null, lastError: { code: 'connect_failed', roomName: 'Command' } });
+      expect(RNCallKeep.endCall).toHaveBeenCalled();
+      expect(foregroundService.stop).toHaveBeenCalled();
+      expect(getHeadsetButtonService().isMonitoringActive()).toBe(false);
+
+      // Nothing rejoins the dropped channel afterwards.
+      await jest.advanceTimersByTimeAsync(60_000);
+      await flush(10);
+      expect(FakeRoom.instances).toHaveLength(2);
+    });
+
+    it('ends the session when a switch fails after leaving the previous channel, and keeps it when the switch never left', async () => {
+      await useLiveKitStore.getState().connectToRoom(channel('1', 'Fireground'));
+      jest.mocked(RNCallKeep.endCall).mockClear();
+
+      // No token: refused before the current channel is left, so the member is still in it.
+      expect((await useLiveKitStore.getState().connectToRoom(channel('2', 'Command', { Token: '' }))).ok).toBe(false);
+      expect(useLiveKitStore.getState()).toMatchObject({ isConnected: true, currentRoomInfo: { Id: '1' } });
+      expect(RNCallKeep.endCall).not.toHaveBeenCalled();
+      expect(getHeadsetButtonService().isMonitoringActive()).toBe(true);
+
+      FakeRoom.nextConnect = [new Error('ws closed')];
+      expect((await useLiveKitStore.getState().connectToRoom(channel('2', 'Command'))).ok).toBe(false);
+      expect(useLiveKitStore.getState()).toMatchObject({ isConnected: false, currentRoom: null, currentRoomInfo: null });
+      expect(RNCallKeep.endCall).toHaveBeenCalled();
+      expect(foregroundService.stop).toHaveBeenCalled();
+      expect(getHeadsetButtonService().isMonitoringActive()).toBe(false);
+    });
+
     it('stops rejoining and ends the call when the member disconnects, or ends the system call, while it waits', async () => {
       await useLiveKitStore.getState().connectToRoom(channel('1', 'Fireground'));
       lastRoom().emit(RoomEvent.Disconnected);

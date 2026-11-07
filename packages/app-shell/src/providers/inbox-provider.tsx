@@ -24,7 +24,8 @@ export const useShellInboxReady = (): boolean => useShellInboxStatus() === 'read
  * The Novu inbox's unread count into the badge counts store, so the app bar bell and the Notifications menu entry share
  * one Novu subscription (Novu keeps it current over its socket). Mounted only under a ready provider: against the
  * placeholder client it would count for nobody. A rise means something new arrived — a message, a call, a chat push
- * all land in the inbox — so the server counts are refreshed too.
+ * all land in the inbox — and a fall often means it was dealt with, possibly on another device (a message read there
+ * lowers its server count too), so either change refreshes the server counts. The first count is only the baseline.
  */
 function InboxUnreadCountBridge() {
   const count = useInboxUnreadCount();
@@ -33,7 +34,7 @@ function InboxUnreadCountBridge() {
   useEffect(() => {
     useBadgeCountsStore.getState().setUnreadNotifications(count);
 
-    if (previous.current !== null && count > previous.current) refreshBadgeCountsSoon();
+    if (previous.current !== null && count !== previous.current) refreshBadgeCountsSoon();
     previous.current = count;
   }, [count]);
 

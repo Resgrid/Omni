@@ -4,9 +4,9 @@ import '../../status/__tests__/test-setup';
 import { useAuthStore } from '@resgrid/auth';
 import { setDataSessionScopeProvider, useBadgeCountsStore, useCallsStore, useCheckInTimersStore, usePersonnelStatusStore, usePersonnelStore, useUnitRolesStore, useWeatherAlertsStore } from '@resgrid/data';
 import { ActionBaseTypes, StaffingBaseTypes, StatusProvider } from '@resgrid/features/status';
-import type { CallResultData, CheckInTimerStatusResultData, PersonnelInfoResultData, StatusesResultData, WeatherAlertResultData } from '@resgrid/models';
+import { type CallResultData, type CheckInTimerStatusResultData, DispatchedEventResultData, type PersonnelInfoResultData, type StatusesResultData, type WeatherAlertResultData } from '@resgrid/models';
 import { AppBarTitleSlotContext } from '@resgrid/ui';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { router, usePathname } from 'expo-router';
 import React from 'react';
 import { Text } from 'react-native';
@@ -78,7 +78,7 @@ beforeEach(() => {
   useCallsStore.setState({ calls: [], callExtrasById: {}, callDispatches: {}, fetchCalls: fetchers.fetchCalls, fetchCallDispatches: fetchers.fetchCallDispatches });
   useWeatherAlertsStore.setState({ alerts: [], fetchActiveAlerts: fetchers.fetchActiveAlerts });
   useUnitRolesStore.setState({ roles: [], fetchRoles: fetchers.fetchRoles });
-  useBadgeCountsStore.setState({ counts: {}, wanted: [], unsupported: false });
+  useBadgeCountsStore.setState({ counts: {}, wanted: [], unsupported: false, errors: {} });
   useCheckInTimersStore.setState({
     statusesByCall: {},
     globalOverdueCount: 0,
@@ -214,6 +214,42 @@ describe('MemberHomeScreen', () => {
     expect(router.push).toHaveBeenLastCalledWith('/home/calls?filter=mine');
     await fireEvent.press(screen.getByTestId('summary-weather-alerts-press'));
     expect(router.push).toHaveBeenLastCalledWith('/weather-alerts');
+  });
+
+  // An older Core answers the first counts request (sent after the first load) with not_found.
+  it('reads the unit seats and the open calls once the server turns out to have no counts', async () => {
+    useCallsStore.setState({ calls: [call('100')] });
+    await render(<MemberHomeScreen />);
+    expect(fetchers.fetchRoles).not.toHaveBeenCalled();
+    expect(fetchers.fetchCallDispatches).not.toHaveBeenCalled();
+
+    await act(() => useBadgeCountsStore.setState({ unsupported: true }));
+
+    await waitFor(() => expect(fetchers.fetchRoles).toHaveBeenCalledWith({ bypassCache: false }));
+    expect(fetchers.fetchCallDispatches).toHaveBeenCalledWith(['100']);
+    expect(fetchers.fetchGlobalOverdueCount).toHaveBeenCalled();
+  });
+
+  // A failing counts request must not leave "calls I'm on" and the missed check-ins at zero before they ever came in.
+  it('counts locally while the per-call counts have never come in and the counts request fails', async () => {
+    useCallsStore.setState({ calls: [call('100'), call('101')], callDispatches: { '100': [Object.assign(new DispatchedEventResultData(), { Id: 'me', Type: 'Personnel', Name: 'Pat Lee' })] } });
+    useBadgeCountsStore.setState({ counts: { calls: 2 }, errors: { counts: { code: 'server', status: 500, messageKey: 'errors.data.server' } } });
+    await render(<MemberHomeScreen />);
+
+    await waitFor(() => expect(fetchers.fetchCallDispatches).toHaveBeenCalledWith(['100', '101']));
+    expect(fetchers.fetchGlobalOverdueCount).toHaveBeenCalled();
+    expect(fetchers.fetchRoles).toHaveBeenCalledWith({ bypassCache: false });
+    expect(screen.getByTestId('summary-calls-im-on-value')).toHaveTextContent('1');
+  });
+
+  it('keeps the counts that came in through a failing refresh, without reading every open call', async () => {
+    useCallsStore.setState({ calls: [call('100')] });
+    useBadgeCountsStore.setState({ counts: { calls: 1, callsImOn: 4, checkIns: 0 }, errors: { counts: { code: 'server', status: 500, messageKey: 'errors.data.server' } } });
+    await render(<MemberHomeScreen />);
+
+    expect(screen.getByTestId('summary-calls-im-on-value')).toHaveTextContent('4');
+    expect(fetchers.fetchCallDispatches).not.toHaveBeenCalled();
+    expect(fetchers.fetchRoles).not.toHaveBeenCalled();
   });
 
   it('lets the summary tile labels wrap and shrink to fit instead of cutting them off', async () => {

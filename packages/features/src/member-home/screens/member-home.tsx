@@ -27,6 +27,7 @@ import { HomeStatusButtons } from '../components/home-status-buttons';
 import { SummaryStatsRow } from '../components/summary-stats-row';
 import { UserStatusCard } from '../components/user-status-card';
 import { useMemberHomeHookPoints } from '../hook-points';
+import { countsSummariesLocally } from '../lib/summary-counts';
 import { memberHomeRoutes } from '../routes';
 
 export interface MemberHomeScreenProps {
@@ -75,8 +76,9 @@ export default function MemberHomeScreen({ dueChecks, onClearActiveCall }: Membe
       useWeatherAlertsStore.getState().fetchActiveAlerts({ bypassCache }),
     ];
 
-    // Unit seats decide which unit dispatches count as "calls I'm on" — only when the cards count locally.
-    if (useBadgeCountsStore.getState().unsupported) tasks.push(useUnitRolesStore.getState().fetchRoles({ bypassCache }));
+    // Unit seats decide which unit dispatches count as "calls I'm on" — only when the cards count locally. The effect
+    // below reads them when that starts (on mount, or once the counts turn out unavailable); a pull to refresh reads again.
+    if (bypassCache && countsSummariesLocally(useBadgeCountsStore.getState())) tasks.push(useUnitRolesStore.getState().fetchRoles({ bypassCache }));
 
     // The cards' numbers: one counts request, shared with the menu badges.
     if (bypassCache) refreshBadgeCountsSoon(0);
@@ -90,19 +92,20 @@ export default function MemberHomeScreen({ dueChecks, onClearActiveCall }: Membe
   }, [load]);
 
   // The server counts the summary cards (calls I'm on, missed check-ins) in one request; the per-call dispatch and
-  // check-in timer reads they used to need — one request per open call — are only made on a server without the counts.
-  const isCounted = useBadgeCountsStore((state) => !state.unsupported);
+  // check-in timer reads they used to need — one request per open call — are only made on a server without the counts,
+  // or while those counts have never come in and the request for them fails.
+  const countsLocally = useBadgeCountsStore(countsSummariesLocally);
   const openCalls = useMemo(() => selectActiveCalls({ calls }), [calls]);
   const openCallsKey = openCalls.map((call) => `${call.CallId}:${call.CheckInTimersEnabled ? 1 : 0}`).join(',');
 
   const refreshCallSummaries = useCallback(() => {
-    if (!useBadgeCountsStore.getState().unsupported) {
-      // Timers turn from warning to overdue with the clock: read the counts again whenever the home is shown (unless the
-      // shell just did).
-      refreshBadgeCountsIfStale();
+    const badgeCounts = useBadgeCountsStore.getState();
 
-      return;
-    }
+    // Timers turn from warning to overdue with the clock: read the counts again whenever the home is shown (unless the
+    // shell just did).
+    if (!badgeCounts.unsupported) refreshBadgeCountsIfStale();
+
+    if (!countsSummariesLocally(badgeCounts)) return;
 
     const open = selectActiveCalls(useCallsStore.getState());
 
@@ -112,11 +115,16 @@ export default function MemberHomeScreen({ dueChecks, onClearActiveCall }: Membe
   }, []);
 
   useEffect(() => {
+    // Only the local "calls I'm on" count needs the unit seats; load() could not know at mount that it would be needed.
+    if (countsLocally) void useUnitRolesStore.getState().fetchRoles({ bypassCache: false });
+  }, [countsLocally]);
+
+  useEffect(() => {
     // With server counts the realtime pings already refresh them; the open calls only matter for the local fallback.
-    if (!isCounted) refreshCallSummaries();
+    if (countsLocally) refreshCallSummaries();
     // Keyed on the open calls (ids and timer flags), not the array identity: every refetch builds a new array.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [openCallsKey, isCounted]);
+  }, [openCallsKey, countsLocally]);
   // Read on focus through getState: depending on the calls array would re-run on every refetch while focused.
   useFocusEffect(refreshCallSummaries);
 

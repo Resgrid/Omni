@@ -153,8 +153,9 @@ export const useBadgeCountsStore = create<BadgeCountsState>()(
             { trailing: options?.bypassCache === true, silent: true }
           );
 
-          // An older Core without the endpoint: stop asking until the next sign-in, and show no stale counts.
-          if (!result.ok && result.error?.code === 'not_found') set({ unsupported: true, counts: {} });
+          // An older Core without the endpoint: stop asking until the next sign-in, and show no stale counts. A stale answer
+          // (sent before a sign-out or server switch) says nothing about the server this session talks to.
+          if (!result.ok && !result.stale && result.error?.code === 'not_found') set({ unsupported: true, counts: {} });
         },
 
         setUnreadNotifications: (count) => {
