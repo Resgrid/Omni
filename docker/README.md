@@ -91,10 +91,14 @@ docker run -d -p 8080:80 \
 
 They are served as JSON. When they are absent, these paths return 404 and never `index.html`.
 
+## Web push
+
+Each image serves the push service worker at `/service-worker.js` (no long cache). Push also needs HTTPS in front of the container, the app at the root of its host, and the Firebase and Novu setup on the Resgrid server: see [docs/subsystems/web-push.md](../docs/subsystems/web-push.md). A custom `CONTENT_SECURITY_POLICY` must keep `worker-src 'self'` and allow `https://firebaseinstallations.googleapis.com` and `https://fcmregistrations.googleapis.com` in `connect-src`.
+
 ## What nginx does
 
 - `index.html`, other HTML and `env-config.js` are sent with `no-store`, so a redeploy or an env change applies on the next reload.
-- Content-hashed bundles under `/_expo/static/` and `/assets/` are cached for a year (`immutable`). Unhashed root files are cached for an hour.
+- Content-hashed bundles under `/_expo/static/` and `/assets/` are cached for a year (`immutable`). Unhashed root files are cached for an hour, except the push and map workers and `metadata.json`, which browsers revalidate (`no-cache`).
 - Client-side routes fall back to `index.html`. A missing asset with an extension returns 404, not HTML.
 - Hidden files (`/.env`, `/.git`, …) are denied, except the two association files above.
 - Every response carries `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy` and the CSP.

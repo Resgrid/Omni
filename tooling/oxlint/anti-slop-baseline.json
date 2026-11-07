@@ -6028,8 +6028,5 @@
     "anti-slop/no-known-value-widening": 1,
     "anti-slop/require-readable-spacing": 12,
     "anti-slop/require-safety-comment-for-type-assertion": 1
-  },
-  "scripts/web-export.mjs": {
-    "anti-slop/require-readable-spacing": 5
   }
 }
