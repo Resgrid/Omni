@@ -175,7 +175,7 @@ function RecordDetail({ id, showHeader, recordsTitle }: { id: string; showHeader
     return (
       <View style={styles.screen} className="bg-background-0" testID="record-detail-screen">
         {header(recordsTitle)}
-        {isLoading ? <Loading /> : <ZeroState icon={FileText} isError={errorKey !== null} heading={errorKey ? t('records.load_failed') : t('records.not_found')} testID="record-detail-missing" />}
+        {isLoading ? <Loading /> : <ZeroState icon={FileText} isError={errorKey !== null} heading={errorKey ? t('records.load_failed') : t('records.not_found')} onRetry={refresh} testID="record-detail-missing" />}
       </View>
     );
   }

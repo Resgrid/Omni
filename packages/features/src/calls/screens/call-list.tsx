@@ -3,7 +3,7 @@ import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { type CallListItem, useCallsStore, useCheckInTimersStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import type { DispatchedEventResultData } from '@resgrid/models';
-import { Button, ButtonText, Fab, FlatList, Loading, RefreshControl, TabBar, type TabBarItem, useFormFactor, useThemeColors, ZeroState } from '@resgrid/ui';
+import { Fab, FlatList, Loading, RefreshControl, TabBar, type TabBarItem, useFormFactor, useThemeColors, ZeroState } from '@resgrid/ui';
 import { useRouter } from 'expo-router';
 import { Plus } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -55,6 +55,19 @@ export default function CallListScreen({ density, realtime = true, onOpenCall }:
   const timerStatuses = useCheckInTimersStore((state) => state.statusesByCall);
   const [tab, setTab] = useState<CallListTab>('active');
   const [filters, setFilters] = useState<CallListFilters>(EMPTY_CALL_FILTERS);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // A Retry, Refresh or pull refetches the active calls and the queues. The empty slot shows the loader until all of them
+  // have settled: the active calls' loading flag alone would bring an enabled Refresh back while a queue still loads.
+  const refreshAll = useCallback(async () => {
+    setIsRefreshing(true);
+
+    try {
+      await refresh();
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [refresh]);
 
   const rowDensity: CallCardDensity = density ?? (formFactor === 'wall' ? 'wall' : 'comfortable');
   const tabs: CallListTab[] = calls.queues ? ['active', 'pending', 'scheduled'] : ['active'];
@@ -124,17 +137,19 @@ export default function CallListScreen({ density, realtime = true, onOpenCall }:
     [assignment, callPriorities, dispatchesFor, openCall, rowDensity, t, timerStateFor]
   );
 
-  const emptyState = isLoading ? (
-    <Loading text={t('calls.loading')} />
-  ) : hasError && activeTab === 'active' && visible.length === 0 ? (
-    <ZeroState isError heading={t('errors.data.unknown')} description={t('common.tryAgainLater')} testID="call-list-error">
-      <Button onPress={() => void refresh()} accessibilityLabel={t('common.retry')}>
-        <ButtonText>{t('common.retry')}</ButtonText>
-      </Button>
-    </ZeroState>
-  ) : (
-    <ZeroState heading={hasActiveFilters(filters) ? t('common.no_results_found') : t('calls.no_calls')} description={hasActiveFilters(filters) ? undefined : t('calls.no_calls_description')} testID="call-list-empty" />
-  );
+  const emptyState =
+    isLoading || isRefreshing ? (
+      <Loading text={t('calls.loading')} />
+    ) : hasError && activeTab === 'active' && visible.length === 0 ? (
+      <ZeroState isError heading={t('errors.data.unknown')} description={t('common.tryAgainLater')} onRetry={refreshAll} testID="call-list-error" />
+    ) : (
+      <ZeroState
+        heading={hasActiveFilters(filters) ? t('common.no_results_found') : t('calls.no_calls')}
+        description={hasActiveFilters(filters) ? undefined : t('calls.no_calls_description')}
+        onRetry={refreshAll}
+        testID="call-list-empty"
+      />
+    );
 
   return (
     <View style={styles.screen} className="bg-background-50" testID="call-list-screen">
@@ -151,7 +166,7 @@ export default function CallListScreen({ density, realtime = true, onOpenCall }:
         renderItem={renderItem}
         contentContainerStyle={canCreate ? styles.listAboveFab : styles.list}
         ListEmptyComponent={emptyState}
-        refreshControl={<RefreshControl refreshing={false} onRefresh={() => void refresh()} />}
+        refreshControl={<RefreshControl refreshing={false} onRefresh={() => void refreshAll()} />}
         testID="call-list"
       />
       {/* The shell header titles the screen; New Call floats over the list rather than adding a second header row. */}

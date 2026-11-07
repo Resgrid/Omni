@@ -57,15 +57,11 @@ export default function OperationsListScreen() {
   const isEmpty = deployments.length === 0;
   const isFirstLoad = isEmpty && !errorKey && loadedFilter !== filter;
   const isRefreshing = isLoading && !isFirstLoad;
-  const refresh = () => void load(filter);
+  const refresh = () => load(filter);
 
   const body =
     isEmpty && errorKey ? (
-      <ZeroState isError heading={t('operations.loadFailed')} description={t(`operations.errors.${errorKey}`)} testID="operations-error">
-        <Button onPress={refresh} className="mt-2" testID="operations-retry">
-          <ButtonText>{t('common.retry')}</ButtonText>
-        </Button>
-      </ZeroState>
+      <ZeroState isError heading={t('operations.loadFailed')} description={t(`operations.errors.${errorKey}`)} onRetry={refresh} retryTestID="operations-retry" testID="operations-error" />
     ) : isFirstLoad ? (
       <Loading />
     ) : isEmpty ? (
@@ -73,17 +69,15 @@ export default function OperationsListScreen() {
         icon={BriefcaseBusiness}
         heading={filter === 'open' ? t('operations.empty.openTitle') : t('operations.empty.allTitle')}
         description={filter === 'open' ? t('operations.empty.openDescription') : access?.CanManage ? t('operations.empty.allDescriptionManager') : t('operations.empty.allDescription')}
+        onRetry={refresh}
+        retryTestID="operations-empty-refresh"
         testID="operations-empty"
       >
         {filter === 'open' ? (
           <Button onPress={() => setFilter('all')} className="mt-2" testID="operations-empty-show-all">
             <ButtonText>{t('operations.empty.showAll')}</ButtonText>
           </Button>
-        ) : (
-          <Button variant="outline" onPress={refresh} className="mt-2" testID="operations-empty-refresh">
-            <ButtonText>{t('common.refresh')}</ButtonText>
-          </Button>
-        )}
+        ) : null}
       </ZeroState>
     ) : (
       <OperationsFrame maxWidth={1280}>
@@ -116,7 +110,7 @@ export default function OperationsListScreen() {
           />
         </View>
       </OperationsFrame>
-      <ScrollView style={styles.screen} contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={refresh} />}>
+      <ScrollView style={styles.screen} contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => void refresh()} />}>
         {body}
       </ScrollView>
     </View>

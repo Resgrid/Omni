@@ -56,11 +56,19 @@ export default function RouteInstanceScreen({ instanceId: instanceIdProp, render
   const instance = detail?.progress?.Instance ?? null;
   const back = () => (router.canGoBack() ? router.back() : router.replace(unitRoutesRoutes.list()));
 
+  const reload = async () => {
+    if (instanceId) await useRoutesStore.getState().fetchInstanceDetail(instanceId, { bypassCache: true });
+  };
+
   if (!instance) {
     return (
       <View className="flex-1 bg-background-50" testID="route-instance-screen">
         <ScreenHeader title={t('routes.instance_detail')} onBack={back} />
-        {isLoading ? <Loading /> : <ZeroState icon={History} isError={!!error} heading={t('routes.no_history')} description={error ? t(error.messageKey) : undefined} testID="route-instance-missing" />}
+        {isLoading ? (
+          <Loading />
+        ) : (
+          <ZeroState icon={History} isError={!!error} heading={t('routes.no_history')} description={error ? t(error.messageKey) : undefined} onRetry={instanceId ? reload : undefined} testID="route-instance-missing" />
+        )}
       </View>
     );
   }

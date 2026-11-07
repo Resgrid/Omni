@@ -78,7 +78,7 @@ export default function CommandBoardScreen({ tier: tierOverride }: CommandBoardS
   if (!active) {
     return (
       <View className="flex-1 bg-background-50" testID="command-board-screen">
-        <ZeroState icon={ClipboardList} heading={t('incident_command.empty_heading')} description={t('incident_command.empty_description')}>
+        <ZeroState icon={ClipboardList} heading={t('incident_command.empty_heading')} description={t('incident_command.empty_description')} testID="command-board-empty">
           <HStack className="mt-2" space="sm">
             <Button onPress={() => router.push('/calls' as never)} testID="command-go-to-calls">
               <ButtonText>{t('incident_command.go_to_calls')}</ButtonText>

@@ -4,11 +4,14 @@ import './test-setup';
 import { FeatureFlagKeys, featureFlagsStore, useSharedSessionStore } from '@resgrid/auth';
 import { useCallsStore, useCheckInTimersStore, useUnitRolesStore, useUnitsStore, useUnitStatusStore } from '@resgrid/data';
 import { NavigationHandoffProvider } from '@resgrid/features/contacts';
+import { useMapLockStore } from '@resgrid/features/map';
 import { ActionBaseTypes, StatusProvider } from '@resgrid/features/status';
-import type { CallResultData, StatusesResultData, UnitInfoResultData, UnitResultData, UnitTypeStatusResultData } from '@resgrid/models';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
+import type { ActiveUnitRoleResultData, CallResultData, StatusesResultData, UnitInfoResultData, UnitResultData, UnitRoleResultData, UnitTypeStatusResultData } from '@resgrid/models';
+import { useAudioStreamStore, useLiveKitStore } from '@resgrid/voice';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import { router } from 'expo-router';
 import React from 'react';
+import { StyleSheet } from 'react-native';
 
 import { StatusButtons } from '../components/status-buttons';
 import { UnitStatusSidebar } from '../components/unit-status-sidebar';
@@ -69,6 +72,9 @@ const renderSidebar = async (props: { activeUnitId?: string | null; activeCallId
 
 beforeEach(() => {
   activateUnitVariant();
+  useMapLockStore.setState({ isMapLocked: false });
+  useLiveKitStore.setState({ isConnected: false, isTalking: false, currentRoomInfo: null });
+  useAudioStreamStore.setState({ currentStream: null, isPlaying: false });
   navigateTo.mockClear();
   mockLock.mockClear();
   mockEndShift.mockClear();
@@ -109,17 +115,72 @@ describe('UnitStatusSidebar', () => {
     await renderSidebar();
     expect(screen.getByTestId('unit-summary-card-name')).toHaveTextContent('Engine 1');
     expect(screen.getByText('Station 1')).toBeTruthy();
-    expect(within(screen.getByTestId('unit-current-status')).getByText('In Quarters')).toBeTruthy();
+    expect(screen.getByTestId('unit-status-tile-text')).toHaveTextContent('In Quarters');
     expect(screen.getByTestId('unit-status-buttons-current-30')).toBeTruthy();
     expect(screen.getByTestId('unit-status-buttons-31')).toBeTruthy();
-    expect(screen.getByTestId('unit-roles-button')).toBeTruthy();
+  });
+
+  it('lays out the top row like legacy Unit: the unit card beside the status in its colour over the crew seats', async () => {
+    const seats: UnitRoleResultData[] = [
+      { UnitRoleId: 'r1', UnitId: 'u1', Name: 'Driver' },
+      { UnitRoleId: 'r2', UnitId: 'u1', Name: 'Officer' },
+    ];
+
+    const assigned: ActiveUnitRoleResultData[] = [{ UnitRoleId: 'r1', UnitId: 'u1', Name: 'Driver', UserId: 'user-1', FullName: 'Pat Doe', UpdatedOn: '' }];
+
+    useUnitRolesStore.setState({ rolesByUnit: { u1: seats }, assignmentsByUnit: { u1: assigned } });
+    await renderSidebar();
+    const topRow = within(screen.getByTestId('unit-status-panel-top-row'));
+    expect(topRow.getByTestId('unit-summary-card')).toBeTruthy();
+    expect(topRow.getByTestId('unit-status-tile')).toHaveStyle({ backgroundColor: '#22c55e' });
+    expect(topRow.getByTestId('unit-roles-button-status')).toHaveTextContent('roles.status:1,2');
+    // The detailed status card and the roles row belong to the full console.
+    expect(screen.queryByTestId('unit-current-status')).toBeNull();
+    expect(screen.queryByText('roles.tap_to_manage')).toBeNull();
+  });
+
+  it('reads "Unknown" with no active unit, as legacy Unit did', async () => {
+    await renderSidebar({ activeUnitId: null });
+    expect(screen.getByTestId('unit-status-tile-text')).toHaveTextContent('common.unknown');
+    expect(screen.queryByTestId('unit-roles-button')).toBeNull();
   });
 
   it('shows a queued status as pending sync', async () => {
     useUnitStatusStore.setState({ queuedStatuses: { q1: { localId: 'q1', unitId: 'u1', statusType: '31', respondingTo: '', respondingToType: null, note: '', createdAt: 1, state: 'queued' } } });
     await renderSidebar();
-    expect(screen.getByTestId('unit-current-status-badge-pending')).toBeTruthy();
-    expect(within(screen.getByTestId('unit-current-status')).getByText('Responding')).toBeTruthy();
+    expect(screen.getByTestId('unit-status-tile-pending')).toBeTruthy();
+    expect(screen.getByTestId('unit-status-tile-text')).toHaveTextContent('Responding');
+  });
+
+  it('locks the map to the unit and unlocks it from the unit card', async () => {
+    await renderSidebar();
+    const lock = screen.getByTestId('unit-summary-card-map-lock');
+    expect(lock).toHaveAccessibleName('map.lock_map');
+    await fireEvent.press(lock);
+    expect(useMapLockStore.getState().isMapLocked).toBe(true);
+    expect(screen.getByTestId('unit-summary-card-map-lock')).toHaveAccessibleName('map.unlock_map');
+    await fireEvent.press(screen.getByTestId('unit-summary-card-map-lock'));
+    expect(useMapLockStore.getState().isMapLocked).toBe(false);
+  });
+
+  it('opens the audio streams and voice channel sheets, lit while a stream plays and a channel is joined', async () => {
+    await renderSidebar();
+    expect(screen.getByTestId('unit-summary-card-audio-streams')).not.toBeSelected();
+    await fireEvent.press(screen.getByTestId('unit-summary-card-audio-streams'));
+    expect(useAudioStreamStore.getState().setIsBottomSheetVisible).toHaveBeenCalledWith(true);
+
+    await fireEvent.press(screen.getByTestId('unit-summary-card-voice'));
+    await waitFor(() => expect(useLiveKitStore.getState().setIsBottomSheetVisible).toHaveBeenCalledWith(true));
+    expect(useLiveKitStore.getState().ensureMicrophonePermission).toHaveBeenCalled();
+
+    await act(() => {
+      useAudioStreamStore.setState({ currentStream: { Id: 's1', Name: 'County Fire', Type: 'Scanner', Url: 'https://streams.example.test/s1' }, isPlaying: true });
+      useLiveKitStore.setState({ isConnected: true, isTalking: true, currentRoomInfo: { Id: 'c1', Name: 'Command', ConferenceNumber: 1, IsDefault: true, Token: 'token-1' } });
+    });
+    expect(screen.getByTestId('unit-summary-card-audio-streams')).toBeSelected();
+    expect(screen.getByTestId('unit-summary-card-voice')).toBeSelected();
+    expect(screen.getByTestId('unit-summary-card-room')).toHaveTextContent('Command');
+    expect(screen.getByTestId('unit-summary-card-talking')).toBeTruthy();
   });
 
   it('opens the unit status sheet on the tapped status', async () => {
@@ -183,11 +244,21 @@ describe('UnitStatusSidebar', () => {
     expect(useCheckInTimersStore.getState().fetchTimerStatuses).toHaveBeenCalledWith(7);
   });
 
-  it('gates quick actions by department flags and the active unit', async () => {
+  it('gates quick actions by department flags and the active unit, and leaves Settings to its tab', async () => {
     await renderSidebar();
     expect(screen.queryByTestId('unit-quick-actions-chat')).toBeNull();
     expect(screen.getByTestId('unit-quick-actions-inventory')).toBeTruthy();
-    expect(screen.getByTestId('unit-quick-actions-settings')).toBeTruthy();
+    expect(screen.queryByTestId('unit-quick-actions-settings')).toBeNull();
+  });
+
+  it('puts chat and the assistant side by side, every other shortcut on a row of its own', async () => {
+    featureFlagsStore.setState({ flags: { [FeatureFlagKeys.ChatSystem]: { enabled: true }, [FeatureFlagKeys.ChecklistsSystem]: { enabled: true } }, isLoaded: true });
+    await renderSidebar();
+    const widthOf = (id: string) => StyleSheet.flatten(screen.getByTestId(`unit-quick-actions-${id}`).parent?.props.style).width;
+    expect(widthOf('chat')).toBe('50%');
+    expect(widthOf('assistant')).toBe('50%');
+    expect(widthOf('checklists')).toBe('100%');
+    expect(widthOf('inventory')).toBe('100%');
   });
 
   it('opens a flag-enabled quick action and closes the drawer', async () => {

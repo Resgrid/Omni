@@ -69,6 +69,11 @@ Done right in this codebase:
   every detail screen in every app.
 - `ZeroState` fills the space its column has left (`w-full flex-1`), not a full screen height that ran past the bottom
   under a header or search field. Seven list screens had overridden it one at a time; the default now covers all 110 uses.
+- Every empty, not-found or error `ZeroState` passes `onRetry` (a Retry / Refresh button that loads it again): the state
+  replaces what failed to load, so pull to refresh went with it, and web and Electron never had it. Nine screens had drawn
+  their own Retry button and the rest had none (Units showed "An error occurred" with no way back but leaving). A source
+  rule (`features/src/__tests__/zero-state-retry.test.ts`) rejects a `ZeroState` without it, apart from listed states a
+  refetch cannot change (no id in the route, no right, feature off).
 
 Done wrong: copies of shared strings in app namespaces. The shared check-in card, protocol picker and time-report labels
 use their strings one way; Responder, Dispatch and IC kept older copies worded another way and showed "Last check-in:

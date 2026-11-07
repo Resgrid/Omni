@@ -34,6 +34,7 @@ export default function ProtocolListScreen() {
   const visible = useMemo(() => searchProtocols(protocols, query), [protocols, query]);
 
   const open = useCallback((protocol: CallProtocolsResultData) => pushRoutePath(router, protocolRoutes.protocolDetail(protocol.Id)), []);
+  const refresh = useCallback(() => fetchProtocols({ bypassCache: true }), [fetchProtocols]);
 
   return (
     <View style={styles.screen} className="bg-background-50" testID="protocol-list-screen">
@@ -47,8 +48,8 @@ export default function ProtocolListScreen() {
         keyExtractor={(item: CallProtocolsResultData) => item.Id}
         renderItem={({ item }: { item: CallProtocolsResultData }) => <ProtocolCard protocol={item} onPress={open} />}
         contentContainerStyle={styles.list}
-        refreshControl={<RefreshControl refreshing={false} onRefresh={() => void fetchProtocols({ bypassCache: true })} />}
-        ListEmptyComponent={isLoading ? <Loading /> : <ZeroState icon={BookOpen} heading={t('protocols.empty')} description={t('protocols.emptyDescription')} testID="protocol-list-empty" />}
+        refreshControl={<RefreshControl refreshing={false} onRefresh={() => void refresh()} />}
+        ListEmptyComponent={isLoading ? <Loading /> : <ZeroState icon={BookOpen} heading={t('protocols.empty')} description={t('protocols.emptyDescription')} onRetry={refresh} testID="protocol-list-empty" />}
         testID="protocol-list"
       />
     </View>

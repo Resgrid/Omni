@@ -80,12 +80,16 @@ export default function CertificationDetailScreen({ certificationId }: Certifica
   const [busy, setBusy] = useState<Scope | 'photo' | null>(null);
   const [confirmRemove, setConfirmRemove] = useState(false);
 
-  useEffect(() => {
+  /** The certification and its credit history. A retry reloads both: when one request failed, the other usually did too. */
+  const load = useCallback(async () => {
     if (!id) return;
     const store = useCertificationsStore.getState();
-    void store.fetchCertification(id, { bypassCache: true });
-    void store.fetchCredits(id);
+    await Promise.all([store.fetchCertification(id, { bypassCache: true }), store.fetchCredits(id)]);
   }, [id]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   const goBack = useCallback(() => goBackOr(certificationsRoutes.list()), []);
 
@@ -212,7 +216,7 @@ export default function CertificationDetailScreen({ certificationId }: Certifica
         isLoading ? (
           <Loading />
         ) : (
-          <ZeroState isError heading={t('certifications.loadOneFailed')} description={t(loadError ? certificationErrorKey(loadError) : 'certifications.errors.notFound')} testID="certification-missing">
+          <ZeroState isError heading={t('certifications.loadOneFailed')} description={t(loadError ? certificationErrorKey(loadError) : 'certifications.errors.notFound')} onRetry={load} testID="certification-missing">
             <Button className="mt-4" variant="outline" onPress={goBack} testID="certification-missing-back">
               <ButtonText>{t('certifications.backToList')}</ButtonText>
             </Button>

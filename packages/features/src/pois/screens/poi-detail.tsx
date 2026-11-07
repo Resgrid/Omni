@@ -50,11 +50,17 @@ export default function PoiDetailScreen({ poiId: poiIdProp, renderMap }: PoiDeta
   const back = () => (router.canGoBack() ? router.back() : router.replace('/pois'));
   const current = poi ?? cached;
 
+  const reload = async () => {
+    if (!poiId) return;
+
+    setPoi((await usePoisStore.getState().fetchPoi(poiId, { bypassCache: true })) ?? null);
+  };
+
   if (!current) {
     return (
       <View className="flex-1 bg-background-50" testID="poi-detail-screen">
         <ScreenHeader title={t('pois.title')} onBack={back} />
-        {isLoading ? <Loading text={t('pois.loading_detail')} /> : <ZeroState icon={MapPinned} heading={t('pois.not_found')} testID="poi-detail-missing" />}
+        {isLoading ? <Loading text={t('pois.loading_detail')} /> : <ZeroState icon={MapPinned} heading={t('pois.not_found')} onRetry={poiId ? reload : undefined} testID="poi-detail-missing" />}
       </View>
     );
   }

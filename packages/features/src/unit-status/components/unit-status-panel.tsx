@@ -1,7 +1,7 @@
 import { UnitRolesButton } from '@resgrid/features/roles';
 import { type StatusOption, UnitStatusSheet, useStatusContext } from '@resgrid/features/status';
 import { useTranslation } from '@resgrid/i18n';
-import { Button, ButtonText, Text, useFormFactor, View, VStack, ZeroState } from '@resgrid/ui';
+import { Button, ButtonText, HStack, Text, useFormFactor, View, VStack, ZeroState } from '@resgrid/ui';
 import { type Href, router } from 'expo-router';
 import { Settings } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
@@ -13,6 +13,7 @@ import type { QuickActionId } from '../lib/quick-actions';
 import { ActiveCallCard } from './active-call-card';
 import { CheckInSummary } from './check-in-summary';
 import { CurrentStatusCard } from './current-status-card';
+import { CurrentStatusTile } from './current-status-tile';
 import { QuickActions } from './quick-actions';
 import { SharedSessionCard } from './shared-session-card';
 import { StatusButtons } from './status-buttons';
@@ -36,12 +37,20 @@ interface SheetRequest {
   holdConfirmed: boolean;
 }
 
+/** Settings is a tab of its own in Unit, and the sidebar offers it only when there is no unit (legacy Unit). */
+const SIDEBAR_EXCLUDED_ACTIONS: readonly QuickActionId[] = ['settings'];
+
 /**
  * The Unit app's status console (omni-plan §7.11): the active unit and its voice channel, current status and its status
  * timer (when the department times it), crew seats, the active call with directions, the most urgent check-in timer, the
  * shared-session controls, shortcuts and the status buttons. A status button opens the shared unit status sheet
  * (destinations, notes, GPS, hold-to-confirm) which saves through the outbox. On an MDT (Electron / desktop window)
  * targets grow to 64 px and the screen layout splits in two.
+ *
+ * The `sidebar` layout is legacy Unit's sidebar, not a menu: the unit card (map lock, audio streams, voice) beside the
+ * status in its colour over the crew seats; the active call and its actions; the check-in timer; chat and the assistant
+ * side by side, then checklists, deployments, inventory and records; then the status buttons. The status timer and the
+ * shared-session controls (Omni additions) sit under the unit card when they show.
  */
 export const UnitStatusPanel: React.FC<UnitStatusPanelProps> = ({ onNavigate, onClearActiveCall, excludeQuickActions, layout = 'sidebar', testID = 'unit-status-panel' }) => {
   const { t } = useTranslation();
@@ -60,21 +69,45 @@ export const UnitStatusPanel: React.FC<UnitStatusPanelProps> = ({ onNavigate, on
 
   const wide = layout === 'screen' && metrics.twoColumn;
   const statusColumns = layout === 'screen' ? metrics.statusColumns : 1;
+  const sidebarExclusions = useMemo(() => [...SIDEBAR_EXCLUDED_ACTIONS, ...(excludeQuickActions ?? [])], [excludeQuickActions]);
 
-  const summary = (
+  const activeCall = (
+    <ActiveCallCard
+      activeCallId={context.activeCallId}
+      onSelectCall={context.onActiveCallChange}
+      onClearCall={onClearActiveCall}
+      onNavigate={onNavigate}
+      buttonMinHeight={metrics.buttonMinHeight}
+      iconSize={metrics.iconSize}
+    />
+  );
+
+  const sidebarSummary = (
+    <VStack space="md">
+      <HStack space="md" testID={`${testID}-top-row`}>
+        <View style={styles.half}>
+          <UnitSummaryCard unit={unit} unitInfo={unitInfo} buttonSize={metrics.density === 'mdt' ? 48 : 36} iconSize={metrics.iconSize} fill />
+        </View>
+        <VStack space="xs" style={styles.half}>
+          <CurrentStatusTile status={unitId ? status : null} />
+          {unitId ? <UnitRolesButton unitId={unitId} variant="tile" /> : null}
+        </VStack>
+      </HStack>
+      {unitId ? <StatusTimerCard unitId={unitId} /> : null}
+      <SharedSessionCard buttonMinHeight={metrics.buttonMinHeight} iconSize={metrics.iconSize} />
+      {activeCall}
+      <CheckInSummary activeCallId={context.activeCallId} />
+      <QuickActions hasActiveUnit={!!unitId} onNavigate={onNavigate} exclude={sidebarExclusions} arrangement="sidebar" buttonMinHeight={metrics.buttonMinHeight} iconSize={metrics.iconSize} />
+    </VStack>
+  );
+
+  const screenSummary = (
     <VStack space="md">
       <UnitSummaryCard unit={unit} unitInfo={unitInfo} buttonSize={Math.max(44, metrics.buttonMinHeight - 8)} iconSize={metrics.iconSize} />
       {unitId ? <CurrentStatusCard status={status} /> : null}
       {unitId ? <StatusTimerCard unitId={unitId} /> : null}
       {unitId ? <UnitRolesButton unitId={unitId} /> : null}
-      <ActiveCallCard
-        activeCallId={context.activeCallId}
-        onSelectCall={context.onActiveCallChange}
-        onClearCall={onClearActiveCall}
-        onNavigate={onNavigate}
-        buttonMinHeight={metrics.buttonMinHeight}
-        iconSize={metrics.iconSize}
-      />
+      {activeCall}
       <CheckInSummary activeCallId={context.activeCallId} />
       <SharedSessionCard buttonMinHeight={metrics.buttonMinHeight} iconSize={metrics.iconSize} />
       <QuickActions hasActiveUnit={!!unitId} onNavigate={onNavigate} exclude={excludeQuickActions} columns={wide ? 2 : 1} buttonMinHeight={metrics.buttonMinHeight} iconSize={metrics.iconSize} />
@@ -110,11 +143,11 @@ export const UnitStatusPanel: React.FC<UnitStatusPanelProps> = ({ onNavigate, on
       {wide ? (
         <View style={styles.row}>
           <View style={styles.wideLeft}>{buttons}</View>
-          <View style={styles.wideRight}>{summary}</View>
+          <View style={styles.wideRight}>{screenSummary}</View>
         </View>
       ) : (
         <VStack space="md">
-          {summary}
+          {layout === 'sidebar' ? sidebarSummary : screenSummary}
           {buttons}
         </VStack>
       )}
@@ -128,4 +161,5 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'flex-start' },
   wideLeft: { flex: 3, paddingRight: 12 },
   wideRight: { flex: 2, paddingLeft: 12 },
+  half: { flex: 1 },
 });

@@ -78,6 +78,10 @@ export default function CertificationEditScreen({ certificationId }: Certificati
 
   const title = hasIdParam ? t('certifications.editTitle') : t('certifications.addTitle');
 
+  const retry = async (certification: number) => {
+    await useCertificationsStore.getState().fetchCertification(certification, { bypassCache: true });
+  };
+
   if (hasIdParam && !existing) {
     return (
       <View className="flex-1 bg-background-50" testID="certification-edit-screen">
@@ -85,7 +89,13 @@ export default function CertificationEditScreen({ certificationId }: Certificati
         {id && settledId !== id ? (
           <Loading />
         ) : (
-          <ZeroState isError heading={t('certifications.loadOneFailed')} description={t(loadError ? certificationErrorKey(loadError) : 'certifications.errors.notFound')} testID="certification-edit-error">
+          <ZeroState
+            isError
+            heading={t('certifications.loadOneFailed')}
+            description={t(loadError ? certificationErrorKey(loadError) : 'certifications.errors.notFound')}
+            onRetry={id ? () => retry(id) : undefined}
+            testID="certification-edit-error"
+          >
             <Button className="mt-4" variant="outline" onPress={goBack} testID="certification-edit-back">
               <ButtonText>{t('certifications.backToList')}</ButtonText>
             </Button>

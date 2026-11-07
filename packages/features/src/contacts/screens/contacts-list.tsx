@@ -86,7 +86,7 @@ export default function ContactsListScreen({ onSelectContact }: ContactsListScre
       {isLoading && !isRefreshing && contacts.length === 0 ? (
         <Loading />
       ) : visible.length === 0 ? (
-        <ZeroState icon={Contact} heading={t('contacts.empty')} description={query ? undefined : t('contacts.emptyDescription')} testID="contacts-empty" />
+        <ZeroState icon={Contact} heading={t('contacts.empty')} description={query ? undefined : t('contacts.emptyDescription')} onRetry={handleRefresh} testID="contacts-empty" />
       ) : (
         <FlatList
           data={visible}

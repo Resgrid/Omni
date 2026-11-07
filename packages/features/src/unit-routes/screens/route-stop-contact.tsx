@@ -65,11 +65,15 @@ export default function RouteStopContactScreen({ stopId: stopIdProp, renderMap }
 
   const back = () => (router.canGoBack() ? router.back() : replaceRoutePath(router, unitRoutesRoutes.active()));
 
+  const reload = async () => {
+    if (stopId) await useRoutesStore.getState().fetchStopContact(stopId, { bypassCache: true });
+  };
+
   if (!contact) {
     return (
       <View className="flex-1 bg-background-50" testID="route-stop-contact-screen">
         <ScreenHeader title={t('routes.stop_contact')} onBack={back} />
-        {isLoading ? <Loading /> : <ZeroState icon={User} heading={t('routes.no_contact')} testID="route-stop-contact-missing" />}
+        {isLoading ? <Loading /> : <ZeroState icon={User} heading={t('routes.no_contact')} onRetry={stopId ? reload : undefined} testID="route-stop-contact-missing" />}
       </View>
     );
   }

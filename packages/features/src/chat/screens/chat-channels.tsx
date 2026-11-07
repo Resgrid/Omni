@@ -65,7 +65,7 @@ function ChatChannelsContent() {
       {isLoading && !isRefreshing && channels.length === 0 ? (
         <Loading />
       ) : sections.length === 0 ? (
-        <ZeroState icon={MessagesSquare} heading={t('chat.title')} description={t('chat.empty')} testID="chat-empty" />
+        <ZeroState icon={MessagesSquare} heading={t('chat.title')} description={t('chat.empty')} onRetry={handleRefresh} testID="chat-empty" />
       ) : (
         <ScrollView refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />} contentContainerStyle={{ paddingBottom: 96 }} testID="chat-channel-list">
           {sections.map(({ section, channels: sectionChannels }) => (

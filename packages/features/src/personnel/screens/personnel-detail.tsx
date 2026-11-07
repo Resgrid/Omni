@@ -62,7 +62,7 @@ export default function PersonnelDetailScreen({ userId: userIdProp, renderMap }:
     return (
       <View className="flex-1 bg-background-50" testID="personnel-detail-screen">
         <ScreenHeader title={t('personnel.details')} onBack={back} />
-        {isLoading && userId ? <Loading /> : <ZeroState icon={Users} heading={t('personnel.not_found')} testID="personnel-detail-missing" />}
+        {isLoading && userId ? <Loading /> : <ZeroState icon={Users} heading={t('personnel.not_found')} onRetry={userId ? refresh : undefined} testID="personnel-detail-missing" />}
       </View>
     );
   }

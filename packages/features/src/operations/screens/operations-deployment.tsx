@@ -103,6 +103,18 @@ function DeploymentWorkspace({ id, overrides, showHeader }: { id: string; overri
     };
   }, [id, caps.recordExpenses, caps.recordUsage, caps.draftF42]);
 
+  /** Retry after the deployment failed to load: the workspace's own loads most likely failed with it, so all of them run again. */
+  const retryLoad = useCallback(async () => {
+    const store = useOperationsStore.getState();
+    const options = { bypassCache: true };
+    await Promise.all([
+      store.loadDeployment(id, options),
+      store.loadTimeReports(id, options),
+      caps.recordExpenses ? store.loadExpenses(id, options) : undefined,
+      caps.recordUsage && store.costAccess?.Enabled ? store.loadUsage(id, options) : undefined,
+    ]);
+  }, [id, caps.recordExpenses, caps.recordUsage]);
+
   const timeAccess = deployment?.TimeAccess ?? null;
   const scopes = useMemo(() => (deployment ? availableScopes(deployment) : []), [deployment]);
   const names = useMemo(() => (deployment ? subjectNames(deployment) : {}), [deployment]);
@@ -180,7 +192,7 @@ function DeploymentWorkspace({ id, overrides, showHeader }: { id: string; overri
         {access && !access.Enabled ? (
           <ZeroState icon={BriefcaseBusiness} heading={t('operations.disabled')} testID="operations-access-disabled" />
         ) : loadErrorKey && !isLoading ? (
-          <ZeroState icon={BriefcaseBusiness} isError heading={t(`operations.errors.${loadErrorKey}`)} testID="operations-load-error" />
+          <ZeroState icon={BriefcaseBusiness} isError heading={t(`operations.errors.${loadErrorKey}`)} onRetry={retryLoad} testID="operations-load-error" />
         ) : (
           <Loading />
         )}

@@ -1471,7 +1471,8 @@
     "speaker": "Lautsprecher",
     "speaking": "Spricht",
     "title": "Sprachkanäle",
-    "unmute": "Stummschaltung aufheben"
+    "unmute": "Stummschaltung aufheben",
+    "join_failed": "Could not join the voice channel. Please try again."
   },
   "loading": {
     "loading": "Laden...",

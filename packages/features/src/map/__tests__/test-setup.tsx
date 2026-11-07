@@ -42,7 +42,23 @@ jest.mock('@resgrid/maps', () => {
     ...pinIds,
     ...poi,
     mockCamera,
-    MapView: ({ children, testID, onCameraChanged }: { children?: unknown; testID?: string; onCameraChanged?: unknown }) => mockReact.createElement(View, { testID, onCameraChanged }, children),
+    MapView: ({
+      children,
+      testID,
+      onCameraChanged,
+      scrollEnabled,
+      zoomEnabled,
+      rotateEnabled,
+      pitchEnabled,
+    }: {
+      children?: unknown;
+      testID?: string;
+      onCameraChanged?: unknown;
+      scrollEnabled?: boolean;
+      zoomEnabled?: boolean;
+      rotateEnabled?: boolean;
+      pitchEnabled?: boolean;
+    }) => mockReact.createElement(View, { testID, onCameraChanged, scrollEnabled, zoomEnabled, rotateEnabled, pitchEnabled }, children),
     Camera: mockReact.forwardRef(({ defaultSettings }: { defaultSettings?: { centerCoordinate?: number[]; zoomLevel?: number } }, ref: unknown) => {
       mockReact.useImperativeHandle(ref, () => mockCamera);
       return mockReact.createElement(Text, { testID: 'mock-camera' }, `${defaultSettings?.centerCoordinate?.join(',') ?? ''}@${defaultSettings?.zoomLevel ?? ''}`);

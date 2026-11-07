@@ -163,6 +163,13 @@ export default function InventoryCountScreen({ countId: countIdProp }: Inventory
             isError={!!loadError}
             heading={t('inventory.count')}
             description={loadError ? t(inventoryErrorKey(loadError), { defaultValue: t('inventory.errors.retry') }) : undefined}
+            onRetry={
+              countId
+                ? async () => {
+                    await useInventoryStore.getState().fetchCount(countId, { bypassCache: true });
+                  }
+                : undefined
+            }
             testID="inventory-count-missing"
           />
         )}

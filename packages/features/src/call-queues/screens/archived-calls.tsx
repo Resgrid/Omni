@@ -60,7 +60,8 @@ export default function ArchivedCallsScreen({ showHeader = true, now = Date.now 
 
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
-    void useArchivedCallsStore
+
+    return useArchivedCallsStore
       .getState()
       .fetchArchivedCalls()
       .finally(() => setIsRefreshing(false));
@@ -155,11 +156,12 @@ export default function ArchivedCallsScreen({ showHeader = true, now = Date.now 
     // Only the first load replaces the table; a refresh keeps the rows on screen.
     if (isLoading && archivedCalls.length === 0) return <Loading text={t('archived_calls.loading')} />;
 
-    if (error && archivedCalls.length === 0) return <ZeroState heading={t('common.errorOccurred')} description={t(error.messageKey)} isError />;
+    if (error && archivedCalls.length === 0) return <ZeroState heading={t('common.errorOccurred')} description={t(error.messageKey)} isError onRetry={handleRefresh} />;
 
-    if (archivedCalls.length === 0) return <ZeroState heading={t('archived_calls.no_archived_calls')} description={t('archived_calls.no_archived_calls_description', { year: selectedYear ?? '' })} icon={Archive} />;
+    if (archivedCalls.length === 0)
+      return <ZeroState heading={t('archived_calls.no_archived_calls')} description={t('archived_calls.no_archived_calls_description', { year: selectedYear ?? '' })} icon={Archive} onRetry={handleRefresh} />;
 
-    if (visible.length === 0) return <ZeroState heading={t('archived_calls.no_matches')} description={t('archived_calls.no_matches_description')} icon={Search} />;
+    if (visible.length === 0) return <ZeroState heading={t('archived_calls.no_matches')} description={t('archived_calls.no_matches_description')} icon={Search} onRetry={handleRefresh} />;
 
     return (
       <QueueTable

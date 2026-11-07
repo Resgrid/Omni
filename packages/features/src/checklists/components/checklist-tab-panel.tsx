@@ -28,18 +28,28 @@ export interface ChecklistListFooterProps {
   hasMore: boolean;
   isLoadingMore: boolean;
   onLoadMore: () => void;
+  /** Loads the list again; under the empty line it is a Refresh button (pull to refresh does nothing on web and Electron). */
+  onRefresh: () => void;
+  /** Whether the list is loading again (the Refresh button shows a spinner). */
+  refreshing: boolean;
   testID: string;
 }
 
-/** The empty line and the "Load more" button under a list. */
-export const ChecklistListFooter: React.FC<ChecklistListFooterProps> = ({ emptyText, hasMore, isLoadingMore, onLoadMore, testID }) => {
+/** The empty line with a Refresh button, and the "Load more" button, under a list. */
+export const ChecklistListFooter: React.FC<ChecklistListFooterProps> = ({ emptyText, hasMore, isLoadingMore, onLoadMore, onRefresh, refreshing, testID }) => {
   const { t } = useTranslation();
   return (
     <>
       {emptyText ? (
-        <Text className="py-6 text-center text-typography-500" testID={`${testID}-empty`}>
-          {emptyText}
-        </Text>
+        <View style={styles.empty}>
+          <Text className="mb-3 text-center text-typography-500" testID={`${testID}-empty`}>
+            {emptyText}
+          </Text>
+          <Button variant="outline" action="secondary" size="sm" className="self-center" isDisabled={refreshing} onPress={onRefresh} testID={`${testID}-refresh`}>
+            {refreshing ? <ButtonSpinner /> : null}
+            <ButtonText>{t('common.refresh')}</ButtonText>
+          </Button>
+        </View>
       ) : null}
       {hasMore ? (
         <Button variant="outline" size="sm" className="mt-1 self-center" isDisabled={isLoadingMore} onPress={onLoadMore} testID={`${testID}-more`}>
@@ -55,4 +65,5 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   header: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4 },
   content: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 48 },
+  empty: { paddingVertical: 24, alignItems: 'center' },
 });

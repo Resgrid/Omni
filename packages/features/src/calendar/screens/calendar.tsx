@@ -1,7 +1,7 @@
 import { type DataError, useCalendarStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import type { CalendarItemResultData } from '@resgrid/models';
-import { Button, ButtonText, FlatList, Loading, RefreshControl, TabBar, type TabBarItem, Text, View, ZeroState } from '@resgrid/ui';
+import { FlatList, Loading, RefreshControl, TabBar, type TabBarItem, Text, View, ZeroState } from '@resgrid/ui';
 import { CalendarDays } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet } from 'react-native';
@@ -105,13 +105,7 @@ export default function CalendarScreen({ initialTab = 'today' }: CalendarScreenP
   const renderList = (items: CalendarItemResultData[], isLoading: boolean, error: DataError | null, emptyTitleKey: string, emptyDescriptionKey: string, loadingKey: string, testID: string) => {
     if (isLoading && !isRefreshing && items.length === 0) return <Loading text={t(loadingKey)} />;
     if (error && items.length === 0) {
-      return (
-        <ZeroState heading={t('calendar.error.title')} description={t(error.messageKey)} isError testID={`${testID}-error`}>
-          <Button onPress={() => void handleRefresh()} className="mt-4" testID={`${testID}-retry`}>
-            <ButtonText>{t('common.retry')}</ButtonText>
-          </Button>
-        </ZeroState>
-      );
+      return <ZeroState heading={t('calendar.error.title')} description={t(error.messageKey)} isError onRetry={handleRefresh} retryTestID={`${testID}-retry`} testID={`${testID}-error`} />;
     }
     return (
       <FlatList
@@ -120,7 +114,7 @@ export default function CalendarScreen({ initialTab = 'today' }: CalendarScreenP
         renderItem={({ item }) => <CalendarCard item={item} onPress={openItem} />}
         contentContainerStyle={styles.list}
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => void handleRefresh()} />}
-        ListEmptyComponent={<ZeroState icon={CalendarDays} heading={t(emptyTitleKey)} description={t(emptyDescriptionKey)} testID={`${testID}-empty`} />}
+        ListEmptyComponent={<ZeroState icon={CalendarDays} heading={t(emptyTitleKey)} description={t(emptyDescriptionKey)} onRetry={handleRefresh} testID={`${testID}-empty`} />}
         testID={testID}
       />
     );

@@ -68,11 +68,7 @@ export default function CertificationsListScreen({ onOpenCertification }: Certif
       {isLoading && !isRefreshing && items.length === 0 ? (
         <Loading />
       ) : error && items.length === 0 ? (
-        <ZeroState isError heading={t('certifications.loadFailed')} description={t(certificationErrorKey(error))} testID="certifications-error">
-          <Button className="mt-4" onPress={() => void handleRefresh()} testID="certifications-retry">
-            <ButtonText>{t('common.retry')}</ButtonText>
-          </Button>
-        </ZeroState>
+        <ZeroState isError heading={t('certifications.loadFailed')} description={t(certificationErrorKey(error))} onRetry={handleRefresh} retryTestID="certifications-retry" testID="certifications-error" />
       ) : (
         <FlatList
           data={items}
@@ -81,7 +77,7 @@ export default function CertificationsListScreen({ onOpenCertification }: Certif
           refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => void handleRefresh()} />}
           ListHeaderComponent={header}
           ListEmptyComponent={
-            <ZeroState icon={Award} heading={t('certifications.none')} description={t('certifications.noneHint')} testID="certifications-empty">
+            <ZeroState icon={Award} heading={t('certifications.none')} description={t('certifications.noneHint')} onRetry={handleRefresh} testID="certifications-empty">
               <Button className="mt-4" onPress={add} testID="certifications-empty-add">
                 <ButtonText>{t('certifications.add')}</ButtonText>
               </Button>

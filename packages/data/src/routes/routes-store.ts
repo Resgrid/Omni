@@ -265,12 +265,12 @@ export const useRoutesStore = create<RoutesState>()(
             { trailing: options?.bypassCache === true }
           );
         },
-        fetchRoutePlan: async (routePlanId) => {
+        fetchRoutePlan: async (routePlanId, options) => {
           await runner.run(
             'plan',
             async () => unwrapItem(await getRoutePlan(ctx(), { id: routePlanId })),
             (activePlan) => ({ activePlan }),
-            { flightKey: `plan:${routePlanId}` }
+            { flightKey: `plan:${routePlanId}`, trailing: options?.bypassCache === true }
           );
         },
 
@@ -349,12 +349,12 @@ export const useRoutesStore = create<RoutesState>()(
             }
           );
         },
-        fetchStopsForInstance: async (instanceId) => {
+        fetchStopsForInstance: async (instanceId, options) => {
           await runner.run(
             'stops',
             async () => unwrapList(await getStopsForInstance(ctx(), { instanceId })),
             (stopDetails) => ({ stopDetails }),
-            { flightKey: `stops:${instanceId}` }
+            { flightKey: `stops:${instanceId}`, trailing: options?.bypassCache === true }
           );
         },
         fetchDirections: async (instanceId, position) => {
@@ -414,7 +414,7 @@ export const useRoutesStore = create<RoutesState>()(
           );
           return result.ok ? (result.value ?? cached ?? null) : (cached ?? null);
         },
-        fetchInstanceDetail: async (instanceId) => {
+        fetchInstanceDetail: async (instanceId, options) => {
           const result = await runner.run(
             'instanceDetail',
             async (): Promise<RouteInstanceDetail> => {
@@ -422,7 +422,7 @@ export const useRoutesStore = create<RoutesState>()(
               return { progress: unwrapItem(progressResult), stops: unwrapList(stopsResult) };
             },
             (detail, state) => ({ instanceDetailsById: keepNewest({ ...withoutKey(state.instanceDetailsById, instanceId), [instanceId]: detail }, INSTANCE_DETAILS_MAX) }),
-            { flightKey: `instanceDetail:${instanceId}` }
+            { flightKey: `instanceDetail:${instanceId}`, trailing: options?.bypassCache === true }
           );
           return result.ok ? result.value : (get().instanceDetailsById[instanceId] ?? null);
         },

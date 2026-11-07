@@ -140,7 +140,7 @@ function ChatConversationContent({ channelId, keyboardOffset = 0 }: { channelId:
         {isLoading && ordered.length === 0 ? (
           <Loading />
         ) : ordered.length === 0 ? (
-          <ZeroState icon={MessagesSquare} heading={t('chat.no_messages')} testID="chat-conversation-empty" />
+          <ZeroState icon={MessagesSquare} heading={t('chat.no_messages')} onRetry={() => useChatStore.getState().loadInitialMessages(channelId, { bypassCache: true })} testID="chat-conversation-empty" />
         ) : (
           <FlatList
             data={ordered}

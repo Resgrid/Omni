@@ -57,11 +57,19 @@ export default function WeatherAlertDetailScreen({ alertId: alertIdProp, renderM
   const back = () => (router.canGoBack() ? router.back() : router.replace('/weather-alerts'));
   const current = alert ?? cached;
 
+  // The store keeps the alert it fetches, and `cached` reads it for the current id: nothing is written here, so a retry that
+  // settles after the screen moved to another alert cannot show the old one.
+  const reload = async () => {
+    if (!alertId) return;
+
+    await useWeatherAlertsStore.getState().fetchAlertDetail(alertId, { bypassCache: true });
+  };
+
   if (!current) {
     return (
       <View className="flex-1 bg-background-50" testID="weather-alert-detail-screen">
         <ScreenHeader title={t('weather_alerts.title')} onBack={back} />
-        {isLoading ? <Loading text={t('weather_alerts.loading')} /> : <ZeroState icon={CloudSun} heading={t('weather_alerts.not_found')} testID="weather-alert-detail-missing" />}
+        {isLoading ? <Loading text={t('weather_alerts.loading')} /> : <ZeroState icon={CloudSun} heading={t('weather_alerts.not_found')} onRetry={alertId ? reload : undefined} testID="weather-alert-detail-missing" />}
       </View>
     );
   }

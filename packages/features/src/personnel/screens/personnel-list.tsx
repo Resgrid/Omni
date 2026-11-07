@@ -89,7 +89,7 @@ export default function PersonnelListScreen({ onSelectPerson }: PersonnelListScr
       {isLoading && !isRefreshing && personnel.length === 0 ? (
         <Loading />
       ) : visible.length === 0 ? (
-        <ZeroState icon={Users} heading={showError ? undefined : t('personnel.empty')} isError={showError} testID="personnel-empty" />
+        <ZeroState icon={Users} heading={showError ? undefined : t('personnel.empty')} isError={showError} onRetry={handleRefresh} testID="personnel-empty" />
       ) : (
         <FlatList
           data={visible}

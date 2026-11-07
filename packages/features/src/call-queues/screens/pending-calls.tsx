@@ -51,7 +51,8 @@ export default function PendingCallsScreen({ showHeader = true, realtime = true 
 
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
-    void refresh().finally(() => setIsRefreshing(false));
+
+    return refresh().finally(() => setIsRefreshing(false));
   }, [refresh]);
 
   const visible = useMemo(() => pendingCalls.filter((call) => matchesQueueQuery(call, query)), [pendingCalls, query]);
@@ -106,9 +107,9 @@ export default function PendingCallsScreen({ showHeader = true, realtime = true 
     // Only the first load replaces the table; a refresh from a push keeps the rows on screen.
     if (isLoading && pendingCalls.length === 0) return <Loading text={t('pending_calls.loading')} />;
 
-    if (error && pendingCalls.length === 0) return <ZeroState heading={t('common.errorOccurred')} description={t(error.messageKey)} isError />;
+    if (error && pendingCalls.length === 0) return <ZeroState heading={t('common.errorOccurred')} description={t(error.messageKey)} isError onRetry={handleRefresh} />;
 
-    if (visible.length === 0) return <ZeroState heading={t('pending_calls.no_pending_calls')} description={t('pending_calls.no_pending_calls_description')} icon={Hourglass} />;
+    if (visible.length === 0) return <ZeroState heading={t('pending_calls.no_pending_calls')} description={t('pending_calls.no_pending_calls_description')} icon={Hourglass} onRetry={handleRefresh} />;
 
     return (
       <QueueTable

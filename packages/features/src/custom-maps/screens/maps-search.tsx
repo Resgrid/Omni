@@ -49,6 +49,8 @@ export default function MapsSearchScreen() {
     timer.current = setTimeout(() => void useCustomMapsStore.getState().searchMapFeatures(text, nextScope), MAP_SEARCH_DEBOUNCE_MS);
   }, []);
 
+  const searchAgain = () => useCustomMapsStore.getState().searchMapFeatures(query, scope);
+
   const changeScope = (next: MapFeatureSearchScope) => {
     setScope(next);
     search(query, next);
@@ -98,7 +100,9 @@ export default function MapsSearchScreen() {
       </VStack>
       <ScrollView contentContainerStyle={styles.results} keyboardShouldPersistTaps="handled">
         {isLoading && results.length === 0 ? <Loading text={t('maps.loading')} /> : null}
-        {!isLoading && query.trim() && results.length === 0 ? <ZeroState icon={Search} isError={hasError} heading={hasError ? t('maps.error_loading') : t('maps.no_results')} testID="maps-search-empty" /> : null}
+        {!isLoading && query.trim() && results.length === 0 ? (
+          <ZeroState icon={Search} isError={hasError} heading={hasError ? t('maps.error_loading') : t('maps.no_results')} onRetry={searchAgain} testID="maps-search-empty" />
+        ) : null}
         {results.map((item) => {
           const indoor = item.FeatureType === 'indoor_zone';
           return (

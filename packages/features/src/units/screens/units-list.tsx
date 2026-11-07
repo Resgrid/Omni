@@ -94,7 +94,7 @@ export default function UnitsListScreen({ onSelectUnit }: UnitsListScreenProps) 
       {isLoading && !isRefreshing && unitInfos.length === 0 ? (
         <Loading />
       ) : units.length === 0 ? (
-        <ZeroState icon={Truck} heading={showError ? undefined : t('units.empty')} isError={showError} testID="units-empty" />
+        <ZeroState icon={Truck} heading={showError ? undefined : t('units.empty')} isError={showError} onRetry={handleRefresh} testID="units-empty" />
       ) : (
         <FlatList
           data={units}

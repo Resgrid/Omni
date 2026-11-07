@@ -22,6 +22,7 @@ import { CALL_RECORDS_TAB, configureRecords, registerRecordsContextHook } from '
 import { registerRunCardCallDetailTab, registerRunCardHookPoints } from '@resgrid/features/runcards';
 import { configureSettings } from '@resgrid/features/settings';
 import { StatusTimerBanner, StatusTimerNotifications, unitStatusRoutes, UnitStatusSidebar } from '@resgrid/features/unit-status';
+import { AudioStreamSheet, VoiceChannelSheet } from '@resgrid/features/voice';
 import { FullScreenLocationPicker, StaticMap } from '@resgrid/maps';
 import { configureNotificationSounds } from '@resgrid/notifications';
 import { playAudioClip } from '@resgrid/voice';
@@ -99,6 +100,12 @@ registerShellOverlay('step-up-prompt', StepUpPromptHost);
 
 // Opens the approve screen when a sign-in request is waiting (inert without capabilities.push.approveSignIns).
 registerShellOverlay('pending-approval', PendingApprovalWatcher);
+
+// The voice channels and audio streams sheets, opened through their stores from any button (Unit's sidebar): mounted
+// once here so two can never stack. The voice sheet renders nothing without capabilities.voice.ptt.
+registerShellOverlay('voice-channels', VoiceChannelSheet);
+
+registerShellOverlay('audio-streams', AudioStreamSheet);
 
 // Dispatch's awaiting-resources sync and unit-available alerts, and its banner (inert without calls.runCards + flags).
 registerShellOverlay('awaiting-resources', AwaitingResourcesHost);

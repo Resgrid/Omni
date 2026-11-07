@@ -116,7 +116,7 @@ jest.mock('@react-native-community/netinfo', () => ({
   useNetInfo: jest.fn(() => ({ isConnected: true, isInternetReachable: true })),
 }));
 
-// LiveKit (voice) has native modules: a small zustand stand-in with the fields the console reads.
+// LiveKit and the audio streams (voice) have native modules: small zustand stand-ins with the fields the console reads.
 jest.mock('@resgrid/voice', () => {
   const { create } = require('zustand');
   const mockLiveKitStore = create(() => ({
@@ -126,8 +126,14 @@ jest.mock('@resgrid/voice', () => {
     ensureMicrophonePermission: jest.fn(async () => 'granted'),
     setIsBottomSheetVisible: jest.fn(),
   }));
-  return { useLiveKitStore: mockLiveKitStore };
+  const noStream: { Id: string; Name: string } | null = null;
+  const mockAudioStreamStore = create(() => ({ currentStream: noStream, isPlaying: false, setIsBottomSheetVisible: jest.fn() }));
+
+  return { useLiveKitStore: mockLiveKitStore, useAudioStreamStore: mockAudioStreamStore };
 });
+
+// The map feature's barrel brings the map screen (MapLibre); the console only needs the map-lock preference, real.
+jest.mock('@resgrid/features/map', () => require('../../map/hooks/use-map-lock'));
 
 // Device notifications: the scheduler is recorded and exact alarms are drivable (`jest.requireMock(...).mockExactAlarms`);
 // the gate is the real rule (the active manifest has the unit status console). The real package pulls in analytics.

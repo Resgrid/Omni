@@ -1,4 +1,4 @@
-import { checkInAtStop, checkOutFromStop, endRoute, getActiveRouteForUnit, getInstanceDirections, getRoutePlans, getRouteProgress, pauseRoute, resumeRoute, startRoute } from '@resgrid/api';
+import { checkInAtStop, checkOutFromStop, endRoute, getActiveRouteForUnit, getInstanceDirections, getRoutePlans, getRouteProgress, getStopsForInstance, pauseRoute, resumeRoute, startRoute } from '@resgrid/api';
 import type { RouteInstanceResultData, RouteProgressResultData } from '@resgrid/models';
 import { defaultResetRegistry } from '@resgrid/offline';
 
@@ -151,6 +151,31 @@ describe('routes store: RD11–RD13 defects fixed', () => {
     expect(getRoutePlans).toHaveBeenLastCalledWith(expect.anything(), { forceRefresh: false });
     await useRoutesStore.getState().fetchAllRoutePlans({ bypassCache: true });
     expect(getRoutePlans).toHaveBeenLastCalledWith(expect.anything(), { forceRefresh: true });
+  });
+
+  it('a stops refresh while a read is out queues a fresh read instead of sharing it (a stop added meanwhile shows up)', async () => {
+    // SAFETY: GetStopsForInstance envelopes carrying only the field this test reads, each stop's RouteStopId.
+    const before = ok([{ RouteStopId: 's-1' }]) as never;
+    // SAFETY: as above.
+    const after = ok([{ RouteStopId: 's-1' }, { RouteStopId: 's-2' }]) as never;
+    let answerFirst: () => void = () => undefined;
+    jest
+      .mocked(getStopsForInstance)
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            answerFirst = () => resolve(before);
+          })
+      )
+      .mockResolvedValueOnce(after);
+
+    const first = useRoutesStore.getState().fetchStopsForInstance('ri-1');
+    const refresh = useRoutesStore.getState().fetchStopsForInstance('ri-1', { bypassCache: true });
+    answerFirst();
+    await Promise.all([first, refresh]);
+
+    expect(getStopsForInstance).toHaveBeenCalledTimes(2);
+    expect(useRoutesStore.getState().stopDetails.map((detail) => detail.RouteStopId)).toEqual(['s-1', 's-2']);
   });
 
   it('RD11: directions are requested from the unit position (passed, else the last known fix)', async () => {

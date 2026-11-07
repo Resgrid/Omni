@@ -27,11 +27,13 @@ export default function CommandLogScreen({ callId: callIdProp }: CommandLogScree
   const fetchTimeline = useCommandStore((state) => state.fetchTimeline);
   const [query, setQuery] = useState('');
 
-  const load = useCallback(() => {
-    if (callId) void fetchTimeline(callId);
+  const load = useCallback(async () => {
+    if (callId) await fetchTimeline(callId);
   }, [callId, fetchTimeline]);
 
-  useEffect(load, [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   const rows = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase();
@@ -65,7 +67,7 @@ export default function CommandLogScreen({ callId: callIdProp }: CommandLogScree
               </View>
             )}
             refreshControl={<RefreshControl refreshing={isLoading} onRefresh={load} />}
-            ListEmptyComponent={<ZeroState icon={ScrollText} heading={t('incident_command.no_log')} testID="command-log-empty" />}
+            ListEmptyComponent={<ZeroState icon={ScrollText} heading={t('incident_command.no_log')} onRetry={load} testID="command-log-empty" />}
             testID="command-log-list"
           />
         </>

@@ -2,27 +2,7 @@ import { useTerm } from '@resgrid/auth';
 import { useShiftsStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import type { PendingShiftSignupResultData, ShiftDayResultData, ShiftResultData, ShiftTradeResultData } from '@resgrid/models';
-import {
-  Button,
-  ButtonText,
-  FlatList,
-  HStack,
-  Input,
-  InputField,
-  InputIcon,
-  InputSlot,
-  Loading,
-  Pressable,
-  RefreshControl,
-  ScrollRow,
-  TabBar,
-  type TabBarItem,
-  Text,
-  useThemeColors,
-  View,
-  VStack,
-  ZeroState,
-} from '@resgrid/ui';
+import { FlatList, HStack, Input, InputField, InputIcon, InputSlot, Loading, Pressable, RefreshControl, ScrollRow, TabBar, type TabBarItem, Text, useThemeColors, View, VStack, ZeroState } from '@resgrid/ui';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { CalendarDays, Info, Search, X } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
@@ -106,9 +86,8 @@ export default function ShiftsScreen({ initialView }: ShiftsScreenProps) {
 
   const changeView = setView;
 
-  const refresh = useCallback(() => {
-    void loadShiftView(activeView, { bypassCache: true }, calendar);
-    if (activeView !== 'approvals') void useShiftsStore.getState().fetchPendingApprovals();
+  const refresh = useCallback(async () => {
+    await Promise.all([loadShiftView(activeView, { bypassCache: true }, calendar), activeView === 'approvals' ? undefined : useShiftsStore.getState().fetchPendingApprovals()]);
   }, [activeView, calendar]);
 
   // The page tab strip: pills that scroll on a phone, with edge chevrons while views are off-screen.
@@ -198,13 +177,7 @@ export default function ShiftsScreen({ initialView }: ShiftsScreenProps) {
     return (errors as Record<string, unknown>)[slice] ? 'error' : null;
   };
 
-  const errorState = (
-    <ZeroState isError heading={t('shifts.load_error')} description={t('errors.data.unknown')} testID="shifts-error">
-      <Button onPress={refresh} className="mt-4" testID="shifts-retry">
-        <ButtonText>{t('common.retry')}</ButtonText>
-      </Button>
-    </ZeroState>
-  );
+  const errorState = <ZeroState isError heading={t('shifts.load_error')} description={t('errors.data.unknown')} onRetry={refresh} retryTestID="shifts-retry" testID="shifts-error" />;
 
   const content = () => {
     switch (activeView) {
@@ -226,7 +199,7 @@ export default function ShiftsScreen({ initialView }: ShiftsScreenProps) {
               )
             }
             contentContainerStyle={styles.list}
-            refreshControl={<RefreshControl refreshing={false} onRefresh={refresh} />}
+            refreshControl={<RefreshControl refreshing={false} onRefresh={() => void refresh()} />}
             ListHeaderComponent={
               standingShifts.length > 0 ? (
                 <VStack className="mb-2">
@@ -239,7 +212,7 @@ export default function ShiftsScreen({ initialView }: ShiftsScreenProps) {
                 </VStack>
               ) : null
             }
-            ListEmptyComponent={<ZeroState icon={CalendarDays} heading={t('shifts.empty.mine_title')} description={t('shifts.empty.mine_description')} testID="shifts-mine-empty" />}
+            ListEmptyComponent={<ZeroState icon={CalendarDays} heading={t('shifts.empty.mine_title')} description={t('shifts.empty.mine_description')} onRetry={refresh} testID="shifts-mine-empty" />}
             testID="shifts-mine-list"
           />
         );
@@ -254,7 +227,7 @@ export default function ShiftsScreen({ initialView }: ShiftsScreenProps) {
             keyExtractor={dayKey}
             renderItem={renderDay}
             contentContainerStyle={styles.list}
-            refreshControl={<RefreshControl refreshing={false} onRefresh={refresh} />}
+            refreshControl={<RefreshControl refreshing={false} onRefresh={() => void refresh()} />}
             ListHeaderComponent={
               <VStack space="xs" className="mb-2">
                 <Text size="sm" className="text-typography-600">
@@ -266,7 +239,7 @@ export default function ShiftsScreen({ initialView }: ShiftsScreenProps) {
                 </HStack>
               </VStack>
             }
-            ListEmptyComponent={<ZeroState icon={CalendarDays} heading={t('shifts.empty.signup_title')} description={t('shifts.empty.signup_description')} testID="shifts-signup-empty" />}
+            ListEmptyComponent={<ZeroState icon={CalendarDays} heading={t('shifts.empty.signup_title')} description={t('shifts.empty.signup_description')} onRetry={refresh} testID="shifts-signup-empty" />}
             testID="shifts-signup-list"
           />
         );
@@ -282,7 +255,7 @@ export default function ShiftsScreen({ initialView }: ShiftsScreenProps) {
               </View>
             )}
             contentContainerStyle={styles.calendar}
-            refreshControl={<RefreshControl refreshing={false} onRefresh={refresh} />}
+            refreshControl={<RefreshControl refreshing={false} onRefresh={() => void refresh()} />}
             ListHeaderComponent={
               <VStack space="sm">
                 <HStack className="items-center pr-4">
@@ -350,8 +323,8 @@ export default function ShiftsScreen({ initialView }: ShiftsScreenProps) {
             keyExtractor={dayKey}
             renderItem={renderDay}
             contentContainerStyle={styles.list}
-            refreshControl={<RefreshControl refreshing={false} onRefresh={refresh} />}
-            ListEmptyComponent={<ZeroState icon={CalendarDays} heading={t('shifts.no_shifts_today')} description={t('shifts.no_shifts_today_description')} testID="shifts-today-empty" />}
+            refreshControl={<RefreshControl refreshing={false} onRefresh={() => void refresh()} />}
+            ListEmptyComponent={<ZeroState icon={CalendarDays} heading={t('shifts.no_shifts_today')} description={t('shifts.no_shifts_today_description')} onRetry={refresh} testID="shifts-today-empty" />}
             testID="shifts-today-list"
           />
         );
