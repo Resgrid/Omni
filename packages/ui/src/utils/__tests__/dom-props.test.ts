@@ -44,18 +44,36 @@ describe('toDomProps', () => {
 
   // A shared Text with onPress (an "Open check-ins" link) did nothing on the web: the span got an unknown onPress prop.
   describe('onPress', () => {
+    interface KeyEvent {
+      key: string;
+      defaultPrevented: boolean;
+      preventDefault: () => void;
+    }
+
     interface PressResult {
       role?: string;
       tabIndex?: number;
       onClick?: () => void;
-      onKeyDown?: (event: { key: string; preventDefault: () => void }) => void;
+      onKeyDown?: (event: KeyEvent) => void;
       onPress?: unknown;
       style?: { cursor?: string; color?: string };
     }
 
     // SAFETY: toDomProps adds these props for an onPress (pressDomProps); DomProps<T> only types the caller's own props.
     const pressResult = <T extends object>(props: T) => toDomProps(props) as PressResult;
-    const key = (name: string) => ({ key: name, preventDefault: jest.fn() });
+
+    // As a DOM event: preventDefault() marks it defaultPrevented.
+    const key = (name: string) => {
+      const event = {
+        key: name,
+        defaultPrevented: false,
+        preventDefault: jest.fn(() => {
+          event.defaultPrevented = true;
+        }),
+      };
+
+      return event;
+    };
 
     it('becomes a focusable, clickable button that Enter and Space press', () => {
       const onPress = jest.fn();
@@ -90,6 +108,32 @@ describe('toDomProps', () => {
 
       expect(result).not.toHaveProperty('onClick');
       expect(result).not.toHaveProperty('tabIndex');
+    });
+
+    it('does nothing while aria-disabled, as a boolean or as the string "true"', () => {
+      for (const ariaDisabled of [true, 'true']) {
+        const result = pressResult({ onPress: jest.fn(), 'aria-disabled': ariaDisabled });
+
+        expect(result).not.toHaveProperty('onClick');
+        expect(result).not.toHaveProperty('tabIndex');
+      }
+    });
+
+    // A caller's onKeyDown for another key replaced the generated one: a focusable button that Enter could not press.
+    it('runs a caller onKeyDown first and still presses on Enter unless it called preventDefault', () => {
+      const onPress = jest.fn();
+      const callerKeyDown = jest.fn();
+      const result = pressResult({ onPress, onKeyDown: callerKeyDown });
+      const enter = key('Enter');
+
+      result.onKeyDown?.(enter);
+      expect(callerKeyDown).toHaveBeenCalledWith(enter);
+      expect(onPress).toHaveBeenCalledTimes(1);
+
+      const cancelling = pressResult({ onPress, onKeyDown: (event: KeyEvent) => event.preventDefault() });
+
+      cancelling.onKeyDown?.(key('Enter'));
+      expect(onPress).toHaveBeenCalledTimes(1);
     });
 
     it('lets a web-only onClick win and drops the press events the DOM has no name for', () => {

@@ -272,17 +272,29 @@ describe('UnitStatusSidebar', () => {
     expect(widthOf('checklists')).toBe('50%');
   });
 
-  // The half-width card is too narrow for three 36 pt buttons and their margins (126 pt): they shrink, never wrap.
+  // The half-width card is too narrow for three 36 pt buttons and their margins (132 pt): they shrink rather than wrap,
+  // and each one's hit slop stays inside its own slot so neighbouring targets never overlap.
   it('keeps the unit card’s round buttons on one row in a narrow card', async () => {
     await renderSidebar();
     const row = screen.getByTestId('unit-summary-card-buttons');
     expect(StyleSheet.flatten(row.props.style)).toMatchObject({ flexDirection: 'row', justifyContent: 'flex-start' });
     expect(StyleSheet.flatten(row.props.style).flexWrap).toBeUndefined();
     await fireEvent(row, 'layout', { nativeEvent: { layout: { x: 0, y: 0, width: 120, height: 40 } } });
+    expect(StyleSheet.flatten(screen.getByTestId('unit-summary-card-buttons').props.style).flexWrap).toBeUndefined();
 
     for (const id of ['map-lock', 'audio-streams', 'voice']) {
-      expect(StyleSheet.flatten(screen.getByTestId(`unit-summary-card-${id}`).props.style).width).toBe(34);
+      const button = screen.getByTestId(`unit-summary-card-${id}`);
+      expect(StyleSheet.flatten(button.props.style).width).toBe(32);
+      expect(button.props.hitSlop).toEqual({ top: 6, bottom: 6, left: 4, right: 4 });
     }
+  });
+
+  // Three 24 pt buttons and their margins need 96 pt: a narrower card wraps them instead of letting them run out of it.
+  it('wraps the unit card’s round buttons only when even the smallest size does not fit', async () => {
+    await renderSidebar();
+    await fireEvent(screen.getByTestId('unit-summary-card-buttons'), 'layout', { nativeEvent: { layout: { x: 0, y: 0, width: 80, height: 40 } } });
+    expect(StyleSheet.flatten(screen.getByTestId('unit-summary-card-buttons').props.style).flexWrap).toBe('wrap');
+    expect(StyleSheet.flatten(screen.getByTestId('unit-summary-card-voice').props.style).width).toBe(24);
   });
 
   it('opens a flag-enabled quick action and closes the drawer', async () => {

@@ -4,7 +4,7 @@ import { ActionBaseTypes } from '@resgrid/features/status';
 import type { CallResultData } from '@resgrid/models';
 
 import { callDestinationTarget, callLocationTarget, isUsablePoint } from '../lib/call-location';
-import { consoleMetrics, fitRoundButtonSize, MIN_ROUND_BUTTON_SIZE } from '../lib/console-layout';
+import { consoleMetrics, fitRoundButtonSize, MIN_ROUND_BUTTON_SIZE, MIN_TOUCH_TARGET, roundButtonRow } from '../lib/console-layout';
 import { visibleQuickActions } from '../lib/quick-actions';
 import { resolveUnitStatusDisplay, statusStyleColor } from '../lib/status-display';
 import { unitStatusRoutes } from '../routes';
@@ -128,6 +128,34 @@ describe('fitRoundButtonSize', () => {
 
   it('never shrinks them below the minimum', () => {
     expect(fitRoundButtonSize(36, 60, 3, 3)).toBe(MIN_ROUND_BUTTON_SIZE);
+  });
+});
+
+describe('roundButtonRow', () => {
+  // The sidebar's 36 pt buttons in 44 pt slots (4 pt either side): full 44 pt targets, none reaching into the next.
+  it('gives the preferred size full, separate 44 pt targets', () => {
+    const row = roundButtonRow(36, 200, 3, 4);
+
+    expect(row).toEqual({ size: 36, wraps: false, hitSlop: { top: 4, bottom: 4, left: 4, right: 4 } });
+    expect(row.size + 4 + 4).toBe(MIN_TOUCH_TARGET);
+  });
+
+  // 44 pt of slop on shrunk buttons overlapped their neighbours, so a touch at one's edge could press the next.
+  it('keeps a shrunk button 44 pt tall to the finger but its target inside its own slot', () => {
+    const row = roundButtonRow(36, 100, 3, 4);
+
+    expect(row).toEqual({ size: 25, wraps: false, hitSlop: { top: 10, bottom: 10, left: 4, right: 4 } });
+    expect(row.size + 10 + 10).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
+    expect(row.size + 4 + 4).toBeLessThanOrEqual(Math.floor(100 / 3));
+  });
+
+  // Three 24 pt buttons in their slots need 96 pt: an 80 pt row wraps rather than running out of the card.
+  it('wraps a row too narrow for the smallest buttons, and keeps their targets apart up and down too', () => {
+    expect(roundButtonRow(36, 80, 3, 4)).toEqual({ size: MIN_ROUND_BUTTON_SIZE, wraps: true, hitSlop: { top: 4, bottom: 4, left: 4, right: 4 } });
+  });
+
+  it('adds no slop to a button already a full target, and never wraps a row not measured yet', () => {
+    expect(roundButtonRow(48, 0, 3, 4)).toEqual({ size: 48, wraps: false, hitSlop: undefined });
   });
 });
 

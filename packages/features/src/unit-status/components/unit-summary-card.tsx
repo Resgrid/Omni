@@ -7,9 +7,9 @@ import { HStack, Pressable, Text, TypeIcon, View } from '@resgrid/ui';
 import { useAudioStreamStore, useLiveKitStore } from '@resgrid/voice';
 import { Lock, type LucideIcon, Mic, Phone, Radio, Truck, Unlock } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
-import { type LayoutChangeEvent, StyleSheet } from 'react-native';
+import { type Insets, type LayoutChangeEvent, StyleSheet } from 'react-native';
 
-import { fitRoundButtonSize } from '../lib/console-layout';
+import { roundButtonRow } from '../lib/console-layout';
 
 export interface UnitSummaryCardProps {
   unit: UnitResultData | null;
@@ -22,34 +22,34 @@ export interface UnitSummaryCardProps {
   testID?: string;
 }
 
-/** Round buttons smaller than a touch target get the rest as hit slop, so every one is at least 44 pt to the finger. */
-const MIN_TOUCH = 44;
-
 const ACTIVE_COLOR = '#2563eb';
 
-/** Space on either side of each round button (margins rather than `gap`: web/Electron-safe). */
-const SLOT_MARGIN = 3;
+/**
+ * Space on either side of each round button (margins rather than `gap`: web/Electron-safe). At the sidebar's 36 pt a
+ * slot is 44 pt wide, so each button's hit slop makes it a full, separate 44 pt target.
+ */
+const SLOT_MARGIN = 4;
 
 interface RoundButtonProps {
   icon: LucideIcon;
   active: boolean;
   size: number;
   iconSize: number;
+  /** Up to a 44 pt target, inside its own slot (`roundButtonRow`). */
+  hitSlop: Insets | undefined;
   label: string;
   onPress: () => void;
   testID: string;
 }
 
-function RoundButton({ icon: Icon, active, size, iconSize, label, onPress, testID }: RoundButtonProps) {
-  const slop = Math.max(0, Math.ceil((MIN_TOUCH - size) / 2));
-
+function RoundButton({ icon: Icon, active, size, iconSize, hitSlop, label, onPress, testID }: RoundButtonProps) {
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ selected: active }}
-      hitSlop={slop > 0 ? slop : undefined}
+      hitSlop={hitSlop}
       testID={testID}
       style={StyleSheet.flatten([styles.round, { width: size, height: size, borderRadius: size / 2 }, active ? styles.roundActive : null])}
     >
@@ -66,7 +66,7 @@ function RoundButton({ icon: Icon, active, size, iconSize, label, onPress, testI
  * follows the vehicle), the department's audio streams, and the voice channels (variant `voice.ptt`). The audio and
  * voice buttons open the shell's sheets (`@resgrid/features/voice`); each lights up while its stream plays / channel is
  * joined. The buttons share one row under the name, starting at its left edge, and shrink to fit a narrow card (the
- * sidebar's half-width one) instead of wrapping.
+ * sidebar's half-width one) instead of wrapping; only a card too narrow for even the smallest size wraps them.
  */
 export const UnitSummaryCard: React.FC<UnitSummaryCardProps> = ({ unit, unitInfo, buttonSize = 44, iconSize = 18, fill = false, testID = 'unit-summary-card' }) => {
   const { t } = useTranslation();
@@ -82,7 +82,7 @@ export const UnitSummaryCard: React.FC<UnitSummaryCardProps> = ({ unit, unitInfo
 
   const showMapLock = status.subject === 'unit';
   const buttonCount = (showMapLock ? 1 : 0) + 1 + (voice.ptt ? 1 : 0);
-  const size = fitRoundButtonSize(buttonSize, rowWidth, buttonCount, SLOT_MARGIN);
+  const { size, wraps, hitSlop } = roundButtonRow(buttonSize, rowWidth, buttonCount, SLOT_MARGIN);
   const glyphSize = Math.min(iconSize, Math.round(size / 2));
 
   const name = unit?.Name || unitInfo?.Name || t('common.no_unit');
@@ -117,7 +117,7 @@ export const UnitSummaryCard: React.FC<UnitSummaryCardProps> = ({ unit, unitInfo
           ) : null}
         </HStack>
       ) : null}
-      <View style={styles.buttons} onLayout={onRowLayout} testID={`${testID}-buttons`}>
+      <View style={wraps ? styles.buttonsWrapped : styles.buttons} onLayout={onRowLayout} testID={`${testID}-buttons`}>
         {showMapLock ? (
           <View style={styles.buttonSlot}>
             <RoundButton
@@ -125,6 +125,7 @@ export const UnitSummaryCard: React.FC<UnitSummaryCardProps> = ({ unit, unitInfo
               active={isMapLocked}
               size={size}
               iconSize={glyphSize}
+              hitSlop={hitSlop}
               label={isMapLocked ? t('map.unlock_map') : t('map.lock_map')}
               onPress={toggleMapLock}
               testID={`${testID}-map-lock`}
@@ -132,11 +133,11 @@ export const UnitSummaryCard: React.FC<UnitSummaryCardProps> = ({ unit, unitInfo
           </View>
         ) : null}
         <View style={styles.buttonSlot}>
-          <RoundButton icon={Radio} active={isStreamPlaying} size={size} iconSize={glyphSize} label={t('audio_streams.title')} onPress={openAudioStreamSheet} testID={`${testID}-audio-streams`} />
+          <RoundButton icon={Radio} active={isStreamPlaying} size={size} iconSize={glyphSize} hitSlop={hitSlop} label={t('audio_streams.title')} onPress={openAudioStreamSheet} testID={`${testID}-audio-streams`} />
         </View>
         {voice.ptt ? (
           <View style={styles.buttonSlot}>
-            <RoundButton icon={Phone} active={isConnected} size={size} iconSize={glyphSize} label={t('livekit.title')} onPress={() => void openVoiceChannelSheet()} testID={`${testID}-voice`} />
+            <RoundButton icon={Phone} active={isConnected} size={size} iconSize={glyphSize} hitSlop={hitSlop} label={t('livekit.title')} onPress={() => void openVoiceChannelSheet()} testID={`${testID}-voice`} />
           </View>
         ) : null}
       </View>
@@ -146,8 +147,10 @@ export const UnitSummaryCard: React.FC<UnitSummaryCardProps> = ({ unit, unitInfo
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  // One row, never wrapped; it pulls back the outer slots' margins so the buttons line up with the text above.
+  // One row that pulls back the outer slots' margins so the buttons line up with the text above.
   buttons: { flexDirection: 'row', justifyContent: 'flex-start', marginTop: 8, marginHorizontal: -SLOT_MARGIN },
+  // A card too narrow for even the smallest buttons wraps them rather than letting the row run out of it.
+  buttonsWrapped: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-start', marginTop: 8, marginHorizontal: -SLOT_MARGIN },
   buttonSlot: { margin: SLOT_MARGIN },
   round: { borderWidth: 1, borderColor: ACTIVE_COLOR, alignItems: 'center', justifyContent: 'center' },
   roundActive: { backgroundColor: ACTIVE_COLOR },

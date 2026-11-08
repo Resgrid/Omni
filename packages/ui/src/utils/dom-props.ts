@@ -195,17 +195,24 @@ interface PressDomTarget {
 
 /**
  * What a React Native `onPress` becomes on a span or div: a click, a pointer cursor, a tab stop, and Enter (Space too
- * unless it is a link) from the keyboard, as a button or link would have. None of it while disabled, and a web-only
- * `onClick` or `onKeyDown` the caller gave wins.
+ * unless it is a link) from the keyboard, as a button or link would have. None of it while disabled (`disabled`, or
+ * `aria-disabled` as `true` or `"true"`). A web-only `onClick` the caller gave wins; a caller's `onKeyDown` runs first and
+ * the key still presses unless it called `preventDefault()`, as on a native button.
  */
 function pressDomProps(onPress: NonNullable<WithPress['onPress']>, domProps: PressDomTarget): PressDomTarget {
-  if (domProps.disabled === true || domProps['aria-disabled'] === true) {
+  if (domProps.disabled === true || domProps['aria-disabled'] === true || domProps['aria-disabled'] === 'true') {
     return {};
   }
 
   const role = domProps.role ?? 'button';
+  // SAFETY: the web wrappers type `onKeyDown` as their element's own React keyboard handler.
+  const callerKeyDown = domProps.onKeyDown as ((event: React.KeyboardEvent<HTMLElement>) => void) | undefined;
 
   const onKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
+    callerKeyDown?.(event);
+
+    if (event.defaultPrevented) return;
+
     if (event.key === 'Enter' || (event.key === ' ' && role !== 'link')) {
       // Space would otherwise scroll the page.
       event.preventDefault();
@@ -217,7 +224,7 @@ function pressDomProps(onPress: NonNullable<WithPress['onPress']>, domProps: Pre
     role,
     tabIndex: domProps.tabIndex ?? 0,
     onClick: domProps.onClick ?? onPress,
-    onKeyDown: domProps.onKeyDown ?? onKeyDown,
+    onKeyDown,
     // SAFETY: an array style was flattened into one object above, and a web wrapper takes a style object.
     style: { cursor: 'pointer', ...((domProps.style as React.CSSProperties | undefined) ?? {}) },
   };
