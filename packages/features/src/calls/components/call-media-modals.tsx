@@ -19,9 +19,16 @@ interface ModalProps {
   callId: string;
 }
 
+export interface CallMediaPanelBodyProps {
+  callId: string;
+  /** Loads the call's list when it turns true (default: on mount). A modal passes its `isOpen`, so a closed one stays idle. */
+  active?: boolean;
+}
+
 /** The call's notes in a page sheet. */
 export const CallNotesModal: React.FC<ModalProps> = ({ isOpen, onClose, callId }) => {
   const { t } = useTranslation();
+
   return (
     <CallModalFrame isOpen={isOpen} onClose={onClose} title={t('callNotes.title')} testID="call-notes-modal">
       <CallNotesPanel callId={callId} />
@@ -33,14 +40,17 @@ const EMPTY_QUEUED: QueuedCallFile[] = [];
 
 const useQueuedFiles = (callId: string, type: number): QueuedCallFile[] => {
   const queuedFiles = useCallDetailStore((state) => state.queuedFiles);
+
   return useMemo(() => {
     const list = Object.values(queuedFiles).filter((file) => file.callId === callId && file.type === type);
+
     return list.length > 0 ? list : EMPTY_QUEUED;
   }, [callId, queuedFiles, type]);
 };
 
 const QueuedFileRow: React.FC<{ file: QueuedCallFile }> = ({ file }) => {
   const { t } = useTranslation();
+
   return (
     <View style={styles.row} className="border-outline-100" testID={`queued-file-${file.localId}`}>
       <Text className="flex-1 text-typography-900">{file.name}</Text>
@@ -54,12 +64,23 @@ const QueuedFileRow: React.FC<{ file: QueuedCallFile }> = ({ file }) => {
 /** The picture of a call image: its signed link, else the bytes the server sent inline; '' when it has neither. */
 const callImageUri = (image: CallFileResultData): string => image.Url || (image.Data ? `data:${image.Mime || 'image/jpeg'};base64,${image.Data}` : '');
 
+/** The call's images in a page sheet. */
+export const CallImagesModal: React.FC<ModalProps> = ({ isOpen, onClose, callId }) => {
+  const { t } = useTranslation();
+
+  return (
+    <CallModalFrame isOpen={isOpen} onClose={onClose} title={t('callImages.title')} testID="call-images-modal">
+      <CallImagesPanel callId={callId} active={isOpen} />
+    </CallModalFrame>
+  );
+};
+
 /**
  * Images on the call (R images modal UI): thumbnails (tap one to see it full screen), and add from the camera or
  * gallery. Uploads are offline-capable (outbox `calls.file.upload`): the picked image is staged and sent when the
- * connection returns.
+ * connection returns. The images modal and the call summary's Images tab both show it.
  */
-export const CallImagesModal: React.FC<ModalProps> = ({ isOpen, onClose, callId }) => {
+export const CallImagesPanel: React.FC<CallMediaPanelBodyProps> = ({ callId, active = true }) => {
   const { t } = useTranslation();
   const toast = useToast();
   const images = useCallDetailStore((state) => state.details[callId]?.images ?? null);
@@ -73,16 +94,18 @@ export const CallImagesModal: React.FC<ModalProps> = ({ isOpen, onClose, callId 
   const viewingSource = useMemo(() => (viewingUri ? { uri: viewingUri } : null), [viewingUri]);
 
   useEffect(() => {
-    if (isOpen) void fetchCallImages(callId);
-  }, [callId, fetchCallImages, isOpen]);
+    if (active) void fetchCallImages(callId);
+  }, [active, callId, fetchCallImages]);
 
   const pick = async (source: 'camera' | 'gallery') => {
     try {
       const options: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], quality: 0.7, base64: true };
       const result = source === 'camera' ? await ImagePicker.launchCameraAsync(options) : await ImagePicker.launchImageLibraryAsync(options);
       const asset = result.canceled ? null : result.assets[0];
+
       if (!asset) return;
       const fix = getDataLocationFix();
+
       const outcome = await uploadCallFile({
         callId,
         type: CallFileKind.Image,
@@ -92,7 +115,9 @@ export const CallImagesModal: React.FC<ModalProps> = ({ isOpen, onClose, callId 
         latitude: fix?.latitude ?? null,
         longitude: fix?.longitude ?? null,
       });
+
       setName('');
+
       if (outcome.outcome === 'queued') toast.info(t('callImages.queued'));
       else if (outcome.outcome === 'rejected') toast.error(t('callImages.upload_error'));
     } catch {
@@ -101,35 +126,33 @@ export const CallImagesModal: React.FC<ModalProps> = ({ isOpen, onClose, callId 
   };
 
   return (
-    <CallModalFrame isOpen={isOpen} onClose={onClose} title={t('callImages.title')} testID="call-images-modal">
-      <View style={styles.panel}>
-        <View style={styles.grid}>
-          {(images ?? []).map((image) => (
-            <ImageTile key={image.Id} image={image} onOpen={setViewing} />
-          ))}
-        </View>
-        {queued.map((file) => (
-          <QueuedFileRow key={file.localId} file={file} />
+    <View style={styles.panel} testID="call-images-panel">
+      <View style={styles.grid}>
+        {(images ?? []).map((image) => (
+          <ImageTile key={image.Id} image={image} onOpen={setViewing} />
         ))}
-        {images !== null && images.length === 0 && queued.length === 0 ? <Text className="py-4 text-center text-typography-500">{t('callImages.no_images')}</Text> : null}
-        <Text size="sm" className="mb-1 mt-4 text-typography-600">
-          {t('callImages.image_name')}
-        </Text>
-        <Input variant="outline">
-          <InputField value={name} onChangeText={setName} placeholder={t('callImages.image_name')} accessibilityLabel={t('callImages.image_name')} />
-        </Input>
-        {/* One under the other: side by side, the longer labels ("Select from Gallery", and most translations) wrap. */}
-        <View style={styles.actions} testID="call-images-actions">
-          <Button onPress={() => void pick('camera')} accessibilityLabel={t('callImages.take_photo')} testID="call-images-camera">
-            <ButtonText>{t('callImages.take_photo')}</ButtonText>
-          </Button>
-          <Button variant="outline" className="mt-2" onPress={() => void pick('gallery')} accessibilityLabel={t('callImages.select_from_gallery')} testID="call-images-gallery">
-            <ButtonText>{t('callImages.select_from_gallery')}</ButtonText>
-          </Button>
-        </View>
+      </View>
+      {queued.map((file) => (
+        <QueuedFileRow key={file.localId} file={file} />
+      ))}
+      {images !== null && images.length === 0 && queued.length === 0 ? <Text className="py-4 text-center text-typography-500">{t('callImages.no_images')}</Text> : null}
+      <Text size="sm" className="mb-1 mt-4 text-typography-600">
+        {t('callImages.image_name')}
+      </Text>
+      <Input variant="outline">
+        <InputField value={name} onChangeText={setName} placeholder={t('callImages.image_name')} accessibilityLabel={t('callImages.image_name')} />
+      </Input>
+      {/* One under the other: side by side, the longer labels ("Select from Gallery", and most translations) wrap. */}
+      <View style={styles.actions} testID="call-images-actions">
+        <Button onPress={() => void pick('camera')} accessibilityLabel={t('callImages.take_photo')} testID="call-images-camera">
+          <ButtonText>{t('callImages.take_photo')}</ButtonText>
+        </Button>
+        <Button variant="outline" className="mt-2" onPress={() => void pick('gallery')} accessibilityLabel={t('callImages.select_from_gallery')} testID="call-images-gallery">
+          <ButtonText>{t('callImages.select_from_gallery')}</ButtonText>
+        </Button>
       </View>
       <ImageViewer source={viewingSource} caption={viewing?.Name || undefined} label={viewing?.Name || t('callImages.image_alt')} onClose={() => setViewing(null)} testID="call-image-viewer" />
-    </CallModalFrame>
+    </View>
   );
 };
 
@@ -152,8 +175,22 @@ const ImageTile: React.FC<{ image: CallFileResultData; onOpen: (image: CallFileR
   );
 };
 
-/** Files on the call (R files modal UI): open via the signed link, add a document (offline-capable upload). */
+/** The call's files in a page sheet. */
 export const CallFilesModal: React.FC<ModalProps> = ({ isOpen, onClose, callId }) => {
+  const { t } = useTranslation();
+
+  return (
+    <CallModalFrame isOpen={isOpen} onClose={onClose} title={t('call_detail.files.title')} testID="call-files-modal">
+      <CallFilesPanel callId={callId} active={isOpen} />
+    </CallModalFrame>
+  );
+};
+
+/**
+ * Files on the call (R files modal UI): open via the signed link, add a document (offline-capable upload). The files
+ * modal and the call summary's Files tab both show it.
+ */
+export const CallFilesPanel: React.FC<CallMediaPanelBodyProps> = ({ callId, active = true }) => {
   const { t } = useTranslation();
   const timeZone = useDepartmentTimeZone();
   const toast = useToast();
@@ -163,8 +200,8 @@ export const CallFilesModal: React.FC<ModalProps> = ({ isOpen, onClose, callId }
   const queued = useQueuedFiles(callId, CallFileKind.File);
 
   useEffect(() => {
-    if (isOpen) void fetchCallFiles(callId);
-  }, [callId, fetchCallFiles, isOpen]);
+    if (active) void fetchCallFiles(callId);
+  }, [active, callId, fetchCallFiles]);
 
   const addFile = async () => {
     try {
@@ -179,10 +216,12 @@ export const CallFilesModal: React.FC<ModalProps> = ({ isOpen, onClose, callId }
 
       if (isWeb && !data) {
         toast.error(t('call_detail.files.select_error'));
+
         return;
       }
 
       const outcome = await uploadCallFile({ callId, type: CallFileKind.File, name: asset.name, data, stagedUri: isWeb ? undefined : asset.uri });
+
       if (outcome.outcome === 'queued') toast.info(t('call_detail.files.queued'));
       else if (outcome.outcome === 'rejected') toast.error(t('call_detail.files.upload_error'));
     } catch {
@@ -195,40 +234,40 @@ export const CallFilesModal: React.FC<ModalProps> = ({ isOpen, onClose, callId }
 
     if (!url) {
       toast.error(t('call_detail.files.open_error'));
+
       return;
     }
+
     Linking.openURL(url).catch(() => toast.error(t('call_detail.files.open_error')));
   };
 
   return (
-    <CallModalFrame isOpen={isOpen} onClose={onClose} title={t('call_detail.files.title')} testID="call-files-modal">
-      <View style={styles.panel}>
-        {(files ?? []).map((file) => (
-          <Pressable key={file.Id} onPress={() => open(file)} accessibilityRole="link" accessibilityLabel={file.Name || file.FileName} style={styles.row} className="border-outline-100" testID={`call-file-${file.Id}`}>
-            <View style={styles.fileBody}>
-              <Text className="text-typography-900">{file.Name || file.FileName}</Text>
-              <Text size="xs" className="text-typography-500">
-                {formatUtcInDepartmentTime(file.Timestamp, timeZone)}
-              </Text>
-            </View>
-          </Pressable>
-        ))}
-        {queued.map((file) => (
-          <QueuedFileRow key={file.localId} file={file} />
-        ))}
-        {files !== null && files.length === 0 && queued.length === 0 ? (
-          <View>
-            <Text className="pt-4 text-center text-typography-700">{t('call_detail.files.empty')}</Text>
-            <Text size="sm" className="pb-4 text-center text-typography-500">
-              {t('call_detail.files.empty_description')}
+    <View style={styles.panel} testID="call-files-panel">
+      {(files ?? []).map((file) => (
+        <Pressable key={file.Id} onPress={() => open(file)} accessibilityRole="link" accessibilityLabel={file.Name || file.FileName} style={styles.row} className="border-outline-100" testID={`call-file-${file.Id}`}>
+          <View style={styles.fileBody}>
+            <Text className="text-typography-900">{file.Name || file.FileName}</Text>
+            <Text size="xs" className="text-typography-500">
+              {formatUtcInDepartmentTime(file.Timestamp, timeZone)}
             </Text>
           </View>
-        ) : null}
-        <Button className="mt-4" onPress={() => void addFile()} accessibilityLabel={t('call_detail.files.add_file')} testID="call-files-add">
-          <ButtonText>{t('call_detail.files.add_file')}</ButtonText>
-        </Button>
-      </View>
-    </CallModalFrame>
+        </Pressable>
+      ))}
+      {queued.map((file) => (
+        <QueuedFileRow key={file.localId} file={file} />
+      ))}
+      {files !== null && files.length === 0 && queued.length === 0 ? (
+        <View>
+          <Text className="pt-4 text-center text-typography-700">{t('call_detail.files.empty')}</Text>
+          <Text size="sm" className="pb-4 text-center text-typography-500">
+            {t('call_detail.files.empty_description')}
+          </Text>
+        </View>
+      ) : null}
+      <Button className="mt-4" onPress={() => void addFile()} accessibilityLabel={t('call_detail.files.add_file')} testID="call-files-add">
+        <ButtonText>{t('call_detail.files.add_file')}</ButtonText>
+      </Button>
+    </View>
   );
 };
 

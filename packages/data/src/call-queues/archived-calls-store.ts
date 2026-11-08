@@ -2,6 +2,7 @@ import { type ApiContext, defineEndpoints, request } from '@resgrid/api';
 import type { ArchivedCallsResult, CallResultData, CallYearsResult } from '@resgrid/models';
 import { create } from 'zustand';
 
+import { sortCallsNewestFirst } from '../calls/call-order';
 import { unwrapList } from '../core/envelope';
 import { registerDataStoreReset } from '../core/reset';
 import { dataNow, getDataApiContext } from '../core/runtime';
@@ -83,7 +84,7 @@ export const useArchivedCallsStore = create<ArchivedCallsState>()((set, get) => 
       await runner.run(
         'calls',
         async () => unwrapList(await getArchivedCalls(getDataApiContext(), year)),
-        (archivedCalls, state) => (state.selectedYear === year ? { archivedCalls } : {})
+        (archivedCalls, state) => (state.selectedYear === year ? { archivedCalls: sortCallsNewestFirst(archivedCalls) } : {})
       );
     },
   };

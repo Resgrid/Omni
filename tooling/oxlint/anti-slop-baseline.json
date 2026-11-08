@@ -1937,9 +1937,6 @@
     "anti-slop/no-unsafe-dictionary-type": 1,
     "anti-slop/require-safety-comment-for-type-assertion": 3
   },
-  "packages/features/src/calls/components/call-media-modals.tsx": {
-    "anti-slop/require-readable-spacing": 12
-  },
   "packages/features/src/calls/components/call-modal-frame.tsx": {
     "anti-slop/require-readable-spacing": 1
   },
@@ -3403,7 +3400,6 @@
     "anti-slop/require-safety-comment-for-type-assertion": 1
   },
   "packages/features/src/status/__tests__/status-picker.test.tsx": {
-    "anti-slop/require-readable-spacing": 2,
     "anti-slop/require-safety-comment-for-type-assertion": 3
   },
   "packages/features/src/status/__tests__/status-sheets.test.tsx": {
@@ -3568,9 +3564,6 @@
     "anti-slop/require-readable-spacing": 1,
     "anti-slop/require-safety-comment-for-type-assertion": 1
   },
-  "packages/features/src/unit-status/components/active-call-card.tsx": {
-    "anti-slop/require-readable-spacing": 7
-  },
   "packages/features/src/unit-status/components/check-in-summary.tsx": {
     "anti-slop/require-readable-spacing": 3
   },
@@ -3578,7 +3571,6 @@
     "anti-slop/require-readable-spacing": 1
   },
   "packages/features/src/unit-status/components/quick-actions.tsx": {
-    "anti-slop/require-readable-spacing": 1,
     "anti-slop/require-safety-comment-for-type-assertion": 1
   },
   "packages/features/src/unit-status/components/shared-session-card.tsx": {

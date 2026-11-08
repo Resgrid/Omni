@@ -10,10 +10,15 @@ export const CALL_SHORTCUTS_AVAILABLE = true;
 
 const isTyping = (target: EventTarget | null): boolean => target instanceof HTMLElement && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName));
 
+/** On web every pop-up (NativeModal, CustomBottomSheet, dialogs) renders an `aria-modal` dialog while it is open. */
+const isPopupOpen = (): boolean => document.querySelector('[aria-modal="true"]') !== null;
+
 /**
  * Dispatch web's call shortcuts: Escape goes back, Ctrl/Cmd+E edits (detail), Ctrl/Cmd+Enter or Ctrl/Cmd+S saves (form),
  * 1–9 switch to the tab at that position (detail). Digits never fire while the dispatcher is typing in a field. Only the
- * focused screen listens: the stack keeps the call detail mounted under the edit form it opened.
+ * focused screen listens: the stack keeps the call detail mounted under the edit form it opened. None fire while a
+ * pop-up is open over the screen, wherever it was opened from (Unit's sidebar, Set Active, the screen's own sheets):
+ * the pop-up owns the keyboard, and React Native Web's Modal closes on the Escape keyup, after this keydown.
  */
 export function useCallShortcuts(handlers: CallShortcutHandlers): void {
   const isFocused = useIsFocused();
@@ -26,6 +31,7 @@ export function useCallShortcuts(handlers: CallShortcutHandlers): void {
     if (!isFocused || isDisabled) return undefined;
 
     const onKeyDown = (event: KeyboardEvent): void => {
+      if (isPopupOpen()) return;
       const { onBack, onEdit, onSubmit, onTab } = latest.current;
       const withModifier = event.ctrlKey || event.metaKey;
 

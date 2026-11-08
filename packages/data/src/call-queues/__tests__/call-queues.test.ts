@@ -55,6 +55,18 @@ describe('archived calls store', () => {
     expect(useArchivedCallsStore.getState().errors.years?.code).toBe('not_found');
   });
 
+  it('lists the archived calls newest first', async () => {
+    answerArchived(['2026'], {
+      '2026': [
+        { CallId: '1', LoggedOnUtc: '2026-03-01T08:00:00Z' },
+        { CallId: '3', LoggedOnUtc: '2026-09-01T08:00:00Z' },
+        { CallId: '2', LoggedOnUtc: '2026-06-01T08:00:00Z' },
+      ],
+    });
+    await useArchivedCallsStore.getState().load();
+    expect(useArchivedCallsStore.getState().archivedCalls.map((c) => c.CallId)).toEqual(['3', '2', '1']);
+  });
+
   it('places an unreported year among the years, newest first', () => {
     expect(withArchivedYear(['2026', '2024'], '2025')).toEqual(['2026', '2025', '2024']);
     expect(withArchivedYear(['2026'], '2026')).toEqual(['2026']);

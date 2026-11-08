@@ -18,12 +18,29 @@ export interface CallAudioModalProps {
   callId: string;
 }
 
+/** The call's audio recordings in a page sheet; closing it stops playback. */
+export const CallAudioModal: React.FC<CallAudioModalProps> = ({ isOpen, onClose, callId }) => {
+  const { t } = useTranslation();
+
+  return (
+    <CallModalFrame isOpen={isOpen} onClose={onClose} title={t('call_detail.audio')} testID="call-audio-modal">
+      <CallAudioPanel callId={callId} active={isOpen} />
+    </CallModalFrame>
+  );
+};
+
+export interface CallAudioPanelProps {
+  callId: string;
+  /** Loads the recordings when it turns true and stops playback when it turns false (default: on mount; unmounting also stops). */
+  active?: boolean;
+}
+
 /**
  * The call's audio recordings (Dispatch call audio modal): one plays at a time, tapping it again stops it, and closing
- * the sheet stops playback. Playback is the app's `playAudioClip` hook point; without it a recording opens in the
- * platform's player. Recording URLs follow the call attachment scheme rules.
+ * the sheet (or leaving the call summary's Audio tab) stops playback. Playback is the app's `playAudioClip` hook point;
+ * without it a recording opens in the platform's player. Recording URLs follow the call attachment scheme rules.
  */
-export const CallAudioModal: React.FC<CallAudioModalProps> = ({ isOpen, onClose, callId }) => {
+export const CallAudioPanel: React.FC<CallAudioPanelProps> = ({ callId, active = true }) => {
   const { t } = useTranslation();
   const timeZone = useDepartmentTimeZone();
   const toast = useToast();
@@ -52,9 +69,9 @@ export const CallAudioModal: React.FC<CallAudioModalProps> = ({ isOpen, onClose,
   }, [stop]);
 
   useEffect(() => {
-    if (isOpen) void fetchCallAudio(callId);
+    if (active) void fetchCallAudio(callId);
     else cancel();
-  }, [callId, cancel, fetchCallAudio, isOpen]);
+  }, [active, callId, cancel, fetchCallAudio]);
 
   useEffect(() => () => cancel(), [cancel]);
 
@@ -106,41 +123,39 @@ export const CallAudioModal: React.FC<CallAudioModalProps> = ({ isOpen, onClose,
   };
 
   return (
-    <CallModalFrame isOpen={isOpen} onClose={onClose} title={t('call_detail.audio')} testID="call-audio-modal">
-      <View style={styles.panel}>
-        {isLoading && audio === null ? <Spinner /> : null}
-        {(audio ?? []).map((file) => {
-          const isPlaying = playingId === file.Id;
-          const label = file.Name || file.FileName;
+    <View style={styles.panel} testID="call-audio-panel">
+      {isLoading && audio === null ? <Spinner /> : null}
+      {(audio ?? []).map((file) => {
+        const isPlaying = playingId === file.Id;
+        const label = file.Name || file.FileName;
 
-          return (
-            <Pressable
-              key={file.Id}
-              onPress={() => void toggle(file)}
-              accessibilityRole="button"
-              accessibilityLabel={isPlaying ? t('call_detail.audio_stop', { name: label }) : t('call_detail.audio_play', { name: label })}
-              style={styles.row}
-              className="border-outline-100"
-              testID={`call-audio-${file.Id}`}
-            >
-              <View style={styles.icon}>{loadingId === file.Id ? <Spinner size="small" /> : isPlaying ? <Pause size={20} color={colors.primary} /> : <Play size={20} color={colors.primary} />}</View>
-              <View style={styles.body}>
-                <Text className="text-typography-900">{label}</Text>
-                <Text size="xs" className="text-typography-500">
-                  {formatUtcInDepartmentTime(file.Timestamp, timeZone)}
-                </Text>
-              </View>
-            </Pressable>
-          );
-        })}
-        {audio !== null && audio.length === 0 ? (
-          <View style={styles.empty}>
-            <Music size={32} color={colors.textSubtle} />
-            <Text className="mt-2 text-center text-typography-500">{t('call_detail.audio_empty')}</Text>
-          </View>
-        ) : null}
-      </View>
-    </CallModalFrame>
+        return (
+          <Pressable
+            key={file.Id}
+            onPress={() => void toggle(file)}
+            accessibilityRole="button"
+            accessibilityLabel={isPlaying ? t('call_detail.audio_stop', { name: label }) : t('call_detail.audio_play', { name: label })}
+            style={styles.row}
+            className="border-outline-100"
+            testID={`call-audio-${file.Id}`}
+          >
+            <View style={styles.icon}>{loadingId === file.Id ? <Spinner size="small" /> : isPlaying ? <Pause size={20} color={colors.primary} /> : <Play size={20} color={colors.primary} />}</View>
+            <View style={styles.body}>
+              <Text className="text-typography-900">{label}</Text>
+              <Text size="xs" className="text-typography-500">
+                {formatUtcInDepartmentTime(file.Timestamp, timeZone)}
+              </Text>
+            </View>
+          </Pressable>
+        );
+      })}
+      {audio !== null && audio.length === 0 ? (
+        <View style={styles.empty}>
+          <Music size={32} color={colors.textSubtle} />
+          <Text className="mt-2 text-center text-typography-500">{t('call_detail.audio_empty')}</Text>
+        </View>
+      ) : null}
+    </View>
   );
 };
 

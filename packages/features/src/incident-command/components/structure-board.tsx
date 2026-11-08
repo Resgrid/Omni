@@ -88,6 +88,21 @@ const ResourceRow: React.FC<ResourceRowProps> = React.memo(({ assignment, node, 
 
 ResourceRow.displayName = 'ResourceRow';
 
+interface LaneDropTargetProps {
+  label: string;
+  onPress: () => void;
+  testID: string;
+}
+
+/**
+ * Laid over a lane the selected resource can move to, so a tap anywhere in it — the title, a resource, the empty space
+ * a column stretches to — moves the resource there. Only while a move is in progress; the lane's own buttons and
+ * resources are back once it ends.
+ */
+const LaneDropTarget: React.FC<LaneDropTargetProps> = ({ label, onPress, testID }) => (
+  <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} style={StyleSheet.absoluteFill} className="rounded-lg data-[active=true]:bg-primary-100/50" testID={testID} />
+);
+
 interface LaneScrollStripProps {
   direction: -1 | 1;
   /** Lanes lie past this edge. */
@@ -128,8 +143,8 @@ const LaneScrollStrip: React.FC<LaneScrollStripProps> = ({ direction, isEnabled,
  * `structure-section` on phones, `landscape-structure-board` columns on tablets and desktop). Columns share the card's
  * whole width and are as tall as the fullest lane (no lane scrolls); a wide lane tiles its resources two or more across.
  * Lanes that do not fit at their minimum width scroll sideways, with the next lane cut off at the edge and a scroll strip
- * on each side. Moving is tap-to-select a resource, then tap the target lane — the same gesture on touch, mouse and
- * keyboard.
+ * on each side. Moving is tap-to-select a resource, then tap anywhere in the target lane — the same gesture on touch,
+ * mouse and keyboard.
  */
 export const StructureBoard: React.FC<StructureBoardProps> = ({
   lanes,
@@ -172,6 +187,8 @@ export const StructureBoard: React.FC<StructureBoardProps> = ({
     },
     [onMoveResource, selected]
   );
+
+  const moveLabel = (lane: string) => (selected ? t('incident_command.move_to_lane', { resource: roster.resourceName(selected.ResourceKind, selected.ResourceId), lane }) : lane);
 
   const columnStyle = (index: number) => ({ width: layout.laneWidth, minHeight: LANE_MIN_HEIGHT, marginLeft: index === 0 ? 0 : LANE_GAP });
 
@@ -225,14 +242,7 @@ export const StructureBoard: React.FC<StructureBoardProps> = ({
         testID={`lane-${node.CommandStructureNodeId}`}
       >
         <HStack className="items-start justify-between">
-          <Pressable
-            onPress={() => dropOn(node.CommandStructureNodeId)}
-            disabled={!isTarget}
-            accessibilityHint={isTarget && selected ? t('incident_command.move_to_lane', { resource: roster.resourceName(selected.ResourceKind, selected.ResourceId), lane: node.Name }) : undefined}
-            accessibilityRole="button"
-            className="min-w-0 flex-1"
-            testID={`lane-target-${node.CommandStructureNodeId}`}
-          >
+          <VStack className="min-w-0 flex-1">
             <HStack className="flex-wrap items-center" space="xs">
               <Text className="font-semibold text-typography-900" numberOfLines={1}>
                 {node.Name}
@@ -256,7 +266,7 @@ export const StructureBoard: React.FC<StructureBoardProps> = ({
                 {t('incident_command.lane_leads', { names: leads.join(', ') })}
               </Text>
             ) : null}
-          </Pressable>
+          </VStack>
           <HStack className="items-center">
             {onOpenLaneChat && laneChatAvailable?.(node.CommandStructureNodeId) ? (
               <IconPress
@@ -279,6 +289,7 @@ export const StructureBoard: React.FC<StructureBoardProps> = ({
           </HStack>
         </HStack>
         <View style={styles.laneBody}>{rows.length === 0 ? <Text className="text-sm text-typography-500">{t('incident_command.lane_empty')}</Text> : renderResources(rows, node)}</View>
+        {isTarget ? <LaneDropTarget label={moveLabel(node.Name)} onPress={() => dropOn(node.CommandStructureNodeId)} testID={`lane-target-${node.CommandStructureNodeId}`} /> : null}
       </View>
     );
   };
@@ -291,11 +302,10 @@ export const StructureBoard: React.FC<StructureBoardProps> = ({
       className={`rounded-lg border border-dashed ${poolTarget ? 'border-primary-400 bg-primary-50' : 'border-outline-300 bg-background-50'}`}
       testID="lane-pool"
     >
-      <Pressable onPress={() => dropOn('')} disabled={!poolTarget} accessibilityRole="button" testID="lane-target-pool">
-        <Text className="font-semibold text-typography-900">{t('incident_command.unassigned_pool')}</Text>
-        <Text className="mb-2 text-xs text-typography-500">{t('incident_command.unassigned_pool_hint')}</Text>
-      </Pressable>
+      <Text className="font-semibold text-typography-900">{t('incident_command.unassigned_pool')}</Text>
+      <Text className="mb-2 text-xs text-typography-500">{t('incident_command.unassigned_pool_hint')}</Text>
       {pool.length === 0 ? <Text className="text-sm text-typography-500">{t('incident_command.pool_empty')}</Text> : renderResources(pool)}
+      {poolTarget ? <LaneDropTarget label={moveLabel(t('incident_command.unassigned_pool'))} onPress={() => dropOn('')} testID="lane-target-pool" /> : null}
     </View>
   );
 

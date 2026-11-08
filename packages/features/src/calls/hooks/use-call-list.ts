@@ -13,7 +13,7 @@ export interface UseCallListOptions {
 }
 
 export interface CallListData {
-  /** This device's queued (not yet accepted) calls first, then the active calls. */
+  /** This device's queued (not yet accepted) calls first, then the active calls; each newest first. */
   activeCalls: CallListItem[];
   pendingCalls: CallListItem[];
   scheduledCalls: CallListItem[];

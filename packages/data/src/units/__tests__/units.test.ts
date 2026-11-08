@@ -86,6 +86,26 @@ describe('unit status (Unit status sheet logic)', () => {
     expect(getSetUnitStatusData).toHaveBeenCalledTimes(2);
   });
 
+  it('offers the destination calls newest first (Core sends them in storage order)', async () => {
+    // SAFETY: a GetSetUnitStatusData envelope with only the fields the destination lists read.
+    jest.mocked(getSetUnitStatusData).mockResolvedValue(
+      ok({
+        Calls: [
+          { CallId: '0', Name: 'No Call' },
+          { CallId: '5', Name: 'Oldest', LoggedOnUtc: '2026-11-07T08:00:00Z' },
+          { CallId: '7', Name: 'Newest', LoggedOnUtc: '2026-11-07T10:00:00Z' },
+          { CallId: '6', Name: 'Middle', LoggedOnUtc: '2026-11-07T09:00:00Z' },
+        ],
+        Stations: [],
+        DestinationPois: [],
+        PoiTypes: [],
+        Statuses: [],
+      }) as never
+    );
+    await useUnitStatusStore.getState().fetchDestinationData('10');
+    expect(useUnitStatusStore.getState().destinationsByUnit['10'].calls.map((c) => c.CallId)).toEqual(['7', '6', '5']);
+  });
+
   it('sends online with EventId = outbox id, the status time and GPS from the location provider', async () => {
     setDataLocationProvider(() => ({ latitude: 39.7, longitude: -105, accuracy: 8 }));
     jest.mocked(saveUnitStatus).mockResolvedValue({ Id: '1', Status: 'success' } as never);

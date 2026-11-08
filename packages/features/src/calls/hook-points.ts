@@ -1,4 +1,4 @@
-import type { UdfFieldResultData } from '@resgrid/models';
+import type { CallResultData, UdfFieldResultData } from '@resgrid/models';
 import type React from 'react';
 import { useSyncExternalStore } from 'react';
 
@@ -53,6 +53,11 @@ export interface StaticLocationMapProps {
   testID?: string;
 }
 
+export interface CallDetailActionProps {
+  /** The server call the detail screen shows (never a call queued on this device). */
+  call: CallResultData;
+}
+
 /** A recorded clip that is playing. */
 export interface AudioClipHandle {
   stop: () => void;
@@ -67,6 +72,11 @@ export interface CallFormHookPoints {
   LocationPicker?: React.ComponentType<LocationPickerProps>;
   /** Small map of a point (detail: the call or its destination; form: the picked location). */
   StaticLocationMap?: React.ComponentType<StaticLocationMapProps>;
+  /**
+   * An action beside the call's title on the detail screen, supplied by a module the calls screens may not import (Unit:
+   * "Set Active", from unit-status). It gates itself on capabilities and renders nothing where it does not apply.
+   */
+  CallDetailAction?: React.ComponentType<CallDetailActionProps>;
   /** Plays a call audio recording in the app; without it the recording opens in the platform player. */
   playAudioClip?: (url: string, onFinished: () => void) => Promise<AudioClipHandle>;
   /** Loads the department's call custom fields (EntityType Call = 0). */

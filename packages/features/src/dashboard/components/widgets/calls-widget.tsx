@@ -1,12 +1,11 @@
 import { useNow } from '@resgrid/core/lifecycle/use-now';
 import { selectActiveCalls, useCallsStore } from '@resgrid/data';
-import { CallCard, callDisplayName, callDisplayText, DispatchTicker } from '@resgrid/features/calls';
+import { callDisplayName, callDisplayText, DispatchTicker } from '@resgrid/features/calls';
 import { CallNavigationEtas } from '@resgrid/features/navigation-eta';
 import { useTranslation } from '@resgrid/i18n';
 import type { CallResultData } from '@resgrid/models';
-import { HStack, ScrollView, TypeIcon, View, VStack } from '@resgrid/ui';
+import { HStack, TypeIcon, VStack } from '@resgrid/ui';
 import React, { useMemo } from 'react';
-import { StyleSheet } from 'react-native';
 
 import { usePriorityLookup } from '../../hooks/use-priority-lookup';
 import { useStale } from '../../hooks/use-stale';
@@ -22,10 +21,14 @@ import type { WidgetProps } from './types';
 
 const COLUMN_FLEX: Readonly<Record<CallsColumnKey, number>> = { id: 0.5, name: 1.2, address: 1.2, timestamp: 0.9, priority: 0.7, dispatched: 1.8 };
 
+/** Shown when every column is switched off, so the board still names its calls. */
+const FALLBACK_COLUMNS: readonly CallsColumnKey[] = ['name'];
+
 /**
- * The department's active calls (pending calls never count): the shared call rows at wall density (`cards`), or the
- * configurable column table BigBoard had (`table`). Dispatch badges come from the calls store's per-call cache; units
- * navigating to a call in the Unit app show their live ETAs under it (cards) or under its dispatches (table).
+ * The department's active calls (pending calls never count) as BigBoard's dense column list: one line per call, with
+ * the columns, column order, font size and dispatch scrolling configured for the board. Call cards belong to the apps a
+ * person works from; a wall board needs every call on screen at once. Dispatch badges come from the calls store's
+ * per-call cache, and units navigating to a call in the Unit app show their live ETAs under its dispatches.
  */
 export const CallsWidget: React.FC<WidgetProps> = ({ isEditMode, onRemove, onConfigure }) => {
   const { t } = useTranslation();
@@ -36,7 +39,7 @@ export const CallsWidget: React.FC<WidgetProps> = ({ isEditMode, onRemove, onCon
   const isLoading = useCallsStore((state) => state.loading.calls === true);
   const hasError = useCallsStore((state) => !!state.errors.calls);
   const settings = useWidgetSettings('calls');
-  const now = useNow(30000);
+  const now = useNow(30000, settings.showTimestamp);
   const active = useMemo(() => selectActiveCalls({ calls }), [calls]);
   const priorityOf = usePriorityLookup(priorities);
   const stale = useStale(active.length > 0, hasError);
@@ -94,7 +97,7 @@ export const CallsWidget: React.FC<WidgetProps> = ({ isEditMode, onRemove, onCon
         return (
           <VStack>
             {dispatches.length > 0 ? (
-              <DispatchTicker dispatches={dispatches} animate={settings.scrollDispatches} testID={`calls-widget-ticker-${call.CallId}`} />
+              <DispatchTicker dispatches={dispatches} animate={settings.scrollDispatches} fontSize={fontSize} testID={`calls-widget-ticker-${call.CallId}`} />
             ) : (
               <CellText fontSize={fontSize} muted>
                 —
@@ -106,48 +109,21 @@ export const CallsWidget: React.FC<WidgetProps> = ({ isEditMode, onRemove, onCon
       },
     };
 
-    return settings.columnOrder.filter((key) => visible[key]).map((key) => ({ key, label: t(CALLS_COLUMN_LABEL_KEYS[key]), flex: COLUMN_FLEX[key], render: render[key] }));
+    const keys = settings.columnOrder.filter((key) => visible[key]);
+    const shown = keys.length > 0 ? keys : FALLBACK_COLUMNS;
+
+    return shown.map((key) => ({ key, label: t(CALLS_COLUMN_LABEL_KEYS[key]), flex: COLUMN_FLEX[key], render: render[key] }));
   }, [dispatchesByCall, fontSize, now, priorityOf, protectedLabel, settings, t]);
 
-  const body =
-    isLoading && active.length === 0 ? (
-      <WidgetLoading testID="calls-widget-loading" />
-    ) : hasError && active.length === 0 ? (
-      <WidgetMessage message={t('dashboard.failed_to_load')} tone="error" testID="calls-widget-error" />
-    ) : settings.display === 'table' ? (
-      <WidgetTable columns={columns} rows={active} rowKey={(call) => call.CallId} fontSize={fontSize} emptyMessage={t('dashboard.no_active_calls')} testID="calls-table" />
-    ) : active.length === 0 ? (
-      <WidgetMessage message={t('dashboard.no_active_calls')} testID="calls-widget-empty" />
-    ) : (
-      <ScrollView style={styles.fill} nestedScrollEnabled testID="calls-cards">
-        {active.map((call) => {
-          const priority = priorityOf(call.Priority);
-
-          return (
-            <View key={call.CallId}>
-              <CallCard
-                call={call}
-                density="wall"
-                priorityColor={priority.color}
-                priorityLabel={priority.label}
-                dispatches={dispatchesByCall[call.CallId] ?? null}
-                showDispatchTicker={settings.showDispatched}
-                now={now}
-              />
-              <CallNavigationEtas callId={call.CallId} dispatches={dispatchesByCall[call.CallId] ?? null} fontSize={Math.max(10, fontSize - 2)} testID={`calls-widget-etas-${call.CallId}`} />
-            </View>
-          );
-        })}
-      </ScrollView>
-    );
-
   return (
-    <WidgetContainer title={title} testID="calls-widget" isEditMode={isEditMode} onRemove={onRemove} onConfigure={onConfigure} stale={stale}>
-      {body}
+    <WidgetContainer title={title} testID="calls-widget" isEditMode={isEditMode} onRemove={onRemove} onConfigure={onConfigure} stale={stale} dense>
+      {isLoading && active.length === 0 ? (
+        <WidgetLoading testID="calls-widget-loading" />
+      ) : hasError && active.length === 0 ? (
+        <WidgetMessage message={t('dashboard.failed_to_load')} tone="error" testID="calls-widget-error" />
+      ) : (
+        <WidgetTable columns={columns} rows={active} rowKey={(call) => call.CallId} fontSize={fontSize} emptyMessage={t('dashboard.no_active_calls')} testID="calls-table" />
+      )}
     </WidgetContainer>
   );
 };
-
-const styles = StyleSheet.create({
-  fill: { flex: 1 },
-});

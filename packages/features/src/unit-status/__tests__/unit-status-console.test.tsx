@@ -255,21 +255,36 @@ describe('UnitStatusSidebar', () => {
 
   const widthOf = (id: string) => StyleSheet.flatten(screen.getByTestId(`unit-quick-actions-${id}`).parent?.props.style).width;
 
-  it('puts chat, checklists and deployments on one row, every other shortcut on a row of its own, and no assistant shortcut', async () => {
+  it('puts chat, checklists, deployments and inventory on one row, and no assistant shortcut', async () => {
     featureFlagsStore.setState({ flags: { [FeatureFlagKeys.ChatSystem]: { enabled: true }, [FeatureFlagKeys.ChecklistsSystem]: { enabled: true }, [FeatureFlagKeys.Deployments]: { enabled: true } }, isLoaded: true });
     await renderSidebar();
-    expect(widthOf('chat')).toBe(`${100 / 3}%`);
-    expect(widthOf('checklists')).toBe(`${100 / 3}%`);
-    expect(widthOf('operations')).toBe(`${100 / 3}%`);
-    expect(widthOf('inventory')).toBe('100%');
+
+    for (const id of ['chat', 'checklists', 'operations', 'inventory']) expect(widthOf(id)).toBe('25%');
     expect(screen.queryByTestId('unit-quick-actions-assistant')).toBeNull();
+  });
+
+  // Four buttons leave no width for labels: the row shows icons only and keeps each label for screen readers.
+  it('shows the row’s shortcuts as icon-only buttons labelled for screen readers', async () => {
+    featureFlagsStore.setState({ flags: { [FeatureFlagKeys.ChatSystem]: { enabled: true }, [FeatureFlagKeys.ChecklistsSystem]: { enabled: true }, [FeatureFlagKeys.Deployments]: { enabled: true } }, isLoaded: true });
+    await renderSidebar();
+
+    for (const [id, label] of [
+      ['chat', 'tabs.chat'],
+      ['checklists', 'checklists.labels.Checklists'],
+      ['operations', 'operations.title'],
+      ['inventory', 'inventory.title'],
+    ]) {
+      expect(screen.getByTestId(`unit-quick-actions-${id}`).props.accessibilityLabel).toBe(label);
+      expect(screen.queryByText(label)).toBeNull();
+    }
   });
 
   it('splits the row between the shortcuts the department has', async () => {
     featureFlagsStore.setState({ flags: { [FeatureFlagKeys.ChatSystem]: { enabled: true }, [FeatureFlagKeys.ChecklistsSystem]: { enabled: true } }, isLoaded: true });
     await renderSidebar();
-    expect(widthOf('chat')).toBe('50%');
-    expect(widthOf('checklists')).toBe('50%');
+    expect(widthOf('chat')).toBe(`${100 / 3}%`);
+    expect(widthOf('checklists')).toBe(`${100 / 3}%`);
+    expect(widthOf('inventory')).toBe(`${100 / 3}%`);
   });
 
   // The half-width card is too narrow for three 36 pt buttons and their margins (132 pt): they shrink rather than wrap,

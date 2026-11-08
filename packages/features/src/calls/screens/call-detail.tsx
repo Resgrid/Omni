@@ -43,6 +43,7 @@ import { QueuedCallBadge } from '../components/queued-call-badge';
 import { RescheduleCallSheet } from '../components/reschedule-call-sheet';
 import { registerBuiltInCallDetailTabs } from '../detail-tabs/built-in-tabs';
 import { type CallDetailTabContext, resolveCallDetailTabs, useRegisteredCallDetailTabs } from '../detail-tabs/registry';
+import { useCallFormHookPoints } from '../hook-points';
 import { useCallDispatchNow } from '../hooks/use-call-dispatch-now';
 import { useCallPermissions } from '../hooks/use-call-permissions';
 import { CALL_SHORTCUTS_AVAILABLE, useCallShortcuts } from '../hooks/use-call-shortcuts';
@@ -120,6 +121,8 @@ function ServerCallDetail({ callId, mapSlot, menuItems, onMenuAction, onClosed, 
   const priorities = useCallsStore((state) => state.callPriorities);
   const attentionCheckIns = useCheckInTimersStore((state) => (state.statusesByCall[callId] ?? []).filter((status) => ATTENTION_TIMER_STATES.has(status.Status)).length);
   const registered = useRegisteredCallDetailTabs();
+  // A module-supplied action beside the title (Unit "Set Active"); it renders nothing where it does not apply.
+  const { CallDetailAction } = useCallFormHookPoints();
   const [modal, setModal] = useState<DetailModal>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -270,6 +273,7 @@ function ServerCallDetail({ callId, mapSlot, menuItems, onMenuAction, onClosed, 
           <Text className="ml-2 flex-1 text-lg font-bold text-typography-900" accessibilityRole="header" testID="call-detail-title">
             {`${callDisplayName(call, protectedLabel)} (#${call.Number})`}
           </Text>
+          {CallDetailAction ? <CallDetailAction call={call} /> : null}
         </View>
         {priority ? (
           <View

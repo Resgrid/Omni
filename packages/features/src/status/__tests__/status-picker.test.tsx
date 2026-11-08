@@ -27,6 +27,7 @@ const renderPicker = async (props: Partial<StatusPickerProps> = {}) => {
   const onSubmitStatus = jest.fn(async () => 'sent' as const);
   const onClose = jest.fn();
   const utils = await render(<StatusPicker isOpen onClose={onClose} subject="unit" statuses={STATUSES} onSubmitStatus={onSubmitStatus} {...props} />);
+
   return { ...utils, onSubmitStatus: (props.onSubmitStatus as jest.Mock | undefined) ?? onSubmitStatus, onClose };
 };
 
@@ -272,8 +273,72 @@ describe('StatusPicker', () => {
     });
   });
 
+  // Unit "Set Active" on a call's detail: the call is the destination, so the sheet asks for the status, then a note.
+  describe('a call chosen before the sheet opened (Set Active)', () => {
+    const FIRE = call('100', 'Structure Fire');
+
+    it('names the call from the first step, skips the destination step and sends the call with the note', async () => {
+      const { onSubmitStatus } = await renderPicker({ fixedCall: FIRE, destinations: { calls: [call('101', 'Medical')], stations: [station('7', 'Station 7')], pois: [] }, lenientDestinations: true });
+
+      expect(screen.getByTestId('status-picker-summary', q)).toHaveTextContent('status.selected_destination: #100 Structure Fire');
+      await fireEvent.press(screen.getByTestId('status-option-11', q));
+      await fireEvent.press(screen.getByTestId('status-picker-next', q));
+
+      expect(screen.queryByTestId('status-destination-call-101', q)).toBeNull();
+      await fireEvent.changeText(screen.getByTestId('status-picker-note-input', q), ' Taking hydrant ');
+      await fireEvent.press(screen.getByTestId('status-picker-submit', q));
+
+      await waitFor(() => expect(onSubmitStatus).toHaveBeenCalledWith(expect.objectContaining({ status: RESPONDING, respondingTo: '100', respondingToType: 2, note: 'Taking hydrant' })));
+    });
+
+    it('offers a note even for a status that takes none, and keeps it optional', async () => {
+      const { onSubmitStatus } = await renderPicker({ fixedCall: FIRE });
+
+      await fireEvent.press(screen.getByTestId('status-option-10', q));
+      expect(screen.queryByTestId('status-picker-submit', q)).toBeNull();
+      await fireEvent.press(screen.getByTestId('status-picker-next', q));
+      expect(screen.getByText('status.note_optional', q)).toBeTruthy();
+      await fireEvent.press(screen.getByTestId('status-picker-submit', q));
+
+      await waitFor(() => expect(onSubmitStatus).toHaveBeenCalledWith(expect.objectContaining({ status: AVAILABLE, respondingTo: '100', note: '' })));
+    });
+
+    it('sends no call with a status that only goes to stations or POIs, and says so', async () => {
+      const toStations = status(13, 'Returning', { Detail: 1 });
+      const { onSubmitStatus } = await renderPicker({ fixedCall: FIRE, statuses: [...STATUSES, toStations] });
+
+      await fireEvent.press(screen.getByTestId('status-option-13', q));
+      await fireEvent.press(screen.getByTestId('status-picker-next', q));
+      expect(screen.getByTestId('status-picker-summary', q)).toHaveTextContent(/status\.selected_destination: status\.no_destination$/);
+      await fireEvent.press(screen.getByTestId('status-picker-submit', q));
+
+      await waitFor(() => expect(onSubmitStatus).toHaveBeenCalledWith(expect.objectContaining({ status: toStations, respondingTo: '', respondingToType: null })));
+    });
+
+    it('does not wait for the destination lists', async () => {
+      const { onSubmitStatus } = await renderPicker({ fixedCall: FIRE, isLoadingDestinations: true, hasPotentialDefaultCall: true });
+
+      await fireEvent.press(screen.getByTestId('status-option-10', q));
+      await fireEvent.press(screen.getByTestId('status-picker-next', q));
+      await fireEvent.press(screen.getByTestId('status-picker-submit', q));
+
+      await waitFor(() => expect(onSubmitStatus).toHaveBeenCalledWith(expect.objectContaining({ respondingTo: '100' })));
+    });
+
+    it('in hold mode, opens the note step after a hold instead of saving, and saves with another hold', async () => {
+      const { onSubmitStatus } = await renderPicker({ fixedCall: FIRE, holdToConfirm: true });
+
+      await fireEvent(screen.getByTestId('status-hold-10', q), 'accessibilityAction', { nativeEvent: { actionName: 'activate' } });
+
+      await waitFor(() => expect(screen.getByTestId('status-picker-note-input', q)).toBeTruthy());
+      expect(onSubmitStatus).not.toHaveBeenCalled();
+      expect(screen.getByTestId('status-picker-hold-submit', q)).toBeTruthy();
+    });
+  });
+
   it('shows the staffing tab and submits staffing separately', async () => {
     const onSubmitStaffing = jest.fn(async () => 'queued' as const);
+
     const { onClose } = await renderPicker({
       subject: 'personnel',
       showStaffing: true,

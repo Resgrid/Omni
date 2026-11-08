@@ -275,6 +275,7 @@
     "call_location": "Call Location",
     "call_number": "Call Number",
     "call_priority": "Call Priority",
+    "call_summary_hint": "Shows the call's nature, notes, protocols and more",
     "confirm_deselect_message": "Are you sure you want to deselect the current active call?",
     "confirm_deselect_title": "Deselect Active Call",
     "contact_info": "Contact Info",
@@ -3732,9 +3733,6 @@
     "arrange": "Arrange automatically",
     "board_order": "Position {{position}} of {{count}}",
     "board_order_hint": "Moving a widget earlier or later re-packs the dashboard from the top.",
-    "calls_display": "Show calls as",
-    "calls_display_cards": "Cards",
-    "calls_display_table": "Table",
     "center_hint": "Leave latitude and longitude empty to use the department's map center.",
     "column": {
       "name": "Name",

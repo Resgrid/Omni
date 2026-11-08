@@ -122,7 +122,7 @@ export const UnitsWidget: React.FC<WidgetProps> = ({ isEditMode, onRemove, onCon
   );
 
   return (
-    <WidgetContainer title={title} testID="units-widget" isEditMode={isEditMode} onRemove={onRemove} onConfigure={onConfigure} stale={stale}>
+    <WidgetContainer title={title} testID="units-widget" isEditMode={isEditMode} onRemove={onRemove} onConfigure={onConfigure} stale={stale} dense>
       {isLoading && units.length === 0 ? (
         <WidgetLoading testID="units-widget-loading" />
       ) : hasError && units.length === 0 ? (

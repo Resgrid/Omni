@@ -275,6 +275,7 @@
     "call_location": "Anrufstandort",
     "call_number": "Anrufnummer",
     "call_priority": "Anrufpriorität",
+    "call_summary_hint": "Zeigt Art, Notizen, Protokolle und mehr zum Anruf",
     "confirm_deselect_message": "Sind Sie sicher, dass Sie die Auswahl des aktuellen aktiven Anrufs aufheben möchten?",
     "confirm_deselect_title": "Aktiven Anruf abwählen",
     "contact_info": "Kontaktinfo",
@@ -3732,9 +3733,6 @@
     "arrange": "Arrange automatically",
     "board_order": "Position {{position}} of {{count}}",
     "board_order_hint": "Moving a widget earlier or later re-packs the dashboard from the top.",
-    "calls_display": "Show calls as",
-    "calls_display_cards": "Cards",
-    "calls_display_table": "Table",
     "center_hint": "Leave latitude and longitude empty to use the department's map center.",
     "column": {
       "name": "Name",

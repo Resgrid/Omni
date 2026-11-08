@@ -3,6 +3,7 @@ import type { CallResultData, CustomStatusResultData, GroupResultData, PoiResult
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+import { sortCallsNewestFirst } from '../calls/call-order';
 import { assertV4Success, unwrapItem } from '../core/envelope';
 import { defineDataHandler, submitWrite, type WriteResult } from '../core/outbox';
 import { dataPersistOptions, registerPersistedStore } from '../core/persist';
@@ -109,7 +110,8 @@ export const useUnitStatusStore = create<UnitStatusState>()(
               destinationsByUnit: {
                 ...state.destinationsByUnit,
                 [unitId]: {
-                  calls: (data?.Calls ?? []).filter((call) => !isNoCallSentinel(call)),
+                  // Core sends these in storage order: newest first, like every other call list.
+                  calls: sortCallsNewestFirst((data?.Calls ?? []).filter((call) => !isNoCallSentinel(call))),
                   stations: (data?.Stations ?? []).filter((station) => !isNoStationSentinel(station)),
                   pois: data?.DestinationPois ?? [],
                   poiTypes: data?.PoiTypes ?? [],

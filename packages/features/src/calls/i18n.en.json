@@ -35,6 +35,7 @@
   "call_detail.reschedule_tomorrow_morning": "Tomorrow 8 AM",
   "call_detail.scheduled_on": "Scheduled Dispatch Date & Time",
   "call_detail.tabs.notes": "Notes & files",
+  "calls.call_summary_hint": "Shows the call's nature, notes, protocols and more",
   "calls.card.assigned_to_me": "Assigned to me",
   "calls.card.open_hint": "Opens the call details",
   "calls.card.timers_attention": "Check-ins: {{overdue}} overdue, {{warning}} due soon",

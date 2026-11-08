@@ -1,11 +1,11 @@
 import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { selectCallById, useCallsStore } from '@resgrid/data';
-import { CallCard, callRoutes, resolvePriority } from '@resgrid/features/calls';
+import { CallCard, callRoutes, CallSummaryModal, resolvePriority } from '@resgrid/features/calls';
 import { useNavigationHandoff } from '@resgrid/features/contacts';
 import { useTranslation } from '@resgrid/i18n';
 import { HStack, Pressable, Text, useToast, View, VStack } from '@resgrid/ui';
 import { router } from 'expo-router';
-import { CircleX, Eye, type LucideIcon, MapPin, Navigation } from 'lucide-react-native';
+import { ArrowLeftRight, CircleX, Eye, type LucideIcon, MapPin, Navigation } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
 import { StyleSheet } from 'react-native';
 
@@ -34,9 +34,11 @@ interface CallAction {
 }
 
 /**
- * The crew's active call on the console (Unit `call-sidebar`): the call card, or "No active call"; tapping it opens the
- * call picker. Actions: call details, directions to the call, directions to its destination POI and deselect (confirmed).
- * Directions hand off to the crew's navigation app — the app never calls a routing provider.
+ * The crew's active call on the console (Unit `call-sidebar`): the call card, or "No active call". Tapping the card opens
+ * the call summary (nature, notes, images, files, video, protocols, site info, history and audio, with a way on to the
+ * full detail); tapping "No active call" opens the call picker. Actions: call details, directions to the call,
+ * directions to its destination POI, change the active call and deselect (confirmed). Directions hand off to the crew's
+ * navigation app — the app never calls a routing provider.
  */
 export const ActiveCallCard: React.FC<ActiveCallCardProps> = ({ activeCallId, onSelectCall, onClearCall, onNavigate, buttonMinHeight = 44, iconSize = 18, testID = 'unit-active-call' }) => {
   const { t } = useTranslation();
@@ -45,6 +47,7 @@ export const ActiveCallCard: React.FC<ActiveCallCardProps> = ({ activeCallId, on
   const call = useCallsStore((state) => (activeCallId ? selectCallById(state, activeCallId) : undefined));
   const priorities = useCallsStore((state) => state.callPriorities);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const [isSummaryOpen, setIsSummaryOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
   const priority = useMemo(() => (call ? resolvePriority(priorities, call.Priority) : null), [call, priorities]);
@@ -55,29 +58,37 @@ export const ActiveCallCard: React.FC<ActiveCallCardProps> = ({ activeCallId, on
     async (target: typeof location) => {
       if (!target) return;
       const opened = await handoff.navigateTo(target);
+
       if (!opened) toast.error(t('map.failed_to_open_maps'));
     },
     [handoff, t, toast]
   );
 
+  const openDetails = useCallback(
+    (callId: string) => {
+      pushRoutePath(router, callRoutes.callDetail(callId));
+      onNavigate?.();
+    },
+    [onNavigate]
+  );
+
   const actions = useMemo<CallAction[]>(() => {
     if (!call) return [];
-    const list: CallAction[] = [
-      {
-        id: 'details',
-        labelKey: 'map.view_call_details',
-        icon: Eye,
-        onPress: () => {
-          pushRoutePath(router, callRoutes.callDetail(call.CallId));
-          onNavigate?.();
-        },
-      },
-    ];
+    const list: CallAction[] = [{ id: 'details', labelKey: 'map.view_call_details', icon: Eye, onPress: () => openDetails(call.CallId) }];
+
     if (location) list.push({ id: 'directions', labelKey: 'calls.directions', icon: MapPin, onPress: () => void navigate(location) });
+
     if (destination) list.push({ id: 'destination', labelKey: 'calls.directions_to_destination', icon: Navigation, onPress: () => void navigate(destination) });
+
+    // The card itself opens the call summary, so changing the call is a button of its own.
+    if (onSelectCall) list.push({ id: 'change', labelKey: 'calls.select_active_call', icon: ArrowLeftRight, onPress: () => setIsPickerOpen(true) });
+
     if (onClearCall) list.push({ id: 'deselect', labelKey: 'calls.deselect', icon: CircleX, onPress: () => setIsConfirmOpen(true) });
+
     return list;
-  }, [call, destination, location, navigate, onClearCall, onNavigate]);
+  }, [call, destination, location, navigate, onClearCall, onSelectCall, openDetails]);
+
+  const onCardPress = call ? () => setIsSummaryOpen(true) : onSelectCall ? () => setIsPickerOpen(true) : undefined;
 
   const handleSelect = useCallback(
     (callId: string) => {
@@ -89,7 +100,7 @@ export const ActiveCallCard: React.FC<ActiveCallCardProps> = ({ activeCallId, on
 
   return (
     <VStack space="xs" testID={testID}>
-      <Pressable onPress={onSelectCall ? () => setIsPickerOpen(true) : undefined} disabled={!onSelectCall} accessibilityRole="button" accessibilityHint={t('calls.select_active_call')} testID={`${testID}-trigger`}>
+      <Pressable onPress={onCardPress} disabled={!onCardPress} accessibilityRole="button" accessibilityHint={call ? t('calls.call_summary_hint') : t('calls.select_active_call')} testID={`${testID}-trigger`}>
         {call ? (
           <CallCard
             call={call}
@@ -110,6 +121,7 @@ export const ActiveCallCard: React.FC<ActiveCallCardProps> = ({ activeCallId, on
         <HStack className="w-full">
           {actions.map((action) => {
             const Icon = action.icon;
+
             return (
               <Pressable
                 key={action.id}
@@ -128,6 +140,7 @@ export const ActiveCallCard: React.FC<ActiveCallCardProps> = ({ activeCallId, on
           })}
         </HStack>
       ) : null}
+      {call ? <CallSummaryModal isOpen={isSummaryOpen} onClose={() => setIsSummaryOpen(false)} callId={call.CallId} onOpenDetails={openDetails} testID={`${testID}-summary`} /> : null}
       {onSelectCall ? <ActiveCallSheet isOpen={isPickerOpen} onClose={() => setIsPickerOpen(false)} activeCallId={activeCallId} onSelect={handleSelect} rowMinHeight={buttonMinHeight + 8} /> : null}
       <ConfirmDialog
         isOpen={isConfirmOpen}

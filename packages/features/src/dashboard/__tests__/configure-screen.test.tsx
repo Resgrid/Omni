@@ -75,14 +75,20 @@ describe('ConfigureDashboardScreen', () => {
     await fireEvent.press(screen.getByTestId('setting-personnel-hideGroups-option-7'));
     expect(useWidgetSettingsStore.getState().personnel.hideGroups).toEqual(['7']);
 
+    // The calls widget is a list only: every column, the order, scrolling and font size are always configurable.
     await fireEvent.press(screen.getByTestId('configure-tab-calls'));
-    expect(screen.queryByTestId('setting-calls-showId')).toBeNull();
-    await fireEvent.press(screen.getByTestId('setting-calls-display-table'));
-    expect(useWidgetSettingsStore.getState().calls.display).toBe('table');
-    expect(screen.getByTestId('setting-calls-showId')).toBeTruthy();
+    expect(screen.queryByTestId('setting-calls-display-cards')).toBeNull();
+
+    for (const key of ['showId', 'showName', 'showAddress', 'showTimestamp', 'showPriority', 'showDispatched', 'scrollDispatches']) expect(screen.getByTestId(`setting-calls-${key}`)).toBeTruthy();
+    await fireEvent(screen.getByTestId('setting-calls-showAddress'), 'valueChange', false);
+    await fireEvent.press(screen.getByTestId('setting-calls-columns-name-up'));
+    await fireEvent.press(screen.getByTestId('setting-calls-fontSize-decrease'));
+    await fireEvent(screen.getByTestId('setting-calls-scrollDispatches'), 'valueChange', false);
+    expect(useWidgetSettingsStore.getState().calls).toMatchObject({ showAddress: false, fontSize: 13, scrollDispatches: false });
+    expect(useWidgetSettingsStore.getState().calls.columnOrder.slice(0, 2)).toEqual(['name', 'id']);
 
     await fireEvent.press(screen.getByTestId('configure-reset-settings'));
-    expect(useWidgetSettingsStore.getState().calls.display).toBe('cards');
+    expect(useWidgetSettingsStore.getState().calls).toMatchObject({ showAddress: true, fontSize: 14, scrollDispatches: true });
   });
 
   it('commits coordinates on blur and ignores out-of-range values', async () => {

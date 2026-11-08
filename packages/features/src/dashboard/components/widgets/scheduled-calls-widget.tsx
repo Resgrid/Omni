@@ -109,7 +109,7 @@ export const ScheduledCallsWidget: React.FC<WidgetProps> = ({ isEditMode, onRemo
         const dispatches = dispatchesByCall[call.CallId] ?? [];
 
         return dispatches.length > 0 ? (
-          <DispatchTicker dispatches={dispatches} animate={settings.scrollDispatches} />
+          <DispatchTicker dispatches={dispatches} animate={settings.scrollDispatches} fontSize={fontSize} testID={`scheduled-calls-widget-ticker-${call.CallId}`} />
         ) : (
           <CellText fontSize={fontSize} muted>
             —
@@ -122,7 +122,7 @@ export const ScheduledCallsWidget: React.FC<WidgetProps> = ({ isEditMode, onRemo
   }, [dispatchesByCall, fontSize, now, priorityOf, protectedLabel, scheduledLabel, settings, t]);
 
   return (
-    <WidgetContainer title={title} testID="scheduled-calls-widget" isEditMode={isEditMode} onRemove={onRemove} onConfigure={onConfigure} stale={stale}>
+    <WidgetContainer title={title} testID="scheduled-calls-widget" isEditMode={isEditMode} onRemove={onRemove} onConfigure={onConfigure} stale={stale} dense>
       {isLoading && scheduledCalls.length === 0 ? (
         <WidgetLoading testID="scheduled-calls-widget-loading" />
       ) : hasError && scheduledCalls.length === 0 ? (

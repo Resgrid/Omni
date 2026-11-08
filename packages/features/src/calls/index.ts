@@ -8,6 +8,7 @@
 // one statement: Oxlint's readable spacing wants a blank line between top-level statements, which the export sorter removes.
 import { AddResourcesSheet, type AddResourcesSheetProps } from './components/add-resources-sheet';
 import { CallConfirmDialog, type CallConfirmDialogProps } from './components/call-confirm-dialog';
+import { CallSummaryModal, type CallSummaryModalProps } from './components/call-summary-modal';
 import { type CallDispatchNowControls, useCallDispatchNow, type UseCallDispatchNowOptions } from './hooks/use-call-dispatch-now';
 import { useCallPermissions, useCallPermissionsResolver, useCallRights } from './hooks/use-call-permissions';
 import { callDisplayName, callDisplayText, type CallTextField, type CallTextFields, revealedCallText } from './lib/call-display';
@@ -58,6 +59,7 @@ export { type CallDetailTabContext, type CallDetailTabDefinition, getCallDetailT
 export {
   type AddResourcesRecommendationProps,
   type AudioClipHandle,
+  type CallDetailActionProps,
   type CallFormHookPoints,
   type ContactPickerProps,
   getCallFormHookPoints,
@@ -119,6 +121,8 @@ export {
   type CallPermissions,
   type CallRights,
   type CallsCapability,
+  CallSummaryModal,
+  type CallSummaryModalProps,
   type CallTextField,
   type CallTextFields,
   dispatchesToSelection,

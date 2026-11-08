@@ -23,7 +23,7 @@ describe('normalizeWidgetSettings', () => {
   it('fills missing sections and rejects bad values', () => {
     const settings = normalizeWidgetSettings({
       personnel: { fontSize: 2, showGroup: 'yes', hideGroups: ['1', 2, null, '1'], columnOrder: ['status', 'bogus', 'name'] },
-      calls: { display: 'grid', fontSize: 99 },
+      calls: { display: 'cards', fontSize: 99 },
       map: { zoomLevel: 40, latitude: 123, longitude: -100.5 },
       weather: { units: 'kelvin' },
       callsSummary: { priorityIds: ['3', 1, 'x'], maxPrioritiesToShow: -2 },
@@ -34,7 +34,8 @@ describe('normalizeWidgetSettings', () => {
     expect(settings.personnel.showGroup).toBe(true);
     expect(settings.personnel.hideGroups).toEqual(['1', '2']);
     expect(settings.personnel.columnOrder).toEqual(['status', 'name', 'group', 'staffing', 'roles', 'timestamp']);
-    expect(settings.calls.display).toBe('cards');
+    // The calls widget is a list only; the card/table choice earlier builds stored is dropped.
+    expect(settings.calls).not.toHaveProperty('display');
     expect(settings.calls.fontSize).toBe(30);
     expect(settings.map).toMatchObject({ zoomLevel: 20, latitude: 0, longitude: -100.5 });
     expect(settings.weather.units).toBe('imperial');
@@ -71,12 +72,13 @@ describe('migrateLegacyWidgetSettings (BigBoard widget-settings v0)', () => {
     notes: { category: 'None', includeUncategorized: false },
   };
 
-  it('keeps the toggles the configure screen wrote, drops dead and text-matched fields, keeps the call table', () => {
+  it('keeps the toggles the configure screen wrote and drops dead and text-matched fields', () => {
     const migrated = migrateLegacyWidgetSettings(legacyBlob, () => undefined);
     expect(migrated.personnel).toMatchObject({ showGroup: false, fontSize: 18, hideNotResponding: true });
     expect(migrated.personnel).not.toHaveProperty('respondingText');
     expect(migrated.personnel).not.toHaveProperty('sortOrders');
-    expect(migrated.calls).toMatchObject({ display: 'table', scrollDispatches: false, fontSize: 16 });
+    expect(migrated.calls).toMatchObject({ scrollDispatches: false, fontSize: 16 });
+    expect(migrated.calls).not.toHaveProperty('display');
     expect(migrated.calls).not.toHaveProperty('showUser');
     expect(migrated.scheduledCalls.scrollDispatches).toBe(true);
     expect(migrated.notes).toEqual({ category: '', includeUncategorized: false });

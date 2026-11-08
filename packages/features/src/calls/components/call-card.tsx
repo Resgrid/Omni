@@ -45,7 +45,7 @@ const GREY = '#808080';
 
 /**
  * One call as a row or card (omni-plan §7.10: Responder card with dispatch ticker and assignment outline + Unit/IC
- * timer props). `density` lets BigBoard widgets and the Dispatch console reuse it. Nature is shown as plain text
+ * timer props). `density` sizes it for wall screens and the Dispatch console. Nature is shown as plain text
  * (never HTML in a list row); protected values show a "Protected" label, never the REDACTED sentinel.
  */
 export const CallCard: React.FC<CallCardProps> = React.memo(function CallCard({

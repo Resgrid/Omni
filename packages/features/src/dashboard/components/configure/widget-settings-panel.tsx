@@ -113,37 +113,21 @@ const CallsPanel: React.FC = () => {
   const [settings, update] = useSection('calls');
   return (
     <>
-      <SettingsSection title={t('configure.display_options')}>
-        <SegmentedChoice
-          label={t('dashboard.calls_display')}
-          options={[
-            { value: 'cards', label: t('dashboard.calls_display_cards') },
-            { value: 'table', label: t('dashboard.calls_display_table') },
-          ]}
-          value={settings.display}
-          onChange={(display) => update({ display })}
-          testID="setting-calls-display"
-        />
+      <SettingsSection title={t('configure.visible_columns')}>
+        <SettingSwitch label={t('configure.id')} value={settings.showId} onChange={(showId) => update({ showId })} testID="setting-calls-showId" />
+        <SettingSwitch label={t('configure.name')} value={settings.showName} onChange={(showName) => update({ showName })} testID="setting-calls-showName" />
+        <SettingSwitch label={t('configure.address')} value={settings.showAddress} onChange={(showAddress) => update({ showAddress })} testID="setting-calls-showAddress" />
+        <SettingSwitch label={t('configure.timestamp')} value={settings.showTimestamp} onChange={(showTimestamp) => update({ showTimestamp })} testID="setting-calls-showTimestamp" />
+        <SettingSwitch label={t('configure.priority')} value={settings.showPriority} onChange={(showPriority) => update({ showPriority })} testID="setting-calls-showPriority" />
         <SettingSwitch label={t('configure.dispatched')} value={settings.showDispatched} onChange={(showDispatched) => update({ showDispatched })} testID="setting-calls-showDispatched" />
-        <SettingSwitch label={t('dashboard.scroll_dispatches')} value={settings.scrollDispatches} onChange={(scrollDispatches) => update({ scrollDispatches })} testID="setting-calls-scrollDispatches" />
       </SettingsSection>
-      {settings.display === 'table' ? (
-        <>
-          <SettingsSection title={t('configure.visible_columns')}>
-            <SettingSwitch label={t('configure.id')} value={settings.showId} onChange={(showId) => update({ showId })} testID="setting-calls-showId" />
-            <SettingSwitch label={t('configure.name')} value={settings.showName} onChange={(showName) => update({ showName })} testID="setting-calls-showName" />
-            <SettingSwitch label={t('configure.address')} value={settings.showAddress} onChange={(showAddress) => update({ showAddress })} testID="setting-calls-showAddress" />
-            <SettingSwitch label={t('configure.timestamp')} value={settings.showTimestamp} onChange={(showTimestamp) => update({ showTimestamp })} testID="setting-calls-showTimestamp" />
-            <SettingSwitch label={t('configure.priority')} value={settings.showPriority} onChange={(showPriority) => update({ showPriority })} testID="setting-calls-showPriority" />
-          </SettingsSection>
-          <SettingsSection title={t('configure.column_order')} description={t('configure.use_arrows_reorder')}>
-            <ColumnOrderEditor order={settings.columnOrder} labelOf={(key) => t(CALLS_COLUMN_LABEL_KEYS[key])} onChange={(columnOrder) => update({ columnOrder })} testID="setting-calls-columns" />
-          </SettingsSection>
-          <SettingsSection title={t('configure.options')}>
-            <FontSize value={settings.fontSize} onChange={(fontSize) => update({ fontSize })} testID="setting-calls-fontSize" />
-          </SettingsSection>
-        </>
-      ) : null}
+      <SettingsSection title={t('configure.column_order')} description={t('configure.use_arrows_reorder')}>
+        <ColumnOrderEditor order={settings.columnOrder} labelOf={(key) => t(CALLS_COLUMN_LABEL_KEYS[key])} onChange={(columnOrder) => update({ columnOrder })} testID="setting-calls-columns" />
+      </SettingsSection>
+      <SettingsSection title={t('configure.options')}>
+        <SettingSwitch label={t('dashboard.scroll_dispatches')} value={settings.scrollDispatches} onChange={(scrollDispatches) => update({ scrollDispatches })} testID="setting-calls-scrollDispatches" />
+        <FontSize value={settings.fontSize} onChange={(fontSize) => update({ fontSize })} testID="setting-calls-fontSize" />
+      </SettingsSection>
     </>
   );
 };

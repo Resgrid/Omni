@@ -5,7 +5,7 @@ import { defaultResetRegistry } from '@resgrid/offline';
 import { createDataTestRuntime, type DataTestRuntime, flush, httpError, manifest, networkError, notFound, ok, persisted } from '../../__tests__/helpers';
 import { setDataStorage } from '../../core/persist';
 import { setDataVariant } from '../../core/runtime';
-import { CALL_CREATE_EVENT, configureCallsCachePolicy, selectCallListWithQueued, selectUnacknowledgedSyncedCalls, useCallsStore } from '../calls-store';
+import { CALL_CREATE_EVENT, configureCallsCachePolicy, selectActiveCalls, selectCallListWithQueued, selectUnacknowledgedSyncedCalls, useCallsStore } from '../calls-store';
 
 jest.mock('@resgrid/api', () => ({
   ...jest.requireActual('@resgrid/api'),
@@ -43,12 +43,29 @@ describe('calls store: fetch', () => {
   it('loads calls, priorities and types into separate slices', async () => {
     await useCallsStore.getState().init();
     const state = useCallsStore.getState();
-    expect(state.calls.map((c) => c.CallId)).toEqual(['1', '2']);
+    // Logged at the same time: the newer (higher) call id first.
+    expect(state.calls.map((c) => c.CallId)).toEqual(['2', '1']);
     expect(state.callPriorities).toHaveLength(1);
     expect(state.callTypes).toHaveLength(1);
     expect(state.loading.calls).toBe(false);
     expect(state.errors.calls).toBeNull();
     expect(state.fetchedAt.calls).toBe(runtime.clock.now());
+  });
+
+  it('keeps the active calls newest first whatever order the server sends (every call list and picker reads this order)', async () => {
+    // SAFETY: a GetActiveCalls envelope with only the fields the order reads.
+    jest.mocked(getActiveCalls).mockResolvedValue(ok([call('7', { LoggedOnUtc: '2026-10-31T08:00:00Z' }), call('9', { LoggedOnUtc: '2026-10-31T10:00:00' }), call('8', { LoggedOnUtc: '2026-10-31T09:00:00Z' })]) as never);
+    await useCallsStore.getState().fetchCalls();
+    expect(useCallsStore.getState().calls.map((c) => c.CallId)).toEqual(['9', '8', '7']);
+    expect(selectActiveCalls(useCallsStore.getState()).map((c) => c.CallId)).toEqual(['9', '8', '7']);
+  });
+
+  it('places a synced queued call by its logged time, not at the top', async () => {
+    await useCallsStore.getState().fetchCalls();
+    useCallsStore
+      .getState()
+      .replaceQueuedCall('local-1', call('3', { LoggedOnUtc: '2026-10-31T10:00:00Z' }), { localId: 'local-1', callId: '3', number: 'C-3', syncedAt: runtime.clock.now(), possibleDuplicate: false, duplicateCallIds: [] });
+    expect(useCallsStore.getState().calls.map((c) => c.CallId)).toEqual(['2', '1', '3']);
   });
 
   it('records a translatable error code per slice and keeps the other slices', async () => {
