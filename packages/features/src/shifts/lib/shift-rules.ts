@@ -1,4 +1,5 @@
 import { parseUtcMs } from '@resgrid/core/utils/dates';
+import { getDepartmentTimeZone } from '@resgrid/features/department-config';
 import {
   type PendingShiftSignupResultData,
   SHIFT_SERVER_ERROR_CODES,
@@ -16,7 +17,7 @@ import {
   ShiftTradeUserState,
 } from '@resgrid/models';
 
-import { getDateKey, parseWallClock } from './shift-time';
+import { getDateKey, wallClockToUtcMs } from './shift-time';
 
 // Pure rules for the shift screens (Responder shift-labels + shift-utils). The server re-checks every action; these
 // only decide which buttons show and how an outcome is worded.
@@ -122,8 +123,11 @@ export const getTradeMyStateKey = (state: number): string => {
 /** Key for an applicant's eligibility problem (`IneligibleReason`), or null when they qualify. */
 export const getIneligibleReasonKey = (reason: string | null | undefined): string | null => {
   if (!reason) return null;
+
   if (reason === 'already_on_roster') return 'shifts.trade.ineligible.already_on_day';
+
   if (reason === 'not_eligible') return 'shifts.trade.ineligible.missing_roles';
+
   return 'shifts.trade.ineligible.not_allowed';
 };
 
@@ -132,36 +136,47 @@ const KNOWN_ERROR_CODES = new Set<string>([...SHIFT_SERVER_ERROR_CODES, 'network
 /** Translation key for a mutation outcome code; anything unrecognised reads as the generic message. */
 export const getShiftErrorKey = (code: ShiftErrorCode | string | null | undefined): string => {
   const normalized = typeof code === 'string' ? code.trim().toLowerCase() : '';
+
   return KNOWN_ERROR_CODES.has(normalized) ? `shifts.errors.${normalized}` : 'shifts.errors.unknown';
 };
 
-/**
- * When the day ends, in epoch ms: the server's UTC end (`EndUtc`) when it sends one, otherwise the department wall-clock
- * end read on the device clock (older servers). Null when neither parses.
- */
-export const getShiftDayEndMs = (day: Pick<ShiftDayResultData, 'End' | 'EndUtc'>): number | null => parseUtcMs(day.EndUtc) ?? parseWallClock(day.End)?.getTime() ?? null;
+// Whether a shift has ended is decided as the server decides it (`now >= End`, department-local). The UTC end is exact;
+// a wall-clock end is read in the department's time zone (`timeZone`, from the department config by default; the
+// device zone when the server sends none).
+
+/** A wall-clock end has passed. */
+const hasEnded = (end: string | null | undefined, now: Date, timeZone: string | null): boolean => {
+  const endMs = wallClockToUtcMs(end, timeZone);
+
+  return endMs !== null && endMs <= now.getTime();
+};
 
 /**
- * The day has finished, as the server decides it (`now >= End`). The UTC end is exact in any device time zone; without
- * it, a day the server called active is not over and the wall-clock end is read on the device clock.
+ * When the day counts as over, in epoch ms: the server's UTC end (`EndUtc`) when it sends one, otherwise (older servers)
+ * the wall-clock end. Null when time alone never ends it: a day the server called active with no UTC end stays current
+ * until the next load, as does one whose end cannot be read.
  */
-export const isShiftDayOver = (day: Pick<ShiftDayResultData, 'End' | 'EndUtc' | 'IsActive'>, now: Date = new Date()): boolean => {
+export const getShiftDayOverAtMs = (day: Pick<ShiftDayResultData, 'End' | 'EndUtc' | 'IsActive'>, timeZone: string | null = getDepartmentTimeZone()): number | null => {
   const utcEnd = parseUtcMs(day.EndUtc);
 
-  if (utcEnd !== null) return utcEnd <= now.getTime();
+  if (utcEnd !== null) return utcEnd;
 
-  if (day.IsActive) return false;
+  return day.IsActive ? null : wallClockToUtcMs(day.End, timeZone);
+};
 
-  const end = parseWallClock(day.End);
+/** The day has finished (see getShiftDayOverAtMs): exact in any device time zone. */
+export const isShiftDayOver = (day: Pick<ShiftDayResultData, 'End' | 'EndUtc' | 'IsActive'>, now: Date = new Date(), timeZone: string | null = getDepartmentTimeZone()): boolean => {
+  const overAt = getShiftDayOverAtMs(day, timeZone);
 
-  return end !== null && end.getTime() <= now.getTime();
+  return overAt !== null && overAt <= now.getTime();
 };
 
 /** A trade's day has finished: the server says so (`IsOver`) or its wall-clock end has passed. */
-export const isShiftTradeOver = (trade: Pick<ShiftTradeResultData, 'End' | 'IsOver'>, now: Date = new Date()): boolean => trade.IsOver === true || isShiftDayOver({ End: trade.End, IsActive: false }, now);
+export const isShiftTradeOver = (trade: Pick<ShiftTradeResultData, 'End' | 'IsOver'>, now: Date = new Date(), timeZone: string | null = getDepartmentTimeZone()): boolean =>
+  trade.IsOver === true || hasEnded(trade.End, now, timeZone);
 
 /** A pending sign-up's day has finished (its wall-clock end has passed). */
-export const isPendingSignupOver = (signup: Pick<PendingShiftSignupResultData, 'End'>, now: Date = new Date()): boolean => isShiftDayOver({ End: signup.End, IsActive: false }, now);
+export const isPendingSignupOver = (signup: Pick<PendingShiftSignupResultData, 'End'>, now: Date = new Date(), timeZone: string | null = getDepartmentTimeZone()): boolean => hasEnded(signup.End, now, timeZone);
 
 // A finished day is history: no sign-up, withdrawal, trade or roster change (the server refuses them as `day_in_past`).
 
@@ -177,21 +192,26 @@ export const canManageShiftDay = (day: ShiftDayResultData, now: Date = new Date(
 /** The caller's own roster entry for the day, when the full day (with Roster) is loaded. */
 export const findMyRosterEntry = (day: ShiftDayResultData, userId: string | null | undefined): ShiftDayRosterResultData | undefined => {
   if (!userId) return undefined;
+
   return (day.Roster ?? []).find((entry) => entry.UserId === userId && (!day.MySignupId || entry.ShiftSignupId === day.MySignupId || entry.ShiftSignupId === ''));
 };
 
 /** A sign-up the caller holds can be withdrawn; a standing-roster slot (source 0) is traded, not withdrawn. Static shift days never. */
 export const canWithdrawFromDay = (day: ShiftDayResultData, userId: string | null | undefined, now: Date = new Date()): boolean => {
   if (day.ShiftType === ShiftAssignmentType.Workshift) return false;
+
   if (!day.MySignupId || (day.MyStatus !== ShiftDayMyStatus.OnRoster && day.MyStatus !== ShiftDayMyStatus.PendingApproval) || isShiftDayOver(day, now)) return false;
   const entry = findMyRosterEntry(day, userId);
+
   if (entry) return entry.Source === ShiftRosterSource.Signup || entry.Source === ShiftRosterSource.SupervisorAssigned || entry.Source === ShiftRosterSource.Trade;
+
   return day.ShiftType === ShiftAssignmentType.Signup;
 };
 
 /** On the roster (approved), no trade open, not over. Newer servers decide it (`CanTrade`); older ones leave it to this check. */
 export const canRequestTradeForDay = (day: ShiftDayResultData, now: Date = new Date()): boolean => {
   if (day.MyStatus !== ShiftDayMyStatus.OnRoster || !!day.MyTradeId || isShiftDayOver(day, now)) return false;
+
   return day.CanTrade ?? true;
 };
 
@@ -203,6 +223,7 @@ export const getManageableGroups = (day: ShiftDayResultData): ShiftDayGroupNeeds
 /** By the entry's group when it has one, otherwise by the day-level flag. */
 export const canManageRosterEntry = (day: ShiftDayResultData, entry: Pick<ShiftDayRosterResultData, 'GroupId'>): boolean => {
   if (!entry.GroupId) return day.CanManage;
+
   return (day.Needs ?? []).some((group) => group.GroupId === entry.GroupId && group.CanManage);
 };
 
@@ -222,6 +243,7 @@ export const groupRoster = (roster: readonly ShiftDayRosterResultData[], noGroup
     existing.entries.push(entry);
     groups.set(key, existing);
   });
+
   return Array.from(groups.values());
 };
 
@@ -254,8 +276,11 @@ export const canRespondToTrade = (trade: ShiftTradeResultData, now: Date = new D
 /** Trades that need something from the caller: an answer, a pick, or a review. */
 export const tradeNeedsAttention = (trade: ShiftTradeResultData): boolean => {
   if (canReviewTrade(trade)) return true;
+
   if (trade.Status !== ShiftTradeStatus.Open) return false;
+
   if (canRespondToTrade(trade)) return true;
+
   return canPickTrade(trade) && (trade.Users ?? []).some((user) => user.Offered && !user.Declined);
 };
 
@@ -273,6 +298,7 @@ const nonEmpty = <T>(sections: Section<T>[]): Section<T>[] => sections.filter((s
 export const sectionMyTrades = (trades: readonly ShiftTradeResultData[]): Section<ShiftTradeResultData>[] => {
   const attention = trades.filter(tradeNeedsAttention);
   const rest = trades.filter((trade) => !tradeNeedsAttention(trade));
+
   return nonEmpty([
     { key: 'attention', titleKey: 'shifts.trade.section_attention', items: attention },
     { key: 'active', titleKey: 'shifts.trade.section_active', items: rest.filter(isActiveTrade) },
@@ -315,6 +341,7 @@ export const summarizeShiftDaysByDate = (days: readonly ShiftDayResultData[]): M
   const map = new Map<string, DaySummary>();
   days.forEach((day) => {
     const key = getDateKey(day.ShiftDay || day.Start);
+
     if (!key) return;
     const summary = map.get(key) ?? { count: 0, openSlots: 0, hasMine: false, allFilled: true };
     summary.count += 1;
@@ -323,11 +350,13 @@ export const summarizeShiftDaysByDate = (days: readonly ShiftDayResultData[]): M
     summary.allFilled = summary.allFilled && day.Filled;
     map.set(key, summary);
   });
+
   return map;
 };
 
 /** Case-insensitive match on the shift name (the list search). */
 export const matchesShiftQuery = (day: Pick<ShiftDayResultData, 'ShiftName'>, query: string): boolean => {
   const needle = query.trim().toLowerCase();
+
   return needle === '' || (day.ShiftName ?? '').toLowerCase().includes(needle);
 };

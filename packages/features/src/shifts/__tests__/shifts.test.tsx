@@ -12,6 +12,8 @@ import { ShiftActionSheet } from '../components/shift-action-sheet';
 import { ShiftDayDetails } from '../components/shift-day-details';
 import { ShiftApprovalsList } from '../components/shift-lists';
 import { ShiftTradeCard } from '../components/shift-trade-card';
+import { ShiftTradeDetails } from '../components/shift-trade-details';
+import { useRerenderAt } from '../hooks/use-rerender-at';
 import ShiftDayScreen from '../screens/shift-day';
 import ShiftTradeScreen from '../screens/shift-trade';
 import ShiftsScreen from '../screens/shifts';
@@ -38,6 +40,15 @@ afterEach(async () => {
 });
 
 const toasts = () => useToastStore.getState().toasts.map((toast) => `${toast.type}:${toast.message}`);
+
+const pad = (value: number): string => String(value).padStart(2, '0');
+
+/** A shift time `ms` from now on the device clock (no department zone is set in these tests). */
+const wallClockIn = (ms: number): string => {
+  const at = new Date(Date.now() + ms);
+
+  return `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}T${pad(at.getHours())}:${pad(at.getMinutes())}:${pad(at.getSeconds())}`;
+};
 
 describe('ShiftsScreen', () => {
   it('loads Today on focus, merges static shift days and filters by search', async () => {
@@ -184,6 +195,33 @@ describe('ShiftsScreen', () => {
     expect(screen.getByTestId('shift-day-card-j14')).toBeTruthy();
   });
 
+  it('calendar: a link into Shifts while it is open shows the month and day it names and keeps the shift filter', async () => {
+    jest.setSystemTime(new Date(2030, 8, 15, 12));
+    jest.mocked(useLocalSearchParams).mockReturnValue({ view: 'calendar', month: '2030-06', date: '2030-06-14' });
+    useShiftsStore.setState({ shifts: [makeShift('s1')] });
+    const { rerender } = await render(<ShiftsScreen />);
+    await fireEvent.press(screen.getByTestId('shifts-calendar-filter-s1'));
+    expect(actions.fetchShiftDaysForDateRange).toHaveBeenLastCalledWith('2030-06-01', '2030-06-30', 's1', undefined);
+
+    jest.mocked(useLocalSearchParams).mockReturnValue({ view: 'calendar', month: '2030-08', date: '2030-08-03' });
+    await rerender(<ShiftsScreen />);
+    expect(actions.fetchShiftDaysForDateRange).toHaveBeenLastCalledWith('2030-08-01', '2030-08-31', 's1', undefined);
+    expect(screen.getByTestId('shift-calendar-day-2030-08-03')).toBeSelected();
+
+    // The screen's own writes, read back from the route, change nothing: a month moved to keeps no picked day, even
+    // the month holding today.
+    await fireEvent.press(screen.getByTestId('shift-calendar-next'));
+    expect(router.setParams).toHaveBeenLastCalledWith({ month: '2030-09', date: undefined });
+    jest.mocked(useLocalSearchParams).mockReturnValue({ view: 'calendar', month: '2030-09' });
+    await rerender(<ShiftsScreen />);
+    expect(screen.getByTestId('shift-calendar-day-2030-09-15')).not.toBeSelected();
+
+    jest.mocked(useLocalSearchParams).mockReturnValue({ view: 'trades' });
+    await rerender(<ShiftsScreen />);
+    expect(actions.fetchShiftTrades).toHaveBeenCalled();
+    expect(screen.queryByTestId('shift-calendar-view')).toBeNull();
+  });
+
   it('trades: an action on a card asks for confirmation, then responds with the offered swap-back', async () => {
     useShiftsStore.setState({
       openTrades: [makeTrade('t1', { IsOpen: true, CanApply: true })],
@@ -286,6 +324,7 @@ describe('ShiftDayDetails', () => {
       Needs: [{ GroupId: 'g1', GroupName: 'Station 1', GroupNeeds: [], CanManage: true }],
       Roster: [roster('u2', { ApprovalPending: true }), roster('u3')],
     });
+
     useShiftsStore.setState({ shiftDaysById: { d1: day }, personnelOptionsByDay: { d1: [{ UserId: 'u9', Name: 'Nina', GroupId: 'g1', GroupName: 'Station 1', Roles: [], RoleIds: [] }] } });
     await render(<ShiftDayDetails shiftDayId="d1" />);
 
@@ -420,12 +459,93 @@ describe('approvals and trades on a finished day', () => {
     expect(screen.queryByTestId('trade-approve-t-old')).toBeNull();
   });
 
+  it('an open trade whose day ends while on screen stops offering its applicants to pick', async () => {
+    const End = wallClockIn(60_000);
+    const offered = { UserId: 'a1', Name: 'Alex', Declined: false, Offered: true, Reason: '', OfferedShifts: [] };
+    await render(<ShiftTradeDetails tradeId="t2" fallback={makeTrade('t2', { Direction: ShiftTradeDirection.Outgoing, IsOpen: true, End, Users: [offered] })} onAction={jest.fn()} />);
+    expect(screen.getByTestId('trade-pick-t2-a1')).toBeTruthy();
+    expect(screen.getByTestId('trade-detail-cancel-t2')).toBeTruthy();
+
+    await act(() => {
+      jest.advanceTimersByTime(62_000);
+    });
+    expect(screen.queryByTestId('trade-pick-t2-a1')).toBeNull();
+    expect(screen.queryByTestId('trade-detail-cancel-t2')).toBeNull();
+  });
+
+  it('the approvals list drops a sign-up or trade review once its day ends on screen', async () => {
+    const End = wallClockIn(60_000);
+    await render(
+      <ShiftApprovalsList
+        signups={[makeSignup('p1', { End })]}
+        trades={[makeTrade('t1', { Status: ShiftTradeStatus.PendingApproval, CanReview: true, End })]}
+        isLoading={false}
+        onRefresh={async () => undefined}
+        onAction={jest.fn()}
+        onOpenTradeDetails={jest.fn()}
+      />
+    );
+    expect(screen.getByTestId('signup-approve-p1')).toBeTruthy();
+    expect(screen.getByTestId('trade-approve-t1')).toBeTruthy();
+
+    await act(() => {
+      jest.advanceTimersByTime(62_000);
+    });
+    expect(screen.getByTestId('signup-over-p1')).toBeTruthy();
+    expect(screen.queryByTestId('signup-approve-p1')).toBeNull();
+    expect(screen.getByTestId('trade-over-t1')).toBeTruthy();
+    expect(screen.queryByTestId('trade-approve-t1')).toBeNull();
+  });
+
   it('the Trades badge leaves out open requests whose day is over', async () => {
     useShiftsStore.setState({ openTrades: [makeTrade('t1', { IsOpen: true, CanApply: true }), makeTrade('t2', { IsOpen: true, CanApply: true, IsOver: true })] });
     await render(<ShiftsScreen initialView="trades" />);
     expect(screen.getByTestId('shifts-segment-trades-badge')).toHaveTextContent('1');
     expect(screen.getByTestId('trade-apply-t1')).toBeTruthy();
     expect(screen.queryByTestId('trade-apply-t2')).toBeNull();
+  });
+});
+
+describe('useRerenderAt', () => {
+  it('re-renders just after the moment, in steps past the timer ceiling, and never for a moment already gone', async () => {
+    let renders = 0;
+
+    const Probe: React.FC<{ atMs: number | null }> = ({ atMs }) => {
+      renders += 1;
+      useRerenderAt(atMs);
+
+      return null;
+    };
+
+    // Thirty days out: beyond setTimeout's 24.8-day ceiling.
+    const atMs = Date.now() + 30 * 24 * 60 * 60 * 1000;
+    await render(<Probe atMs={atMs} />);
+    const mounted = renders;
+
+    await act(() => {
+      jest.advanceTimersByTime(2_147_483_647);
+    });
+    expect(renders).toBe(mounted + 1);
+    await act(() => {
+      jest.advanceTimersByTime(atMs - Date.now());
+    });
+    expect(renders).toBe(mounted + 1);
+    await act(() => {
+      jest.advanceTimersByTime(1_000);
+    });
+    expect(renders).toBe(mounted + 2);
+    await act(() => {
+      jest.advanceTimersByTime(60 * 24 * 60 * 60 * 1000);
+    });
+    expect(renders).toBe(mounted + 2);
+
+    await render(<Probe atMs={Date.now() - 5_000} />);
+    const past = renders;
+    await render(<Probe atMs={null} />);
+    await act(() => {
+      jest.advanceTimersByTime(60_000);
+    });
+    expect(renders).toBe(past + 1);
   });
 });
 

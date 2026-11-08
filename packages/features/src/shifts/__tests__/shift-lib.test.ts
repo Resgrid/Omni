@@ -1,4 +1,6 @@
-import { ShiftAssignmentType, ShiftDayMyStatus, ShiftRosterSource, ShiftTradeDirection, ShiftTradeStatus, ShiftTradeUserState } from '@resgrid/models';
+import { getTimeZoneOffsetMinutes, zonedWallClockToUtc } from '@resgrid/core/utils/dates';
+import { setDepartmentConfig } from '@resgrid/features/department-config';
+import { type GetConfigResultData, ShiftAssignmentType, ShiftDayMyStatus, ShiftRosterSource, ShiftTradeDirection, ShiftTradeStatus, ShiftTradeUserState } from '@resgrid/models';
 
 import { resolveShiftCalendarStart, toMonthParam } from '../lib/shift-loaders';
 import {
@@ -15,7 +17,7 @@ import {
   canWithdrawApplication,
   canWithdrawFromDay,
   getIneligibleReasonKey,
-  getShiftDayEndMs,
+  getShiftDayOverAtMs,
   getShiftErrorKey,
   groupRoster,
   isPendingSignupOver,
@@ -27,7 +29,7 @@ import {
   summarizeShiftDaysByDate,
   swapOptionsFor,
 } from '../lib/shift-rules';
-import { getDateKey, getMonthRange, isOvernightShift, mergeShiftDays, monthGrid, parseWallClock } from '../lib/shift-time';
+import { getDateKey, getMonthRange, isOvernightShift, mergeShiftDays, monthGrid, parseWallClock, wallClockToUtcMs } from '../lib/shift-time';
 import { shiftRoutes } from '../routes';
 import { makeDay, makeSignup, makeTrade } from './fixtures';
 
@@ -55,6 +57,7 @@ describe('shift time', () => {
       [makeDay('1', { Start: '2030-05-10T07:00:00' })],
       [makeDay('w', { ShiftType: ShiftAssignmentType.Workshift, Start: '2030-05-10T06:00:00' }), makeDay('1', { Start: '2030-05-10T07:00:00' })]
     );
+
     expect(merged.map((day) => day.ShiftDayId)).toEqual(['w', '1']);
     expect(mergeShiftDays([makeDay('1')], [makeDay('1')]).length).toBe(1);
   });
@@ -113,28 +116,62 @@ describe('shift rules', () => {
     expect(canPickTrade(outgoing)).toBe(true);
     expect(canPickTrade({ ...outgoing, CanPick: false })).toBe(false);
     expect(canCancelTrade(makeTrade('2'))).toBe(false);
+
     const mine = [
       makeDay('a', { MySignupId: 'sa', MyStatus: ShiftDayMyStatus.OnRoster }),
       makeDay('b', { MySignupId: 'sb', MyStatus: ShiftDayMyStatus.PendingApproval }),
       makeDay('d-trade', { MySignupId: 'sc', MyStatus: ShiftDayMyStatus.OnRoster }),
     ];
+
     expect(swapOptionsFor(makeTrade('3'), mine).map((day) => day.MySignupId)).toEqual(['sa']);
     expect(swapOptionsFor(makeTrade('4', { ShiftType: ShiftAssignmentType.Workshift }), mine)).toEqual([]);
   });
 
   it('a day is over at its UTC end when the server sends one (any device time zone), else at its wall-clock end', () => {
     const utc = makeDay('1', { End: '2030-05-10T19:00:00', EndUtc: '2030-05-10T23:00:00Z' });
-    expect(getShiftDayEndMs(utc)).toBe(Date.UTC(2030, 4, 10, 23));
+    expect(getShiftDayOverAtMs(utc)).toBe(Date.UTC(2030, 4, 10, 23));
     expect(isShiftDayOver(utc, new Date(Date.UTC(2030, 4, 10, 22, 59)))).toBe(false);
     expect(isShiftDayOver(utc, new Date(Date.UTC(2030, 4, 10, 23)))).toBe(true);
     // A kept copy still flagged active is over once its UTC end has passed.
     expect(isShiftDayOver({ ...utc, IsActive: true }, new Date(Date.UTC(2030, 4, 11)))).toBe(true);
-    // Older servers: no UTC end, so an active day is not over and the wall-clock end is read on the device clock.
+    // Older servers: no UTC end, so the wall-clock end is read in the department zone (the device's when none is known)
+    // and an active day is not over: time alone never ends it, so nothing waits for it.
     const local = makeDay('2', { End: '2030-05-10T19:00:00' });
-    expect(getShiftDayEndMs(local)).toBe(new Date(2030, 4, 10, 19).getTime());
+    expect(getShiftDayOverAtMs(local)).toBe(new Date(2030, 4, 10, 19).getTime());
     expect(isShiftDayOver(local, new Date(2030, 4, 10, 19))).toBe(true);
     expect(isShiftDayOver({ ...local, IsActive: true }, new Date(2030, 4, 10, 19))).toBe(false);
-    expect(getShiftDayEndMs(makeDay('3', { End: '' }))).toBeNull();
+    expect(getShiftDayOverAtMs({ ...local, IsActive: true })).toBeNull();
+    expect(getShiftDayOverAtMs(makeDay('3', { End: '' }))).toBeNull();
+  });
+
+  it('reads a wall-clock end in the department time zone, whatever zone the device is in', () => {
+    // Tokyo is UTC+9 all year; Windows ids map to IANA; a legacy offset is dropped, never applied.
+    expect(wallClockToUtcMs('2030-05-10T19:00:00', 'Asia/Tokyo')).toBe(Date.UTC(2030, 4, 10, 10));
+    expect(wallClockToUtcMs('2030-05-10T19:00:00Z', 'Asia/Tokyo')).toBe(Date.UTC(2030, 4, 10, 10));
+    expect(wallClockToUtcMs('2030-05-10T19:00:00', 'Central Standard Time')).toBe(Date.UTC(2030, 4, 11, 0));
+    expect([wallClockToUtcMs('', 'Asia/Tokyo'), wallClockToUtcMs('not a date', 'Asia/Tokyo'), wallClockToUtcMs(null, null)]).toEqual([null, null, null]);
+
+    // A department zone that differs from the test machine's, so a device-clock read would land on the wrong instant.
+    const zone = getTimeZoneOffsetMinutes(new Date(Date.UTC(2030, 4, 10)), null) === 540 ? 'America/Chicago' : 'Asia/Tokyo';
+    const endMs = zonedWallClockToUtc({ year: 2030, month: 5, day: 10, hour: 19, minute: 0, second: 0 }, zone).getTime();
+    const before = new Date(endMs - 60_000);
+    const at = new Date(endMs);
+    const trade = makeTrade('1', { IsOpen: true, CanApply: true, End: '2030-05-10T19:00:00' });
+    const signup = makeSignup('p1', { End: '2030-05-10T19:00:00' });
+    expect([isShiftTradeOver(trade, before, zone), isShiftTradeOver(trade, at, zone)]).toEqual([false, true]);
+    expect([isPendingSignupOver(signup, before, zone), isPendingSignupOver(signup, at, zone)]).toEqual([false, true]);
+    expect([isShiftDayOver(makeDay('1'), before, zone), isShiftDayOver(makeDay('1'), at, zone)]).toEqual([false, true]);
+
+    // The rules take the zone from the department config by default.
+    // SAFETY: a test fixture; only the field the rules read is set.
+    setDepartmentConfig({ TimeZoneId: zone } as GetConfigResultData);
+
+    try {
+      expect([canApplyToTrade(trade, before), canApplyToTrade(trade, at), isPendingSignupOver(signup, at)]).toEqual([true, false, true]);
+      expect(getShiftDayOverAtMs(makeDay('1'))).toBe(endMs);
+    } finally {
+      setDepartmentConfig(null);
+    }
   });
 
   it('a finished day takes no sign-up, trade, withdrawal or roster change', () => {

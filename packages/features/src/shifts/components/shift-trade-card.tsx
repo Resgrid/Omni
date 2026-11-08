@@ -5,6 +5,7 @@ import { ArrowRightLeft, ChevronRight, Clock, Truck, Users } from 'lucide-react-
 import React from 'react';
 import { View } from 'react-native';
 
+import { useRerenderAtShiftEnd } from '../hooks/use-rerender-at';
 import type { ShiftTradeAction } from '../lib/shift-action-types';
 import {
   canApplyToTrade,
@@ -38,6 +39,7 @@ export const ShiftTradeOfferRow: React.FC<ShiftTradeOfferRowProps> = ({ trade, u
   const stateText = user.Declined ? (trade.IsOpen ? t('shifts.trade.user_withdrew') : t('shifts.trade.user_declined')) : user.Offered ? t('shifts.trade.user_offered') : t('shifts.trade.user_waiting');
   const details = [user.GroupName, (user.Roles ?? []).join(', ')].filter((part) => !!part).join(' · ');
   const offered = user.OfferedShifts ?? [];
+
   return (
     <VStack className="rounded-md bg-background-50 p-2" testID={`trade-user-${trade.ShiftSignupTradeId}-${user.UserId}`}>
       <HStack className="items-center justify-between">
@@ -98,11 +100,16 @@ export interface ShiftTradeActionButtonsProps {
   testPrefix?: string;
 }
 
-/** Accept/decline (targeted), apply/withdraw (open), approve/deny (reviewer) and cancel — whatever the caller may do now. */
+/**
+ * Accept/decline (targeted), apply/withdraw (open), approve/deny (reviewer) and cancel — whatever the caller may do now.
+ * They go when the day ends, also on a trade left open on screen.
+ */
 export const ShiftTradeActionButtons: React.FC<ShiftTradeActionButtonsProps> = ({ trade, isBusy, onAction, testPrefix = 'trade' }) => {
   const { t } = useTranslation();
   const id = trade.ShiftSignupTradeId;
   const isIncoming = trade.Direction === ShiftTradeDirection.Incoming;
+
+  useRerenderAtShiftEnd(trade.End);
 
   // A finished day takes no more changes; a trade still open or pending on it says why its actions are gone.
   if (isShiftTradeOver(trade)) {
@@ -171,7 +178,10 @@ export interface ShiftTradeCardProps {
   isBusy?: boolean;
 }
 
-/** A trade request: which day, who asked, its state, the applicants (for whoever picks) and the caller's actions. */
+/**
+ * A trade request: which day, who asked, its state, the applicants (for whoever picks) and the caller's actions. Picking
+ * an applicant stops when the day ends, also on a card left open on screen.
+ */
 export const ShiftTradeCard: React.FC<ShiftTradeCardProps> = React.memo(({ trade, onAction, onOpenDetails, isBusy = false }) => {
   const { t, i18n } = useTranslation();
   const colors = useThemeColors();
@@ -187,6 +197,8 @@ export const ShiftTradeCard: React.FC<ShiftTradeCardProps> = React.memo(({ trade
   const applicantCount = trade.ApplicantCount ?? users.filter((user) => user.Offered && !user.Declined).length;
   const showOffers = isOpenStatus && (canPick || !isIncoming);
   const date = formatShiftDate(trade.ShiftDay || trade.Start, locale);
+
+  useRerenderAtShiftEnd(trade.End);
 
   const header = (
     <HStack className="items-start justify-between" space="sm">

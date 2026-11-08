@@ -31,6 +31,9 @@ export function readWav(file) {
   if (!format || !data) throw new Error(`${file} has no fmt or data chunk`);
 
   if (format.tag !== 1 || format.bits !== 16) throw new Error(`${file} is not 16-bit PCM`);
+
+  // Every caller reads channel 0 (and divides by the channel count), so a header claiming none is refused here.
+  if (format.channels < 1) throw new Error(`${file} has no audio channels`);
   const frames = Math.floor(data.size / (format.channels * 2));
   const channels = Array.from({ length: format.channels }, () => new Float64Array(frames));
 

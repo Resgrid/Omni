@@ -6,7 +6,7 @@ import type { PendingShiftSignupResultData, ShiftDayResultData, ShiftResultData,
 import { FlatList, HStack, Input, InputField, InputIcon, InputSlot, Loading, Pressable, RefreshControl, ScrollRow, TabBar, type TabBarItem, Text, useThemeColors, View, VStack, ZeroState } from '@resgrid/ui';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { CalendarDays, Info, Search, X } from 'lucide-react-native';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, View as RNView } from 'react-native';
 
 import { ShiftActionSheet } from '../components/shift-action-sheet';
@@ -41,6 +41,8 @@ const isShiftView = (value: string | undefined): value is ShiftView => value !==
 
 const firstParam = (value: string | string[] | undefined): string | undefined => (Array.isArray(value) ? value[0] : value);
 
+const paramsKey = (view: string | undefined, month: string | undefined, date: string | undefined): string => JSON.stringify([view ?? null, month ?? null, date ?? null]);
+
 /**
  * Shifts (Responder): Today, My Shifts, Sign up, Calendar, Trades, On duty and — for supervisors — Approvals. A shift day
  * opens as its own screen (`/shifts/day/[id]`) with sign-up, withdraw, trade and roster management; this one stays
@@ -52,6 +54,8 @@ export default function ShiftsScreen({ initialView }: ShiftsScreenProps) {
   const router = useRouter();
   const params = useLocalSearchParams<ShiftsRouteParams>();
   const routeView = firstParam(params.view);
+  const routeMonth = firstParam(params.month);
+  const routeDate = firstParam(params.date);
   const colors = useThemeColors();
   const title = useTerm('module.shifts', t('shifts.title'));
   const lists = useShiftDayLists();
@@ -70,7 +74,7 @@ export default function ShiftsScreen({ initialView }: ShiftsScreenProps) {
   const [tradesFilter, setTradesFilter] = useState<ShiftTradesFilter>('open');
   // The calendar month, picked day and shift filter are view state: the route's month and day, else the last loaded
   // month (persisted in the store), else this one.
-  const [calendarStart] = useState(() => resolveShiftCalendarStart({ month: firstParam(params.month), date: firstParam(params.date) }, useShiftsStore.getState().calendarRange));
+  const [calendarStart] = useState(() => resolveShiftCalendarStart({ month: routeMonth, date: routeDate }, useShiftsStore.getState().calendarRange));
   const [selectedDate, setSelectedDate] = useState<string | null>(calendarStart.selectedDate);
   const [calendar, setCalendar] = useState<ShiftCalendarSelection>(calendarStart.calendar);
   const [openShift, setOpenShift] = useState<ShiftResultData | null>(null);
@@ -88,14 +92,41 @@ export default function ShiftsScreen({ initialView }: ShiftsScreenProps) {
   useFocusEffect(
     useCallback(() => {
       void loadShiftView(activeView, undefined, calendar);
+
       if (activeView !== 'approvals') void useShiftsStore.getState().fetchPendingApprovals();
     }, [activeView, calendar])
   );
 
+  // The route params this screen shows: read at mount, written by `remember`, or followed from a change made elsewhere.
+  const shownParams = useRef(paramsKey(routeView, routeMonth, routeDate));
+
   // The view, month and picked day ride in the route params as well, so a screen rebuilt after a web reload or a
   // browser history step opens where the member left it. Written only from this screen's own handlers: setParams
   // changes whichever route is focused.
-  const remember = useCallback((next: RememberedParams) => router.setParams(next), [router]);
+  const remember = useCallback(
+    (next: RememberedParams) => {
+      shownParams.current = paramsKey('view' in next ? next.view : routeView, 'month' in next ? next.month : routeMonth, 'date' in next ? next.date : routeDate);
+      router.setParams(next);
+    },
+    [router, routeView, routeMonth, routeDate]
+  );
+
+  // A link into Shifts while it is open (a deep link, a browser history step) can change the params without a remount:
+  // show the view, month and day they name. The calendar's shift filter stays; a link without a month or day leaves
+  // the calendar where it is.
+  useEffect(() => {
+    const key = paramsKey(routeView, routeMonth, routeDate);
+
+    if (key === shownParams.current) return;
+    shownParams.current = key;
+    setView(isShiftView(routeView) ? routeView : (initialView ?? 'today'));
+
+    if (routeMonth === undefined && routeDate === undefined) return;
+    const start = resolveShiftCalendarStart({ month: routeMonth, date: routeDate }, useShiftsStore.getState().calendarRange);
+
+    setCalendar((current) => (current.range.start === start.calendar.range.start && current.range.end === start.calendar.range.end ? current : { range: start.calendar.range, shiftId: current.shiftId }));
+    setSelectedDate(start.selectedDate);
+  }, [routeView, routeMonth, routeDate, initialView]);
 
   const changeView = useCallback(
     (next: ShiftView) => {
@@ -119,7 +150,9 @@ export default function ShiftsScreen({ initialView }: ShiftsScreenProps) {
       { key: 'trades', label: t('shifts.segments.trades'), badge: openTrades.filter((trade) => canApplyToTrade(trade)).length },
       { key: 'onduty', label: t('shifts.segments.on_duty') },
     ];
+
     if (isSupervisor) list.push({ key: 'approvals', label: t('shifts.segments.approvals'), badge: pendingSignups.length + pendingTrades.length });
+
     return list.map(({ key, label, badge = 0 }) => ({
       key,
       label,
@@ -140,7 +173,9 @@ export default function ShiftsScreen({ initialView }: ShiftsScreenProps) {
     },
     [router]
   );
+
   const openTradeDetails = useCallback((trade: ShiftTradeResultData) => setOpenTrade(trade), []);
+
   const handleTradeAction = useCallback((action: ShiftTradeAction) => {
     setOpenTrade(null);
     setSheetAction(action);
@@ -148,6 +183,7 @@ export default function ShiftsScreen({ initialView }: ShiftsScreenProps) {
 
   const calendarMonth = useMemo(() => parseWallClock(calendar.range.start) ?? new Date(), [calendar.range.start]);
   const calendarShiftId = calendar.shiftId;
+
   const changeMonth = useCallback(
     (month: Date) => {
       setSelectedDate(null);
@@ -156,6 +192,7 @@ export default function ShiftsScreen({ initialView }: ShiftsScreenProps) {
     },
     [remember]
   );
+
   const selectDate = useCallback(
     (date: string) => {
       setSelectedDate(date);
@@ -163,7 +200,9 @@ export default function ShiftsScreen({ initialView }: ShiftsScreenProps) {
     },
     [remember]
   );
+
   const filterCalendar = useCallback((shiftId: string | null) => setCalendar((current) => ({ range: current.range, shiftId })), []);
+
   const viewShiftInCalendar = useCallback(
     (shiftId: string) => {
       // Keep the picked day; with none, pick today when the month on show holds it.
@@ -180,6 +219,7 @@ export default function ShiftsScreen({ initialView }: ShiftsScreenProps) {
   );
 
   const today = useMemo(() => lists.today.filter((day) => matchesShiftQuery(day, query)), [lists.today, query]);
+
   const mineRows = useMemo<DayRow[]>(
     () =>
       sectionMyShiftDays(lists.mine.filter((day) => matchesShiftQuery(day, query))).flatMap((section) => [
@@ -188,6 +228,7 @@ export default function ShiftsScreen({ initialView }: ShiftsScreenProps) {
       ]),
     [lists.mine, query, t]
   );
+
   const standingShifts = useMemo(() => shifts.filter((shift) => shift.InShift), [shifts]);
   const visibleSignupDays = useMemo(() => (signupFilter === 'needed' ? signupDays.filter((day) => !day.Filled) : signupDays).filter((day) => matchesShiftQuery(day, query)), [signupDays, signupFilter, query]);
   const daysForSelectedDate = useMemo(() => (selectedDate ? lists.calendar.filter((day) => getDateKey(day.ShiftDay || day.Start) === selectedDate) : []), [lists.calendar, selectedDate]);
@@ -212,7 +253,9 @@ export default function ShiftsScreen({ initialView }: ShiftsScreenProps) {
 
   const stateFor = (slice: string, isEmpty: boolean): 'loading' | 'error' | null => {
     if (!isEmpty) return null;
+
     if ((loading as Record<string, boolean | undefined>)[slice] === true) return 'loading';
+
     return (errors as Record<string, unknown>)[slice] ? 'error' : null;
   };
 
@@ -222,8 +265,11 @@ export default function ShiftsScreen({ initialView }: ShiftsScreenProps) {
     switch (activeView) {
       case 'mine': {
         const state = stateFor('mine', lists.mine.length === 0);
+
         if (state === 'loading') return <Loading text={t('shifts.loading')} />;
+
         if (state === 'error') return errorState;
+
         return (
           <FlatList
             data={mineRows}
@@ -256,10 +302,14 @@ export default function ShiftsScreen({ initialView }: ShiftsScreenProps) {
           />
         );
       }
+
       case 'signup': {
         const state = stateFor('signup', signupDays.length === 0);
+
         if (state === 'loading') return <Loading text={t('shifts.loading')} />;
+
         if (state === 'error') return errorState;
+
         return (
           <FlatList
             data={visibleSignupDays}
@@ -283,6 +333,7 @@ export default function ShiftsScreen({ initialView }: ShiftsScreenProps) {
           />
         );
       }
+
       case 'calendar':
         return (
           <FlatList
@@ -354,8 +405,11 @@ export default function ShiftsScreen({ initialView }: ShiftsScreenProps) {
       case 'today':
       default: {
         const state = stateFor('today', lists.today.length === 0);
+
         if (state === 'loading') return <Loading text={t('shifts.loading')} />;
+
         if (state === 'error') return errorState;
+
         return (
           <FlatList
             data={today}
