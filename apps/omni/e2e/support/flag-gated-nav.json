@@ -19,10 +19,6 @@
     {
       "id": "chat",
       "flags": ["Chat.System"]
-    },
-    {
-      "id": "chatbot",
-      "flags": ["Chat.System"]
     }
   ],
   "unit": [
@@ -41,10 +37,6 @@
     {
       "id": "chat",
       "flags": ["Chat.System"]
-    },
-    {
-      "id": "chatbot",
-      "flags": ["Chat.System"]
     }
   ],
   "ic": [
@@ -58,10 +50,6 @@
     },
     {
       "id": "chat",
-      "flags": ["Chat.System"]
-    },
-    {
-      "id": "chatbot",
       "flags": ["Chat.System"]
     }
   ],
@@ -80,10 +68,6 @@
     },
     {
       "id": "chat",
-      "flags": ["Chat.System"]
-    },
-    {
-      "id": "chatbot",
       "flags": ["Chat.System"]
     }
   ],

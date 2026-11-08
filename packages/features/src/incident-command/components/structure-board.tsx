@@ -1,12 +1,13 @@
 import { useTranslation } from '@resgrid/i18n';
 import type { CommandStructureNode, ResourceAssignment } from '@resgrid/models';
-import { Badge, BadgeText, HStack, Pressable, ScrollView, Text, TypeIcon, VStack } from '@resgrid/ui';
-import { CloudOff, Eye, MessagesSquare, Network, Pencil, Plus, UserPlus } from 'lucide-react-native';
+import { Badge, BadgeText, HStack, Pressable, ScrollView, Text, TypeIcon, useEdgeScroll, useThemeColors, VStack } from '@resgrid/ui';
+import { ChevronLeft, ChevronRight, CloudOff, Eye, MessagesSquare, Network, Pencil, Plus, UserPlus } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { type LayoutChangeEvent, StyleSheet, View } from 'react-native';
 
 import type { BoardRoster } from '../hooks/use-board-roster';
 import { isLocalId, laneAssignments, laneStaffing, type OrderedLane, poolAssignments } from '../lib/board';
+import { LANE_GAP, LANE_GUTTER, LANE_MIN_HEIGHT, LANE_MIN_WIDTH, LANE_RESOURCE_GAP, laneColumnLayout, laneResourceColumns, laneScrollTarget } from '../lib/board-layout';
 import { nodeTypeName, safeColor } from '../lib/labels';
 import { BoardButton, IconPress } from './board-buttons';
 import { SectionCard, SectionEmpty } from './section-card';
@@ -17,7 +18,7 @@ export interface StructureBoardProps {
   assignments: ResourceAssignment[];
   roster: Pick<BoardRoster, 'resourceName' | 'resourceIcon' | 'leadName'>;
   nowMs: number;
-  /** Lanes as columns (tablet landscape, desktop) instead of a stacked list (phone). */
+  /** Lanes as side-by-side columns filling the width (tablet, laptop, desktop) instead of a stacked list (phone). */
   columns: boolean;
   canManageStructure: boolean;
   canAssignResources: boolean;
@@ -48,6 +49,7 @@ const ResourceRow: React.FC<ResourceRowProps> = React.memo(({ assignment, node, 
   const name = roster.resourceName(assignment.ResourceKind, assignment.ResourceId);
   const icon = roster.resourceIcon(assignment.ResourceKind, assignment.ResourceId);
   const id = assignment.ResourceAssignmentId;
+
   return (
     <HStack
       space="sm"
@@ -83,12 +85,51 @@ const ResourceRow: React.FC<ResourceRowProps> = React.memo(({ assignment, node, 
     </HStack>
   );
 });
+
 ResourceRow.displayName = 'ResourceRow';
+
+interface LaneScrollStripProps {
+  direction: -1 | 1;
+  /** Lanes lie past this edge. */
+  isEnabled: boolean;
+  label: string;
+  onPress: () => void;
+  testID: string;
+}
+
+/**
+ * A full-height strip beside the lanes when they run past the edge: always there while they overflow (so the lanes
+ * never change width mid-scroll), dimmed on the side that has nothing more, and a tap pages the lanes that way.
+ */
+const LaneScrollStrip: React.FC<LaneScrollStripProps> = ({ direction, isEnabled, label, onPress, testID }) => {
+  const colors = useThemeColors();
+  const Icon = direction === -1 ? ChevronLeft : ChevronRight;
+
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={!isEnabled}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: !isEnabled }}
+      style={StyleSheet.flatten([styles.strip, direction === -1 ? styles.stripLeft : styles.stripRight, isEnabled ? null : styles.stripIdle])}
+      className="rounded-lg border border-outline-200 bg-background-50"
+      testID={testID}
+    >
+      <View>
+        <Icon size={20} color={colors.icon} />
+      </View>
+    </Pressable>
+  );
+};
 
 /**
  * The ICS structure: lanes (Division/Group/Branch/…) with their resources plus the unassigned pool (IC
- * `structure-section` on phones, `landscape-structure-board` columns on tablets and desktop). Moving is tap-to-select a
- * resource, then tap the target lane — the same gesture on touch, mouse and keyboard.
+ * `structure-section` on phones, `landscape-structure-board` columns on tablets and desktop). Columns share the card's
+ * whole width and are as tall as the fullest lane (no lane scrolls); a wide lane tiles its resources two or more across.
+ * Lanes that do not fit at their minimum width scroll sideways, with the next lane cut off at the edge and a scroll strip
+ * on each side. Moving is tap-to-select a resource, then tap the target lane — the same gesture on touch, mouse and
+ * keyboard.
  */
 export const StructureBoard: React.FC<StructureBoardProps> = ({
   lanes,
@@ -108,8 +149,17 @@ export const StructureBoard: React.FC<StructureBoardProps> = ({
 }) => {
   const { t } = useTranslation();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [columnsWidth, setColumnsWidth] = useState(0);
+  const edge = useEdgeScroll();
   const selected = useMemo(() => assignments.find((assignment) => assignment.ResourceAssignmentId === selectedId) ?? null, [assignments, selectedId]);
   const pool = useMemo(() => poolAssignments(assignments), [assignments]);
+  // The pool is a column too. Until the row is measured, lanes take their minimum width.
+  const layout = useMemo(() => (columnsWidth > 0 ? laneColumnLayout(columnsWidth, lanes.length + 1) : { laneWidth: LANE_MIN_WIDTH, overflows: false, viewportWidth: 0 }), [columnsWidth, lanes.length]);
+  const resourceColumns = columns ? laneResourceColumns(layout.laneWidth) : 1;
+
+  const measureColumns = useCallback((event: LayoutChangeEvent) => setColumnsWidth(Math.round(event.nativeEvent.layout.width)), []);
+
+  const pageLanes = (direction: -1 | 1) => edge.scrollViewRef.current?.scrollTo({ x: laneScrollTarget(edge.metricsRef.current, layout.laneWidth, direction), animated: true });
 
   const toggleSelect = useCallback((assignmentId: string) => setSelectedId((current) => (current === assignmentId ? null : assignmentId)), []);
 
@@ -117,21 +167,60 @@ export const StructureBoard: React.FC<StructureBoardProps> = ({
     (targetNodeId: string) => {
       if (!selected) return;
       setSelectedId(null);
+
       if ((selected.CommandStructureNodeId || '') !== targetNodeId) onMoveResource(selected, targetNodeId);
     },
     [onMoveResource, selected]
   );
 
-  const renderLane = ({ node, depth }: OrderedLane) => {
+  const columnStyle = (index: number) => ({ width: layout.laneWidth, minHeight: LANE_MIN_HEIGHT, marginLeft: index === 0 ? 0 : LANE_GAP });
+
+  const renderResources = (rows: ResourceAssignment[], node?: CommandStructureNode) => {
+    const renderRow = (assignment: ResourceAssignment) => (
+      <ResourceRow
+        key={assignment.ResourceAssignmentId}
+        assignment={assignment}
+        node={node}
+        roster={roster}
+        nowMs={nowMs}
+        isSelected={selectedId === assignment.ResourceAssignmentId}
+        canMove={canAssignResources}
+        onSelect={toggleSelect}
+        onView={onViewResource}
+      />
+    );
+
+    if (resourceColumns === 1) return <VStack space="xs">{rows.map(renderRow)}</VStack>;
+
+    const cell = { width: `${100 / resourceColumns}%` as const, paddingHorizontal: LANE_RESOURCE_GAP / 2, marginBottom: 4 };
+
+    return (
+      <View style={styles.resourceGrid}>
+        {rows.map((assignment) => (
+          <View key={assignment.ResourceAssignmentId} style={cell}>
+            {renderRow(assignment)}
+          </View>
+        ))}
+      </View>
+    );
+  };
+
+  const renderLane = ({ node, depth }: OrderedLane, index: number) => {
     const rows = laneAssignments(assignments, node.CommandStructureNodeId);
     const staffing = laneStaffing(node, rows);
     const isTarget = !!selected && (selected.CommandStructureNodeId || '') !== node.CommandStructureNodeId;
     const leads = [roster.leadName(node.PrimaryLeadUserId, node.PrimaryLeadName), roster.leadName(node.SecondaryLeadUserId, node.SecondaryLeadName)].filter((name): name is string => !!name);
     const color = node.Color ? safeColor(node.Color) : null;
+
     return (
       <View
         key={node.CommandStructureNodeId}
-        style={StyleSheet.flatten([styles.lane, columns ? styles.laneColumn : depth > 0 ? { marginLeft: Math.min(depth, 4) * 12 } : null, color ? { borderLeftWidth: 4, borderLeftColor: color } : null])}
+        style={StyleSheet.flatten([
+          styles.lane,
+          columns ? columnStyle(index) : styles.laneStacked,
+          !columns && depth > 0 ? { marginLeft: Math.min(depth, 4) * 12 } : null,
+          color ? { borderLeftWidth: 4, borderLeftColor: color } : null,
+        ])}
         className={`rounded-lg border ${isTarget ? 'border-primary-400 bg-primary-50' : 'border-outline-200 bg-background-0'}`}
         testID={`lane-${node.CommandStructureNodeId}`}
       >
@@ -189,33 +278,16 @@ export const StructureBoard: React.FC<StructureBoardProps> = ({
             ) : null}
           </HStack>
         </HStack>
-        <VStack space="xs" className="mt-2">
-          {rows.length === 0 ? (
-            <Text className="text-sm text-typography-500">{t('incident_command.lane_empty')}</Text>
-          ) : (
-            rows.map((assignment) => (
-              <ResourceRow
-                key={assignment.ResourceAssignmentId}
-                assignment={assignment}
-                node={node}
-                roster={roster}
-                nowMs={nowMs}
-                isSelected={selectedId === assignment.ResourceAssignmentId}
-                canMove={canAssignResources}
-                onSelect={toggleSelect}
-                onView={onViewResource}
-              />
-            ))
-          )}
-        </VStack>
+        <View style={styles.laneBody}>{rows.length === 0 ? <Text className="text-sm text-typography-500">{t('incident_command.lane_empty')}</Text> : renderResources(rows, node)}</View>
       </View>
     );
   };
 
   const poolTarget = !!selected && !!selected.CommandStructureNodeId;
+
   const poolCard = (
     <View
-      style={StyleSheet.flatten([styles.lane, columns ? styles.laneColumn : null])}
+      style={StyleSheet.flatten([styles.lane, columns ? columnStyle(0) : styles.laneStacked])}
       className={`rounded-lg border border-dashed ${poolTarget ? 'border-primary-400 bg-primary-50' : 'border-outline-300 bg-background-50'}`}
       testID="lane-pool"
     >
@@ -223,24 +295,7 @@ export const StructureBoard: React.FC<StructureBoardProps> = ({
         <Text className="font-semibold text-typography-900">{t('incident_command.unassigned_pool')}</Text>
         <Text className="mb-2 text-xs text-typography-500">{t('incident_command.unassigned_pool_hint')}</Text>
       </Pressable>
-      <VStack space="xs">
-        {pool.length === 0 ? (
-          <Text className="text-sm text-typography-500">{t('incident_command.pool_empty')}</Text>
-        ) : (
-          pool.map((assignment) => (
-            <ResourceRow
-              key={assignment.ResourceAssignmentId}
-              assignment={assignment}
-              roster={roster}
-              nowMs={nowMs}
-              isSelected={selectedId === assignment.ResourceAssignmentId}
-              canMove={canAssignResources}
-              onSelect={toggleSelect}
-              onView={onViewResource}
-            />
-          ))
-        )}
-      </VStack>
+      {pool.length === 0 ? <Text className="text-sm text-typography-500">{t('incident_command.pool_empty')}</Text> : renderResources(pool)}
     </View>
   );
 
@@ -260,15 +315,30 @@ export const StructureBoard: React.FC<StructureBoardProps> = ({
       ) : null}
       {lanes.length === 0 ? <SectionEmpty text={t('incident_command.no_lanes')} testID="structure-empty" /> : null}
       {columns ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator testID="structure-columns">
-          <HStack className="items-start">
-            {poolCard}
-            {lanes.map(renderLane)}
-          </HStack>
-        </ScrollView>
+        <View style={styles.columns} onLayout={measureColumns} testID="structure-columns">
+          {layout.overflows ? <LaneScrollStrip direction={-1} isEnabled={edge.overflow.canScrollLeft} label={t('common.scroll_left')} onPress={() => pageLanes(-1)} testID="structure-scroll-left" /> : null}
+          <ScrollView
+            ref={edge.scrollViewRef}
+            horizontal
+            showsHorizontalScrollIndicator
+            scrollEventThrottle={16}
+            style={styles.columnsScroll}
+            contentContainerStyle={styles.columnsContent}
+            onLayout={edge.onLayout}
+            onContentSizeChange={edge.onContentSizeChange}
+            onScroll={edge.onScroll}
+            testID="structure-columns-scroll"
+          >
+            <HStack className="items-stretch">
+              {poolCard}
+              {lanes.map((lane, index) => renderLane(lane, index + 1))}
+            </HStack>
+          </ScrollView>
+          {layout.overflows ? <LaneScrollStrip direction={1} isEnabled={edge.overflow.canScrollRight} label={t('common.scroll_right')} onPress={() => pageLanes(1)} testID="structure-scroll-right" /> : null}
+        </View>
       ) : (
         <VStack testID="structure-list">
-          {lanes.map(renderLane)}
+          {lanes.map((lane, index) => renderLane(lane, index + 1))}
           {poolCard}
         </VStack>
       )}
@@ -277,6 +347,18 @@ export const StructureBoard: React.FC<StructureBoardProps> = ({
 };
 
 const styles = StyleSheet.create({
-  lane: { padding: 10, marginBottom: 8 },
-  laneColumn: { width: 300, marginRight: 8 },
+  lane: { padding: 10 },
+  laneStacked: { marginBottom: 8 },
+  laneBody: { marginTop: 8 },
+  // Strips and scroller side by side, the strips as tall as the lanes.
+  columns: { flexDirection: 'row', alignItems: 'stretch' },
+  columnsScroll: { flexGrow: 1, flexShrink: 1 },
+  // Room under the lanes for the scroll bar (web, Electron) so it never covers the last resource.
+  columnsContent: { paddingBottom: 4 },
+  strip: { width: LANE_GUTTER - LANE_GAP, alignItems: 'center', paddingTop: 16 },
+  stripLeft: { marginRight: LANE_GAP },
+  stripRight: { marginLeft: LANE_GAP },
+  stripIdle: { opacity: 0.35 },
+  // Wide lanes: resource cards in rows, half the gap either side of each card.
+  resourceGrid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -LANE_RESOURCE_GAP / 2 },
 });

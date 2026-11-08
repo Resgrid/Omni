@@ -7,7 +7,7 @@ import { type Href, router } from 'expo-router';
 import React, { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 
-import { QUICK_ACTION_FLAGS, type QuickAction, type QuickActionId, visibleQuickActions } from '../lib/quick-actions';
+import { QUICK_ACTION_FLAGS, type QuickAction, type QuickActionId, SIDEBAR_ROW_ACTIONS, visibleQuickActions } from '../lib/quick-actions';
 
 export interface QuickActionsProps {
   hasActiveUnit: boolean;
@@ -19,7 +19,8 @@ export interface QuickActionsProps {
   columns?: number;
   /**
    * `grid` (default): `columns` per row, icon and label left-aligned (the full console). `sidebar`: legacy Unit's sidebar
-   * buttons — chat and the assistant side by side, every other action on a row of its own, centred.
+   * buttons — chat, checklists and deployments share one row (three of them stack the icon over the label to fit the
+   * narrow column), every other action on a row of its own, centred.
    */
   arrangement?: 'grid' | 'sidebar';
   buttonMinHeight?: number;
@@ -48,6 +49,8 @@ export const QuickActions: React.FC<QuickActionsProps> = ({ hasActiveUnit, onNav
   );
   const itemStyle = useMemo(() => StyleSheet.flatten([styles.item, { width: `${100 / Math.max(1, columns)}%` as const }]), [columns]);
   const isSidebar = arrangement === 'sidebar';
+  const rowCount = useMemo(() => actions.filter((action) => SIDEBAR_ROW_ACTIONS.includes(action.id)).length, [actions]);
+  const rowItemStyle = useMemo(() => StyleSheet.flatten([styles.item, { width: `${100 / Math.max(1, rowCount)}%` as const }]), [rowCount]);
 
   const open = (action: QuickAction) => {
     router.push(action.href as Href);
@@ -60,24 +63,33 @@ export const QuickActions: React.FC<QuickActionsProps> = ({ hasActiveUnit, onNav
         const Icon = action.icon;
         const label = (action.termKey ? terms[action.termKey] : undefined) || t(action.labelKey);
         const count = badgeCount(action.badge);
+        const inRow = isSidebar && SIDEBAR_ROW_ACTIONS.includes(action.id);
+        // Three to a row leaves too little width for an icon beside "Deployments": the icon goes over the label.
+        const stacked = inRow && rowCount >= 3;
 
         return (
-          <View key={action.id} style={isSidebar ? (isPaired(action.id) && hasPair(actions) ? styles.half : styles.full) : itemStyle}>
+          <View key={action.id} style={isSidebar ? (inRow ? rowItemStyle : styles.full) : itemStyle}>
             <Pressable
               onPress={() => open(action)}
               accessibilityRole="button"
               accessibilityLabel={count ? t('shell.nav_item_with_count', { label, count }) : label}
               testID={`${testID}-${action.id}`}
-              className={`flex-row items-center rounded-lg border border-outline-200 bg-background-0 px-3 ${isSidebar ? 'justify-center' : ''}`}
+              className={`rounded-lg border border-outline-200 bg-background-0 ${stacked ? 'items-center justify-center px-1 py-2' : `flex-row items-center px-3 ${isSidebar ? 'justify-center' : ''}`}`}
               style={{ minHeight: buttonMinHeight }}
             >
-              <View style={styles.icon}>
-                <Icon size={iconSize} color={action.id === 'assistant' ? ASSISTANT_COLOR : ACTION_COLOR} />
+              <View style={stacked ? styles.stackedIcon : styles.icon}>
+                <Icon size={iconSize} color={ACTION_COLOR} />
               </View>
-              <Text className={`${isSidebar ? 'flex-shrink' : 'flex-1'} font-medium text-typography-900`} numberOfLines={1}>
-                {label}
-              </Text>
-              <CountBadge count={count} testID={`${testID}-${action.id}-badge`} />
+              {stacked ? (
+                <Text className="text-center text-sm font-medium text-typography-900" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
+                  {label}
+                </Text>
+              ) : (
+                <Text className={`${isSidebar ? 'flex-shrink' : 'flex-1'} font-medium text-typography-900`} numberOfLines={1}>
+                  {label}
+                </Text>
+              )}
+              <CountBadge count={count} placement={stacked ? 'corner' : 'inline'} testID={`${testID}-${action.id}-badge`} />
             </Pressable>
           </View>
         );
@@ -88,18 +100,10 @@ export const QuickActions: React.FC<QuickActionsProps> = ({ hasActiveUnit, onNav
 
 const ACTION_COLOR = '#2563eb';
 
-/** Legacy Unit drew the assistant's sparkles in violet. */
-const ASSISTANT_COLOR = '#7c3aed';
-
-/** Chat and the assistant share a row in the sidebar (both or neither show: one Chat.System flag gates them). */
-const isPaired = (id: QuickActionId): boolean => id === 'chat' || id === 'assistant';
-
-const hasPair = (actions: readonly QuickAction[]): boolean => actions.filter((action) => isPaired(action.id)).length === 2;
-
 const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 },
   item: { padding: 4 },
-  half: { width: '50%', padding: 4 },
   full: { width: '100%', padding: 4 },
   icon: { marginRight: 8 },
+  stackedIcon: { marginBottom: 4 },
 });

@@ -2586,7 +2586,6 @@
     "anti-slop/require-safety-comment-for-type-assertion": 1
   },
   "packages/features/src/incident-command/__tests__/command-board-view.test.tsx": {
-    "anti-slop/require-readable-spacing": 1,
     "anti-slop/require-safety-comment-for-type-assertion": 1
   },
   "packages/features/src/incident-command/__tests__/fixtures.ts": {
@@ -2617,9 +2616,6 @@
   },
   "packages/features/src/incident-command/components/incident-command-tab.tsx": {
     "anti-slop/require-readable-spacing": 6
-  },
-  "packages/features/src/incident-command/components/log-section.tsx": {
-    "anti-slop/require-readable-spacing": 2
   },
   "packages/features/src/incident-command/components/needs-section.tsx": {
     "anti-slop/require-readable-spacing": 1
@@ -2678,9 +2674,6 @@
   },
   "packages/features/src/incident-command/components/sheets/sheet-form.tsx": {
     "anti-slop/require-readable-spacing": 3
-  },
-  "packages/features/src/incident-command/components/structure-board.tsx": {
-    "anti-slop/require-readable-spacing": 5
   },
   "packages/features/src/incident-command/components/timers-section.tsx": {
     "anti-slop/require-readable-spacing": 1
@@ -3569,7 +3562,6 @@
     "anti-slop/require-safety-comment-for-type-assertion": 3
   },
   "packages/features/src/unit-status/__tests__/unit-status-console.test.tsx": {
-    "anti-slop/require-readable-spacing": 2,
     "anti-slop/require-safety-comment-for-type-assertion": 7
   },
   "packages/features/src/unit-status/__tests__/unit-status-lib.test.ts": {
@@ -3603,9 +3595,6 @@
   },
   "packages/features/src/unit-status/index.ts": {
     "anti-slop/require-readable-spacing": 14
-  },
-  "packages/features/src/unit-status/lib/console-layout.ts": {
-    "anti-slop/require-readable-spacing": 2
   },
   "packages/features/src/unit-status/lib/status-display.ts": {
     "anti-slop/no-known-value-widening": 1,
@@ -5629,7 +5618,6 @@
     "anti-slop/no-chained-type-assertions": 5,
     "anti-slop/no-runtime-typeof": 1,
     "anti-slop/no-unsafe-dictionary-type": 1,
-    "anti-slop/require-readable-spacing": 6,
     "anti-slop/require-safety-comment-for-type-assertion": 10
   },
   "packages/ui/src/text/index.web.tsx": {
@@ -5683,7 +5671,6 @@
     "anti-slop/no-known-value-widening": 3,
     "anti-slop/no-runtime-typeof": 6,
     "anti-slop/no-unsafe-dictionary-type": 5,
-    "anti-slop/require-readable-spacing": 19,
     "anti-slop/require-safety-comment-for-type-assertion": 7
   },
   "packages/ui/src/utils/errors.ts": {

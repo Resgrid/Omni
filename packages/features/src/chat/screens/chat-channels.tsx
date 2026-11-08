@@ -1,7 +1,7 @@
 import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { useChatStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
-import { type ChatChannelResultData, ChatChannelType } from '@resgrid/models';
+import { type ChatChannelResultData } from '@resgrid/models';
 import { useRealtimeEvent } from '@resgrid/realtime';
 import { Fab, FabIcon, Input, InputField, InputIcon, InputSlot, Loading, RefreshControl, ScrollView, Text, View, VStack, ZeroState } from '@resgrid/ui';
 import { router } from 'expo-router';
@@ -9,10 +9,11 @@ import { MessageSquarePlus, MessagesSquare, Search, X } from 'lucide-react-nativ
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useChatIdentity } from '../chat-identity';
+import { AssistantListItem } from '../components/assistant-list-item';
 import { ChannelListItem } from '../components/channel-list-item';
 import { ChatGate } from '../components/chat-gate';
 import { NewConversationSheet } from '../components/new-conversation-sheet';
-import { CHAT_SECTION_KEYS, groupChannels } from '../lib/chat-format';
+import { assistantChannelOf, CHAT_SECTION_KEYS, groupChannels } from '../lib/chat-format';
 import { chatRoutes } from '../routes';
 
 function ChatChannelsContent() {
@@ -40,12 +41,12 @@ function ChatChannelsContent() {
     setIsRefreshing(false);
   }, [load]);
 
-  const open = useCallback((channel: ChatChannelResultData) => {
-    // The assistant has its own screen; every other channel opens the conversation.
-    pushRoutePath(router, channel.ChannelType === ChatChannelType.Chatbot ? chatRoutes.chatbot() : chatRoutes.conversation(channel.ChatChannelId));
-  }, []);
+  const open = useCallback((channel: ChatChannelResultData) => pushRoutePath(router, chatRoutes.conversation(channel.ChatChannelId)), []);
+  // The assistant has its own screen, reached from its pinned entry rather than from a section.
+  const openAssistant = useCallback(() => pushRoutePath(router, chatRoutes.chatbot()), []);
 
   const sections = useMemo(() => groupChannels(channels, query), [channels, query]);
+  const assistantChannel = useMemo(() => assistantChannelOf(channels), [channels]);
 
   return (
     <View className="flex-1 bg-background-50" testID="chat-channels-screen">
@@ -62,6 +63,7 @@ function ChatChannelsContent() {
           ) : null}
         </Input>
       </View>
+      <AssistantListItem channel={assistantChannel} onPress={openAssistant} />
       {isLoading && !isRefreshing && channels.length === 0 ? (
         <Loading />
       ) : sections.length === 0 ? (
@@ -86,7 +88,10 @@ function ChatChannelsContent() {
   );
 }
 
-/** Conversations (Responder list): direct messages, channels, incidents and the assistant, with unread counts. Gated by ChatGate. */
+/**
+ * Conversations (Responder list): the assistant pinned first, then direct messages, channels and incidents, with unread
+ * counts. Gated by ChatGate.
+ */
 export default function ChatChannelsScreen() {
   return (
     <ChatGate>

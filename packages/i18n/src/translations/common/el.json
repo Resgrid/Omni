@@ -578,7 +578,6 @@
     "save": "Αποθήκευση",
     "search_gifs": "Αναζήτηση GIF",
     "search_people": "Αναζήτηση ατόμων",
-    "section_assistant": "Βοηθός",
     "section_channels": "Κανάλια",
     "section_direct_messages": "Άμεσα Μηνύματα",
     "section_incidents": "Περιστατικά",
@@ -3016,7 +3015,6 @@
     "status_tab": "Status"
   },
   "tabs": {
-    "assistant": "Βοηθός",
     "calendar": "Ημερολόγιο",
     "calls": "Κλήσεις",
     "chat": "Συνομιλία",

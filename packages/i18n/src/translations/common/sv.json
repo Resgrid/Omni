@@ -578,7 +578,6 @@
     "save": "Spara",
     "search_gifs": "Sök GIF-filer",
     "search_people": "Sök personer",
-    "section_assistant": "Assistent",
     "section_channels": "Kanaler",
     "section_direct_messages": "Direktmeddelanden",
     "section_incidents": "Händelser",
@@ -3016,7 +3015,6 @@
     "status_tab": "Status"
   },
   "tabs": {
-    "assistant": "Assistent",
     "calendar": "Kalender",
     "calls": "Ärenden",
     "chat": "Chatt",

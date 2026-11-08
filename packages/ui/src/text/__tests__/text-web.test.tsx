@@ -10,13 +10,16 @@ type HostJson = { type: string; props: Record<string, unknown> };
 // RNTL 14 always rejects text outside React Native's <Text>, and these builds put text in <span>/<h2>, so they render
 // through test-renderer directly (no text-component check).
 const roots: Root[] = [];
+
 const render = async (element: React.ReactElement) => {
   const root = createRoot();
   roots.push(root);
   await act(async () => root.render(element));
+
   return {
     toJSON: () => {
       const [node] = root.container.children;
+
       return typeof node === 'string' ? node : (node?.toJSON() ?? null);
     },
   };
@@ -42,6 +45,7 @@ describe('Text (web)', () => {
         Long text
       </Text>
     );
+
     const node = toJSON() as unknown as HostJson;
 
     expect(node.props.style).toEqual({ display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2, overflow: 'hidden', color: 'red' });
@@ -54,11 +58,34 @@ describe('Text (web)', () => {
         Details
       </Text>
     );
+
     const node = toJSON() as unknown as HostJson;
 
     expect(node.props.role).toBe('heading');
     expect(node.props['aria-label']).toBe('Call details');
     expect(node.props).not.toHaveProperty('accessibilityRole');
+  });
+});
+
+describe('Text (web) press', () => {
+  it('turns onPress into a click on a focusable link, as React Native Text does on a phone', async () => {
+    const onPress = jest.fn();
+    const root = createRoot();
+
+    roots.push(root);
+    await act(async () =>
+      root.render(
+        <Text accessibilityRole="link" onPress={onPress} testID="open-check-ins">
+          Check-ins
+        </Text>
+      )
+    );
+    const [span] = root.container.queryAll((instance) => instance.type === 'span');
+
+    expect(span.props).toMatchObject({ role: 'link', tabIndex: 0, 'data-testid': 'open-check-ins' });
+    expect(span.props).not.toHaveProperty('onPress');
+    await act(async () => span.props.onClick());
+    expect(onPress).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -75,6 +102,7 @@ describe('Heading (web)', () => {
         A very long title
       </Heading>
     );
+
     const node = toJSON() as unknown as HostJson;
 
     expect(node.props['data-testid']).toBe('heading');

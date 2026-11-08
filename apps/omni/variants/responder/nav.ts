@@ -109,7 +109,7 @@ export const nav = defineNav([
   ...featureNav(operationsNav, 'sidebar', { order: 62 }),
   ...featureNav(workOrdersNav, 'sidebar', { order: 63 }),
   ...featureNav(certificationsNav, 'sidebar', { order: 64 }),
-  ...featureNav(chatNav, 'sidebar', { order: 70 }),
+  ...featureNav(chatNav, { chat: 'sidebar', chatbot: 'hidden' }, { order: 70 }),
   ...featureNav(notificationsNav, 'sidebar', { order: 80 }),
   ...featureNav(callsNav, { 'call-new': 'hidden' }),
   ...featureNav(settingsNavEntries, variant),

@@ -20,6 +20,7 @@ import { activateUnitVariant, hidden } from './test-helpers';
 
 const mockLock = jest.fn(async () => undefined);
 const mockEndShift = jest.fn(async () => undefined);
+
 jest.mock('@resgrid/auth', () => ({
   ...jest.requireActual('@resgrid/auth'),
   lockSharedSession: (...args: unknown[]) => mockLock(...(args as [])),
@@ -67,6 +68,7 @@ const renderSidebar = async (props: { activeUnitId?: string | null; activeCallId
       </StatusProvider>
     </NavigationHandoffProvider>
   );
+
   return { onNavigate };
 };
 
@@ -251,14 +253,36 @@ describe('UnitStatusSidebar', () => {
     expect(screen.queryByTestId('unit-quick-actions-settings')).toBeNull();
   });
 
-  it('puts chat and the assistant side by side, every other shortcut on a row of its own', async () => {
+  const widthOf = (id: string) => StyleSheet.flatten(screen.getByTestId(`unit-quick-actions-${id}`).parent?.props.style).width;
+
+  it('puts chat, checklists and deployments on one row, every other shortcut on a row of its own, and no assistant shortcut', async () => {
+    featureFlagsStore.setState({ flags: { [FeatureFlagKeys.ChatSystem]: { enabled: true }, [FeatureFlagKeys.ChecklistsSystem]: { enabled: true }, [FeatureFlagKeys.Deployments]: { enabled: true } }, isLoaded: true });
+    await renderSidebar();
+    expect(widthOf('chat')).toBe(`${100 / 3}%`);
+    expect(widthOf('checklists')).toBe(`${100 / 3}%`);
+    expect(widthOf('operations')).toBe(`${100 / 3}%`);
+    expect(widthOf('inventory')).toBe('100%');
+    expect(screen.queryByTestId('unit-quick-actions-assistant')).toBeNull();
+  });
+
+  it('splits the row between the shortcuts the department has', async () => {
     featureFlagsStore.setState({ flags: { [FeatureFlagKeys.ChatSystem]: { enabled: true }, [FeatureFlagKeys.ChecklistsSystem]: { enabled: true } }, isLoaded: true });
     await renderSidebar();
-    const widthOf = (id: string) => StyleSheet.flatten(screen.getByTestId(`unit-quick-actions-${id}`).parent?.props.style).width;
     expect(widthOf('chat')).toBe('50%');
-    expect(widthOf('assistant')).toBe('50%');
-    expect(widthOf('checklists')).toBe('100%');
-    expect(widthOf('inventory')).toBe('100%');
+    expect(widthOf('checklists')).toBe('50%');
+  });
+
+  // The half-width card is too narrow for three 36 pt buttons and their margins (126 pt): they shrink, never wrap.
+  it('keeps the unit card’s round buttons on one row in a narrow card', async () => {
+    await renderSidebar();
+    const row = screen.getByTestId('unit-summary-card-buttons');
+    expect(StyleSheet.flatten(row.props.style)).toMatchObject({ flexDirection: 'row', justifyContent: 'flex-start' });
+    expect(StyleSheet.flatten(row.props.style).flexWrap).toBeUndefined();
+    await fireEvent(row, 'layout', { nativeEvent: { layout: { x: 0, y: 0, width: 120, height: 40 } } });
+
+    for (const id of ['map-lock', 'audio-streams', 'voice']) {
+      expect(StyleSheet.flatten(screen.getByTestId(`unit-summary-card-${id}`).props.style).width).toBe(34);
+    }
   });
 
   it('opens a flag-enabled quick action and closes the drawer', async () => {
@@ -275,7 +299,6 @@ describe('UnitStatusSidebar', () => {
     useBadgeCountsStore.setState({ counts: { chats: 5 } });
     await renderSidebar();
     expect(screen.getByTestId('unit-quick-actions-chat-badge')).toHaveTextContent('5');
-    expect(screen.queryByTestId('unit-quick-actions-assistant-badge')).toBeNull();
     useBadgeCountsStore.setState({ counts: {} });
   });
 

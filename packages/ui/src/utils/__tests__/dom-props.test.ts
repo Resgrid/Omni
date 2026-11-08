@@ -42,6 +42,66 @@ describe('toDomProps', () => {
     expect(result).not.toHaveProperty('pointerEvents');
   });
 
+  // A shared Text with onPress (an "Open check-ins" link) did nothing on the web: the span got an unknown onPress prop.
+  describe('onPress', () => {
+    interface PressResult {
+      role?: string;
+      tabIndex?: number;
+      onClick?: () => void;
+      onKeyDown?: (event: { key: string; preventDefault: () => void }) => void;
+      onPress?: unknown;
+      style?: { cursor?: string; color?: string };
+    }
+
+    // SAFETY: toDomProps adds these props for an onPress (pressDomProps); DomProps<T> only types the caller's own props.
+    const pressResult = <T extends object>(props: T) => toDomProps(props) as PressResult;
+    const key = (name: string) => ({ key: name, preventDefault: jest.fn() });
+
+    it('becomes a focusable, clickable button that Enter and Space press', () => {
+      const onPress = jest.fn();
+      const result = pressResult({ onPress, style: [{ color: 'red' }] });
+
+      expect(result).toMatchObject({ role: 'button', tabIndex: 0, style: { cursor: 'pointer', color: 'red' } });
+      expect(result).not.toHaveProperty('onPress');
+      result.onClick?.();
+      const enter = key('Enter');
+      result.onKeyDown?.(enter);
+      const space = key(' ');
+      result.onKeyDown?.(space);
+      result.onKeyDown?.(key('a'));
+
+      expect(onPress).toHaveBeenCalledTimes(3);
+      expect(space.preventDefault).toHaveBeenCalled();
+    });
+
+    it('keeps a link a link, pressed by Enter only', () => {
+      const onPress = jest.fn();
+      const result = pressResult({ onPress, accessibilityRole: 'link' });
+
+      expect(result.role).toBe('link');
+      result.onKeyDown?.(key(' '));
+      expect(onPress).not.toHaveBeenCalled();
+      result.onKeyDown?.(key('Enter'));
+      expect(onPress).toHaveBeenCalledTimes(1);
+    });
+
+    it('does nothing while disabled', () => {
+      const result = pressResult({ onPress: jest.fn(), accessibilityState: { disabled: true } });
+
+      expect(result).not.toHaveProperty('onClick');
+      expect(result).not.toHaveProperty('tabIndex');
+    });
+
+    it('lets a web-only onClick win and drops the press events the DOM has no name for', () => {
+      const onClick = jest.fn();
+      const result = pressResult({ onPress: jest.fn(), onClick, onLongPress: jest.fn(), onPressIn: jest.fn(), onPressOut: jest.fn() });
+
+      expect(result.onClick).toBe(onClick);
+
+      for (const name of ['onLongPress', 'onPressIn', 'onPressOut']) expect(result).not.toHaveProperty(name);
+    });
+  });
+
   describe('accessibility', () => {
     it('maps accessibility props onto aria attributes and role', () => {
       const result = toDomProps({

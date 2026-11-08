@@ -28,8 +28,9 @@ const hasChatHub = (capabilities: Capabilities): boolean => capabilities.realtim
 /**
  * Hidden unless the variant has the chat hub and the department has `Chat.System` (every chat endpoint 404s without it).
  * The chat entry's badge counts unread messages across every channel.
- * `chatbot` is the assistant, in the side menu of every legacy chat app (R, U, I, D); a variant that wants it reachable
- * only from the chat list places it hidden: `featureNav(chatNav, { chat: 'sidebar', chatbot: 'hidden' })`.
+ * `chatbot` is the assistant. Legacy apps (R, U, I, D) had it in the side menu; every Omni chat app reaches it from the
+ * entry pinned at the top of the chat list instead, so each places it hidden:
+ * `featureNav(chatNav, { chat: 'sidebar', chatbot: 'hidden' })` (the route stays, for that entry and for push taps).
  */
 export const chatNav: readonly FeatureNavEntry[] = [
   { id: 'chat', href: '/chat', labelKey: 'chat.title', defaultLabel: 'Chat', icon: MessagesSquare, requiresFlag: 'Chat.System', requiresCapability: hasChatHub, badge: 'chats' },

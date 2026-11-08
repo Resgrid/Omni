@@ -7,11 +7,14 @@ import { IncidentCapabilities, IncidentCommandStatus, IncidentTimerStatus, ParSt
 import { useToastStore } from '@resgrid/ui';
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 import React from 'react';
+import { ScrollView, StyleSheet, Text } from 'react-native';
 
 import { activateVariant, hidden } from '../../calls/__tests__/test-utils';
 import { CommandBoardView } from '../components/command-board-view';
+import { SectionCard, SectionGrid } from '../components/section-card';
 import { StructureBoard } from '../components/structure-board';
 import { orderLanes } from '../lib/board';
+import { BOARD_LOG_MAX_HEIGHT, LANE_MIN_HEIGHT } from '../lib/board-layout';
 import { assignment, makeBoard, mockDispatch, mockEndCommand, mockFetchCapabilities, node, seedBoard } from './fixtures';
 
 const lastToast = () => useToastStore.getState().toasts.at(-1);
@@ -34,6 +37,7 @@ describe('CommandBoardView — command tier (IC)', () => {
     expect(within(screen.getByTestId('lane-n1')).getByText('Engine 1')).toBeTruthy();
     expect(within(screen.getByTestId('lane-pool')).getByText('Ladder 2')).toBeTruthy();
     expect(screen.getByTestId('lane-understaffed-n1')).toBeTruthy();
+
     for (const id of ['command-accountability', 'command-objectives', 'command-needs', 'command-timers', 'command-roles', 'command-notes', 'command-log-section']) expect(screen.getByTestId(id)).toBeTruthy();
     expect(screen.getByTestId('command-end')).toBeTruthy();
     expect(screen.getByTestId('structure-add-lane')).toBeTruthy();
@@ -233,28 +237,178 @@ describe('CommandBoardView — assist tier (Dispatch)', () => {
   });
 });
 
+const structureProps = {
+  roster: { resourceName: () => 'Engine 1', resourceIcon: () => null, leadName: () => null },
+  nowMs: Date.now(),
+  canManageStructure: false,
+  canAssignResources: false,
+  onAddLane: jest.fn(),
+  onEditLane: jest.fn(),
+  onAssignToLane: jest.fn(),
+  onMoveResource: jest.fn(),
+  onViewResource: jest.fn(),
+};
+
+const styleOf = (testID: string) => StyleSheet.flatten(screen.getByTestId(testID).props.style);
+
+/** Lays the lane row out `width` wide, as the screen would. */
+const measureLanes = async (width: number) => {
+  await fireEvent(screen.getByTestId('structure-columns'), 'layout', { nativeEvent: { layout: { width, height: 400 } } });
+};
+
 describe('StructureBoard columns', () => {
   it('lays lanes out as columns with the pool first on wide layouts', async () => {
     const lanes = orderLanes([node('n1', { Name: 'Division A' })]);
-    const roster = { resourceName: () => 'Engine 1', resourceIcon: () => null, leadName: () => null };
-    await render(
-      <StructureBoard
-        lanes={lanes}
-        assignments={[assignment('a1', 'n1', 'unit-1')]}
-        roster={roster}
-        nowMs={Date.now()}
-        columns
-        canManageStructure={false}
-        canAssignResources={false}
-        onAddLane={jest.fn()}
-        onEditLane={jest.fn()}
-        onAssignToLane={jest.fn()}
-        onMoveResource={jest.fn()}
-        onViewResource={jest.fn()}
-      />
-    );
+    await render(<StructureBoard {...structureProps} lanes={lanes} assignments={[assignment('a1', 'n1', 'unit-1')]} columns />);
     expect(screen.getByTestId('structure-columns')).toBeTruthy();
     expect(screen.queryByTestId('structure-list')).toBeNull();
     expect(screen.queryByTestId('lane-edit-n1')).toBeNull();
+  });
+
+  it('shares the full width between lanes that fit, with no scroll strips, and tiles resources in a wide lane', async () => {
+    const lanes = orderLanes([node('n1', { Name: 'Division A' })]);
+    await render(<StructureBoard {...structureProps} lanes={lanes} assignments={[assignment('a1', 'n1', 'unit-1'), assignment('a2', 'n1', 'unit-2')]} columns />);
+    await measureLanes(1208);
+
+    // Pool + one lane in 1208: 600 each, the full width, and tall enough for a few resources when empty.
+    expect(styleOf('lane-pool')).toMatchObject({ width: 600, minHeight: LANE_MIN_HEIGHT, marginLeft: 0 });
+    expect(styleOf('lane-n1')).toMatchObject({ width: 600, minHeight: LANE_MIN_HEIGHT, marginLeft: 8 });
+    expect(screen.queryByTestId('structure-scroll-left')).toBeNull();
+    expect(screen.queryByTestId('structure-scroll-right')).toBeNull();
+    // A 600-wide lane holds its resources two across instead of one long column.
+    expect(StyleSheet.flatten(screen.getByTestId('lane-resource-a1').parent?.parent?.props.style)).toMatchObject({ width: '50%' });
+  });
+
+  it('shows a scroll strip on each side when lanes run past the edge, paging by whole lanes', async () => {
+    const scrollTo = jest.spyOn(ScrollView.prototype, 'scrollTo').mockImplementation(() => undefined);
+    const lanes = orderLanes(['n1', 'n2', 'n3', 'n4'].map((id, index) => node(id, { Name: `Division ${index}`, SortOrder: index })));
+    await render(<StructureBoard {...structureProps} lanes={lanes} assignments={[]} columns />);
+    await measureLanes(718);
+
+    const scroller = screen.getByTestId('structure-columns-scroll');
+    await fireEvent(scroller, 'layout', { nativeEvent: { layout: { width: 646, height: 400 } } });
+    await fireEvent(scroller, 'contentSizeChange', 5 * 268 + 4 * 8, 400);
+
+    const left = screen.getByTestId('structure-scroll-left');
+    const right = screen.getByRole('button', { name: 'common.scroll_right' });
+    expect(left.props.accessibilityState).toMatchObject({ disabled: true });
+    expect(right.props.accessibilityState).toMatchObject({ disabled: false });
+    expect(styleOf('lane-n1')).toMatchObject({ width: 268 });
+
+    await fireEvent.press(right);
+    expect(scrollTo).toHaveBeenLastCalledWith({ x: 552, animated: true });
+
+    await fireEvent.scroll(scroller, { nativeEvent: { contentOffset: { x: 552, y: 0 } } });
+    expect(screen.getByTestId('structure-scroll-left').props.accessibilityState).toMatchObject({ disabled: false });
+    scrollTo.mockRestore();
+  });
+
+  it('stacks lanes in a list on phones', async () => {
+    const lanes = orderLanes([node('n1', { Name: 'Division A' })]);
+    await render(<StructureBoard {...structureProps} lanes={lanes} assignments={[]} columns={false} />);
+    expect(screen.getByTestId('structure-list')).toBeTruthy();
+    expect(screen.queryByTestId('structure-columns')).toBeNull();
+  });
+});
+
+describe('CommandBoardView layout', () => {
+  const measureBoard = async (width: number) => {
+    await fireEvent(screen.getByTestId('command-board-view'), 'layout', { nativeEvent: { layout: { width, height: 2000 } } });
+  };
+
+  const log = (id: string, minute: number) => ({
+    CommandLogEntryId: id,
+    IncidentCommandId: 'ic-7',
+    DepartmentId: 1,
+    CallId: 7,
+    EntryType: 0,
+    Description: `Entry ${id}`,
+    OccurredOn: `2026-11-07T10:${String(minute).padStart(2, '0')}:00Z`,
+  });
+
+  it('puts the section cards two to a row and the incident log last, across the full width with its own scroll', async () => {
+    seedBoard('7', makeBoard(), { timeline: Array.from({ length: 20 }, (_, index) => log(`l${index}`, index)) });
+    await render(<CommandBoardView callId="7" tier="command" />);
+    await measureBoard(1200);
+
+    expect(screen.getByTestId('structure-columns')).toBeTruthy();
+
+    for (const id of ['command-accountability', 'command-objectives', 'command-needs', 'command-timers', 'command-roles', 'command-notes']) {
+      expect(styleOf(id)).toMatchObject({ flexBasis: '40%', flexGrow: 1 });
+    }
+
+    // The log is not a grid cell: full width, after every other card, scrolling inside a capped height.
+    expect(styleOf('command-log-section')).not.toHaveProperty('flexBasis');
+    expect(within(screen.getByTestId('command-sections')).queryByTestId('command-log-section')).toBeNull();
+    const order = screen.getByTestId('command-board-view').children;
+    const sectionsAt = order.indexOf(screen.getByTestId('command-sections'));
+
+    expect(order.indexOf(screen.getByTestId('command-structure'))).toBeGreaterThan(-1);
+    expect(order.indexOf(screen.getByTestId('command-structure'))).toBeLessThan(sectionsAt);
+    expect(order.indexOf(screen.getByTestId('command-log-section'))).toBe(sectionsAt + 1);
+    expect(styleOf('command-log-section-scroll')).toMatchObject({ maxHeight: BOARD_LOG_MAX_HEIGHT, flexGrow: 0 });
+    expect(screen.getByTestId('command-log-section-scroll').props.nestedScrollEnabled).toBe(true);
+    // More than the old eight: the list scrolls rather than cutting off at a handful.
+    expect(within(screen.getByTestId('command-log-section-scroll')).getAllByTestId(/command-log-section-entry-/)).toHaveLength(20);
+  });
+
+  it('stacks everything in one column on a narrow board', async () => {
+    await render(<CommandBoardView callId="7" tier="command" />);
+    await measureBoard(500);
+
+    expect(screen.getByTestId('structure-list')).toBeTruthy();
+    expect(styleOf('command-objectives')).not.toHaveProperty('flexBasis');
+  });
+});
+
+describe('SectionGrid', () => {
+  const Nothing: React.FC = () => null;
+
+  it('gives each card a cell, skips a section that renders nothing, and leaves a card alone on the last row to span it', async () => {
+    await render(
+      <SectionGrid columns={2} testID="grid">
+        <SectionCard title="A" testID="card-a">
+          <Text>a</Text>
+        </SectionCard>
+        <Nothing />
+        <SectionCard title="B" testID="card-b">
+          <Text>b</Text>
+        </SectionCard>
+        <SectionCard title="C" testID="card-c">
+          <Text>c</Text>
+        </SectionCard>
+      </SectionGrid>
+    );
+
+    expect(styleOf('grid')).toMatchObject({ flexDirection: 'row', flexWrap: 'wrap' });
+
+    // Two 40% bases share a row; growing fills it, so C (alone on the second row) spans the row.
+    for (const id of ['card-a', 'card-b', 'card-c']) expect(styleOf(id)).toMatchObject({ flexBasis: '40%', flexGrow: 1, flexShrink: 1, minWidth: 0 });
+  });
+
+  it('keeps cards nested in a grid card out of the grid', async () => {
+    await render(
+      <SectionGrid columns={2}>
+        <SectionCard title="Outer" testID="outer">
+          <SectionCard title="Inner" testID="inner">
+            <Text>inner</Text>
+          </SectionCard>
+        </SectionCard>
+      </SectionGrid>
+    );
+
+    expect(styleOf('inner')).not.toHaveProperty('flexBasis');
+  });
+
+  it('lays cards out one per row with one column', async () => {
+    await render(
+      <SectionGrid columns={1} testID="grid">
+        <SectionCard title="A" testID="card-a">
+          <Text>a</Text>
+        </SectionCard>
+      </SectionGrid>
+    );
+
+    expect(styleOf('card-a')).not.toHaveProperty('flexBasis');
   });
 });

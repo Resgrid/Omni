@@ -15,6 +15,8 @@ type ITextProps = Omit<React.ComponentProps<'span'>, 'style'> &
     accessibilityLabel?: string;
     accessibilityRole?: string;
     accessibilityHint?: string;
+    /** As React Native Text: a click, and Enter (Space too unless a link) from the keyboard (see `toDomProps`). */
+    onPress?: (event: React.SyntheticEvent<HTMLElement>) => void;
   };
 
 const Text = React.forwardRef<React.ElementRef<'span'>, ITextProps>(

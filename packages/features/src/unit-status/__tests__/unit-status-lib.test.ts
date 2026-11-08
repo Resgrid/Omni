@@ -4,7 +4,7 @@ import { ActionBaseTypes } from '@resgrid/features/status';
 import type { CallResultData } from '@resgrid/models';
 
 import { callDestinationTarget, callLocationTarget, isUsablePoint } from '../lib/call-location';
-import { consoleMetrics } from '../lib/console-layout';
+import { consoleMetrics, fitRoundButtonSize, MIN_ROUND_BUTTON_SIZE } from '../lib/console-layout';
 import { visibleQuickActions } from '../lib/quick-actions';
 import { resolveUnitStatusDisplay, statusStyleColor } from '../lib/status-display';
 import { unitStatusRoutes } from '../routes';
@@ -103,8 +103,31 @@ describe('quick actions', () => {
   });
 
   it('follows flags and the active unit, and drops actions the variant lacks', () => {
-    expect(visibleQuickActions({ ...none, chat: true, inventory: true }).map((action) => action.id)).toEqual(['chat', 'assistant', 'inventory', 'settings']);
-    expect(visibleQuickActions({ ...none, chat: true }, ['assistant']).map((action) => action.id)).toEqual(['chat', 'settings']);
+    expect(visibleQuickActions({ ...none, chat: true, inventory: true }).map((action) => action.id)).toEqual(['chat', 'inventory', 'settings']);
+    expect(visibleQuickActions({ ...none, chat: true, checklists: true, deployments: true }, ['settings']).map((action) => action.id)).toEqual(['chat', 'checklists', 'operations']);
+  });
+
+  // The assistant lives in the chat list (pinned first), so it has no shortcut of its own.
+  it('has no assistant shortcut', () => {
+    expect(visibleQuickActions({ chat: true, checklists: true, deployments: true, records: true, inventory: true }).map((action) => action.href)).not.toContain('/chatbot');
+  });
+});
+
+describe('fitRoundButtonSize', () => {
+  it('keeps the preferred size when the row fits it or is not measured yet', () => {
+    expect(fitRoundButtonSize(36, 0, 3, 3)).toBe(36);
+    expect(fitRoundButtonSize(36, 200, 3, 3)).toBe(36);
+  });
+
+  // The sidebar's half-width unit card: three 36 pt buttons and their margins need 126 pt.
+  it('shrinks the buttons so they share one row instead of wrapping', () => {
+    const size = fitRoundButtonSize(36, 120, 3, 3);
+    expect(size).toBe(34);
+    expect(3 * (size + 6)).toBeLessThanOrEqual(120);
+  });
+
+  it('never shrinks them below the minimum', () => {
+    expect(fitRoundButtonSize(36, 60, 3, 3)).toBe(MIN_ROUND_BUTTON_SIZE);
   });
 });
 

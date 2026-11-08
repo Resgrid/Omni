@@ -13,19 +13,27 @@ export const chatSectionOf = (channel: Pick<ChatChannelResultData, 'ChannelType'
   return 'channels';
 };
 
-export const CHAT_SECTION_ORDER: readonly ChatSection[] = ['direct', 'channels', 'incidents', 'assistant'];
+/** The list's sections. The assistant is not one of them: it is pinned above them (`assistantChannelOf`). */
+export type ChatListSection = Exclude<ChatSection, 'assistant'>;
 
-export const CHAT_SECTION_KEYS: Record<ChatSection, string> = {
+export const CHAT_SECTION_ORDER: readonly ChatListSection[] = ['direct', 'channels', 'incidents'];
+
+export const CHAT_SECTION_KEYS: Record<ChatListSection, string> = {
   direct: 'chat.section_direct_messages',
   channels: 'chat.section_channels',
   incidents: 'chat.section_incidents',
-  assistant: 'chat.section_assistant',
 };
 
 const lastActivity = (channel: ChatChannelResultData): number => parseUtcMs(channel.LastMessageOn) ?? parseUtcMs(channel.CreatedOn) ?? 0;
 
-/** Non-archived channels grouped into sections, most recent activity first; empty sections dropped. */
-export const groupChannels = (channels: readonly ChatChannelResultData[], query = ''): { section: ChatSection; channels: ChatChannelResultData[] }[] => {
+/**
+ * The assistant's channel, when Core has created it (it does on the first visit to the assistant): the pinned assistant
+ * entry takes its unread count and last activity from it.
+ */
+export const assistantChannelOf = (channels: readonly ChatChannelResultData[]): ChatChannelResultData | null => channels.find((channel) => !channel.IsArchived && chatSectionOf(channel) === 'assistant') ?? null;
+
+/** Non-archived channels grouped into sections, most recent activity first; empty sections dropped; the assistant left out. */
+export const groupChannels = (channels: readonly ChatChannelResultData[], query = ''): { section: ChatListSection; channels: ChatChannelResultData[] }[] => {
   const needle = query.trim().toLowerCase();
   const visible = channels.filter((channel) => !channel.IsArchived && (!needle || (channel.Name ?? '').toLowerCase().includes(needle) || (channel.Topic ?? '').toLowerCase().includes(needle)));
   return CHAT_SECTION_ORDER.map((section) => ({ section, channels: visible.filter((channel) => chatSectionOf(channel) === section).sort((a, b) => lastActivity(b) - lastActivity(a)) })).filter(
