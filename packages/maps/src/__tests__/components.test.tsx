@@ -142,10 +142,43 @@ describe('sheets', () => {
       Personnel: [{ Id: null, Name: '', States: [] }],
       Units: [{ Id: 4, Name: 'Engine', States: [{ Id: 1, Name: 'Available' }] }],
     }));
+
     await renderWithProvider(<MapLegendSheet isOpen={true} onClose={jest.fn()} canViewPersonnel={false} loadLegend={loadLegend} />);
     await waitFor(() => expect(screen.getByTestId('map-legend-content')).toBeTruthy());
     expect(screen.getByTestId('map-legend-status-available')).toBeTruthy();
     expect(screen.getByTestId('map-legend-units-4')).toBeTruthy();
     expect(screen.queryByTestId('map-legend-heading-personnel')).toBeNull();
+  });
+
+  it('shows the department station icon under the app label, then each station with its own icon', async () => {
+    const loadLegend = jest.fn(async () => ({
+      Stations: [
+        { Id: null, Name: 'Station', IconUrl: 'https://api.example.org/api/v4/TypeIcons/all', ImagePath: 'Station', States: [] },
+        { Id: 41, Name: ' Ambulance post ', IconUrl: 'https://api.example.org/api/v4/TypeIcons/own', ImagePath: 'Station', States: [] },
+      ],
+    }));
+
+    await renderWithProvider(<MapLegendSheet isOpen={true} onClose={jest.fn()} canViewPersonnel={true} loadLegend={loadLegend} />);
+    await waitFor(() => expect(screen.getByTestId('map-legend-content')).toBeTruthy());
+
+    expect(screen.getByTestId('map-legend-station-icon-upload').props.source).toEqual({ uri: 'https://api.example.org/api/v4/TypeIcons/all' });
+    expect(screen.getByTestId('map-legend-station')).toHaveTextContent('maps.legend.station');
+    expect(screen.getByTestId('map-legend-station-41')).toHaveTextContent('Ambulance post');
+    expect(screen.getByTestId('map-legend-station-41-icon-upload').props.source).toEqual({ uri: 'https://api.example.org/api/v4/TypeIcons/own' });
+  });
+
+  it('falls back to the bundled station pin when an upload fails or the server sends no station icons', async () => {
+    const loadLegend = jest.fn(async () => ({ Stations: [{ Id: null, Name: 'Station', IconUrl: 'https://api.example.org/api/v4/TypeIcons/gone', ImagePath: 'Station', States: [] }] }));
+    const { unmount } = await renderWithProvider(<MapLegendSheet isOpen={true} onClose={jest.fn()} canViewPersonnel={true} loadLegend={loadLegend} />);
+    await waitFor(() => expect(screen.getByTestId('map-legend-station-icon-upload')).toBeTruthy());
+    await fireEvent(screen.getByTestId('map-legend-station-icon-upload'), 'error');
+    expect(screen.getByTestId('map-legend-station-icon-bundled').props.source).toBe(2);
+    await unmount();
+
+    // An older server: no Stations at all.
+    await renderWithProvider(<MapLegendSheet isOpen={true} onClose={jest.fn()} canViewPersonnel={true} loadLegend={jest.fn(async () => ({ PoiTypes: [] }))} />);
+    await waitFor(() => expect(screen.getByTestId('map-legend-content')).toBeTruthy());
+    expect(screen.getByTestId('map-legend-station-icon-bundled').props.source).toBe(2);
+    expect(screen.queryByTestId('map-legend-station-icon-upload')).toBeNull();
   });
 });

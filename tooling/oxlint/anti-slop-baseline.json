@@ -3926,9 +3926,6 @@
   "packages/maps/jest.setup.ts": {
     "anti-slop/require-readable-spacing": 3
   },
-  "packages/maps/src/__tests__/components.test.tsx": {
-    "anti-slop/require-readable-spacing": 1
-  },
   "packages/maps/src/__tests__/fakes/maplibre-gl.ts": {
     "anti-slop/no-known-value-widening": 2,
     "anti-slop/no-unknown-parameters": 1,
@@ -4043,8 +4040,7 @@
   "packages/maps/src/components/map-legend-sheet.tsx": {
     "anti-slop/no-known-value-widening": 1,
     "anti-slop/no-runtime-typeof": 1,
-    "anti-slop/no-unknown-parameters": 1,
-    "anti-slop/require-readable-spacing": 11
+    "anti-slop/no-unknown-parameters": 1
   },
   "packages/maps/src/components/map-pins.tsx": {
     "anti-slop/no-conditional-empty-object-spread": 1,

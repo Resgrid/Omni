@@ -87,4 +87,10 @@ export class GetMapIconLegendResultData {
   public Personnel?: MapLegendRowData[] = [];
   /** Department POI types by name. */
   public PoiTypes?: MapLegendPoiTypeData[] = [];
+  /**
+   * Station icons (no `States`): first row (Id null) = what every station without its own icon shows (`IconUrl` the
+   * department's station icon, else the bundled `ImagePath` "Station"), then each station with its own upload, by name.
+   * Absent from servers before station icons.
+   */
+  public Stations?: MapLegendRowData[] = [];
 }

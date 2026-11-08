@@ -35,6 +35,8 @@ export interface NormalizedLegend {
   calls: MapLegendRowData[];
   units: MapLegendRowData[];
   personnel: MapLegendRowData[];
+  /** Empty when the server predates station icons (no `Stations`): the sheet then draws the bundled station pin. */
+  stations: MapLegendRowData[];
   poiTypes: NonNullable<GetMapIconLegendResultData['PoiTypes']>;
 }
 
@@ -44,12 +46,14 @@ const asText = (value: unknown): string => (typeof value === 'string' ? value.tr
 /** Every list present (absent / null lists from older servers become empty). */
 export const normalizeMapLegend = (data: GetMapIconLegendResultData | null | undefined): NormalizedLegend => {
   const rows = (value: MapLegendRowData[] | null | undefined) => asArray(value).map((row) => ({ ...row, States: asArray(row.States) }));
+
   return {
     statusStyles: asArray(data?.StatusStyles),
     priorityStyles: asArray(data?.PriorityStyles),
     calls: rows(data?.Calls),
     units: rows(data?.Units),
     personnel: rows(data?.Personnel),
+    stations: rows(data?.Stations),
     poiTypes: asArray(data?.PoiTypes),
   };
 };
@@ -91,15 +95,20 @@ export const MapLegendSheet: React.FC<MapLegendSheetProps> = ({ isOpen, onClose,
       .catch(() => {
         if (!controller.signal.aborted) setStatus('error');
       });
+
     return () => controller.abort();
   }, [isOpen, attempt, load]);
 
   const retry = useCallback(() => setAttempt((value) => value + 1), []);
+
   const styleLabel = (key: string, kind: 'status' | 'priority'): string => {
     const normalized = asText(key).toLowerCase();
+
     if (!normalized || normalized === 'unknown') return kind === 'status' ? t('maps.legend.style.unknown') : t('maps.legend.no_meaning');
+
     return STYLE_LABEL_KEYS[normalized] ? t(STYLE_LABEL_KEYS[normalized]) : asText(key);
   };
+
   const callsTitle = terms?.calls ?? t('maps.legend.calls');
   const unitsTitle = terms?.units ?? t('maps.legend.units');
   const personnelTitle = terms?.personnel ?? t('maps.legend.personnel');
@@ -116,6 +125,7 @@ export const MapLegendSheet: React.FC<MapLegendSheetProps> = ({ isOpen, onClose,
     const color = HEX_COLOR.test(asText(style.Color)) ? asText(style.Color) : null;
     const names = kind === 'priority' ? asArray(style.Priorities) : [...asArray(style.UnitStatuses), ...(canViewPersonnel ? asArray(style.PersonnelStatuses) : [])];
     const pin = kind === 'priority' ? style.CallPinIconUrl : style.UnitPinIconUrl;
+
     return (
       <View key={key} style={StyleSheet.flatten([styles.row, { borderColor: colors.border }])} testID={`map-legend-${kind}-${key}`}>
         <PinMarkerIcon pinIconUrl={pin} fallbackToBundled={false} size={28} accessibilityLabel={label} />
@@ -131,6 +141,7 @@ export const MapLegendSheet: React.FC<MapLegendSheetProps> = ({ isOpen, onClose,
   const typeRow = (row: MapLegendRowData, noneLabel: string, section: string, index: number) => {
     const name = row.Id == null ? noneLabel : asText(row.Name);
     const states = row.States ?? [];
+
     return (
       <View key={`${section}-${row.Id ?? 'none'}-${index}`} style={StyleSheet.flatten([styles.card, { borderColor: colors.border }])} testID={`map-legend-${section}-${row.Id ?? 'none'}`}>
         <View style={styles.cardHeader}>
@@ -162,6 +173,7 @@ export const MapLegendSheet: React.FC<MapLegendSheetProps> = ({ isOpen, onClose,
         </View>
       );
     }
+
     if (status === 'error' || !legend) {
       return (
         <View style={styles.center} testID="map-legend-error">
@@ -170,7 +182,14 @@ export const MapLegendSheet: React.FC<MapLegendSheetProps> = ({ isOpen, onClose,
         </View>
       );
     }
+
     const personnel = canViewPersonnel ? legend.personnel : [];
+    // The Id-null station row is what every station without its own icon shows (the department's upload, else the bundled
+    // pin); the other rows are stations with their own upload. A server before station icons sends none: bundled pin.
+    const stationLabel = t('maps.legend.station');
+    const defaultStation = legend.stations.find((row) => row.Id == null) ?? null;
+    const ownIconStations = legend.stations.filter((row) => row.Id != null);
+
     return (
       <View testID="map-legend-content">
         {legend.statusStyles.length > 0 ? heading(t('maps.legend.status_colors'), 'map-legend-heading-status') : null}
@@ -186,9 +205,19 @@ export const MapLegendSheet: React.FC<MapLegendSheetProps> = ({ isOpen, onClose,
         {personnel.map((row, index) => typeRow(row, t('maps.legend.no_role_icon'), 'personnel', index))}
         {heading(t('maps.legend.other'), 'map-legend-heading-other')}
         <View style={StyleSheet.flatten([styles.row, { borderColor: colors.border }])} testID="map-legend-station">
-          <PinMarkerIcon imagePath="station" size={28} accessibilityLabel={t('maps.legend.station')} />
-          <Text style={StyleSheet.flatten([styles.rowTitle, styles.cardTitle, { color: colors.text }])}>{t('maps.legend.station')}</Text>
+          <PinMarkerIcon iconUrl={defaultStation?.IconUrl} imagePath="station" size={28} accessibilityLabel={stationLabel} testID="map-legend-station-icon" />
+          <Text style={StyleSheet.flatten([styles.rowTitle, styles.cardTitle, { color: colors.text }])}>{stationLabel}</Text>
         </View>
+        {ownIconStations.map((row, index) => {
+          const name = asText(row.Name) || stationLabel;
+
+          return (
+            <View key={`station-${row.Id}-${index}`} style={StyleSheet.flatten([styles.row, { borderColor: colors.border }])} testID={`map-legend-station-${row.Id}`}>
+              <PinMarkerIcon iconUrl={row.IconUrl} imagePath="station" size={28} accessibilityLabel={name} testID={`map-legend-station-${row.Id}-icon`} />
+              <Text style={StyleSheet.flatten([styles.rowTitle, styles.cardTitle, { color: colors.text }])}>{name}</Text>
+            </View>
+          );
+        })}
         {legend.poiTypes.map((poiType) => (
           <View key={`poi-${poiType.PoiTypeId}`} style={StyleSheet.flatten([styles.row, { borderColor: colors.border }])} testID={`map-legend-poi-${poiType.PoiTypeId}`}>
             {poiType.IconUrl ? (
