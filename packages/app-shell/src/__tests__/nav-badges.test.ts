@@ -45,6 +45,15 @@ describe('nav badges', () => {
     expect(loadNav(variant).entries.filter((entry) => entry.badge !== undefined && !EXPECTED_BADGES.has(entry.id))).toEqual([]);
   });
 
+  // The app bar bell opens the inbox and carries its count, so no app also lists it in the menu or tab bar.
+  it.each(VARIANTS)('%s: the notifications inbox has no menu or tab entry (the app bar bell opens it)', (variant) => {
+    const placements = loadNav(variant)
+      .entries.filter((entry) => entry.id === 'notifications')
+      .map((entry) => entry.placement);
+
+    expect(placements.filter((placement) => placement !== 'hidden')).toEqual([]);
+  });
+
   it('featureNav keeps a feature badge, and a variant override wins over it', () => {
     const [plain] = featureNav([{ id: 'calls', route: 'calls', titleKey: 'calls.title', badge: 'calls' }], 'sidebar');
     const [overridden] = featureNav([{ id: 'calls', route: 'calls', titleKey: 'calls.title', badge: 'calls' }], 'sidebar', { overrides: { calls: { badge: 'messages' } } });

@@ -212,6 +212,14 @@ describe('ArchivedCallsScreen', () => {
     expect(screen.getByText('Barn fire')).toBeTruthy();
   });
 
+  // A margin under a chip in a ScrollRow made the row taller than its chips and its centred edge chevron sat low.
+  it('keeps the scrolling year chips free of a bottom margin, while wrapping filter chips keep theirs', async () => {
+    await render(<ArchivedCallsScreen now={() => Date.parse('2026-10-31T12:00:00Z')} />);
+    expect(String(screen.getByTestId('archived-year-2026').props.className)).not.toMatch(/(^|\s)m[tby]-/);
+    await fireEvent.press(screen.getByTestId('archived-calls-filters-toggle'));
+    expect(String(screen.getByTestId('archived-filter-state-5').props.className)).toMatch(/(^|\s)mb-2(\s|$)/);
+  });
+
   it('reuses a year loaded a moment ago and shows the no-match state', async () => {
     const now = Date.parse('2026-10-31T12:00:00Z');
     useArchivedCallsStore.setState({ fetchedAt: { calls: now - 1000 } });

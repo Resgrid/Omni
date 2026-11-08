@@ -106,7 +106,8 @@ export const nav = defineNav([
   ...featureNav(recordsNav, 'sidebar', { order: 44, overrides: { records: { requiresFlag: [FeatureFlagKeys.RecordsSystem, FeatureFlagKeys.RecordsFieldDispatch] } } }),
   ...featureNav(operationsNav, 'sidebar', { order: 45 }),
   ...featureNav(chatNav, { chat: 'sidebar', chatbot: 'hidden' }, { order: 60 }),
-  ...featureNav(notificationsNav, 'sidebar', { order: 70 }),
+  // The inbox is the app bar bell (with its unread count); the route stays for the bell and for push taps.
+  ...featureNav(notificationsNav, 'hidden', { order: 70 }),
   ...featureNav(settingsNavEntries, variant),
   ...featureNav(customMapsNav, { maps: 'sidebar', 'maps-search': 'hidden' }, { order: 26 }),
   ...featureNav(offlineMapsNav, 'hidden', { order: 906 }),

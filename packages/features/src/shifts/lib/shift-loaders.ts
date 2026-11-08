@@ -1,6 +1,6 @@
 import { type FetchOptions, useShiftsStore } from '@resgrid/data';
 
-import { type DateRange, getMonthRange, toDateParam } from './shift-time';
+import { type DateRange, getMonthRange, parseWallClock, toDateParam } from './shift-time';
 
 /** The views of the Shifts screen (Responder segments). Approvals show only for supervisors. */
 export type ShiftView = 'today' | 'mine' | 'signup' | 'calendar' | 'trades' | 'approvals' | 'onduty';
@@ -23,6 +23,55 @@ export async function loadShiftCalendar(range: DateRange, shiftId: string | null
 export interface ShiftCalendarSelection {
   range: DateRange;
   shiftId: string | null;
+}
+
+/** The calendar's place in the Shifts route: `/shifts?view=calendar&month=2026-12&date=2026-12-14`. */
+export interface ShiftCalendarRouteParams {
+  /** `YYYY-MM` */
+  month?: string;
+  /** `YYYY-MM-DD`, the picked day. */
+  date?: string;
+}
+
+/** Where the calendar opens and which day is picked. */
+export interface ShiftCalendarStart {
+  calendar: ShiftCalendarSelection;
+  selectedDate: string | null;
+}
+
+const MONTH_PARAM = /^(\d{4})-(\d{2})$/;
+
+/** `YYYY-MM` of a date (the `month` route param). */
+export const toMonthParam = (date: Date): string => toDateParam(date).slice(0, 7);
+
+const parseMonthParam = (value: string | undefined): Date | null => {
+  const match = value ? MONTH_PARAM.exec(value) : null;
+  const month = match ? Number(match[2]) : 0;
+
+  return match && month >= 1 && month <= 12 ? new Date(Number(match[1]), month - 1, 1) : null;
+};
+
+/** A real `YYYY-MM-DD` day (2030-02-31 is not one), or null. */
+const parseDayParam = (value: string | undefined): string | null => {
+  const parsed = value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? parseWallClock(value) : null;
+
+  return parsed && toDateParam(parsed) === value ? value : null;
+};
+
+/**
+ * Where the calendar opens: the month and day in the route (the screen rebuilt after a reload or a history step), else
+ * the last loaded month (kept in the store), else this month. The shift filter is the last loaded one. The picked day is
+ * the route's when it lies in that month, else today when today does, else none.
+ */
+export function resolveShiftCalendarStart(params: ShiftCalendarRouteParams, last: { start: string; end: string; shiftId: string | null } | null, now: Date = new Date()): ShiftCalendarStart {
+  const date = parseDayParam(params.date);
+  const month = parseMonthParam(params.month) ?? (date ? parseWallClock(date) : null);
+  const range = month ? getMonthRange(month) : last ? { start: last.start, end: last.end } : getMonthRange(now);
+  const inRange = (day: string): boolean => day >= range.start && day <= range.end;
+  const today = toDateParam(now);
+  const selectedDate = date && inRange(date) ? date : inRange(today) ? today : null;
+
+  return { calendar: { range, shiftId: last?.shiftId ?? null }, selectedDate };
 }
 
 /**

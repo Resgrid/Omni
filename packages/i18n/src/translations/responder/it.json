@@ -429,6 +429,7 @@
       "no_group": "Nessun gruppo",
       "no_role_requirements": "Nessun ruolo richiesto",
       "open_needs": "Posti da coprire",
+      "past_note": "Questo giorno di turno è terminato, quindi non può più essere modificato.",
       "pending_note": "La tua iscrizione è in attesa dell'approvazione di un supervisore. Non sei in servizio finché non viene approvata.",
       "require_approval_note": "Le iscrizioni e gli scambi di questo turno richiedono l'approvazione di un supervisore.",
       "roster": "Personale in turno",

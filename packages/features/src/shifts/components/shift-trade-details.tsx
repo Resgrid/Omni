@@ -4,6 +4,7 @@ import { ShiftTradeDirection, type ShiftTradeResultData, ShiftTradeStatus, type 
 import { Badge, BadgeText, HStack, Spinner, Text, VStack } from '@resgrid/ui';
 import React, { useEffect } from 'react';
 
+import { useRerenderAtShiftEnd } from '../hooks/use-rerender-at';
 import type { ShiftTradeAction } from '../lib/shift-action-types';
 import { canPickTrade, getIneligibleReasonKey, getTradeMyStateKey, getTradeStatusLabel } from '../lib/shift-rules';
 import { formatShiftDate, formatShiftTime } from '../lib/shift-time';
@@ -11,10 +12,12 @@ import { ShiftTradeActionButtons, ShiftTradeOfferRow } from './shift-trade-card'
 
 const ApplicantQualifications: React.FC<{ user: ShiftTradeUserResultData }> = ({ user }) => {
   const { t } = useTranslation();
+
   // Only GetShiftTrade fills these, and only for the requester and the people who decide.
   if (user.IsEligible === undefined) return null;
   const ineligibleKey = user.IsEligible === false ? getIneligibleReasonKey(user.IneligibleReason) : null;
   const certifications = user.Certifications ?? [];
+
   return (
     <VStack space="xs" className="mt-1">
       <Text size="xs" className="text-typography-700" testID={`trade-applicant-certs-${user.UserId}`}>
@@ -56,6 +59,10 @@ export const ShiftTradeDetails: React.FC<ShiftTradeDetailsProps> = ({ tradeId, f
   }, [tradeId]);
 
   const trade = loaded ?? fallback;
+
+  // Picking an applicant stops when the day ends, also with the trade left open on screen.
+  useRerenderAtShiftEnd(trade?.End);
+
   if (!trade) {
     return isLoading ? (
       <HStack space="sm" className="items-center justify-center py-8" testID="shift-trade-loading">

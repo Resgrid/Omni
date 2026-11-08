@@ -65,13 +65,16 @@ export const QueueActionButton: React.FC<{ label: string; icon: LucideIcon; onPr
   );
 };
 
-/** A filter chip (archived calls filters). */
-export const FilterChip: React.FC<{ label: string; active: boolean; onPress: () => void; color?: string; testID: string }> = ({ label, active, onPress, color, testID }) => (
+/**
+ * A filter chip (archived calls filters). In a wrapping row it keeps a gap below for the next line; in a `ScrollRow`
+ * (`scroll`) it has none, so the row is as tall as its chips and the edge chevrons centre on them.
+ */
+export const FilterChip: React.FC<{ label: string; active: boolean; onPress: () => void; color?: string; scroll?: boolean; testID: string }> = ({ label, active, onPress, color, scroll = false, testID }) => (
   <Pressable
     onPress={onPress}
     accessibilityRole="button"
     accessibilityState={{ selected: active }}
-    className={`mb-2 mr-2 flex-row items-center rounded-full border px-3 py-1 ${active ? 'border-primary-500 bg-primary-500' : 'border-outline-300 bg-background-0'}`}
+    className={`${scroll ? '' : 'mb-2 '}mr-2 flex-row items-center rounded-full border px-3 py-1 ${active ? 'border-primary-500 bg-primary-500' : 'border-outline-300 bg-background-0'}`}
     testID={testID}
   >
     {color ? <View style={StyleSheet.flatten([styles.dot, { backgroundColor: color }])} /> : null}

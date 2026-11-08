@@ -429,6 +429,7 @@
       "no_group": "Bez grupy",
       "no_role_requirements": "Brak wymagań dotyczących ról",
       "open_needs": "Nieobsadzone miejsca",
+      "past_note": "Ten dzień zmiany już się zakończył, więc nie można go już zmienić.",
       "pending_note": "Twój zapis czeka na zatwierdzenie przez przełożonego. Do tego czasu nie jesteś na służbie.",
       "require_approval_note": "Zapisy i zamiany na tej zmianie wymagają zatwierdzenia przez przełożonego.",
       "roster": "Obsada",

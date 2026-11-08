@@ -131,6 +131,9 @@ describe('pins', () => {
     expect(resolvePinIcon(pin({ IconUrl: 'https://x/u.png', PinIconUrl: 'https://x/p.png' }), icons)?.source).toBe('https://x/u.png');
     expect(resolvePinIcon(pin({ IconUrl: 'relative.png', PinIconUrl: 'https://x/p.png' }), icons)?.source).toBe('https://x/p.png');
     expect(resolvePinIcon(pin({ ImagePath: 'Station' }), icons)).toEqual({ name: 'pin-bundled-station', source: 2 });
+    // A station with the department's uploaded station icon draws it, like a type upload; without one, the bundled pin.
+    expect(resolvePinIcon(pin({ Type: MapPinType.Station, ImagePath: 'Station', IconUrl: 'https://x/station.png' }), icons)?.source).toBe('https://x/station.png');
+    expect(resolvePinIcon(pin({ Type: MapPinType.Station, ImagePath: 'Station', IconUrl: null }), icons)?.source).toBe(2);
     expect(resolvePinIcon(pin({ ImagePath: 'unknown', Type: MapPinType.Poi }), icons)).toEqual({ name: 'pin-bundled-flag', source: 3 });
     expect(resolvePinIcon(pin({ ImagePath: 'unknown' }), {})).toBeNull();
   });

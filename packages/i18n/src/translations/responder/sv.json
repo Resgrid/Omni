@@ -429,6 +429,7 @@
       "no_group": "Ingen grupp",
       "no_role_requirements": "Inga rollkrav",
       "open_needs": "Obemannade platser",
+      "past_note": "Den här skiftdagen är över och kan inte längre ändras.",
       "pending_note": "Din anmälan väntar på godkännande av en arbetsledare. Du är inte i tjänst förrän den har godkänts.",
       "require_approval_note": "Anmälningar och byten på det här skiftet måste godkännas av en arbetsledare.",
       "roster": "Bemanning",

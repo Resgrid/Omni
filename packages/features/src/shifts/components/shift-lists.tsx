@@ -7,8 +7,9 @@ import { ArrowRightLeft, CalendarCheck, UserCheck } from 'lucide-react-native';
 import React, { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 
+import { useRerenderAtShiftEnd } from '../hooks/use-rerender-at';
 import type { ShiftSheetAction, ShiftTradeAction } from '../lib/shift-action-types';
-import { getRosterSourceLabel, sectionMyTrades, sectionOpenTrades } from '../lib/shift-rules';
+import { getRosterSourceLabel, isPendingSignupOver, sectionMyTrades, sectionOpenTrades } from '../lib/shift-rules';
 import { formatShiftDate, formatShiftTime } from '../lib/shift-time';
 import { ShiftTradeCard } from './shift-trade-card';
 
@@ -55,6 +56,7 @@ export interface ShiftTradesListProps {
 /** Open requests in the department (what I can take first) or my own trades (what needs me first). */
 export const ShiftTradesList: React.FC<ShiftTradesListProps> = ({ trades, openTrades, filter, onFilterChange, isLoading, onRefresh, onAction, onOpenDetails }) => {
   const { t } = useTranslation();
+
   const rows = useMemo<Row<ShiftTradeResultData>[]>(
     () =>
       (filter === 'open' ? sectionOpenTrades(openTrades) : sectionMyTrades(trades)).flatMap((section) => [
@@ -66,6 +68,7 @@ export const ShiftTradesList: React.FC<ShiftTradesListProps> = ({ trades, openTr
 
   const chip = (value: ShiftTradesFilter, label: string) => {
     const isActive = filter === value;
+
     return (
       <Pressable
         onPress={() => onFilterChange(value)}
@@ -120,12 +123,16 @@ export interface ShiftApprovalsListProps {
   onOpenTradeDetails: (trade: ShiftTradeResultData) => void;
 }
 
+/** A sign-up waiting for review; approve and deny go when its day ends, also with the list left open on screen. */
 const PendingSignupCard: React.FC<{ signup: PendingShiftSignupResultData; onAction: (action: ShiftSheetAction) => void }> = ({ signup, onAction }) => {
   const { t, i18n } = useTranslation();
   const timeZone = useDepartmentTimeZone();
   const locale = i18n.language;
   const roles = (signup.Roles ?? []).join(', ');
   const requested = formatUtcInDepartmentTime(signup.SignupTimestamp, timeZone, { dateStyle: 'medium', timeStyle: 'short' }, locale);
+
+  useRerenderAtShiftEnd(signup.End);
+
   return (
     <VStack space="xs" className="mb-3 rounded-xl border border-outline-100 bg-background-0 p-4" testID={`pending-signup-${signup.ShiftSignupId}`}>
       <Text className="font-semibold text-typography-900">{signup.UserName}</Text>
@@ -145,14 +152,20 @@ const PendingSignupCard: React.FC<{ signup: PendingShiftSignupResultData; onActi
           {t('shifts.review.requested_at', { date: requested })}
         </Text>
       ) : null}
-      <HStack space="sm" className="mt-2">
-        <Button size="sm" action="positive" onPress={() => onAction({ kind: 'review-signup', signup, approve: true })} testID={`signup-approve-${signup.ShiftSignupId}`}>
-          <ButtonText>{t('shifts.actions.approve')}</ButtonText>
-        </Button>
-        <Button size="sm" action="negative" variant="outline" onPress={() => onAction({ kind: 'review-signup', signup, approve: false })} testID={`signup-deny-${signup.ShiftSignupId}`}>
-          <ButtonText>{t('shifts.actions.deny')}</ButtonText>
-        </Button>
-      </HStack>
+      {isPendingSignupOver(signup) ? (
+        <Text size="sm" className="mt-2 text-typography-500" testID={`signup-over-${signup.ShiftSignupId}`}>
+          {t('shifts.day.past_note')}
+        </Text>
+      ) : (
+        <HStack space="sm" className="mt-2">
+          <Button size="sm" action="positive" onPress={() => onAction({ kind: 'review-signup', signup, approve: true })} testID={`signup-approve-${signup.ShiftSignupId}`}>
+            <ButtonText>{t('shifts.actions.approve')}</ButtonText>
+          </Button>
+          <Button size="sm" action="negative" variant="outline" onPress={() => onAction({ kind: 'review-signup', signup, approve: false })} testID={`signup-deny-${signup.ShiftSignupId}`}>
+            <ButtonText>{t('shifts.actions.deny')}</ButtonText>
+          </Button>
+        </HStack>
+      )}
     </VStack>
   );
 };
@@ -162,16 +175,20 @@ type ApprovalItem = { kind: 'signup'; signup: PendingShiftSignupResultData } | {
 /** Supervisors: sign-ups and trades waiting for approval in the groups they supervise. */
 export const ShiftApprovalsList: React.FC<ShiftApprovalsListProps> = ({ signups, trades, isLoading, onRefresh, onAction, onOpenTradeDetails }) => {
   const { t } = useTranslation();
+
   const rows = useMemo<Row<ApprovalItem>[]>(() => {
     const list: Row<ApprovalItem>[] = [];
+
     if (signups.length > 0) {
       list.push({ type: 'header', key: 'header-signups', title: t('shifts.approvals.signups') });
       signups.forEach((signup) => list.push({ type: 'item', key: `signup-${signup.ShiftSignupId}`, item: { kind: 'signup', signup } }));
     }
+
     if (trades.length > 0) {
       list.push({ type: 'header', key: 'header-trades', title: t('shifts.approvals.trades') });
       trades.forEach((trade) => list.push({ type: 'item', key: `trade-${trade.ShiftSignupTradeId}`, item: { kind: 'trade', trade } }));
     }
+
     return list;
   }, [signups, trades, t]);
 
@@ -209,6 +226,7 @@ export interface ShiftOnDutyListProps {
 export const ShiftOnDutyList: React.FC<ShiftOnDutyListProps> = ({ personnel, isLoading, onRefresh }) => {
   const { t, i18n } = useTranslation();
   const locale = i18n.language;
+
   const rows = useMemo<Row<OnDutyPersonResultData>[]>(() => {
     const byDay = new Map<string, OnDutyPersonResultData[]>();
     personnel.forEach((person) => {
@@ -218,10 +236,12 @@ export const ShiftOnDutyList: React.FC<ShiftOnDutyListProps> = ({ personnel, isL
     const list: Row<OnDutyPersonResultData>[] = [];
     byDay.forEach((people, key) => {
       const first = people[0];
+
       if (!first) return;
       list.push({ type: 'header', key: `header-${key}`, title: first.ShiftName, subtitle: `${formatShiftTime(first.Start, locale)} – ${formatShiftTime(first.End, locale)}`, count: people.length });
       people.forEach((person) => list.push({ type: 'item', key: `person-${key}-${person.UserId}`, item: person }));
     });
+
     return list;
   }, [personnel, locale]);
 
@@ -234,6 +254,7 @@ export const ShiftOnDutyList: React.FC<ShiftOnDutyListProps> = ({ personnel, isL
         const person = row.item;
         const source = getRosterSourceLabel(person.Source);
         const details = [person.GroupName, (person.Roles ?? []).join(', ')].filter((part) => !!part).join(' · ');
+
         return (
           <HStack className="mb-2 items-center justify-between rounded-lg border border-outline-100 bg-background-0 p-3" space="sm" testID={`on-duty-${person.ShiftDayId}-${person.UserId}`}>
             <VStack className="flex-1">

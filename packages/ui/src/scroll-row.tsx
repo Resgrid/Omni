@@ -21,6 +21,10 @@ export interface ScrollRowProps extends Omit<ScrollViewProps, 'horizontal' | 'st
  * room to grow took half a screen, or was squeezed to nothing above a full-height list), and shows a small round
  * chevron at each edge that has more chips past it, so a phone never hides choices without a hint; a chevron pages
  * the row that way; on web and Electron a mouse wheel scrolls it too. Tab rows use `TabBar`.
+ *
+ * The chevrons centre on the row's box, so the chips inside carry no margin above or below and the content no padding
+ * on one side only (a chip's `mb-2` kept for wrapping set the chevron low beside the chips): space around the row goes
+ * on `style` or `className`.
  */
 export const ScrollRow: React.FC<ScrollRowProps> = ({ children, style, className, showOverflowIndicators = true, testID = 'scroll-row', onLayout, onContentSizeChange, onScroll, ...props }) => {
   const { t } = useTranslation();

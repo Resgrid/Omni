@@ -196,9 +196,9 @@ export default function ArchivedCallsScreen({ showHeader = true, now = Date.now 
         </Pressable>
       </View>
       {years.length > 0 ? (
-        <ScrollRow className="mb-3" testID="archived-calls-years">
+        <ScrollRow className="mb-5" testID="archived-calls-years">
           {years.map((year) => (
-            <FilterChip key={year} label={year} active={year === selectedYear} onPress={() => void useArchivedCallsStore.getState().selectYear(year)} testID={`archived-year-${year}`} />
+            <FilterChip key={year} label={year} active={year === selectedYear} onPress={() => void useArchivedCallsStore.getState().selectYear(year)} scroll testID={`archived-year-${year}`} />
           ))}
         </ScrollRow>
       ) : null}

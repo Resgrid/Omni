@@ -27,9 +27,10 @@ import variant from './variant';
 
 // responder navigation and route contract (omni-plan §5.3.4, §5.4). Only routes with a file in ./app belong here; the
 // per-variant route contract test (packages/app-shell) fails otherwise. Feature entries come from each feature's nav.ts
-// (imported directly so this file stays light); the menu follows the legacy Responder side menu (home, messages,
-// contacts, map, notes, protocols, calendar, shifts, weather alerts, checklists, records, operations, work orders,
-// certifications, chat, settings). Personnel, units and calls are the member home's nested tabs (/home/*).
+// (imported directly so this file stays light); the menu follows the legacy Responder side menu, with chat beside
+// messages and no notifications entry (the app bar bell opens the inbox): home, messages, chat, contacts, map, notes,
+// protocols, calendar, shifts, weather alerts, checklists, records, operations, work orders, certifications, settings.
+// Personnel, units and calls are the member home's nested tabs (/home/*).
 
 export const routes = defineRoutes([
   'home',
@@ -97,6 +98,7 @@ export const nav = defineNav([
   { id: 'root', href: '/', placement: 'hidden', labelKey: 'tabs.home', defaultLabel: 'Home' },
   ...featureNav(memberHomeNav, 'sidebar', { order: 0, overrides: { home: { nestedTabs: true } } }),
   ...featureNav(messagesNav, 'sidebar', { order: 10 }),
+  ...featureNav(chatNav, { chat: 'sidebar', chatbot: 'hidden' }, { order: 11 }),
   ...featureNav(contactsNav, 'sidebar', { order: 20 }),
   ...featureNav(mapNav, 'sidebar', { order: 25 }),
   ...featureNav(notesNav, 'sidebar', { order: 30 }),
@@ -109,8 +111,8 @@ export const nav = defineNav([
   ...featureNav(operationsNav, 'sidebar', { order: 62 }),
   ...featureNav(workOrdersNav, 'sidebar', { order: 63 }),
   ...featureNav(certificationsNav, 'sidebar', { order: 64 }),
-  ...featureNav(chatNav, { chat: 'sidebar', chatbot: 'hidden' }, { order: 70 }),
-  ...featureNav(notificationsNav, 'sidebar', { order: 80 }),
+  // The inbox is the app bar bell (with its unread count); the route stays for the bell and for push taps.
+  ...featureNav(notificationsNav, 'hidden', { order: 80 }),
   ...featureNav(callsNav, { 'call-new': 'hidden' }),
   ...featureNav(settingsNavEntries, variant),
   ...featureNav(offlineMapsNav, 'hidden', { order: 906 }),

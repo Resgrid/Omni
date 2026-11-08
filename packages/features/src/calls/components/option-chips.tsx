@@ -36,7 +36,7 @@ export function OptionChips<V extends string | number>({ options, selected, onTo
         accessibilityState={mode === 'single' ? { selected: isSelected } : { checked: isSelected }}
         accessibilityLabel={option.label}
         testID={`${testID}-${String(option.value)}`}
-        className={`mb-2 mr-2 flex-row items-center rounded-full border px-3 py-1.5 ${isSelected ? 'border-primary-600 bg-primary-100' : 'border-outline-300 bg-background-0'}`}
+        className={`${scroll ? '' : 'mb-2 '}mr-2 flex-row items-center rounded-full border px-3 py-1.5 ${isSelected ? 'border-primary-600 bg-primary-100' : 'border-outline-300 bg-background-0'}`}
       >
         {option.color ? <View style={StyleSheet.flatten([styles.swatch, { backgroundColor: option.color }])} /> : null}
         <Text size="sm" className={isSelected ? 'font-semibold text-primary-800' : 'text-typography-700'}>
@@ -46,8 +46,10 @@ export function OptionChips<V extends string | number>({ options, selected, onTo
     );
   });
 
+  // A wrapping chip keeps a gap below for the next line; a scrolling row puts that gap below its box instead, since a
+  // margin under each chip made the row taller than its chips and its centred edge chevron sat low.
   return scroll ? (
-    <ScrollRow accessibilityRole={mode === 'single' ? 'radiogroup' : undefined} accessibilityLabel={accessibilityLabel} testID={testID}>
+    <ScrollRow className="mb-2" accessibilityRole={mode === 'single' ? 'radiogroup' : undefined} accessibilityLabel={accessibilityLabel} testID={testID}>
       {chips}
     </ScrollRow>
   ) : (
