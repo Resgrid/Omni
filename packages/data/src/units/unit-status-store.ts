@@ -73,6 +73,8 @@ export interface UnitStatusState extends UnitStatusData {
   setQueuedStatusState: (localId: string, state: QueuedUnitStatus['state'] | null) => void;
 }
 
+type PersistedUnitStatus = Pick<UnitStatusData, 'destinationsByUnit' | 'currentStatusByUnit' | 'queuedStatuses' | 'fetchedAt'>;
+
 const initialData = (): UnitStatusData => ({ ...emptySliceMeta<UnitStatusSlice>(), destinationsByUnit: {}, currentStatusByUnit: {}, queuedStatuses: {} });
 
 // GetSetUnitStatusData includes server sentinels ("No Call", "No Station") that are not destinations.
@@ -160,9 +162,17 @@ export const useUnitStatusStore = create<UnitStatusState>()(
           }),
       };
     },
-    dataPersistOptions<UnitStatusState, Pick<UnitStatusData, 'destinationsByUnit' | 'currentStatusByUnit' | 'queuedStatuses' | 'fetchedAt'>>({
+    dataPersistOptions<UnitStatusState, PersistedUnitStatus>({
       name: 'omni-unit-status-storage',
       partialize: (state) => ({ destinationsByUnit: state.destinationsByUnit, currentStatusByUnit: state.currentStatusByUnit, queuedStatuses: state.queuedStatuses, fetchedAt: state.fetchedAt }),
+      // Destination calls written by a build that kept the server's order are restored newest first: an offline start has no fetch to sort them.
+      merge: (persisted, current) => {
+        // SAFETY: zustand merges a blob this store's partialize wrote (no version or migrate yet), or undefined when nothing is stored.
+        const state = { ...current, ...(persisted as Partial<PersistedUnitStatus> | undefined) };
+        const destinationsByUnit = Object.fromEntries(Object.entries(state.destinationsByUnit).map(([unitId, destinations]) => [unitId, { ...destinations, calls: sortCallsNewestFirst(destinations.calls) }]));
+
+        return { ...state, destinationsByUnit };
+      },
     })
   )
 );

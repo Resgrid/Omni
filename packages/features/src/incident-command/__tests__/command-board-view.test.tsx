@@ -355,6 +355,23 @@ describe('StructureBoard tap-to-move', () => {
     await fireEvent.press(screen.getByTestId('lane-target-n1'));
     expect(onMoveResource).toHaveBeenCalledWith(rows[2], 'n1');
   });
+
+  it('ends a move in progress when the board turns read-only (the command closed), and does not bring it back', async () => {
+    const onMoveResource = jest.fn();
+    const board = (canAssignResources: boolean) => <StructureBoard {...structureProps} canAssignResources={canAssignResources} lanes={lanes} assignments={rows} columns onMoveResource={onMoveResource} />;
+    const view = await render(board(true));
+    await fireEvent.press(screen.getByTestId('lane-resource-a1'));
+    expect(screen.getByTestId('lane-target-n2')).toBeTruthy();
+
+    await view.rerender(board(false));
+    expect(screen.queryByTestId(/^lane-target-/)).toBeNull();
+    expect(screen.queryByTestId('structure-move-banner')).toBeNull();
+    expect(screen.getByTestId('lane-resource-a1').props.accessibilityState).toMatchObject({ selected: false });
+
+    await view.rerender(board(true));
+    expect(screen.queryByTestId(/^lane-target-/)).toBeNull();
+    expect(onMoveResource).not.toHaveBeenCalled();
+  });
 });
 
 describe('CommandBoardView layout', () => {

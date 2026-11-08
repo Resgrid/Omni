@@ -406,6 +406,13 @@ export const useCallsStore = create<CallsState>()(
         fetchedAt: state.fetchedAt,
       }),
       migrate: (persisted, version) => migrateCallsStorage(persisted, version),
+      // Calls written by a build that kept the server's order are restored newest first: an offline start has no fetch to sort them.
+      merge: (persisted, current) => {
+        // SAFETY: zustand merges what migrateCallsStorage() returned, a blob this version's partialize wrote, or undefined when nothing is stored.
+        const state = { ...current, ...(persisted as Partial<PersistedCalls> | undefined) };
+
+        return { ...state, calls: sortCallsNewestFirst(state.calls) };
+      },
     })
   )
 );

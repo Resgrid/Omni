@@ -31,9 +31,15 @@ export function useCallShortcuts(handlers: CallShortcutHandlers): void {
     if (!isFocused || isDisabled) return undefined;
 
     const onKeyDown = (event: KeyboardEvent): void => {
-      if (isPopupOpen()) return;
       const { onBack, onEdit, onSubmit, onTab } = latest.current;
       const withModifier = event.ctrlKey || event.metaKey;
+
+      if (isPopupOpen()) {
+        // Nothing submits under a pop-up, but a form's Ctrl/Cmd+S still never opens the browser's Save Page dialog.
+        if (onSubmit && withModifier && (event.key === 's' || event.key === 'S')) event.preventDefault();
+
+        return;
+      }
 
       // Escape cancels from any field (the form's "Escape to cancel" tip), but not a key an open popup already handled.
       if (event.key === 'Escape') {

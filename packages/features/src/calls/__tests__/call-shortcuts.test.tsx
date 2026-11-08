@@ -84,4 +84,34 @@ describe('call screen shortcuts (web)', () => {
     keyDown(press('Escape'));
     expect(handlers.onBack).toHaveBeenCalledTimes(1);
   });
+
+  it('keeps a form’s Ctrl/Cmd+S from opening the browser’s Save Page dialog under a pop-up, without saving', async () => {
+    const handlers = { onBack: jest.fn(), onSubmit: jest.fn() };
+    await renderHook(() => useCallShortcuts(handlers));
+    openPopups = 1;
+
+    const save = press('s', { metaKey: true });
+    const saveWithEnter = press('Enter', { ctrlKey: true });
+    const escape = press('Escape');
+    keyDown(save);
+    keyDown(saveWithEnter);
+    keyDown(escape);
+
+    expect(handlers.onSubmit).not.toHaveBeenCalled();
+    expect(handlers.onBack).not.toHaveBeenCalled();
+    expect(save.preventDefault).toHaveBeenCalledTimes(1);
+    // The pop-up keeps every other key, Ctrl/Cmd+Enter and Escape included.
+    expect(saveWithEnter.preventDefault).not.toHaveBeenCalled();
+    expect(escape.preventDefault).not.toHaveBeenCalled();
+  });
+
+  it('leaves Ctrl/Cmd+S to the browser on a screen with nothing to save', async () => {
+    await renderShortcuts();
+    openPopups = 1;
+
+    const save = press('s', { ctrlKey: true });
+    keyDown(save);
+
+    expect(save.preventDefault).not.toHaveBeenCalled();
+  });
 });

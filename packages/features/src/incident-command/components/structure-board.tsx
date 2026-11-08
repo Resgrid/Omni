@@ -2,7 +2,7 @@ import { useTranslation } from '@resgrid/i18n';
 import type { CommandStructureNode, ResourceAssignment } from '@resgrid/models';
 import { Badge, BadgeText, HStack, Pressable, ScrollView, Text, TypeIcon, useEdgeScroll, useThemeColors, VStack } from '@resgrid/ui';
 import { ChevronLeft, ChevronRight, CloudOff, Eye, MessagesSquare, Network, Pencil, Plus, UserPlus } from 'lucide-react-native';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { type LayoutChangeEvent, StyleSheet, View } from 'react-native';
 
 import type { BoardRoster } from '../hooks/use-board-roster';
@@ -163,10 +163,16 @@ export const StructureBoard: React.FC<StructureBoardProps> = ({
   onOpenLaneChat,
 }) => {
   const { t } = useTranslation();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [pickedId, setPickedId] = useState<string | null>(null);
   const [columnsWidth, setColumnsWidth] = useState(0);
   const edge = useEdgeScroll();
+  // A move in progress ends when the board turns read-only (the command closed, the rights changed): no lane stays a target.
+  const selectedId = canAssignResources ? pickedId : null;
   const selected = useMemo(() => assignments.find((assignment) => assignment.ResourceAssignmentId === selectedId) ?? null, [assignments, selectedId]);
+
+  useEffect(() => {
+    if (!canAssignResources) setPickedId(null);
+  }, [canAssignResources]);
   const pool = useMemo(() => poolAssignments(assignments), [assignments]);
   // The pool is a column too. Until the row is measured, lanes take their minimum width.
   const layout = useMemo(() => (columnsWidth > 0 ? laneColumnLayout(columnsWidth, lanes.length + 1) : { laneWidth: LANE_MIN_WIDTH, overflows: false, viewportWidth: 0 }), [columnsWidth, lanes.length]);
@@ -176,12 +182,12 @@ export const StructureBoard: React.FC<StructureBoardProps> = ({
 
   const pageLanes = (direction: -1 | 1) => edge.scrollViewRef.current?.scrollTo({ x: laneScrollTarget(edge.metricsRef.current, layout.laneWidth, direction), animated: true });
 
-  const toggleSelect = useCallback((assignmentId: string) => setSelectedId((current) => (current === assignmentId ? null : assignmentId)), []);
+  const toggleSelect = useCallback((assignmentId: string) => setPickedId((current) => (current === assignmentId ? null : assignmentId)), []);
 
   const dropOn = useCallback(
     (targetNodeId: string) => {
       if (!selected) return;
-      setSelectedId(null);
+      setPickedId(null);
 
       if ((selected.CommandStructureNodeId || '') !== targetNodeId) onMoveResource(selected, targetNodeId);
     },
@@ -320,7 +326,7 @@ export const StructureBoard: React.FC<StructureBoardProps> = ({
       {selected ? (
         <HStack className="mb-2 items-center justify-between rounded-md bg-primary-50 px-2 py-1" testID="structure-move-banner">
           <Text className="flex-1 text-sm font-medium text-primary-700">{t('incident_command.move_selected', { resource: roster.resourceName(selected.ResourceKind, selected.ResourceId) })}</Text>
-          <BoardButton label={t('common.cancel')} variant="link" onPress={() => setSelectedId(null)} testID="structure-move-cancel" />
+          <BoardButton label={t('common.cancel')} variant="link" onPress={() => setPickedId(null)} testID="structure-move-cancel" />
         </HStack>
       ) : null}
       {lanes.length === 0 ? <SectionEmpty text={t('incident_command.no_lanes')} testID="structure-empty" /> : null}

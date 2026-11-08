@@ -165,6 +165,22 @@ describe('calls store: persistence and reset', () => {
     expect(useCallsStore.getState().fetchedAt.calls).toBe(1234);
   });
 
+  it('restores calls a build that kept the server order persisted newest first, with no fetch (offline start)', async () => {
+    const calls = [call('5', { LoggedOnUtc: '2026-11-07T08:00:00Z' }), call('7', { LoggedOnUtc: '2026-11-07T10:00:00Z' }), call('6', { LoggedOnUtc: '2026-11-07T09:00:00' })];
+    runtime.kv.set('calls-storage', JSON.stringify({ state: { calls, queuedCalls: {}, fetchedAt: { calls: 1234 } }, version: 1 }));
+    await setDataStorage(runtime.kv);
+    expect(getActiveCalls).not.toHaveBeenCalled();
+    expect(useCallsStore.getState().calls.map((c) => c.CallId)).toEqual(['7', '6', '5']);
+    expect(useCallsStore.getState().fetchedAt.calls).toBe(1234);
+  });
+
+  it('rehydrates an empty store when nothing was persisted', async () => {
+    runtime.kv.delete('calls-storage');
+    await setDataStorage(runtime.kv);
+    expect(useCallsStore.getState().calls).toEqual([]);
+    expect(useCallsStore.getState().queuedCalls).toEqual({});
+  });
+
   it('resets on wipe and drops answers that land after the reset', async () => {
     let resolve: (value: unknown) => void = () => undefined;
     jest.mocked(getActiveCalls).mockImplementation(() => new Promise((r) => (resolve = r)) as never);
