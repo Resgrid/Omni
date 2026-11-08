@@ -8,6 +8,7 @@ import { useToastStore } from '@resgrid/ui';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import React from 'react';
+import { ScrollView } from 'react-native';
 
 import { activateVariant } from '../../calls/__tests__/test-utils';
 import CallCommandScreen from '../screens/call-command';
@@ -59,6 +60,36 @@ describe('CommandBoardScreen', () => {
     expect(screen.queryByTestId('command-board-tab-9')).toBeNull();
     await fireEvent.press(screen.getByTestId('command-board-tab-8'));
     expect(useCommandStore.getState().activeCallId).toBe('8');
+  });
+
+  // A commander running more incidents than fit across a phone: the switcher must say so and scroll to the rest.
+  it('shows edge chevrons when the incident tabs run off the screen and scrolls to the hidden ones', async () => {
+    const callIds = ['7', '8', '9', '10', '11', '12'];
+    useCommandStore.setState({ boards: Object.fromEntries(callIds.map((callId) => [callId, boardState(callId, makeBoard())])), activeCallId: '7' });
+    const scrollTo = jest.spyOn(ScrollView.prototype, 'scrollTo').mockImplementation(() => undefined);
+    await render(<CommandBoardScreen />);
+
+    // Each tab 100 wide at 108 spacing in a 320-wide strip over a 680-wide row: the first three are in view.
+    for (const [index, callId] of callIds.entries()) {
+      await fireEvent(screen.getByTestId(`command-board-tab-${callId}`), 'layout', { nativeEvent: { layout: { x: 16 + index * 108, y: 0, width: 100, height: 40 } } });
+    }
+
+    const scrollView = screen.getByTestId('command-board-switcher-scroll-view');
+    await fireEvent(scrollView, 'layout', { nativeEvent: { layout: { width: 320 } } });
+    await fireEvent(scrollView, 'contentSizeChange', 680, 56);
+
+    expect(screen.queryByTestId('command-board-switcher-left-overflow')).toBeNull();
+    await fireEvent.press(screen.getByTestId('command-board-switcher-right-overflow'));
+    expect(scrollTo).toHaveBeenLastCalledWith({ x: 264, animated: true });
+
+    // A swipe to the end: the chevron moves to the left edge.
+    await fireEvent.scroll(scrollView, { nativeEvent: { contentOffset: { x: 360, y: 0 } } });
+    expect(screen.getByTestId('command-board-switcher-left-overflow')).toBeTruthy();
+    expect(screen.queryByTestId('command-board-switcher-right-overflow')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('command-board-tab-12'));
+    expect(useCommandStore.getState().activeCallId).toBe('12');
+    scrollTo.mockRestore();
   });
 
   it('shows the empty state without a board and is unavailable outside the command tier', async () => {

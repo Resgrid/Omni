@@ -21,7 +21,7 @@ import { registerOfflineMapsSettings } from '@resgrid/features/offline-maps';
 import { CALL_RECORDS_TAB, configureRecords, registerRecordsContextHook } from '@resgrid/features/records';
 import { registerRunCardCallDetailTab, registerRunCardHookPoints } from '@resgrid/features/runcards';
 import { configureSettings } from '@resgrid/features/settings';
-import { StatusTimerBanner, StatusTimerNotifications, unitStatusRoutes, UnitStatusSidebar } from '@resgrid/features/unit-status';
+import { registerUnitStatusCallDetailAction, StatusTimerBanner, StatusTimerNotifications, unitStatusRoutes, UnitStatusSidebar } from '@resgrid/features/unit-status';
 import { AudioStreamSheet, VoiceChannelSheet, VoiceMenuButtons } from '@resgrid/features/voice';
 import { FullScreenLocationPicker, StaticMap } from '@resgrid/maps';
 import { configureNotificationSounds } from '@resgrid/notifications';
@@ -155,6 +155,9 @@ registerRunCardHookPoints();
 
 // The calls screens never import maps or native audio: the app hands them the map picker, the static map and clip playback.
 registerCallFormHookPoints({ LocationPicker: CallLocationPicker, StaticLocationMap: CallStaticMap, playAudioClip });
+
+// "Set Active" beside a call's title on its detail screen (shown only where the device reports status for a unit: Unit).
+registerUnitStatusCallDetailAction();
 
 // Readiness checklist runs save through the data layer's checklists store.
 registerChecklistRunWriter(createDataChecklistRunWriter());

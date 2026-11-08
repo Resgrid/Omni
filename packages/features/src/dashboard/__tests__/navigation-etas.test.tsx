@@ -9,7 +9,6 @@ import React from 'react';
 import { CallsWidget } from '../components/widgets/calls-widget';
 import { UnitsWidget } from '../components/widgets/units-widget';
 import { useDashboardData } from '../hooks/use-dashboard-data';
-import { useWidgetSettingsStore } from '../hooks/use-widget-settings-store';
 import { dataSourcesFor } from '../lib/widget-types';
 import { stubDataStores, utcAgo } from './fixtures';
 
@@ -81,16 +80,11 @@ describe('Big Board live ETAs', () => {
     expect(screen.queryByTestId('units-widget-eta-8')).toBeNull();
   });
 
-  it("shows a call's responding units with their ETAs in the calls widget (cards and table)", async () => {
+  it("shows a call's responding units with their ETAs under its dispatches in the calls list", async () => {
     useCallsStore.setState({ calls: [call('1'), call('2')], callDispatches: { '1': [{ Id: '7', Type: 'Unit', Name: 'Engine 7' } as never] } });
-    const cards = await render(<CallsWidget {...props} />);
-    expect(within(screen.getByTestId('calls-widget-etas-1')).getByTestId('navigation-eta-7')).toHaveTextContent('Engine 7 · navigation_eta.minutes:5 · navigation_eta.traffic');
-    expect(screen.queryByTestId('calls-widget-etas-2')).toBeNull();
-    await cards.unmount();
-
-    useWidgetSettingsStore.getState().updateSettings('calls', { display: 'table' });
     await render(<CallsWidget {...props} />);
     expect(within(screen.getByTestId('calls-widget-etas-1')).getByTestId('navigation-eta-7')).toHaveTextContent('Engine 7 · navigation_eta.minutes:5 · navigation_eta.traffic');
+    expect(screen.queryByTestId('calls-widget-etas-2')).toBeNull();
   });
 
   it('greys out an ETA whose unit stopped reporting', async () => {

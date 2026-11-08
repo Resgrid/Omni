@@ -49,7 +49,7 @@ const SIDEBAR_EXCLUDED_ACTIONS: readonly QuickActionId[] = ['settings'];
  *
  * The `sidebar` layout is legacy Unit's sidebar, not a menu: the unit card (map lock, audio streams, voice) beside the
  * status in its colour over the crew seats; the active call and its actions; the check-in timer; chat (the assistant is
- * inside it), checklists and deployments on one row, then inventory and records; then the status buttons. The status timer and the
+ * inside it), checklists, deployments and inventory as icon buttons on one row, then records; then the status buttons. The status timer and the
  * shared-session controls (Omni additions) sit under the unit card when they show.
  */
 export const UnitStatusPanel: React.FC<UnitStatusPanelProps> = ({ onNavigate, onClearActiveCall, excludeQuickActions, layout = 'sidebar', testID = 'unit-status-panel' }) => {

@@ -67,6 +67,12 @@ export interface StatusPickerProps {
   defaultCall?: CallResultData | null;
   /** True while a default call may still arrive with the destination lists (submits wait for them). */
   hasPotentialDefaultCall?: boolean;
+  /**
+   * A call chosen before the sheet opened (Unit "Set Active" on a call's detail). It replaces `defaultCall`, the sheet
+   * has no destination step (every status that takes a call sends this one), and every status gets the note step, so
+   * the sheet asks for the status, then a note.
+   */
+  fixedCall?: CallResultData | null;
   /** Unit's rule: older call-only Detail values also offer stations and POIs. */
   lenientDestinations?: boolean;
   /** Department "Hold to set status" (config StatusHoldToConfirm): statuses are held on the list, and the last step saves on a hold. */
@@ -110,8 +116,9 @@ export const StatusPicker: React.FC<StatusPickerProps> = ({
   initialHoldConfirmed = false,
   destinations = EMPTY_LISTS,
   isLoadingDestinations = false,
-  defaultCall = null,
-  hasPotentialDefaultCall = false,
+  defaultCall: listDefaultCall = null,
+  hasPotentialDefaultCall: listMayHaveDefaultCall = false,
+  fixedCall = null,
   lenientDestinations = false,
   holdToConfirm = false,
   onSubmitStatus,
@@ -170,9 +177,12 @@ export const StatusPicker: React.FC<StatusPickerProps> = ({
   const selectedStatus = useMemo(() => statuses.find((option) => toOptionId(option.Id) === selectedId) ?? null, [selectedId, statuses]);
   const selectedStaffing = useMemo(() => staffingOptions.find((option) => toOptionId(option.Id) === selectedStaffingId) ?? null, [selectedStaffingId, staffingOptions]);
 
+  // A fixed call is the default for every status and needs no destination lists to arrive.
+  const defaultCall = fixedCall ?? listDefaultCall;
+  const hasPotentialDefaultCall = fixedCall ? false : listMayHaveDefaultCall;
   const detail = statusDetailType(selectedStatus);
   const destinationTabs = useMemo(() => (detail > 0 ? getDestinationTabs(detail, lenientDestinations) : []), [detail, lenientDestinations]);
-  const hasDestinationStep = destinationTabs.length > 0;
+  const hasDestinationStep = destinationTabs.length > 0 && !fixedCall;
   const allowsCalls = destinationTabs.includes('call');
 
   const effectiveDestination = useMemo(
@@ -180,10 +190,13 @@ export const StatusPicker: React.FC<StatusPickerProps> = ({
     [defaultCall, detail, hasExplicitChoice, lenientDestinations, selectedStatus, selection]
   );
 
+  // Before a status is picked, a fixed call is what the sheet is for.
+  const summaryDestination = useMemo<StatusDestination>(() => (selectedStatus || !fixedCall ? effectiveDestination : { type: 'call', call: fixedCall }), [effectiveDestination, fixedCall, selectedStatus]);
+
   const isAwaitingDestinations = isLoadingDestinations && (hasDestinationStep || hasPotentialDefaultCall);
 
   const noteRequired = isStaffingTab ? isNoteRequired(selectedStaffing) : isNoteRequired(selectedStatus);
-  const optionHasNoteStep = isStaffingTab ? hasNoteStep(selectedStaffing) : hasNoteStep(selectedStatus);
+  const optionHasNoteStep = isStaffingTab ? hasNoteStep(selectedStaffing) : !!fixedCall || hasNoteStep(selectedStatus);
   // The status passed in skips the list once its option has loaded (were it missing, the list lets the user pick another).
   const hasPresetStatus = initialStatusId != null && selectedStatus !== null && selectedId === toOptionId(initialStatusId);
 
@@ -269,14 +282,15 @@ export const StatusPicker: React.FC<StatusPickerProps> = ({
     setHoldPending(false);
     const nextStep = steps.find((value) => value !== 'select');
 
-    if (!nextStep || canSubmitStatusWithoutInput(selectedStatus, { allowsCalls, hasDefaultCall: !!defaultCall })) {
+    // With a fixed call the hold picks the status and the note step follows: that sheet always offers a note.
+    if (!nextStep || (!fixedCall && canSubmitStatusWithoutInput(selectedStatus, { allowsCalls, hasDefaultCall: !!defaultCall }))) {
       submitStatus();
 
       return;
     }
 
     setStep(nextStep);
-  }, [allowsCalls, defaultCall, holdPending, isAwaitingDestinations, isOpen, isSubmitting, selectedStatus, steps, submitStatus]);
+  }, [allowsCalls, defaultCall, fixedCall, holdPending, isAwaitingDestinations, isOpen, isSubmitting, selectedStatus, steps, submitStatus]);
 
   const handleSelectStatus = useCallback((option: StatusOption) => {
     setSelectedId(toOptionId(option.Id));
@@ -448,10 +462,11 @@ export const StatusPicker: React.FC<StatusPickerProps> = ({
           ) : null}
         </ScrollView>
 
-        {currentStep !== 'select' && !isStaffingTab && selectedStatus ? (
+        {/* A fixed call shows from the first step, so the crew sees which call the status is for before picking one. */}
+        {!isStaffingTab && (selectedStatus || fixedCall) && (currentStep !== 'select' || fixedCall) ? (
           <VStack className="rounded-lg bg-background-50 p-3" testID={`${testID}-summary`}>
-            <Text className="text-sm text-typography-700">{`${t('status.selected_status')}: ${selectedStatus.Text}`}</Text>
-            <Text className="text-sm text-typography-700">{`${t('status.selected_destination')}: ${effectiveDestination.type === 'none' ? t('status.no_destination') : destinationLabel(effectiveDestination, t('data_protection.protected_value'))}`}</Text>
+            {selectedStatus ? <Text className="text-sm text-typography-700">{`${t('status.selected_status')}: ${selectedStatus.Text}`}</Text> : null}
+            <Text className="text-sm text-typography-700">{`${t('status.selected_destination')}: ${summaryDestination.type === 'none' ? t('status.no_destination') : destinationLabel(summaryDestination, t('data_protection.protected_value'))}`}</Text>
           </VStack>
         ) : null}
 

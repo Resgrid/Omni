@@ -5,6 +5,7 @@ import { formatBadgeCount } from './count-badge';
 import { EdgeChevrons, useEdgeScroll } from './edge-scroll';
 import { type ThemeColors, useThemeColors } from './theme/use-theme-colors';
 import { useTranslation } from './utils/i18n';
+import { useWheelScrollsSideways } from './wheel-scroll';
 
 /**
  * - `pills`: the tab strip at the top of a top-level page (Shifts, Calls, Messages, Calendar, Checklists, Routes, IC's
@@ -174,7 +175,8 @@ const getBadgeColors = (variant: TabBarVariant, isActive: boolean, badgeVariant:
 /**
  * A row of tabs: the bar of `SharedTabs`, and on its own the strip at the top of a top-level page whose content the
  * screen renders itself (`variant="pills"`). A scrollable bar keeps the selected tab in view and shows edge chevrons
- * whenever tabs run off either side, so a phone never hides tabs without a hint; a chevron pages the bar that way.
+ * whenever tabs run off either side, so a phone never hides tabs without a hint; a chevron pages the bar that way. A
+ * finger swipes it, and on web and Electron a mouse wheel scrolls it too.
  */
 export function TabBar<K extends string>({
   tabs,
@@ -199,6 +201,9 @@ export function TabBar<K extends string>({
   // Which edges hide tabs (the chevrons), and the bar's measurements for bringing the selected tab into view.
   const edge = useEdgeScroll();
   const { scrollViewRef, metricsRef } = edge;
+
+  // Web and Electron: a mouse wheel over the bar scrolls it sideways too.
+  useWheelScrollsSideways(scrollViewRef, scrollable);
 
   // Where each tab of the scrollable bar sits, and which selection the bar last brought into view.
   const tabLayoutsRef = useRef(new Map<number, { x: number; width: number }>());

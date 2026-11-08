@@ -83,7 +83,7 @@ export const PersonnelWidget: React.FC<WidgetProps> = ({ isEditMode, onRemove, o
   }, [fontSize, now, settings, t]);
 
   return (
-    <WidgetContainer title={title} testID="personnel-widget" isEditMode={isEditMode} onRemove={onRemove} onConfigure={onConfigure} stale={stale}>
+    <WidgetContainer title={title} testID="personnel-widget" isEditMode={isEditMode} onRemove={onRemove} onConfigure={onConfigure} stale={stale} dense>
       {isLoading && personnel.length === 0 ? (
         <WidgetLoading testID="personnel-widget-loading" />
       ) : hasError && personnel.length === 0 ? (

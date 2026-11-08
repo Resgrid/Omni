@@ -117,9 +117,18 @@ describe('widget settings store', () => {
     const { units, calls } = useWidgetSettingsStore.getState();
     expect(units).toMatchObject({ showType: false, fontSize: 20 });
     expect(units.columnOrder.slice(0, 2)).toEqual(['state', 'name']);
-    expect(calls.display).toBe('table');
+    expect(calls.scrollDispatches).toBe(true);
+    expect(calls).not.toHaveProperty('display');
     await flush();
     expect(JSON.parse(kv.getString(WIDGET_SETTINGS_STORE_NAME) ?? '{}').version).toBe(1);
+  });
+
+  it('keeps a board that earlier Omni builds set to call cards on its call columns', async () => {
+    kv.set(WIDGET_SETTINGS_STORE_NAME, JSON.stringify({ state: { calls: { display: 'cards', showId: false, fontSize: 18 } }, version: 1 }));
+    await useWidgetSettingsStore.persist.rehydrate();
+    const { calls } = useWidgetSettingsStore.getState();
+    expect(calls).toMatchObject({ showId: false, fontSize: 18 });
+    expect(calls).not.toHaveProperty('display');
   });
 });
 

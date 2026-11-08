@@ -2,6 +2,7 @@ import { getAllUnits, getAllUnitStatuses, getRoleAssignmentsForUnit, getSetUnitS
 import { defaultResetRegistry } from '@resgrid/offline';
 
 import { createDataTestRuntime, type DataTestRuntime, flush, httpError, networkError, notFound, ok, persisted } from '../../__tests__/helpers';
+import { setDataStorage } from '../../core/persist';
 import { setDataLocationProvider } from '../../core/runtime';
 import { useUnitRolesStore } from '../unit-roles-store';
 import { selectPendingUnitStatus, UNIT_DESTINATIONS_TTL_MS, UNIT_STATUS_SET_EVENT, unitStatusOrderKey, useUnitStatusStore } from '../unit-status-store';
@@ -84,6 +85,43 @@ describe('unit status (Unit status sheet logic)', () => {
     runtime.clock.advance(UNIT_DESTINATIONS_TTL_MS + 1);
     await useUnitStatusStore.getState().fetchDestinationData('10');
     expect(getSetUnitStatusData).toHaveBeenCalledTimes(2);
+  });
+
+  it('offers the destination calls newest first (Core sends them in storage order)', async () => {
+    // SAFETY: a GetSetUnitStatusData envelope with only the fields the destination lists read.
+    jest.mocked(getSetUnitStatusData).mockResolvedValue(
+      ok({
+        Calls: [
+          { CallId: '0', Name: 'No Call' },
+          { CallId: '5', Name: 'Oldest', LoggedOnUtc: '2026-11-07T08:00:00Z' },
+          { CallId: '7', Name: 'Newest', LoggedOnUtc: '2026-11-07T10:00:00Z' },
+          { CallId: '6', Name: 'Middle', LoggedOnUtc: '2026-11-07T09:00:00Z' },
+        ],
+        Stations: [],
+        DestinationPois: [],
+        PoiTypes: [],
+        Statuses: [],
+      }) as never
+    );
+    await useUnitStatusStore.getState().fetchDestinationData('10');
+    expect(useUnitStatusStore.getState().destinationsByUnit['10'].calls.map((c) => c.CallId)).toEqual(['7', '6', '5']);
+  });
+
+  it('restores destination calls a build that kept the server order persisted newest first, with no fetch (offline start)', async () => {
+    const calls = [
+      { CallId: '5', Name: 'Oldest', LoggedOnUtc: '2026-11-07T08:00:00Z' },
+      { CallId: '7', Name: 'Newest', LoggedOnUtc: '2026-11-07T10:00:00Z' },
+      { CallId: '6', Name: 'Middle', LoggedOnUtc: '2026-11-07T09:00:00Z' },
+    ];
+
+    const destinations = { calls, stations: [{ GroupId: '2', Name: 'Station 2' }], pois: [], poiTypes: [], statuses: [], fetchedAt: 1234 };
+    runtime.kv.set('omni-unit-status-storage', JSON.stringify({ state: { destinationsByUnit: { '10': destinations }, currentStatusByUnit: {}, queuedStatuses: {}, fetchedAt: {} }, version: 0 }));
+    await setDataStorage(runtime.kv);
+    expect(getSetUnitStatusData).not.toHaveBeenCalled();
+    const restored = useUnitStatusStore.getState().destinationsByUnit['10'];
+    expect(restored.calls.map((c) => c.CallId)).toEqual(['7', '6', '5']);
+    expect(restored.stations.map((s) => s.GroupId)).toEqual(['2']);
+    expect(restored.fetchedAt).toBe(1234);
   });
 
   it('sends online with EventId = outbox id, the status time and GPS from the location provider', async () => {

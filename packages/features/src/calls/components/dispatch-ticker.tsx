@@ -1,7 +1,7 @@
 import type { DispatchedEventResultData } from '@resgrid/models';
 import { Text, TypeIcon } from '@resgrid/ui';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Easing, Platform, StyleSheet, View } from 'react-native';
+import { Animated, Easing, Platform, StyleSheet, type TextStyle, View, type ViewStyle } from 'react-native';
 
 import { dispatchKey, getDispatchTypeStyle, getUniqueDispatches, isUnitDispatchType } from '../lib/call-dispatch';
 
@@ -11,6 +11,11 @@ export interface DispatchTickerProps {
   animate?: boolean;
   /** Larger badges for wall boards. */
   large?: boolean;
+  /**
+   * Sizes the badges to a table row's text (BigBoard's call lists): tight padding so the row stays one line tall.
+   * Overrides `large`.
+   */
+  fontSize?: number;
   testID?: string;
 }
 
@@ -18,12 +23,28 @@ const REPEAT_GAP = 28;
 const MIN_DURATION_MS = 4000;
 const MS_PER_PIXEL = 25;
 
+interface RowSizedBadge {
+  badge: ViewStyle;
+  type: TextStyle;
+  name: TextStyle;
+  icon: number;
+}
+
+/** Badge sizes that follow a row's font size (name a point under the row text, type letter smaller still). */
+const rowSizedBadge = (fontSize: number): RowSizedBadge => ({
+  badge: { borderRadius: Math.round(fontSize * 0.7), maxWidth: fontSize * 14, minHeight: 0, paddingHorizontal: 4, paddingVertical: 1, marginRight: 4 },
+  type: { fontSize: Math.max(7, fontSize - 3) },
+  name: { fontSize: Math.max(8, fontSize - 1) },
+  icon: Math.max(10, fontSize),
+});
+
 /**
  * Who the call went to, as P/U/G/R badges (Responder dispatch ticker). Scrolls like a marquee only when the badges
  * overflow; uses React Native's Animated so it runs the same on native, web and Electron.
  */
-export const DispatchTicker: React.FC<DispatchTickerProps> = ({ dispatches, animate = true, large = false, testID = 'dispatch-ticker' }) => {
+export const DispatchTicker: React.FC<DispatchTickerProps> = ({ dispatches, animate = true, large = false, fontSize, testID = 'dispatch-ticker' }) => {
   const unique = useMemo(() => getUniqueDispatches(dispatches), [dispatches]);
+  const sized = useMemo(() => (fontSize === undefined ? null : rowSizedBadge(fontSize)), [fontSize]);
   const translateX = useRef(new Animated.Value(0)).current;
   const [containerWidth, setContainerWidth] = useState(0);
   const [contentWidth, setContentWidth] = useState(0);
@@ -46,17 +67,17 @@ export const DispatchTicker: React.FC<DispatchTickerProps> = ({ dispatches, anim
       return (
         <View
           key={`${dispatchKey(dispatch)}-${suffix}`}
-          style={StyleSheet.flatten([styles.badge, large ? styles.badgeLarge : null, { backgroundColor: style.backgroundColor }])}
+          style={StyleSheet.flatten([styles.badge, large ? styles.badgeLarge : null, sized ? sized.badge : null, { backgroundColor: style.backgroundColor }])}
           accessible
           accessibilityLabel={`${style.label} ${dispatch.Name}`}
         >
-          <Text style={StyleSheet.flatten([styles.badgeType, large ? styles.badgeTypeLarge : null, { color: style.textColor }])}>{style.label}</Text>
+          <Text style={StyleSheet.flatten([styles.badgeType, large ? styles.badgeTypeLarge : null, sized ? sized.type : null, { color: style.textColor }])}>{style.label}</Text>
           {isUnitDispatchType(dispatch.Type) ? (
             <View style={styles.icon}>
-              <TypeIcon iconUrl={dispatch.TypeIconUrl} mapIcon={dispatch.TypeMapIcon} size={large ? 18 : 14} />
+              <TypeIcon iconUrl={dispatch.TypeIconUrl} mapIcon={dispatch.TypeMapIcon} size={sized ? sized.icon : large ? 18 : 14} />
             </View>
           ) : null}
-          <Text style={StyleSheet.flatten([styles.badgeName, large ? styles.badgeNameLarge : null, { color: style.textColor }])} numberOfLines={1}>
+          <Text style={StyleSheet.flatten([styles.badgeName, large ? styles.badgeNameLarge : null, sized ? sized.name : null, { color: style.textColor }])} numberOfLines={1}>
             {dispatch.Name}
           </Text>
         </View>
@@ -66,11 +87,11 @@ export const DispatchTicker: React.FC<DispatchTickerProps> = ({ dispatches, anim
   return (
     <View style={styles.viewport} onLayout={(event) => setContainerWidth(event.nativeEvent.layout.width)} testID={testID}>
       <Animated.View style={StyleSheet.flatten([styles.track, { transform: [{ translateX }] }])}>
-        <View style={styles.content} onLayout={(event) => setContentWidth(event.nativeEvent.layout.width)} testID={`${testID}-primary`}>
+        <View style={StyleSheet.flatten([styles.content, sized ? styles.contentTight : null])} onLayout={(event) => setContentWidth(event.nativeEvent.layout.width)} testID={`${testID}-primary`}>
           {renderBadges('a')}
         </View>
         {overflowing ? (
-          <View style={StyleSheet.flatten([styles.content, styles.repeat])} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
+          <View style={StyleSheet.flatten([styles.content, sized ? styles.contentTight : null, styles.repeat])} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
             {renderBadges('b')}
           </View>
         ) : null}
@@ -83,6 +104,7 @@ const styles = StyleSheet.create({
   viewport: { overflow: 'hidden', width: '100%' },
   track: { flexDirection: 'row', alignItems: 'center' },
   content: { flexDirection: 'row', alignItems: 'center', flexShrink: 0, paddingVertical: 2 },
+  contentTight: { paddingVertical: 0 },
   repeat: { marginLeft: REPEAT_GAP },
   badge: { flexDirection: 'row', alignItems: 'center', borderRadius: 10, maxWidth: 160, minHeight: 20, paddingHorizontal: 6, paddingVertical: 2, marginRight: 6 },
   badgeLarge: { borderRadius: 14, maxWidth: 260, minHeight: 30, paddingHorizontal: 10, marginRight: 10 },

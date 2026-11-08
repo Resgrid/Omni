@@ -15,13 +15,15 @@ export interface WidgetContainerProps {
   stale?: boolean;
   /** Optional element right of the title (counts, badges). */
   headerRight?: ReactNode;
+  /** List widgets: the body keeps only a hairline of padding so a wall board fits more rows (the table pads its cells). */
+  dense?: boolean;
 }
 
 /**
  * The frame every widget draws in: a title bar (drag grip, settings and remove buttons in edit mode; a stale marker when
  * the data is the last known copy) and a clipped body. Sized by its grid cell, so it always fills its parent.
  */
-export const WidgetContainer: React.FC<WidgetContainerProps> = ({ title, children, testID, isEditMode = false, onRemove, onConfigure, stale = false, headerRight }) => {
+export const WidgetContainer: React.FC<WidgetContainerProps> = ({ title, children, testID, isEditMode = false, onRemove, onConfigure, stale = false, headerRight, dense = false }) => {
   const { t } = useTranslation();
   return (
     <View className="flex-1 overflow-hidden rounded-lg border border-outline-200 bg-background-0" testID={testID}>
@@ -54,7 +56,9 @@ export const WidgetContainer: React.FC<WidgetContainerProps> = ({ title, childre
           </Pressable>
         ) : null}
       </HStack>
-      <View style={styles.body}>{children}</View>
+      <View style={dense ? styles.bodyDense : styles.body} testID={`${testID}-body`}>
+        {children}
+      </View>
     </View>
   );
 };
@@ -82,5 +86,6 @@ export const WidgetMessage: React.FC<WidgetMessageProps> = ({ message, tone = 'm
 
 const styles = StyleSheet.create({
   body: { flex: 1, overflow: 'hidden', padding: 8 },
+  bodyDense: { flex: 1, overflow: 'hidden', padding: 2 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 8 },
 });

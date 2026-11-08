@@ -3,6 +3,7 @@ import { type LayoutChangeEvent, type NativeScrollEvent, type NativeSyntheticEve
 
 import { EdgeChevrons, useEdgeScroll } from './edge-scroll';
 import { useTranslation } from './utils/i18n';
+import { useWheelScrollsSideways } from './wheel-scroll';
 
 export interface ScrollRowProps extends Omit<ScrollViewProps, 'horizontal' | 'style'> {
   /** The row's box: margins, or `flexGrow: 1, flexShrink: 1` to fill what is left beside other items in a row. */
@@ -19,11 +20,14 @@ export interface ScrollRowProps extends Omit<ScrollViewProps, 'horizontal' | 'st
  * A sideways-scrolling row of chips, filters or choices. It keeps its content's height (a horizontal scroller given
  * room to grow took half a screen, or was squeezed to nothing above a full-height list), and shows a small round
  * chevron at each edge that has more chips past it, so a phone never hides choices without a hint; a chevron pages
- * the row that way. Tab rows use `TabBar`.
+ * the row that way; on web and Electron a mouse wheel scrolls it too. Tab rows use `TabBar`.
  */
 export const ScrollRow: React.FC<ScrollRowProps> = ({ children, style, className, showOverflowIndicators = true, testID = 'scroll-row', onLayout, onContentSizeChange, onScroll, ...props }) => {
   const { t } = useTranslation();
   const edge = useEdgeScroll();
+
+  // Web and Electron: a mouse wheel over the row scrolls it sideways too.
+  useWheelScrollsSideways(edge.scrollViewRef, true);
 
   const handleLayout = (event: LayoutChangeEvent) => {
     edge.onLayout(event);

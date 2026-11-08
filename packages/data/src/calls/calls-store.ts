@@ -9,6 +9,7 @@ import { dataPersistOptions, registerPersistedStore } from '../core/persist';
 import { registerDataStoreReset } from '../core/reset';
 import { dataNow, getDataApiContext, getDataOutbox, getDataVariant } from '../core/runtime';
 import { cacheOptions, createSliceRunner, emptySliceMeta, type FetchOptions, type SliceMeta, type SliceRunner } from '../core/slices';
+import { compareCallsNewestFirst, sortCallsNewestFirst } from './call-order';
 
 /** Outbox type for offline call creation (plan §8.5). */
 export const CALL_CREATE_EVENT = 'calls.create';
@@ -201,7 +202,8 @@ export const useCallsStore = create<CallsState>()(
               // Evict per-call data for calls no longer open (Unit/Responder: bounded memory and storage).
               const openIds = new Set(calls.map((call) => call.CallId));
               return {
-                calls,
+                // Newest first for every list and picker that reads the store (not every Core endpoint orders its calls).
+                calls: sortCallsNewestFirst(calls),
                 callDispatches: pickByIds(state.callDispatches, openIds),
                 callDispatchesFetchedAt: pickByIds(state.callDispatchesFetchedAt, openIds),
                 callExtrasById: pickByIds(state.callExtrasById, openIds),
@@ -377,7 +379,7 @@ export const useCallsStore = create<CallsState>()(
           set((state) => {
             const queuedCalls = { ...state.queuedCalls };
             delete queuedCalls[localId];
-            const calls = serverCall && isCallActiveState(serverCall.State) ? [serverCall, ...state.calls.filter((call) => call.CallId !== serverCall.CallId)] : state.calls;
+            const calls = serverCall && isCallActiveState(serverCall.State) ? sortCallsNewestFirst([serverCall, ...state.calls.filter((call) => call.CallId !== serverCall.CallId)]) : state.calls;
             const pendingCalls = serverCall && serverCall.State === 8 ? [...state.pendingCalls.filter((call) => call.CallId !== serverCall.CallId), serverCall] : state.pendingCalls;
             return { queuedCalls, calls, pendingCalls, syncedCalls: { ...pruneNotices(state.syncedCalls), [localId]: { ...notice, acknowledged: false } } };
           });
@@ -404,6 +406,13 @@ export const useCallsStore = create<CallsState>()(
         fetchedAt: state.fetchedAt,
       }),
       migrate: (persisted, version) => migrateCallsStorage(persisted, version),
+      // Calls written by a build that kept the server's order are restored newest first: an offline start has no fetch to sort them.
+      merge: (persisted, current) => {
+        // SAFETY: zustand merges what migrateCallsStorage() returned, a blob this version's partialize wrote, or undefined when nothing is stored.
+        const state = { ...current, ...(persisted as Partial<PersistedCalls> | undefined) };
+
+        return { ...state, calls: sortCallsNewestFirst(state.calls) };
+      },
     })
   )
 );
@@ -451,6 +460,10 @@ registerDataStoreReset<CallsState>('calls', useCallsStore, initialData, () => ru
 
 // ---------------------------------------------------------------- selectors (pure; no view state)
 
+// The newest-first order every call list keeps (also used by the unit status and archived calls stores).
+export { compareCallsNewestFirst, sortCallsNewestFirst };
+
+/** Open calls, newest first (the store keeps `calls` in that order). */
 export const selectActiveCalls = (state: Pick<CallsState, 'calls'>): CallResultData[] => state.calls.filter((call) => isCallActiveState(call.State));
 
 export const selectCallById = (state: Pick<CallsState, 'calls'>, callId: string): CallResultData | undefined => state.calls.find((call) => call.CallId === callId);

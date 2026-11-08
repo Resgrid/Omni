@@ -311,6 +311,69 @@ describe('StructureBoard columns', () => {
   });
 });
 
+describe('StructureBoard tap-to-move', () => {
+  const lanes = orderLanes([node('n1', { Name: 'Division A', SortOrder: 0 }), node('n2', { Name: 'Division B', SortOrder: 1 })]);
+  const rows = [assignment('a1', 'n1', 'unit-1'), assignment('a2', 'n1', 'unit-2'), assignment('a3', '', 'unit-3')];
+  const fullLane = { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 };
+
+  it.each([
+    ['columns', true],
+    ['stacked', false],
+  ])('covers every lane the selected resource can move to, so a tap anywhere in it moves it (%s)', async (_layout, columns) => {
+    const onMoveResource = jest.fn();
+    await render(<StructureBoard {...structureProps} canAssignResources lanes={lanes} assignments={rows} columns={columns} onMoveResource={onMoveResource} />);
+    // No move in progress: nothing covers the lanes, so their resources and buttons take the taps.
+    expect(screen.queryByTestId(/^lane-target-/)).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('lane-resource-a1'));
+    // The other lane and the pool are covered edge to edge (title, resources and the empty space below); the resource's own lane is not.
+    const target = within(screen.getByTestId('lane-n2')).getByTestId('lane-target-n2');
+    expect(StyleSheet.flatten(target.props.style)).toMatchObject(fullLane);
+    expect(StyleSheet.flatten(within(screen.getByTestId('lane-pool')).getByTestId('lane-target-pool').props.style)).toMatchObject(fullLane);
+    expect(screen.queryByTestId('lane-target-n1')).toBeNull();
+    expect(screen.getByRole('button', { name: 'incident_command.move_to_lane:Engine 1,Division B' })).toBe(target);
+    expect(screen.getByRole('button', { name: 'incident_command.move_to_lane:Engine 1,incident_command.unassigned_pool' })).toBeTruthy();
+
+    await fireEvent.press(target);
+    expect(onMoveResource).toHaveBeenCalledWith(rows[0], 'n2');
+    expect(screen.queryByTestId(/^lane-target-/)).toBeNull();
+  });
+
+  it('keeps the resource’s own lane tappable to change the selection, and drops a pool resource on any lane but the pool', async () => {
+    const onMoveResource = jest.fn();
+    await render(<StructureBoard {...structureProps} canAssignResources lanes={lanes} assignments={rows} columns onMoveResource={onMoveResource} />);
+
+    await fireEvent.press(screen.getByTestId('lane-resource-a1'));
+    await fireEvent.press(screen.getByTestId('lane-resource-a2'));
+    expect(screen.getByTestId('lane-resource-a2').props.accessibilityState).toMatchObject({ selected: true });
+    expect(screen.queryByTestId('lane-target-n1')).toBeNull();
+    await fireEvent.press(screen.getByTestId('lane-resource-a2'));
+    expect(screen.queryByTestId(/^lane-target-/)).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('lane-resource-a3'));
+    expect(screen.queryByTestId('lane-target-pool')).toBeNull();
+    await fireEvent.press(screen.getByTestId('lane-target-n1'));
+    expect(onMoveResource).toHaveBeenCalledWith(rows[2], 'n1');
+  });
+
+  it('ends a move in progress when the board turns read-only (the command closed), and does not bring it back', async () => {
+    const onMoveResource = jest.fn();
+    const board = (canAssignResources: boolean) => <StructureBoard {...structureProps} canAssignResources={canAssignResources} lanes={lanes} assignments={rows} columns onMoveResource={onMoveResource} />;
+    const view = await render(board(true));
+    await fireEvent.press(screen.getByTestId('lane-resource-a1'));
+    expect(screen.getByTestId('lane-target-n2')).toBeTruthy();
+
+    await view.rerender(board(false));
+    expect(screen.queryByTestId(/^lane-target-/)).toBeNull();
+    expect(screen.queryByTestId('structure-move-banner')).toBeNull();
+    expect(screen.getByTestId('lane-resource-a1').props.accessibilityState).toMatchObject({ selected: false });
+
+    await view.rerender(board(true));
+    expect(screen.queryByTestId(/^lane-target-/)).toBeNull();
+    expect(onMoveResource).not.toHaveBeenCalled();
+  });
+});
+
 describe('CommandBoardView layout', () => {
   const measureBoard = async (width: number) => {
     await fireEvent(screen.getByTestId('command-board-view'), 'layout', { nativeEvent: { layout: { width, height: 2000 } } });

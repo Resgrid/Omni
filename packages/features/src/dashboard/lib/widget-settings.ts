@@ -6,6 +6,8 @@
  * - Text-matched personnel options (`respondingText`, `notRespondingText`, `unavailableText`) became meaning-based
  *   (status/staffing BaseType); never decide what a status means from its name.
  * - Settings no widget ever read (`showUser`, `showEta`, `sortOrders`) are dropped.
+ * - The calls widget is BigBoard's dense column list only: call cards are for the apps a person works from, a wall board
+ *   needs every call on one line. A stored `display` choice from earlier Omni builds is ignored.
  */
 
 export const FONT_SIZE_MIN = 8;
@@ -49,11 +51,7 @@ export interface UnitsWidgetSettings {
   columnOrder: UnitsColumnKey[];
 }
 
-export type CallsDisplay = 'cards' | 'table';
-
 export interface CallsWidgetSettings {
-  /** `cards`: the shared call rows at wall density; `table`: the configurable columns. */
-  display: CallsDisplay;
   showId: boolean;
   showName: boolean;
   showTimestamp: boolean;
@@ -202,7 +200,6 @@ export const DEFAULT_WIDGET_SETTINGS: Readonly<WidgetSettings> = {
   },
   units: { showStation: true, showType: true, showState: true, showTimestamp: true, fontSize: 14, hideGroups: [], columnOrder: [...UNITS_COLUMNS] },
   calls: {
-    display: 'cards',
     showId: true,
     showName: true,
     showTimestamp: true,
@@ -321,7 +318,6 @@ export function normalizeWidgetSettings(raw: unknown): WidgetSettings {
   units.columnOrder = normalizeColumnOrder(section('units').columnOrder, UNITS_COLUMNS);
 
   const calls = mergeScalars(d.calls, section('calls'));
-  calls.display = section('calls').display === 'table' ? 'table' : section('calls').display === 'cards' ? 'cards' : d.calls.display;
   calls.fontSize = fontSize(calls.fontSize, d.calls.fontSize);
   calls.columnOrder = normalizeColumnOrder(section('calls').columnOrder, CALLS_COLUMNS);
 
@@ -410,8 +406,7 @@ const legacySettings = (read: (key: string) => string | undefined, key: string):
 /**
  * Upgrades BigBoard's `widget-settings` blob (zustand version 0). Display toggles, font sizes and options come from the
  * MMKV store the configure screen wrote; column orders (and the scheduled-calls filters, sort and colours, which lived
- * only there) come from the legacy AsyncStorage stores when this device can read them. Upgraded boards keep the call
- * table they had; new boards start with call cards.
+ * only there) come from the legacy AsyncStorage stores when this device can read them.
  */
 export function migrateLegacyWidgetSettings(raw: unknown, read: (key: string) => string | undefined): WidgetSettings {
   const source: Raw = isRecord(raw) ? { ...raw } : {};
@@ -423,7 +418,7 @@ export function migrateLegacyWidgetSettings(raw: unknown, read: (key: string) =>
   }
   const calls = isRecord(source.calls) ? (source.calls as Raw) : {};
   const scheduled = isRecord(source.scheduledCalls) ? (source.scheduledCalls as Raw) : {};
-  source.calls = { display: 'table', ...calls, scrollDispatches: calls.dispatchScrollSpeed !== 0 };
+  source.calls = { ...calls, scrollDispatches: calls.dispatchScrollSpeed !== 0 };
   source.scheduledCalls = { ...scheduled, scrollDispatches: scheduled.dispatchScrollSpeed !== 0 };
   return normalizeWidgetSettings(source);
 }

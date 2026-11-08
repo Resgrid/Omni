@@ -6,6 +6,7 @@ import type { CallPriorityResultData, CallResultData, MapMakerInfoData, NoteResu
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { router } from 'expo-router';
 import React from 'react';
+import { StyleSheet } from 'react-native';
 
 import { WIDGET_COMPONENTS, WidgetRenderer } from '../components/widget-renderer';
 import { CallsSummaryWidget } from '../components/widgets/calls-summary-widget';
@@ -94,23 +95,48 @@ describe('PersonnelWidget', () => {
 });
 
 describe('CallsWidget', () => {
+  const headerLabels = (): string[] => screen.getAllByText(/^configure\./).map((node) => String(node.props.children));
+  const fontSizeOf = (text: string): number | undefined => StyleSheet.flatten(screen.getByText(text).props.style)?.fontSize;
+
   beforeEach(() => {
     useCallsStore.setState({ calls: [call('1'), call('2', { State: 8 })], callPriorities: [priority(1, 'Urgent')], callDispatches: { '1': [{ Id: 'u1', Type: 'Unit', Name: 'Engine 1' } as never] } });
   });
 
-  it('shows active calls as wall-density cards (pending calls never count)', async () => {
-    await render(<CallsWidget {...props} />);
-    expect(screen.getByTestId('call-card-1')).toBeTruthy();
-    expect(screen.queryByTestId('call-card-2')).toBeNull();
-  });
-
-  it('shows the configured table', async () => {
-    useWidgetSettingsStore.getState().updateSettings('calls', { display: 'table', showAddress: false });
+  it("lists active calls one per row in BigBoard's columns, never as cards (pending calls never count)", async () => {
     await render(<CallsWidget {...props} />);
     expect(screen.getByTestId('calls-table')).toBeTruthy();
+    expect(screen.queryByTestId('call-card-1')).toBeNull();
+    expect(headerLabels()).toEqual(['configure.id', 'configure.name', 'configure.address', 'configure.timestamp', 'configure.priority', 'configure.dispatched']);
+    expect(screen.getByText('Call 1')).toBeTruthy();
+    expect(screen.queryByText('Call 2')).toBeNull();
+    expect(screen.getByText('1 Main St')).toBeTruthy();
     expect(screen.getByText('Urgent')).toBeTruthy();
-    expect(screen.queryByText('1 Main St')).toBeNull();
     expect(screen.getByTestId('calls-widget-ticker-1')).toBeTruthy();
+    // The list takes the whole widget body.
+    expect(StyleSheet.flatten(screen.getByTestId('calls-widget-body').props.style)).toMatchObject({ padding: 2 });
+  });
+
+  it('honours every calls setting: visible columns, column order and font size (dispatch badges included)', async () => {
+    useWidgetSettingsStore.getState().updateSettings('calls', { showAddress: false, showId: false, columnOrder: ['priority', 'dispatched', 'name'], fontSize: 20, scrollDispatches: false });
+    await render(<CallsWidget {...props} />);
+    expect(headerLabels()).toEqual(['configure.priority', 'configure.dispatched', 'configure.name', 'configure.timestamp']);
+    expect(screen.queryByText('1 Main St')).toBeNull();
+    expect(fontSizeOf('Call 1')).toBe(20);
+    expect(fontSizeOf('Urgent')).toBe(20);
+    expect(fontSizeOf('Engine 1')).toBe(19);
+  });
+
+  it('still names each call when every column is switched off', async () => {
+    useWidgetSettingsStore.getState().updateSettings('calls', { showId: false, showName: false, showAddress: false, showTimestamp: false, showPriority: false, showDispatched: false });
+    await render(<CallsWidget {...props} />);
+    expect(headerLabels()).toEqual(['configure.name']);
+    expect(screen.getByText('Call 1')).toBeTruthy();
+  });
+
+  it('shows the empty message in the list when no call is active', async () => {
+    useCallsStore.setState({ calls: [call('2', { State: 8 })] });
+    await render(<CallsWidget {...props} />);
+    expect(screen.getByTestId('calls-table-empty')).toBeTruthy();
   });
 });
 
@@ -124,6 +150,16 @@ describe('ScheduledCallsWidget', () => {
     expect(screen.getAllByText(/^(Later|Overdue)$/).map((node) => node.props.children)).toEqual(['Overdue', 'Later']);
     expect(screen.getByText(/scheduledCalls\.overdue/)).toBeTruthy();
     await waitFor(() => expect(mocks.fetchCallExtraData).toHaveBeenCalledWith('late'));
+  });
+
+  it('sizes the dispatch badges with the font size setting', async () => {
+    useCallsStore.setState({ scheduledCalls: [call('late', { Name: 'Later', DispatchedOnUtc: new Date(Date.now() + 3 * 3600000).toISOString() })] });
+    // SAFETY: the scheduled-calls widget reads only `Dispatches` (Id, Type, Name) from a call's extra data.
+    mocks.fetchCallExtraData.mockResolvedValue({ Dispatches: [{ Id: 'u1', Type: 'Unit', Name: 'Engine 1' }] } as never);
+    useWidgetSettingsStore.getState().updateSettings('scheduledCalls', { fontSize: 18 });
+    await render(<ScheduledCallsWidget {...props} />);
+    await waitFor(() => expect(screen.getByTestId('scheduled-calls-widget-ticker-late')).toBeTruthy());
+    expect(StyleSheet.flatten(screen.getByText('Engine 1').props.style)?.fontSize).toBe(17);
   });
 });
 

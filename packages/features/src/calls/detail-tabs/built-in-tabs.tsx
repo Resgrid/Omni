@@ -1,3 +1,4 @@
+import type { CallResultData } from '@resgrid/models';
 import React from 'react';
 
 import { CheckInTab } from '../../check-in';
@@ -23,6 +24,9 @@ export const CALL_DETAIL_TAB_IDS = {
   siteInfo: 'site-info',
   locationHistory: 'location-history',
 } as const;
+
+/** Whether a call has site info to show. Older servers send no Contacts list: keep the tab; an empty list means nothing is linked. */
+export const callHasSiteInfo = (call: Pick<CallResultData, 'Contacts'>): boolean => call.Contacts === undefined || call.Contacts.length > 0;
 
 export const BUILT_IN_CALL_DETAIL_TABS: readonly CallDetailTabDefinition[] = [
   { id: CALL_DETAIL_TAB_IDS.info, order: 10, title: 'call_detail.tabs.info', render: (context) => <CallInfoPanel call={context.call} /> },
@@ -67,8 +71,7 @@ export const BUILT_IN_CALL_DETAIL_TABS: readonly CallDetailTabDefinition[] = [
     id: CALL_DETAIL_TAB_IDS.siteInfo,
     order: 80,
     title: 'call_detail.tabs.site',
-    // Older servers send no Contacts list: keep the tab; an empty list means nothing is linked.
-    visible: (context) => context.call.Contacts === undefined || context.call.Contacts.length > 0,
+    visible: (context) => callHasSiteInfo(context.call),
     render: (context) => <SiteInfoPanel callId={context.callId} />,
   },
   { id: CALL_DETAIL_TAB_IDS.locationHistory, order: 90, title: 'call_detail.tabs.history', render: (context) => <LocationHistoryPanel callId={context.callId} /> },

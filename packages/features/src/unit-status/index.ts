@@ -5,10 +5,12 @@
 //
 // The status timer pieces are re-exported through one statement: Oxlint's readable spacing wants a blank line between
 // top-level statements, which the export sorter removes.
+import { SetActiveCallButton } from './components/set-active-call-button';
 import { StatusTimerBanner, type StatusTimerBannerProps } from './components/status-timer-banner';
 import { StatusTimerCard, type StatusTimerCardProps } from './components/status-timer-card';
 import { StatusTimerNotifications } from './components/status-timer-notifications';
 import { timerToneColors, unitTimerNotifications, type UnitTimerText, unitTimerText, type UnitTimerTone } from './lib/status-timer-text';
+import { registerUnitStatusCallDetailAction } from './register';
 
 // Screens
 export { default as UnitConsoleScreen, type UnitConsoleScreenProps } from './screens/unit-console';
@@ -36,8 +38,11 @@ export { resolveUnitStatusDisplay, STATE_STYLE_COLORS, statusStyleColor, type Un
 export { type FeatureNavEntry, unitStatusNav } from './nav';
 export { UNIT_STATUS_ROUTE_PATTERNS, unitStatusRoutes } from './routes';
 
-// Status timer (the console card, the shell banner and the notifications while the app is in the background)
+// Status timer (the console card, the shell banner and the notifications while the app is in the background), and
+// "Set Active" on a call's detail
 export {
+  registerUnitStatusCallDetailAction,
+  SetActiveCallButton,
   StatusTimerBanner,
   type StatusTimerBannerProps,
   StatusTimerCard,

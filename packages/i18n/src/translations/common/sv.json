@@ -275,6 +275,7 @@
     "call_location": "Samtalets plats",
     "call_number": "Samtalsnummer",
     "call_priority": "Samtalsprioritet",
+    "call_summary_hint": "Visar samtalets art, anteckningar, protokoll och mer",
     "confirm_deselect_message": "Är du säker på att du vill avmarkera det aktuella aktiva samtalet?",
     "confirm_deselect_title": "Avmarkera aktivt samtal",
     "contact_info": "Kontaktinfo",
@@ -3732,9 +3733,6 @@
     "arrange": "Arrange automatically",
     "board_order": "Position {{position}} of {{count}}",
     "board_order_hint": "Moving a widget earlier or later re-packs the dashboard from the top.",
-    "calls_display": "Show calls as",
-    "calls_display_cards": "Cards",
-    "calls_display_table": "Table",
     "center_hint": "Leave latitude and longitude empty to use the department's map center.",
     "column": {
       "name": "Name",

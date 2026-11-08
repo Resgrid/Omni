@@ -1,5 +1,5 @@
 import { selectUnitById, useUnitRolesStore, useUnitsStore, useUnitStatusStore } from '@resgrid/data';
-import { type ActiveUnitRoleResultData, type StatusesResultData, type UnitTypeStatusResultData } from '@resgrid/models';
+import { type ActiveUnitRoleResultData, type CallResultData, type StatusesResultData, type UnitTypeStatusResultData } from '@resgrid/models';
 import React, { useCallback, useEffect, useMemo } from 'react';
 
 import { locationForStatus } from '../lib/location-for-status';
@@ -17,6 +17,8 @@ export interface UnitStatusSheetProps {
   isOnBehalf?: boolean;
   initialStatusId?: number | string | null;
   initialHoldConfirmed?: boolean;
+  /** Unit "Set Active" on a call's detail: the status is for this call, so the sheet asks for the status and a note, not a destination. */
+  fixedCall?: CallResultData | null;
 }
 
 const NO_ROLES: ActiveUnitRoleResultData[] = [];
@@ -27,7 +29,7 @@ const EMPTY_LISTS: DestinationLists = { calls: [], stations: [], pois: [] };
  * built-in statuses), its destination lists (`GetSetUnitStatusData`), current status and crew seats. Saves through
  * the outbox, ordered per unit, so it works offline and a newer status can never overtake an older queued one.
  */
-export const UnitStatusSheet: React.FC<UnitStatusSheetProps> = ({ isOpen, onClose, unitId: unitIdProp, isOnBehalf = false, initialStatusId, initialHoldConfirmed }) => {
+export const UnitStatusSheet: React.FC<UnitStatusSheetProps> = ({ isOpen, onClose, unitId: unitIdProp, isOnBehalf = false, initialStatusId, initialHoldConfirmed, fixedCall = null }) => {
   const context = useStatusContext();
   const unitId = unitIdProp ?? context.activeUnitId;
 
@@ -99,6 +101,7 @@ export const UnitStatusSheet: React.FC<UnitStatusSheetProps> = ({ isOpen, onClos
       holdToConfirm={context.holdToConfirm}
       initialStatusId={initialStatusId}
       initialHoldConfirmed={initialHoldConfirmed}
+      fixedCall={isOnBehalf ? null : fixedCall}
       onSubmitStatus={handleSubmit}
       testID="unit-status-sheet"
     />

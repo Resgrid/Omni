@@ -44,8 +44,11 @@ export const QUICK_ACTIONS: readonly QuickAction[] = [
   { id: 'settings', href: '/settings', labelKey: 'settings.title', icon: Settings },
 ];
 
-/** The shortcuts the sidebar puts side by side on one row (each of the others gets a row of its own). */
-export const SIDEBAR_ROW_ACTIONS: readonly QuickActionId[] = ['chat', 'checklists', 'operations'];
+/**
+ * The shortcuts the sidebar puts side by side on one row as icon-only buttons (the label stays the button's accessibility
+ * label); each of the others gets a labelled row of its own.
+ */
+export const SIDEBAR_ROW_ACTIONS: readonly QuickActionId[] = ['chat', 'checklists', 'operations', 'inventory'];
 
 /** The quick actions to show, in order. `exclude` drops actions the variant's route tree does not have. */
 export const visibleQuickActions = (gates: QuickActionGates, exclude: readonly QuickActionId[] = []): QuickAction[] =>
