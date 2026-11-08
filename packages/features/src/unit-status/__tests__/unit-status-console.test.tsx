@@ -273,7 +273,8 @@ describe('UnitStatusSidebar', () => {
   });
 
   // The half-width card is too narrow for three 36 pt buttons and their margins (132 pt): they shrink rather than wrap,
-  // and each one's hit slop stays inside its own slot so neighbouring targets never overlap.
+  // and each one's hit slop stays inside its own slot, whose bounds hold all of it (React Native drops a touch outside
+  // the parent's bounds), so neighbouring targets never overlap.
   it('keeps the unit card’s round buttons on one row in a narrow card', async () => {
     await renderSidebar();
     const row = screen.getByTestId('unit-summary-card-buttons');
@@ -286,6 +287,7 @@ describe('UnitStatusSidebar', () => {
       const button = screen.getByTestId(`unit-summary-card-${id}`);
       expect(StyleSheet.flatten(button.props.style).width).toBe(32);
       expect(button.props.hitSlop).toEqual({ top: 6, bottom: 6, left: 4, right: 4 });
+      expect(StyleSheet.flatten(button.parent?.props.style)).toMatchObject({ width: 40, height: 44 });
     }
   });
 

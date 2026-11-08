@@ -51,28 +51,34 @@ export interface RoundButtonRowLayout {
   size: number;
   /** Even at {@link MIN_ROUND_BUTTON_SIZE} the slots are wider than the row, so it wraps instead of running out of the card. */
   wraps: boolean;
+  /** Width of the box each button is centred in: the button and `slotMargin` either side. */
+  slotWidth: number;
+  /** Height of that box: the button and its margins, and never less than {@link MIN_TOUCH_TARGET}. */
+  slotHeight: number;
   /**
-   * Touch area around each button, up to {@link MIN_TOUCH_TARGET}, that never reaches past its own slot toward a neighbour
-   * (sideways, and up and down too once the row wraps): two buttons' targets never overlap, so a touch at the edge of one
-   * cannot press the other.
+   * Touch area around each button, up to {@link MIN_TOUCH_TARGET}, that fills at most its own slot. The slot's bounds hold
+   * all of it (React Native drops a touch outside the parent's bounds, slop or not), and slots never overlap, so a touch
+   * at the edge of one button cannot press the next — sideways or, once the row wraps, up and down.
    */
   hitSlop: Insets | undefined;
 }
 
 /**
- * Layout of `count` round buttons sharing a row `rowWidth` wide, each in a slot with `slotMargin` on either side: the size
- * {@link fitRoundButtonSize} gives, a wrap when even the smallest size overflows, and hit slop kept inside each slot. A
- * `slotMargin` of at least (44 − preferred) / 2 keeps the preferred size's targets a full 44 pt each.
+ * Layout of `count` round buttons sharing a row `rowWidth` wide, each centred in a slot with `slotMargin` on either side:
+ * the size {@link fitRoundButtonSize} gives, a wrap when even the smallest size overflows, and hit slop inside each slot,
+ * which is tall enough for a 44 pt target. A `slotMargin` of at least (44 − preferred) / 2 keeps the preferred size's
+ * targets a full 44 pt wide too.
  */
 export function roundButtonRow(preferred: number, rowWidth: number, count: number, slotMargin: number): RoundButtonRowLayout {
   const size = fitRoundButtonSize(preferred, rowWidth, count, slotMargin);
   const wraps = rowWidth > 0 && count * (size + slotMargin * 2) > rowWidth;
   const reach = Math.max(0, Math.ceil((MIN_TOUCH_TARGET - size) / 2));
+  const slotWidth = size + slotMargin * 2;
+  const slotHeight = size + Math.max(slotMargin, reach) * 2;
 
-  if (reach === 0) return { size, wraps, hitSlop: undefined };
+  if (reach === 0) return { size, wraps, slotWidth, slotHeight, hitSlop: undefined };
 
   const sideways = Math.min(reach, slotMargin);
-  const vertical = wraps ? sideways : reach;
 
-  return { size, wraps, hitSlop: { top: vertical, bottom: vertical, left: sideways, right: sideways } };
+  return { size, wraps, slotWidth, slotHeight, hitSlop: { top: reach, bottom: reach, left: sideways, right: sideways } };
 }

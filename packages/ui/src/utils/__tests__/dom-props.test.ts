@@ -48,6 +48,7 @@ describe('toDomProps', () => {
       key: string;
       defaultPrevented: boolean;
       preventDefault: () => void;
+      currentTarget: { click: () => void };
     }
 
     interface PressResult {
@@ -62,14 +63,15 @@ describe('toDomProps', () => {
     // SAFETY: toDomProps adds these props for an onPress (pressDomProps); DomProps<T> only types the caller's own props.
     const pressResult = <T extends object>(props: T) => toDomProps(props) as PressResult;
 
-    // As a DOM event: preventDefault() marks it defaultPrevented.
-    const key = (name: string) => {
+    // As a DOM key event on `element`: preventDefault() marks it defaultPrevented, and click() runs the element's onClick.
+    const key = (name: string, element: PressResult) => {
       const event = {
         key: name,
         defaultPrevented: false,
         preventDefault: jest.fn(() => {
           event.defaultPrevented = true;
         }),
+        currentTarget: { click: jest.fn(() => element.onClick?.()) },
       };
 
       return event;
@@ -82,11 +84,11 @@ describe('toDomProps', () => {
       expect(result).toMatchObject({ role: 'button', tabIndex: 0, style: { cursor: 'pointer', color: 'red' } });
       expect(result).not.toHaveProperty('onPress');
       result.onClick?.();
-      const enter = key('Enter');
+      const enter = key('Enter', result);
       result.onKeyDown?.(enter);
-      const space = key(' ');
+      const space = key(' ', result);
       result.onKeyDown?.(space);
-      result.onKeyDown?.(key('a'));
+      result.onKeyDown?.(key('a', result));
 
       expect(onPress).toHaveBeenCalledTimes(3);
       expect(space.preventDefault).toHaveBeenCalled();
@@ -97,9 +99,9 @@ describe('toDomProps', () => {
       const result = pressResult({ onPress, accessibilityRole: 'link' });
 
       expect(result.role).toBe('link');
-      result.onKeyDown?.(key(' '));
+      result.onKeyDown?.(key(' ', result));
       expect(onPress).not.toHaveBeenCalled();
-      result.onKeyDown?.(key('Enter'));
+      result.onKeyDown?.(key('Enter', result));
       expect(onPress).toHaveBeenCalledTimes(1);
     });
 
@@ -124,7 +126,7 @@ describe('toDomProps', () => {
       const onPress = jest.fn();
       const callerKeyDown = jest.fn();
       const result = pressResult({ onPress, onKeyDown: callerKeyDown });
-      const enter = key('Enter');
+      const enter = key('Enter', result);
 
       result.onKeyDown?.(enter);
       expect(callerKeyDown).toHaveBeenCalledWith(enter);
@@ -132,7 +134,7 @@ describe('toDomProps', () => {
 
       const cancelling = pressResult({ onPress, onKeyDown: (event: KeyEvent) => event.preventDefault() });
 
-      cancelling.onKeyDown?.(key('Enter'));
+      cancelling.onKeyDown?.(key('Enter', cancelling));
       expect(onPress).toHaveBeenCalledTimes(1);
     });
 
@@ -143,6 +145,21 @@ describe('toDomProps', () => {
       expect(result.onClick).toBe(onClick);
 
       for (const name of ['onLongPress', 'onPressIn', 'onPressOut']) expect(result).not.toHaveProperty(name);
+    });
+
+    // With both, a click ran onClick but Enter and Space ran onPress: keyboard users got a different action.
+    it('presses from the keyboard with the same action a click runs', () => {
+      const onPress = jest.fn();
+      const onClick = jest.fn();
+      const result = pressResult({ onPress, onClick });
+      const enter = key('Enter', result);
+
+      result.onKeyDown?.(enter);
+      result.onKeyDown?.(key(' ', result));
+
+      expect(enter.currentTarget.click).toHaveBeenCalledTimes(1);
+      expect(onClick).toHaveBeenCalledTimes(2);
+      expect(onPress).not.toHaveBeenCalled();
     });
   });
 

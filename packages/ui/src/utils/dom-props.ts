@@ -196,8 +196,9 @@ interface PressDomTarget {
 /**
  * What a React Native `onPress` becomes on a span or div: a click, a pointer cursor, a tab stop, and Enter (Space too
  * unless it is a link) from the keyboard, as a button or link would have. None of it while disabled (`disabled`, or
- * `aria-disabled` as `true` or `"true"`). A web-only `onClick` the caller gave wins; a caller's `onKeyDown` runs first and
- * the key still presses unless it called `preventDefault()`, as on a native button.
+ * `aria-disabled` as `true` or `"true"`). A web-only `onClick` the caller gave wins. As on a native button, the key
+ * clicks the element, so it runs whatever a click runs; a caller's `onKeyDown` runs first and cancels that with
+ * `preventDefault()`.
  */
 function pressDomProps(onPress: NonNullable<WithPress['onPress']>, domProps: PressDomTarget): PressDomTarget {
   if (domProps.disabled === true || domProps['aria-disabled'] === true || domProps['aria-disabled'] === 'true') {
@@ -216,7 +217,8 @@ function pressDomProps(onPress: NonNullable<WithPress['onPress']>, domProps: Pre
     if (event.key === 'Enter' || (event.key === ' ' && role !== 'link')) {
       // Space would otherwise scroll the page.
       event.preventDefault();
-      onPress(event);
+      // The same action as a pointer: the caller's onClick when it gave one, onPress otherwise.
+      event.currentTarget.click();
     }
   };
 

@@ -132,30 +132,44 @@ describe('fitRoundButtonSize', () => {
 });
 
 describe('roundButtonRow', () => {
+  // React Native drops a touch outside the parent's bounds, slop or not: each slot must hold its button's whole target.
+  const expectTargetInsideSlot = (row: ReturnType<typeof roundButtonRow>) => {
+    const slop = row.hitSlop ?? { top: 0, bottom: 0, left: 0, right: 0 };
+
+    expect(row.size + (slop.left ?? 0) + (slop.right ?? 0)).toBeLessThanOrEqual(row.slotWidth);
+    expect(row.size + (slop.top ?? 0) + (slop.bottom ?? 0)).toBeLessThanOrEqual(row.slotHeight);
+    expect(row.size + (slop.top ?? 0) + (slop.bottom ?? 0)).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
+  };
+
   // The sidebar's 36 pt buttons in 44 pt slots (4 pt either side): full 44 pt targets, none reaching into the next.
   it('gives the preferred size full, separate 44 pt targets', () => {
     const row = roundButtonRow(36, 200, 3, 4);
 
-    expect(row).toEqual({ size: 36, wraps: false, hitSlop: { top: 4, bottom: 4, left: 4, right: 4 } });
-    expect(row.size + 4 + 4).toBe(MIN_TOUCH_TARGET);
+    expect(row).toEqual({ size: 36, wraps: false, slotWidth: MIN_TOUCH_TARGET, slotHeight: MIN_TOUCH_TARGET, hitSlop: { top: 4, bottom: 4, left: 4, right: 4 } });
+    expectTargetInsideSlot(row);
   });
 
-  // 44 pt of slop on shrunk buttons overlapped their neighbours, so a touch at one's edge could press the next.
-  it('keeps a shrunk button 44 pt tall to the finger but its target inside its own slot', () => {
+  // 44 pt of slop on shrunk buttons overlapped their neighbours, so a touch at one's edge could press the next; and slop
+  // past a margin-only slot's bounds never reached the button at all.
+  it('keeps a shrunk button 44 pt tall to the finger, its target inside a slot that holds it', () => {
     const row = roundButtonRow(36, 100, 3, 4);
 
-    expect(row).toEqual({ size: 25, wraps: false, hitSlop: { top: 10, bottom: 10, left: 4, right: 4 } });
-    expect(row.size + 10 + 10).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
-    expect(row.size + 4 + 4).toBeLessThanOrEqual(Math.floor(100 / 3));
+    expect(row).toEqual({ size: 25, wraps: false, slotWidth: 33, slotHeight: 45, hitSlop: { top: 10, bottom: 10, left: 4, right: 4 } });
+    expect(row.slotWidth).toBeLessThanOrEqual(Math.floor(100 / 3));
+    expectTargetInsideSlot(row);
   });
 
-  // Three 24 pt buttons in their slots need 96 pt: an 80 pt row wraps rather than running out of the card.
-  it('wraps a row too narrow for the smallest buttons, and keeps their targets apart up and down too', () => {
-    expect(roundButtonRow(36, 80, 3, 4)).toEqual({ size: MIN_ROUND_BUTTON_SIZE, wraps: true, hitSlop: { top: 4, bottom: 4, left: 4, right: 4 } });
+  // Three 24 pt buttons in their slots need 96 pt: an 80 pt row wraps rather than running out of the card, and each
+  // wrapped line is a full 44 pt slot tall, so targets stay 44 pt tall without reaching into the next line.
+  it('wraps a row too narrow for the smallest buttons, each line a 44 pt slot tall', () => {
+    const row = roundButtonRow(36, 80, 3, 4);
+
+    expect(row).toEqual({ size: MIN_ROUND_BUTTON_SIZE, wraps: true, slotWidth: 32, slotHeight: MIN_TOUCH_TARGET, hitSlop: { top: 10, bottom: 10, left: 4, right: 4 } });
+    expectTargetInsideSlot(row);
   });
 
   it('adds no slop to a button already a full target, and never wraps a row not measured yet', () => {
-    expect(roundButtonRow(48, 0, 3, 4)).toEqual({ size: 48, wraps: false, hitSlop: undefined });
+    expect(roundButtonRow(48, 0, 3, 4)).toEqual({ size: 48, wraps: false, slotWidth: 56, slotHeight: 56, hitSlop: undefined });
   });
 });
 
