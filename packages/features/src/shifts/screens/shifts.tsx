@@ -1,9 +1,10 @@
 import { useTerm } from '@resgrid/auth';
+import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { useShiftsStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import type { PendingShiftSignupResultData, ShiftDayResultData, ShiftResultData, ShiftTradeResultData } from '@resgrid/models';
 import { FlatList, HStack, Input, InputField, InputIcon, InputSlot, Loading, Pressable, RefreshControl, ScrollRow, TabBar, type TabBarItem, Text, useThemeColors, View, VStack, ZeroState } from '@resgrid/ui';
-import { useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { CalendarDays, Info, Search, X } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, View as RNView } from 'react-native';
@@ -12,14 +13,14 @@ import { ShiftActionSheet } from '../components/shift-action-sheet';
 import { ShiftCalendarView } from '../components/shift-calendar-view';
 import { ShiftCard } from '../components/shift-card';
 import { ShiftDayCard } from '../components/shift-day-card';
-import { ShiftDayDetailsSheet } from '../components/shift-day-details-sheet';
 import { ShiftApprovalsList, ShiftOnDutyList, type ShiftTradesFilter, ShiftTradesList } from '../components/shift-lists';
 import { ShiftDetailsSheet, ShiftTradeDetailsSheet } from '../components/shift-sheets';
 import { useShiftDayLists } from '../hooks/use-shift-day-lists';
 import type { ShiftSheetAction, ShiftTradeAction } from '../lib/shift-action-types';
-import { loadShiftView, SHIFT_VIEWS, type ShiftCalendarSelection, type ShiftView } from '../lib/shift-loaders';
-import { matchesShiftQuery, sectionMyShiftDays } from '../lib/shift-rules';
-import { formatShiftLongDate, getDateKey, getMonthRange, parseWallClock, toDateParam } from '../lib/shift-time';
+import { loadShiftView, resolveShiftCalendarStart, SHIFT_VIEWS, type ShiftCalendarSelection, type ShiftView, toMonthParam } from '../lib/shift-loaders';
+import { canApplyToTrade, matchesShiftQuery, sectionMyShiftDays } from '../lib/shift-rules';
+import { formatShiftLongDate, getDateKey, getMonthRange, isWorkshiftDay, parseWallClock, toDateParam } from '../lib/shift-time';
+import { shiftRoutes } from '../routes';
 
 type DayRow = { type: 'header'; key: string; title: string } | { type: 'day'; key: string; day: ShiftDayResultData };
 
@@ -31,17 +32,26 @@ export interface ShiftsScreenProps {
   initialView?: ShiftView;
 }
 
-const isShiftView = (value: unknown): value is ShiftView => typeof value === 'string' && (SHIFT_VIEWS as readonly string[]).includes(value);
+type ShiftsRouteParams = { view?: string | string[]; month?: string | string[]; date?: string | string[] };
+
+/** What the screen writes back into its route params (`date` undefined clears the picked day). */
+type RememberedParams = { view?: ShiftView; month?: string; date?: string | undefined };
+
+const isShiftView = (value: string | undefined): value is ShiftView => value !== undefined && (SHIFT_VIEWS as readonly string[]).includes(value);
+
+const firstParam = (value: string | string[] | undefined): string | undefined => (Array.isArray(value) ? value[0] : value);
 
 /**
- * Shifts (Responder): Today, My Shifts, Sign up, Calendar, Trades, On duty and — for supervisors — Approvals. Shift days
- * open in a sheet with sign-up, withdraw, trade and roster management; trade and approval actions confirm in a sheet.
- * Lists are persisted (own shifts and today's roster read offline); every action is online only.
+ * Shifts (Responder): Today, My Shifts, Sign up, Calendar, Trades, On duty and — for supervisors — Approvals. A shift day
+ * opens as its own screen (`/shifts/day/[id]`) with sign-up, withdraw, trade and roster management; this one stays
+ * mounted underneath, so Back returns to the same view, calendar month and picked day. Trade and approval actions
+ * confirm in a sheet. Lists are persisted (own shifts and today's roster read offline); every action is online only.
  */
 export default function ShiftsScreen({ initialView }: ShiftsScreenProps) {
   const { t, i18n } = useTranslation();
-  const params = useLocalSearchParams<{ view?: string | string[] }>();
-  const routeView = Array.isArray(params.view) ? params.view[0] : params.view;
+  const router = useRouter();
+  const params = useLocalSearchParams<ShiftsRouteParams>();
+  const routeView = firstParam(params.view);
   const colors = useThemeColors();
   const title = useTerm('module.shifts', t('shifts.title'));
   const lists = useShiftDayLists();
@@ -58,16 +68,14 @@ export default function ShiftsScreen({ initialView }: ShiftsScreenProps) {
   const [query, setQuery] = useState('');
   const [signupFilter, setSignupFilter] = useState<'needed' | 'all'>('needed');
   const [tradesFilter, setTradesFilter] = useState<ShiftTradesFilter>('open');
-  const [selectedDate, setSelectedDate] = useState<string | null>(() => toDateParam(new Date()));
-  const [openDay, setOpenDay] = useState<ShiftDayResultData | null>(null);
+  // The calendar month, picked day and shift filter are view state: the route's month and day, else the last loaded
+  // month (persisted in the store), else this one.
+  const [calendarStart] = useState(() => resolveShiftCalendarStart({ month: firstParam(params.month), date: firstParam(params.date) }, useShiftsStore.getState().calendarRange));
+  const [selectedDate, setSelectedDate] = useState<string | null>(calendarStart.selectedDate);
+  const [calendar, setCalendar] = useState<ShiftCalendarSelection>(calendarStart.calendar);
   const [openShift, setOpenShift] = useState<ShiftResultData | null>(null);
   const [openTrade, setOpenTrade] = useState<ShiftTradeResultData | null>(null);
   const [sheetAction, setSheetAction] = useState<ShiftSheetAction | null>(null);
-  // The calendar month and shift filter are view state: the last loaded month (persisted in the store) or this one.
-  const [calendar, setCalendar] = useState<ShiftCalendarSelection>(() => {
-    const last = useShiftsStore.getState().calendarRange;
-    return last ? { range: { start: last.start, end: last.end }, shiftId: last.shiftId } : { range: getMonthRange(new Date()), shiftId: null };
-  });
 
   // Approvals exist only for supervisors (the server decides via IsSupervisor); On duty is for everyone.
   const isSupervisor = pendingApprovals?.IsSupervisor === true;
@@ -84,7 +92,18 @@ export default function ShiftsScreen({ initialView }: ShiftsScreenProps) {
     }, [activeView, calendar])
   );
 
-  const changeView = setView;
+  // The view, month and picked day ride in the route params as well, so a screen rebuilt after a web reload or a
+  // browser history step opens where the member left it. Written only from this screen's own handlers: setParams
+  // changes whichever route is focused.
+  const remember = useCallback((next: RememberedParams) => router.setParams(next), [router]);
+
+  const changeView = useCallback(
+    (next: ShiftView) => {
+      setView(next);
+      remember({ view: next });
+    },
+    [remember]
+  );
 
   const refresh = useCallback(async () => {
     await Promise.all([loadShiftView(activeView, { bypassCache: true }, calendar), activeView === 'approvals' ? undefined : useShiftsStore.getState().fetchPendingApprovals()]);
@@ -97,7 +116,7 @@ export default function ShiftsScreen({ initialView }: ShiftsScreenProps) {
       { key: 'mine', label: t('shifts.segments.mine') },
       { key: 'signup', label: t('shifts.segments.signup') },
       { key: 'calendar', label: t('shifts.segments.calendar') },
-      { key: 'trades', label: t('shifts.segments.trades'), badge: openTrades.filter((trade) => trade.CanApply).length },
+      { key: 'trades', label: t('shifts.segments.trades'), badge: openTrades.filter((trade) => canApplyToTrade(trade)).length },
       { key: 'onduty', label: t('shifts.segments.on_duty') },
     ];
     if (isSupervisor) list.push({ key: 'approvals', label: t('shifts.segments.approvals'), badge: pendingSignups.length + pendingTrades.length });
@@ -111,16 +130,17 @@ export default function ShiftsScreen({ initialView }: ShiftsScreenProps) {
     }));
   }, [t, isSupervisor, openTrades, pendingSignups.length, pendingTrades.length]);
 
-  // The day sheet, the shift sheet and the trade sheet never stack; a trade action closes the trade sheet first.
-  const openDayDetails = useCallback((day: ShiftDayResultData) => {
-    setOpenShift(null);
-    setOpenTrade(null);
-    setOpenDay(day);
-  }, []);
-  const openTradeDetails = useCallback((trade: ShiftTradeResultData) => {
-    setOpenDay(null);
-    setOpenTrade(trade);
-  }, []);
+  // A shift day opens as its own screen over this one (the shift and trade sheets close first); the shift and trade
+  // sheets never stack, and a trade action closes the trade sheet first.
+  const openDayDetails = useCallback(
+    (day: ShiftDayResultData) => {
+      setOpenShift(null);
+      setOpenTrade(null);
+      pushRoutePath(router, shiftRoutes.day(day.ShiftDayId, { workshift: isWorkshiftDay(day) }));
+    },
+    [router]
+  );
+  const openTradeDetails = useCallback((trade: ShiftTradeResultData) => setOpenTrade(trade), []);
   const handleTradeAction = useCallback((action: ShiftTradeAction) => {
     setOpenTrade(null);
     setSheetAction(action);
@@ -128,17 +148,36 @@ export default function ShiftsScreen({ initialView }: ShiftsScreenProps) {
 
   const calendarMonth = useMemo(() => parseWallClock(calendar.range.start) ?? new Date(), [calendar.range.start]);
   const calendarShiftId = calendar.shiftId;
-  const changeMonth = useCallback((month: Date) => {
-    setSelectedDate(null);
-    setCalendar((current) => ({ range: getMonthRange(month), shiftId: current.shiftId }));
-  }, []);
+  const changeMonth = useCallback(
+    (month: Date) => {
+      setSelectedDate(null);
+      setCalendar((current) => ({ range: getMonthRange(month), shiftId: current.shiftId }));
+      remember({ month: toMonthParam(month), date: undefined });
+    },
+    [remember]
+  );
+  const selectDate = useCallback(
+    (date: string) => {
+      setSelectedDate(date);
+      remember({ date });
+    },
+    [remember]
+  );
   const filterCalendar = useCallback((shiftId: string | null) => setCalendar((current) => ({ range: current.range, shiftId })), []);
-  const viewShiftInCalendar = useCallback((shiftId: string) => {
-    setOpenShift(null);
-    setView('calendar');
-    setSelectedDate((current) => current ?? toDateParam(new Date()));
-    setCalendar((current) => ({ range: current.range, shiftId }));
-  }, []);
+  const viewShiftInCalendar = useCallback(
+    (shiftId: string) => {
+      // Keep the picked day; with none, pick today when the month on show holds it.
+      const today = toDateParam(new Date());
+      const date = selectedDate ?? (today >= calendar.range.start && today <= calendar.range.end ? today : null);
+
+      setOpenShift(null);
+      setView('calendar');
+      setSelectedDate(date);
+      setCalendar((current) => ({ range: current.range, shiftId }));
+      remember({ view: 'calendar', month: calendar.range.start.slice(0, 7), date: date ?? undefined });
+    },
+    [remember, selectedDate, calendar.range.start, calendar.range.end]
+  );
 
   const today = useMemo(() => lists.today.filter((day) => matchesShiftQuery(day, query)), [lists.today, query]);
   const mineRows = useMemo<DayRow[]>(
@@ -277,7 +316,7 @@ export default function ShiftsScreen({ initialView }: ShiftsScreenProps) {
                     </Pressable>
                   ) : null}
                 </HStack>
-                <ShiftCalendarView month={calendarMonth} days={lists.calendar} selectedDate={selectedDate} isLoading={loading.calendar === true} onMonthChange={changeMonth} onSelectDate={setSelectedDate} />
+                <ShiftCalendarView month={calendarMonth} days={lists.calendar} selectedDate={selectedDate} isLoading={loading.calendar === true} onMonthChange={changeMonth} onSelectDate={selectDate} />
                 {selectedDate ? (
                   <Text className="px-4 font-semibold text-typography-900" accessibilityRole="header">
                     {formatShiftLongDate(selectedDate, i18n.language)}
@@ -355,7 +394,6 @@ export default function ShiftsScreen({ initialView }: ShiftsScreenProps) {
       <View className="flex-1 pt-2">{content()}</View>
 
       <ShiftDetailsSheet shift={openShift} onClose={() => setOpenShift(null)} onViewCalendar={viewShiftInCalendar} onOpenDay={openDayDetails} />
-      <ShiftDayDetailsSheet shiftDay={openDay} onClose={() => setOpenDay(null)} />
       <ShiftTradeDetailsSheet trade={openTrade} onClose={() => setOpenTrade(null)} onAction={handleTradeAction} />
       <ShiftActionSheet action={sheetAction} onClose={() => setSheetAction(null)} />
     </View>

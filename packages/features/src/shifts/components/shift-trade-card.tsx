@@ -6,7 +6,20 @@ import React from 'react';
 import { View } from 'react-native';
 
 import type { ShiftTradeAction } from '../lib/shift-action-types';
-import { canCancelTrade, canPickTrade, canRespondToTrade, canWithdrawApplication, getAssignmentTypeKey, getIneligibleReasonKey, getTradeMyStateKey, getTradeStatusLabel } from '../lib/shift-rules';
+import {
+  canApplyToTrade,
+  canCancelTrade,
+  canPickTrade,
+  canRespondToTrade,
+  canReviewTrade,
+  canWithdrawApplication,
+  getAssignmentTypeKey,
+  getIneligibleReasonKey,
+  getTradeMyStateKey,
+  getTradeStatusLabel,
+  isActiveTrade,
+  isShiftTradeOver,
+} from '../lib/shift-rules';
 import { formatShiftDate, formatShiftTime } from '../lib/shift-time';
 
 export interface ShiftTradeOfferRowProps {
@@ -90,11 +103,24 @@ export const ShiftTradeActionButtons: React.FC<ShiftTradeActionButtonsProps> = (
   const { t } = useTranslation();
   const id = trade.ShiftSignupTradeId;
   const isIncoming = trade.Direction === ShiftTradeDirection.Incoming;
+
+  // A finished day takes no more changes; a trade still open or pending on it says why its actions are gone.
+  if (isShiftTradeOver(trade)) {
+    return isActiveTrade(trade) ? (
+      <Text size="sm" className="mt-1 text-typography-500" testID={`${testPrefix}-over-${id}`}>
+        {t('shifts.day.past_note')}
+      </Text>
+    ) : null;
+  }
+
   const canRespond = canRespondToTrade(trade);
-  const canApply = trade.CanApply === true;
+  const canApply = canApplyToTrade(trade);
   const canWithdraw = canWithdrawApplication(trade);
   const canCancel = canCancelTrade(trade);
-  if (!canRespond && !canApply && !canWithdraw && !canCancel && !trade.CanReview) return null;
+  const canReview = canReviewTrade(trade);
+
+  if (!canRespond && !canApply && !canWithdraw && !canCancel && !canReview) return null;
+
   return (
     <HStack space="sm" className="mt-1 flex-wrap">
       {canRespond ? (
@@ -117,7 +143,7 @@ export const ShiftTradeActionButtons: React.FC<ShiftTradeActionButtonsProps> = (
           <ButtonText>{t('shifts.actions.withdraw_application')}</ButtonText>
         </Button>
       ) : null}
-      {trade.CanReview ? (
+      {canReview ? (
         <>
           <Button size="sm" action="positive" onPress={() => onAction({ kind: 'review-trade', trade, approve: true })} isDisabled={isBusy} className="mb-1" testID={`${testPrefix}-approve-${id}`}>
             <ButtonText>{t('shifts.actions.approve')}</ButtonText>
@@ -156,7 +182,7 @@ export const ShiftTradeCard: React.FC<ShiftTradeCardProps> = React.memo(({ trade
   const isOpenStatus = trade.Status === ShiftTradeStatus.Open;
   const canPick = canPickTrade(trade);
   const isWorkshift = trade.ShiftType === ShiftAssignmentType.Workshift;
-  const ineligibleKey = trade.IsOpen && isIncoming && !trade.CanApply && !canWithdrawApplication(trade) && isOpenStatus ? getIneligibleReasonKey(trade.IneligibleReason) : null;
+  const ineligibleKey = trade.IsOpen && isIncoming && !trade.CanApply && !canWithdrawApplication(trade) && isOpenStatus && !isShiftTradeOver(trade) ? getIneligibleReasonKey(trade.IneligibleReason) : null;
   const users = trade.Users ?? [];
   const applicantCount = trade.ApplicantCount ?? users.filter((user) => user.Offered && !user.Declined).length;
   const showOffers = isOpenStatus && (canPick || !isIncoming);

@@ -44,7 +44,7 @@ export interface ChecklistFilterChipsProps<V extends string> {
 export function ChecklistFilterChips<V extends string>({ options, value, onChange, testID }: ChecklistFilterChipsProps<V>) {
   const { t } = useTranslation();
   return (
-    <ScrollRow contentContainerStyle={styles.row} accessibilityRole="radiogroup" accessibilityLabel={t('checklists.ui.filters')} testID={testID}>
+    <ScrollRow style={styles.row} accessibilityRole="radiogroup" accessibilityLabel={t('checklists.ui.filters')} testID={testID}>
       {options.map((option) => {
         const isSelected = option.value === value;
         return (
@@ -68,5 +68,6 @@ export function ChecklistFilterChips<V extends string>({ options, value, onChang
 }
 
 const styles = StyleSheet.create({
-  row: { paddingTop: 8 },
+  // Space above the row's box, not inside it: padding above the chips made the row taller than them and its centred edge chevron sat high.
+  row: { marginTop: 8 },
 });

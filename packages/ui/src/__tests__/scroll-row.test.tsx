@@ -131,6 +131,29 @@ describe('sideways row source rule', () => {
     expect(offenders).toEqual([]);
   });
 
+  // The chevrons centre on the row's box: a chip with space on one side only made the box taller than the chips and the
+  // chevron sat off their centre (the calls priority row's chevron sat low). Space around the row goes on the ScrollRow.
+  it('keeps chips written inside a ScrollRow free of space above or below on one side only', () => {
+    const ROW = /<ScrollRow\b[^>]*>([\s\S]*?)<\/ScrollRow>/g;
+    const CLASS_NAME = /className=\{?[`'"]([^`'"]*)/g;
+    const ONE_SIDED = /(^|[\s{])-?(mt|mb|pt|pb)-/;
+
+    const offenders = ROOTS.flatMap(walk).flatMap((absolute) => {
+      const file = path.relative(REPO, absolute).replace(/\\/g, '/');
+      const rows = [...fs.readFileSync(absolute, 'utf8').matchAll(ROW)].map((match) => match[1] ?? '');
+
+      return rows.flatMap((row) =>
+        [...row.matchAll(CLASS_NAME)].flatMap((match) => {
+          const className = match[1] ?? '';
+
+          return ONE_SIDED.test(className) ? [`${file}: ${className}`] : [];
+        })
+      );
+    });
+
+    expect(offenders).toEqual([]);
+  });
+
   it('lists only files that still need it', () => {
     const stale = [...ALLOWED.keys()].filter((file) => {
       const absolute = path.resolve(REPO, file);

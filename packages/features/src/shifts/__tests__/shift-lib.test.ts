@@ -1,14 +1,26 @@
 import { ShiftAssignmentType, ShiftDayMyStatus, ShiftRosterSource, ShiftTradeDirection, ShiftTradeStatus, ShiftTradeUserState } from '@resgrid/models';
 
+import { resolveShiftCalendarStart, toMonthParam } from '../lib/shift-loaders';
 import {
+  canApplyToTrade,
   canCancelTrade,
+  canCancelTradeForDay,
   canManageRosterEntry,
+  canManageShiftDay,
   canPickTrade,
   canRequestTradeForDay,
+  canRespondToTrade,
+  canReviewTrade,
+  canSignupForDay,
+  canWithdrawApplication,
   canWithdrawFromDay,
   getIneligibleReasonKey,
+  getShiftDayEndMs,
   getShiftErrorKey,
   groupRoster,
+  isPendingSignupOver,
+  isShiftDayOver,
+  isShiftTradeOver,
   sectionMyShiftDays,
   sectionMyTrades,
   sectionOpenTrades,
@@ -17,7 +29,7 @@ import {
 } from '../lib/shift-rules';
 import { getDateKey, getMonthRange, isOvernightShift, mergeShiftDays, monthGrid, parseWallClock } from '../lib/shift-time';
 import { shiftRoutes } from '../routes';
-import { makeDay, makeTrade } from './fixtures';
+import { makeDay, makeSignup, makeTrade } from './fixtures';
 
 const past = new Date(2020, 0, 1);
 
@@ -110,9 +122,73 @@ describe('shift rules', () => {
     expect(swapOptionsFor(makeTrade('4', { ShiftType: ShiftAssignmentType.Workshift }), mine)).toEqual([]);
   });
 
+  it('a day is over at its UTC end when the server sends one (any device time zone), else at its wall-clock end', () => {
+    const utc = makeDay('1', { End: '2030-05-10T19:00:00', EndUtc: '2030-05-10T23:00:00Z' });
+    expect(getShiftDayEndMs(utc)).toBe(Date.UTC(2030, 4, 10, 23));
+    expect(isShiftDayOver(utc, new Date(Date.UTC(2030, 4, 10, 22, 59)))).toBe(false);
+    expect(isShiftDayOver(utc, new Date(Date.UTC(2030, 4, 10, 23)))).toBe(true);
+    // A kept copy still flagged active is over once its UTC end has passed.
+    expect(isShiftDayOver({ ...utc, IsActive: true }, new Date(Date.UTC(2030, 4, 11)))).toBe(true);
+    // Older servers: no UTC end, so an active day is not over and the wall-clock end is read on the device clock.
+    const local = makeDay('2', { End: '2030-05-10T19:00:00' });
+    expect(getShiftDayEndMs(local)).toBe(new Date(2030, 4, 10, 19).getTime());
+    expect(isShiftDayOver(local, new Date(2030, 4, 10, 19))).toBe(true);
+    expect(isShiftDayOver({ ...local, IsActive: true }, new Date(2030, 4, 10, 19))).toBe(false);
+    expect(getShiftDayEndMs(makeDay('3', { End: '' }))).toBeNull();
+  });
+
+  it('a finished day takes no sign-up, trade, withdrawal or roster change', () => {
+    const after = new Date(2031, 0, 1);
+    const mine = { UserId: 'me', Name: 'Me', GroupId: '', GroupName: '', RoleIds: [], Roles: [], Source: ShiftRosterSource.Signup, ShiftSignupId: 's1', ApprovalPending: false, TradedFromUserId: '', TradedFromName: '' };
+    const day = makeDay('1', { CanSignup: true, CanManage: true, MyTradeId: 't1', MySignupId: 's1', MyStatus: ShiftDayMyStatus.OnRoster, Roster: [mine] });
+    expect([canSignupForDay(day, past), canManageShiftDay(day, past), canCancelTradeForDay(day, past)]).toEqual([true, true, true]);
+    expect([canSignupForDay(day, after), canManageShiftDay(day, after), canCancelTradeForDay(day, after), canWithdrawFromDay(day, 'me', after)]).toEqual([false, false, false, false]);
+    expect(canRequestTradeForDay({ ...day, MyTradeId: '' }, after)).toBe(false);
+    // Static shift days are staffed from unit crews: never signed up for or managed here.
+    const workshift = { ...day, ShiftType: ShiftAssignmentType.Workshift };
+    expect([canSignupForDay(workshift, past), canManageShiftDay(workshift, past)]).toEqual([false, false]);
+    expect(canSignupForDay({ ...day, CanSignup: false }, past)).toBe(false);
+  });
+
+  it('a trade or pending sign-up on a finished day offers no action, whatever the kept Can* flags say', () => {
+    const after = new Date(2031, 0, 1);
+    const open = makeTrade('1', { IsOpen: true, CanApply: true, CanReview: true, MyState: ShiftTradeUserState.Proposed });
+    expect([canApplyToTrade(open, past), canReviewTrade(open, past), canWithdrawApplication(open, past)]).toEqual([true, true, true]);
+    expect([isShiftTradeOver(open, after), canApplyToTrade(open, after), canReviewTrade(open, after), canWithdrawApplication(open, after)]).toEqual([true, false, false, false]);
+    expect(canApplyToTrade({ ...open, IsOver: true }, past)).toBe(false);
+    const targeted = makeTrade('2');
+    expect([canRespondToTrade(targeted, past), canRespondToTrade(targeted, after)]).toEqual([true, false]);
+    const outgoing = makeTrade('3', { Direction: ShiftTradeDirection.Outgoing });
+    expect([canPickTrade(outgoing, past), canCancelTrade(outgoing, past)]).toEqual([true, true]);
+    expect([canPickTrade(outgoing, after), canCancelTrade(outgoing, after)]).toEqual([false, false]);
+    expect(sectionOpenTrades([{ ...open, IsOver: true }]).map((section) => section.key)).toEqual(['applied']);
+    expect([isPendingSignupOver(makeSignup('p1'), past), isPendingSignupOver(makeSignup('p1'), after)]).toEqual([false, true]);
+  });
+
   it('summarizes calendar days', () => {
     const summary = summarizeShiftDaysByDate([makeDay('1', { OpenSlots: 2 }), makeDay('2', { Filled: true, MyStatus: ShiftDayMyStatus.OnRoster })]).get('2030-05-10');
     expect(summary).toEqual({ count: 2, openSlots: 2, hasMine: true, allFilled: false });
+  });
+});
+
+describe('calendar start', () => {
+  const now = new Date(2026, 10, 8, 12);
+  const last = { start: '2030-05-01', end: '2030-05-31', shiftId: 's1' };
+
+  it('opens on the month and day in the route, keeping the last shift filter', () => {
+    expect(resolveShiftCalendarStart({ month: '2030-06', date: '2030-06-14' }, last, now)).toEqual({ calendar: { range: { start: '2030-06-01', end: '2030-06-30' }, shiftId: 's1' }, selectedDate: '2030-06-14' });
+    // A day alone names its month; a day outside the route's month is not picked.
+    expect(resolveShiftCalendarStart({ date: '2030-07-04' }, null, now)).toEqual({ calendar: { range: { start: '2030-07-01', end: '2030-07-31' }, shiftId: null }, selectedDate: '2030-07-04' });
+    expect(resolveShiftCalendarStart({ month: '2030-06', date: '2030-07-04' }, null, now).selectedDate).toBeNull();
+  });
+
+  it('falls back to the last loaded month, else this one, and picks today only inside it', () => {
+    expect(resolveShiftCalendarStart({}, last, now)).toEqual({ calendar: { range: { start: '2030-05-01', end: '2030-05-31' }, shiftId: 's1' }, selectedDate: null });
+    expect(resolveShiftCalendarStart({}, null, now)).toEqual({ calendar: { range: { start: '2026-11-01', end: '2026-11-30' }, shiftId: null }, selectedDate: '2026-11-08' });
+    // Malformed or impossible params are ignored.
+    expect(resolveShiftCalendarStart({ month: '2030-13', date: '2030-02-31' }, null, now).calendar.range.start).toBe('2026-11-01');
+    expect(resolveShiftCalendarStart({ month: 'June', date: 'x' }, last, now).calendar.range.start).toBe('2030-05-01');
+    expect(toMonthParam(new Date(2030, 5, 14))).toBe('2030-06');
   });
 });
 

@@ -26,8 +26,8 @@ import variant from './variant';
 // unit navigation and route contract (omni-plan §5.3.4, §5.4). Only routes with a file in ./app belong here; the
 // per-variant route contract test (packages/app-shell) fails otherwise. Feature entries come from each feature's nav.ts
 // (imported directly so this file stays light); placement follows the legacy Unit tab bar: map, calls, routes, contacts,
-// notes, weather, protocols, settings — the status console, checklists, inventory, records, operations, chat and the
-// inbox from the menu (the landscape sidebar is the status console itself).
+// notes, weather, protocols, settings — the status console, checklists, inventory, records, operations and chat from
+// the menu (the landscape sidebar is the status console itself); the app bar bell opens the inbox.
 
 export const routes = defineRoutes([
   'home',
@@ -105,7 +105,8 @@ export const nav = defineNav([
   ...featureNav(recordsNav, 'sidebar', { order: 41, overrides: { records: { requiresFlag: [FeatureFlagKeys.RecordsSystem, FeatureFlagKeys.RecordsFieldUnit] } } }),
   ...featureNav(operationsNav, 'sidebar', { order: 42 }),
   ...featureNav(chatNav, { chat: 'sidebar', chatbot: 'hidden' }, { order: 50 }),
-  ...featureNav(notificationsNav, 'sidebar', { order: 60 }),
+  // The inbox is the app bar bell (with its unread count); the route stays for the bell and for push taps.
+  ...featureNav(notificationsNav, 'hidden', { order: 60 }),
   ...featureNav(settingsNavEntries, variant),
   ...featureNav(customMapsNav, { maps: 'sidebar', 'maps-search': 'hidden' }, { order: 26 }),
   ...featureNav(offlineMapsNav, 'hidden', { order: 906 }),

@@ -429,6 +429,7 @@
       "no_group": "No group",
       "no_role_requirements": "No role requirements",
       "open_needs": "Open needs",
+      "past_note": "This shift day is over, so it can no longer be changed.",
       "pending_note": "Your sign-up is waiting for supervisor approval. You are not on duty until it is approved.",
       "require_approval_note": "Sign-ups and trades on this shift need supervisor approval.",
       "roster": "Roster",

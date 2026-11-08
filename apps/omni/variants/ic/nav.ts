@@ -80,7 +80,8 @@ export const nav = defineNav([
   ...featureNav(operationsNav, 'sidebar', { order: 32 }),
   ...featureNav(chatNav, { chat: 'sidebar', chatbot: 'hidden' }, { order: 40 }),
   ...featureNav(weatherAlertsNav, { 'weather-alerts': 'sidebar' }, { order: 50 }),
-  ...featureNav(notificationsNav, 'sidebar', { order: 60 }),
+  // The inbox is the app bar bell (with its unread count); the route stays for the bell and for push taps.
+  ...featureNav(notificationsNav, 'hidden', { order: 60 }),
   ...featureNav(settingsNavEntries, variant),
   ...featureNav(customMapsNav, { maps: 'sidebar', 'maps-search': 'hidden' }, { order: 26 }),
   ...featureNav(offlineMapsNav, 'hidden', { order: 906 }),

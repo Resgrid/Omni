@@ -122,6 +122,18 @@ describe('CallListScreen', () => {
     expect(screen.queryByText('Queued fire')).toBeNull();
   });
 
+  // The row's edge chevron centres on the row's box: a margin under each chip made the box taller than the chips and
+  // the chevron sat low beside them (iOS and Android).
+  it('keeps the priority chips as tall as their scrolling row, with the gap below the row instead', async () => {
+    activateVariant('responder');
+    await render(<CallListScreen realtime={false} />);
+    const chips = screen.getAllByTestId(/^call-filters-priority-\d+$/);
+    expect(chips.length).toBeGreaterThan(1);
+
+    for (const chip of chips) expect(String(chip.props.className)).not.toMatch(/(^|\s)-?m[tby]-/);
+    expect(String(screen.getByTestId('call-filters-priority').props.className)).toContain('mb-2');
+  });
+
   it('refetches bypassing caches on a call push', async () => {
     activateVariant('responder');
     await render(<CallListScreen />);

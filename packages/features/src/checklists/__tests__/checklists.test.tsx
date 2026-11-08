@@ -8,6 +8,7 @@ import { emitRealtimeEvent } from '@resgrid/realtime';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import React from 'react';
+import { StyleSheet } from 'react-native';
 
 import { activateVariant, hidden } from '../../calls/__tests__/test-utils';
 import { DueChecksCard } from '../components/due-checks-card';
@@ -340,6 +341,15 @@ describe('checklists screen', () => {
     expect(screen.getByTestId('shared-tab-due')).not.toBeSelected();
     expect(screen.queryByTestId('checklist-due-occ1')).toBeNull();
     await waitFor(() => expect(screen.getByTestId('checklist-calendar-empty')).toHaveTextContent('checklists.ui.noCalendar'));
+  });
+
+  // Padding above the chips made the row taller than them and its centred edge chevron sat high.
+  it('spaces the filter chip row with a margin on its box, not padding above the chips', async () => {
+    await render(<ChecklistsScreen />);
+    await waitFor(() => expect(screen.getByTestId('checklists-due-filter')).toBeTruthy());
+
+    expect(StyleSheet.flatten(screen.getByTestId('checklists-due-filter').props.style)).toMatchObject({ marginTop: 8 });
+    expect(StyleSheet.flatten(screen.getByTestId('checklists-due-filter-scroll-view').props.contentContainerStyle)).toBeUndefined();
   });
 
   it('searches and filters the due list, keeping the query across tabs', async () => {

@@ -429,6 +429,7 @@
       "no_group": "Keine Gruppe",
       "no_role_requirements": "Keine Rollenanforderungen",
       "open_needs": "Offener Bedarf",
+      "past_note": "Dieser Schichttag ist vorbei und kann nicht mehr geändert werden.",
       "pending_note": "Ihre Anmeldung wartet auf die Genehmigung durch eine Aufsicht. Bis dahin sind Sie nicht im Dienst.",
       "require_approval_note": "Anmeldungen und Tausche für diese Schicht müssen von einer Aufsicht genehmigt werden.",
       "roster": "Dienstplan",

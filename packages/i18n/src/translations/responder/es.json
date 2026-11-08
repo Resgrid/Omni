@@ -429,6 +429,7 @@
       "no_group": "Sin grupo",
       "no_role_requirements": "Sin requisitos de rol",
       "open_needs": "Necesidades abiertas",
+      "past_note": "Este día de turno ya terminó, así que ya no se puede modificar.",
       "pending_note": "Su inscripción espera la aprobación de un supervisor. No estará de servicio hasta que se apruebe.",
       "require_approval_note": "Las inscripciones y los cambios en este turno requieren la aprobación de un supervisor.",
       "roster": "Personal asignado",

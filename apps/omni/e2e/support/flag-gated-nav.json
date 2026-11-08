@@ -1,6 +1,10 @@
 {
   "responder": [
     {
+      "id": "chat",
+      "flags": ["Chat.System"]
+    },
+    {
       "id": "checklists",
       "flags": ["Checklists.System"]
     },
@@ -15,10 +19,6 @@
     {
       "id": "work-orders",
       "flags": ["Maintenance.WorkOrders"]
-    },
-    {
-      "id": "chat",
-      "flags": ["Chat.System"]
     }
   ],
   "unit": [

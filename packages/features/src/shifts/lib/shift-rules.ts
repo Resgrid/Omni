@@ -1,4 +1,6 @@
+import { parseUtcMs } from '@resgrid/core/utils/dates';
 import {
+  type PendingShiftSignupResultData,
   SHIFT_SERVER_ERROR_CODES,
   ShiftAssignmentType,
   type ShiftDayGroupNeedsResultData,
@@ -133,12 +135,44 @@ export const getShiftErrorKey = (code: ShiftErrorCode | string | null | undefine
   return KNOWN_ERROR_CODES.has(normalized) ? `shifts.errors.${normalized}` : 'shifts.errors.unknown';
 };
 
-/** The day has finished (device clock against the department wall-clock end). */
-export const isShiftDayOver = (day: Pick<ShiftDayResultData, 'End' | 'IsActive'>, now: Date = new Date()): boolean => {
+/**
+ * When the day ends, in epoch ms: the server's UTC end (`EndUtc`) when it sends one, otherwise the department wall-clock
+ * end read on the device clock (older servers). Null when neither parses.
+ */
+export const getShiftDayEndMs = (day: Pick<ShiftDayResultData, 'End' | 'EndUtc'>): number | null => parseUtcMs(day.EndUtc) ?? parseWallClock(day.End)?.getTime() ?? null;
+
+/**
+ * The day has finished, as the server decides it (`now >= End`). The UTC end is exact in any device time zone; without
+ * it, a day the server called active is not over and the wall-clock end is read on the device clock.
+ */
+export const isShiftDayOver = (day: Pick<ShiftDayResultData, 'End' | 'EndUtc' | 'IsActive'>, now: Date = new Date()): boolean => {
+  const utcEnd = parseUtcMs(day.EndUtc);
+
+  if (utcEnd !== null) return utcEnd <= now.getTime();
+
   if (day.IsActive) return false;
+
   const end = parseWallClock(day.End);
+
   return end !== null && end.getTime() <= now.getTime();
 };
+
+/** A trade's day has finished: the server says so (`IsOver`) or its wall-clock end has passed. */
+export const isShiftTradeOver = (trade: Pick<ShiftTradeResultData, 'End' | 'IsOver'>, now: Date = new Date()): boolean => trade.IsOver === true || isShiftDayOver({ End: trade.End, IsActive: false }, now);
+
+/** A pending sign-up's day has finished (its wall-clock end has passed). */
+export const isPendingSignupOver = (signup: Pick<PendingShiftSignupResultData, 'End'>, now: Date = new Date()): boolean => isShiftDayOver({ End: signup.End, IsActive: false }, now);
+
+// A finished day is history: no sign-up, withdrawal, trade or roster change (the server refuses them as `day_in_past`).
+
+/** The server offers sign-up (`CanSignup`) on a day that is not over. Static shift days are staffed from unit crews: never. */
+export const canSignupForDay = (day: ShiftDayResultData, now: Date = new Date()): boolean => day.CanSignup && day.ShiftType !== ShiftAssignmentType.Workshift && !isShiftDayOver(day, now);
+
+/** The caller's own open trade request on the day can be cancelled until the day is over. */
+export const canCancelTradeForDay = (day: ShiftDayResultData, now: Date = new Date()): boolean => !!day.MyTradeId && !isShiftDayOver(day, now);
+
+/** Supervisors add, remove and review people on a day that is not over. Static shift days are staffed from unit crews: never. */
+export const canManageShiftDay = (day: ShiftDayResultData, now: Date = new Date()): boolean => day.CanManage && day.ShiftType !== ShiftAssignmentType.Workshift && !isShiftDayOver(day, now);
 
 /** The caller's own roster entry for the day, when the full day (with Roster) is loaded. */
 export const findMyRosterEntry = (day: ShiftDayResultData, userId: string | null | undefined): ShiftDayRosterResultData | undefined => {
@@ -193,22 +227,33 @@ export const groupRoster = (roster: readonly ShiftDayRosterResultData[], noGroup
 
 // ── Trades ─────────────────────────────────────────────────────────
 
-/** Whether the caller may pick between offers: the server decides on newer servers; before that only the requester could. */
-export const canPickTrade = (trade: ShiftTradeResultData): boolean => trade.CanPick ?? (trade.Direction === ShiftTradeDirection.Outgoing && trade.Status === ShiftTradeStatus.Open);
+// Every trade action changes who works the day, so none is offered once the day is over (a list kept offline can
+// still carry the server's earlier Can* flags).
 
-export const canCancelTrade = (trade: ShiftTradeResultData): boolean =>
-  trade.CanCancel ?? (trade.Direction === ShiftTradeDirection.Outgoing && (trade.Status === ShiftTradeStatus.Open || trade.Status === ShiftTradeStatus.PendingApproval));
+/** Whether the caller may pick between offers: the server decides on newer servers; before that only the requester could. */
+export const canPickTrade = (trade: ShiftTradeResultData, now: Date = new Date()): boolean =>
+  !isShiftTradeOver(trade, now) && (trade.CanPick ?? (trade.Direction === ShiftTradeDirection.Outgoing && trade.Status === ShiftTradeStatus.Open));
+
+export const canCancelTrade = (trade: ShiftTradeResultData, now: Date = new Date()): boolean =>
+  !isShiftTradeOver(trade, now) && (trade.CanCancel ?? (trade.Direction === ShiftTradeDirection.Outgoing && (trade.Status === ShiftTradeStatus.Open || trade.Status === ShiftTradeStatus.PendingApproval)));
+
+/** The caller may offer to take an open request (the server decides eligibility: `CanApply`). */
+export const canApplyToTrade = (trade: ShiftTradeResultData, now: Date = new Date()): boolean => trade.CanApply === true && !isShiftTradeOver(trade, now);
+
+/** A supervisor may approve or deny the trade (`CanReview`). */
+export const canReviewTrade = (trade: ShiftTradeResultData, now: Date = new Date()): boolean => trade.CanReview && !isShiftTradeOver(trade, now);
 
 /** The caller applied to an open request and can still take the offer back. */
-export const canWithdrawApplication = (trade: ShiftTradeResultData): boolean => !!trade.IsOpen && trade.Status === ShiftTradeStatus.Open && trade.MyState === ShiftTradeUserState.Proposed && !trade.IsOver;
+export const canWithdrawApplication = (trade: ShiftTradeResultData, now: Date = new Date()): boolean =>
+  !!trade.IsOpen && trade.Status === ShiftTradeStatus.Open && trade.MyState === ShiftTradeUserState.Proposed && !isShiftTradeOver(trade, now);
 
 /** A targeted request the caller was asked to take and has not answered. */
-export const canRespondToTrade = (trade: ShiftTradeResultData): boolean =>
-  !trade.IsOpen && trade.Direction === ShiftTradeDirection.Incoming && trade.Status === ShiftTradeStatus.Open && trade.MyState === ShiftTradeUserState.Open;
+export const canRespondToTrade = (trade: ShiftTradeResultData, now: Date = new Date()): boolean =>
+  !trade.IsOpen && trade.Direction === ShiftTradeDirection.Incoming && trade.Status === ShiftTradeStatus.Open && trade.MyState === ShiftTradeUserState.Open && !isShiftTradeOver(trade, now);
 
 /** Trades that need something from the caller: an answer, a pick, or a review. */
 export const tradeNeedsAttention = (trade: ShiftTradeResultData): boolean => {
-  if (trade.CanReview) return true;
+  if (canReviewTrade(trade)) return true;
   if (trade.Status !== ShiftTradeStatus.Open) return false;
   if (canRespondToTrade(trade)) return true;
   return canPickTrade(trade) && (trade.Users ?? []).some((user) => user.Offered && !user.Declined);
@@ -238,9 +283,9 @@ export const sectionMyTrades = (trades: readonly ShiftTradeResultData[]): Sectio
 /** Open requests in the department: what the caller can take, what they applied to, everything else. */
 export const sectionOpenTrades = (trades: readonly ShiftTradeResultData[]): Section<ShiftTradeResultData>[] =>
   nonEmpty([
-    { key: 'can-apply', titleKey: 'shifts.trade.section_can_apply', items: trades.filter((trade) => trade.CanApply) },
-    { key: 'applied', titleKey: 'shifts.trade.section_applied', items: trades.filter((trade) => !trade.CanApply && trade.MyState === ShiftTradeUserState.Proposed) },
-    { key: 'others', titleKey: 'shifts.trade.section_other_requests', items: trades.filter((trade) => !trade.CanApply && trade.MyState !== ShiftTradeUserState.Proposed) },
+    { key: 'can-apply', titleKey: 'shifts.trade.section_can_apply', items: trades.filter((trade) => canApplyToTrade(trade)) },
+    { key: 'applied', titleKey: 'shifts.trade.section_applied', items: trades.filter((trade) => !canApplyToTrade(trade) && trade.MyState === ShiftTradeUserState.Proposed) },
+    { key: 'others', titleKey: 'shifts.trade.section_other_requests', items: trades.filter((trade) => !canApplyToTrade(trade) && trade.MyState !== ShiftTradeUserState.Proposed) },
   ]);
 
 /** My Shifts in the order someone checks them: on now, waiting on a supervisor, then upcoming. */

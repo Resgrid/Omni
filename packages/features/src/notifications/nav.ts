@@ -23,7 +23,11 @@ export interface FeatureNavEntry {
   badge?: NavBadge;
 }
 
-/** The inbox exists where the variant has a push subject (BigBoard has none). The badge counts unread inbox items. */
+/**
+ * The inbox exists where the variant has a push subject (BigBoard has none). The badge counts unread inbox items.
+ * Every app opens it from the app bar bell (which carries the same count), so each places it hidden:
+ * `featureNav(notificationsNav, 'hidden')` (the route stays, for the bell and for push taps).
+ */
 export const notificationsNav: readonly FeatureNavEntry[] = [
   {
     id: 'notifications',

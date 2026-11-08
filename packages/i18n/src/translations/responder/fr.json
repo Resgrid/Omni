@@ -429,6 +429,7 @@
       "no_group": "Aucun groupe",
       "no_role_requirements": "Aucun rôle requis",
       "open_needs": "Besoins à pourvoir",
+      "past_note": "Ce jour de quart est terminé et ne peut plus être modifié.",
       "pending_note": "Votre inscription attend l'approbation d'un superviseur. Vous n'êtes pas en service tant qu'elle n'est pas approuvée.",
       "require_approval_note": "Les inscriptions et les échanges de ce quart doivent être approuvés par un superviseur.",
       "roster": "Effectif du jour",

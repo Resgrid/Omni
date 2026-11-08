@@ -1,7 +1,7 @@
 import { useTranslation } from '@resgrid/i18n';
 import type { CallProtocolsResultData } from '@resgrid/models';
 import { htmlToPlainText, Pressable, Text } from '@resgrid/ui';
-import { BookOpen, ChevronRight } from 'lucide-react-native';
+import { BookOpen } from 'lucide-react-native';
 import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -40,7 +40,6 @@ export const ProtocolCard: React.FC<ProtocolCardProps> = ({ protocol, onPress })
             </Text>
           ) : null}
         </View>
-        <ChevronRight size={18} color="#9CA3AF" />
       </View>
     </Pressable>
   );

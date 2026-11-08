@@ -3,13 +3,27 @@ import { type ShiftActionOutcome, useShiftsStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import { type ShiftDayGroupNeedsResultData, ShiftDayMyStatus, type ShiftDayResultData, type ShiftDayRosterResultData, type ShiftPersonOptionResultData } from '@resgrid/models';
 import { Badge, BadgeText, Box, Button, ButtonSpinner, ButtonText, HStack, Input, InputField, Spinner, Text, Textarea, TextareaInput, useThemeColors, VStack } from '@resgrid/ui';
-import { AlertCircle, CheckCircle, Clock, Repeat, Truck, UserMinus, UserPlus } from 'lucide-react-native';
+import { AlertCircle, CheckCircle, Clock, History, Repeat, Truck, UserMinus, UserPlus } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
 
 import { useShiftAction } from '../hooks/use-shift-action';
+import { useShiftDayOver } from '../hooks/use-shift-day-over';
 import { refreshAfterShiftChange } from '../lib/shift-loaders';
-import { canManageRosterEntry, canRequestTradeForDay, canWithdrawFromDay, getAssignmentTypeKey, getGroupOpenSlots, getManageableGroups, getMyStatusLabel, getRosterSourceLabel, groupRoster } from '../lib/shift-rules';
+import {
+  canCancelTradeForDay,
+  canManageRosterEntry,
+  canManageShiftDay,
+  canRequestTradeForDay,
+  canSignupForDay,
+  canWithdrawFromDay,
+  getAssignmentTypeKey,
+  getGroupOpenSlots,
+  getManageableGroups,
+  getMyStatusLabel,
+  getRosterSourceLabel,
+  groupRoster,
+} from '../lib/shift-rules';
 import { formatShiftLongDate, formatShiftTime, isOvernightShift, isWorkshiftDay } from '../lib/shift-time';
 import { ShiftSelectRow } from './shift-select-row';
 
@@ -135,7 +149,8 @@ export interface ShiftDayDetailsProps {
 
 /**
  * One shift day: when, staffing, the caller's standing, open needs and roster, plus inline panels for sign-up
- * (pick a team), withdraw, request/cancel a trade and — for supervisors — add, remove and review sign-ups.
+ * (pick a team), withdraw, request/cancel a trade and — for supervisors — add, remove and review sign-ups. A day that is
+ * over is read-only: it says so and offers none of them (also when it ends while open).
  */
 export const ShiftDayDetails: React.FC<ShiftDayDetailsProps> = ({ shiftDayId, fallback = null, workshift }) => {
   const { t, i18n } = useTranslation();
@@ -152,6 +167,7 @@ export const ShiftDayDetails: React.FC<ShiftDayDetailsProps> = ({ shiftDayId, fa
 
   const day = loaded ?? fallback;
   const isWorkshift = workshift ?? isWorkshiftDay(day);
+  const isOver = useShiftDayOver(day);
 
   const [panel, setPanel] = useState<DayPanel>('details');
   const [tradeMode, setTradeMode] = useState<TradeMode>('open');
@@ -211,8 +227,12 @@ export const ShiftDayDetails: React.FC<ShiftDayDetailsProps> = ({ shiftDayId, fa
   const overnight = isOvernightShift(day.Start, day.End);
   const canWithdraw = canWithdrawFromDay(day, userId);
   const canTrade = canRequestTradeForDay(day);
-  // Static shift days are staffed from unit crews: no sign-ups, withdrawals or per-day roster edits here.
-  const canManageDay = day.CanManage && !isWorkshift;
+  const canCancelTrade = canCancelTradeForDay(day);
+  // Static shift days are staffed from unit crews: no sign-ups, withdrawals or per-day roster edits here. A finished day
+  // takes no changes at all (the rules check it; the open panel falls back to the overview).
+  const canSignup = !isWorkshift && canSignupForDay(day);
+  const canManageDay = !isWorkshift && canManageShiftDay(day);
+  const activePanel: DayPanel = isOver ? 'details' : panel;
   const isRosterLoading = isDayLoading && (day.Roster ?? []).length === 0;
   const needs = day.Needs ?? [];
 
@@ -327,6 +347,19 @@ export const ShiftDayDetails: React.FC<ShiftDayDetailsProps> = ({ shiftDayId, fa
 
   const renderDetails = () => (
     <VStack space="lg">
+      {isOver ? (
+        <Box className="rounded-lg bg-background-100 p-3" testID="shift-day-past-note">
+          <HStack space="sm" className="items-center">
+            <View>
+              <History size={18} color={colors.icon} />
+            </View>
+            <Text size="sm" className="flex-1 text-typography-700">
+              {t('shifts.day.past_note')}
+            </Text>
+          </HStack>
+        </Box>
+      ) : null}
+
       {myStatus ? (
         <Box
           className={`rounded-lg p-3 ${day.MyStatus === ShiftDayMyStatus.OnRoster ? 'bg-background-success' : day.MyStatus === ShiftDayMyStatus.PendingApproval ? 'bg-background-warning' : 'bg-background-error'}`}
@@ -370,14 +403,14 @@ export const ShiftDayDetails: React.FC<ShiftDayDetailsProps> = ({ shiftDayId, fa
         </Box>
       ) : null}
 
-      {day.RequireApproval ? (
+      {day.RequireApproval && !isOver ? (
         <Text size="sm" className="text-typography-600">
           {t('shifts.day.require_approval_note')}
         </Text>
       ) : null}
 
       <VStack space="sm">
-        {day.CanSignup && !isWorkshift ? (
+        {canSignup ? (
           <Button onPress={openSignup} isDisabled={isDayLoading || anyBusy} accessibilityHint={t('shifts.signup_panel.hint')} testID="shift-day-signup-button">
             <View>
               <UserPlus size={16} color={colors.textInverse} />
@@ -393,7 +426,7 @@ export const ShiftDayDetails: React.FC<ShiftDayDetailsProps> = ({ shiftDayId, fa
             <ButtonText>{t('shifts.actions.request_trade')}</ButtonText>
           </Button>
         ) : null}
-        {day.MyTradeId ? (
+        {canCancelTrade ? (
           <Button variant="outline" action="secondary" onPress={() => setPanel('cancel-trade')} isDisabled={anyBusy} testID="shift-day-cancel-trade-button">
             <ButtonText>{t('shifts.actions.cancel_trade')}</ButtonText>
           </Button>
@@ -445,7 +478,7 @@ export const ShiftDayDetails: React.FC<ShiftDayDetailsProps> = ({ shiftDayId, fa
                   key={`${entry.UserId}-${entry.ShiftSignupId}-${entry.UnitId ?? ''}`}
                   entry={entry}
                   isMe={entry.UserId === userId}
-                  canManage={isWorkshift ? false : canManageRosterEntry(day, entry)}
+                  canManage={isWorkshift || isOver ? false : canManageRosterEntry(day, entry)}
                   onReview={openReview}
                   onRemove={openRemove}
                 />
@@ -721,7 +754,7 @@ export const ShiftDayDetails: React.FC<ShiftDayDetailsProps> = ({ shiftDayId, fa
         </HStack>
       </Box>
 
-      {panels[panel]()}
+      {panels[activePanel]()}
     </VStack>
   );
 };

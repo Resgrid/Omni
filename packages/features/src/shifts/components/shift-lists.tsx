@@ -8,7 +8,7 @@ import React, { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 
 import type { ShiftSheetAction, ShiftTradeAction } from '../lib/shift-action-types';
-import { getRosterSourceLabel, sectionMyTrades, sectionOpenTrades } from '../lib/shift-rules';
+import { getRosterSourceLabel, isPendingSignupOver, sectionMyTrades, sectionOpenTrades } from '../lib/shift-rules';
 import { formatShiftDate, formatShiftTime } from '../lib/shift-time';
 import { ShiftTradeCard } from './shift-trade-card';
 
@@ -145,14 +145,20 @@ const PendingSignupCard: React.FC<{ signup: PendingShiftSignupResultData; onActi
           {t('shifts.review.requested_at', { date: requested })}
         </Text>
       ) : null}
-      <HStack space="sm" className="mt-2">
-        <Button size="sm" action="positive" onPress={() => onAction({ kind: 'review-signup', signup, approve: true })} testID={`signup-approve-${signup.ShiftSignupId}`}>
-          <ButtonText>{t('shifts.actions.approve')}</ButtonText>
-        </Button>
-        <Button size="sm" action="negative" variant="outline" onPress={() => onAction({ kind: 'review-signup', signup, approve: false })} testID={`signup-deny-${signup.ShiftSignupId}`}>
-          <ButtonText>{t('shifts.actions.deny')}</ButtonText>
-        </Button>
-      </HStack>
+      {isPendingSignupOver(signup) ? (
+        <Text size="sm" className="mt-2 text-typography-500" testID={`signup-over-${signup.ShiftSignupId}`}>
+          {t('shifts.day.past_note')}
+        </Text>
+      ) : (
+        <HStack space="sm" className="mt-2">
+          <Button size="sm" action="positive" onPress={() => onAction({ kind: 'review-signup', signup, approve: true })} testID={`signup-approve-${signup.ShiftSignupId}`}>
+            <ButtonText>{t('shifts.actions.approve')}</ButtonText>
+          </Button>
+          <Button size="sm" action="negative" variant="outline" onPress={() => onAction({ kind: 'review-signup', signup, approve: false })} testID={`signup-deny-${signup.ShiftSignupId}`}>
+            <ButtonText>{t('shifts.actions.deny')}</ButtonText>
+          </Button>
+        </HStack>
+      )}
     </VStack>
   );
 };

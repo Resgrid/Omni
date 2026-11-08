@@ -1,6 +1,6 @@
 // @resgrid/features/shifts — Responder shifts (omni-plan §7.11): Today, My Shifts, Sign up, Calendar, Trades (request,
-// accept/decline, apply/withdraw, pick, cancel), On duty and supervisor Approvals; shift-day detail with sign-up,
-// withdraw, trade and roster management. Route files re-export the screens, e.g.
+// accept/decline, apply/withdraw, pick, cancel), On duty and supervisor Approvals; the shift-day screen with sign-up,
+// withdraw, trade and roster management (none once the day is over). Route files re-export the screens, e.g.
 //   export { default } from '@resgrid/features/shifts/screens/shifts';
 
 // Screens
@@ -14,7 +14,6 @@ export { ShiftCalendarView, type ShiftCalendarViewProps } from './components/shi
 export { ShiftCard, type ShiftCardProps } from './components/shift-card';
 export { ShiftDayCard, type ShiftDayCardProps } from './components/shift-day-card';
 export { ShiftDayDetails, type ShiftDayDetailsProps } from './components/shift-day-details';
-export { ShiftDayDetailsSheet, type ShiftDayDetailsSheetProps } from './components/shift-day-details-sheet';
 export { ShiftApprovalsList, type ShiftApprovalsListProps, ShiftOnDutyList, type ShiftOnDutyListProps, type ShiftTradesFilter, ShiftTradesList, type ShiftTradesListProps } from './components/shift-lists';
 export { ShiftSelectRow, type ShiftSelectRowProps } from './components/shift-select-row';
 export { ShiftDetailsSheet, type ShiftDetailsSheetProps, ShiftTradeDetailsSheet, type ShiftTradeDetailsSheetProps } from './components/shift-sheets';
@@ -27,7 +26,19 @@ export { type ShiftDayLists, useShiftDayLists } from './hooks/use-shift-day-list
 
 // Pure helpers
 export type { ShiftSheetAction, ShiftTradeAction } from './lib/shift-action-types';
-export { loadShiftCalendar, loadShiftView, refreshAfterShiftChange, SHIFT_VIEWS, type ShiftCalendarSelection, type ShiftChangeTarget, type ShiftView } from './lib/shift-loaders';
+export {
+  loadShiftCalendar,
+  loadShiftView,
+  refreshAfterShiftChange,
+  resolveShiftCalendarStart,
+  SHIFT_VIEWS,
+  type ShiftCalendarRouteParams,
+  type ShiftCalendarSelection,
+  type ShiftCalendarStart,
+  type ShiftChangeTarget,
+  type ShiftView,
+  toMonthParam,
+} from './lib/shift-loaders';
 export * from './lib/shift-rules';
 export * from './lib/shift-time';
 

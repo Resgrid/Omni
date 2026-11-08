@@ -3316,7 +3316,7 @@
   "packages/features/src/shifts/__tests__/shifts.test.tsx": {
     "anti-slop/no-unsafe-dictionary-type": 1,
     "anti-slop/require-readable-spacing": 1,
-    "anti-slop/require-safety-comment-for-type-assertion": 4
+    "anti-slop/require-safety-comment-for-type-assertion": 1
   },
   "packages/features/src/shifts/__tests__/source-rules.test.ts": {
     "anti-slop/no-array-filter-map": 1,
@@ -3344,7 +3344,7 @@
     "anti-slop/require-readable-spacing": 1
   },
   "packages/features/src/shifts/components/shift-trade-card.tsx": {
-    "anti-slop/require-readable-spacing": 3
+    "anti-slop/require-readable-spacing": 1
   },
   "packages/features/src/shifts/components/shift-trade-details.tsx": {
     "anti-slop/require-readable-spacing": 3
@@ -3354,7 +3354,7 @@
     "anti-slop/require-readable-spacing": 3
   },
   "packages/features/src/shifts/index.ts": {
-    "anti-slop/require-readable-spacing": 17
+    "anti-slop/require-readable-spacing": 16
   },
   "packages/features/src/shifts/lib/shift-loaders.ts": {
     "anti-slop/require-readable-spacing": 16,
@@ -3362,16 +3362,15 @@
   },
   "packages/features/src/shifts/lib/shift-rules.ts": {
     "anti-slop/no-runtime-typeof": 1,
-    "anti-slop/require-readable-spacing": 19
+    "anti-slop/require-readable-spacing": 18
   },
   "packages/features/src/shifts/lib/shift-time.ts": {
     "anti-slop/no-known-value-widening": 1,
     "anti-slop/require-readable-spacing": 8
   },
   "packages/features/src/shifts/screens/shifts.tsx": {
-    "anti-slop/no-runtime-typeof": 1,
     "anti-slop/no-unsafe-dictionary-type": 1,
-    "anti-slop/require-readable-spacing": 25,
+    "anti-slop/require-readable-spacing": 24,
     "anti-slop/require-safety-comment-for-type-assertion": 3
   },
   "packages/features/src/staffing/__tests__/staffing.test.tsx": {

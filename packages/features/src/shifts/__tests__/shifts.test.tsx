@@ -2,14 +2,15 @@ import '../../status/__tests__/test-setup';
 
 import { useAuthStore } from '@resgrid/auth';
 import { useShiftsStore } from '@resgrid/data';
-import { ShiftAssignmentType, ShiftDayMyStatus, ShiftRosterSource, ShiftTradeDirection, ShiftTradeUserState } from '@resgrid/models';
+import { ShiftAssignmentType, ShiftDayMyStatus, ShiftRosterSource, ShiftTradeDirection, ShiftTradeStatus, ShiftTradeUserState } from '@resgrid/models';
 import { useToastStore } from '@resgrid/ui';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-import { useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import React from 'react';
 
 import { ShiftActionSheet } from '../components/shift-action-sheet';
 import { ShiftDayDetails } from '../components/shift-day-details';
+import { ShiftApprovalsList } from '../components/shift-lists';
 import { ShiftTradeCard } from '../components/shift-trade-card';
 import ShiftDayScreen from '../screens/shift-day';
 import ShiftTradeScreen from '../screens/shift-trade';
@@ -25,7 +26,7 @@ beforeEach(() => {
   actions = mockShiftActions();
   useAuthStore.setState({ userId: 'me' });
   useToastStore.getState().clearToasts();
-  (useLocalSearchParams as jest.Mock).mockReturnValue({});
+  jest.mocked(useLocalSearchParams).mockReturnValue({});
   // Focus = mount (expo-router's focus effect without a navigator).
   (useFocusEffect as jest.Mock).mockImplementation((effect: () => void | (() => void)) => React.useEffect(effect, [effect]));
 });
@@ -83,6 +84,7 @@ describe('ShiftsScreen', () => {
     await render(<ShiftsScreen />);
 
     await fireEvent.press(screen.getByTestId('shifts-segment-mine'));
+    expect(router.setParams).toHaveBeenLastCalledWith({ view: 'mine' });
     expect(actions.fetchMyShifts).toHaveBeenCalled();
     expect(actions.fetchWorkshiftDays).toHaveBeenCalledWith('mine', { mine: true }, undefined);
     expect(screen.getByTestId('shift-card-s1')).toBeTruthy();
@@ -137,12 +139,49 @@ describe('ShiftsScreen', () => {
     expect(actions.fetchShiftDaysForDateRange).toHaveBeenLastCalledWith(expect.any(String), expect.any(String), 's1', undefined);
   });
 
-  it('opens a day in the sheet and loads its roster', async () => {
-    useShiftsStore.setState({ todaysShiftDays: [makeDay('1')] });
+  it('opens a day as its own screen; static shift days say so in the link', async () => {
+    useShiftsStore.setState({
+      todaysShiftDays: [makeDay('1')],
+      workshiftDays: { today: [makeDay('w1', { ShiftType: ShiftAssignmentType.Workshift, Start: '2030-05-10T06:00:00' })], mine: [], calendar: [] },
+    });
     await render(<ShiftsScreen />);
     await fireEvent.press(screen.getByTestId('shift-day-card-1'));
-    expect(screen.getByTestId('shift-day-details', q)).toBeTruthy();
-    expect(actions.fetchShiftDay).toHaveBeenCalledWith('1', { workshift: false });
+    expect(router.push).toHaveBeenLastCalledWith('/shifts/day/1');
+    await fireEvent.press(screen.getByTestId('shift-day-card-w1'));
+    expect(router.push).toHaveBeenLastCalledWith('/shifts/day/w1?workshift=1');
+    expect(screen.queryByTestId('shift-day-details', q)).toBeNull();
+  });
+
+  it('calendar: opening a day from another month leaves that month and the picked day in place, and in the route', async () => {
+    useShiftsStore.setState({ calendarRange: { start: '2030-05-01', end: '2030-05-31', shiftId: null } });
+    await render(<ShiftsScreen initialView="calendar" />);
+    await fireEvent.press(screen.getByTestId('shift-calendar-next'));
+    expect(router.setParams).toHaveBeenLastCalledWith({ month: '2030-06', date: undefined });
+    await act(() => {
+      useShiftsStore.setState({ calendarDays: [makeDay('j14', { ShiftDay: '2030-06-14T00:00:00', Start: '2030-06-14T07:00:00', End: '2030-06-14T19:00:00' })] });
+    });
+    await fireEvent.press(screen.getByTestId('shift-calendar-day-2030-06-14'));
+    expect(router.setParams).toHaveBeenLastCalledWith({ date: '2030-06-14' });
+
+    await fireEvent.press(screen.getByTestId('shift-day-card-j14'));
+    expect(router.push).toHaveBeenLastCalledWith('/shifts/day/j14');
+    // The day screen goes on top of this one (the stack keeps it mounted): Back finds the same month and day.
+    expect(screen.getByTestId('shift-calendar-month')).toHaveTextContent(/2030/);
+    expect(screen.getByTestId('shift-calendar-day-2030-06-14')).toBeSelected();
+    expect(screen.getByTestId('shift-day-card-j14')).toBeTruthy();
+    expect(actions.fetchShiftDaysForDateRange).toHaveBeenLastCalledWith('2030-06-01', '2030-06-30', null, undefined);
+  });
+
+  it('calendar: a screen rebuilt from its route (a reload, a history step) opens on that month and day', async () => {
+    jest.mocked(useLocalSearchParams).mockReturnValue({ view: 'calendar', month: '2030-06', date: '2030-06-14' });
+    useShiftsStore.setState({
+      calendarRange: { start: '2030-05-01', end: '2030-05-31', shiftId: 's1' },
+      calendarDays: [makeDay('j14', { ShiftDay: '2030-06-14T00:00:00', Start: '2030-06-14T07:00:00', End: '2030-06-14T19:00:00' })],
+    });
+    await render(<ShiftsScreen />);
+    expect(actions.fetchShiftDaysForDateRange).toHaveBeenCalledWith('2030-06-01', '2030-06-30', 's1', undefined);
+    expect(screen.getByTestId('shift-calendar-day-2030-06-14')).toBeSelected();
+    expect(screen.getByTestId('shift-day-card-j14')).toBeTruthy();
   });
 
   it('trades: an action on a card asks for confirmation, then responds with the offered swap-back', async () => {
@@ -268,6 +307,59 @@ describe('ShiftDayDetails', () => {
     await waitFor(() => expect(actions.assignToShiftDay).toHaveBeenCalledWith('d1', 'u9', 'g1'));
   });
 
+  it('a day that is over is read-only: it says so and offers no sign-up, trade, withdrawal or roster change', async () => {
+    const day = makeDay('old', {
+      ShiftDay: '2020-05-10T00:00:00',
+      Start: '2020-05-10T07:00:00',
+      End: '2020-05-10T19:00:00',
+      EndUtc: '2020-05-10T23:00:00Z',
+      CanSignup: true,
+      CanManage: true,
+      CanTrade: true,
+      RequireApproval: true,
+      MyStatus: ShiftDayMyStatus.OnRoster,
+      MySignupId: 'sig-me',
+      MyTradeId: 'tr1',
+      Needs: [{ GroupId: 'g1', GroupName: 'Station 1', GroupNeeds: [], CanManage: true }],
+      Roster: [roster('me', { ShiftSignupId: 'sig-me' }), roster('u2', { ApprovalPending: true })],
+    });
+
+    useShiftsStore.setState({ shiftDaysById: { old: day } });
+    await render(<ShiftDayDetails shiftDayId="old" />);
+    expect(screen.getByTestId('shift-day-past-note')).toHaveTextContent('shifts.day.past_note');
+    expect(screen.getByTestId('roster-entry-u2')).toBeTruthy();
+
+    const actionIds = [
+      'shift-day-signup-button',
+      'shift-day-trade-button',
+      'shift-day-cancel-trade-button',
+      'shift-day-withdraw-button',
+      'shift-day-add-person-button',
+      'roster-approve-u2',
+      'roster-deny-u2',
+      'roster-remove-u2',
+    ];
+
+    expect(actionIds.filter((id) => screen.queryByTestId(id) !== null)).toEqual([]);
+    expect(screen.queryByText('shifts.day.require_approval_note')).toBeNull();
+  });
+
+  it('a day that ends while open drops its actions and the open panel', async () => {
+    const day = makeDay('soon', { CanSignup: true, EndUtc: new Date(Date.now() + 60_000).toISOString(), Needs: [{ GroupId: 'g1', GroupName: 'Station 1', GroupNeeds: [], CanManage: false }] });
+    useShiftsStore.setState({ shiftDaysById: { soon: day } });
+    await render(<ShiftDayDetails shiftDayId="soon" />);
+    expect(screen.queryByTestId('shift-day-past-note')).toBeNull();
+    await fireEvent.press(screen.getByTestId('shift-day-signup-button'));
+    expect(screen.getByTestId('shift-day-signup-panel')).toBeTruthy();
+
+    await act(() => {
+      jest.advanceTimersByTime(62_000);
+    });
+    expect(screen.getByTestId('shift-day-past-note')).toBeTruthy();
+    expect(screen.queryByTestId('shift-day-signup-panel')).toBeNull();
+    expect(screen.queryByTestId('shift-day-signup-button')).toBeNull();
+  });
+
   it('shows the not-found state when the day cannot be loaded', async () => {
     await render(<ShiftDayDetails shiftDayId="gone" />);
     expect(screen.getByTestId('shift-day-missing')).toBeTruthy();
@@ -308,15 +400,65 @@ describe('ShiftTradeCard and ShiftActionSheet', () => {
   });
 });
 
+describe('approvals and trades on a finished day', () => {
+  it('a pending sign-up or trade whose day is over can no longer be approved, denied or taken', async () => {
+    const onAction = jest.fn();
+    await render(
+      <ShiftApprovalsList
+        signups={[makeSignup('p-old', { End: '2020-05-10T19:00:00' }), makeSignup('p-new')]}
+        trades={[makeTrade('t-old', { Status: ShiftTradeStatus.PendingApproval, CanReview: true, IsOver: true })]}
+        isLoading={false}
+        onRefresh={async () => undefined}
+        onAction={onAction}
+        onOpenTradeDetails={jest.fn()}
+      />
+    );
+    expect(screen.getByTestId('signup-over-p-old')).toHaveTextContent('shifts.day.past_note');
+    expect(screen.queryByTestId('signup-approve-p-old')).toBeNull();
+    expect(screen.getByTestId('signup-approve-p-new')).toBeTruthy();
+    expect(screen.getByTestId('trade-over-t-old')).toBeTruthy();
+    expect(screen.queryByTestId('trade-approve-t-old')).toBeNull();
+  });
+
+  it('the Trades badge leaves out open requests whose day is over', async () => {
+    useShiftsStore.setState({ openTrades: [makeTrade('t1', { IsOpen: true, CanApply: true }), makeTrade('t2', { IsOpen: true, CanApply: true, IsOver: true })] });
+    await render(<ShiftsScreen initialView="trades" />);
+    expect(screen.getByTestId('shifts-segment-trades-badge')).toHaveTextContent('1');
+    expect(screen.getByTestId('trade-apply-t1')).toBeTruthy();
+    expect(screen.queryByTestId('trade-apply-t2')).toBeNull();
+  });
+});
+
 describe('deep-link screens', () => {
   it('ShiftDayScreen loads a static shift day by route id', async () => {
-    (useLocalSearchParams as jest.Mock).mockReturnValue({ id: 'w5', workshift: '1' });
+    jest.mocked(useLocalSearchParams).mockReturnValue({ id: 'w5', workshift: '1' });
     await render(<ShiftDayScreen />);
     expect(actions.fetchShiftDay).toHaveBeenCalledWith('w5', { workshift: true });
   });
 
+  it('ShiftDayScreen shows a day picked from a list at once, titled by its shift, while the full day loads', async () => {
+    jest.mocked(useLocalSearchParams).mockReturnValue({ id: 'c1' });
+    useShiftsStore.setState({ calendarDays: [makeDay('c1', { ShiftName: 'Night Shift' })], loading: { shiftDay: true } });
+    await render(<ShiftDayScreen />);
+    expect(actions.fetchShiftDay).toHaveBeenCalledWith('c1', { workshift: false });
+    expect(screen.getByTestId('shift-day-details')).toBeTruthy();
+    expect(screen.queryByTestId('shift-day-loading')).toBeNull();
+    expect(screen.getByTestId('shift-day-header')).toHaveTextContent(/Night Shift/);
+  });
+
+  it('ShiftDayScreen Back returns to the screen underneath, or to Shifts when opened cold', async () => {
+    jest.mocked(useLocalSearchParams).mockReturnValue({ id: 'c1' });
+    await render(<ShiftDayScreen />);
+    await fireEvent.press(screen.getByTestId('back-button'));
+    expect(router.back).toHaveBeenCalled();
+
+    jest.mocked(router.canGoBack).mockReturnValueOnce(false);
+    await fireEvent.press(screen.getByTestId('back-button'));
+    expect(router.replace).toHaveBeenCalledWith('/shifts');
+  });
+
   it('ShiftDayScreen and ShiftTradeScreen refuse unsafe ids', async () => {
-    (useLocalSearchParams as jest.Mock).mockReturnValue({ id: '../settings' });
+    jest.mocked(useLocalSearchParams).mockReturnValue({ id: '../settings' });
     await render(<ShiftDayScreen />);
     expect(screen.getByTestId('shift-day-invalid')).toBeTruthy();
     await render(<ShiftTradeScreen />);
