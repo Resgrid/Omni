@@ -578,7 +578,6 @@
     "save": "Зберегти",
     "search_gifs": "Пошук GIF",
     "search_people": "Пошук людей",
-    "section_assistant": "Асистент",
     "section_channels": "Канали",
     "section_direct_messages": "Прямі повідомлення",
     "section_incidents": "Інциденти",
@@ -3016,7 +3015,6 @@
     "status_tab": "Status"
   },
   "tabs": {
-    "assistant": "Асистент",
     "calendar": "Календар",
     "calls": "Виклики",
     "chat": "Чат",

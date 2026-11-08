@@ -3,6 +3,9 @@ import { StyleSheet } from 'react-native';
 
 type WithTestID = { testID?: string };
 
+/** React Native's press handler (`Text` takes one); a span or div has no such event. */
+type WithPress = { onPress?: (event: React.SyntheticEvent<HTMLElement>) => void };
+
 export type DomProps<T> = Omit<T, 'testID'> & { 'data-testid'?: string };
 
 // React Native-only props that must never reach a DOM element. React warns
@@ -25,6 +28,10 @@ const RN_ONLY_PROPS = new Set([
   'dataDetectorType',
   'onTextLayout',
   'onLayout',
+  // Press-in/out and long press have no DOM counterpart (onPress becomes a click, see pressDomProps).
+  'onLongPress',
+  'onPressIn',
+  'onPressOut',
   'nativeID',
   'hitSlop',
   'collapsable',
@@ -78,6 +85,7 @@ const ROLE_MAP: Record<string, string | null> = {
 };
 
 type AccessibilityState = { disabled?: boolean; selected?: boolean; checked?: boolean | 'mixed'; busy?: boolean; expanded?: boolean };
+
 type AccessibilityValue = { min?: number; max?: number; now?: number; text?: string };
 
 /** CSS that clamps text to `numberOfLines` lines — the web counterpart of React Native's `numberOfLines`. */
@@ -101,48 +109,65 @@ export function toAriaProps(props: Record<string, unknown>): Record<string, unkn
 
   if (typeof role === 'string' && role.length > 0) {
     const mapped = Object.prototype.hasOwnProperty.call(ROLE_MAP, role) ? ROLE_MAP[role] : role;
+
     if (mapped) {
       aria.role = mapped;
     }
+
     if (role === 'header') {
       aria['aria-level'] = 2;
     }
   }
+
   if (typeof props.accessibilityLabel === 'string') {
     aria['aria-label'] = props.accessibilityLabel;
   }
+
   if (typeof props.accessibilityHint === 'string') {
     aria['aria-description'] = props.accessibilityHint;
   }
+
   if (typeof props.nativeID === 'string') {
     aria.id = props.nativeID;
   }
+
   if (props.accessibilityLiveRegion === 'polite' || props.accessibilityLiveRegion === 'assertive') {
     aria['aria-live'] = props.accessibilityLiveRegion;
   } else if (props.accessibilityLiveRegion === 'none') {
     aria['aria-live'] = 'off';
   }
+
   if (props.accessibilityElementsHidden === true || props.importantForAccessibility === 'no-hide-descendants') {
     aria['aria-hidden'] = true;
   }
+
   if (props.accessibilityViewIsModal === true) {
     aria['aria-modal'] = true;
   }
 
   const state = props.accessibilityState as AccessibilityState | undefined;
+
   if (state && typeof state === 'object') {
     if (state.disabled !== undefined) aria['aria-disabled'] = state.disabled;
+
     if (state.selected !== undefined) aria['aria-selected'] = state.selected;
+
     if (state.checked !== undefined) aria['aria-checked'] = state.checked;
+
     if (state.busy !== undefined) aria['aria-busy'] = state.busy;
+
     if (state.expanded !== undefined) aria['aria-expanded'] = state.expanded;
   }
 
   const value = props.accessibilityValue as AccessibilityValue | undefined;
+
   if (value && typeof value === 'object') {
     if (value.min !== undefined) aria['aria-valuemin'] = value.min;
+
     if (value.max !== undefined) aria['aria-valuemax'] = value.max;
+
     if (value.now !== undefined) aria['aria-valuenow'] = value.now;
+
     if (value.text !== undefined) aria['aria-valuetext'] = value.text;
   }
 
@@ -157,18 +182,69 @@ export function withPixelLineHeight(style: React.CSSProperties): React.CSSProper
   return Number.isFinite(style.lineHeight) ? { ...style, lineHeight: `${Number(style.lineHeight)}px` } : style;
 }
 
+/** The DOM props a press reads (state, a caller's own role, tab stop and handlers) and sets on a span or div. */
+interface PressDomTarget {
+  disabled?: unknown;
+  'aria-disabled'?: unknown;
+  role?: unknown;
+  tabIndex?: unknown;
+  onClick?: unknown;
+  onKeyDown?: unknown;
+  style?: unknown;
+}
+
+/**
+ * What a React Native `onPress` becomes on a span or div: a click, a pointer cursor, a tab stop, and Enter (Space too
+ * unless it is a link) from the keyboard, as a button or link would have. None of it while disabled (`disabled`, or
+ * `aria-disabled` as `true` or `"true"`). A web-only `onClick` the caller gave wins. As on a native button, the key
+ * clicks the element, so it runs whatever a click runs; a caller's `onKeyDown` runs first and cancels that with
+ * `preventDefault()`.
+ */
+function pressDomProps(onPress: NonNullable<WithPress['onPress']>, domProps: PressDomTarget): PressDomTarget {
+  if (domProps.disabled === true || domProps['aria-disabled'] === true || domProps['aria-disabled'] === 'true') {
+    return {};
+  }
+
+  const role = domProps.role ?? 'button';
+  // SAFETY: the web wrappers type `onKeyDown` as their element's own React keyboard handler.
+  const callerKeyDown = domProps.onKeyDown as ((event: React.KeyboardEvent<HTMLElement>) => void) | undefined;
+
+  const onKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
+    callerKeyDown?.(event);
+
+    if (event.defaultPrevented) return;
+
+    if (event.key === 'Enter' || (event.key === ' ' && role !== 'link')) {
+      // Space would otherwise scroll the page.
+      event.preventDefault();
+      // The same action as a pointer: the caller's onClick when it gave one, onPress otherwise.
+      event.currentTarget.click();
+    }
+  };
+
+  return {
+    role,
+    tabIndex: domProps.tabIndex ?? 0,
+    onClick: domProps.onClick ?? onPress,
+    onKeyDown,
+    // SAFETY: an array style was flattened into one object above, and a web wrapper takes a style object.
+    style: { cursor: 'pointer', ...((domProps.style as React.CSSProperties | undefined) ?? {}) },
+  };
+}
+
 /**
  * Converts React Native props into valid DOM props for the web wrappers (`index.web.tsx`):
  * - `testID` → `data-testid`;
  * - accessibility* / `nativeID` → aria-* / `role` / `id` (explicit aria-* and `role` props win);
+ * - `onPress` → a click and keyboard activation on a focusable element (`pressDomProps`);
  * - `numberOfLines` → a CSS line clamp merged into `style`;
  * - a numeric `lineHeight` → pixels (`withPixelLineHeight`);
  * - style arrays are flattened (a DOM element only takes one object — an array makes React set
  *   style[0] on the CSSStyleDeclaration, which throws and takes the whole screen down);
  * - every other React Native-only prop is dropped so React does not warn about it.
  */
-export function toDomProps<T extends object>(props: T & WithTestID): DomProps<T> {
-  const { testID, ...rest } = props as T & WithTestID & Record<string, unknown>;
+export function toDomProps<T extends object>(props: T & WithTestID & WithPress): DomProps<T> {
+  const { testID, onPress, ...rest } = props as T & WithTestID & WithPress & Record<string, unknown>;
   const domProps: Record<string, unknown> = { ...toAriaProps(rest) };
 
   for (const [key, value] of Object.entries(rest)) {
@@ -183,6 +259,7 @@ export function toDomProps<T extends object>(props: T & WithTestID): DomProps<T>
   }
 
   const clamp = lineClampStyle(rest.numberOfLines as number | undefined);
+
   if (clamp) {
     domProps.style = { ...clamp, ...((domProps.style as React.CSSProperties | undefined) ?? {}) };
   }
@@ -190,6 +267,10 @@ export function toDomProps<T extends object>(props: T & WithTestID): DomProps<T>
   // A raw element has no pointerEvents prop; 'none'/'auto' carry over as CSS (box-* have no CSS equivalent).
   if (rest.pointerEvents === 'none' || rest.pointerEvents === 'auto') {
     domProps.style = { pointerEvents: rest.pointerEvents, ...((domProps.style as React.CSSProperties | undefined) ?? {}) };
+  }
+
+  if (onPress) {
+    Object.assign(domProps, pressDomProps(onPress, domProps));
   }
 
   if (testID) {

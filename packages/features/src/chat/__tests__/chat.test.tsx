@@ -16,7 +16,7 @@ import { ChatGate } from '../components/chat-gate';
 import { MessageActionsSheet } from '../components/message-actions-sheet';
 import { MessageBubble } from '../components/message-bubble';
 import { NewConversationSheet } from '../components/new-conversation-sheet';
-import { buildGifMetadata, groupChannels, isOwnMessage, parseGifMetadata } from '../lib/chat-format';
+import { assistantChannelOf, buildGifMetadata, groupChannels, isOwnMessage, parseGifMetadata } from '../lib/chat-format';
 import ChatChannelsScreen from '../screens/chat-channels';
 import ChatConversationScreen from '../screens/chat-conversation';
 
@@ -104,6 +104,11 @@ beforeEach(() => {
 describe('chat format', () => {
   it('groups channels into sections and recognises own messages (as user or as unit)', () => {
     expect(groupChannels(useChatStore.getState().channels).map((group) => group.section)).toEqual(['direct', 'channels', 'incidents']);
+    // The assistant is pinned above the sections, not listed in one.
+    const bot = channel('b1', 'Assistant', ChatChannelType.Chatbot, { UnreadCount: 2 });
+    expect(groupChannels([...useChatStore.getState().channels, bot]).map((group) => group.section)).toEqual(['direct', 'channels', 'incidents']);
+    expect(assistantChannelOf([...useChatStore.getState().channels, bot])).toBe(bot);
+    expect(assistantChannelOf(useChatStore.getState().channels)).toBeNull();
     expect(isOwnMessage(message('x', { SenderUserId: 'me' }), 'me', null)).toBe(true);
     expect(isOwnMessage(message('x', { SenderParticipantType: 1, SenderUnitId: 7, SenderUserId: 'me' }), 'me', 7)).toBe(true);
     expect(isOwnMessage(message('x', { SenderParticipantType: 1, SenderUnitId: 8 }), 'me', 7)).toBe(false);
@@ -222,6 +227,29 @@ describe('ChatChannelsScreen', () => {
     expect(screen.getByTestId('chat-channel-c1-unread')).toHaveTextContent('3');
     await fireEvent.press(screen.getByTestId('chat-channel-c1'));
     expect(router.push).toHaveBeenCalledWith('/chat/c1');
+  });
+
+  // Every chat app reaches the assistant from Chat, before Core has made its channel and with no menu entry of its own.
+  it('pins the assistant first and opens its screen', async () => {
+    await render(<ChatChannelsScreen />);
+    expect(screen.getByTestId('chat-assistant')).toHaveAccessibleName('chatbot.title');
+    expect(screen.queryByTestId('chat-assistant-unread')).toBeNull();
+    await fireEvent.press(screen.getByTestId('chat-assistant'));
+    expect(router.push).toHaveBeenCalledWith('/chatbot');
+  });
+
+  it('shows the assistant channel’s unread count on the pinned entry, not as a list row', async () => {
+    useChatStore.setState({ channels: [...useChatStore.getState().channels, channel('b1', 'Assistant', ChatChannelType.Chatbot, { UnreadCount: 2 })] });
+    await render(<ChatChannelsScreen />);
+    expect(screen.getByTestId('chat-assistant-unread')).toHaveTextContent('2');
+    expect(screen.queryByTestId('chat-channel-b1')).toBeNull();
+  });
+
+  it('keeps the assistant reachable when there are no conversations', async () => {
+    useChatStore.setState({ channels: [] });
+    await render(<ChatChannelsScreen />);
+    expect(screen.getByTestId('chat-empty')).toBeTruthy();
+    expect(screen.getByTestId('chat-assistant')).toBeTruthy();
   });
 });
 

@@ -4,7 +4,7 @@ import { ActionBaseTypes } from '@resgrid/features/status';
 import type { CallResultData } from '@resgrid/models';
 
 import { callDestinationTarget, callLocationTarget, isUsablePoint } from '../lib/call-location';
-import { consoleMetrics } from '../lib/console-layout';
+import { consoleMetrics, fitRoundButtonSize, MIN_ROUND_BUTTON_SIZE, MIN_TOUCH_TARGET, roundButtonRow } from '../lib/console-layout';
 import { visibleQuickActions } from '../lib/quick-actions';
 import { resolveUnitStatusDisplay, statusStyleColor } from '../lib/status-display';
 import { unitStatusRoutes } from '../routes';
@@ -103,8 +103,73 @@ describe('quick actions', () => {
   });
 
   it('follows flags and the active unit, and drops actions the variant lacks', () => {
-    expect(visibleQuickActions({ ...none, chat: true, inventory: true }).map((action) => action.id)).toEqual(['chat', 'assistant', 'inventory', 'settings']);
-    expect(visibleQuickActions({ ...none, chat: true }, ['assistant']).map((action) => action.id)).toEqual(['chat', 'settings']);
+    expect(visibleQuickActions({ ...none, chat: true, inventory: true }).map((action) => action.id)).toEqual(['chat', 'inventory', 'settings']);
+    expect(visibleQuickActions({ ...none, chat: true, checklists: true, deployments: true }, ['settings']).map((action) => action.id)).toEqual(['chat', 'checklists', 'operations']);
+  });
+
+  // The assistant lives in the chat list (pinned first), so it has no shortcut of its own.
+  it('has no assistant shortcut', () => {
+    expect(visibleQuickActions({ chat: true, checklists: true, deployments: true, records: true, inventory: true }).map((action) => action.href)).not.toContain('/chatbot');
+  });
+});
+
+describe('fitRoundButtonSize', () => {
+  it('keeps the preferred size when the row fits it or is not measured yet', () => {
+    expect(fitRoundButtonSize(36, 0, 3, 3)).toBe(36);
+    expect(fitRoundButtonSize(36, 200, 3, 3)).toBe(36);
+  });
+
+  // The sidebar's half-width unit card: three 36 pt buttons and their margins need 126 pt.
+  it('shrinks the buttons so they share one row instead of wrapping', () => {
+    const size = fitRoundButtonSize(36, 120, 3, 3);
+    expect(size).toBe(34);
+    expect(3 * (size + 6)).toBeLessThanOrEqual(120);
+  });
+
+  it('never shrinks them below the minimum', () => {
+    expect(fitRoundButtonSize(36, 60, 3, 3)).toBe(MIN_ROUND_BUTTON_SIZE);
+  });
+});
+
+describe('roundButtonRow', () => {
+  // React Native drops a touch outside the parent's bounds, slop or not: each slot must hold its button's whole target.
+  const expectTargetInsideSlot = (row: ReturnType<typeof roundButtonRow>) => {
+    const slop = row.hitSlop ?? { top: 0, bottom: 0, left: 0, right: 0 };
+
+    expect(row.size + (slop.left ?? 0) + (slop.right ?? 0)).toBeLessThanOrEqual(row.slotWidth);
+    expect(row.size + (slop.top ?? 0) + (slop.bottom ?? 0)).toBeLessThanOrEqual(row.slotHeight);
+    expect(row.size + (slop.top ?? 0) + (slop.bottom ?? 0)).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
+  };
+
+  // The sidebar's 36 pt buttons in 44 pt slots (4 pt either side): full 44 pt targets, none reaching into the next.
+  it('gives the preferred size full, separate 44 pt targets', () => {
+    const row = roundButtonRow(36, 200, 3, 4);
+
+    expect(row).toEqual({ size: 36, wraps: false, slotWidth: MIN_TOUCH_TARGET, slotHeight: MIN_TOUCH_TARGET, hitSlop: { top: 4, bottom: 4, left: 4, right: 4 } });
+    expectTargetInsideSlot(row);
+  });
+
+  // 44 pt of slop on shrunk buttons overlapped their neighbours, so a touch at one's edge could press the next; and slop
+  // past a margin-only slot's bounds never reached the button at all.
+  it('keeps a shrunk button 44 pt tall to the finger, its target inside a slot that holds it', () => {
+    const row = roundButtonRow(36, 100, 3, 4);
+
+    expect(row).toEqual({ size: 25, wraps: false, slotWidth: 33, slotHeight: 45, hitSlop: { top: 10, bottom: 10, left: 4, right: 4 } });
+    expect(row.slotWidth).toBeLessThanOrEqual(Math.floor(100 / 3));
+    expectTargetInsideSlot(row);
+  });
+
+  // Three 24 pt buttons in their slots need 96 pt: an 80 pt row wraps rather than running out of the card, and each
+  // wrapped line is a full 44 pt slot tall, so targets stay 44 pt tall without reaching into the next line.
+  it('wraps a row too narrow for the smallest buttons, each line a 44 pt slot tall', () => {
+    const row = roundButtonRow(36, 80, 3, 4);
+
+    expect(row).toEqual({ size: MIN_ROUND_BUTTON_SIZE, wraps: true, slotWidth: 32, slotHeight: MIN_TOUCH_TARGET, hitSlop: { top: 10, bottom: 10, left: 4, right: 4 } });
+    expectTargetInsideSlot(row);
+  });
+
+  it('adds no slop to a button already a full target, and never wraps a row not measured yet', () => {
+    expect(roundButtonRow(48, 0, 3, 4)).toEqual({ size: 48, wraps: false, slotWidth: 56, slotHeight: 56, hitSlop: undefined });
   });
 });
 

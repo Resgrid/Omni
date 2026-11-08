@@ -105,7 +105,7 @@ export const nav = defineNav([
   ...featureNav(notesNav, 'hidden', { order: 43 }),
   ...featureNav(recordsNav, 'sidebar', { order: 44, overrides: { records: { requiresFlag: [FeatureFlagKeys.RecordsSystem, FeatureFlagKeys.RecordsFieldDispatch] } } }),
   ...featureNav(operationsNav, 'sidebar', { order: 45 }),
-  ...featureNav(chatNav, 'sidebar', { order: 60 }),
+  ...featureNav(chatNav, { chat: 'sidebar', chatbot: 'hidden' }, { order: 60 }),
   ...featureNav(notificationsNav, 'sidebar', { order: 70 }),
   ...featureNav(settingsNavEntries, variant),
   ...featureNav(customMapsNav, { maps: 'sidebar', 'maps-search': 'hidden' }, { order: 26 }),

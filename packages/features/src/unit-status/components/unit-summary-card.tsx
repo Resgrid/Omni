@@ -6,13 +6,15 @@ import type { UnitInfoResultData, UnitResultData } from '@resgrid/models';
 import { HStack, Pressable, Text, TypeIcon, View } from '@resgrid/ui';
 import { useAudioStreamStore, useLiveKitStore } from '@resgrid/voice';
 import { Lock, type LucideIcon, Mic, Phone, Radio, Truck, Unlock } from 'lucide-react-native';
-import React from 'react';
-import { StyleSheet } from 'react-native';
+import React, { useCallback, useMemo, useState } from 'react';
+import { type Insets, type LayoutChangeEvent, StyleSheet } from 'react-native';
+
+import { roundButtonRow } from '../lib/console-layout';
 
 export interface UnitSummaryCardProps {
   unit: UnitResultData | null;
   unitInfo: UnitInfoResultData | null;
-  /** Size of the round map-lock, audio-stream and voice buttons. */
+  /** Preferred size of the round map-lock, audio-stream and voice buttons (they shrink to share one row in a narrow card). */
   buttonSize?: number;
   iconSize?: number;
   /** Fills the space it is given (the sidebar's half-width card beside the status and roles). */
@@ -20,31 +22,34 @@ export interface UnitSummaryCardProps {
   testID?: string;
 }
 
-/** Round buttons smaller than a touch target get the rest as hit slop, so every one is at least 44 pt to the finger. */
-const MIN_TOUCH = 44;
-
 const ACTIVE_COLOR = '#2563eb';
+
+/**
+ * Space on either side of each round button inside its slot (slots rather than `gap`: web/Electron-safe). At the
+ * sidebar's 36 pt a slot is 44 × 44 pt, so each button's hit slop makes it a full, separate 44 pt target.
+ */
+const SLOT_MARGIN = 4;
 
 interface RoundButtonProps {
   icon: LucideIcon;
   active: boolean;
   size: number;
   iconSize: number;
+  /** Up to a 44 pt target, inside its own slot's bounds (`roundButtonRow`). */
+  hitSlop: Insets | undefined;
   label: string;
   onPress: () => void;
   testID: string;
 }
 
-function RoundButton({ icon: Icon, active, size, iconSize, label, onPress, testID }: RoundButtonProps) {
-  const slop = Math.max(0, Math.ceil((MIN_TOUCH - size) / 2));
-
+function RoundButton({ icon: Icon, active, size, iconSize, hitSlop, label, onPress, testID }: RoundButtonProps) {
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ selected: active }}
-      hitSlop={slop > 0 ? slop : undefined}
+      hitSlop={hitSlop}
       testID={testID}
       style={StyleSheet.flatten([styles.round, { width: size, height: size, borderRadius: size / 2 }, active ? styles.roundActive : null])}
     >
@@ -60,7 +65,8 @@ function RoundButton({ icon: Icon, active, size, iconSize, label, onPress, testI
  * has joined (and who is talking), and the crew's round buttons — lock the map to the unit (unit devices, whose map
  * follows the vehicle), the department's audio streams, and the voice channels (variant `voice.ptt`). The audio and
  * voice buttons open the shell's sheets (`@resgrid/features/voice`); each lights up while its stream plays / channel is
- * joined. The buttons wrap onto a second line in a narrow card rather than overflow it.
+ * joined. The buttons share one row under the name, starting at its left edge, and shrink to fit a narrow card (the
+ * sidebar's half-width one) instead of wrapping; only a card too narrow for even the smallest size wraps them.
  */
 export const UnitSummaryCard: React.FC<UnitSummaryCardProps> = ({ unit, unitInfo, buttonSize = 44, iconSize = 18, fill = false, testID = 'unit-summary-card' }) => {
   const { t } = useTranslation();
@@ -71,6 +77,15 @@ export const UnitSummaryCard: React.FC<UnitSummaryCardProps> = ({ unit, unitInfo
   const isTalking = useLiveKitStore((state) => state.isTalking);
   const roomName = useLiveKitStore((state) => state.currentRoomInfo?.Name ?? null);
   const isStreamPlaying = useAudioStreamStore((state) => state.currentStream !== null && state.isPlaying);
+  const [rowWidth, setRowWidth] = useState(0);
+  const onRowLayout = useCallback((event: LayoutChangeEvent) => setRowWidth(Math.round(event.nativeEvent.layout.width)), []);
+
+  const showMapLock = status.subject === 'unit';
+  const buttonCount = (showMapLock ? 1 : 0) + 1 + (voice.ptt ? 1 : 0);
+  const { size, wraps, slotWidth, slotHeight, hitSlop } = roundButtonRow(buttonSize, rowWidth, buttonCount, SLOT_MARGIN);
+  // The slot holds the button's whole touch area: React Native drops a touch outside the parent's bounds, slop or not.
+  const slotStyle = useMemo(() => StyleSheet.flatten([styles.buttonSlot, { width: slotWidth, height: slotHeight }]), [slotWidth, slotHeight]);
+  const glyphSize = Math.min(iconSize, Math.round(size / 2));
 
   const name = unit?.Name || unitInfo?.Name || t('common.no_unit');
   const type = unit?.Type || unitInfo?.Type || '';
@@ -104,26 +119,27 @@ export const UnitSummaryCard: React.FC<UnitSummaryCardProps> = ({ unit, unitInfo
           ) : null}
         </HStack>
       ) : null}
-      <View style={styles.buttons}>
-        {status.subject === 'unit' ? (
-          <View style={styles.buttonSlot}>
+      <View style={wraps ? styles.buttonsWrapped : styles.buttons} onLayout={onRowLayout} testID={`${testID}-buttons`}>
+        {showMapLock ? (
+          <View style={slotStyle}>
             <RoundButton
               icon={isMapLocked ? Lock : Unlock}
               active={isMapLocked}
-              size={buttonSize}
-              iconSize={iconSize}
+              size={size}
+              iconSize={glyphSize}
+              hitSlop={hitSlop}
               label={isMapLocked ? t('map.unlock_map') : t('map.lock_map')}
               onPress={toggleMapLock}
               testID={`${testID}-map-lock`}
             />
           </View>
         ) : null}
-        <View style={styles.buttonSlot}>
-          <RoundButton icon={Radio} active={isStreamPlaying} size={buttonSize} iconSize={iconSize} label={t('audio_streams.title')} onPress={openAudioStreamSheet} testID={`${testID}-audio-streams`} />
+        <View style={slotStyle}>
+          <RoundButton icon={Radio} active={isStreamPlaying} size={size} iconSize={glyphSize} hitSlop={hitSlop} label={t('audio_streams.title')} onPress={openAudioStreamSheet} testID={`${testID}-audio-streams`} />
         </View>
         {voice.ptt ? (
-          <View style={styles.buttonSlot}>
-            <RoundButton icon={Phone} active={isConnected} size={buttonSize} iconSize={iconSize} label={t('livekit.title')} onPress={() => void openVoiceChannelSheet()} testID={`${testID}-voice`} />
+          <View style={slotStyle}>
+            <RoundButton icon={Phone} active={isConnected} size={size} iconSize={glyphSize} hitSlop={hitSlop} label={t('livekit.title')} onPress={() => void openVoiceChannelSheet()} testID={`${testID}-voice`} />
           </View>
         ) : null}
       </View>
@@ -133,9 +149,11 @@ export const UnitSummaryCard: React.FC<UnitSummaryCardProps> = ({ unit, unitInfo
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  // Margins rather than `gap` (web/Electron-safe); the row pulls back the first slot's left margin.
-  buttons: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', marginTop: 8, marginHorizontal: -3 },
-  buttonSlot: { margin: 3 },
+  // One row that pulls back the outer slots' side margins so the buttons line up with the text above.
+  buttons: { flexDirection: 'row', justifyContent: 'flex-start', marginTop: 8, marginHorizontal: -SLOT_MARGIN },
+  // A card too narrow for even the smallest buttons wraps them rather than letting the row run out of it.
+  buttonsWrapped: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-start', marginTop: 8, marginHorizontal: -SLOT_MARGIN },
+  buttonSlot: { alignItems: 'center', justifyContent: 'center' },
   round: { borderWidth: 1, borderColor: ACTIVE_COLOR, alignItems: 'center', justifyContent: 'center' },
   roundActive: { backgroundColor: ACTIVE_COLOR },
 });

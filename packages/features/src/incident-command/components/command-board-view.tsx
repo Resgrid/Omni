@@ -7,7 +7,7 @@ import { type CommandStructureNode, type IncidentNeed, type IncidentTimer, type 
 import { HStack, Text, useFormFactor, useToast } from '@resgrid/ui';
 import { Radio, ShieldCheck, Users } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { type LayoutChangeEvent, StyleSheet, View } from 'react-native';
 
 import { useBoardRoster } from '../hooks/use-board-roster';
 import { useCommandActions } from '../hooks/use-command-actions';
@@ -16,6 +16,7 @@ import { useIncidentChat } from '../hooks/use-incident-chat';
 import { useIsOnline } from '../hooks/use-is-online';
 import { useNow } from '../hooks/use-now';
 import { activeAssignments, decideAssignment, isCommandClosed, laneAssignments, nextSortOrder, orderLanes } from '../lib/board';
+import { BOARD_LOG_LIMIT, BOARD_LOG_MAX_HEIGHT, boardGridColumns, boardLanesAsColumns } from '../lib/board-layout';
 import {
   acknowledgeTimerEvent,
   addLaneEvent,
@@ -48,6 +49,7 @@ import { NeedsSection } from './needs-section';
 import { NotesSection } from './notes-section';
 import { ObjectivesSection } from './objectives-section';
 import { RolesSection } from './roles-section';
+import { SectionGrid } from './section-card';
 import { AdHocResourceSheet } from './sheets/ad-hoc-resource-sheet';
 import { AssignResourceSheet } from './sheets/assign-resource-sheet';
 import { AssistantSheet } from './sheets/assistant-sheet';
@@ -85,14 +87,21 @@ export interface CommandBoardViewProps {
 /**
  * The command board for one incident — the same board in every app that shows one (IC command tier, Dispatch assist
  * tier), gated action by action by `useCommandPermissions`. Every write goes through the outbox (`useCommandActions`).
- * Layout follows the form factor: lanes as columns with side sections on tablets in landscape and desktop/Electron,
- * one stacked column on phones. Renders no vertical ScrollView (the hosting screen or call tab scrolls).
+ * Layout follows the width the board is given (the screen, a call tab or a split pane), top to bottom: the command
+ * structure across the full width with its lanes as columns (stacked on phones and narrow panes), the section cards up
+ * to two to a row, then the incident log across the full width. Only the log scrolls inside its card; the hosting
+ * screen or call tab scrolls the board.
  */
 export const CommandBoardView: React.FC<CommandBoardViewProps> = ({ callId, tier, onOpenLog, onOpenMap, onOpenCheckIns, onShowResourceOnMap, onEnded, headerActions }) => {
   const { t } = useTranslation();
   const toast = useToast();
-  const { isLandscapeBoard, isDesktop, isPhone } = useFormFactor();
-  const wide = isLandscapeBoard || isDesktop;
+  const { isPhone, width: windowWidth } = useFormFactor();
+  // The board's own width once laid out (a sidebar, call tab or split pane takes some of the window); the window less
+  // the screen's padding until then.
+  const [measuredWidth, setMeasuredWidth] = useState(0);
+  const boardWidth = measuredWidth > 0 ? measuredWidth : windowWidth - 24;
+  const lanesAsColumns = boardLanesAsColumns(boardWidth, isPhone);
+  const gridColumns = boardGridColumns(boardWidth, isPhone);
   const entry = useCommandStore((state) => state.boards[callId]);
   const refreshBoard = useCommandStore((state) => state.refreshBoard);
   const fetchTimeline = useCommandStore((state) => state.fetchTimeline);
@@ -128,6 +137,7 @@ export const CommandBoardView: React.FC<CommandBoardViewProps> = ({ callId, tier
   );
 
   const close = useCallback(() => setSheet(null), []);
+  const measureBoard = useCallback((event: LayoutChangeEvent) => setMeasuredWidth(Math.round(event.nativeEvent.layout.width)), []);
   const saved = t('incident_command.saved');
 
   const refresh = useCallback(() => {
@@ -223,7 +233,7 @@ export const CommandBoardView: React.FC<CommandBoardViewProps> = ({ callId, tier
       assignments={assignments}
       roster={roster}
       nowMs={nowMs}
-      columns={wide}
+      columns={lanesAsColumns}
       canManageStructure={permissions.canManageStructure}
       canAssignResources={permissions.canAssignResources}
       onAddLane={() => {
@@ -267,8 +277,9 @@ export const CommandBoardView: React.FC<CommandBoardViewProps> = ({ callId, tier
       </View>
     ) : null;
 
-  const side = (
-    <>
+  // Up to two to a row, in this order; a section with nothing to show (no chat channels, voice off) takes no cell.
+  const sections = (
+    <SectionGrid columns={gridColumns} testID="command-sections">
       <AccountabilitySection rows={board?.Accountability ?? []} personName={roster.personName} onOpenCheckIns={onOpenCheckIns} />
       <ObjectivesSection objectives={board?.Objectives ?? []} canManage={permissions.canManageObjectives} onAdd={() => setSheet('objective')} onOpen={setOpenObjective} />
       <NeedsSection needs={board?.Needs ?? []} canManage={permissions.canManageResources} onAdd={() => setSheet('need')} onOpen={setOpenNeed} />
@@ -278,11 +289,6 @@ export const CommandBoardView: React.FC<CommandBoardViewProps> = ({ callId, tier
         onAdd={() => setSheet('timer')}
         onAcknowledge={(timer: IncidentTimer) => void run(acknowledgeTimerEvent(callId, timer.IncidentTimerId))}
       />
-    </>
-  );
-
-  const rolesAndNotes = (
-    <>
       <RolesSection
         roles={roles}
         personName={roster.personName}
@@ -291,12 +297,6 @@ export const CommandBoardView: React.FC<CommandBoardViewProps> = ({ callId, tier
         onRemove={(role) => void run(removeRoleEvent(callId, role.IncidentRoleAssignmentId))}
       />
       <NotesSection notes={board?.Notes ?? []} canAdd={permissions.canAddNotes} onAdd={() => setSheet('note')} authorName={roster.personName} />
-    </>
-  );
-
-  const communications = (
-    <>
-      <LogSection entries={entry.timeline ?? []} onOpenFullLog={onOpenLog} />
       {chat.isAvailable ? (
         <IncidentChatSection
           channels={[
@@ -315,11 +315,11 @@ export const CommandBoardView: React.FC<CommandBoardViewProps> = ({ callId, tier
         />
       ) : null}
       <VoiceSection callId={callId} canManage={permissions.canManageChannels} />
-    </>
+    </SectionGrid>
   );
 
   return (
-    <View testID="command-board-view">
+    <View onLayout={measureBoard} testID="command-board-view">
       <CommandHeader
         title={title}
         subtitle={subtitle}
@@ -357,28 +357,9 @@ export const CommandBoardView: React.FC<CommandBoardViewProps> = ({ callId, tier
         </View>
       ) : null}
       {resourceActions}
-      {wide ? (
-        <View style={styles.wideRow}>
-          <View style={styles.wideMain}>{structure}</View>
-          <View style={styles.wideSide}>{side}</View>
-        </View>
-      ) : (
-        <>
-          {structure}
-          {side}
-        </>
-      )}
-      {wide ? (
-        <View style={styles.wideRow}>
-          <View style={styles.wideHalf}>{rolesAndNotes}</View>
-          <View style={styles.wideHalfLast}>{communications}</View>
-        </View>
-      ) : (
-        <>
-          {rolesAndNotes}
-          {communications}
-        </>
-      )}
+      {structure}
+      {sections}
+      <LogSection entries={entry.timeline ?? []} limit={BOARD_LOG_LIMIT} maxHeight={BOARD_LOG_MAX_HEIGHT} onOpenFullLog={onOpenLog} />
 
       <LaneSheet
         isOpen={sheet === 'lane'}
@@ -551,9 +532,4 @@ const styles = StyleSheet.create({
   resourceActions: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 8 },
   actionGap: { marginLeft: 8 },
   banner: { padding: 10, marginTop: 8 },
-  wideRow: { flexDirection: 'row', alignItems: 'flex-start' },
-  wideMain: { flex: 3, marginRight: 8 },
-  wideSide: { flex: 2 },
-  wideHalf: { flex: 1, marginRight: 8 },
-  wideHalfLast: { flex: 1 },
 });

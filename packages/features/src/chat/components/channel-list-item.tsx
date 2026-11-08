@@ -14,6 +14,15 @@ export interface ChannelListItemProps {
 
 const ICONS = { direct: MessageCircle, channels: Hash, incidents: Siren, assistant: Bot } as const;
 
+/** A conversation's unread count at the end of its row (nothing when there are none). */
+export function UnreadPill({ count, testID }: { count: number; testID: string }) {
+  return count > 0 ? (
+    <View className="min-w-[22px] items-center rounded-full bg-primary-500 px-1.5 py-0.5" testID={testID}>
+      <Text className="text-xs font-bold text-typography-0">{count > 99 ? '99+' : String(count)}</Text>
+    </View>
+  ) : null;
+}
+
 /** One conversation in the list: type icon, name, topic, last activity and the unread count. */
 export const ChannelListItem: React.FC<ChannelListItemProps> = React.memo(({ channel, onPress }) => {
   const { t } = useTranslation();
@@ -45,11 +54,7 @@ export const ChannelListItem: React.FC<ChannelListItemProps> = React.memo(({ cha
             </Text>
           ) : null}
         </VStack>
-        {unread > 0 ? (
-          <View className="min-w-[22px] items-center rounded-full bg-primary-500 px-1.5 py-0.5" testID={`chat-channel-${channel.ChatChannelId}-unread`}>
-            <Text className="text-xs font-bold text-typography-0">{unread > 99 ? '99+' : String(unread)}</Text>
-          </View>
-        ) : null}
+        <UnreadPill count={unread} testID={`chat-channel-${channel.ChatChannelId}-unread`} />
       </HStack>
     </Pressable>
   );

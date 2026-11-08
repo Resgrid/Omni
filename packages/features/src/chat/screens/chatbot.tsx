@@ -16,6 +16,7 @@ import { MessageComposer } from '../components/message-composer';
 import { TypingDots } from '../components/typing-dots';
 import { useActiveChatChannel } from '../hooks/use-active-chat-channel';
 import { useJoinedChatChannel } from '../hooks/use-joined-chat-channel';
+import { ASSISTANT_ACCENT, ASSISTANT_ACCENT_DARK } from '../lib/assistant-accent';
 import { flagMessage, setMessagePinned } from '../lib/chat-actions';
 import { isOwnMessage, orderMessages } from '../lib/chat-format';
 import { messageBodyText } from '../lib/message-text';
@@ -26,8 +27,6 @@ export interface ChatbotScreenProps {
 }
 
 const NO_MESSAGES: ChatMessageResultData[] = [];
-const ASSISTANT_ACCENT = '#7c3aed';
-const ASSISTANT_ACCENT_DARK = '#d8b4fe';
 
 /** The assistant always talks to the signed-in user: no unit identity on its channel, even in Unit. */
 const NO_UNIT: number | null = null;

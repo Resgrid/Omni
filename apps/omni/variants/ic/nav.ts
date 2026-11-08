@@ -78,7 +78,7 @@ export const nav = defineNav([
   ...featureNav(contactsNav, 'sidebar', { order: 30 }),
   ...featureNav(recordsNav, 'sidebar', { order: 31, overrides: { records: { requiresFlag: [FeatureFlagKeys.RecordsSystem, FeatureFlagKeys.RecordsFieldIncidentCommand] } } }),
   ...featureNav(operationsNav, 'sidebar', { order: 32 }),
-  ...featureNav(chatNav, 'sidebar', { order: 40 }),
+  ...featureNav(chatNav, { chat: 'sidebar', chatbot: 'hidden' }, { order: 40 }),
   ...featureNav(weatherAlertsNav, { 'weather-alerts': 'sidebar' }, { order: 50 }),
   ...featureNav(notificationsNav, 'sidebar', { order: 60 }),
   ...featureNav(settingsNavEntries, variant),

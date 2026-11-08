@@ -578,7 +578,6 @@
     "save": "Speichern",
     "search_gifs": "GIFs suchen",
     "search_people": "Personen suchen",
-    "section_assistant": "Assistent",
     "section_channels": "Kanäle",
     "section_direct_messages": "Direktnachrichten",
     "section_incidents": "Vorfälle",
@@ -3016,7 +3015,6 @@
     "status_tab": "Status"
   },
   "tabs": {
-    "assistant": "Assistent",
     "calendar": "Kalender",
     "calls": "Einsätze",
     "chat": "Chat",

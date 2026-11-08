@@ -578,7 +578,6 @@
     "save": "حفظ",
     "search_gifs": "البحث عن صور GIF",
     "search_people": "البحث عن أشخاص",
-    "section_assistant": "المساعد",
     "section_channels": "القنوات",
     "section_direct_messages": "الرسائل المباشرة",
     "section_incidents": "الحوادث",
@@ -3016,7 +3015,6 @@
     "status_tab": "Status"
   },
   "tabs": {
-    "assistant": "المساعد",
     "calendar": "التقويم",
     "calls": "المكالمات",
     "chat": "الدردشة",

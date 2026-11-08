@@ -116,10 +116,12 @@ describe('chat routes and nav', () => {
     expect(entry?.requiresCapability?.({ realtime: { chatHub: true } } as Capabilities)).toBe(true);
   });
 
+  // The assistant channel is not a list row: the pinned assistant entry stands for it and opens its own screen.
   it('the conversation list opens the assistant channel on its own screen', async () => {
     useChatStore.setState({ channels: [{ ChatChannelId: BOT, Name: 'Assistant', ChannelType: ChatChannelType.Chatbot, IsArchived: false, CreatedOn: '2026-10-30T10:00:00Z' } as ChatChannelResultData] });
     await render(<ChatChannelsScreen />);
-    await fireEvent.press(screen.getByTestId(`chat-channel-${BOT}`));
+    expect(screen.queryByTestId(`chat-channel-${BOT}`)).toBeNull();
+    await fireEvent.press(screen.getByTestId('chat-assistant'));
     expect(router.push).toHaveBeenCalledWith('/chatbot');
   });
 });
