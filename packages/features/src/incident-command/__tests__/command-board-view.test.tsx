@@ -111,6 +111,16 @@ describe('CommandBoardView — command tier (IC)', () => {
     expect(onEnded).toHaveBeenCalled();
   });
 
+  it('stays on the board when the server refuses to end command', async () => {
+    mockEndCommand.mockResolvedValueOnce({ command: { outcome: 'rejected', id: 'c1' }, call: null });
+    const onEnded = jest.fn();
+    await render(<CommandBoardView callId="7" tier="command" onEnded={onEnded} />);
+    await fireEvent.press(screen.getByTestId('command-end'));
+    await act(async () => fireEvent.press(screen.getByTestId('end-command-dialog-submit', hidden)));
+    expect(lastToast()).toMatchObject({ type: 'error', message: 'incident_command.end_command_failed' });
+    expect(onEnded).not.toHaveBeenCalled();
+  });
+
   it('transfers command to another member (online) and explains a failure', async () => {
     const transferCommand = jest.fn(async () => undefined);
     useCommandSupportStore.setState({ transferCommand });
@@ -205,12 +215,72 @@ describe('CommandBoardView — command tier (IC)', () => {
   });
 });
 
+describe('CommandBoardView — command tier (IC), another member’s board', () => {
+  // Every board write control; none may show to a member the server would refuse (no 403s from the board).
+  const writeControls = [
+    'structure-add-lane',
+    'lane-assign-n1',
+    'command-add-to-incident',
+    'command-add-adhoc',
+    'command-details',
+    'command-transfer',
+    'command-end',
+    'command-objectives-add',
+    'command-needs-add',
+    'command-timers-add',
+    'command-roles-add',
+    'command-notes-add',
+    'command-voice-add',
+  ];
+
+  beforeEach(() => {
+    // Signed in as someone who neither commands nor established this incident (makeBoard: u1 commands).
+    seedBoard('7', makeBoard(), {}, 'u9');
+  });
+
+  it('shows no write control before the capabilities load', async () => {
+    await render(<CommandBoardView callId="7" tier="command" />);
+    expect(mockFetchCapabilities).toHaveBeenCalledWith('7', { bypassCache: true });
+    expect(screen.getByTestId('command-board-view')).toBeTruthy();
+
+    for (const id of writeControls) expect(screen.queryByTestId(id)).toBeNull();
+  });
+
+  it('stays read-only when the server says the member may only read the board', async () => {
+    useCommandSupportStore.setState({ capabilitiesByCall: { '7': IncidentCapabilities.ViewBoard } });
+    await render(<CommandBoardView callId="7" tier="command" />);
+
+    for (const id of writeControls) expect(screen.queryByTestId(id)).toBeNull();
+    // Moving resources needs the assign capability: tapping a resource selects nothing.
+    await fireEvent.press(screen.getByTestId('lane-resource-a1'));
+    expect(screen.queryByTestId('structure-move-banner')).toBeNull();
+  });
+
+  it('offers what an ICS role grants and nothing more (Safety Officer: objectives, needs, internal notes)', async () => {
+    useCommandSupportStore.setState({
+      capabilitiesByCall: { '7': IncidentCapabilities.ViewBoard | IncidentCapabilities.ManageObjectives | IncidentCapabilities.ManageAnnotations | IncidentCapabilities.ManageNotes },
+    });
+    await render(<CommandBoardView callId="7" tier="command" />);
+    expect(screen.getByTestId('command-objectives-add')).toBeTruthy();
+    expect(screen.getByTestId('command-needs-add')).toBeTruthy();
+    expect(screen.getByTestId('command-notes-add')).toBeTruthy();
+
+    for (const id of ['structure-add-lane', 'command-add-to-incident', 'command-add-adhoc', 'command-end', 'command-roles-add', 'command-timers-add']) {
+      expect(screen.queryByTestId(id)).toBeNull();
+    }
+
+    await fireEvent.press(screen.getByTestId('command-notes-add'));
+    // Public notes need ManagePublicInformation.
+    expect(screen.queryByTestId('note-sheet-visibility', hidden)).toBeNull();
+  });
+});
+
 describe('CommandBoardView — assist tier (Dispatch)', () => {
   beforeEach(() => activateVariant('dispatch'));
 
   it('reads the member capabilities and stays read-only until they arrive', async () => {
     await render(<CommandBoardView callId="7" />);
-    expect(mockFetchCapabilities).toHaveBeenCalledWith('7');
+    expect(mockFetchCapabilities).toHaveBeenCalledWith('7', { bypassCache: true });
     expect(screen.getByTestId('command-board-view')).toBeTruthy();
     expect(screen.queryByTestId('structure-add-lane')).toBeNull();
     expect(screen.queryByTestId('lane-assign-n1')).toBeNull();

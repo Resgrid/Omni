@@ -59,10 +59,12 @@ export interface NoteSheetProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (body: string, visibility: number, title: string) => void;
+  /** Public visibility is offered only to members who may publish incident information (the server refuses it otherwise). */
+  allowPublic?: boolean;
 }
 
 /** An operational status note — internal, or public (it may reach the public incident feed). */
-export const NoteSheet: React.FC<NoteSheetProps> = ({ isOpen, onClose, onSave }) => {
+export const NoteSheet: React.FC<NoteSheetProps> = ({ isOpen, onClose, onSave, allowPublic = true }) => {
   const { t } = useTranslation();
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
@@ -88,17 +90,21 @@ export const NoteSheet: React.FC<NoteSheetProps> = ({ isOpen, onClose, onSave })
     >
       <TextField label={t('incident_command.note_title')} value={title} onChangeText={setTitle} optional testID="note-sheet-title" />
       <TextField label={t('incident_command.note_body')} value={body} onChangeText={setBody} multiline testID="note-sheet-body" />
-      <FieldLabel text={t('incident_command.note_visibility')} />
-      <ChoiceChips
-        choices={[
-          { value: IncidentContentVisibility.Internal as number, label: t('incident_command.note_internal') },
-          { value: IncidentContentVisibility.Public as number, label: t('incident_command.note_public') },
-        ]}
-        selected={visibility}
-        onSelect={setVisibility}
-        accessibilityLabel={t('incident_command.note_visibility')}
-        testID="note-sheet-visibility"
-      />
+      {allowPublic ? (
+        <>
+          <FieldLabel text={t('incident_command.note_visibility')} />
+          <ChoiceChips
+            choices={[
+              { value: IncidentContentVisibility.Internal as number, label: t('incident_command.note_internal') },
+              { value: IncidentContentVisibility.Public as number, label: t('incident_command.note_public') },
+            ]}
+            selected={visibility}
+            onSelect={setVisibility}
+            accessibilityLabel={t('incident_command.note_visibility')}
+            testID="note-sheet-visibility"
+          />
+        </>
+      ) : null}
     </SheetForm>
   );
 };

@@ -41,6 +41,7 @@ import type {
   IncidentTimer,
   MoveResourceInput,
   ResourceAssignment,
+  ResourceAssignmentResult,
   SetNeedStatusInput,
   TacticalObjective,
   UpdateCommandDetailsInput,
@@ -63,14 +64,41 @@ class NoIncidentCommandError extends Error {
 /** The server IncidentCommandId for a call (writes queued before the command existed). Retried until the establish lands. */
 const resolveIncidentCommandId = async (ctx: ApiContext, callId: string): Promise<string> => {
   const known = useCommandStore.getState().boards[callId]?.board?.Command?.IncidentCommandId;
+
   if (known && !known.startsWith('local-')) return known;
   const board = unwrapItem(await getCommandBoard(ctx, { callId }));
   const id = board?.Command?.IncidentCommandId;
+
   if (!id) throw new NoIncidentCommandError();
+
   return id;
 };
 
 const param = (payload: IcEventPayload, name: string): string => payload.params?.[name] ?? '';
+
+/** The board's row for an assignment, else the server's (the board may not have refreshed since the write was queued). */
+const findAssignment = async (ctx: ApiContext, callId: string, resourceAssignmentId: string): Promise<ResourceAssignment | null> => {
+  const known = useCommandStore.getState().boards[callId]?.board?.Assignments?.find((row) => row.ResourceAssignmentId === resourceAssignmentId);
+
+  if (known) return known;
+
+  const board = unwrapItem(await getCommandBoard(ctx, { callId }));
+
+  return board?.Assignments?.find((row) => row.ResourceAssignmentId === resourceAssignmentId) ?? null;
+};
+
+/**
+ * Core's MoveResource only targets a lane (a blank TargetNodeId is a 400), so a move back to the unassigned pool
+ * re-saves the assignment through AssignResource, which upserts by id and keeps a blank node as the pool. An
+ * assignment no longer on the board has nothing to move — delivered, like MoveResource's own not_found.
+ */
+const sendMoveResource = async (ctx: ApiContext, callId: string, input: MoveResourceInput): Promise<ResourceAssignmentResult | null> => {
+  if (input.TargetNodeId?.trim()) return moveResource(ctx, input);
+
+  const assignment = await findAssignment(ctx, callId, input.ResourceAssignmentId);
+
+  return assignment ? assignResource(ctx, { ...assignment, CommandStructureNodeId: '' }) : null;
+};
 
 type Sender = (ctx: ApiContext, payload: IcEventPayload, body: Record<string, unknown>) => Promise<unknown>;
 
@@ -90,7 +118,7 @@ const SENDERS: Record<IcEventType, Sender> = {
   [IC_EVENT.updateNode]: (ctx, _payload, body) => saveNode(ctx, body as unknown as CommandStructureNode),
   [IC_EVENT.deleteNode]: (ctx, payload) => deleteNode(ctx, { commandStructureNodeId: param(payload, 'commandStructureNodeId') }),
   [IC_EVENT.assignResource]: (ctx, _payload, body) => assignResource(ctx, body as unknown as ResourceAssignment),
-  [IC_EVENT.moveResource]: (ctx, _payload, body) => moveResource(ctx, body as unknown as MoveResourceInput),
+  [IC_EVENT.moveResource]: (ctx, payload, body) => sendMoveResource(ctx, payload.callId, body as unknown as MoveResourceInput),
   [IC_EVENT.releaseResource]: (ctx, payload) => releaseResource(ctx, { resourceAssignmentId: param(payload, 'resourceAssignmentId') }),
   [IC_EVENT.saveObjective]: (ctx, _payload, body) => saveObjective(ctx, body as unknown as TacticalObjective),
   [IC_EVENT.completeObjective]: (ctx, payload, body) => completeObjective(ctx, { tacticalObjectiveId: param(payload, 'tacticalObjectiveId') }, body as unknown as CompleteObjectiveInput),
@@ -112,19 +140,24 @@ const createIcHandler = (type: IcEventType): OutboxHandler<IcEventPayload, unkno
     type,
     optimisticApply: (event) => {
       const { local, body, callId } = event.payload;
+
       if (!local) return;
       useCommandStore.getState().addLocalRow({ eventId: event.id, callId, collection: local.collection, row: { ...(body ?? {}), [local.idField]: `local-${event.id}`, __localEventId: event.id } });
     },
     send: async (event) => {
       const ctx = getDataApiContext();
       const body = { ...(event.payload.body ?? {}) };
+
       if (event.payload.resolveCommandId) body.IncidentCommandId = await resolveIncidentCommandId(ctx, event.payload.callId);
+
       return assertV4Success(await SENDERS[type](ctx, event.payload, body));
     },
     afterAck: async (event) => {
       const store = useCommandStore.getState();
       store.removeLocalRow(event.id);
+
       if (type === IC_EVENT.establishCommand) store.markBoardEstablished(event.payload.callId);
+
       if (!NO_REFRESH.has(type) && store.boards[event.payload.callId]) await store.refreshBoard(event.payload.callId);
     },
     rollback: (event) => useCommandStore.getState().removeLocalRow(event.id),

@@ -210,7 +210,9 @@ export const CommandBoardView: React.FC<CommandBoardViewProps> = ({ callId, tier
         reportWrite(result.call, { sent: t('call_detail.close_call_success'), queued: t('incident_command.close_call_queued'), rejected: t('incident_command.close_call_failed') });
 
         if (result.call?.outcome === 'sent') void useCallsStore.getState().fetchCalls({ bypassCache: true });
-        onEnded?.();
+
+        // A refused close keeps the board (the command is still active on the server).
+        if (result.command?.outcome !== 'rejected') onEnded?.();
       } catch {
         toast.error(t('incident_command.write_failed'));
       }
@@ -221,6 +223,8 @@ export const CommandBoardView: React.FC<CommandBoardViewProps> = ({ callId, tier
   if (!entry) return null;
 
   const command = board?.Command ?? null;
+  // The move needs the assign capability; a confirmation left open after losing it never shows.
+  const visibleMoveConflict = permissions.canAssignResources ? moveConflict : null;
   const commanderName = command?.CurrentCommanderUserId ? roster.personName(command.CurrentCommanderUserId) : null;
   const title = call?.Number ? t('incident_command.call_number', { number: call.Number }) : t('incident_command.call_number', { number: callId });
   const subtitle = command?.Name || (call ? callDisplayName(call, t('data_protection.protected_value')) : '') || null;
@@ -282,7 +286,7 @@ export const CommandBoardView: React.FC<CommandBoardViewProps> = ({ callId, tier
     <SectionGrid columns={gridColumns} testID="command-sections">
       <AccountabilitySection rows={board?.Accountability ?? []} personName={roster.personName} onOpenCheckIns={onOpenCheckIns} />
       <ObjectivesSection objectives={board?.Objectives ?? []} canManage={permissions.canManageObjectives} onAdd={() => setSheet('objective')} onOpen={setOpenObjective} />
-      <NeedsSection needs={board?.Needs ?? []} canManage={permissions.canManageResources} onAdd={() => setSheet('need')} onOpen={setOpenNeed} />
+      <NeedsSection needs={board?.Needs ?? []} canManage={permissions.canManageNeeds} onAdd={() => setSheet('need')} onOpen={setOpenNeed} />
       <TimersSection
         timers={board?.Timers ?? []}
         canManage={permissions.canManageTimers}
@@ -338,16 +342,16 @@ export const CommandBoardView: React.FC<CommandBoardViewProps> = ({ callId, tier
         onEnd={permissions.canManageCommand ? () => setSheet('end') : undefined}
         extraActions={headerActions}
       />
-      {moveConflict ? (
+      {visibleMoveConflict ? (
         <View style={styles.banner} className="rounded-lg bg-warning-50" testID="command-move-conflict">
-          <Text className="text-sm text-typography-900">{t('incident_command.move_conflict', { resource: moveConflict.name, from: moveConflict.from, to: moveConflict.to })}</Text>
+          <Text className="text-sm text-typography-900">{t('incident_command.move_conflict', { resource: visibleMoveConflict.name, from: visibleMoveConflict.from, to: visibleMoveConflict.to })}</Text>
           <HStack className="mt-2 justify-end" space="sm">
             <BoardButton label={t('common.cancel')} onPress={() => setMoveConflict(null)} testID="command-move-conflict-cancel" />
             <BoardButton
               label={t('incident_command.move_resource')}
               variant="solid"
               onPress={() => {
-                const conflict = moveConflict;
+                const conflict = visibleMoveConflict;
                 setMoveConflict(null);
                 void run(moveResourceEvent(callId, conflict.assignmentId, conflict.targetNodeId));
               }}
@@ -362,7 +366,7 @@ export const CommandBoardView: React.FC<CommandBoardViewProps> = ({ callId, tier
       <LogSection entries={entry.timeline ?? []} limit={BOARD_LOG_LIMIT} maxHeight={BOARD_LOG_MAX_HEIGHT} onOpenFullLog={onOpenLog} />
 
       <LaneSheet
-        isOpen={sheet === 'lane'}
+        isOpen={sheet === 'lane' ? permissions.canManageStructure : false}
         onClose={close}
         node={editLane}
         parents={lanes.map((lane) => lane.node)}
@@ -384,10 +388,13 @@ export const CommandBoardView: React.FC<CommandBoardViewProps> = ({ callId, tier
             { success: saved }
           );
         }}
-        onDelete={editLane ? (disposition) => void deleteLane(editLane, disposition) : undefined}
+        onDelete={
+          // Deleting a lane that holds resources moves or releases them, which needs the assign capability too.
+          editLane && (permissions.canAssignResources || laneAssignments(assignments, editLane.CommandStructureNodeId).length === 0) ? (disposition) => void deleteLane(editLane, disposition) : undefined
+        }
       />
       <AssignResourceSheet
-        isOpen={sheet === 'assign'}
+        isOpen={sheet === 'assign' ? permissions.canAssignResources : false}
         onClose={close}
         options={roster.options}
         targetNodeId={assignTarget}
@@ -399,7 +406,7 @@ export const CommandBoardView: React.FC<CommandBoardViewProps> = ({ callId, tier
         }}
       />
       <AdHocResourceSheet
-        isOpen={sheet === 'adhoc'}
+        isOpen={sheet === 'adhoc' ? permissions.canManageResources : false}
         onClose={close}
         onCreateUnit={(input) => {
           setSheet(null);
@@ -434,7 +441,7 @@ export const CommandBoardView: React.FC<CommandBoardViewProps> = ({ callId, tier
         }
       />
       <AddObjectiveSheet
-        isOpen={sheet === 'objective'}
+        isOpen={sheet === 'objective' ? permissions.canManageObjectives : false}
         onClose={close}
         onSave={(input) => {
           setSheet(null);
@@ -455,7 +462,7 @@ export const CommandBoardView: React.FC<CommandBoardViewProps> = ({ callId, tier
         }}
       />
       <AddNeedSheet
-        isOpen={sheet === 'need'}
+        isOpen={sheet === 'need' ? permissions.canManageNeeds : false}
         onClose={close}
         onSave={(input) => {
           setSheet(null);
@@ -463,7 +470,7 @@ export const CommandBoardView: React.FC<CommandBoardViewProps> = ({ callId, tier
         }}
       />
       <NeedStatusSheet
-        need={openNeed}
+        need={permissions.canManageNeeds ? openNeed : null}
         onClose={() => setOpenNeed(null)}
         onSave={(need, status, quantity, note) => {
           setOpenNeed(null);
@@ -471,7 +478,7 @@ export const CommandBoardView: React.FC<CommandBoardViewProps> = ({ callId, tier
         }}
       />
       <TimerSheet
-        isOpen={sheet === 'timer'}
+        isOpen={sheet === 'timer' ? permissions.canManageTimers : false}
         onClose={close}
         onStart={(name, seconds) => {
           setSheet(null);
@@ -479,15 +486,16 @@ export const CommandBoardView: React.FC<CommandBoardViewProps> = ({ callId, tier
         }}
       />
       <NoteSheet
-        isOpen={sheet === 'note'}
+        isOpen={sheet === 'note' ? permissions.canAddNotes : false}
         onClose={close}
+        allowPublic={permissions.canAddPublicNotes}
         onSave={(body, visibility, noteTitle) => {
           setSheet(null);
           void run(addNoteEvent(callId, body, visibility, noteTitle), { success: saved });
         }}
       />
       <RoleSheet
-        isOpen={sheet === 'role'}
+        isOpen={sheet === 'role' ? permissions.canManageRoles : false}
         onClose={close}
         people={roster.people}
         onAssign={(userId, roleType) => {
@@ -496,7 +504,7 @@ export const CommandBoardView: React.FC<CommandBoardViewProps> = ({ callId, tier
         }}
       />
       <TransferCommandSheet
-        isOpen={sheet === 'transfer'}
+        isOpen={sheet === 'transfer' ? permissions.canManageCommand : false}
         onClose={close}
         people={roster.people}
         currentCommanderUserId={command?.CurrentCommanderUserId}
@@ -513,7 +521,7 @@ export const CommandBoardView: React.FC<CommandBoardViewProps> = ({ callId, tier
         }}
       />
       <CommandDetailsSheet
-        isOpen={sheet === 'details'}
+        isOpen={sheet === 'details' ? permissions.canManageCommand : false}
         onClose={close}
         estimatedEndOn={command?.EstimatedEndOn}
         importantInformation={command?.ImportantInformation}
@@ -522,7 +530,7 @@ export const CommandBoardView: React.FC<CommandBoardViewProps> = ({ callId, tier
           void run(commandDetailsEvent(callId, input), { success: saved });
         }}
       />
-      <EndCommandDialog isOpen={sheet === 'end'} onClose={close} canCloseCall={closeCapability ? canUserCloseCalls : false} onConfirm={(closeCall) => void confirmEnd(closeCall)} />
+      <EndCommandDialog isOpen={sheet === 'end' ? permissions.canManageCommand : false} onClose={close} canCloseCall={closeCapability ? canUserCloseCalls : false} onConfirm={(closeCall) => void confirmEnd(closeCall)} />
       {assistantFlag ? <AssistantSheet isOpen={sheet === 'assistant'} onClose={close} callId={callId} isOnline={isOnline} /> : null}
     </View>
   );

@@ -39,7 +39,8 @@ beforeEach(async () => {
 
 describe('command support store', () => {
   it('reads the effective capability bitmask per incident (0 when the server sends none)', async () => {
-    jest.mocked(getMyIncidentCapabilities).mockResolvedValueOnce(ok({ Value: 9, Capabilities: ['ViewBoard', 'AssignResources'] }) as never);
+    // The bitmask is on the envelope, as Core sends it (no Data).
+    jest.mocked(getMyIncidentCapabilities).mockResolvedValueOnce({ Status: 'success', Value: 9, Capabilities: ['ViewBoard', 'AssignResources'] } as never);
     await useCommandSupportStore.getState().fetchCapabilities('7');
     expect(getMyIncidentCapabilities).toHaveBeenCalledWith(expect.anything(), { callId: 7 });
     expect(useCommandSupportStore.getState().capabilitiesByCall['7']).toBe(9);

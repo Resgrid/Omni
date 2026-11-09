@@ -203,8 +203,27 @@ export enum IncidentCapabilities {
   ManageChannels = 256,
   ManageResources = 512,
   ViewReports = 1024,
+  /** Operational, situation and safety notes. */
+  ManageNotes = 2048,
+  /** Incident-level files and records. */
+  ManageDocuments = 4096,
+  /** Public notes, documents and the share-link lifecycle. */
+  ManagePublicInformation = 8192,
 
-  All = ViewBoard | ManageCommand | ManageStructure | AssignResources | ManageObjectives | ManageTimers | ManageAnnotations | ManageAccountability | ManageChannels | ManageResources | ViewReports,
+  All = ViewBoard |
+    ManageCommand |
+    ManageStructure |
+    AssignResources |
+    ManageObjectives |
+    ManageTimers |
+    ManageAnnotations |
+    ManageAccountability |
+    ManageChannels |
+    ManageResources |
+    ViewReports |
+    ManageNotes |
+    ManageDocuments |
+    ManagePublicInformation,
 }
 
 /** True when the given effective capability bitmask contains the requested capability flag. */
@@ -225,18 +244,19 @@ export const getIncidentRoleCapabilities = (role: IncidentRoleType): IncidentCap
       return C.ViewBoard | C.ManageStructure | C.AssignResources | C.ManageObjectives | C.ManageTimers | C.ManageResources;
     case IncidentRoleType.PlanningSectionChief:
     case IncidentRoleType.SituationUnitLeader:
-      return C.ViewBoard | C.ManageObjectives | C.ManageAnnotations | C.ViewReports;
+      return C.ViewBoard | C.ManageObjectives | C.ManageAnnotations | C.ManageNotes | C.ManageDocuments | C.ViewReports;
     case IncidentRoleType.DocumentationUnitLeader:
-      return C.ViewBoard | C.ViewReports;
+      return C.ViewBoard | C.ManageNotes | C.ManageDocuments | C.ViewReports;
     case IncidentRoleType.LogisticsSectionChief:
       return C.ViewBoard | C.ManageChannels | C.ManageResources;
     case IncidentRoleType.CommunicationsUnitLeader:
       return C.ViewBoard | C.ManageChannels;
     case IncidentRoleType.FinanceAdminSectionChief:
-    case IncidentRoleType.PublicInformationOfficer:
       return C.ViewBoard | C.ViewReports;
+    case IncidentRoleType.PublicInformationOfficer:
+      return C.ViewBoard | C.ManageNotes | C.ManageDocuments | C.ManagePublicInformation | C.ViewReports;
     case IncidentRoleType.SafetyOfficer:
-      return C.ViewBoard | C.ManageAnnotations | C.ManageObjectives;
+      return C.ViewBoard | C.ManageAnnotations | C.ManageObjectives | C.ManageNotes;
     case IncidentRoleType.LiaisonOfficer:
       return C.ViewBoard | C.ManageResources;
     case IncidentRoleType.StagingAreaManager:
@@ -264,7 +284,7 @@ export const getIncidentRoleCapabilities = (role: IncidentRoleType): IncidentCap
       return C.ViewBoard | C.AssignResources | C.ManageObjectives | C.ManageAnnotations;
     case IncidentRoleType.ShelterMassCareCoordinator:
     case IncidentRoleType.DamageAssessmentLead:
-      return C.ViewBoard | C.ManageObjectives | C.ViewReports;
+      return C.ViewBoard | C.ManageObjectives | C.ManageNotes | C.ManageDocuments | C.ViewReports;
     default:
       return C.ViewBoard;
   }

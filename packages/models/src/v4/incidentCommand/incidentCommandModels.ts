@@ -435,7 +435,8 @@ export type CommandTimelineResult = V4Result<CommandLogEntry[]>;
 export type IncidentCommandActionResult = V4Result<boolean>;
 export type IncidentRoleResult = V4Result<IncidentRoleAssignment>;
 export type IncidentRolesResult = V4Result<IncidentRoleAssignment[]>;
-export type IncidentCapabilitiesResult = V4Result<{ Value: number; Capabilities: string[] }>;
+/** `IncidentRoles/GetMyCapabilities`: the bitmask and flag names sit on the envelope itself (no `Data`), as Core sends them. */
+export type IncidentCapabilitiesResult = BaseV4Request & { Value?: number; Capabilities?: string[] };
 export type AdHocUnitResult = V4Result<IncidentAdHocUnit>;
 export type AdHocUnitsResult = V4Result<IncidentAdHocUnit[]>;
 export type AdHocPersonnelResult = V4Result<IncidentAdHocPersonnel>;

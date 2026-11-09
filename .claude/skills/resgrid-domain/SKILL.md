@@ -23,7 +23,7 @@ Sources (verify there before relying on a detail): Core at `../Core` (`CLAUDE.md
 | Dispatch | Dispatcher CAD console: new/edit/close/pending/scheduled/archived calls, run cards, unit and personnel actions | Desktop/web, Electron |
 | BigBoard | Unattended wall display: widget grid (personnel, units with status timers, unit alerts, calls, map, weather) | TV / monitor |
 
-App login gates: `CanLoginToDispatchApp`, `CanLoginToCommandApp` in rights (permissions 29/30, default allow). The app identifies itself with `X-Resgrid-Client` (`responder|unit|dispatch|bigboard|command|ic|…`) → server claim `client_app`; the server changes behaviour per app (e.g. BigBoard gets a redacted "safe shell" for protected departments).
+App login gates: `CanLoginToDispatchApp`, `CanLoginToCommandApp` in rights (permissions 29/30, default allow). `CanLoginToCommandApp` is also the department's **run-command** permission (establish command; work boards where the member holds incident capabilities). **View Command Boards** (permission 125, rights `CanViewCommandBoards`; no row = follows 30) decides who reads every board; members on an incident (command staff, lane leads, dispatched directly or via group/role/a unit they crew, placed on the board) always read that board. Per board, `IncidentRoles/GetMyCapabilities` (bitmask on the envelope, not `Data`) is exactly what Core accepts: commander and establisher get all, ICS roles parts, everyone else read-only — gate every board control on it. The app identifies itself with `X-Resgrid-Client` (`responder|unit|dispatch|bigboard|command|ic|…`) → server claim `client_app`; the server changes behaviour per app (e.g. BigBoard gets a redacted "safe shell" for protected departments).
 
 ## Vocabulary
 

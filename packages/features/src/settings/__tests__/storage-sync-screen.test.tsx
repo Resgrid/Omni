@@ -151,7 +151,7 @@ describe('StorageSyncScreen', () => {
     expect(screen.getByTestId('storage-pending-summary')).toHaveTextContent('storage_sync.pending_summary [unsent=2,failed=1,stuck=1]');
     expect(screen.getByTestId('storage-item-evt-1-meta')).toHaveTextContent('storage_sync.age.minutes [count=5] · storage_sync.attempts [count=1]');
     expect(screen.getByTestId('storage-item-evt-2-state')).toHaveTextContent('storage_sync.state.dead');
-    expect(screen.getByTestId('storage-item-evt-2-error')).toHaveTextContent('storage_sync.last_error [error=validation_failed]');
+    expect(screen.getByTestId('storage-item-evt-2-error')).toHaveTextContent('storage_sync.last_error [error=HTTP 422 · validation_failed]');
     expect(screen.getByTestId('storage-item-evt-3-state')).toHaveTextContent('storage_sync.state.stuck');
     expect(screen.getByTestId('storage-item-evt-3-meta')).toHaveTextContent(/storage_sync\.age\.hours \[count=26\]/);
     expect(screen.getByTestId('storage-pending-held')).toHaveTextContent('storage_sync.held [count=2]');

@@ -111,7 +111,7 @@ describe('board rules', () => {
 describe('permissions by tier', () => {
   it('view and none never write or show the board', () => {
     for (const tier of ['none', 'view'] as const) {
-      expect(resolveCommandPermissions({ tier, capabilities: IncidentCapabilities.All, isClosed: false, canCreateCalls: true })).toMatchObject({
+      expect(resolveCommandPermissions({ tier, capabilities: IncidentCapabilities.All, isClosed: false, canEstablish: true })).toMatchObject({
         canViewBoard: false,
         canEstablish: false,
         canManageCommand: false,
@@ -120,28 +120,74 @@ describe('permissions by tier', () => {
     }
   });
 
-  it('command can do everything until the command is closed', () => {
-    expect(resolveCommandPermissions({ tier: 'command', isClosed: false, canCreateCalls: false })).toMatchObject({
+  it('command follows the server capabilities, so another commander’s board is read-only', () => {
+    // The member may run command (they establish their own), but this board belongs to someone else.
+    expect(resolveCommandPermissions({ tier: 'command', capabilities: IncidentCapabilities.ViewBoard, isClosed: false, canEstablish: true })).toMatchObject({
       canViewBoard: true,
       canEstablish: true,
+      canManageCommand: false,
+      canManageStructure: false,
+      canAssignResources: false,
+      canManageObjectives: false,
+      canManageNeeds: false,
+      canAddNotes: false,
+      canManageChannels: false,
+    });
+  });
+
+  it('command treats the member’s own board as theirs until the capabilities load (offline too), and nothing else', () => {
+    expect(resolveCommandPermissions({ tier: 'command', isClosed: false, canEstablish: true, isOwnBoard: true })).toMatchObject({
       canManageCommand: true,
       canManageStructure: true,
       canManageTimers: true,
+      canAddNotes: true,
+      canAddPublicNotes: true,
     });
-    expect(resolveCommandPermissions({ tier: 'command', isClosed: true, canCreateCalls: false })).toMatchObject({ canViewBoard: true, canManageCommand: false, canAssignResources: false });
+    expect(resolveCommandPermissions({ tier: 'command', isClosed: false, canEstablish: true })).toMatchObject({ canManageCommand: false, canAssignResources: false });
+    // Loaded capabilities win over the fallback (command transferred away).
+    expect(resolveCommandPermissions({ tier: 'command', capabilities: IncidentCapabilities.ViewBoard, isClosed: false, canEstablish: true, isOwnBoard: true })).toMatchObject({
+      canManageCommand: false,
+    });
+    expect(resolveCommandPermissions({ tier: 'command', isClosed: true, canEstablish: true, isOwnBoard: true })).toMatchObject({ canViewBoard: true, canManageCommand: false, canAssignResources: false });
+  });
+
+  it('each control maps to the capability Core checks for that write', () => {
+    const safety = resolveCommandPermissions({
+      tier: 'command',
+      capabilities: IncidentCapabilities.ViewBoard | IncidentCapabilities.ManageObjectives | IncidentCapabilities.ManageNotes,
+      isClosed: false,
+      canEstablish: true,
+    });
+
+    // Needs are SaveNeed/SetNeedStatus (ManageObjectives); notes are AddNote (ManageNotes); public notes add ManagePublicInformation.
+    expect(safety).toMatchObject({ canManageNeeds: true, canAddNotes: true, canAddPublicNotes: false, canManageResources: false });
+
+    const logistics = resolveCommandPermissions({
+      tier: 'command',
+      capabilities: IncidentCapabilities.ViewBoard | IncidentCapabilities.ManageResources | IncidentCapabilities.ManageChannels,
+      isClosed: false,
+      canEstablish: true,
+    });
+
+    expect(logistics).toMatchObject({ canManageResources: true, canManageChannels: true, canManageNeeds: false, canAddNotes: false });
   });
 
   it('assist follows the server capabilities and is read-only until they load', () => {
-    expect(resolveCommandPermissions({ tier: 'assist', isClosed: false, canCreateCalls: true })).toMatchObject({ canViewBoard: true, canEstablish: true, canManageCommand: false, canAssignResources: false });
+    expect(resolveCommandPermissions({ tier: 'assist', isClosed: false, canEstablish: true, isOwnBoard: true })).toMatchObject({
+      canViewBoard: true,
+      canEstablish: true,
+      canManageCommand: false,
+      canAssignResources: false,
+    });
 
     const ops = resolveCommandPermissions({
       tier: 'assist',
       capabilities: IncidentCapabilities.ViewBoard | IncidentCapabilities.AssignResources | IncidentCapabilities.ManageObjectives,
       isClosed: false,
-      canCreateCalls: false,
+      canEstablish: false,
     });
 
-    expect(ops).toMatchObject({ canEstablish: false, canAssignResources: true, canManageObjectives: true, canManageStructure: false, canManageCommand: false, canAddNotes: true });
+    expect(ops).toMatchObject({ canEstablish: false, canAssignResources: true, canManageObjectives: true, canManageStructure: false, canManageCommand: false, canAddNotes: false });
   });
 });
 

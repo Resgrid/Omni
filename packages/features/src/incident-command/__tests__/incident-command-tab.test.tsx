@@ -2,7 +2,7 @@ import './test-setup';
 
 import { securityStore } from '@resgrid/auth';
 import { useCommandStore, useResourceViewStore } from '@resgrid/data';
-import type { DepartmentRightsResultData, ResourceIncidentView } from '@resgrid/models';
+import { DepartmentRightsResultData, type ResourceIncidentView } from '@resgrid/models';
 import { IncidentCommandStatus } from '@resgrid/models';
 import { useToastStore } from '@resgrid/ui';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
@@ -191,5 +191,13 @@ describe('command tier (IC)', () => {
     await act(async () => fireEvent.press(screen.getByTestId('start-command-blank', hidden)));
     expect(mockStartCommand).toHaveBeenCalledWith('7', null);
     expect(router.push).toHaveBeenCalledWith('/command');
+  });
+
+  it('hides establish when the department does not let the member run command (Command App Login)', async () => {
+    securityStore.setState({ rights: Object.assign(new DepartmentRightsResultData(), { CanCreateCalls: true, CanLoginToCommandApp: false }), isLoaded: true });
+    seedBoard('8', makeBoard());
+    await render(<IncidentCommandTab callId="7" />);
+    expect(screen.getByTestId('incident-command-tab-empty')).toBeTruthy();
+    expect(screen.queryByTestId('incident-command-tab-establish')).toBeNull();
   });
 });

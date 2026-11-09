@@ -176,13 +176,15 @@ export const useCommandStore = create<CommandState>()(
           if (incidentCommandId && !entry?.isProvisional) {
             command = await get().dispatchCommandEvent(IC_EVENT.closeCommand, { callId, params: { incidentCommandId } });
           }
+          // A refused close leaves the command active on the server: the board stays, and the call is not closed (the
+          // server refuses to close a call whose command is still active).
+          if (command?.outcome === 'rejected') return { command, call: null };
           const boards = { ...get().boards };
           delete boards[callId];
           const remaining = Object.keys(boards);
           set((state) => ({ boards, activeCallId: state.activeCallId === callId ? (remaining[0] ?? null) : state.activeCallId }));
           let call: WriteResult | null = null;
-          // Never after a refused command close: the server refuses to close a call whose command is still active.
-          if (options?.closeCall && command?.outcome !== 'rejected') {
+          if (options?.closeCall) {
             call = await get().dispatchCommandEvent(
               IC_EVENT.closeCall,
               { callId, body: { callId, type: options.closeCall.type, note: options.closeCall.notes ?? '', sendNotification: options.closeCall.sendNotification } },

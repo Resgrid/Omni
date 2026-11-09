@@ -1,5 +1,5 @@
-import { closeCallWith, closeCommand, establishCommand, getAdHocPersonnel, getAdHocUnits, getCommandBoard, getResourceIncidentView, getSyncBundle, saveObjective } from '@resgrid/api';
-import type { IncidentCommandBoard } from '@resgrid/models';
+import { assignResource, closeCallWith, closeCommand, establishCommand, getAdHocPersonnel, getAdHocUnits, getCommandBoard, getResourceIncidentView, getSyncBundle, moveResource, saveObjective } from '@resgrid/api';
+import { BaseV4Request, type IncidentCommandBoard, type ResourceAssignment } from '@resgrid/models';
 import { defaultResetRegistry } from '@resgrid/offline';
 
 import { createDataTestRuntime, type DataTestRuntime, flush, httpError, notFound, ok, persisted } from '../../__tests__/helpers';
@@ -11,6 +11,8 @@ jest.mock('@resgrid/api', () => ({
   ...jest.requireActual('@resgrid/api'),
   establishCommand: jest.fn(),
   closeCommand: jest.fn(),
+  moveResource: jest.fn(),
+  assignResource: jest.fn(),
   closeCallWith: jest.fn(),
   getCommandBoard: jest.fn(),
   getAdHocUnits: jest.fn(),
@@ -34,12 +36,16 @@ const board = (callId: number, extra: Partial<IncidentCommandBoard> = {}): Incid
     ...extra,
   }) as unknown as IncidentCommandBoard;
 
+/** A v4 success envelope as the API functions resolve it. */
+const envelope = <T>(Data: T): BaseV4Request & { Data: T } => ({ ...new BaseV4Request(), Status: 'success', Data });
+
 let runtime: DataTestRuntime;
 
 beforeEach(async () => {
   runtime = await createDataTestRuntime({ variant: 'ic' });
   jest.mocked(getAdHocUnits).mockResolvedValue(ok([]) as never);
   jest.mocked(getAdHocPersonnel).mockResolvedValue(ok([]) as never);
+
   for (const name of ['data.incident-command', 'data.resource-view']) await defaultResetRegistry.getStoreResets().get(name)?.('logout');
 });
 
@@ -64,12 +70,14 @@ describe('incident command board (IC stores/command/*)', () => {
     jest.mocked(getCommandBoard).mockResolvedValue(ok(board(7)) as never);
     useCommandStore.setState({ boards: { '7': { callId: '7', board: board(7), adHocUnits: [], adHocPersonnel: [], isProvisional: false, lastRefreshed: 1 } } });
     runtime.connectivity.setOnline(false);
+
     const result = await useCommandStore.getState().dispatchCommandEvent(IC_EVENT.saveObjective, {
       callId: '7',
       resolveCommandId: true,
       body: { CallId: 7, Name: 'Search floor 2', ObjectiveType: 1 },
       local: { collection: 'Objectives', idField: 'TacticalObjectiveId' },
     });
+
     expect(useCommandStore.getState().boards['7'].board?.Objectives).toEqual([expect.objectContaining({ TacticalObjectiveId: `local-${result.id}`, Name: 'Search floor 2' })]);
     expect((await runtime.rows())[0]).toMatchObject({ orderKey: incidentOrderKey('7') });
 
@@ -106,11 +114,51 @@ describe('incident command board (IC stores/command/*)', () => {
     expect(jest.mocked(closeCommand).mock.invocationCallOrder[0]).toBeLessThan(jest.mocked(closeCallWith).mock.invocationCallOrder[0]);
     expect(closeCallWith).toHaveBeenCalledWith(expect.anything(), { callId: '7', type: 1, note: 'Done', sendNotification: true });
 
-    useCommandStore.setState({ boards: { '8': { callId: '8', board: board(8), adHocUnits: [], adHocPersonnel: [], isProvisional: false, lastRefreshed: 1 } } });
-    jest.mocked(closeCommand).mockRejectedValueOnce(httpError(400));
+    useCommandStore.setState({ boards: { '8': { callId: '8', board: board(8), adHocUnits: [], adHocPersonnel: [], isProvisional: false, lastRefreshed: 1 } }, activeCallId: '8' });
+    jest.mocked(closeCommand).mockRejectedValueOnce(httpError(403));
     const refused = await useCommandStore.getState().endCommand('8', { closeCall: { type: 1 } });
     expect(refused.command?.outcome).toBe('rejected');
     expect(refused.call).toBeNull();
+    // The command is still active on the server: the board stays.
+    expect(useCommandStore.getState().boards['8'].board?.Command.IncidentCommandId).toBe('ic-8');
+    expect(useCommandStore.getState().activeCallId).toBe('8');
+  });
+
+  it('moves a resource to a lane through MoveResource and back to the pool through AssignResource', async () => {
+    const row: ResourceAssignment = {
+      ResourceAssignmentId: 'a1',
+      IncidentCommandId: 'ic-7',
+      DepartmentId: 1,
+      CallId: 7,
+      CommandStructureNodeId: 'n1',
+      ResourceKind: 1,
+      ResourceId: 'u1',
+      AssignedByUserId: 'u0',
+      AssignedOn: '2026-11-08T22:00:00Z',
+      RequirementsWarning: false,
+    };
+
+    const withRow = board(7, { Assignments: [row] });
+    jest.mocked(getCommandBoard).mockResolvedValue(envelope(withRow));
+    jest.mocked(moveResource).mockResolvedValue(envelope(row));
+    jest.mocked(assignResource).mockResolvedValue(envelope(row));
+    useCommandStore.setState({ boards: { '7': { callId: '7', board: withRow, adHocUnits: [], adHocPersonnel: [], isProvisional: false, lastRefreshed: 1 } } });
+
+    const toLane = await useCommandStore.getState().dispatchCommandEvent(IC_EVENT.moveResource, { callId: '7', body: { ResourceAssignmentId: 'a1', TargetNodeId: 'n2' } });
+    expect(toLane.outcome).toBe('sent');
+    expect(moveResource).toHaveBeenCalledWith(expect.anything(), { ResourceAssignmentId: 'a1', TargetNodeId: 'n2' });
+
+    // Core's MoveResource refuses a blank target (400): the pool move re-saves the row with no lane.
+    const toPool = await useCommandStore.getState().dispatchCommandEvent(IC_EVENT.moveResource, { callId: '7', body: { ResourceAssignmentId: 'a1', TargetNodeId: '' } });
+    expect(toPool.outcome).toBe('sent');
+    expect(moveResource).toHaveBeenCalledTimes(1);
+    expect(assignResource).toHaveBeenCalledWith(expect.anything(), { ...row, CommandStructureNodeId: '' });
+
+    // A row on neither the board nor the server (released meanwhile) has nothing to move.
+    jest.mocked(getCommandBoard).mockResolvedValue(envelope(board(7)));
+    const gone = await useCommandStore.getState().dispatchCommandEvent(IC_EVENT.moveResource, { callId: '7', body: { ResourceAssignmentId: 'a9', TargetNodeId: '' } });
+    expect(gone.outcome).toBe('sent');
+    expect(assignResource).toHaveBeenCalledTimes(1);
   });
 
   it('syncs every board from /Sync/Bundle and persists in the frozen command-storage shape', async () => {
