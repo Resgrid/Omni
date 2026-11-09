@@ -213,6 +213,14 @@ describe('CommandBoardView — command tier (IC)', () => {
     expect(screen.queryByTestId('lane-assign-n1')).toBeNull();
     expect(screen.queryByTestId('command-end')).toBeNull();
   });
+
+  it('keeps the member’s own board readable when a capability answer without ViewBoard is still current', async () => {
+    // e.g. read before their establish landed; Core counts the commander and establisher as on the incident.
+    useCommandSupportStore.setState({ capabilitiesByCall: { '7': IncidentCapabilities.None } });
+    await render(<CommandBoardView callId="7" tier="command" />);
+    expect(screen.getByTestId('command-board-view')).toBeTruthy();
+    expect(screen.queryByTestId('command-board-not-viewable')).toBeNull();
+  });
 });
 
 describe('CommandBoardView — command tier (IC), another member’s board', () => {
@@ -272,6 +280,15 @@ describe('CommandBoardView — command tier (IC), another member’s board', () 
     await fireEvent.press(screen.getByTestId('command-notes-add'));
     // Public notes need ManagePublicInformation.
     expect(screen.queryByTestId('note-sheet-visibility', hidden)).toBeNull();
+  });
+
+  it('hides a board the server says the member may not read, though the device still holds it', async () => {
+    useCommandSupportStore.setState({ capabilitiesByCall: { '7': IncidentCapabilities.None } });
+    await render(<CommandBoardView callId="7" tier="command" />);
+    expect(screen.getByTestId('command-board-not-viewable')).toBeTruthy();
+    expect(screen.getByText('incident_command.board_not_viewable')).toBeTruthy();
+    expect(screen.queryByTestId('command-board-view')).toBeNull();
+    expect(screen.queryByText('Warehouse fire')).toBeNull();
   });
 });
 

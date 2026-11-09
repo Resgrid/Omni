@@ -151,6 +151,17 @@ describe('permissions by tier', () => {
     expect(resolveCommandPermissions({ tier: 'command', isClosed: true, canEstablish: true, isOwnBoard: true })).toMatchObject({ canViewBoard: true, canManageCommand: false, canAssignResources: false });
   });
 
+  it('shows the board unless Core’s capabilities leave out ViewBoard (the member’s own board always)', () => {
+    for (const tier of ['assist', 'command'] as const) {
+      // Not loaded yet: the board read itself is Core's check.
+      expect(resolveCommandPermissions({ tier, isClosed: false, canEstablish: false }).canViewBoard).toBe(true);
+      expect(resolveCommandPermissions({ tier, capabilities: IncidentCapabilities.ViewBoard, isClosed: true, canEstablish: false }).canViewBoard).toBe(true);
+      // Core sends 0 to a member who may not read the board (no View Command Boards, not on the incident).
+      expect(resolveCommandPermissions({ tier, capabilities: IncidentCapabilities.None, isClosed: false, canEstablish: true })).toMatchObject({ canViewBoard: false, canManageCommand: false });
+      expect(resolveCommandPermissions({ tier, capabilities: IncidentCapabilities.None, isClosed: false, canEstablish: true, isOwnBoard: true }).canViewBoard).toBe(true);
+    }
+  });
+
   it('each control maps to the capability Core checks for that write', () => {
     const safety = resolveCommandPermissions({
       tier: 'command',

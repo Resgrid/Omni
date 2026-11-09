@@ -1,5 +1,5 @@
 import { closeIncidentChannels, createIncidentChannel, getAllCommandDefinitions, getCommandBoard, getIncidentVoiceChannels, getMyIncidentCapabilities, transferCommand } from '@resgrid/api';
-import type { IncidentCommandBoard } from '@resgrid/models';
+import { BaseV4Request, type IncidentCapabilitiesResult, type IncidentCommandBoard } from '@resgrid/models';
 import { defaultResetRegistry } from '@resgrid/offline';
 
 import { createDataTestRuntime, failure, ok } from '../../__tests__/helpers';
@@ -18,6 +18,9 @@ jest.mock('@resgrid/api', () => ({
   getAdHocUnits: jest.fn(async () => ({ Data: [], Status: 'success' })),
   getAdHocPersonnel: jest.fn(async () => ({ Data: [], Status: 'success' })),
 }));
+
+/** `IncidentRoles/GetMyCapabilities` as Core answers it: a success envelope carrying the bitmask itself (or not). */
+const capabilitiesAnswer = (fields: Pick<IncidentCapabilitiesResult, 'Value' | 'Capabilities'>): IncidentCapabilitiesResult => ({ ...new BaseV4Request(), Status: 'success', ...fields });
 
 const board = (callId: number): IncidentCommandBoard =>
   ({
@@ -38,16 +41,26 @@ beforeEach(async () => {
 });
 
 describe('command support store', () => {
-  it('reads the effective capability bitmask per incident (0 when the server sends none)', async () => {
+  it('reads the effective capability bitmask per incident (still unknown when the answer has none)', async () => {
     // The bitmask is on the envelope, as Core sends it (no Data).
     jest.mocked(getMyIncidentCapabilities).mockResolvedValueOnce({ Status: 'success', Value: 9, Capabilities: ['ViewBoard', 'AssignResources'] } as never);
     await useCommandSupportStore.getState().fetchCapabilities('7');
     expect(getMyIncidentCapabilities).toHaveBeenCalledWith(expect.anything(), { callId: 7 });
     expect(useCommandSupportStore.getState().capabilitiesByCall['7']).toBe(9);
 
-    jest.mocked(getMyIncidentCapabilities).mockResolvedValueOnce({ Data: null, Status: 'not_found' } as never);
+    // A member who may do nothing gets 0, which is known (read-only, or not even readable).
+    jest.mocked(getMyIncidentCapabilities).mockResolvedValueOnce(capabilitiesAnswer({ Value: 0, Capabilities: [] }));
     await useCommandSupportStore.getState().fetchCapabilities('8', { bypassCache: true });
     expect(useCommandSupportStore.getState().capabilitiesByCall['8']).toBe(0);
+
+    // No bitmask says nothing: unknown, so the IC own-board fallback still applies (and a previous answer is kept).
+    jest.mocked(getMyIncidentCapabilities).mockResolvedValueOnce({ Data: null, Status: 'not_found' } as never);
+    await useCommandSupportStore.getState().fetchCapabilities('9', { bypassCache: true });
+    expect(useCommandSupportStore.getState().capabilitiesByCall).not.toHaveProperty('9');
+
+    jest.mocked(getMyIncidentCapabilities).mockResolvedValueOnce(capabilitiesAnswer({}));
+    await useCommandSupportStore.getState().fetchCapabilities('7', { bypassCache: true });
+    expect(useCommandSupportStore.getState().capabilitiesByCall['7']).toBe(9);
   });
 
   it('keeps a failed capability read unloaded and records the error', async () => {

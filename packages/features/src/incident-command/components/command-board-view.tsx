@@ -4,8 +4,8 @@ import { generateDataId, selectCallById, useCallsStore, useCommandStore, useComm
 import { callDisplayName } from '@resgrid/features/calls';
 import { useTranslation } from '@resgrid/i18n';
 import { type CommandStructureNode, type IncidentNeed, type IncidentTimer, type ResourceAssignment, type TacticalObjective } from '@resgrid/models';
-import { HStack, Text, useFormFactor, useToast } from '@resgrid/ui';
-import { Radio, ShieldCheck, Users } from 'lucide-react-native';
+import { HStack, Text, useFormFactor, useToast, ZeroState } from '@resgrid/ui';
+import { Radio, ShieldCheck, ShieldOff, Users } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
 import { type LayoutChangeEvent, StyleSheet, View } from 'react-native';
 
@@ -105,6 +105,7 @@ export const CommandBoardView: React.FC<CommandBoardViewProps> = ({ callId, tier
   const entry = useCommandStore((state) => state.boards[callId]);
   const refreshBoard = useCommandStore((state) => state.refreshBoard);
   const fetchTimeline = useCommandStore((state) => state.fetchTimeline);
+  const fetchCapabilities = useCommandSupportStore((state) => state.fetchCapabilities);
   const endCommand = useCommandStore((state) => state.endCommand);
   const call = useCallsStore((state) => selectCallById(state, callId));
   const closeCapability = useCapability('calls').close;
@@ -144,6 +145,12 @@ export const CommandBoardView: React.FC<CommandBoardViewProps> = ({ callId, tier
     void refreshBoard(callId, { bypassCache: true });
     void fetchTimeline(callId);
   }, [callId, fetchTimeline, refreshBoard]);
+
+  // Access to the board may have been granted since (View Command Boards, or a place on the incident): ask Core again.
+  const recheckAccess = useCallback(async () => {
+    await fetchCapabilities(callId, { bypassCache: true });
+    await refreshBoard(callId, { bypassCache: true });
+  }, [callId, fetchCapabilities, refreshBoard]);
 
   // ---------------------------------------------------------------- resources
   const assignTo = useCallback(
@@ -221,6 +228,11 @@ export const CommandBoardView: React.FC<CommandBoardViewProps> = ({ callId, tier
   );
 
   if (!entry) return null;
+
+  // Core says this member may not read the board (capabilities without ViewBoard): what the device still holds stays hidden.
+  if (!permissions.canViewBoard) {
+    return <ZeroState icon={ShieldOff} heading={t('incident_command.board_not_viewable')} description={t('incident_command.board_not_viewable_description')} onRetry={recheckAccess} testID="command-board-not-viewable" />;
+  }
 
   const command = board?.Command ?? null;
   // The move needs the assign capability; a confirmation left open after losing it never shows.

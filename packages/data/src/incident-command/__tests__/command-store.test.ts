@@ -1,10 +1,23 @@
-import { assignResource, closeCallWith, closeCommand, establishCommand, getAdHocPersonnel, getAdHocUnits, getCommandBoard, getResourceIncidentView, getSyncBundle, moveResource, saveObjective } from '@resgrid/api';
-import { BaseV4Request, type IncidentCommandBoard, type ResourceAssignment } from '@resgrid/models';
+import {
+  assignResource,
+  closeCallWith,
+  closeCommand,
+  establishCommand,
+  getAdHocPersonnel,
+  getAdHocUnits,
+  getCommandBoard,
+  getResourceIncidentView,
+  getSyncBundle,
+  moveResource,
+  saveNode,
+  saveObjective,
+} from '@resgrid/api';
+import { BaseV4Request, type CommandStructureNode, type IncidentCommandBoard, type ResourceAssignment } from '@resgrid/models';
 import { defaultResetRegistry } from '@resgrid/offline';
 
 import { createDataTestRuntime, type DataTestRuntime, flush, httpError, notFound, ok, persisted } from '../../__tests__/helpers';
 import { setDataStorage } from '../../core/persist';
-import { IC_EVENT, incidentOrderKey, useCommandStore, withPendingLocalRows } from '../command-store';
+import { IC_EVENT, incidentOrderKey, RESOLVED_LOCAL_ID_RETENTION_MS, useCommandStore, withPendingLocalRows } from '../command-store';
 import { useResourceViewStore } from '../resource-view-store';
 
 jest.mock('@resgrid/api', () => ({
@@ -18,6 +31,7 @@ jest.mock('@resgrid/api', () => ({
   getAdHocUnits: jest.fn(),
   getAdHocPersonnel: jest.fn(),
   getSyncBundle: jest.fn(),
+  saveNode: jest.fn(),
   saveObjective: jest.fn(),
   getResourceIncidentView: jest.fn(),
 }));
@@ -38,6 +52,20 @@ const board = (callId: number, extra: Partial<IncidentCommandBoard> = {}): Incid
 
 /** A v4 success envelope as the API functions resolve it. */
 const envelope = <T>(Data: T): BaseV4Request & { Data: T } => ({ ...new BaseV4Request(), Status: 'success', Data });
+
+/** Unit u1 in lane n1 on call 7's board. */
+const assignmentRow: ResourceAssignment = {
+  ResourceAssignmentId: 'a1',
+  IncidentCommandId: 'ic-7',
+  DepartmentId: 1,
+  CallId: 7,
+  CommandStructureNodeId: 'n1',
+  ResourceKind: 1,
+  ResourceId: 'u1',
+  AssignedByUserId: 'u0',
+  AssignedOn: '2026-11-08T22:00:00Z',
+  RequirementsWarning: false,
+};
 
 let runtime: DataTestRuntime;
 
@@ -125,19 +153,7 @@ describe('incident command board (IC stores/command/*)', () => {
   });
 
   it('moves a resource to a lane through MoveResource and back to the pool through AssignResource', async () => {
-    const row: ResourceAssignment = {
-      ResourceAssignmentId: 'a1',
-      IncidentCommandId: 'ic-7',
-      DepartmentId: 1,
-      CallId: 7,
-      CommandStructureNodeId: 'n1',
-      ResourceKind: 1,
-      ResourceId: 'u1',
-      AssignedByUserId: 'u0',
-      AssignedOn: '2026-11-08T22:00:00Z',
-      RequirementsWarning: false,
-    };
-
+    const row = assignmentRow;
     const withRow = board(7, { Assignments: [row] });
     jest.mocked(getCommandBoard).mockResolvedValue(envelope(withRow));
     jest.mocked(moveResource).mockResolvedValue(envelope(row));
@@ -161,12 +177,82 @@ describe('incident command board (IC stores/command/*)', () => {
     expect(assignResource).toHaveBeenCalledTimes(1);
   });
 
+  it('sends writes queued against rows created offline with the ids the server gave those rows', async () => {
+    const lane: CommandStructureNode = { CommandStructureNodeId: 'n1', IncidentCommandId: 'ic-7', DepartmentId: 1, CallId: 7, Name: 'Interior', NodeType: 0, SortOrder: 0 };
+    const row = assignmentRow;
+
+    useCommandStore.setState({ boards: { '7': { callId: '7', board: board(7), adHocUnits: [], adHocPersonnel: [], isProvisional: false, lastRefreshed: 1 } } });
+    runtime.connectivity.setOnline(false);
+
+    // Offline: add a lane, assign a resource into it, nest a lane under it, then move the resource back to the pool.
+    const addLane = await useCommandStore.getState().dispatchCommandEvent(IC_EVENT.saveNode, {
+      callId: '7',
+      resolveCommandId: true,
+      local: { collection: 'Nodes', idField: 'CommandStructureNodeId' },
+      body: { CallId: 7, Name: 'Interior', NodeType: 0, ParentNodeId: null, SortOrder: 0 },
+    });
+
+    const assign = await useCommandStore.getState().dispatchCommandEvent(IC_EVENT.assignResource, {
+      callId: '7',
+      resolveCommandId: true,
+      local: { collection: 'Assignments', idField: 'ResourceAssignmentId' },
+      body: { CallId: 7, CommandStructureNodeId: `local-${addLane.id}`, ResourceKind: 1, ResourceId: 'u1' },
+    });
+
+    await useCommandStore.getState().dispatchCommandEvent(IC_EVENT.saveNode, { callId: '7', resolveCommandId: true, body: { CallId: 7, Name: 'Floor 2', NodeType: 0, ParentNodeId: `local-${addLane.id}`, SortOrder: 1 } });
+    await useCommandStore.getState().dispatchCommandEvent(IC_EVENT.moveResource, { callId: '7', body: { ResourceAssignmentId: `local-${assign.id}`, TargetNodeId: '' } });
+
+    jest
+      .mocked(saveNode)
+      .mockResolvedValueOnce(envelope(lane))
+      .mockResolvedValueOnce(envelope({ ...lane, CommandStructureNodeId: 'n2', ParentNodeId: 'n1' }));
+    jest.mocked(assignResource).mockResolvedValue(envelope(row));
+    jest.mocked(getCommandBoard).mockResolvedValue(envelope(board(7, { Nodes: [lane], Assignments: [row] })));
+    runtime.connectivity.setOnline(true);
+    await runtime.outbox.drain();
+    await flush();
+
+    expect(assignResource).toHaveBeenNthCalledWith(1, expect.anything(), expect.objectContaining({ CommandStructureNodeId: 'n1', ResourceId: 'u1', IncidentCommandId: 'ic-7' }));
+    expect(saveNode).toHaveBeenNthCalledWith(2, expect.anything(), expect.objectContaining({ Name: 'Floor 2', ParentNodeId: 'n1' }));
+    // The pool move re-saves the server's row, not a row the server never had.
+    expect(assignResource).toHaveBeenNthCalledWith(2, expect.anything(), { ...row, CommandStructureNodeId: '' });
+    expect(useCommandStore.getState().resolvedLocalIds).toEqual({
+      [`local-${addLane.id}`]: expect.objectContaining({ callId: '7', serverId: 'n1' }),
+      [`local-${assign.id}`]: expect.objectContaining({ callId: '7', serverId: 'a1' }),
+    });
+    expect(useCommandStore.getState().pendingLocalRows).toEqual({});
+    expect(await runtime.rows()).toEqual([]);
+  });
+
+  it('holds back a write whose row is still waiting for its create, and sends an unknown local id as it is', async () => {
+    useCommandStore.setState({ boards: { '7': { callId: '7', board: board(7), adHocUnits: [], adHocPersonnel: [], isProvisional: false, lastRefreshed: 1 } } });
+    useCommandStore.getState().addLocalRow({ eventId: 'e1', callId: '7', collection: 'Assignments', row: { ResourceAssignmentId: 'local-e1', __localEventId: 'e1' } });
+
+    const held = await useCommandStore.getState().dispatchCommandEvent(IC_EVENT.moveResource, { callId: '7', body: { ResourceAssignmentId: 'local-e1', TargetNodeId: 'n2' } });
+    expect(held.outcome).toBe('queued');
+    expect(moveResource).not.toHaveBeenCalled();
+    await runtime.outbox.discard(held.id, { confirmed: true });
+
+    // Its create was refused or discarded: nothing on the server has the id, and the server answers for it.
+    jest.mocked(moveResource).mockResolvedValue(envelope(assignmentRow));
+    const orphan = await useCommandStore.getState().dispatchCommandEvent(IC_EVENT.moveResource, { callId: '7', body: { ResourceAssignmentId: 'local-e9', TargetNodeId: 'n2' } });
+    expect(orphan.outcome).toBe('sent');
+    expect(moveResource).toHaveBeenCalledWith(expect.anything(), { ResourceAssignmentId: 'local-e9', TargetNodeId: 'n2' });
+  });
+
+  it('keeps the server ids of acknowledged creates for the retention period only', () => {
+    useCommandStore.getState().resolveLocalId('e1', '7', 'a1');
+    runtime.clock.advance(RESOLVED_LOCAL_ID_RETENTION_MS + 1);
+    useCommandStore.getState().resolveLocalId('e2', '7', 'a2');
+    expect(Object.keys(useCommandStore.getState().resolvedLocalIds)).toEqual(['local-e2']);
+  });
+
   it('syncs every board from /Sync/Bundle and persists in the frozen command-storage shape', async () => {
     jest.mocked(getSyncBundle).mockResolvedValue(ok({ ServerTimestampMs: 77, Boards: [board(7)], AdHocUnits: [{ CallId: 7, ReleasedOn: null }], AdHocPersonnel: [] }) as never);
     await useCommandStore.getState().syncFromServer();
     expect(useCommandStore.getState().boards['7'].adHocUnits).toHaveLength(1);
     expect(useCommandStore.getState().lastSyncTimestampMs).toBe(77);
-    expect(Object.keys(persisted(runtime.kv, 'command-storage')?.state ?? {})).toEqual(['boards', 'activeCallId', 'lastSyncTimestampMs', 'pendingLocalRows']);
+    expect(Object.keys(persisted(runtime.kv, 'command-storage')?.state ?? {})).toEqual(['boards', 'activeCallId', 'lastSyncTimestampMs', 'pendingLocalRows', 'resolvedLocalIds']);
   });
 
   it('rehydrates legacy IC boards (no Needs) and repairs a dangling activeCallId', async () => {

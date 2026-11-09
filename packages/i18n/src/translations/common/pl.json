@@ -1459,7 +1459,9 @@
     "voice_preset_tactical": "Tactical",
     "work_time": "{{minutes}} minutes in lane",
     "write_failed": "That change could not be saved.",
-    "write_rejected": "The server refused that change. Review it in Pending changes."
+    "write_rejected": "The server refused that change. Review it in Pending changes.",
+    "board_not_viewable": "You can't view this command board",
+    "board_not_viewable_description": "Seeing this board needs the View Command Boards permission or a place on the incident."
   },
   "livekit": {
     "audio_devices": "Urządzenia audio",

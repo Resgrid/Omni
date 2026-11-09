@@ -13,11 +13,14 @@ export type IncidentCommandTier = Capabilities['incidentCommand'];
  *   command; ICS roles and command assist give parts; anyone else reads the board without changing it.
  * - Until the capabilities load (or offline), the IC tier treats a board the member commands, established, or started on
  *   this device as fully theirs, and every other board as read-only; Dispatch is read-only.
+ * - Reading the board follows Core's `ViewBoard` bit (View Command Boards, or being on the incident): once the
+ *   capabilities say the member may not read it, a board still held on the device is not shown. Until they load, the
+ *   board read itself is the check (Core refuses it), and the member's own board is always readable.
  * Establishing needs the department's run-command permission (IC, `CanLoginToCommandApp`) or `CanCreateCalls` (Dispatch).
  * A closed command is read-only in every tier.
  */
 export interface CommandPermissions {
-  /** The full board is shown (assist/command). */
+  /** The full board is shown (assist/command, unless Core's capabilities leave out `ViewBoard`). Closed boards stay readable. */
   canViewBoard: boolean;
   canEstablish: boolean;
   /** End, transfer, command details. */
@@ -77,7 +80,9 @@ export function resolveCommandPermissions({ tier, capabilities, isClosed, canEst
   const value = known ? capabilities : tier === 'command' && isOwnBoard ? IncidentCapabilities.All : IncidentCapabilities.None;
   const can = (flag: IncidentCapabilities) => !isClosed && hasIncidentCapability(value, flag);
   return {
-    canViewBoard: true,
+    // Core sends 0 to a member who may not read the board. The member's own board stays readable while a capability
+    // answer from before their establish landed is still current (Core counts commander and establisher as on the incident).
+    canViewBoard: !known || isOwnBoard || hasIncidentCapability(value, IncidentCapabilities.ViewBoard),
     canEstablish,
     canManageCommand: can(IncidentCapabilities.ManageCommand),
     canManageRoles: can(IncidentCapabilities.ManageCommand),

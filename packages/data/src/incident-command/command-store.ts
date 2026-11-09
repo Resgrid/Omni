@@ -75,6 +75,25 @@ export interface PendingLocalRow {
   row: Record<string, unknown>;
 }
 
+/** Optimistic rows carry `local-<eventId>` ids until the server acknowledges their create. */
+export const LOCAL_ID_PREFIX = 'local-';
+
+/** The server id an acknowledged create gave its optimistic row (keyed by the row's `local-<eventId>` id). */
+export interface ResolvedLocalId {
+  callId: string;
+  serverId: string;
+  resolvedAt: number;
+}
+
+/**
+ * Retention for `resolvedLocalIds`: writes queued against an optimistic row replay right after its create (one order
+ * per incident), so a mapping is only needed while those writes are still being retried.
+ */
+export const RESOLVED_LOCAL_ID_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
+
+const pruneResolvedLocalIds = (resolved: Record<string, ResolvedLocalId>, now: number): Record<string, ResolvedLocalId> =>
+  Object.fromEntries(Object.entries(resolved).filter(([, entry]) => now - entry.resolvedAt <= RESOLVED_LOCAL_ID_RETENTION_MS));
+
 export interface EndCommandOptions {
   closeCall?: { type: number; notes?: string; sendNotification?: boolean };
 }
@@ -91,6 +110,11 @@ interface CommandData extends SliceMeta<CommandSlice> {
   activeCallId: string | null;
   lastSyncTimestampMs: number;
   pendingLocalRows: Record<string, PendingLocalRow>;
+  /**
+   * Optimistic row ids whose create the server acknowledged → the server's id, so writes queued against the row while it
+   * was pending (moving a resource assigned offline, filling or editing a lane added offline) reach the real row.
+   */
+  resolvedLocalIds: Record<string, ResolvedLocalId>;
   /** IC incident list (GetCommandList). */
   summaries: IncidentCommandSummary[];
 }
@@ -110,10 +134,12 @@ export interface CommandState extends CommandData {
   // Used by the outbox handlers.
   addLocalRow: (row: PendingLocalRow) => void;
   removeLocalRow: (eventId: string) => void;
+  /** Records the server id an acknowledged create gave the row `local-<eventId>` (and drops mappings past retention). */
+  resolveLocalId: (eventId: string, callId: string, serverId: string) => void;
   markBoardEstablished: (callId: string) => void;
 }
 
-const initialData = (): CommandData => ({ ...emptySliceMeta<CommandSlice>(), boards: {}, activeCallId: null, lastSyncTimestampMs: 0, pendingLocalRows: {}, summaries: [] });
+const initialData = (): CommandData => ({ ...emptySliceMeta<CommandSlice>(), boards: {}, activeCallId: null, lastSyncTimestampMs: 0, pendingLocalRows: {}, resolvedLocalIds: {}, summaries: [] });
 
 const emptyBoardState = (callId: string, provisional: boolean): CommandBoardState => ({ callId, board: null, adHocUnits: [], adHocPersonnel: [], isProvisional: provisional, lastRefreshed: null });
 
@@ -288,6 +314,13 @@ export const useCommandStore = create<CommandState>()(
             return { pendingLocalRows, ...(entry ? { boards: { ...state.boards, [row.callId]: entry } } : {}) };
           }),
 
+        resolveLocalId: (eventId, callId, serverId) =>
+          set((state) => {
+            const now = dataNow();
+
+            return { resolvedLocalIds: { ...pruneResolvedLocalIds(state.resolvedLocalIds, now), [`${LOCAL_ID_PREFIX}${eventId}`]: { callId, serverId, resolvedAt: now } } };
+          }),
+
         markBoardEstablished: (callId) =>
           set((state) => {
             const entry = state.boards[callId];
@@ -295,19 +328,33 @@ export const useCommandStore = create<CommandState>()(
           }),
       };
     },
-    dataPersistOptions<CommandState, Pick<CommandData, 'boards' | 'activeCallId' | 'lastSyncTimestampMs' | 'pendingLocalRows'>>({
-      // Frozen: IC's persisted command store (boards, activeCallId, lastSyncTimestampMs); pendingLocalRows is additive.
+    dataPersistOptions<CommandState, Pick<CommandData, 'boards' | 'activeCallId' | 'lastSyncTimestampMs' | 'pendingLocalRows' | 'resolvedLocalIds'>>({
+      // Frozen: IC's persisted command store (boards, activeCallId, lastSyncTimestampMs); pendingLocalRows and
+      // resolvedLocalIds are additive.
       name: 'command-storage',
-      partialize: (state) => ({ boards: state.boards, activeCallId: state.activeCallId, lastSyncTimestampMs: state.lastSyncTimestampMs, pendingLocalRows: state.pendingLocalRows }),
+      partialize: (state) => ({
+        boards: state.boards,
+        activeCallId: state.activeCallId,
+        lastSyncTimestampMs: state.lastSyncTimestampMs,
+        pendingLocalRows: state.pendingLocalRows,
+        resolvedLocalIds: state.resolvedLocalIds,
+      }),
       merge: (persisted, current) => {
-        const value = (persisted ?? {}) as Partial<Pick<CommandData, 'boards' | 'activeCallId' | 'lastSyncTimestampMs' | 'pendingLocalRows'>>;
+        const value = (persisted ?? {}) as Partial<Pick<CommandData, 'boards' | 'activeCallId' | 'lastSyncTimestampMs' | 'pendingLocalRows' | 'resolvedLocalIds'>>;
         const boards = value.boards && typeof value.boards === 'object' ? value.boards : {};
         // Older IC builds persisted boards before Needs existed.
         for (const [callId, entry] of Object.entries(boards)) {
           if (entry?.board) boards[callId] = { ...entry, board: { ...entry.board, Needs: Array.isArray(entry.board.Needs) ? entry.board.Needs : [] } };
         }
         const activeCallId = value.activeCallId && boards[value.activeCallId] ? value.activeCallId : (Object.keys(boards)[0] ?? null);
-        return { ...current, boards, activeCallId, lastSyncTimestampMs: value.lastSyncTimestampMs ?? 0, pendingLocalRows: value.pendingLocalRows ?? {} };
+        return {
+          ...current,
+          boards,
+          activeCallId,
+          lastSyncTimestampMs: value.lastSyncTimestampMs ?? 0,
+          pendingLocalRows: value.pendingLocalRows ?? {},
+          resolvedLocalIds: pruneResolvedLocalIds(value.resolvedLocalIds ?? {}, dataNow()),
+        };
       },
     })
   )
