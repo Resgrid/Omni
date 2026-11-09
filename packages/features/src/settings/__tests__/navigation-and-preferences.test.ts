@@ -5,7 +5,7 @@ import { createMemoryKvBackend, DurableKv } from '@resgrid/offline';
 import { Linking } from 'react-native';
 
 import { setDevicePreferencesKv } from '../../auth-ui/lib/device-kv';
-import { ageParts, formatBytes } from '../lib/format';
+import { ageParts, formatBytes, outboxErrorLabel } from '../lib/format';
 import { getNavigationApp, getNavigationAppOptions, normalizeNavigationApp, setNavigationApp } from '../lib/navigation-app';
 import { buildNavigationAttempts, NAVIGATION_ORIGIN_MAX_AGE_MS, openMapsWithDirections, openNavigationTarget, toNavigationCoordinates } from '../lib/navigation-handoff';
 import { getKeepAlivePreference, getLocationPreferences, getThemeMode, subscribePreferences } from '../lib/preferences';
@@ -167,5 +167,14 @@ describe('format', () => {
     expect(ageParts(10_000)).toEqual({ key: 'just_now', count: 0 });
     expect(ageParts(90 * 60_000)).toEqual({ key: 'hours', count: 1 });
     expect(ageParts(72 * 3_600_000)).toEqual({ key: 'days', count: 3 });
+  });
+
+  it('labels a queued change error by HTTP status, never by the generic axios code', () => {
+    expect(outboxErrorLabel(undefined)).toBeNull();
+    expect(outboxErrorLabel({ status: 403, code: 'ERR_BAD_REQUEST', message: 'Request failed with status code 403' })).toBe('HTTP 403');
+    expect(outboxErrorLabel({ status: 502, code: 'ERR_BAD_RESPONSE', message: 'Bad gateway' })).toBe('HTTP 502');
+    expect(outboxErrorLabel({ status: 422, code: 'validation_failed', message: 'Note too long' })).toBe('HTTP 422 · validation_failed');
+    expect(outboxErrorLabel({ code: 'payload_unreadable', message: 'The queued payload could not be decrypted.' })).toBe('payload_unreadable');
+    expect(outboxErrorLabel({ message: 'No active incident command for the call yet.' })).toBe('No active incident command for the call yet.');
   });
 });

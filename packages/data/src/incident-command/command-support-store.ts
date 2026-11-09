@@ -16,7 +16,11 @@ type SupportSlice = 'capabilities' | 'definitions' | 'voiceChannels';
  * the board; templates and voice channels are online conveniences (a blank board always works offline).
  */
 interface CommandSupportData extends SliceMeta<SupportSlice> {
-  /** Effective `IncidentCapabilities` bitmask per incident (`IncidentRoles/GetMyCapabilities`); absent = not loaded. */
+  /**
+   * Effective `IncidentCapabilities` bitmask per incident (`IncidentRoles/GetMyCapabilities`): exactly the writes the server
+   * accepts from this member there, plus `ViewBoard` when they may read it (`resolveCommandPermissions` gates both).
+   * Absent = not loaded.
+   */
   capabilitiesByCall: Record<string, number>;
   /** Department command templates (`Commands/GetAllCommands`). */
   definitions: CommandResultData[];
@@ -57,8 +61,14 @@ export const useCommandSupportStore = create<CommandSupportState>()((set, get) =
     fetchCapabilities: async (callId, options) => {
       await supportRunner.run(
         'capabilities',
-        async () => unwrapItem(await getMyIncidentCapabilities(ctx(), { callId: toCallParam(callId) })),
-        (data, state) => ({ capabilitiesByCall: { ...state.capabilitiesByCall, [callId]: typeof data?.Value === 'number' ? data.Value : 0 } }),
+        // Core puts the bitmask on the envelope (`Value`), not in `Data`; a member who may do nothing gets 0.
+        async () => assertV4Success(await getMyIncidentCapabilities(ctx(), { callId: toCallParam(callId) })),
+        (result, state) => {
+          const value = result?.Value;
+
+          // An answer without a bitmask says nothing: the capabilities stay unknown (the IC own-board fallback), not 0.
+          return typeof value === 'number' ? { capabilitiesByCall: { ...state.capabilitiesByCall, [callId]: value } } : {};
+        },
         { flightKey: `capabilities:${callId}`, trailing: options?.bypassCache === true }
       );
     },

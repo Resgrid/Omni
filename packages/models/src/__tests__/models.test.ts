@@ -166,6 +166,11 @@ describe('helpers', () => {
     expect(getIncidentRoleCapabilities(R.IncidentCommander)).toBe(C.All);
     expect(hasIncidentCapability(getIncidentRoleCapabilities(R.SafetyOfficer), C.ManageAnnotations)).toBe(true);
     expect(hasIncidentCapability(getIncidentRoleCapabilities(R.SafetyOfficer), C.ManageCommand)).toBe(false);
+    // Core's flags and map (Resgrid.Model.IncidentCapabilities / IncidentRoleCapabilityMap), notes and public information included.
+    expect(C.All).toBe(16383);
+    expect(hasIncidentCapability(getIncidentRoleCapabilities(R.SafetyOfficer), C.ManageNotes)).toBe(true);
+    expect(hasIncidentCapability(getIncidentRoleCapabilities(R.PublicInformationOfficer), C.ManagePublicInformation)).toBe(true);
+    expect(hasIncidentCapability(getIncidentRoleCapabilities(R.FinanceAdminSectionChief), C.ManageNotes)).toBe(false);
     expect(models.TacticalObjectiveStatus.InProgress).toBe(2);
     expect(models.IncidentNeedCategory.Entity).toBe(6);
     expect(models.ParStatus.Critical).toBe('Critical');

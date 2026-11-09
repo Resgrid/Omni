@@ -1,4 +1,5 @@
 // Board fixtures for the incident-command tests (not a test file).
+import { useAuthStore } from '@resgrid/auth';
 import { type CommandBoardState, useCommandStore, useCommandSupportStore, usePersonnelStore, useUnitsStore } from '@resgrid/data';
 import {
   CommandNodeType,
@@ -87,7 +88,11 @@ export const mockStartCommand = jest.fn();
 export const mockFetchCapabilities = jest.fn();
 
 /** Puts one board in the command store with every network action stubbed. */
-export function seedBoard(callId = '7', board: IncidentCommandBoard | null = makeBoard(), overrides: Partial<CommandBoardState> = {}): void {
+/** The board's commander (makeBoard: u1). Core gives them every capability, so the IC tier can work the board. */
+export const COMMANDER_USER_ID = 'u1';
+
+export function seedBoard(callId = '7', board: IncidentCommandBoard | null = makeBoard(), overrides: Partial<CommandBoardState> = {}, userId: string | null = COMMANDER_USER_ID): void {
+  useAuthStore.setState({ userId });
   mockDispatch.mockResolvedValue({ outcome: 'sent', id: 'e1' });
   mockRefreshBoard.mockResolvedValue(undefined);
   mockFetchTimeline.mockResolvedValue(undefined);

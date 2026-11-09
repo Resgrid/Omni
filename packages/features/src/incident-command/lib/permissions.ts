@@ -7,14 +7,20 @@ export type IncidentCommandTier = Capabilities['incidentCommand'];
 /**
  * What the signed-in member may do on a command board. One board for every app, gated here (plan §7.10):
  * - `none` (BigBoard) and `view` (Responder/Unit): no board writes; R/U see their own slice (resource view).
- * - `assist` (Dispatch): the server's effective `IncidentCapabilities` for this member and incident decide each action
- *   (Dispatch `command-board-view`); until they load, the board is read-only. Establishing needs `CanCreateCalls`.
- * - `command` (IC): everything — command-app access is already enforced at sign-in (`CanLoginToCommandApp`), the board
- *   must work offline where capabilities cannot be fetched, and the server refuses anything a role may not do.
+ * - `assist` (Dispatch) and `command` (IC): the server's effective `IncidentCapabilities` for this member and incident
+ *   (`IncidentRoles/GetMyCapabilities`) decide each action — the same checks Core applies to each write, so no control
+ *   is offered that the server would refuse. Core gives every capability to the commander and to whoever established
+ *   command; ICS roles and command assist give parts; anyone else reads the board without changing it.
+ * - Until the capabilities load (or offline), the IC tier treats a board the member commands, established, or started on
+ *   this device as fully theirs, and every other board as read-only; Dispatch is read-only.
+ * - Reading the board follows Core's `ViewBoard` bit (View Command Boards, or being on the incident): once the
+ *   capabilities say the member may not read it, a board still held on the device is not shown. Until they load, the
+ *   board read itself is the check (Core refuses it), and the member's own board is always readable.
+ * Establishing needs the department's run-command permission (IC, `CanLoginToCommandApp`) or `CanCreateCalls` (Dispatch).
  * A closed command is read-only in every tier.
  */
 export interface CommandPermissions {
-  /** The full board is shown (assist/command). */
+  /** The full board is shown (assist/command, unless Core's capabilities leave out `ViewBoard`). Closed boards stay readable. */
   canViewBoard: boolean;
   canEstablish: boolean;
   /** End, transfer, command details. */
@@ -23,13 +29,18 @@ export interface CommandPermissions {
   canManageRoles: boolean;
   canManageStructure: boolean;
   canAssignResources: boolean;
-  /** Ad-hoc (non-Resgrid) units and personnel, needs. */
+  /** Ad-hoc (non-Resgrid) units and personnel. */
   canManageResources: boolean;
+  /** Incident needs and their status (Core: ManageObjectives). */
+  canManageNeeds: boolean;
   canManageObjectives: boolean;
   canManageTimers: boolean;
   canManageAccountability: boolean;
   canManageChannels: boolean;
+  /** Add incident notes (Core: ManageNotes). */
   canAddNotes: boolean;
+  /** Choose Public visibility for a note (Core: ManagePublicInformation). */
+  canAddPublicNotes: boolean;
 }
 
 export const NO_COMMAND_PERMISSIONS: CommandPermissions = {
@@ -40,11 +51,13 @@ export const NO_COMMAND_PERMISSIONS: CommandPermissions = {
   canManageStructure: false,
   canAssignResources: false,
   canManageResources: false,
+  canManageNeeds: false,
   canManageObjectives: false,
   canManageTimers: false,
   canManageAccountability: false,
   canManageChannels: false,
   canAddNotes: false,
+  canAddPublicNotes: false,
 };
 
 export interface PermissionInput {
@@ -52,44 +65,36 @@ export interface PermissionInput {
   /** Server bitmask for this member and incident; undefined while unknown. */
   capabilities?: number;
   isClosed: boolean;
-  /** Rights DTO `CanCreateCalls` (assist tier establish). */
-  canCreateCalls: boolean;
+  /** May establish command: rights `CanLoginToCommandApp` (command tier) or `CanCreateCalls` (assist tier). */
+  canEstablish: boolean;
+  /**
+   * The member commands this board, established it, or started it on this device (provisional): Core gives them every
+   * capability, so the IC tier can work it before the capabilities load and offline.
+   */
+  isOwnBoard?: boolean;
 }
 
-export function resolveCommandPermissions({ tier, capabilities, isClosed, canCreateCalls }: PermissionInput): CommandPermissions {
+export function resolveCommandPermissions({ tier, capabilities, isClosed, canEstablish, isOwnBoard = false }: PermissionInput): CommandPermissions {
   if (tier === 'none' || tier === 'view') return NO_COMMAND_PERMISSIONS;
-  if (tier === 'command') {
-    const write = !isClosed;
-    return {
-      canViewBoard: true,
-      canEstablish: true,
-      canManageCommand: write,
-      canManageRoles: write,
-      canManageStructure: write,
-      canAssignResources: write,
-      canManageResources: write,
-      canManageObjectives: write,
-      canManageTimers: write,
-      canManageAccountability: write,
-      canManageChannels: write,
-      canAddNotes: write,
-    };
-  }
-  // assist
-  const value = typeof capabilities === 'number' ? capabilities : IncidentCapabilities.None;
+  const known = typeof capabilities === 'number';
+  const value = known ? capabilities : tier === 'command' && isOwnBoard ? IncidentCapabilities.All : IncidentCapabilities.None;
   const can = (flag: IncidentCapabilities) => !isClosed && hasIncidentCapability(value, flag);
   return {
-    canViewBoard: true,
-    canEstablish: canCreateCalls,
+    // Core sends 0 to a member who may not read the board. The member's own board stays readable while a capability
+    // answer from before their establish landed is still current (Core counts commander and establisher as on the incident).
+    canViewBoard: !known || isOwnBoard || hasIncidentCapability(value, IncidentCapabilities.ViewBoard),
+    canEstablish,
     canManageCommand: can(IncidentCapabilities.ManageCommand),
     canManageRoles: can(IncidentCapabilities.ManageCommand),
     canManageStructure: can(IncidentCapabilities.ManageStructure),
     canAssignResources: can(IncidentCapabilities.AssignResources),
     canManageResources: can(IncidentCapabilities.ManageResources),
+    canManageNeeds: can(IncidentCapabilities.ManageObjectives),
     canManageObjectives: can(IncidentCapabilities.ManageObjectives),
     canManageTimers: can(IncidentCapabilities.ManageTimers),
     canManageAccountability: can(IncidentCapabilities.ManageAccountability),
     canManageChannels: can(IncidentCapabilities.ManageChannels),
-    canAddNotes: can(IncidentCapabilities.ManageCommand) || can(IncidentCapabilities.ManageObjectives),
+    canAddNotes: can(IncidentCapabilities.ManageNotes),
+    canAddPublicNotes: can(IncidentCapabilities.ManageNotes) && can(IncidentCapabilities.ManagePublicInformation),
   };
 }

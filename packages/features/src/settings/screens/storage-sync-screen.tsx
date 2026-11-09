@@ -7,7 +7,7 @@ import React, { useCallback, useState } from 'react';
 
 import { SettingsCard, SettingsRow } from '../components/settings-row';
 import { type SyncNowOutcome, useStorageSync } from '../hooks/use-storage-sync';
-import { ageParts, formatBytes } from '../lib/format';
+import { ageParts, formatBytes, outboxErrorLabel } from '../lib/format';
 
 type Confirmation = { kind: 'discard'; item: OutboxItemView } | { kind: 'clear-cached' } | { kind: 'clear-all'; unsent: number } | null;
 
@@ -21,7 +21,7 @@ const canRetry = (item: OutboxItemView): boolean => item.state === 'failed' || i
 const PendingItem: React.FC<{ item: OutboxItemView; busy: boolean; onRetry: () => void; onConfirm: () => void; onDiscard: () => void }> = ({ item, busy, onRetry, onConfirm, onDiscard }) => {
   const { t } = useTranslation();
   const age = ageParts(item.ageMs);
-  const error = item.lastError ? (item.lastError.code ?? (item.lastError.status ? `HTTP ${item.lastError.status}` : item.lastError.message)) : null;
+  const error = outboxErrorLabel(item.lastError);
   const typeLabel = t(typeKey(item.type), { defaultValue: item.type });
   return (
     <Box className="rounded-lg border border-outline-200 p-3" testID={`storage-item-${item.id}`}>

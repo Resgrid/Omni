@@ -37,6 +37,11 @@ export class DepartmentRightsResultData {
    * when the department has never configured the permission.
    */
   public CanLoginToCommandApp: boolean = true;
+  /**
+   * Whether this user may read every command board in the department (View Command Boards). Without it they still read
+   * the boards of incidents they are on. Undefined from servers that predate the field, where CanLoginToCommandApp decided.
+   */
+  public CanViewCommandBoards?: boolean;
   public Groups: GroupRightResultData[] = []; // Group Rights
 }
 

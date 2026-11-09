@@ -20,7 +20,7 @@ Every Omni app works offline: it reads its shift working set from durable storag
      classify: (err) => (err.status && err.status < 500 ? 'permanent' : 'retry'),
    });
    ```
-3. **Idempotency:** the event `id` (client UUID) is the idempotency key sent to the server; creates send a client GUID. Never generate ids that change on retry.
+3. **Idempotency:** the event `id` (client UUID) is the idempotency key sent to the server; creates send a client GUID. Never generate ids that change on retry. A row shown optimistically under a placeholder id (IC board rows: `local-<eventId>`) may be acted on before its create is sent; the write queued then still names the placeholder, so the create's `afterAck` records the server's id and the later write's `send` swaps it in (IC `resolvedLocalIds`). Never let such a write reach the server with the placeholder and count as delivered.
 4. **Ordering:** use `dependsOn` for real dependencies (e.g. close call only after close command) and `coalesceKey` for newest-wins streams (location fixes).
 5. **Scope:** every queued event and stored record carries server + department + user (+ unit). Never replay one user's or server's events as another; hold them (7 days) and show them.
 6. **Wipe:** logout, department switch and server switch wipe the working set and queue for that scope (preserved: device prefs like language, theme, server URL). Register stores with the reset registry.

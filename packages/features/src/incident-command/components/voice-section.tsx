@@ -38,6 +38,13 @@ export const VoiceSection: React.FC<VoiceSectionProps> = ({ callId, canManage, t
     if (isVoiceEnabled) void fetchVoiceChannels(callId);
   }, [callId, fetchVoiceChannels, isVoiceEnabled]);
 
+  // The create panel never outlives the right to create (a role removed, command transferred or ended).
+  useEffect(() => {
+    if (!canManage) setIsAdding(false);
+  }, [canManage]);
+
+  const showCreate = canManage ? isAdding : false;
+
   const join = useCallback(
     async (channel: IncidentVoiceChannel) => {
       let room = rooms.find((candidate) => candidate.Id === channel.DepartmentVoiceChannelId);
@@ -91,7 +98,7 @@ export const VoiceSection: React.FC<VoiceSectionProps> = ({ callId, canManage, t
       action={canManage ? <BoardButton label={t('incident_command.add_voice_channel')} icon={Plus} onPress={() => setIsAdding((open) => !open)} testID={`${testID}-add`} /> : undefined}
       testID={testID}
     >
-      {isAdding ? (
+      {showCreate ? (
         <VStack className="mb-3" testID={`${testID}-create`}>
           <HStack className="flex-wrap" space="sm">
             {[t('incident_command.voice_preset_tactical'), t('incident_command.voice_preset_command')].map((preset, index) => (

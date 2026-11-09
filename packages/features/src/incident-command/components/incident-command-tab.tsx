@@ -94,7 +94,7 @@ const AssistTab: React.FC<{ callId: string; fullScreen: boolean }> = ({ callId, 
       <>
         <NoCommand canEstablish={permissions.canEstablish} onEstablish={() => setIsStartOpen(true)} />
         <StartCommandSheet
-          isOpen={isStartOpen}
+          isOpen={isStartOpen ? permissions.canEstablish : false}
           onClose={() => setIsStartOpen(false)}
           onStart={(definitionId) =>
             void startCommand(callId, definitionId).then(
@@ -128,6 +128,8 @@ const AssistTab: React.FC<{ callId: string; fullScreen: boolean }> = ({ callId, 
 const CommandTab: React.FC<{ callId: string }> = ({ callId }) => {
   const { t } = useTranslation();
   const toast = useToast();
+  // Establishing needs the department's run-command permission (Command App Login), the same check Core applies.
+  const { canEstablish } = useCommandPermissions(callId, { tier: 'command' });
   const entry = useCommandStore((state) => state.boards[callId]);
   const summary = useCommandStore((state) => state.summaries.find((candidate) => String(candidate.CallId) === callId && candidate.Status === IncidentCommandStatus.Active));
   const fetchIncidents = useCommandStore((state) => state.fetchIncidents);
@@ -153,7 +155,7 @@ const CommandTab: React.FC<{ callId: string }> = ({ callId }) => {
     return (
       <>
         <NoCommand
-          canEstablish={!summary}
+          canEstablish={summary ? false : canEstablish}
           onEstablish={() => setIsStartOpen(true)}
           extra={
             summary ? (
@@ -164,7 +166,7 @@ const CommandTab: React.FC<{ callId: string }> = ({ callId }) => {
           }
         />
         <StartCommandSheet
-          isOpen={isStartOpen}
+          isOpen={isStartOpen ? canEstablish : false}
           onClose={() => setIsStartOpen(false)}
           onStart={(definitionId) =>
             void useCommandStore

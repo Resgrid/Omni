@@ -32,6 +32,8 @@
   "incident_command.assistant_thinking": "Thinking…",
   "incident_command.assistant_title": "Incident assistant",
   "incident_command.assistant_unanswered": "Sorry, I couldn't answer that.",
+  "incident_command.board_not_viewable": "You can't view this command board",
+  "incident_command.board_not_viewable_description": "Seeing this board needs the View Command Boards permission or a place on the incident.",
   "incident_command.call_number": "Call #{{number}}",
   "incident_command.call_person": "Call {{name}}",
   "incident_command.chat_unavailable": "That chat isn't available for this incident.",

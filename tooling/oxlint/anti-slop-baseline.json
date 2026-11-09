@@ -1475,7 +1475,6 @@
     "anti-slop/no-chained-type-assertions": 1,
     "anti-slop/no-known-value-widening": 1,
     "anti-slop/no-unsafe-dictionary-type": 1,
-    "anti-slop/require-readable-spacing": 3,
     "anti-slop/require-safety-comment-for-type-assertion": 15
   },
   "packages/data/src/incident-command/__tests__/command-support-store.test.ts": {
@@ -1487,7 +1486,6 @@
     "anti-slop/no-chained-type-assertions": 18,
     "anti-slop/no-unknown-returns": 1,
     "anti-slop/no-unsafe-dictionary-type": 1,
-    "anti-slop/require-readable-spacing": 8,
     "anti-slop/require-safety-comment-for-type-assertion": 37
   },
   "packages/data/src/incident-command/command-store.ts": {
@@ -2691,9 +2689,6 @@
     "anti-slop/no-known-value-widening": 1,
     "anti-slop/require-readable-spacing": 7
   },
-  "packages/features/src/incident-command/hooks/use-command-permissions.ts": {
-    "anti-slop/require-readable-spacing": 1
-  },
   "packages/features/src/incident-command/hooks/use-incident-chat.ts": {
     "anti-slop/require-readable-spacing": 4
   },
@@ -2729,7 +2724,7 @@
   },
   "packages/features/src/incident-command/lib/permissions.ts": {
     "anti-slop/no-runtime-typeof": 1,
-    "anti-slop/require-readable-spacing": 4
+    "anti-slop/require-readable-spacing": 1
   },
   "packages/features/src/incident-command/routes.ts": {
     "anti-slop/require-readable-spacing": 3
@@ -3260,9 +3255,6 @@
   },
   "packages/features/src/settings/index.ts": {
     "anti-slop/require-readable-spacing": 10
-  },
-  "packages/features/src/settings/lib/format.ts": {
-    "anti-slop/require-readable-spacing": 9
   },
   "packages/features/src/settings/lib/navigation-app.ts": {
     "anti-slop/require-readable-spacing": 5
