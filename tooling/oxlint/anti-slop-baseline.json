@@ -135,7 +135,6 @@
     "anti-slop/require-readable-spacing": 9
   },
   "apps/omni/__tests__/app-config.test.ts": {
-    "anti-slop/no-unknown-parameters": 6,
     "anti-slop/require-safety-comment-for-type-assertion": 1
   },
   "apps/omni/__tests__/app-updates.test.ts": {
@@ -5919,7 +5918,7 @@
     "anti-slop/require-readable-spacing": 7
   },
   "scripts/ci/fingerprint.mjs": {
-    "anti-slop/require-readable-spacing": 22
+    "anti-slop/require-readable-spacing": 3
   },
   "scripts/ci/fit-notes.mjs": {
     "anti-slop/require-readable-spacing": 5
@@ -5929,7 +5928,7 @@
   },
   "scripts/ci/lib.mjs": {
     "anti-slop/no-runtime-typeof": 1,
-    "anti-slop/require-readable-spacing": 47
+    "anti-slop/require-readable-spacing": 44
   },
   "scripts/ci/package-sbom.mjs": {
     "anti-slop/no-conditional-empty-object-spread": 2,
@@ -5940,8 +5939,7 @@
     "anti-slop/require-readable-spacing": 23
   },
   "scripts/ci/release-assets.mjs": {
-    "anti-slop/no-conditional-empty-object-spread": 1,
-    "anti-slop/require-readable-spacing": 23
+    "anti-slop/require-readable-spacing": 17
   },
   "scripts/ci/run-playwright.mjs": {
     "anti-slop/require-readable-spacing": 8

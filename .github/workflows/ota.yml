@@ -1,9 +1,34 @@
-# JavaScript-only update for chosen variants and channel (omni-plan §6.6.3, D18). Refuses — before publishing anything
-# for that variant — when the current fingerprint differs from the runtime of the binaries installed on the channel
-# (fingerprints.json on that variant's newest release for the channel). Use release.yml when native code changed.
-name: OTA update
+# EAS (expo-updates) update for critical and emergency fixes only (owner decision 2026-11-10, omni-plan §6.6.3, D18).
+# Regular releases reach users as store builds through release.yml, which never publishes an update. Updates come only
+# from the `hotfix` branch:
+#
+#   pull request into hotfix → checks only, publishing nothing. `native` fails when the pull request changes native
+#                              code compared with the hotfix branch (listing what changed); `check` then runs every
+#                              variant's guard (below) against the production channel and exports the update bundle.
+#                              `hotfix-ok` passes only when both did: require it on the hotfix branch so a pull request
+#                              with native changes cannot be merged. Merging is a push to hotfix, which publishes.
+#   push to hotfix           → every variant, both platforms, channel production; the message is the head commit's
+#                              subject (for a merged pull request, its number and title).
+#   workflow_dispatch        → chosen variants / platforms / channel (for example the internal channel first); refused
+#                              unless it is run from the hotfix branch.
+#
+# Each variant refuses, before publishing anything, unless the bundle's runtime (fingerprint) matches binaries already
+# released on the channel (fingerprints.json on the newest <variant>-v* release whose binaries run it). A fix that
+# changes native code cannot ship as an update: release it through release.yml and the stores. Web (Docker) and
+# Electron do not use EAS updates; they get the fix from a release.yml run.
+name: OTA update (hotfix)
 
 on:
+  pull_request:
+    branches: [hotfix]
+  push:
+    branches: [hotfix]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.claude/**'
+      - '.agents/**'
   workflow_dispatch:
     inputs:
       variants:
@@ -13,8 +38,8 @@ on:
       channel:
         description: 'Update channel'
         type: choice
-        options: [internal, staging, production]
-        default: internal
+        options: [production, staging, internal]
+        default: production
       platforms:
         description: 'Platforms'
         type: choice
@@ -44,7 +69,59 @@ jobs:
     timeout-minutes: 5
     outputs:
       variants: ${{ steps.select.outputs.variants }}
+      channel: ${{ steps.trigger.outputs.channel }}
+      platforms: ${{ steps.trigger.outputs.platforms }}
+      message: ${{ steps.trigger.outputs.message }}
     steps:
+      - name: Hotfix branch only
+        id: trigger
+        env:
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          IN_VARIANTS: ${{ inputs.variants }}
+          IN_CHANNEL: ${{ inputs.channel }}
+          IN_PLATFORMS: ${{ inputs.platforms }}
+          IN_MESSAGE: ${{ inputs.message }}
+          HEAD_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" = pull_request ]; then
+            # Dry run of what merging publishes (push to hotfix: every variant, both platforms, production).
+            if [ "$BASE_REF" != hotfix ]; then
+              echo "::error::Hotfix dry runs are for pull requests into the hotfix branch (this one targets ${BASE_REF})."
+              exit 1
+            fi
+            if [ "$HEAD_REPO" != "$GITHUB_REPOSITORY" ]; then
+              echo "::error::Hotfix pull requests must come from a branch of this repository: a fork's run gets no secrets, so it cannot resolve the runtime."
+              exit 1
+            fi
+            variants=all; channel=production; platforms=all; message=''
+          elif [ "$REF" != refs/heads/hotfix ]; then
+            echo "::error::EAS updates are published only from the hotfix branch (this run is on ${REF}). Regular releases ship as store builds through release.yml."
+            exit 1
+          elif [ "$EVENT" = workflow_dispatch ]; then
+            variants="${IN_VARIANTS:-all}"; channel="${IN_CHANNEL:-production}"; platforms="${IN_PLATFORMS:-all}"; message="$IN_MESSAGE"
+          else
+            subject="${HEAD_MESSAGE%%$'\n'*}"
+            # A merged pull request ("Merge pull request #12 from org/master"): GitHub puts its title on the next line.
+            if [[ "$subject" =~ ^Merge\ pull\ request\ (#[0-9]+) ]]; then
+              number="${BASH_REMATCH[1]}"
+              title="$(printf '%s\n' "$HEAD_MESSAGE" | awk 'NR > 1 && NF { print; exit }')"
+              subject="${number}${title:+ $title}"
+            fi
+            variants=all; channel=production; platforms=all; message="hotfix ${GITHUB_SHA::7}${subject:+: $subject}"
+          fi
+          {
+            echo "variants=${variants// /}"
+            echo "channel=$channel"
+            echo "platforms=$platforms"
+            echo "message<<OTA_MESSAGE_EOF"
+            echo "$message"
+            echo "OTA_MESSAGE_EOF"
+          } >> "$GITHUB_OUTPUT"
+          echo "Hotfix ${EVENT}: variants=$variants channel=$channel platforms=$platforms"
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-workspace
         with:
@@ -52,18 +129,143 @@ jobs:
       - name: Select variants
         id: select
         env:
-          VARIANTS: ${{ inputs.variants }}
+          VARIANTS: ${{ steps.trigger.outputs.variants }}
         run: node scripts/ci/variants-matrix.mjs --variants "$VARIANTS"
+
+  # Pull request into hotfix: no native changes compared with the hotfix branch. Both checkouts resolve every
+  # variant's fingerprint with the same environment and no secrets, so only their code differs; the job summary lists
+  # what changed (native packages, native files, config plugins, app config keys).
+  native:
+    name: no native changes
+    needs: plan
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CHANNEL: ${{ needs.plan.outputs.channel }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-workspace
+      - name: Fingerprints — this pull request
+        run: node scripts/ci/fingerprint.mjs sources --channel "$CHANNEL" --platforms android,ios --out "$RUNNER_TEMP/native/head.json"
+
+      # Outside the workspace: autolinking searches every node_modules folder above a project, so a checkout inside
+      # this one would see this pull request's packages.
+      - name: Check out and install the hotfix branch
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          LEFTHOOK: '0'
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth 1 origin "$BASE_SHA"
+          git worktree add --detach "$RUNNER_TEMP/hotfix-base" "$BASE_SHA"
+          cd "$RUNNER_TEMP/hotfix-base"
+          bash "$GITHUB_WORKSPACE/scripts/ci/retry.sh" 3 20 pnpm install --frozen-lockfile
+      - name: Fingerprints — hotfix branch
+        run: node scripts/ci/fingerprint.mjs sources --root "$RUNNER_TEMP/hotfix-base" --channel "$CHANNEL" --platforms android,ios --out "$RUNNER_TEMP/native/base.json"
+      - name: Compare
+        run: node scripts/ci/fingerprint.mjs diff --base "$RUNNER_TEMP/native/base.json" --head "$RUNNER_TEMP/native/head.json"
+
+  # Pull request into hotfix with no native changes: everything the update job does except publishing. No Expo token,
+  # nothing uploaded.
+  check:
+    name: ota dry run (${{ matrix.variant }})
+    needs: [plan, native]
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # The variant's secrets are fingerprint inputs (Firebase files, client env); reading them records no deployment.
+    environment:
+      name: ${{ matrix.variant }}
+      deployment: false
+    concurrency:
+      group: ota-check-${{ github.event.pull_request.number }}-${{ matrix.variant }}
+      cancel-in-progress: true
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: ${{ fromJSON(needs.plan.outputs.variants) }}
+    # Same build environment as the update job below and release.yml's fingerprint job.
+    env:
+      BASE_API_URL: ${{ secrets.BASE_API_URL }}
+      LOGGING_KEY: ${{ secrets.LOGGING_KEY }}
+      APP_KEY: ${{ secrets.APP_KEY }}
+      SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+      COUNTLY_APP_KEY: ${{ secrets.COUNTLY_APP_KEY }}
+      COUNTLY_SERVER_URL: ${{ secrets.COUNTLY_SERVER_URL }}
+      IOS_APPLE_TEAM_ID: ${{ secrets.IOS_APPLE_TEAM_ID }}
+      CHANNEL: ${{ needs.plan.outputs.channel }}
+      PLATFORM: ${{ needs.plan.outputs.platforms }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-workspace
+      - uses: ./.github/actions/prepare-variant
+        with:
+          variant: ${{ matrix.variant }}
+          channel: ${{ needs.plan.outputs.channel }}
+          google-services-json-base64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+          google-service-info-plist-base64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_BASE64 }}
+
+      # Fails the pull request when merging it could not publish: no released binaries run this bundle's runtime.
+      - name: Guard — runtime matches released binaries
+        id: guard
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          platforms="$PLATFORM"; if [ "$PLATFORM" = all ]; then platforms=android,ios; fi
+          node scripts/ci/fingerprint.mjs check --variant "$APP_VARIANT" --channel "$CHANNEL" --platforms "$platforms"
+
+      # The bundle eas update would upload (eas update runs the same export).
+      - name: Export the update bundle (nothing is published)
+        working-directory: apps/omni
+        env:
+          RELEASE_RUN_NUMBER: ${{ steps.guard.outputs.run_number }}
+          PREVIOUS_RELEASE: ${{ steps.guard.outputs.previous_release }}
+        run: |
+          set -euo pipefail
+          platforms=(android ios); if [ "$PLATFORM" != all ]; then platforms=("$PLATFORM"); fi
+          args=(); for p in "${platforms[@]}"; do args+=(--platform "$p"); done
+          pnpm exec expo export "${args[@]}" --output-dir dist
+          {
+            echo "### ${APP_VARIANT} — hotfix dry run passed"
+            echo
+            echo "Merging publishes an update on \`${CHANNEL}\` (${platforms[*]}) for the binaries in ${PREVIOUS_RELEASE}."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove Firebase config
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/firebase"
+
+  # The one check to require on the hotfix branch (ruleset: require a pull request and this status check).
+  hotfix-ok:
+    name: hotfix-ok
+    needs: [plan, native, check]
+    if: ${{ always() && github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: No native changes and every dry run passed
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Job results: $RESULTS"
+          for r in $RESULTS; do
+            if [ "$r" != success ]; then
+              echo "::error::A hotfix check did not succeed ($r): see the \"no native changes\" and \"ota dry run\" jobs."
+              exit 1
+            fi
+          done
 
   update:
     name: ota (${{ matrix.variant }})
     needs: plan
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: ${{ matrix.variant }}
-    # Shared with release.yml's ota job: updates for one variant and channel never interleave.
+    # Updates for one variant and channel never interleave; a newer push waits for the one publishing.
     concurrency:
-      group: ota-${{ matrix.variant }}-${{ inputs.channel }}
+      group: ota-${{ matrix.variant }}-${{ needs.plan.outputs.channel }}
       cancel-in-progress: false
     strategy:
       fail-fast: false
@@ -80,9 +282,9 @@ jobs:
       IOS_APPLE_TEAM_ID: ${{ secrets.IOS_APPLE_TEAM_ID }}
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
       SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-      CHANNEL: ${{ inputs.channel }}
-      PLATFORM: ${{ inputs.platforms }}
-      MESSAGE: ${{ inputs.message }}
+      CHANNEL: ${{ needs.plan.outputs.channel }}
+      PLATFORM: ${{ needs.plan.outputs.platforms }}
+      MESSAGE: ${{ needs.plan.outputs.message }}
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-workspace
@@ -94,13 +296,13 @@ jobs:
       - uses: ./.github/actions/prepare-variant
         with:
           variant: ${{ matrix.variant }}
-          channel: ${{ inputs.channel }}
+          channel: ${{ needs.plan.outputs.channel }}
           google-services-json-base64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
           google-service-info-plist-base64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_BASE64 }}
 
-      # Resolves the fingerprint with the run number of the release whose binaries are installed, so the update
-      # also reports that version; exits 1 on any mismatch.
-      - name: Guard — runtime matches the installed binaries
+      # Finds the newest release on the channel whose binaries run this runtime and reuses its run number, so the update
+      # reports that version; exits 1 when no released binaries run it.
+      - name: Guard — runtime matches released binaries
         id: guard
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -118,7 +320,7 @@ jobs:
           export OTA_OUT="$GITHUB_WORKSPACE/ota/ota-${APP_VARIANT}.json"
           bash ../../scripts/ci/retry.sh 3 30 bash -c 'eas update --channel "$CHANNEL" --platform "$PLATFORM" --message "$MESSAGE" --non-interactive --json > "$OTA_OUT"'
           {
-            echo "### ${APP_VARIANT} — OTA on \`${CHANNEL}\`"
+            echo "### ${APP_VARIANT} — hotfix update on \`${CHANNEL}\`"
             echo
             jq -r '.[] | "- \(.platform): group `\(.group)`, runtime `\(.runtimeVersion)`"' "$OTA_OUT"
           } >> "$GITHUB_STEP_SUMMARY"
