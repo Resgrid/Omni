@@ -17,11 +17,37 @@
 //           requested platform. Matches the newest such release, not just the newest release: master merges build
 //           release candidates that may not have reached the stores yet, and a hotfix cut from the store build must
 //           still reach it.
+//   sources ota.yml (pull request into hotfix) — every variant's runtime and fingerprint sources in one checkout
+//           (--root, default this one), written to --out. The pull request and the hotfix branch are resolved with
+//           the same environment (no secrets), so only their code differs.
+//   diff    ota.yml — compares the hotfix branch's sources file (--base) with the pull request's (--head) and fails
+//           (exit 1), listing what changed, when any variant's runtime differs: native changes cannot reach
+//           installed apps as an update.
 //
 // Usage:
 //   node scripts/ci/fingerprint.mjs decide --variant unit --channel internal --platforms android,ios --tag unit-v8.12 --out decision-unit.json
 //   node scripts/ci/fingerprint.mjs check  --variant unit --channel production --platforms android,ios
-import { appendSummary, appEnvForChannel, csv, findPreviousRelease, parseArgs, PLATFORMS, requireArg, resolveRuntimeVersion, runsRuntime, setOutputs, writeJson } from './lib.mjs';
+//   node scripts/ci/fingerprint.mjs sources --root ../hotfix-base --channel production --platforms android,ios --out base.json
+//   node scripts/ci/fingerprint.mjs diff --base base.json --head head.json
+import path from 'node:path';
+
+import {
+  appendSummary,
+  appEnvForChannel,
+  csv,
+  describeNativeChanges,
+  findPreviousRelease,
+  parseArgs,
+  PLATFORMS,
+  readJsonIfExists,
+  repoRoot,
+  requireArg,
+  resolveRuntimeVersion,
+  runsRuntime,
+  setOutputs,
+  VARIANT_IDS,
+  writeJson,
+} from './lib.mjs';
 
 const short = (h) => (h ? String(h).slice(0, 12) : 'none');
 
@@ -120,7 +146,96 @@ async function check(args) {
   }
 }
 
-const commands = { decide, check };
+function sources(args) {
+  const channel = requireArg(args, 'channel');
+  const appEnv = appEnvForChannel(channel);
+  const platforms = csv(requireArg(args, 'platforms'), PLATFORMS);
+  const variants = args.variants && args.variants !== 'all' ? csv(args.variants, VARIANT_IDS) : VARIANT_IDS;
+  const projectRoot = path.join(path.resolve(String(args.root ?? repoRoot)), 'apps', 'omni');
+  const result = { schema: 1, channel, variants: {} };
+
+  for (const variant of variants) {
+    result.variants[variant] = {};
+
+    for (const platform of platforms) {
+      const { runtimeVersion, fingerprintSources } = resolveRuntimeVersion(variant, appEnv, platform, process.env, projectRoot);
+
+      result.variants[variant][platform] = { runtimeVersion, sources: fingerprintSources };
+      console.log(`${variant}/${platform}: ${short(runtimeVersion)}`);
+    }
+  }
+
+  writeJson(requireArg(args, 'out'), result);
+}
+
+function readSources(file) {
+  const data = readJsonIfExists(file);
+
+  if (!data?.variants) throw new Error(`${file} is not a fingerprint sources file (fingerprint.mjs sources).`);
+
+  return data;
+}
+
+function diff(args) {
+  const base = readSources(requireArg(args, 'base'));
+  const head = readSources(requireArg(args, 'head'));
+  const rows = [];
+  const where = new Map();
+
+  for (const [variant, platforms] of Object.entries(head.variants)) {
+    for (const [platform, now] of Object.entries(platforms)) {
+      const before = base.variants[variant]?.[platform];
+      const same = before?.runtimeVersion === now.runtimeVersion;
+
+      rows.push(`| ${variant} | ${platform} | \`${short(before?.runtimeVersion)}\` | \`${short(now.runtimeVersion)}\` | ${same ? 'no native change' : '**native change**'} |`);
+
+      if (same) continue;
+
+      const found = before ? describeNativeChanges(before.sources, now.sources) : ['not resolved on the hotfix branch'];
+      const changes = found.length ? found : [`runtime ${short(before.runtimeVersion)} → ${short(now.runtimeVersion)}`];
+
+      for (const change of changes) where.set(change, [...(where.get(change) ?? []), `${variant}/${platform}`]);
+    }
+  }
+
+  const all = rows.length;
+  const changes = [...where].sort(([a], [b]) => a.localeCompare(b)).map(([change, targets]) => `- ${change} — ${targets.length === all ? 'every app and platform' : targets.join(', ')}`);
+
+  appendSummary(
+    [
+      '### Native changes compared with the hotfix branch',
+      '',
+      '| App | Platform | hotfix | this pull request | |',
+      '|---|---|---|---|---|',
+      ...rows,
+      '',
+      ...(changes.length
+        ? [
+            '**This pull request changes native code**, so it cannot ship as an EAS update: installed apps would not run it. Take the native change out (for a pull request from master, branch from hotfix and cherry-pick the fix), or release it through release.yml and the stores.',
+            '',
+            ...changes,
+          ]
+        : ['No native changes: every app runs this pull request on the binaries the hotfix branch was built for.']),
+      '',
+    ].join('\n')
+  );
+
+  setOutputs({ changed: String(changes.length > 0) });
+
+  if (!changes.length) {
+    console.log('No native changes compared with the hotfix branch.');
+
+    return;
+  }
+
+  console.log(changes.join('\n'));
+  console.error(
+    `::error::This pull request changes native code compared with the hotfix branch (${changes.length} change${changes.length === 1 ? '' : 's'}, listed in the job summary), so it cannot ship as an EAS update.`
+  );
+  process.exit(1);
+}
+
+const commands = { decide, check, sources, diff };
 const args = parseArgs();
 const command = args._[0];
 if (!commands[command]) {

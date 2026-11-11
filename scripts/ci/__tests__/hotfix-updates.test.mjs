@@ -1,13 +1,14 @@
 // node --test scripts/ci/__tests__ — EAS updates are for critical and emergency fixes only (owner decision 2026-11-10):
 // only ota.yml publishes them, only from the hotfix branch, and its guard (runsRuntime + findPreviousRelease in
-// scripts/ci/lib.mjs) matches the newest release whose binaries run the bundle's runtime.
+// scripts/ci/lib.mjs) matches the newest release whose binaries run the bundle's runtime. A pull request into hotfix
+// publishes nothing and fails when it changes native code (describeNativeChanges lists what changed).
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { describe, it } from 'node:test';
 
-import { findPreviousRelease, repoRoot, runsRuntime } from '../lib.mjs';
+import { describeNativeChanges, findPreviousRelease, repoRoot, runsRuntime } from '../lib.mjs';
 
 const require = createRequire(import.meta.url);
 const YAML = require('yaml');
@@ -90,6 +91,35 @@ describe('findPreviousRelease with a match (hotfix guard)', () => {
   });
 });
 
+describe('describeNativeChanges (hotfix pull request check)', () => {
+  const file = (filePath, hash) => ({ type: 'file', filePath, reasons: ['expoConfigPlugins'], hash });
+  const pkg = (name, version, hash) => ({ type: 'package', name, version, filePath: `../../node_modules/${name}/package.json`, reasons: ['expoAutolinkingAndroid'], hash });
+  const config = (android) => ({ type: 'contents', id: 'expoConfig', contents: JSON.stringify({ name: 'Unit', android, plugins: ['a'] }), reasons: ['expoConfig'], hash: JSON.stringify(android) });
+  const base = [file('../../packages/config-plugins/index.js', 'f1'), pkg('react-native-foo', '1.2.0', 'p1'), pkg('react-native-old', '2.0.0', 'o1'), config({ permissions: ['WAKE_LOCK'], package: 'x' })];
+
+  it('reports nothing for identical sources', () => {
+    assert.deepEqual(describeNativeChanges(base, base), []);
+  });
+
+  it('names upgraded, added and removed native packages, changed files and changed app config keys', () => {
+    const head = [file('../../packages/config-plugins/index.js', 'f2'), pkg('react-native-foo', '1.3.0', 'p2'), pkg('react-native-new', '0.1.0', 'n1'), config({ permissions: ['WAKE_LOCK', 'NFC'], package: 'x' })];
+
+    assert.deepEqual(describeNativeChanges(base, head), [
+      'app config changed: android.permissions',
+      'file packages/config-plugins/index.js changed',
+      'native package react-native-foo 1.2.0 → 1.3.0',
+      'native package react-native-new 0.1.0 added',
+      'native package react-native-old 2.0.0 removed',
+    ]);
+  });
+
+  it('ignores sources without a hash (generated native folders the fingerprint skips)', () => {
+    const generated = { type: 'dir', filePath: 'android', reasons: ['bareNativeDir'], hash: null };
+
+    assert.deepEqual(describeNativeChanges([...base, generated], base), []);
+  });
+});
+
 describe('EAS update publishing', () => {
   it('only ota.yml runs eas update', () => {
     for (const file of fs.readdirSync(workflowsDir).filter((f) => /\.ya?ml$/.test(f))) {
@@ -99,14 +129,50 @@ describe('EAS update publishing', () => {
     }
   });
 
-  it('ota.yml runs only for the hotfix branch: a push to it, or a dispatch it refuses elsewhere', () => {
+  it('ota.yml runs only for the hotfix branch: a pull request into it, a push to it, or a dispatch it refuses elsewhere', () => {
     const source = readWorkflow('ota.yml');
     const on = YAML.parse(source).on;
 
-    assert.deepEqual(Object.keys(on).sort(), ['push', 'workflow_dispatch']);
+    assert.deepEqual(Object.keys(on).sort(), ['pull_request', 'push', 'workflow_dispatch']);
     assert.deepEqual(on.push.branches, ['hotfix']);
+    assert.deepEqual(on.pull_request.branches, ['hotfix']);
     assert.equal(on.push.tags, undefined);
-    assert.match(source, /if \[ "\$REF" != refs\/heads\/hotfix \]; then[\s\S]*?exit 1/);
+    assert.match(source, /\[ "\$BASE_REF" != hotfix \]; then[\s\S]*?exit 1/);
+    assert.match(source, /\[ "\$REF" != refs\/heads\/hotfix \]; then[\s\S]*?exit 1/);
+  });
+
+  it('a pull request into hotfix is a dry run: it never publishes and gets no Expo token', () => {
+    const { jobs } = YAML.parse(readWorkflow('ota.yml'));
+    const publishing = Object.entries(jobs).filter(([, job]) => /\beas update\b/.test(JSON.stringify(job.steps)));
+
+    assert.deepEqual(
+      publishing.map(([id]) => id),
+      ['update']
+    );
+    assert.equal(jobs.update.if, "github.event_name != 'pull_request'");
+    assert.equal(jobs.check.if, "github.event_name == 'pull_request'");
+    assert.doesNotMatch(JSON.stringify(jobs.check), /EXPO_TOKEN|SENTRY_AUTH_TOKEN|expo-github-action/);
+    assert.equal(jobs.check.environment.deployment, false);
+    assert.ok(
+      jobs.check.steps.some((step) => /fingerprint\.mjs check/.test(step.run ?? '')),
+      'the dry run runs the same guard as the update job'
+    );
+  });
+
+  it('a pull request with native changes cannot pass: hotfix-ok needs the no-secrets native comparison and the dry run', () => {
+    const { jobs } = YAML.parse(readWorkflow('ota.yml'));
+    const native = JSON.stringify(jobs.native);
+
+    assert.equal(jobs.native.if, "github.event_name == 'pull_request'");
+    assert.equal(jobs.native.environment, undefined);
+    assert.doesNotMatch(native, /secrets\./);
+    assert.match(native, /fingerprint\.mjs diff --base/);
+    // The hotfix branch is resolved outside the workspace (autolinking searches node_modules above the project).
+    assert.match(native, /git worktree add --detach \\"\$RUNNER_TEMP\/hotfix-base\\" \\"\$BASE_SHA\\"/);
+    assert.deepEqual(jobs.check.needs, ['plan', 'native']);
+    assert.deepEqual(jobs['hotfix-ok'].needs, ['plan', 'native', 'check']);
+    assert.equal(jobs['hotfix-ok'].name, 'hotfix-ok');
+    assert.equal(jobs['hotfix-ok'].if, "${{ always() && github.event_name == 'pull_request' }}");
   });
 
   it('release.yml has no update job and no force_native input (every run builds native)', () => {

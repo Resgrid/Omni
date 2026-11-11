@@ -23,7 +23,7 @@ Living tracker for executing [`architecture/omni-plan.md`](architecture/omni-pla
 | Spike S5 — MapLibre RN on Expo 57 incl. local PMTiles | ⬜ | |
 | Spike S6 — desktop shell packaging, signing, auto-update | 🟡 | `apps/desktop` built: BigBoard Windows NSIS 86 MB (legacy 387 MB); mac/linux packaging and signing/notarization not yet exercised |
 | Spike S7 — durable web storage (SQLite OPFS vs IndexedDB) | ⬜ | Interim (2026-11-04): the web/Electron memory database is kept as one IndexedDB snapshot (`resgrid-offline.<variant>`), written before each write resolves, by one tab at a time (Web Lock); the OPFS SQLite evaluation is still open |
-| CI workflows (`ci.yml`, `release.yml`, `nightly.yml`, `ota.yml`) | ✅ | Written and validated locally; not yet run on GitHub. Secrets: `docs/build/ci-secrets.md`. Fingerprint stabilized (`apps/omni/fingerprint.config.js`) so OTA can apply. EAS updates only from the `hotfix` branch (`ota.yml`); every `release.yml` run builds native (plan §15 #23) |
+| CI workflows (`ci.yml`, `release.yml`, `nightly.yml`, `ota.yml`) | ✅ | Written and validated locally; not yet run on GitHub. Secrets: `docs/build/ci-secrets.md`. Fingerprint stabilized (`apps/omni/fingerprint.config.js`) so OTA can apply. EAS updates only from the `hotfix` branch (`ota.yml`; a pull request into `hotfix` publishes nothing and fails on native changes, required check `hotfix-ok`); every `release.yml` run builds native (plan §15 #23) |
 | Docker image (nginx runtime, legacy env names) | ✅ | Built and run for BigBoard; health, env-config escaping, cache headers verified |
 
 ## Phase 1 — platform core

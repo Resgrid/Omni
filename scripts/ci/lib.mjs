@@ -107,13 +107,15 @@ export function fenceAfter(open, line) {
 /**
  * Runtime version (= Expo fingerprint of the native inputs) of one variant × env × platform, resolved exactly as eas
  * build / eas update resolve it: `expo-updates runtimeversion:resolve` in apps/omni. The managed workflow ignores the
- * generated ios/ and android/ folders, so the result is the same before and after a prebuild.
+ * generated ios/ and android/ folders, so the result is the same before and after a prebuild. `projectRoot` is the
+ * apps/omni folder of the checkout to resolve (another checkout's must not sit inside this one: autolinking searches
+ * every node_modules folder above the project).
  */
-export function resolveRuntimeVersion(variant, appEnv, platform, env = process.env) {
+export function resolveRuntimeVersion(variant, appEnv, platform, env = process.env, projectRoot = omniRoot) {
   const require = createRequire(import.meta.url);
-  const cli = require.resolve('expo-updates/bin/cli.js', { paths: [omniRoot] });
+  const cli = require.resolve('expo-updates/bin/cli.js', { paths: [projectRoot] });
   const result = spawnSync(process.execPath, [cli, 'runtimeversion:resolve', '--platform', platform, '--workflow', 'managed'], {
-    cwd: omniRoot,
+    cwd: projectRoot,
     env: { ...env, APP_VARIANT: variant, APP_ENV: appEnv, EXPO_NO_DOTENV: '1' },
     encoding: 'utf8',
     maxBuffer: 256 * 1024 * 1024,
@@ -123,7 +125,95 @@ export function resolveRuntimeVersion(variant, appEnv, platform, env = process.e
   }
   const json = JSON.parse(result.stdout.slice(result.stdout.indexOf('{')));
   if (!json.runtimeVersion) throw new Error(`No runtimeVersion for ${variant}/${platform}; is runtimeVersion.policy "fingerprint"?`);
-  return { runtimeVersion: String(json.runtimeVersion), sources: json.fingerprintSources?.length ?? 0 };
+  return { runtimeVersion: String(json.runtimeVersion), sources: json.fingerprintSources?.length ?? 0, fingerprintSources: json.fingerprintSources ?? [] };
+}
+
+const isRecord = (value) => value instanceof Object && !Array.isArray(value);
+
+/** Dotted paths (two levels deep) where two JSON values differ, e.g. ['android.permissions', 'plugins']. */
+function changedPaths(base, head, prefix = '', depth = 2) {
+  if (JSON.stringify(base) === JSON.stringify(head)) return [];
+
+  if (depth === 0 || !isRecord(base) || !isRecord(head)) return [prefix || '(whole value)'];
+
+  const keys = [...new Set([...Object.keys(base), ...Object.keys(head)])].sort();
+
+  return keys.flatMap((key) => changedPaths(base[key], head[key], prefix ? `${prefix}.${key}` : key, depth - 1));
+}
+
+function parseJson(text) {
+  try {
+    return JSON.parse(String(text));
+  } catch {
+    return null;
+  }
+}
+
+const CONTENTS_LABELS = [
+  [/^expoAutolinkingConfig:(\w+)$/, 'Expo native module list ($1)'],
+  [/^rncoreAutolinkingConfig:(\w+)$/, 'React Native native module list ($1)'],
+  [/^packageJson:scripts$/, 'apps/omni package.json scripts'],
+];
+
+/** Identity of one @expo/fingerprint source across two checkouts (file paths are relative to apps/omni). */
+function sourceKey(source) {
+  if (source.type === 'package') return `package ${source.name}`;
+
+  if (source.type === 'contents') {
+    const id = String(source.id);
+    const known = CONTENTS_LABELS.find(([pattern]) => pattern.test(id));
+
+    return known ? id.replace(known[0], known[1]) : id;
+  }
+
+  return `${source.type} ${path.posix.normalize(path.posix.join('apps/omni', String(source.filePath)))}`;
+}
+
+function describeChange(base, head) {
+  const source = head ?? base;
+  const key = sourceKey(source);
+
+  if (source.type === 'package') {
+    if (!base) return `native package ${source.name} ${source.version} added`;
+
+    if (!head) return `native package ${source.name} ${source.version} removed`;
+
+    return base.version === head.version ? `native package ${source.name} ${head.version} changed` : `native package ${source.name} ${base.version} → ${head.version}`;
+  }
+
+  if (!base) return `${key} added`;
+
+  if (!head) return `${key} removed`;
+
+  if (source.id === 'expoConfig') {
+    const paths = changedPaths(parseJson(base.contents), parseJson(head.contents));
+
+    return `app config changed: ${paths.join(', ')}`;
+  }
+
+  return `${key} changed`;
+}
+
+/**
+ * What differs between two fingerprints, from their sources (`fingerprintSources` of resolveRuntimeVersion): native
+ * packages added, removed or upgraded, native files and config plugins changed, app config keys changed. Sorted lines.
+ */
+export function describeNativeChanges(baseSources, headSources) {
+  // A source without a hash (an ignored generated ios/ or android/ folder) is not part of the fingerprint.
+  const byKey = (sources) => new Map(sources.filter((source) => source.hash !== null).map((source) => [sourceKey(source), source]));
+  const base = byKey(baseSources);
+  const head = byKey(headSources);
+  const changes = new Set();
+
+  for (const [key, source] of head) {
+    const before = base.get(key);
+
+    if (!before || before.hash !== source.hash) changes.add(describeChange(before, source));
+  }
+
+  for (const [key, source] of base) if (!head.has(key)) changes.add(describeChange(source, undefined));
+
+  return [...changes].sort();
 }
 
 /** The eas-cli version CI pins (`EAS_CLI_VERSION` in release.yml), so local EAS commands run the same CLI. */
