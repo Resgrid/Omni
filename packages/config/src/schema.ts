@@ -120,7 +120,12 @@ export const capabilitiesSchema = z.object({
     queues: z.boolean(),
     runCards: z.boolean(),
   }),
-  status: z.object({ subject: z.enum(['personnel', 'unit']), onBehalf: z.boolean(), staffing: z.boolean() }),
+  /**
+   * `holdToConfirm`: the app honours the department's "Hold to set status" (config `StatusHoldToConfirm`) — on its iOS
+   * and Android builds only (phone and tablet). Off where status is set from a desk (Dispatch, IC, BigBoard), and on
+   * web and Electron, so status changes there are never delayed (owner decision, plan §15 #24).
+   */
+  status: z.object({ subject: z.enum(['personnel', 'unit']), onBehalf: z.boolean(), staffing: z.boolean(), holdToConfirm: z.boolean() }),
   incidentCommand: z.enum(['none', 'view', 'assist', 'command']),
   checkIn: z.object({ self: z.boolean(), others: z.boolean(), actions: z.boolean() }),
   videoFeeds: z.enum(['none', 'view', 'manage']),

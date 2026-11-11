@@ -20,6 +20,10 @@ export interface DataOutbox {
   drain(options?: DrainOptions): Promise<DrainResult>;
   /** Correct a rejected write and queue it again under the same id (offline call correction). */
   amend?<P>(id: string, payload: P): Promise<boolean>;
+  /** Which of these event ids are still held (queued-marker reconciliation). */
+  findEventIds?(ids: readonly string[]): Promise<Set<string>>;
+  /** Called after every change to the outbox (queued, delivered, retried, dropped). */
+  subscribe?(listener: () => void): () => void;
 }
 
 export interface DataLogEntry {

@@ -132,6 +132,26 @@ describe('call detail', () => {
     expect(useCallDetailStore.getState().queuedNotes[result.id].state).toBe('rejected');
   });
 
+  it('a 409 (Core still saving an earlier send with the same IdempotencyKey) keeps the note queued and retries it', async () => {
+    // SAFETY: a SaveCallNote success envelope; the handler reads only Status.
+    jest
+      .mocked(saveCallNote)
+      .mockRejectedValueOnce(httpError(409))
+      .mockResolvedValue({ Id: 'n3', Status: 'success' } as never);
+
+    const result = await useCallDetailStore.getState().addNote({ callId: '5', note: 'Second line charged' });
+
+    expect(result.outcome).toBe('queued');
+    expect(useCallDetailStore.getState().queuedNotes[result.id].state).toBe('queued');
+
+    runtime.clock.advance(60_000);
+    const drain = await runtime.outbox.drain();
+
+    expect(drain.sent).toEqual([result.id]);
+    expect(saveCallNote).toHaveBeenCalledTimes(2);
+    expect(saveCallNote).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ IdempotencyKey: result.id }));
+  });
+
   it('queues image upload metadata and reads the staged bytes only when sending', async () => {
     runtime.connectivity.setOnline(false);
     const reader = jest.fn(async () => 'BASE64');
@@ -143,8 +163,90 @@ describe('call detail', () => {
     runtime.connectivity.setOnline(true);
     await runtime.outbox.drain();
     expect(reader).toHaveBeenCalledWith('file:///staged/scene.jpg');
-    expect(uploadCallFile).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ callId: '5', userId: 'user-a', type: 2, data: 'BASE64' }));
+    expect(uploadCallFile).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ callId: '5', userId: 'user-a', type: 2, data: 'BASE64', idempotencyKey: result.id }));
     setCallFileReader(null);
+  });
+
+  it('a 409 (Core still saving an earlier send of the same upload) keeps the file queued and retries it with the same key', async () => {
+    setCallFileReader(async () => 'BASE64');
+    // SAFETY: a SaveCallFile success envelope; the handler reads only Status.
+    jest
+      .mocked(uploadCallFile)
+      .mockRejectedValueOnce(httpError(409))
+      .mockResolvedValue({ Id: 'f2', Status: 'success' } as never);
+
+    const result = await useCallDetailStore.getState().uploadCallFile({ callId: '5', type: CallFileKind.Image, name: 'hydrant.jpg', stagedUri: 'file:///staged/hydrant.jpg' });
+
+    expect(result.outcome).toBe('queued');
+    expect(useCallDetailStore.getState().queuedFiles[result.id].state).toBe('queued');
+
+    runtime.clock.advance(60_000);
+    const drain = await runtime.outbox.drain();
+
+    expect(drain.sent).toEqual([result.id]);
+    expect(uploadCallFile).toHaveBeenCalledTimes(2);
+    expect(uploadCallFile).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ idempotencyKey: result.id }));
+    setCallFileReader(null);
+  });
+
+  it('keeps retrying an upload Core answers 409 for until the claim can lapse, but dead-letters other failures at 5', async () => {
+    setCallFileReader(async () => 'BASE64');
+    jest.mocked(uploadCallFile).mockRejectedValue(httpError(409));
+
+    const claimed = await useCallDetailStore.getState().uploadCallFile({ callId: '5', type: CallFileKind.Image, name: 'claimed.jpg', stagedUri: 'file:///staged/claimed.jpg' });
+
+    // Failures 2–8 (the first was the send itself): past the upload limit of 5, still queued while the claim is held.
+    for (let i = 0; i < 7; i++) {
+      runtime.clock.advance(10 * 60_000);
+      await runtime.outbox.drain();
+    }
+
+    expect(uploadCallFile).toHaveBeenCalledTimes(8);
+    expect(useCallDetailStore.getState().queuedFiles[claimed.id].state).toBe('queued');
+
+    // The ninth 409 lands after the five-minute claim would have lapsed: the outbox gives up.
+    runtime.clock.advance(10 * 60_000);
+    await runtime.outbox.drain();
+
+    expect(useCallDetailStore.getState().queuedFiles[claimed.id].state).toBe('rejected');
+
+    jest.mocked(uploadCallFile).mockClear();
+    jest.mocked(uploadCallFile).mockRejectedValue(httpError(503));
+
+    const failing = await useCallDetailStore.getState().uploadCallFile({ callId: '5', type: CallFileKind.Image, name: 'failing.jpg', stagedUri: 'file:///staged/failing.jpg' });
+
+    for (let i = 0; i < 4; i++) {
+      runtime.clock.advance(10 * 60_000);
+      await runtime.outbox.drain();
+    }
+
+    expect(uploadCallFile).toHaveBeenCalledTimes(5);
+    expect(useCallDetailStore.getState().queuedFiles[failing.id].state).toBe('rejected');
+    setCallFileReader(null);
+  });
+
+  it('a note saved while a notes read is in flight gets a fresh read after it, not the in-flight answer', async () => {
+    let answerFirstRead: (envelope: { Data: { CallNoteId: string; Note: string; FullName: string }[]; Status: string }) => void = () => undefined;
+
+    // SAFETY: GetCallNotes envelopes with only the fields the store keeps.
+    jest
+      .mocked(getCallNotes)
+      .mockImplementationOnce(() => new Promise((resolve) => (answerFirstRead = resolve)) as never)
+      .mockResolvedValue(
+        ok([
+          { CallNoteId: 'n1', Note: 'First on scene', FullName: 'B' },
+          { CallNoteId: 'n2', Note: 'Second line charged', FullName: 'B' },
+        ]) as never
+      );
+
+    const firstRead = useCallDetailStore.getState().fetchCallNotes('5');
+    const afterSave = useCallDetailStore.getState().fetchCallNotes('5', { bypassCache: true });
+
+    answerFirstRead(ok([{ CallNoteId: 'n1', Note: 'First on scene', FullName: 'B' }]));
+    await Promise.all([firstRead, afterSave]);
+
+    expect(getCallNotes).toHaveBeenCalledTimes(2);
+    expect(useCallDetailStore.getState().details['5'].notes?.map((note) => note.CallNoteId)).toEqual(['n1', 'n2']);
   });
 
   it('resets on wipe', async () => {

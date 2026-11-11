@@ -240,6 +240,31 @@ describe('offline call creation', () => {
     expect(useCallsStore.getState().queuedCalls[result.id].state).toBe('queued');
   });
 
+  it('a 409 (Core still saving an earlier send with the same IdempotencyKey) keeps the call queued and retries it', async () => {
+    // SAFETY: a SaveCall success envelope; the handler reads only Id and Status.
+    jest
+      .mocked(saveCall)
+      .mockRejectedValueOnce(httpError(409))
+      .mockResolvedValue({ Id: '504', Status: 'success' } as never);
+    // SAFETY: a GetCall success envelope around the test call fixture; the handler reads only Data.
+    jest.mocked(getCall).mockResolvedValue(ok(call('504')) as never);
+
+    const result = await useCallsStore.getState().createCall(request);
+
+    expect(result.outcome).toBe('queued');
+    expect(useCallsStore.getState().queuedCalls[result.id].state).toBe('queued');
+
+    runtime.clock.advance(60_000);
+    const drain = await runtime.outbox.drain();
+    await flush();
+
+    expect(drain.sent).toEqual([result.id]);
+    expect(saveCall).toHaveBeenCalledTimes(2);
+    expect(saveCall).toHaveBeenNthCalledWith(1, expect.anything(), expect.objectContaining({ IdempotencyKey: result.id }));
+    expect(saveCall).toHaveBeenNthCalledWith(2, expect.anything(), expect.objectContaining({ IdempotencyKey: result.id }));
+    expect(useCallsStore.getState().queuedCalls[result.id]).toBeUndefined();
+  });
+
   it('a server rejection stays in Pending sync (dead-lettered) with the local record marked rejected, and can be corrected', async () => {
     jest.mocked(saveCall).mockRejectedValue(httpError(400));
     const result = await useCallsStore.getState().createCall(request);

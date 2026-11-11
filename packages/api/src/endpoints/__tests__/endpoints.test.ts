@@ -84,6 +84,11 @@ describe('call files (Responder: token only to its own host)', () => {
     expect(api.buildSaveCallFileInput({ callId: '1', userId: 'u', type: 2, name: 'a.jpg', data: 'AA==', latitude: 39.5, longitude: -84 })).toMatchObject({ Latitude: '39.5', Longitude: '-84', Note: '' });
   });
 
+  it('sends the idempotency key in the body only when one is given', () => {
+    expect(api.buildSaveCallFileInput({ callId: '1', userId: 'u', type: 2, name: 'a.jpg', data: 'AA==', idempotencyKey: 'outbox-1' })).toMatchObject({ IdempotencyKey: 'outbox-1' });
+    expect(api.buildSaveCallFileInput({ callId: '1', userId: 'u', type: 2, name: 'a.jpg', data: 'AA==' })).not.toHaveProperty('IdempotencyKey');
+  });
+
   it('attaches the bearer for API-origin downloads only', async () => {
     const { ctx, adapter } = createTestContext();
     adapter.mockImplementation(async (config) => ok(config, 'blob'));

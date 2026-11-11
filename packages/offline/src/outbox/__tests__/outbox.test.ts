@@ -7,6 +7,7 @@ import { createManualConnectivitySource, type ManualConnectivitySource } from '.
 import { ConfirmationRequiredError, createOutbox, type Outbox, OutboxNoSessionError, type OutboxOptions, OutboxUnknownTypeError, ProtectedPayloadError } from '../outbox';
 import { createOutboxHandlerRegistry, type OutboxHandlerRegistry } from '../registry';
 import { OUTBOX_TABLE } from '../schema';
+import type { OutboxError } from '../types';
 
 afterEach(() => __resetSqliteFake());
 
@@ -147,6 +148,67 @@ describe.each(engines())('Outbox (%s)', (_engine, openDb) => {
       expect(await rows()).toHaveLength(0);
     });
 
+    it('sends the next write without waiting on the post-delivery reads (refresh)', async () => {
+      // A bulk unit status used to wait on two status-list reads per unit before the next unit was sent.
+      const reads: (() => void)[] = [];
+      const handler = { ...createTestHandler('status.set'), refresh: jest.fn(() => new Promise<void>((resolve) => reads.push(resolve))) };
+      registry.register(handler);
+      await outbox.enqueue({ type: 'status.set', payload: { unit: 1 }, orderKey: 'unit-1' });
+      await outbox.enqueue({ type: 'status.set', payload: { unit: 2 }, orderKey: 'unit-2' });
+
+      await expect(outbox.drain()).resolves.toMatchObject({ status: 'completed', sent: ['evt-1', 'evt-2'] });
+      await flush();
+
+      expect(handler.send).toHaveBeenCalledTimes(2);
+      expect(handler.afterAck).toHaveBeenCalledTimes(2);
+      expect(handler.refresh).toHaveBeenCalledTimes(2);
+      expect(handler.refresh).toHaveBeenCalledWith(expect.objectContaining({ id: 'evt-1' }), { ok: true });
+      // Both reads are still pending: the pass finished without them.
+      expect(reads).toHaveLength(2);
+      reads.forEach((resolve) => resolve());
+    });
+
+    it('starts the refresh only after afterAck settled, and a failed refresh leaves the write delivered', async () => {
+      const order: string[] = [];
+
+      const handler = {
+        ...createTestHandler('status.set'),
+        afterAck: jest.fn(async () => {
+          await flush();
+
+          order.push('afterAck');
+        }),
+        refresh: jest.fn(() => {
+          order.push('refresh');
+
+          return Promise.reject(new Error('read failed'));
+        }),
+      };
+
+      registry.register(handler);
+      await outbox.enqueue({ type: 'status.set', payload: {} });
+
+      await expect(outbox.drain()).resolves.toMatchObject({ status: 'completed', sent: ['evt-1'] });
+      await flush();
+
+      expect(order).toEqual(['afterAck', 'refresh']);
+      expect(await rows()).toHaveLength(0);
+      expect(handler.rollback).not.toHaveBeenCalled();
+    });
+
+    it('reports which event ids it still holds, dead-lettered and other sessions included', async () => {
+      const handler = createTestHandler('status.set');
+      handler.send.mockRejectedValueOnce(httpError(400));
+      registry.register(handler);
+      await outbox.enqueue({ type: 'status.set', payload: { n: 1 } });
+      await outbox.drain();
+      await outbox.enqueue({ type: 'status.set', payload: { n: 2 } });
+      await outbox.enqueue({ type: 'status.set', payload: { n: 3 }, scope: scopeB });
+
+      expect(await outbox.findEventIds(['evt-1', 'evt-2', 'evt-3', 'evt-gone'])).toEqual(new Set(['evt-1', 'evt-2', 'evt-3']));
+      expect(await outbox.findEventIds([])).toEqual(new Set());
+    });
+
     it('keeps insertion order even when the device clock goes backwards', async () => {
       const handler = createTestHandler('note.add');
       registry.register(handler);
@@ -214,6 +276,44 @@ describe.each(engines())('Outbox (%s)', (_engine, openDb) => {
       }
       expect((await rows())[0]).toMatchObject({ state: 'dead', retryFailures: 3 });
       expect(handler.rollback).toHaveBeenCalledWith(expect.anything(), 'dead');
+    });
+
+    it('gives a failure its own budget when the handler picks one, and keeps maxAttempts for the rest', async () => {
+      outbox = await build({ retry: { maxAttempts: 8, baseDelayMs: 1_000, maxDelayMs: 10_000 } });
+      const handler = { ...createTestHandler('file.upload', () => 'retry'), maxAttempts: 2, maxAttemptsFor: jest.fn((failure: OutboxError) => (failure.status === 409 ? 4 : undefined)) };
+      handler.send.mockRejectedValue(httpError(409));
+      registry.register(handler);
+      await outbox.enqueue({ type: 'file.upload', payload: {} });
+
+      for (let i = 0; i < 3; i++) {
+        await outbox.drain();
+        clock.advance(10_000);
+      }
+
+      expect((await rows())[0]).toMatchObject({ state: 'failed', retryFailures: 3 });
+      expect(handler.maxAttemptsFor).toHaveBeenLastCalledWith(expect.objectContaining({ status: 409 }), expect.objectContaining({ id: 'evt-1' }));
+
+      // A failure the handler gives no budget of its own falls back to maxAttempts (2), already spent.
+      handler.send.mockRejectedValue(httpError(503));
+      await outbox.drain();
+
+      expect((await rows())[0]).toMatchObject({ state: 'dead', retryFailures: 4 });
+      expect(handler.rollback).toHaveBeenCalledWith(expect.anything(), 'dead');
+    });
+
+    it('dead-letters a run of failures at the budget the handler picks for them', async () => {
+      outbox = await build({ retry: { maxAttempts: 8, baseDelayMs: 1_000, maxDelayMs: 10_000 } });
+      const handler = { ...createTestHandler('file.upload', () => 'retry'), maxAttempts: 2, maxAttemptsFor: (failure: OutboxError) => (failure.status === 409 ? 4 : undefined) };
+      handler.send.mockRejectedValue(httpError(409));
+      registry.register(handler);
+      await outbox.enqueue({ type: 'file.upload', payload: {} });
+
+      for (let i = 0; i < 4; i++) {
+        await outbox.drain();
+        clock.advance(10_000);
+      }
+
+      expect((await rows())[0]).toMatchObject({ state: 'dead', retryFailures: 4 });
     });
 
     it('stops the pass on a network failure without spending the retry budget', async () => {

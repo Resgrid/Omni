@@ -15,6 +15,7 @@ import { persist } from 'zustand/middleware';
 import { assertV4Success, unwrapList } from '../core/envelope';
 import { defineDataHandler, submitWrite, type WriteResult } from '../core/outbox';
 import { dataPersistOptions, registerPersistedStore } from '../core/persist';
+import { registerQueuedMarkerSource, withoutMarkers } from '../core/queued-markers';
 import { registerDataStoreReset } from '../core/reset';
 import { type DataLocationFix, getDataApiContext, getDataLocationFix } from '../core/runtime';
 import { createSliceRunner, emptySliceMeta, type FetchOptions, type SliceMeta, type SliceRunner } from '../core/slices';
@@ -256,6 +257,11 @@ export const useCheckInTimersStore = create<CheckInTimersState>()(
 registerPersistedStore('omni-check-in-storage', useCheckInTimersStore);
 registerDataStoreReset<CheckInTimersState>('check-in-timers', useCheckInTimersStore, initialData, () => runner.invalidate());
 
+registerQueuedMarkerSource('check-in-timers', {
+  ids: () => Object.keys(useCheckInTimersStore.getState().queuedCheckIns),
+  remove: (ids) => useCheckInTimersStore.setState((state) => ({ queuedCheckIns: withoutMarkers(state.queuedCheckIns, ids) })),
+});
+
 /** Check-ins are additive intents; the event id is the idempotency key Core dedups on. */
 export const checkInPerformHandler = defineDataHandler<PerformCheckInInput, PerformCheckInResult>({
   type: CHECK_IN_PERFORM_EVENT,
@@ -266,9 +272,9 @@ export const checkInPerformHandler = defineDataHandler<PerformCheckInInput, Perf
       .applyQueuedCheckIn({ localId: event.id, callId: payload.CallId, checkInType: payload.CheckInType, userId: payload.UserId ?? null, unitId: payload.UnitId ?? null, createdAt: event.createdAt, state: 'queued' });
   },
   send: async (event, context) => assertV4Success(await performCheckIn(getDataApiContext(), { ...event.payload, IdempotencyKey: context.idempotencyKey })),
-  afterAck: async (event) => {
+  afterAck: (event) => {
     useCheckInTimersStore.getState().setQueuedCheckInState(event.id, null);
-    await useCheckInTimersStore.getState().fetchTimerStatuses(event.payload.CallId, { bypassCache: true });
   },
+  refresh: (event) => useCheckInTimersStore.getState().fetchTimerStatuses(event.payload.CallId, { bypassCache: true }),
   rollback: (event, reason) => useCheckInTimersStore.getState().setQueuedCheckInState(event.id, reason === 'discarded' ? null : 'rejected'),
 });

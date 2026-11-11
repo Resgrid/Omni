@@ -5112,7 +5112,7 @@
     "anti-slop/no-runtime-typeof": 3,
     "anti-slop/no-unknown-parameters": 3,
     "anti-slop/no-unknown-returns": 2,
-    "anti-slop/require-readable-spacing": 109,
+    "anti-slop/require-readable-spacing": 108,
     "anti-slop/require-safety-comment-for-type-assertion": 10
   },
   "packages/offline/src/outbox/registry.ts": {

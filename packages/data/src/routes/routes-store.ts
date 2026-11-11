@@ -466,7 +466,7 @@ export const useRoutesStore = create<RoutesState>()(
 registerPersistedStore('omni-routes-storage', useRoutesStore);
 registerDataStoreReset<RoutesState>('routes', useRoutesStore, initialData, () => runner.invalidate());
 
-const afterStopAck = async (payload: RouteStopWritePayload): Promise<void> => {
+const refreshStopProgress = async (payload: RouteStopWritePayload): Promise<void> => {
   if (payload.routeInstanceId) await useRoutesStore.getState().fetchRouteProgress(payload.routeInstanceId, { bypassCache: true });
 };
 
@@ -481,7 +481,7 @@ export const routeStopCheckInHandler = defineDataHandler<RouteStopWritePayload, 
       CheckInType: RouteStopCheckInType.Manual,
     }),
   send: async (event) => assertV4Success(await checkInAtStop(getDataApiContext(), { RouteInstanceStopId: event.payload.routeInstanceStopId, Latitude: event.payload.latitude, Longitude: event.payload.longitude })),
-  afterAck: (event) => afterStopAck(event.payload),
+  refresh: (event) => refreshStopProgress(event.payload),
   rollback: (event) => revertStop(event.payload),
 });
 
@@ -493,7 +493,7 @@ export const routeStopCheckOutHandler = defineDataHandler<RouteStopWritePayload,
       CheckOutLongitude: event.payload.longitude,
     }),
   send: async (event) => assertV4Success(await checkOutFromStop(getDataApiContext(), { RouteInstanceStopId: event.payload.routeInstanceStopId, Latitude: event.payload.latitude, Longitude: event.payload.longitude })),
-  afterAck: (event) => afterStopAck(event.payload),
+  refresh: (event) => refreshStopProgress(event.payload),
   rollback: (event) => revertStop(event.payload),
 });
 
@@ -501,6 +501,6 @@ export const routeStopSkipHandler = defineDataHandler<RouteStopWritePayload, Sav
   type: ROUTE_STOP_SKIP_EVENT,
   optimisticApply: (event) => useRoutesStore.getState().applyStopStatus(event.payload.routeInstanceStopId, RouteStopStatus.Skipped, event.payload.at, { SkipReason: event.payload.reason ?? null }),
   send: async (event) => assertV4Success(await skipStop(getDataApiContext(), { RouteInstanceStopId: event.payload.routeInstanceStopId, Reason: event.payload.reason ?? null })),
-  afterAck: (event) => afterStopAck(event.payload),
+  refresh: (event) => refreshStopProgress(event.payload),
   rollback: (event) => revertStop(event.payload),
 });

@@ -6,6 +6,7 @@ import { persist } from 'zustand/middleware';
 import { unwrapItem, unwrapList } from '../core/envelope';
 import { submitWrite, type WriteResult } from '../core/outbox';
 import { dataPersistOptions, registerPersistedStore } from '../core/persist';
+import { registerQueuedMarkerSource, withoutMarkers } from '../core/queued-markers';
 import { registerDataStoreReset } from '../core/reset';
 import { dataNow, getDataApiContext, getDataOutbox, getDataVariant } from '../core/runtime';
 import { cacheOptions, createSliceRunner, emptySliceMeta, type FetchOptions, type SliceMeta, type SliceRunner } from '../core/slices';
@@ -457,6 +458,11 @@ export interface CallCreatePayload {
 
 registerPersistedStore('calls-storage', useCallsStore);
 registerDataStoreReset<CallsState>('calls', useCallsStore, initialData, () => runner.invalidate());
+
+registerQueuedMarkerSource('calls', {
+  ids: () => Object.keys(useCallsStore.getState().queuedCalls),
+  remove: (ids) => useCallsStore.setState((state) => ({ queuedCalls: withoutMarkers(state.queuedCalls, ids) })),
+});
 
 // ---------------------------------------------------------------- selectors (pure; no view state)
 

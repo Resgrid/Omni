@@ -21,6 +21,7 @@ import { assertV4Success, unwrapItem, unwrapList } from '../core/envelope';
 import { type DataError, toDataError } from '../core/errors';
 import { submitWrite, type WriteResult } from '../core/outbox';
 import { dataPersistOptions, registerPersistedStore } from '../core/persist';
+import { registerQueuedMarkerSource, withoutMarkers } from '../core/queued-markers';
 import { registerDataStoreReset } from '../core/reset';
 import { dataNow, getDataApiContext, getDataSessionScope } from '../core/runtime';
 import { createSliceRunner, emptySliceMeta, type FetchOptions, type SliceMeta, type SliceRunner } from '../core/slices';
@@ -200,12 +201,12 @@ export const useCallDetailStore = create<CallDetailState>()(
     (set, get) => {
       runner = createSliceRunner<DetailSlice, CallDetailState>('call-detail', set);
 
-      const fileFetch = (slice: 'images' | 'files' | 'audio', type: number) => async (callId: string) => {
+      const fileFetch = (slice: 'images' | 'files' | 'audio', type: number) => async (callId: string, options?: FetchOptions) => {
         await runner.run(
           slice,
           async () => unwrapList(await getCallFiles(getDataApiContext(), { callId, includeData: false, type })),
           (list, state) => patchRecord(state, callId, { [slice]: list }),
-          { flightKey: `${slice}:${callId}` }
+          { flightKey: `${slice}:${callId}`, trailing: options?.bypassCache === true }
         );
       };
 
@@ -225,7 +226,7 @@ export const useCallDetailStore = create<CallDetailState>()(
       return {
         ...initialData(),
 
-        fetchCallDetail: async (callId) => {
+        fetchCallDetail: async (callId, options) => {
           await runner.run(
             'detail',
             async () => {
@@ -234,7 +235,7 @@ export const useCallDetailStore = create<CallDetailState>()(
               return { call: unwrapItem(call), extraData: unwrapItem(extraData) };
             },
             (value, state) => patchRecord(state, callId, { ...value, fetchedAt: dataNow() }),
-            { flightKey: `detail:${callId}` }
+            { flightKey: `detail:${callId}`, trailing: options?.bypassCache === true }
           );
         },
 
@@ -251,12 +252,12 @@ export const useCallDetailStore = create<CallDetailState>()(
           return { call: current.call, extraData: current.extraData };
         },
 
-        fetchCallNotes: async (callId) => {
+        fetchCallNotes: async (callId, options) => {
           await runner.run(
             'notes',
             async () => unwrapList(await getCallNotes(getDataApiContext(), { callId })),
             (notes, state) => patchRecord(state, callId, { notes }),
-            { flightKey: `notes:${callId}` }
+            { flightKey: `notes:${callId}`, trailing: options?.bypassCache === true }
           );
         },
 
@@ -264,21 +265,21 @@ export const useCallDetailStore = create<CallDetailState>()(
         fetchCallFiles: fileFetch('files', CallFileKind.File),
         fetchCallAudio: fileFetch('audio', CallFileKind.Audio),
 
-        fetchCallSiteInfo: async (callId) => {
+        fetchCallSiteInfo: async (callId, options) => {
           await runner.run(
             'siteInfo',
             async () => unwrapItem(await getCallSiteInfo(getDataApiContext(), { callId })),
             (siteInfo, state) => patchRecord(state, callId, { siteInfo }),
-            { flightKey: `siteInfo:${callId}` }
+            { flightKey: `siteInfo:${callId}`, trailing: options?.bypassCache === true }
           );
         },
 
-        fetchCallLocationHistory: async (callId) => {
+        fetchCallLocationHistory: async (callId, options) => {
           await runner.run(
             'locationHistory',
             async () => unwrapItem(await getCallLocationHistory(getDataApiContext(), { callId })),
             (locationHistory, state) => patchRecord(state, callId, { locationHistory }),
-            { flightKey: `locationHistory:${callId}` }
+            { flightKey: `locationHistory:${callId}`, trailing: options?.bypassCache === true }
           );
         },
 
@@ -421,3 +422,13 @@ export const toCallFileUpload = (payload: CallFilePayload, userId: string, data:
 registerPersistedStore('omni-call-detail-storage', useCallDetailStore);
 
 registerDataStoreReset<CallDetailState>('call-detail', useCallDetailStore, initialData, () => runner.invalidate());
+
+registerQueuedMarkerSource('call-detail.notes', {
+  ids: () => Object.keys(useCallDetailStore.getState().queuedNotes),
+  remove: (ids) => useCallDetailStore.setState((state) => ({ queuedNotes: withoutMarkers(state.queuedNotes, ids) })),
+});
+
+registerQueuedMarkerSource('call-detail.files', {
+  ids: () => Object.keys(useCallDetailStore.getState().queuedFiles),
+  remove: (ids) => useCallDetailStore.setState((state) => ({ queuedFiles: withoutMarkers(state.queuedFiles, ids) })),
+});

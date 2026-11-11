@@ -4,8 +4,9 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 import { assertV4Success, unwrapItem } from '../core/envelope';
-import { defineDataHandler, submitWrite, type WriteResult } from '../core/outbox';
+import { defineIdempotentDataHandler, submitWrite, type WriteResult } from '../core/outbox';
 import { dataPersistOptions, registerPersistedStore } from '../core/persist';
+import { registerQueuedMarkerSource, withoutMarkers } from '../core/queued-markers';
 import { registerDataStoreReset } from '../core/reset';
 import { type DataLocationFix, dataNow, getDataApiContext, getDataSessionScope } from '../core/runtime';
 import { createSliceRunner, emptySliceMeta, type FetchOptions, type SliceMeta, type SliceRunner } from '../core/slices';
@@ -168,6 +169,11 @@ export const usePersonnelStatusStore = create<PersonnelStatusState>()(
 registerPersistedStore('omni-personnel-status-storage', usePersonnelStatusStore);
 registerDataStoreReset<PersonnelStatusState>('personnel-status', usePersonnelStatusStore, initialData, () => runner.invalidate());
 
+registerQueuedMarkerSource('personnel-status', {
+  ids: () => Object.keys(usePersonnelStatusStore.getState().queuedWrites),
+  remove: (ids) => usePersonnelStatusStore.setState((state) => ({ queuedWrites: withoutMarkers(state.queuedWrites, ids) })),
+});
+
 const refreshAfterAck = async (userId: string, kind: QueuedPersonnelWriteKind): Promise<void> => {
   const store = usePersonnelStatusStore.getState();
   const own = getDataSessionScope()?.userId === userId;
@@ -177,7 +183,7 @@ const refreshAfterAck = async (userId: string, kind: QueuedPersonnelWriteKind): 
   ]);
 };
 
-export const personnelStatusSetHandler = defineDataHandler<SavePersonStatusInput, SavePersonStatusResult>({
+export const personnelStatusSetHandler = defineIdempotentDataHandler<SavePersonStatusInput, SavePersonStatusResult>({
   type: PERSONNEL_STATUS_SET_EVENT,
   optimisticApply: (event) => {
     const { payload } = event;
@@ -186,14 +192,14 @@ export const personnelStatusSetHandler = defineDataHandler<SavePersonStatusInput
       .applyQueuedWrite({ localId: event.id, kind: 'status', userId: payload.UserId, type: payload.Type, respondingTo: payload.RespondingTo, note: payload.Note, createdAt: event.createdAt, state: 'queued' });
   },
   send: async (event, context) => assertV4Success(await savePersonStatus(getDataApiContext(), { ...event.payload, EventId: context.idempotencyKey })),
-  afterAck: async (event) => {
+  afterAck: (event) => {
     usePersonnelStatusStore.getState().setQueuedWriteState(event.id, null);
-    await refreshAfterAck(event.payload.UserId, 'status');
   },
+  refresh: (event) => refreshAfterAck(event.payload.UserId, 'status'),
   rollback: (event, reason) => usePersonnelStatusStore.getState().setQueuedWriteState(event.id, reason === 'discarded' ? null : 'rejected'),
 });
 
-export const personnelStaffingSetHandler = defineDataHandler<SavePersonnelStaffingInput, SavePersonStaffingResult>({
+export const personnelStaffingSetHandler = defineIdempotentDataHandler<SavePersonnelStaffingInput, SavePersonStaffingResult>({
   type: PERSONNEL_STAFFING_SET_EVENT,
   optimisticApply: (event) => {
     const { payload } = event;
@@ -202,9 +208,9 @@ export const personnelStaffingSetHandler = defineDataHandler<SavePersonnelStaffi
       .applyQueuedWrite({ localId: event.id, kind: 'staffing', userId: payload.UserId, type: payload.Type, respondingTo: '', note: payload.Note ?? '', createdAt: event.createdAt, state: 'queued' });
   },
   send: async (event, context) => assertV4Success(await savePersonStaffing(getDataApiContext(), { ...event.payload, EventId: context.idempotencyKey })),
-  afterAck: async (event) => {
+  afterAck: (event) => {
     usePersonnelStatusStore.getState().setQueuedWriteState(event.id, null);
-    await refreshAfterAck(event.payload.UserId, 'staffing');
   },
+  refresh: (event) => refreshAfterAck(event.payload.UserId, 'staffing'),
   rollback: (event, reason) => usePersonnelStatusStore.getState().setQueuedWriteState(event.id, reason === 'discarded' ? null : 'rejected'),
 });

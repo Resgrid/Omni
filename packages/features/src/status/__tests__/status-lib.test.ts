@@ -3,6 +3,7 @@ import './test-setup';
 import { type CallResultData } from '@resgrid/models';
 
 import { ActionBaseTypes, isStaffingOnDuty, isStatusAvailable, isStatusResponding, StaffingBaseTypes, statusAvailability } from '../lib/base-types';
+import { statusHoldApplies } from '../lib/hold-to-confirm';
 import { readableColors } from '../lib/readable-colors';
 import { getCurrentStatusCallId, getDestinationTabs, resolveDefaultStatusCall, resolveEffectiveDestination } from '../lib/status-destination';
 import { canSubmitStatusWithoutInput, getOfferedStatuses, getStatusPickerSteps, resolveCurrentStatusId } from '../lib/status-flow';
@@ -110,5 +111,24 @@ describe('readable colours', () => {
   it('picks readable text and adds the missing #', () => {
     expect(readableColors('ffffff')).toEqual({ backgroundColor: '#ffffff', textColor: '#000000' });
     expect(readableColors('not-a-colour').backgroundColor).toBe('#808080');
+  });
+});
+
+describe('status hold-to-confirm', () => {
+  it('holds only when the department turned it on, the app offers it and it runs on iOS or Android', () => {
+    expect(statusHoldApplies({ departmentEnabled: true, appAllowsHold: true, isNativeApp: true })).toBe(true);
+  });
+
+  it('never holds in Dispatch, IC or BigBoard, whatever the department setting', () => {
+    expect(statusHoldApplies({ departmentEnabled: true, appAllowsHold: false, isNativeApp: true })).toBe(false);
+    expect(statusHoldApplies({ departmentEnabled: true, appAllowsHold: false, isNativeApp: false })).toBe(false);
+  });
+
+  it('never holds on web or Electron, even in Responder and Unit', () => {
+    expect(statusHoldApplies({ departmentEnabled: true, appAllowsHold: true, isNativeApp: false })).toBe(false);
+  });
+
+  it('does not hold when the department leaves the setting off', () => {
+    expect(statusHoldApplies({ departmentEnabled: false, appAllowsHold: true, isNativeApp: true })).toBe(false);
   });
 });

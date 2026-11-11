@@ -40,6 +40,35 @@ export function defineDataHandler<P, R = unknown>(handler: HandlerInput<P, R>): 
 }
 
 /**
+ * Attempts for a write Core deduplicates. Core holds an in-flight claim for up to 5 minutes (`InboundEmailReceiptsService.
+ * ProcessingLease`) when the request holding it dies without answering. With the default retry policy (2 s doubling) the
+ * 8th failure lands about 4.2 minutes after the first, so the outbox would give up while Core still answers 409. The 9th
+ * lands about 8.5 minutes after the first, after the claim has lapsed and Core takes the write over.
+ */
+export const IDEMPOTENT_WRITE_MAX_ATTEMPTS = 9;
+
+/**
+ * A handler for a write Core deduplicates on the outbox id (the v4 status saves keyed on `EventId`). A resend that reaches
+ * Core while the first attempt still holds the claim is answered 409: the write is in progress, not refused, so it is
+ * retried, and the retry gets the first attempt's saved result. Every other answer classifies as `defineDataHandler`'s.
+ *
+ * A 409 always gets `IDEMPOTENT_WRITE_MAX_ATTEMPTS`, so the claim can lapse before the outbox gives up. A handler's own
+ * `maxAttempts` (uploads keep a lower one) limits its other retryable failures only.
+ */
+export function defineIdempotentDataHandler<P, R = unknown>(handler: HandlerInput<P, R>): OutboxHandler<P, R> {
+  const classify = handler.classify ?? ((error) => classifyDataWriteError(error));
+  const maxAttempts = handler.maxAttempts ?? IDEMPOTENT_WRITE_MAX_ATTEMPTS;
+  const claimMaxAttempts = Math.max(IDEMPOTENT_WRITE_MAX_ATTEMPTS, maxAttempts);
+
+  return {
+    ...handler,
+    maxAttempts,
+    maxAttemptsFor: (failure, event) => (failure.status === 409 ? claimMaxAttempts : handler.maxAttemptsFor?.(failure, event)),
+    classify: (error, event) => (isApiError(error) && error.kind === 'http' && error.status === 409 ? 'retry' : classify(error, event)),
+  };
+}
+
+/**
  * - `sent`: the server accepted it (the write went straight through).
  * - `queued`: held on the device; it replays on reconnect (offline, network failure, or waiting behind earlier writes).
  * - `rejected`: the server refused it; it is dead-lettered in Pending sync for correction or discard.

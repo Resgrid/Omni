@@ -124,13 +124,14 @@ export const useOperationsStore = create<OperationsState>()(
       };
       const perDeployment =
         <T>(slice: OperationsSlice, field: 'timeReportsByDeployment' | 'expensesByDeployment' | 'usageByDeployment', load: (deploymentId: string) => Promise<OperationsResult<T[]>>) =>
-        async (deploymentId: string): Promise<void> => {
+        async (deploymentId: string, options?: FetchOptions): Promise<void> => {
           await runner.run(
             slice,
             async () => unwrapList(await load(deploymentId)),
             (list, state) => ({ [field]: { ...state[field], [deploymentId]: list } }) as Partial<OperationsState>,
             {
               flightKey: `${slice}:${deploymentId}`,
+              trailing: options?.bypassCache === true,
             }
           );
         };
@@ -248,11 +249,11 @@ export interface OperationsWritePayload<T> {
 export const timeEntriesSaveHandler = defineDataHandler<OperationsWritePayload<SaveTimeEntriesInput>, TimeReportResponse>({
   type: TIME_ENTRIES_SAVE_EVENT,
   send: async (event) => assertTimeReport(await saveTimeEntries(getDataApiContext(), event.payload.input)),
-  afterAck: (event) => useOperationsStore.getState().loadTimeReports(event.payload.deploymentId, { bypassCache: true }),
+  refresh: (event) => useOperationsStore.getState().loadTimeReports(event.payload.deploymentId, { bypassCache: true }),
 });
 
 export const expenseSaveHandler = defineDataHandler<OperationsWritePayload<SaveExpenseInput>, OperationsResult<Expense>>({
   type: EXPENSE_SAVE_EVENT,
   send: async (event) => assertV4Success(await saveExpense(getDataApiContext(), event.payload.input)),
-  afterAck: (event) => useOperationsStore.getState().loadExpenses(event.payload.deploymentId, { bypassCache: true }),
+  refresh: (event) => useOperationsStore.getState().loadExpenses(event.payload.deploymentId, { bypassCache: true }),
 });

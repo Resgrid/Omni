@@ -99,4 +99,16 @@ describe('personnel status and staffing', () => {
     expect(refused.outcome).toBe('rejected');
     expect(usePersonnelStatusStore.getState().queuedWrites[refused.id].state).toBe('rejected');
   });
+
+  it('a 409 (Core still saving an earlier send of the same EventId) keeps a status or staffing queued, never rejected', async () => {
+    jest.mocked(savePersonStatus).mockRejectedValueOnce(httpError(409));
+    jest.mocked(savePersonStaffing).mockRejectedValueOnce(httpError(409));
+
+    const status = await usePersonnelStatusStore.getState().setStatus({ statusType: '2' });
+    const staffing = await usePersonnelStatusStore.getState().setStaffing({ staffingType: '1' });
+
+    expect([status.outcome, staffing.outcome]).toEqual(['queued', 'queued']);
+    expect(usePersonnelStatusStore.getState().queuedWrites[status.id].state).toBe('queued');
+    expect(usePersonnelStatusStore.getState().queuedWrites[staffing.id].state).toBe('queued');
+  });
 });

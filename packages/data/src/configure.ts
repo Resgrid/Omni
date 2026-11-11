@@ -4,6 +4,7 @@ import type { DurableKv } from '@resgrid/offline';
 
 import { useChatStore } from './chat/chat-store';
 import { setDataStorage } from './core/persist';
+import { startQueuedMarkerReconciliation } from './core/queued-markers';
 import {
   type DataLocationFix,
   type DataLogger,
@@ -53,7 +54,11 @@ export async function configureData(options: ConfigureDataOptions): Promise<() =
   await setDataStorage(options.storage);
   // Legacy `chat-outbox-storage` items move into the durable outbox once, keeping their ClientMessageId.
   await useChatStore.getState().importLegacyOutbox();
+  // Rehydrated "Pending sync" markers whose write this device's outbox no longer holds are cleared now and after every
+  // outbox change (another tab's markers, an expired event, a close between delivery and the marker's save).
+  const disposeReconciliation = startQueuedMarkerReconciliation();
   return () => {
+    disposeReconciliation();
     disposeSteps();
     disposeHandlers();
   };

@@ -65,10 +65,27 @@ export interface OutboxHandler<P = unknown, R = unknown> {
   /** Called when the write is abandoned: dead-lettered, or discarded by the user. */
   rollback?(event: OutboxEvent<P>, reason: RollbackReason): void | Promise<void>;
   classify(error: unknown, event: OutboxEvent<P>): OutboxErrorClass;
-  /** After the server acknowledged and the event was deleted (e.g. IC board refresh). */
+  /**
+   * After the server acknowledged and the event was deleted: local state that must be settled before the next write is
+   * sent (a server id mapped onto queued rows, the queued marker cleared, the saved row applied). Awaited inside the
+   * drain pass, so it never reads from the server just to refresh a screen — that goes in `refresh`.
+   */
   afterAck?(event: OutboxEvent<P>, result: R): void | Promise<void>;
+  /**
+   * After delivery (once `afterAck` settled): reads that bring screens up to date with the write (the list it changed).
+   * Started and never awaited — the drain pass moves on to the next write and `submitWrite` resolves without waiting on
+   * reads (a bulk unit status waited on two status-list reads per unit before the next unit was even sent). A failure is
+   * logged, never retried.
+   */
+  refresh?(event: OutboxEvent<P>, result: R): void | Promise<void>;
   /** Overrides the retry policy's max attempts for this type. */
   maxAttempts?: number;
+  /**
+   * The max attempts for the retryable failure at hand, when it needs a budget of its own (a write the server is still
+   * saving under the same idempotency key needs time for that claim to lapse; the handler's other failures keep
+   * `maxAttempts`). `undefined` falls back to `maxAttempts`.
+   */
+  maxAttemptsFor?(failure: OutboxError, event: OutboxEvent<P>): number | undefined;
 }
 
 export interface EnqueueInput<P = unknown> {
