@@ -48,7 +48,7 @@ const variants = {
     versioning: { tagPrefix: 'responder-v', major: 11, buildNumberBase: 5100000 },
     capabilities: {
       calls: { create: 'full', dispatch: true, close: true, queues: false, runCards: false },
-      status: { subject: 'personnel', onBehalf: false, staffing: true },
+      status: { subject: 'personnel', onBehalf: false, staffing: true, holdToConfirm: true },
       incidentCommand: 'view',
       checkIn: { self: true, others: false, actions: true },
       videoFeeds: 'view',
@@ -109,7 +109,7 @@ const variants = {
     versioning: { tagPrefix: 'unit-v', major: 8, buildNumberBase: 100000 },
     capabilities: {
       calls: { create: 'full', dispatch: true, close: true, queues: false, runCards: false },
-      status: { subject: 'unit', onBehalf: false, staffing: false },
+      status: { subject: 'unit', onBehalf: false, staffing: false, holdToConfirm: true },
       incidentCommand: 'view',
       checkIn: { self: true, others: false, actions: true },
       videoFeeds: 'view',
@@ -154,7 +154,7 @@ const variants = {
     versioning: { tagPrefix: 'ic-v', major: 2, buildNumberBase: 100000 },
     capabilities: {
       calls: { create: 'full', dispatch: true, close: true, queues: false, runCards: false },
-      status: { subject: 'personnel', onBehalf: false, staffing: false },
+      status: { subject: 'personnel', onBehalf: false, staffing: false, holdToConfirm: false },
       incidentCommand: 'command',
       checkIn: { self: true, others: true, actions: false },
       videoFeeds: 'view',
@@ -208,7 +208,7 @@ const variants = {
     versioning: { tagPrefix: 'dispatch-v', major: 2, buildNumberBase: 100000 },
     capabilities: {
       calls: { create: 'full', dispatch: true, close: true, queues: true, runCards: true },
-      status: { subject: 'personnel', onBehalf: true, staffing: false },
+      status: { subject: 'personnel', onBehalf: true, staffing: false, holdToConfirm: false },
       incidentCommand: 'assist',
       checkIn: { self: false, others: true, actions: false },
       videoFeeds: 'manage',
@@ -253,7 +253,7 @@ const variants = {
     versioning: { tagPrefix: 'bigboard-v', major: 4, buildNumberBase: 100000 },
     capabilities: {
       calls: { create: 'none', dispatch: false, close: false, queues: false, runCards: false },
-      status: { subject: 'personnel', onBehalf: false, staffing: false },
+      status: { subject: 'personnel', onBehalf: false, staffing: false, holdToConfirm: false },
       incidentCommand: 'none',
       checkIn: { self: false, others: false, actions: false },
       videoFeeds: 'none',

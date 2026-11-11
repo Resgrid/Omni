@@ -27,6 +27,11 @@ export const refreshSelectedCall = async (): Promise<void> => {
   if (isCallFilterActive && selectedCallId) await useCallDetailStore.getState().fetchCallDetail(selectedCallId, { bypassCache: true });
 };
 
+/** Re-reads the console's unit rows (infos) and map pins, bypassing caches. */
+export const refreshConsoleUnits = async (): Promise<void> => {
+  await Promise.all([useUnitsStore.getState().fetchUnitInfos({ bypassCache: true }), useMapMarkersStore.getState().fetchMarkers({ bypassCache: true })]);
+};
+
 /**
  * The console's data (Dispatch baseline home screen): calls, priorities, the pending/scheduled queues, units (infos and
  * status sets), personnel, department notes, weather alerts, unit status timers and the map pins — read from the
@@ -42,9 +47,7 @@ export function useConsoleData({ realtime = true }: { realtime?: boolean } = {})
     await Promise.all([calls.fetchCalls({ bypassCache: true }), calls.refreshQueuedCallLists(), refreshSelectedCall(), useMapMarkersStore.getState().fetchMarkers({ bypassCache: true })]);
   }, []);
 
-  const refreshUnits = useCallback(async () => {
-    await Promise.all([useUnitsStore.getState().fetchUnitInfos({ bypassCache: true }), useMapMarkersStore.getState().fetchMarkers({ bypassCache: true })]);
-  }, []);
+  const refreshUnits = useCallback(() => refreshConsoleUnits(), []);
 
   const refreshPersonnel = useCallback(async () => {
     await usePersonnelStore.getState().fetchPersonnel({ bypassCache: true });

@@ -473,6 +473,9 @@ export class Outbox {
           logger.warn({ message: 'Outbox afterAck failed', context: { id: row.id, type: row.type, error: error instanceof Error ? error.name : typeof error } });
         }
       }
+
+      if (handler.refresh) this.startRefresh(handler, event, response);
+
       return 'sent';
     } catch (error) {
       let errorClass: OutboxErrorClass;
@@ -527,6 +530,15 @@ export class Outbox {
       logger.warn({ message: 'Outbox event failed, retry scheduled', context: { id: row.id, type: row.type, failures, status: lastError.status } });
       return 'failed';
     }
+  }
+
+  /** Runs a handler's post-delivery reads without holding the pass (see `OutboxHandler.refresh`). */
+  private startRefresh<P, R>(handler: OutboxHandler<P, R>, event: OutboxEvent<P>, response: R): void {
+    void Promise.resolve()
+      .then(() => handler.refresh?.(event, response))
+      .catch((error) => {
+        getOfflineLogger().warn({ message: 'Outbox refresh after delivery failed', context: { id: event.id, type: event.type, error: describeError(error) } });
+      });
   }
 
   private async isSuperseded(row: MetaRow): Promise<boolean> {
@@ -665,6 +677,21 @@ export class Outbox {
     const row = await this.ownRow(id);
     if (!row) return null;
     return (await this.loadEvent(id)) as OutboxEvent<P>;
+  }
+
+  /**
+   * Which of these event ids the outbox still holds, in any state and any session (dead-lettered included). A data store's
+   * queued marker is written after its event is stored, so a marker whose id is missing here belongs to a write that is
+   * settled — delivered, discarded or dropped — and nothing will clear it any more.
+   */
+  async findEventIds(ids: readonly string[]): Promise<Set<string>> {
+    await this.init();
+
+    if (ids.length === 0) return new Set();
+
+    const rows = await this.db.select<{ id: string } & DbRow>(OUTBOX_TABLE, { where: { id: { in: [...ids] } }, columns: ['id'] });
+
+    return new Set(rows.map((row) => row.id));
   }
 
   // ---------------------------------------------------------------- observable state

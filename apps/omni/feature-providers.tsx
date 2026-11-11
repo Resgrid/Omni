@@ -3,7 +3,7 @@
 // session exists. The active unit and active call come from the shell's active session (frozen legacy keys).
 import { getShellApiContext, getShellOfflineRuntime, setActiveCallId, setActiveUnitId, useActiveCallId, useActiveUnitId, useShellStore } from '@resgrid/app-shell';
 import { useActiveVariant } from '@resgrid/config';
-import { logger } from '@resgrid/core';
+import { isNative, logger } from '@resgrid/core';
 import { ChatIdentityProvider } from '@resgrid/features/chat';
 import { type NavigationHandoff, NavigationHandoffProvider, type NavigationTarget } from '@resgrid/features/contacts';
 import { useInAppNavigationAvailable } from '@resgrid/features/navigation/hooks/use-in-app-navigation';
@@ -11,6 +11,7 @@ import { navigateInAppTo } from '@resgrid/features/navigation/routes';
 import { useOfflineMapsController } from '@resgrid/features/offline-maps';
 import { type ActiveUnitAdapter, getNavigationApp, openNavigationTarget, type StorageSyncServices, usePreferencesVersion } from '@resgrid/features/settings';
 import { StatusProvider } from '@resgrid/features/status';
+import { statusHoldApplies } from '@resgrid/features/status/lib/hold-to-confirm';
 import { UnitRoutesMapProvider } from '@resgrid/features/unit-routes';
 import { acquireLocationFix } from '@resgrid/location';
 import { MapProvider, type MapServices, useOfflineMapOptions } from '@resgrid/maps';
@@ -62,9 +63,14 @@ const changeActiveCall = (callId: string): void => setActiveCallId(callId);
 /** Clears the crew's active call (Unit's status console). */
 export const clearActiveCall = (): void => setActiveCallId(null);
 
-/** The department's hold-to-confirm setting, the device's active unit and the crew's active call for the status sheets. */
+/**
+ * Hold-to-confirm (the department's setting, only in the Responder and Unit mobile apps — `capabilities.status.holdToConfirm`
+ * on iOS/Android), the device's active unit and the crew's active call for the status sheets.
+ */
 export function ShellStatusProvider({ children }: ProviderProps) {
-  const holdToConfirm = useShellStore((state) => state.departmentConfig?.StatusHoldToConfirm === true);
+  const departmentEnabled = useShellStore((state) => state.departmentConfig?.StatusHoldToConfirm === true);
+  const appAllowsHold = useActiveVariant().capabilities.status.holdToConfirm;
+  const holdToConfirm = statusHoldApplies({ departmentEnabled, appAllowsHold, isNativeApp: isNative() });
   const activeUnitId = useActiveUnitId();
   const activeCallId = useActiveCallId();
   return (

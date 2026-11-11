@@ -52,7 +52,8 @@
     "status": {
       "subject": "personnel",
       "onBehalf": false,
-      "staffing": false
+      "staffing": false,
+      "holdToConfirm": false
     },
     "incidentCommand": "none",
     "checkIn": {

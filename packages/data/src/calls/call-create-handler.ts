@@ -2,7 +2,7 @@ import { getCall, getCallLocationHistory, parseUtcMs, saveCall } from '@resgrid/
 import type { CallResultData, NewCallInput, SaveCallResult } from '@resgrid/models';
 
 import { assertV4Success, unwrapItem } from '../core/envelope';
-import { defineDataHandler } from '../core/outbox';
+import { defineIdempotentDataHandler } from '../core/outbox';
 import { dataNow, getDataApiContext, getDataLogger } from '../core/runtime';
 import { CALL_CREATE_EVENT, type CallCreatePayload, useCallsStore } from './calls-store';
 
@@ -10,8 +10,9 @@ import { CALL_CREATE_EVENT, type CallCreatePayload, useCallsStore } from './call
 export const DUPLICATE_CALL_WINDOW_MS = 60 * 60 * 1000;
 
 /**
- * `SaveCall` body with the client GUID as idempotency key (plan §8.6 item 2: Core honours it once the
- * idempotent-create change ships; older servers ignore the unknown field, so the request stays valid).
+ * `SaveCall` body with the client GUID as idempotency key (plan §8.6 item 2). Core reads the body's `IdempotencyKey` when no
+ * `Idempotency-Key` header is sent: a resend returns the first call instead of creating and paging a second one, and a
+ * resend that arrives while the first is still being saved is answered 409 (retried). Older servers ignore the field.
  */
 export type IdempotentNewCallInput = NewCallInput & { IdempotencyKey: string; ClientCallId: string };
 
@@ -39,7 +40,7 @@ const findPossibleDuplicates = async (serverCallId: string, createdAt: number): 
  * possible-duplicate flag). A refusal dead-letters the event: the local record stays, marked rejected,
  * for correction (`correctQueuedCall`) or discard from Pending sync.
  */
-export const callCreateHandler = defineDataHandler<CallCreatePayload, SaveCallResult>({
+export const callCreateHandler = defineIdempotentDataHandler<CallCreatePayload, SaveCallResult>({
   type: CALL_CREATE_EVENT,
   optimisticApply: (event) => {
     useCallsStore.getState().applyQueuedCall({ localId: event.id, request: event.payload.request, input: event.payload.input, createdAt: event.createdAt, state: 'queued' });

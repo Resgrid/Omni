@@ -21,6 +21,7 @@ import { assertV4Success, unwrapItem, unwrapList } from '../core/envelope';
 import { type DataError, toDataError } from '../core/errors';
 import { submitWrite, type WriteResult } from '../core/outbox';
 import { dataPersistOptions, registerPersistedStore } from '../core/persist';
+import { registerQueuedMarkerSource, withoutMarkers } from '../core/queued-markers';
 import { registerDataStoreReset } from '../core/reset';
 import { dataNow, getDataApiContext, getDataSessionScope } from '../core/runtime';
 import { createSliceRunner, emptySliceMeta, type FetchOptions, type SliceMeta, type SliceRunner } from '../core/slices';
@@ -421,3 +422,13 @@ export const toCallFileUpload = (payload: CallFilePayload, userId: string, data:
 registerPersistedStore('omni-call-detail-storage', useCallDetailStore);
 
 registerDataStoreReset<CallDetailState>('call-detail', useCallDetailStore, initialData, () => runner.invalidate());
+
+registerQueuedMarkerSource('call-detail.notes', {
+  ids: () => Object.keys(useCallDetailStore.getState().queuedNotes),
+  remove: (ids) => useCallDetailStore.setState((state) => ({ queuedNotes: withoutMarkers(state.queuedNotes, ids) })),
+});
+
+registerQueuedMarkerSource('call-detail.files', {
+  ids: () => Object.keys(useCallDetailStore.getState().queuedFiles),
+  remove: (ids) => useCallDetailStore.setState((state) => ({ queuedFiles: withoutMarkers(state.queuedFiles, ids) })),
+});

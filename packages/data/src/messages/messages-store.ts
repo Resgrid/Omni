@@ -8,6 +8,7 @@ import { assertV4Success, unwrapItem, unwrapList } from '../core/envelope';
 import { type DataError, toDataError } from '../core/errors';
 import { defineDataHandler, submitWrite, type WriteResult } from '../core/outbox';
 import { dataPersistOptions, registerPersistedStore } from '../core/persist';
+import { registerQueuedMarkerSource, withoutMarkers } from '../core/queued-markers';
 import { registerDataStoreReset } from '../core/reset';
 import { dataNow, getDataApiContext } from '../core/runtime';
 import { createSliceRunner, emptySliceMeta, type FetchOptions, type SliceMeta, type SliceRunner } from '../core/slices';
@@ -206,13 +207,18 @@ registerPersistedStore('omni-messages-storage', useMessagesStore);
 
 registerDataStoreReset<MessagesState>('messages', useMessagesStore, initialData, () => runner.invalidate());
 
+registerQueuedMarkerSource('messages', {
+  ids: () => Object.keys(useMessagesStore.getState().queuedMessages),
+  remove: (ids) => useMessagesStore.setState((state) => ({ queuedMessages: withoutMarkers(state.queuedMessages, ids) })),
+});
+
 export const messageSendHandler = defineDataHandler<NewMessageInput, SendMessageResult>({
   type: MESSAGE_SEND_EVENT,
   optimisticApply: (event) => useMessagesStore.getState().applyQueuedMessage({ localId: event.id, input: event.payload, createdAt: event.createdAt, state: 'queued' }),
   send: async (event) => assertV4Success(await sendMessage(getDataApiContext(), event.payload)),
-  afterAck: async (event) => {
+  afterAck: (event) => {
     useMessagesStore.getState().setQueuedMessageState(event.id, null);
-    await useMessagesStore.getState().fetchSentMessages({ bypassCache: true });
   },
+  refresh: () => useMessagesStore.getState().fetchSentMessages({ bypassCache: true }),
   rollback: (event, reason) => useMessagesStore.getState().setQueuedMessageState(event.id, reason === 'discarded' ? null : 'rejected'),
 });

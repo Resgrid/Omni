@@ -4,6 +4,7 @@ import { useTranslation } from '@resgrid/i18n';
 import { useToast } from '@resgrid/ui';
 import React, { useCallback, useEffect, useMemo } from 'react';
 
+import { refreshConsoleUnits } from '../hooks/use-console-data';
 import { resolveCommonUnitStatusOptions } from '../lib/bulk-status';
 
 /** Department-wide destination lists (open calls, stations, destination POIs) for on-behalf statuses. */
@@ -77,6 +78,10 @@ export const ConsoleUnitStatusSheet: React.FC<ConsoleUnitStatusSheetProps> = ({ 
         )
       );
       const outcome = combineOutcomes(results.map((result) => result.outcome));
+      // One re-read of the rows for the whole selection, as soon as the server has the statuses (the realtime ping
+      // follows): the outbox's own reads after each status refresh the status lists, not these rows.
+      if (results.some((result) => result.outcome === 'sent')) void refreshConsoleUnits();
+
       if (units.length > 1 && outcome === 'rejected') toast.error(t('dispatch.bulk_unit_actions.partial_failure'));
       onSubmitted?.(outcome);
       return outcome;

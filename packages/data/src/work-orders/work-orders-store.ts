@@ -20,6 +20,7 @@ import { assertV4Success, unwrapItem } from '../core/envelope';
 import { type DataError, toDataError } from '../core/errors';
 import { defineDataHandler, submitWrite, type WriteResult } from '../core/outbox';
 import { dataPersistOptions, registerPersistedStore } from '../core/persist';
+import { registerQueuedMarkerSource, withoutMarkers } from '../core/queued-markers';
 import { registerDataStoreReset } from '../core/reset';
 import { getDataApiContext } from '../core/runtime';
 import { createSliceRunner, emptySliceMeta, type FetchOptions, type SliceMeta, type SliceRunner } from '../core/slices';
@@ -217,6 +218,11 @@ export const useWorkOrdersStore = create<WorkOrdersState>()(
 
 registerPersistedStore('omni-work-orders-storage', useWorkOrdersStore);
 registerDataStoreReset<WorkOrdersState>('work-orders', useWorkOrdersStore, initialData, () => runner.invalidate());
+
+registerQueuedMarkerSource('work-orders', {
+  ids: () => Object.keys(useWorkOrdersStore.getState().queuedReports),
+  remove: (ids) => useWorkOrdersStore.setState((state) => ({ queuedReports: withoutMarkers(state.queuedReports, ids) })),
+});
 
 export const workOrderReportHandler = defineDataHandler<Omit<WorkOrderInput, 'RequestId'>, WorkOrderApiResult<WorkOrderDetail>>({
   type: WORK_ORDER_REPORT_EVENT,

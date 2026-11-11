@@ -7,7 +7,7 @@
 export { configureData, type ConfigureDataOptions } from './configure';
 export { assertV4Success, type Enveloped, unwrapItem, unwrapList } from './core/envelope';
 export { type DataError, type DataErrorCode, isConnectivityError, toDataError } from './core/errors';
-export { classifyDataWriteError, defineDataHandler, drainOrderGroup, submitWrite, type WriteOutcome, type WriteResult } from './core/outbox';
+export { classifyDataWriteError, defineDataHandler, defineIdempotentDataHandler, drainOrderGroup, submitWrite, type WriteOutcome, type WriteResult } from './core/outbox';
 export { type DataPersistConfig, dataPersistOptions, getDataStorageKv, getPersistedStoreNames, registerPersistedStore, rehydrateDataStores, setDataStorage } from './core/persist';
 export { registerDataStoreReset } from './core/reset';
 export {

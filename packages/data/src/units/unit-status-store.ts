@@ -5,8 +5,9 @@ import { persist } from 'zustand/middleware';
 
 import { sortCallsNewestFirst } from '../calls/call-order';
 import { assertV4Success, unwrapItem } from '../core/envelope';
-import { defineDataHandler, submitWrite, type WriteResult } from '../core/outbox';
+import { defineIdempotentDataHandler, submitWrite, type WriteResult } from '../core/outbox';
 import { dataPersistOptions, registerPersistedStore } from '../core/persist';
+import { registerQueuedMarkerSource, withoutMarkers } from '../core/queued-markers';
 import { registerDataStoreReset } from '../core/reset';
 import { type DataLocationFix, dataNow, getDataApiContext } from '../core/runtime';
 import { createSliceRunner, emptySliceMeta, type FetchOptions, type SliceMeta, type SliceRunner } from '../core/slices';
@@ -180,8 +181,13 @@ export const useUnitStatusStore = create<UnitStatusState>()(
 registerPersistedStore('omni-unit-status-storage', useUnitStatusStore);
 registerDataStoreReset<UnitStatusState>('unit-status', useUnitStatusStore, initialData, () => runner.invalidate());
 
+registerQueuedMarkerSource('unit-status', {
+  ids: () => Object.keys(useUnitStatusStore.getState().queuedStatuses),
+  remove: (ids) => useUnitStatusStore.setState((state) => ({ queuedStatuses: withoutMarkers(state.queuedStatuses, ids) })),
+});
+
 /** Unit status set (Unit, IC; Dispatch on behalf): EventId = outbox id, so a replay is deduplicated (Core §8.6 item 3). */
-export const unitStatusSetHandler = defineDataHandler<UnitStatusInput, SaveUnitStatusResult>({
+export const unitStatusSetHandler = defineIdempotentDataHandler<UnitStatusInput, SaveUnitStatusResult>({
   type: UNIT_STATUS_SET_EVENT,
   optimisticApply: (event) => {
     const { payload } = event;
@@ -200,8 +206,11 @@ export const unitStatusSetHandler = defineDataHandler<UnitStatusInput, SaveUnitS
     const roles: UnitStatusRoleInput[] = (event.payload.Roles ?? []).map((role) => ({ ...role, EventId: context.idempotencyKey }));
     return assertV4Success(await saveUnitStatus(getDataApiContext(), { ...event.payload, EventId: context.idempotencyKey, Roles: roles }));
   },
-  afterAck: async (event) => {
+  afterAck: (event) => {
     useUnitStatusStore.getState().setQueuedStatusState(event.id, null);
+  },
+  // Not awaited by the outbox: a multi-unit status sends every unit without waiting on these reads in between.
+  refresh: async (event) => {
     await Promise.all([useUnitStatusStore.getState().fetchCurrentStatus(event.payload.Id, { bypassCache: true }), useUnitsStore.getState().fetchUnitStatuses({ bypassCache: true })]);
   },
   rollback: (event, reason) => {

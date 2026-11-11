@@ -22,16 +22,24 @@ export interface CallFileUpload {
   data: string;
   latitude?: number | null;
   longitude?: number | null;
+  /**
+   * Idempotency key for an upload that may be sent again (the outbox event id): Core returns the first file's id instead of
+   * attaching a second copy. Older servers ignore it.
+   */
+  idempotencyKey?: string;
 }
+
+/** `SaveCallFileInput` with the optional body `IdempotencyKey` Core reads when no `Idempotency-Key` header is sent. */
+export type IdempotentSaveCallFileInput = SaveCallFileInput & { IdempotencyKey?: string };
 
 /**
  * Body for `CallFiles/SaveCallFile`. Coordinates are sent (as strings) only when both are finite and not 0,0 —
  * a missing fix must not pin the file to "null island".
  */
-export const buildSaveCallFileInput = (upload: CallFileUpload): SaveCallFileInput => {
+export const buildSaveCallFileInput = (upload: CallFileUpload): IdempotentSaveCallFileInput => {
   const { latitude, longitude } = upload;
   const hasFix = typeof latitude === 'number' && typeof longitude === 'number' && Number.isFinite(latitude) && Number.isFinite(longitude) && !(latitude === 0 && longitude === 0);
-  return {
+  const input: IdempotentSaveCallFileInput = {
     CallId: upload.callId,
     UserId: upload.userId,
     Type: upload.type,
@@ -40,6 +48,10 @@ export const buildSaveCallFileInput = (upload: CallFileUpload): SaveCallFileInpu
     Data: upload.data,
     ...(hasFix ? { Latitude: String(latitude), Longitude: String(longitude) } : {}),
   };
+
+  if (upload.idempotencyKey) input.IdempotencyKey = upload.idempotencyKey;
+
+  return input;
 };
 
 /** Uploads a call file (image, audio or attachment). */

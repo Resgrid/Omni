@@ -69,6 +69,12 @@ describe('variant manifests', () => {
     expect(v.buildNumber).toBeGreaterThan(legacyBuild);
   });
 
+  // Plan §15 #24: the 2-second status hold is for the field apps; desks (Dispatch, IC, BigBoard) set status at once.
+  it('offers hold-to-confirm in Responder and Unit only', () => {
+    const withHold = VARIANT_IDS.filter((id) => load(id).capabilities.status.holdToConfirm);
+    expect(withHold).toEqual(['responder', 'unit']);
+  });
+
   it('only declares background modes and permissions that match capabilities', () => {
     for (const m of VARIANT_IDS.map(load)) {
       const bgLocation = m.native.iosBackgroundModes.includes('location');
