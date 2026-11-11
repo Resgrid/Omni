@@ -80,6 +80,12 @@ export interface OutboxHandler<P = unknown, R = unknown> {
   refresh?(event: OutboxEvent<P>, result: R): void | Promise<void>;
   /** Overrides the retry policy's max attempts for this type. */
   maxAttempts?: number;
+  /**
+   * The max attempts for the retryable failure at hand, when it needs a budget of its own (a write the server is still
+   * saving under the same idempotency key needs time for that claim to lapse; the handler's other failures keep
+   * `maxAttempts`). `undefined` falls back to `maxAttempts`.
+   */
+  maxAttemptsFor?(failure: OutboxError, event: OutboxEvent<P>): number | undefined;
 }
 
 export interface EnqueueInput<P = unknown> {

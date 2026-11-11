@@ -189,6 +189,66 @@ describe('call detail', () => {
     setCallFileReader(null);
   });
 
+  it('keeps retrying an upload Core answers 409 for until the claim can lapse, but dead-letters other failures at 5', async () => {
+    setCallFileReader(async () => 'BASE64');
+    jest.mocked(uploadCallFile).mockRejectedValue(httpError(409));
+
+    const claimed = await useCallDetailStore.getState().uploadCallFile({ callId: '5', type: CallFileKind.Image, name: 'claimed.jpg', stagedUri: 'file:///staged/claimed.jpg' });
+
+    // Failures 2–8 (the first was the send itself): past the upload limit of 5, still queued while the claim is held.
+    for (let i = 0; i < 7; i++) {
+      runtime.clock.advance(10 * 60_000);
+      await runtime.outbox.drain();
+    }
+
+    expect(uploadCallFile).toHaveBeenCalledTimes(8);
+    expect(useCallDetailStore.getState().queuedFiles[claimed.id].state).toBe('queued');
+
+    // The ninth 409 lands after the five-minute claim would have lapsed: the outbox gives up.
+    runtime.clock.advance(10 * 60_000);
+    await runtime.outbox.drain();
+
+    expect(useCallDetailStore.getState().queuedFiles[claimed.id].state).toBe('rejected');
+
+    jest.mocked(uploadCallFile).mockClear();
+    jest.mocked(uploadCallFile).mockRejectedValue(httpError(503));
+
+    const failing = await useCallDetailStore.getState().uploadCallFile({ callId: '5', type: CallFileKind.Image, name: 'failing.jpg', stagedUri: 'file:///staged/failing.jpg' });
+
+    for (let i = 0; i < 4; i++) {
+      runtime.clock.advance(10 * 60_000);
+      await runtime.outbox.drain();
+    }
+
+    expect(uploadCallFile).toHaveBeenCalledTimes(5);
+    expect(useCallDetailStore.getState().queuedFiles[failing.id].state).toBe('rejected');
+    setCallFileReader(null);
+  });
+
+  it('a note saved while a notes read is in flight gets a fresh read after it, not the in-flight answer', async () => {
+    let answerFirstRead: (envelope: { Data: { CallNoteId: string; Note: string; FullName: string }[]; Status: string }) => void = () => undefined;
+
+    // SAFETY: GetCallNotes envelopes with only the fields the store keeps.
+    jest
+      .mocked(getCallNotes)
+      .mockImplementationOnce(() => new Promise((resolve) => (answerFirstRead = resolve)) as never)
+      .mockResolvedValue(
+        ok([
+          { CallNoteId: 'n1', Note: 'First on scene', FullName: 'B' },
+          { CallNoteId: 'n2', Note: 'Second line charged', FullName: 'B' },
+        ]) as never
+      );
+
+    const firstRead = useCallDetailStore.getState().fetchCallNotes('5');
+    const afterSave = useCallDetailStore.getState().fetchCallNotes('5', { bypassCache: true });
+
+    answerFirstRead(ok([{ CallNoteId: 'n1', Note: 'First on scene', FullName: 'B' }]));
+    await Promise.all([firstRead, afterSave]);
+
+    expect(getCallNotes).toHaveBeenCalledTimes(2);
+    expect(useCallDetailStore.getState().details['5'].notes?.map((note) => note.CallNoteId)).toEqual(['n1', 'n2']);
+  });
+
   it('resets on wipe', async () => {
     await useCallDetailStore.getState().fetchCallDetail('5');
     await defaultResetRegistry.getStoreResets().get('data.call-detail')?.('department-switch');

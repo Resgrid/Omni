@@ -89,7 +89,7 @@ export function reconcileQueuedMarkers(): Promise<number> {
       try {
         removed += await reconcileOnce();
       } catch (error) {
-        getDataLogger().warn({ message: 'Queued marker reconciliation failed', context: { error: error instanceof Error ? error.name : 'unknown' } });
+        getDataLogger().warn({ message: 'Queued marker reconciliation failed', context: { operation: 'reconcileQueuedMarkers', removedBeforeFailure: removed, error: error instanceof Error ? error.name : 'unknown' } });
       }
     } while (rerun);
 

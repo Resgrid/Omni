@@ -515,7 +515,7 @@ export class Outbox {
       }
 
       const failures = Number(row.retryFailures) + 1;
-      const maxAttempts = handler.maxAttempts ?? this.retryPolicy.maxAttempts;
+      const maxAttempts = this.maxAttemptsFor(handler, lastError, event);
       if (failures >= maxAttempts) {
         await this.markDead(row, lastError, failures);
         logger.error({ message: 'Outbox event out of retries, dead-lettered', context: { id: row.id, type: row.type, failures } });
@@ -530,6 +530,19 @@ export class Outbox {
       logger.warn({ message: 'Outbox event failed, retry scheduled', context: { id: row.id, type: row.type, failures, status: lastError.status } });
       return 'failed';
     }
+  }
+
+  /** The attempt budget for this failure: the handler's per-failure budget, its type budget, then the retry policy's. */
+  private maxAttemptsFor(handler: OutboxHandler, failure: OutboxError, event: OutboxEvent): number {
+    let forFailure: number | undefined;
+
+    try {
+      forFailure = handler.maxAttemptsFor?.(failure, event);
+    } catch {
+      forFailure = undefined;
+    }
+
+    return forFailure ?? handler.maxAttempts ?? this.retryPolicy.maxAttempts;
   }
 
   /** Runs a handler's post-delivery reads without holding the pass (see `OutboxHandler.refresh`). */

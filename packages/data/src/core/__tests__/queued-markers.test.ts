@@ -5,6 +5,7 @@ import { createDataTestRuntime, type DataTestRuntime, flush, httpError } from '.
 import { usePersonnelStatusStore } from '../../personnel/personnel-status-store';
 import { selectPendingUnitStatus, useUnitStatusStore } from '../../units/unit-status-store';
 import { reconcileQueuedMarkers, startQueuedMarkerReconciliation, withoutMarkers } from '../queued-markers';
+import { setDataLogger } from '../runtime';
 
 jest.mock('@resgrid/api', () => ({
   ...jest.requireActual('@resgrid/api'),
@@ -47,6 +48,18 @@ describe('queued marker reconciliation', () => {
     await expect(reconcileQueuedMarkers()).resolves.toBe(1);
 
     expect(usePersonnelStatusStore.getState().queuedWrites).toEqual({});
+  });
+
+  it('logs a failed lookup with its operation and keeps the markers', async () => {
+    const logger = { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() };
+    setDataLogger(logger);
+    useUnitStatusStore.getState().applyQueuedStatus(foreignMarker('evt-unchecked'));
+    jest.spyOn(runtime.outbox, 'findEventIds').mockRejectedValueOnce(new TypeError('database closed'));
+
+    await expect(reconcileQueuedMarkers()).resolves.toBe(0);
+
+    expect(logger.warn).toHaveBeenCalledWith({ message: 'Queued marker reconciliation failed', context: { operation: 'reconcileQueuedMarkers', removedBeforeFailure: 0, error: 'TypeError' } });
+    expect(Object.keys(useUnitStatusStore.getState().queuedStatuses)).toEqual(['evt-unchecked']);
   });
 
   it('runs at start and again after every outbox change', async () => {

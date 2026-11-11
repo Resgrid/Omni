@@ -79,6 +79,7 @@ export const callFileUploadHandler = defineIdempotentDataHandler<CallFilePayload
   rollback: (event, reason) => {
     useCallDetailStore.getState().setQueuedFileState(event.id, reason === 'discarded' ? null : 'rejected');
   },
-  // Every attempt re-sends the whole file, so uploads keep their lower limit rather than the idempotent default.
+  // Every attempt re-sends the whole file, so failures other than a 409 keep this lower limit. A 409 (Core still holds the
+  // first send's claim) still gets the idempotent budget, long enough for the claim to lapse.
   maxAttempts: 5,
 });

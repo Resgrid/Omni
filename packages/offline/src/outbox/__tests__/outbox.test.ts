@@ -7,6 +7,7 @@ import { createManualConnectivitySource, type ManualConnectivitySource } from '.
 import { ConfirmationRequiredError, createOutbox, type Outbox, OutboxNoSessionError, type OutboxOptions, OutboxUnknownTypeError, ProtectedPayloadError } from '../outbox';
 import { createOutboxHandlerRegistry, type OutboxHandlerRegistry } from '../registry';
 import { OUTBOX_TABLE } from '../schema';
+import type { OutboxError } from '../types';
 
 afterEach(() => __resetSqliteFake());
 
@@ -275,6 +276,44 @@ describe.each(engines())('Outbox (%s)', (_engine, openDb) => {
       }
       expect((await rows())[0]).toMatchObject({ state: 'dead', retryFailures: 3 });
       expect(handler.rollback).toHaveBeenCalledWith(expect.anything(), 'dead');
+    });
+
+    it('gives a failure its own budget when the handler picks one, and keeps maxAttempts for the rest', async () => {
+      outbox = await build({ retry: { maxAttempts: 8, baseDelayMs: 1_000, maxDelayMs: 10_000 } });
+      const handler = { ...createTestHandler('file.upload', () => 'retry'), maxAttempts: 2, maxAttemptsFor: jest.fn((failure: OutboxError) => (failure.status === 409 ? 4 : undefined)) };
+      handler.send.mockRejectedValue(httpError(409));
+      registry.register(handler);
+      await outbox.enqueue({ type: 'file.upload', payload: {} });
+
+      for (let i = 0; i < 3; i++) {
+        await outbox.drain();
+        clock.advance(10_000);
+      }
+
+      expect((await rows())[0]).toMatchObject({ state: 'failed', retryFailures: 3 });
+      expect(handler.maxAttemptsFor).toHaveBeenLastCalledWith(expect.objectContaining({ status: 409 }), expect.objectContaining({ id: 'evt-1' }));
+
+      // A failure the handler gives no budget of its own falls back to maxAttempts (2), already spent.
+      handler.send.mockRejectedValue(httpError(503));
+      await outbox.drain();
+
+      expect((await rows())[0]).toMatchObject({ state: 'dead', retryFailures: 4 });
+      expect(handler.rollback).toHaveBeenCalledWith(expect.anything(), 'dead');
+    });
+
+    it('dead-letters a run of failures at the budget the handler picks for them', async () => {
+      outbox = await build({ retry: { maxAttempts: 8, baseDelayMs: 1_000, maxDelayMs: 10_000 } });
+      const handler = { ...createTestHandler('file.upload', () => 'retry'), maxAttempts: 2, maxAttemptsFor: (failure: OutboxError) => (failure.status === 409 ? 4 : undefined) };
+      handler.send.mockRejectedValue(httpError(409));
+      registry.register(handler);
+      await outbox.enqueue({ type: 'file.upload', payload: {} });
+
+      for (let i = 0; i < 4; i++) {
+        await outbox.drain();
+        clock.advance(10_000);
+      }
+
+      expect((await rows())[0]).toMatchObject({ state: 'dead', retryFailures: 4 });
     });
 
     it('stops the pass on a network failure without spending the retry budget', async () => {

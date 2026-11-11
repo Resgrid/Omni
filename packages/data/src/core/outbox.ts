@@ -51,13 +51,19 @@ export const IDEMPOTENT_WRITE_MAX_ATTEMPTS = 9;
  * A handler for a write Core deduplicates on the outbox id (the v4 status saves keyed on `EventId`). A resend that reaches
  * Core while the first attempt still holds the claim is answered 409: the write is in progress, not refused, so it is
  * retried, and the retry gets the first attempt's saved result. Every other answer classifies as `defineDataHandler`'s.
+ *
+ * A 409 always gets `IDEMPOTENT_WRITE_MAX_ATTEMPTS`, so the claim can lapse before the outbox gives up. A handler's own
+ * `maxAttempts` (uploads keep a lower one) limits its other retryable failures only.
  */
 export function defineIdempotentDataHandler<P, R = unknown>(handler: HandlerInput<P, R>): OutboxHandler<P, R> {
   const classify = handler.classify ?? ((error) => classifyDataWriteError(error));
+  const maxAttempts = handler.maxAttempts ?? IDEMPOTENT_WRITE_MAX_ATTEMPTS;
+  const claimMaxAttempts = Math.max(IDEMPOTENT_WRITE_MAX_ATTEMPTS, maxAttempts);
 
   return {
-    maxAttempts: IDEMPOTENT_WRITE_MAX_ATTEMPTS,
     ...handler,
+    maxAttempts,
+    maxAttemptsFor: (failure, event) => (failure.status === 409 ? claimMaxAttempts : handler.maxAttemptsFor?.(failure, event)),
     classify: (error, event) => (isApiError(error) && error.kind === 'http' && error.status === 409 ? 'retry' : classify(error, event)),
   };
 }
