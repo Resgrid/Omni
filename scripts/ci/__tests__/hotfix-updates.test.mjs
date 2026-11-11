@@ -89,6 +89,20 @@ describe('findPreviousRelease with a match (hotfix guard)', () => {
     assert.equal(found.release, 'unit-v8.40');
     assert.deepEqual(found.skipped, []);
   });
+
+  it('finds the store build behind any number of newer release candidates with another runtime', async () => {
+    const candidates = Array.from({ length: 40 }, (_, i) => {
+      const tag = `unit-v8.${100 - i}`;
+
+      return release(tag, 'production', { android: built(tag, `rc-${i}`), ios: built(tag, `rc-ios-${i}`) });
+    });
+
+    const many = fakeClient([...candidates, release('unit-v8.40', 'production', { android: built('unit-v8.40', 'aaa'), ios: built('unit-v8.40', 'iii') })]);
+    const found = await findPreviousRelease({ variant: 'unit', channel: 'production', client: many, match: (r) => runsRuntime(r, { android: 'aaa', ios: 'iii' }) });
+
+    assert.equal(found.release, 'unit-v8.40');
+    assert.equal(found.skipped.length, 40);
+  });
 });
 
 describe('describeNativeChanges (hotfix pull request check)', () => {

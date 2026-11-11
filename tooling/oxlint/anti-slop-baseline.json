@@ -5928,7 +5928,7 @@
   },
   "scripts/ci/lib.mjs": {
     "anti-slop/no-runtime-typeof": 1,
-    "anti-slop/require-readable-spacing": 45
+    "anti-slop/require-readable-spacing": 44
   },
   "scripts/ci/package-sbom.mjs": {
     "anti-slop/no-conditional-empty-object-spread": 2,

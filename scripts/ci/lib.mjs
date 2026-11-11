@@ -316,18 +316,18 @@ export function runsRuntime(record, runtimes) {
 /**
  * Newest release of this variant whose fingerprints.json is for the same channel and passes `match` (default: any).
  * `skipped` lists the newer releases on the channel that `match` turned down, newest first.
+ * Every release `client.releases()` lists is a candidate: the hotfix guard must still find a store build behind many
+ * newer release candidates with a different runtime.
  */
-export async function findPreviousRelease({ variant, channel, excludeTag, match = () => true, client = githubClient(), maxAssets = 30 }) {
+export async function findPreviousRelease({ variant, channel, excludeTag, match = () => true, client = githubClient() }) {
   if (!client) return { release: null, record: null, skipped: [], note: 'GITHUB_TOKEN / GITHUB_REPOSITORY not set — treating as first release' };
   const { tagPrefix } = loadManifest(variant).versioning;
   const releases = await client.releases();
   const skipped = [];
-  let inspected = 0;
   for (const r of releases) {
     if (r.draft || !String(r.tag_name).startsWith(tagPrefix) || r.tag_name === excludeTag) continue;
     const asset = (r.assets || []).find((a) => a.name === 'fingerprints.json');
     if (!asset) continue;
-    if (++inspected > maxAssets) break;
     let record;
     try {
       record = JSON.parse(await client.assetText(asset.id));
