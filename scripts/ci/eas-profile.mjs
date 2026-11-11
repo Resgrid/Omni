@@ -9,7 +9,7 @@
 //          scripts/generate-eas-json.mjs lacks one, it is derived from the production profile with `channel` and
 //          `env.APP_ENV` replaced and written to the runner's eas.json (never committed).
 //          eas.json is a fingerprint source, so EVERY job that resolves a runtime version for this variant
-//          (fingerprint, android, ios, ota, ota.yml) runs this same command first — the derived file is then
+//          (fingerprint, android, ios, ota.yml) runs this same command first — the derived file is then
 //          byte-identical everywhere and the fingerprints agree.
 // dev:     nightly developer builds use `<v>-dev-sim`. Its Android debug APK needs no release keystore, so when
 //          the profile lacks `android.withoutCredentials` a `<v>-dev-sim-ci` copy with it set is derived.

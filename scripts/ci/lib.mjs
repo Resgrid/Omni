@@ -211,11 +211,27 @@ export function githubClient(env = process.env) {
   };
 }
 
-/** Newest release of this variant whose fingerprints.json is for the same channel. */
-export async function findPreviousRelease({ variant, channel, excludeTag, client = githubClient(), maxAssets = 30 }) {
-  if (!client) return { release: null, record: null, note: 'GITHUB_TOKEN / GITHUB_REPOSITORY not set — treating as first release' };
+/**
+ * True when the binaries a release's fingerprints.json records run `runtimes` ({ android: fingerprint, … }) on every
+ * platform given. A platform whose native build failed (no binaries) never matches.
+ */
+export function runsRuntime(record, runtimes) {
+  return Object.entries(runtimes).every(([platform, fingerprint]) => {
+    const installed = record?.platforms?.[platform];
+
+    return Boolean(installed?.binariesRelease) && Boolean(fingerprint) && installed.fingerprint === fingerprint;
+  });
+}
+
+/**
+ * Newest release of this variant whose fingerprints.json is for the same channel and passes `match` (default: any).
+ * `skipped` lists the newer releases on the channel that `match` turned down, newest first.
+ */
+export async function findPreviousRelease({ variant, channel, excludeTag, match = () => true, client = githubClient(), maxAssets = 30 }) {
+  if (!client) return { release: null, record: null, skipped: [], note: 'GITHUB_TOKEN / GITHUB_REPOSITORY not set — treating as first release' };
   const { tagPrefix } = loadManifest(variant).versioning;
   const releases = await client.releases();
+  const skipped = [];
   let inspected = 0;
   for (const r of releases) {
     if (r.draft || !String(r.tag_name).startsWith(tagPrefix) || r.tag_name === excludeTag) continue;
@@ -229,7 +245,15 @@ export async function findPreviousRelease({ variant, channel, excludeTag, client
       console.error(`::warning::Could not read fingerprints.json on ${r.tag_name}: ${error.message}`);
       continue;
     }
-    if (record?.channel === channel) return { release: r.tag_name, record, note: null };
+
+    if (record?.channel !== channel) continue;
+
+    if (match(record)) return { release: r.tag_name, record, skipped, note: null };
+
+    skipped.push(r.tag_name);
   }
-  return { release: null, record: null, note: `no earlier ${tagPrefix}* release on channel "${channel}"` };
+
+  const which = skipped.length ? 'matching' : 'earlier';
+
+  return { release: null, record: null, skipped, note: `no ${which} ${tagPrefix}* release on channel "${channel}"` };
 }

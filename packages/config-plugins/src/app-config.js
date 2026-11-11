@@ -14,6 +14,25 @@ const { computeVariantVersion } = require('./versioning');
 // with "Runtime version mismatch"). Expo resolves it from the project root; the fingerprint still hashes the file itself.
 const plugin = (file) => `@resgrid/config-plugins/plugins/${file}`;
 
+// R8 keep rules for the native code that reaches classes or members by name and ships no rules of their own. Every other
+// native library brings consumer rules in its AAR or keeps its JNI classes with @Keep/@DoNotStrip (docs/build/google-play-checks.md).
+const androidKeepRules = [
+  '# expo-task-manager restores the location task consumers by the class name it saved',
+  '-keep class expo.modules.location.** { *; }',
+  '# countly-sdk-react-native-bridge reads Countly SDK classes, methods and private fields by name',
+  '-keep class ly.count.android.sdk.** { *; }',
+  "# @maplibre/maplibre-react-native's surface view detach guard swaps two private fields by name",
+  '-keepclassmembers class org.maplibre.android.maps.renderer.surfaceview.MapLibreSurfaceView { *** detachedListener; *** renderThread; }',
+  '# react-native-keyboard-controller looks ReactNestedScrollView and its scroll-enabled getter up by name',
+  '-keepnames class com.facebook.react.views.scroll.ReactNestedScrollView',
+  '-keepclassmembers class com.facebook.react.views.scroll.ReactNestedScrollView { *** getScrollEnabled(); }',
+  "# Expo passes an enum to and from JavaScript by its one instance field (DigestAlgorithm's 'SHA-256'); its own rule keeps",
+  '# that field only for enums implementing Enumerable, which expo-crypto and expo-sqlite enums do not',
+  '-keepclassmembers,allowobfuscation enum expo.modules.** { !static <fields>; }',
+  '# The LiveKit WebRTC build does not ship JniZeroJni; only JniZero.setJniClassLoader names it, and nothing calls that',
+  '-dontwarn livekit.org.jni_zero.JniZeroJni',
+].join('\n');
+
 const isStoreEnv = (appEnv) => appEnv === 'production' || appEnv === 'internal';
 const withEnvSuffix = (id, appEnv) => (isStoreEnv(appEnv) ? id : `${id}.${appEnv}`);
 
@@ -82,7 +101,8 @@ function createAppConfig({ variant, appEnv, runNumber, projectRoot, env = proces
     ['expo-screen-orientation', { initialOrientation: 'DEFAULT' }],
     ['expo-document-picker', { iCloudContainerEnvironment: 'Production' }],
     ['expo-image-picker', { photosPermission: usage.photos(name), cameraPermission: usage.camera(name) }],
-    ['expo-navigation-bar', { position: 'relative', hidden: true, behavior: 'inset-touch' }],
+    // Only `hidden`: Android is edge-to-edge, and SDK 58 dropped the pre-edge-to-edge `position` and `behavior` options.
+    ['expo-navigation-bar', { hidden: true }],
     [
       'expo-location',
       {
@@ -98,10 +118,13 @@ function createAppConfig({ variant, appEnv, runNumber, projectRoot, env = proces
       'expo-build-properties',
       {
         android: {
-          // SDK 58 turns R8 on for release builds. Kept off (the SDK 57 behaviour) until release builds of every variant
-          // have run on devices: notifee, WebRTC, MMKV, CallKeep and MapLibre load classes by reflection.
-          enableMinifyInReleaseBuilds: false,
-          extraProguardRules: '-keep class expo.modules.location.** { *; }',
+          // R8 shrinks and obfuscates release builds: Google Play limits apps whose code is under 25% obfuscated. The App
+          // Bundle carries the mapping file, so Play deobfuscates Android vitals stacks itself.
+          enableMinifyInReleaseBuilds: true,
+          // Off: notification channels and the in-call audio module find their res/raw sounds by name at runtime, so the
+          // resource shrinker would strip them as unused.
+          enableShrinkResourcesInReleaseBuilds: false,
+          extraProguardRules: androidKeepRules,
           extraMavenRepos: ['../../../node_modules/@notifee/react-native/android/libs'],
           targetSdkVersion: 36,
         },

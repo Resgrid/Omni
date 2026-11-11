@@ -5,10 +5,13 @@ import path from 'node:path';
 const { createAppConfig, VARIANT_IDS } = require('@resgrid/config-plugins');
 const variantIds: string[] = VARIANT_IDS;
 
+/** One `plugins` entry of the Expo config: a plugin specifier, or the specifier and its options. */
+type PluginEntry = string | [string, unknown];
+
 const projectRoot = path.resolve(__dirname, '..');
 const build = (variant: string, appEnv = 'production', runNumber = 7) => createAppConfig({ variant, appEnv, runNumber, projectRoot, env: {} });
-const pluginNames = (config: { plugins: (string | [string, unknown])[] }) => config.plugins.map((p) => path.basename(Array.isArray(p) ? p[0] : p));
-const pluginSpecifiers = (config: { plugins: (string | [string, unknown])[] }) => config.plugins.map((p) => (Array.isArray(p) ? p[0] : p));
+const pluginNames = (config: { plugins: PluginEntry[] }) => config.plugins.map((p) => path.basename(Array.isArray(p) ? p[0] : p));
+const pluginSpecifiers = (config: { plugins: PluginEntry[] }) => config.plugins.map((p) => (Array.isArray(p) ? p[0] : p));
 
 describe('app.config per variant', () => {
   // Snapshot = the reviewable record of identity, permissions and native modules per app. A diff here
@@ -46,17 +49,40 @@ describe('app.config per variant', () => {
     for (const variant of ['responder', 'unit', 'ic', 'dispatch', 'bigboard']) {
       const config = build(variant);
       expect(config.experiments).toBeUndefined();
-      const buildProperties = config.plugins.find((p: unknown) => Array.isArray(p) && p[0] === 'expo-build-properties')[1];
+      const buildProperties = config.plugins.find((p: PluginEntry) => Array.isArray(p) && p[0] === 'expo-build-properties')[1];
       expect(buildProperties.ios).not.toHaveProperty('enableSceneSupport');
-      // SDK 58 defaults R8 on; release builds keep it off until they have run on devices.
-      expect(buildProperties.android.enableMinifyInReleaseBuilds).toBe(false);
+    }
+  });
+
+  // Google Play limits apps whose code is under 25% obfuscated (docs/build/google-play-checks.md).
+  it.each(variantIds)('%s release builds run R8 with the keep rules for code that reflects by name', (variant) => {
+    const { android } = build(variant).plugins.find((p: PluginEntry) => Array.isArray(p) && p[0] === 'expo-build-properties')[1];
+    expect(android.enableMinifyInReleaseBuilds).toBe(true);
+    // Channels and in-call audio find their res/raw sounds by name, which the resource shrinker cannot see.
+    expect(android.enableShrinkResourcesInReleaseBuilds).toBe(false);
+
+    for (const rule of [
+      '-keep class expo.modules.location.** { *; }',
+      '-keep class ly.count.android.sdk.** { *; }',
+      'org.maplibre.android.maps.renderer.surfaceview.MapLibreSurfaceView { *** detachedListener; *** renderThread; }',
+      '-keepnames class com.facebook.react.views.scroll.ReactNestedScrollView',
+      '-keepclassmembers,allowobfuscation enum expo.modules.** { !static <fields>; }',
+      '-dontwarn livekit.org.jni_zero.JniZeroJni',
+    ]) {
+      expect(android.extraProguardRules).toContain(rule);
+    }
+  });
+
+  it('passes expo-navigation-bar only the options it reads under edge-to-edge', () => {
+    for (const variant of variantIds) {
+      expect(build(variant).plugins.find((p: PluginEntry) => Array.isArray(p) && p[0] === 'expo-navigation-bar')).toEqual(['expo-navigation-bar', { hidden: true }]);
     }
   });
 
   it('keeps the iOS dev-client network inspector off', () => {
     // It never completes a forwarded `WWW-Authenticate: Basic` challenge, so the token endpoint's 401 invalid_client hung sign-in.
     for (const variant of variantIds) {
-      const buildProperties = build(variant).plugins.find((p: unknown) => Array.isArray(p) && p[0] === 'expo-build-properties')[1];
+      const buildProperties = build(variant).plugins.find((p: PluginEntry) => Array.isArray(p) && p[0] === 'expo-build-properties')[1];
       expect(buildProperties.ios.networkInspector).toBe(false);
     }
   });
@@ -83,16 +109,16 @@ describe('app.config per variant', () => {
       monochromeImage: `${assets}/adaptive-icon-monochrome.png`,
       backgroundColor: expect.stringMatching(/^#[0-9a-f]{6}$/i),
     });
-    const splash = config.plugins.find((p: unknown) => Array.isArray(p) && p[0] === 'expo-splash-screen')[1];
+    const splash = config.plugins.find((p: PluginEntry) => Array.isArray(p) && p[0] === 'expo-splash-screen')[1];
     expect(splash).toEqual({ backgroundColor: expect.any(String), image: `${assets}/splash-icon.png`, imageWidth: 200, dark: { backgroundColor: expect.any(String) } });
     expect(splash.imageWidth).toBeLessThanOrEqual(288);
-    const notifications = config.plugins.find((p: unknown) => Array.isArray(p) && p[0] === 'expo-notifications')[1];
+    const notifications = config.plugins.find((p: PluginEntry) => Array.isArray(p) && p[0] === 'expo-notifications')[1];
     const files = [config.icon, ...Object.values(config.ios.icon), ...Object.values(config.android.adaptiveIcon).filter((v) => String(v).startsWith('./')), splash.image, notifications.icon, config.web.favicon];
     files.forEach((file) => expect(fs.existsSync(path.resolve(projectRoot, String(file)))).toBe(true));
   });
 
   it('badges every icon of non-store builds and none of store builds', () => {
-    const badge = (config: { plugins: unknown[] }) => config.plugins.find((p: unknown) => Array.isArray(p) && String(p[0]).endsWith('with-icon-badge.js')) as [string, { badges: { text: string }[] }] | undefined;
+    const badge = (config: { plugins: PluginEntry[] }) => config.plugins.find((p: PluginEntry) => Array.isArray(p) && String(p[0]).endsWith('with-icon-badge.js')) as [string, { badges: { text: string }[] }] | undefined;
     expect(badge(build('ic', 'production'))).toBeUndefined();
     expect(badge(build('ic', 'internal'))).toBeUndefined();
     const staging = build('ic', 'staging');
@@ -106,7 +132,7 @@ describe('app.config per variant', () => {
   });
 
   it('allows cleartext traffic only in development', () => {
-    const manifestPlugin = (env: string) => build('responder', env).plugins.find((p: unknown) => Array.isArray(p) && String(p[0]).endsWith('custom-manifest.js'));
+    const manifestPlugin = (env: string) => build('responder', env).plugins.find((p: PluginEntry) => Array.isArray(p) && String(p[0]).endsWith('custom-manifest.js'));
     expect(manifestPlugin('development')[1]).toEqual({ allowCleartextTraffic: true });
     expect(manifestPlugin('production')[1]).toEqual({ allowCleartextTraffic: false });
   });

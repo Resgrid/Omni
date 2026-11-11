@@ -1,10 +1,10 @@
 name: Prepare variant build environment
 description: >-
-  Runs identically in every job that resolves a runtime version for a variant (release.yml fingerprint, android, ios and
-  ota jobs; ota.yml). It exports APP_VARIANT / APP_ENV, decodes the Firebase
+  Runs identically in every job that resolves a runtime version for a variant (release.yml fingerprint, android and ios
+  jobs; ota.yml). It exports APP_VARIANT / APP_ENV, decodes the Firebase
   config files to $RUNNER_TEMP (GOOGLE_SERVICES_FILE / IOS_GOOGLE_SERVICES_FILE) and derives the channel's eas.json release
   profiles. Expo fingerprints hash the expo config, eas.json and the Firebase file contents, so doing this in one place is
-  what keeps the fingerprint of a binary equal to the one its OTA updates are published for.
+  what keeps the fingerprint of a binary equal to the one its hotfix updates are published for.
 inputs:
   variant:
     description: Variant id (responder, unit, ic, dispatch, bigboard)

@@ -1,6 +1,6 @@
 # In-app updates (expo-updates OTA)
 
-Plan: D18 (OTA from the first release), §6.2. The build side (fingerprint runtime versions, `updates.url`, the `production` / `staging` / `internal` channels, `eas update` in CI) is in `packages/config-plugins/src/app-config.js` and the release workflow. This note covers what the running app does.
+Plan: D18 (OTA from the first release), §6.2. The build side (fingerprint runtime versions, `updates.url`, the `production` / `staging` / `internal` channels) is in `packages/config-plugins/src/app-config.js` and the release workflow. Updates are for critical and emergency fixes only (owner decision 2026-11-10, plan §15 #23): `.github/workflows/ota.yml` publishes them from the `hotfix` branch, and every regular release reaches users as a store build. This note covers what the running app does.
 
 Without it, expo-updates only downloads at launch (`checkAutomatically: ON_LOAD`, `fallbackToCacheTimeout: 0`) and applies on the following cold start, so an MDT tablet (Unit) or a wall display (BigBoard) that stays open for days never picks up an update.
 
@@ -47,7 +47,7 @@ Registered as built-in section `app-updates` (order 85, between Advanced and Abo
 
 ## Testing on a device
 
-Build a release variant on a channel, for example `APP_VARIANT=unit` with the `unit-internal` profile. Publish a JS-only change to that channel. Then open Settings → App updates → **Check for updates**: the status reaches "An update is ready" and **Restart to update** applies it. For the wall rule, run BigBoard in kiosk mode, publish, and leave the display untouched for 5 minutes after the download. Never publish to `production` unless the owner asks (AGENTS.md).
+Build a release variant on a channel, for example `APP_VARIANT=unit` with the `unit-internal` profile. Publish a JS-only change to that channel. Then open Settings → App updates → **Check for updates**: the status reaches "An update is ready" and **Restart to update** applies it. For the wall rule, run BigBoard in kiosk mode, publish, and leave the display untouched for 5 minutes after the download. Never publish to `production` unless the owner asks (AGENTS.md); CI publishes only from the `hotfix` branch.
 
 ## Translations
 

@@ -1,20 +1,22 @@
 # Release pipeline for all five apps (omni-plan §6.6.2–6.6.5). NEVER rename this file: its run number is M in every
 # version (Responder 11.M, Unit 8.M, IC 2.M, Dispatch 2.M, BigBoard 4.M; build number = base + M).
 #
-#   push to master        → every variant, channel production: a merge always builds the store binaries (release
-#                           candidates), even when the fingerprint is unchanged, attaches them to the release and sends
-#                           the sideload APK to Firebase App Distribution testers. It publishes nothing to users: no OTA
-#                           update, no Electron update feed and no Docker `latest`. The factory reads the release; store
-#                           uploads (TestFlight, Play) are done by hand through the factory, never from GitHub Actions,
-#                           and an OTA update is released with ota.yml.
-#   push tag <variant>-v* → that variant, channel production, published like a dispatch run (OTA for JavaScript-only
-#                           changes, Electron feed, Docker `latest`). The tag is only a trigger: the release itself is
-#                           named <variant>-v<major>.<M> from this run's number (tags created here with GITHUB_TOKEN do
-#                           not re-trigger workflows).
-#   workflow_dispatch     → chosen variants / targets / channel, optional force_native
+#   push to master        → every variant, channel production: builds the store binaries (release candidates), attaches
+#                           them to the release and sends the sideload APK to Firebase App Distribution testers. It
+#                           publishes nothing to users: no Electron update feed and no Docker `latest`. The factory reads
+#                           the release; store uploads (TestFlight, Play) are done by hand through the factory, never
+#                           from GitHub Actions.
+#   push tag <variant>-v* → that variant, channel production, published like a dispatch run (Electron feed, Docker
+#                           `latest`). The tag is only a trigger: the release itself is named <variant>-v<major>.<M> from
+#                           this run's number (tags created here with GITHUB_TOKEN do not re-trigger workflows).
+#   workflow_dispatch     → chosen variants / targets / channel
 #
-# Stage 0  plan → fingerprint (per variant) → decide       versions once; native build where the fingerprint changed (always on a merge)
-# Stage 1  web · android · ios · ota                        AAB + sideload APK (two builds), one App Store IPA; EAS-managed signing;
+# Every run builds native binaries and none publishes an EAS (expo-updates) update: updates are for critical and
+# emergency fixes only and come from the hotfix branch through ota.yml (owner decision 2026-11-10). The fingerprint job
+# records each platform's runtime in fingerprints.json, which ota.yml's guard reads.
+#
+# Stage 0  plan · fingerprint (per variant)                 versions once; runtime fingerprints for fingerprints.json
+# Stage 1  web · android · ios                              AAB + sideload APK (two builds), one App Store IPA; EAS-managed signing;
 #                                                           a CycloneDX SBOM per store package (<AAB|IPA>.cdx.json)
 # Stage 2  docker · electron                                both consume the web-<variant> artifact; nothing rebuilds the app
 # Stage 3  release (per variant)                            GitHub Release + SHA256SUMS + fingerprints.json, Firebase, Changerawr, Electron feed
@@ -49,10 +51,6 @@ on:
         type: choice
         options: [internal, staging, production]
         default: internal
-      force_native:
-        description: 'Build native binaries even when the fingerprint is unchanged'
-        type: boolean
-        default: false
 
 permissions:
   contents: read
@@ -80,8 +78,9 @@ jobs:
       channel: ${{ steps.trigger.outputs.channel }}
       # true for a merge build (push to master): it builds and attaches, and publishes nothing to users.
       merge_build: ${{ steps.trigger.outputs.merge_build }}
-      force_native: ${{ steps.trigger.outputs.force_native }}
       platforms: ${{ steps.targets.outputs.platforms }}
+      has_android: ${{ steps.targets.outputs.has_android }}
+      has_ios: ${{ steps.targets.outputs.has_ios }}
       has_web: ${{ steps.targets.outputs.has_web }}
       has_electron: ${{ steps.targets.outputs.has_electron }}
       variants: ${{ steps.plan.outputs.variants }}
@@ -102,19 +101,17 @@ jobs:
           IN_VARIANTS: ${{ inputs.variants }}
           IN_TARGETS: ${{ inputs.targets }}
           IN_CHANNEL: ${{ inputs.channel }}
-          IN_FORCE: ${{ inputs.force_native }}
         run: |
           set -euo pipefail
           merge_build=false
           if [ "$EVENT" = workflow_dispatch ]; then
-            variants="${IN_VARIANTS:-all}"; targets="${IN_TARGETS:-all}"; channel="${IN_CHANNEL:-internal}"; force="${IN_FORCE:-false}"
+            variants="${IN_VARIANTS:-all}"; targets="${IN_TARGETS:-all}"; channel="${IN_CHANNEL:-internal}"
           elif [ "$REF_TYPE" = tag ]; then
-            variants="${REF_NAME%%-v*}"; targets=all; channel=production; force=false
+            variants="${REF_NAME%%-v*}"; targets=all; channel=production
           else
-            # A merge into master: production-channel store binaries, nothing published to users. Always native, so
-            # every merge gives Firebase testers a new APK and the factory a release candidate; a merge publishes no
-            # OTA update, so with an unchanged fingerprint it would otherwise ship nothing installable.
-            variants=all; targets=all; channel=production; force=true; merge_build=true
+            # A merge into master: production-channel store binaries, nothing published to users. Every merge gives
+            # Firebase testers a new APK and the factory a release candidate.
+            variants=all; targets=all; channel=production; merge_build=true
           fi
           variants="${variants// /}"; targets="${targets// /}"
           {
@@ -122,10 +119,9 @@ jobs:
             echo "targets=$targets"
             echo "channel=$channel"
             echo "merge_build=$merge_build"
-            echo "force_native=$force"
             echo "run_number=$GITHUB_RUN_NUMBER"
           } >> "$GITHUB_OUTPUT"
-          echo "Release run $GITHUB_RUN_NUMBER: variants=$variants targets=$targets channel=$channel merge_build=$merge_build force_native=$force"
+          echo "Release run $GITHUB_RUN_NUMBER: variants=$variants targets=$targets channel=$channel merge_build=$merge_build"
 
       - name: Versions and build matrix
         id: plan
@@ -143,12 +139,18 @@ jobs:
           set -euo pipefail
           t=",${TARGETS},"
           if [ "$TARGETS" = all ]; then t=",ios,android,web,docker,electron,"; fi
-          platforms=""
-          case "$t" in *,android,*) platforms="android" ;; esac
-          case "$t" in *,ios,*) platforms="${platforms:+$platforms,}ios" ;; esac
+          platforms=""; has_android=false; has_ios=false
+          case "$t" in *,android,*) platforms="android"; has_android=true ;; esac
+          case "$t" in *,ios,*) platforms="${platforms:+$platforms,}ios"; has_ios=true ;; esac
           has_web=false; case "$t" in *,web,* | *,docker,* | *,electron,*) has_web=true ;; esac
           has_electron=false; case "$t" in *,electron,*) has_electron=true ;; esac
-          { echo "platforms=$platforms"; echo "has_web=$has_web"; echo "has_electron=$has_electron"; } >> "$GITHUB_OUTPUT"
+          {
+            echo "platforms=$platforms"
+            echo "has_android=$has_android"
+            echo "has_ios=$has_ios"
+            echo "has_web=$has_web"
+            echo "has_electron=$has_electron"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Summary
         env:
@@ -163,6 +165,8 @@ jobs:
             echo "$VERSIONS" | jq -r 'to_entries[] | "| \(.key) | \(.value.version) | \(.value.buildNumber) | \(.value.electronVersion) | \(.value.tag) | \(.value.dockerImage) |"'
           } >> "$GITHUB_STEP_SUMMARY"
 
+  # Records the runtime (Expo fingerprint) of the binaries this run builds; release-assets.mjs writes it into the
+  # release's fingerprints.json for ota.yml's hotfix guard. It decides nothing: every run builds native.
   fingerprint:
     name: fingerprint (${{ matrix.variant }})
     needs: plan
@@ -174,8 +178,8 @@ jobs:
       fail-fast: false
       matrix:
         variant: ${{ fromJSON(needs.plan.outputs.variants) }}
-    # Same build environment as the android / ios / ota jobs: the client env is part of the expo config and therefore
-    # of the fingerprint.
+    # Same build environment as the android / ios jobs and ota.yml: the client env is part of the expo config and
+    # therefore of the fingerprint.
     env:
       RELEASE_RUN_NUMBER: ${{ needs.plan.outputs.run_number }}
       BASE_API_URL: ${{ secrets.BASE_API_URL }}
@@ -195,21 +199,14 @@ jobs:
           google-services-json-base64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
           google-service-info-plist-base64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_BASE64 }}
 
-      - name: Native or OTA
+      - name: Runtime fingerprints
         env:
           GITHUB_TOKEN: ${{ github.token }}
           VARIANT: ${{ matrix.variant }}
           CHANNEL: ${{ needs.plan.outputs.channel }}
           PLATFORMS: ${{ needs.plan.outputs.platforms }}
           TAG: ${{ fromJSON(needs.plan.outputs.versions)[matrix.variant].tag }}
-          FORCE: ${{ needs.plan.outputs.force_native }}
-          MERGE_BUILD: ${{ needs.plan.outputs.merge_build }}
-        run: |
-          set -euo pipefail
-          args=(decide --variant "$VARIANT" --channel "$CHANNEL" --platforms "$PLATFORMS" --tag "$TAG" --out "decisions/decision-$VARIANT.json")
-          if [ "$FORCE" = true ]; then args+=(--force-native); fi
-          if [ "$MERGE_BUILD" = true ]; then args+=(--force-reason 'merge build (every merge to master builds native)'); fi
-          node scripts/ci/fingerprint.mjs "${args[@]}"
+        run: node scripts/ci/fingerprint.mjs decide --variant "$VARIANT" --channel "$CHANNEL" --platforms "$PLATFORMS" --tag "$TAG" --out "decisions/decision-$VARIANT.json"
 
       - name: Remove Firebase config
         if: always()
@@ -221,39 +218,6 @@ jobs:
           path: decisions/
           retention-days: 7
           if-no-files-found: error
-
-  decide:
-    name: native or OTA
-    needs: [plan, fingerprint]
-    if: ${{ !cancelled() && needs.plan.result == 'success' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    outputs:
-      matrix_android: ${{ steps.merge.outputs.matrix_android }}
-      matrix_ios: ${{ steps.merge.outputs.matrix_ios }}
-      matrix_ota: ${{ steps.merge.outputs.matrix_ota }}
-      has_android: ${{ steps.merge.outputs.has_android }}
-      has_ios: ${{ steps.merge.outputs.has_ios }}
-      has_ota: ${{ steps.merge.outputs.has_ota }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup-workspace
-        with:
-          install: none
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: decision-*
-          path: decisions
-          merge-multiple: true
-      - name: Merge decisions
-        id: merge
-        env:
-          VARIANTS: ${{ needs.plan.outputs.variants }}
-          PLATFORMS: ${{ needs.plan.outputs.platforms }}
-          # A merge build is always native (plan forces it) and never publishes an OTA update, even for a platform whose
-          # decision came back OTA; JavaScript-only changes reach installed apps through ota.yml.
-          PUBLISH_OTA: ${{ needs.plan.outputs.merge_build != 'true' }}
-        run: node scripts/ci/fingerprint.mjs merge --dir decisions --variants "$VARIANTS" --platforms "$PLATFORMS" --publish-ota "$PUBLISH_OTA"
 
   # ── Stage 1 ──────────────────────────────────────────────────────────────────────────────────────────────────────
   web:
@@ -296,15 +260,16 @@ jobs:
 
   android:
     name: android (${{ matrix.variant }})
-    needs: [plan, decide]
-    if: ${{ !cancelled() && needs.decide.outputs.has_android == 'true' }}
+    needs: plan
+    if: needs.plan.outputs.has_android == 'true'
     runs-on: ubuntu-latest
     # Two Gradle release builds (AAB, then the sideload APK).
     timeout-minutes: 150
     environment: ${{ matrix.variant }}
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.decide.outputs.matrix_android) }}
+      matrix:
+        variant: ${{ fromJSON(needs.plan.outputs.variants) }}
     env:
       RELEASE_RUN_NUMBER: ${{ needs.plan.outputs.run_number }}
       BASE_API_URL: ${{ secrets.BASE_API_URL }}
@@ -434,14 +399,15 @@ jobs:
 
   ios:
     name: ios (${{ matrix.variant }})
-    needs: [plan, decide]
-    if: ${{ !cancelled() && needs.decide.outputs.has_ios == 'true' }}
+    needs: plan
+    if: needs.plan.outputs.has_ios == 'true'
     runs-on: macos-26
     timeout-minutes: 100
     environment: ${{ matrix.variant }}
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.decide.outputs.matrix_ios) }}
+      matrix:
+        variant: ${{ fromJSON(needs.plan.outputs.variants) }}
     env:
       RELEASE_RUN_NUMBER: ${{ needs.plan.outputs.run_number }}
       BASE_API_URL: ${{ secrets.BASE_API_URL }}
@@ -527,87 +493,6 @@ jobs:
         with:
           name: ios-${{ matrix.variant }}
           path: out/
-          retention-days: 7
-          if-no-files-found: error
-
-  ota:
-    name: ota (${{ matrix.variant }}, ${{ matrix.platform }})
-    needs: [plan, decide]
-    if: ${{ !cancelled() && needs.decide.outputs.has_ota == 'true' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    environment: ${{ matrix.variant }}
-    concurrency:
-      group: ota-${{ matrix.variant }}-${{ needs.plan.outputs.channel }}
-      cancel-in-progress: false
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJSON(needs.decide.outputs.matrix_ota) }}
-    env:
-      RELEASE_RUN_NUMBER: ${{ needs.plan.outputs.run_number }}
-      BASE_API_URL: ${{ secrets.BASE_API_URL }}
-      LOGGING_KEY: ${{ secrets.LOGGING_KEY }}
-      APP_KEY: ${{ secrets.APP_KEY }}
-      SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
-      COUNTLY_APP_KEY: ${{ secrets.COUNTLY_APP_KEY }}
-      COUNTLY_SERVER_URL: ${{ secrets.COUNTLY_SERVER_URL }}
-      IOS_APPLE_TEAM_ID: ${{ secrets.IOS_APPLE_TEAM_ID }}
-      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-      CHANNEL: ${{ needs.plan.outputs.channel }}
-      TAG: ${{ fromJSON(needs.plan.outputs.versions)[matrix.variant].tag }}
-      PLATFORM: ${{ matrix.platform }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup-workspace
-      - uses: expo/expo-github-action@v8
-        with:
-          eas-version: ${{ env.EAS_CLI_VERSION }}
-          token: ${{ secrets.EXPO_TOKEN }}
-          packager: npm
-      - uses: ./.github/actions/prepare-variant
-        with:
-          variant: ${{ matrix.variant }}
-          channel: ${{ needs.plan.outputs.channel }}
-          google-services-json-base64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
-          google-service-info-plist-base64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_BASE64 }}
-
-      - name: Guard — runtime unchanged since the installed binaries
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: |
-          platforms="$PLATFORM"; if [ "$PLATFORM" = all ]; then platforms=android,ios; fi
-          node scripts/ci/fingerprint.mjs check --variant "$APP_VARIANT" --channel "$CHANNEL" --platforms "$platforms" --run-number "$RELEASE_RUN_NUMBER" --exclude-tag "$TAG"
-
-      - name: Publish update (eas update)
-        working-directory: apps/omni
-        run: |
-          set -euo pipefail
-          mkdir -p "$GITHUB_WORKSPACE/ota"
-          export OTA_OUT="$GITHUB_WORKSPACE/ota/ota-${APP_VARIANT}.json"
-          export OTA_MESSAGE="${TAG} (${GITHUB_SHA::7})"
-          bash ../../scripts/ci/retry.sh 3 30 bash -c 'eas update --channel "$CHANNEL" --platform "$PLATFORM" --message "$OTA_MESSAGE" --non-interactive --json > "$OTA_OUT"'
-          jq -r '.[] | "\(.platform): group \(.group) runtime \(.runtimeVersion)"' "$OTA_OUT"
-
-      - name: Upload Sentry source maps
-        if: env.SENTRY_AUTH_TOKEN != ''
-        continue-on-error: true
-        working-directory: apps/omni
-        env:
-          SENTRY_URL: https://sentry.resgrid.net/
-          SENTRY_ORG: sentry
-        run: |
-          export SENTRY_PROJECT="$(node -p "require('./variants/${APP_VARIANT}/variant.json').identity.sentryProject")"
-          npx sentry-expo-upload-sourcemaps dist
-
-      - name: Remove Firebase config
-        if: always()
-        run: rm -rf "$RUNNER_TEMP/firebase"
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ota-${{ matrix.variant }}
-          path: ota/
           retention-days: 7
           if-no-files-found: error
 
@@ -819,11 +704,11 @@ jobs:
 
   # ── Stage 3 ──────────────────────────────────────────────────────────────────────────────────────────────────────
   # Runs even when some build legs failed: it publishes what exists and records failed platforms in fingerprints.json
-  # (so the next run rebuilds them). "Re-run failed jobs" re-runs this job too and completes the same release
+  # (ota.yml's guard never matches them). "Re-run failed jobs" re-runs this job too and completes the same release
   # (allowUpdates; the run number, and therefore every version, is unchanged on re-runs).
   release:
     name: release (${{ matrix.variant }})
-    needs: [plan, decide, web, android, ios, ota, docker, electron]
+    needs: [plan, fingerprint, web, android, ios, docker, electron]
     if: ${{ !cancelled() && needs.plan.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -880,10 +765,10 @@ jobs:
           pattern: feed-${{ matrix.variant }}-*
           path: artifacts/feed
           merge-multiple: true
-      - name: Download decision, OTA and Docker records
+      - name: Download fingerprint and Docker records
         uses: actions/download-artifact@v4
         with:
-          pattern: '{decision,ota,docker}-${{ matrix.variant }}'
+          pattern: '{decision,docker}-${{ matrix.variant }}'
           path: artifacts/meta
           merge-multiple: true
 
@@ -901,7 +786,7 @@ jobs:
           tags=""; if [ -f artifacts/meta/tags.txt ]; then tags="$(paste -sd, artifacts/meta/tags.txt)"; fi
           node scripts/ci/release-assets.mjs --variant "$VARIANT" --tag "$TAG" --version "$VERSION" --build-number "$BUILD_NUMBER" --run "$RUN" \
             --channel "$CHANNEL" --commit "$GITHUB_SHA" --artifacts artifacts/bin --out release --decision "artifacts/meta/decision-${VARIANT}.json" \
-            --ota-dir artifacts/meta --docker-tags "$tags" --product-name "$PRODUCT_NAME" --summary release-summary.md
+            --docker-tags "$tags" --product-name "$PRODUCT_NAME" --summary release-summary.md
           ls -lh release
 
       # The build summary, the description of the pull request whose merge triggered this build (none for a commit no

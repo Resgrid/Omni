@@ -66,7 +66,7 @@ There is no MMKV key secret: each device generates its own storage keys (plan D8
 
 | Environment                                       | Used by                                                                                                               | Protection                                     |
 | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
-| `responder`, `unit`, `ic`, `dispatch`, `bigboard` | `release.yml` (fingerprint, web, android, ios, ota, docker, electron, release), `ota.yml`, `nightly.yml` (dev builds) | Optional: restrict to `master` and `*-v*` tags |
+| `responder`, `unit`, `ic`, `dispatch`, `bigboard` | `release.yml` (fingerprint, web, android, ios, docker, electron, release), `ota.yml`, `nightly.yml` (dev builds) | Optional: restrict to `master`, `hotfix` and `*-v*` tags (`ota.yml` runs on `hotfix`) |
 
 Every variant environment uses the **same secret names**. Each job runs in `environment: <variant>`, so `secrets.EXPO_TOKEN` resolves to that app's token. Never add per-app prefixes in workflows. Repository- or organisation-level secrets (for example Docker Hub) apply wherever an environment does not override them.
 
@@ -87,7 +87,7 @@ Every job that resolves a runtime version reads them. `IOS_APPLE_TEAM_ID` (`ios.
 | `IOS_APPLE_TEAM_ID`                     | Apple team id (`ios.appleTeamId`, Live Activities)                                            |                                                                        |
 | `GOOGLE_SERVICES_JSON_BASE64`           | Android `google-services.json`, base64                                                        | Decoded to `$RUNNER_TEMP/firebase`, passed as `GOOGLE_SERVICES_FILE`   |
 | `GOOGLE_SERVICE_INFO_PLIST_BASE64`      | iOS `GoogleService-Info.plist`, base64                                                        | Passed as `IOS_GOOGLE_SERVICES_FILE`                                   |
-| `SENTRY_AUTH_TOKEN`                     | Native source-map upload during builds, and `sentry-expo-upload-sourcemaps` after OTA updates | Optional                                                               |
+| `SENTRY_AUTH_TOKEN`                     | Native source-map upload during builds, and `sentry-expo-upload-sourcemaps` after hotfix updates | Optional                                                               |
 
 ### Native signing: stored on EAS, nothing in GitHub
 
@@ -159,12 +159,12 @@ GitHub Actions never writes to the App Store or Google Play and holds no store c
 ## How the pipeline uses them
 
 - **Versions** come only from the `plan` job (`scripts/release-plan.mjs`, `RELEASE_RUN_NUMBER` = `release.yml` run number).
-- **Native or OTA:** the `fingerprint` job resolves `expo-updates runtimeversion:resolve` for each platform with the variant's build environment. It compares the result with `fingerprints.json` on the newest `<variant>-v*` release of the same channel, skipping this run's own tag so re-runs stay native. Unchanged → `eas update`. Changed, first release, or the previous binaries failed → native build. `force_native` skips the check. A missing decision always means native.
+- **Native every run:** every `release.yml` run builds native binaries and publishes no EAS update (owner decision 2026-11-10, plan §15 #23). The `fingerprint` job resolves `expo-updates runtimeversion:resolve` for each platform with the variant's build environment and records it in the release's `fingerprints.json`; its summary says whether the runtime changed since the newest `<variant>-v*` release of the same channel. A platform built without a fingerprint (the job failed) is recorded with none, which the hotfix guard never matches.
 - **eas.json profiles:** `scripts/ci/eas-profile.mjs release` picks `<v>-production` (AAB and App Store IPA) and `<v>-production-apk` on the production channel, `<v>-<channel>-store` and `<v>-<channel>-apk` on `internal` and `staging`, because the channel is baked into the binary. `scripts/generate-eas-json.mjs` emits all of them; a missing one is derived from the production profile (channel and `APP_ENV` replaced) in the runner checkout. It runs in **every** fingerprint-resolving job, because eas.json is a fingerprint source.
-- **ota.yml** refuses an update when the current fingerprint differs from the installed runtime recorded on the channel's newest release.
+- **ota.yml** (EAS updates, critical and emergency fixes only) runs on a push to `hotfix` (every variant, channel `production`) or a dispatch from `hotfix`; any other branch is refused. For each variant it finds the newest release on the channel whose `fingerprints.json` records binaries with the bundle's runtime and reuses that release's run number; with none, the variant is refused. Newer releases on the channel with another runtime are listed in the summary: they will not receive the update.
 
 ## Fingerprint inputs
 
-The expo config embeds `version` / `buildNumber` (from `RELEASE_RUN_NUMBER`) and `extra.env`, which change on every run without changing native code. `apps/omni/fingerprint.config.js` skips them (`sourceSkips: ['ExpoConfigVersions', 'ExpoConfigExtraSection']`), so the fingerprint only moves when native inputs change and OTA updates can apply. Without that file every release would build native and `ota.yml` would always refuse. Anything new that must force a native build belongs outside `extra`.
+The expo config embeds `version` / `buildNumber` (from `RELEASE_RUN_NUMBER`) and `extra.env`, which change on every run without changing native code. `apps/omni/fingerprint.config.js` skips them (`sourceSkips: ['ExpoConfigVersions', 'ExpoConfigExtraSection']`), so the fingerprint only moves when native inputs change and hotfix updates can apply. Without that file every release would get a new runtime and `ota.yml` would refuse every hotfix. Anything new that must force a native build belongs outside `extra`.
 
 The config must never name the checkout path: `eas build --local` resolves the runtime again in its own build directory and fails on any difference, and the iOS binaries (macOS) must match the runtime the fingerprint and OTA jobs resolve (Ubuntu). Our config plugins are therefore referenced as `@resgrid/config-plugins/plugins/<file>`, never as absolute paths; `apps/omni/__tests__/app-config.test.ts` guards it.
