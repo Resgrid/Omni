@@ -28,10 +28,21 @@ export const hashString = (value: string): string => {
   return (hash >>> 0).toString(36);
 };
 
+/**
+ * Core stores every uploaded type / role / station icon as a 128 px square (`TypeIcons.StoredSize`) meant to be drawn at
+ * the 32 px map pin size (`TypeIcons.MapSize`). A symbol layer draws a style image at its own pixel size times
+ * `icon-size`, and the bundled and status pins are already 32 px (32 x 37), so only an upload needs scaling down.
+ */
+const UPLOADED_ICON_STORED_SIZE = 128;
+const MAP_PIN_ICON_SIZE = 32;
+export const UPLOADED_ICON_SCALE = MAP_PIN_ICON_SIZE / UPLOADED_ICON_STORED_SIZE;
+
 export interface PinIcon {
   /** Style image name. */
   name: string;
   source: MapIconSource;
+  /** Multiplier on the layer's `icon-size` that draws this image at the map pin size. */
+  scale: number;
 }
 
 /** The bundled icon key for a pin (`PoiImage` wins over `ImagePath`), when the registry has it. */
@@ -45,11 +56,11 @@ export const bundledIconKey = (pin: Pick<MapMakerInfoData, 'ImagePath' | 'PoiIma
 /** The icon a pin draws with, or null when nothing is available (the pin then draws as a coloured circle). */
 export const resolvePinIcon = (pin: Pick<MapMakerInfoData, 'IconUrl' | 'PinIconUrl' | 'ImagePath' | 'PoiImage' | 'Type'>, icons: MapIconRegistry): PinIcon | null => {
   const upload = getRemoteIconUrl(pin.IconUrl);
-  if (upload) return { name: `pin-upload-${hashString(upload)}`, source: upload };
+  if (upload) return { name: `pin-upload-${hashString(upload)}`, source: upload, scale: UPLOADED_ICON_SCALE };
   const styled = getRemoteIconUrl(pin.PinIconUrl);
-  if (styled) return { name: `pin-styled-${hashString(styled)}`, source: styled };
+  if (styled) return { name: `pin-styled-${hashString(styled)}`, source: styled, scale: 1 };
   const key = bundledIconKey(pin, icons);
-  return key ? { name: `pin-bundled-${key}`, source: icons[key] } : null;
+  return key ? { name: `pin-bundled-${key}`, source: icons[key], scale: 1 } : null;
 };
 
 export interface PinFeatureProperties {
@@ -58,6 +69,8 @@ export interface PinFeatureProperties {
   type: number;
   title: string;
   icon: string;
+  /** The icon's `PinIcon.scale` (1 without an icon); the symbol layer multiplies its `icon-size` by it. */
+  iconScale: number;
   color: string;
   sortKey: number;
   isPoi: boolean;
@@ -104,6 +117,7 @@ export const buildPinCollection = (pins: readonly MapMakerInfoData[], { icons, c
         type: pin.Type,
         title: pin.Title ?? '',
         icon: icon?.name ?? '',
+        iconScale: icon?.scale ?? 1,
         color: pin.Color?.trim() || '#3b82f6',
         sortKey: Number.isFinite(pin.zIndex) ? pin.zIndex : 0,
         isPoi: isPoiMarker(pin),

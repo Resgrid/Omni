@@ -2,7 +2,7 @@ import type { MapMakerInfoData, PoiResultData } from '@resgrid/models';
 
 import { computeBounds, createCirclePolygon, normalizeHeading, zoomForSpeed } from '../lib/camera';
 import { boundsToImageCoordinates, buildCustomMapLayerImageUrl, buildCustomMapTileUrlTemplate, buildIndoorFloorImageUrl, indoorZonesToFeatureCollection, resolveCustomMapLayerRendering } from '../lib/custom-maps';
-import { buildPinCollection, resolvePinIcon } from '../lib/pin-features';
+import { buildPinCollection, resolvePinIcon, UPLOADED_ICON_SCALE } from '../lib/pin-features';
 import { getPinEntityId, isPersonnelPin, isPinForCall, MapPinType } from '../lib/pin-ids';
 import { filterAndSortPois, groupPoisByType, isPoiMarker, poisToFeatureCollection } from '../lib/poi';
 import { fillStaticMapTemplate } from '../lib/static-map';
@@ -130,12 +130,23 @@ describe('pins', () => {
   it('resolves the pin icon chain: upload > status pin > bundled > default', () => {
     expect(resolvePinIcon(pin({ IconUrl: 'https://x/u.png', PinIconUrl: 'https://x/p.png' }), icons)?.source).toBe('https://x/u.png');
     expect(resolvePinIcon(pin({ IconUrl: 'relative.png', PinIconUrl: 'https://x/p.png' }), icons)?.source).toBe('https://x/p.png');
-    expect(resolvePinIcon(pin({ ImagePath: 'Station' }), icons)).toEqual({ name: 'pin-bundled-station', source: 2 });
+    expect(resolvePinIcon(pin({ ImagePath: 'Station' }), icons)).toEqual({ name: 'pin-bundled-station', source: 2, scale: 1 });
     // A station with the department's uploaded station icon draws it, like a type upload; without one, the bundled pin.
     expect(resolvePinIcon(pin({ Type: MapPinType.Station, ImagePath: 'Station', IconUrl: 'https://x/station.png' }), icons)?.source).toBe('https://x/station.png');
     expect(resolvePinIcon(pin({ Type: MapPinType.Station, ImagePath: 'Station', IconUrl: null }), icons)?.source).toBe(2);
-    expect(resolvePinIcon(pin({ ImagePath: 'unknown', Type: MapPinType.Poi }), icons)).toEqual({ name: 'pin-bundled-flag', source: 3 });
+    expect(resolvePinIcon(pin({ ImagePath: 'unknown', Type: MapPinType.Poi }), icons)).toEqual({ name: 'pin-bundled-flag', source: 3, scale: 1 });
     expect(resolvePinIcon(pin({ ImagePath: 'unknown' }), {})).toBeNull();
+  });
+
+  it('draws an uploaded icon (a 128 px server rendition) at the 32 px pin size; status and bundled pins stay 1:1', () => {
+    expect(UPLOADED_ICON_SCALE).toBe(0.25);
+    expect(resolvePinIcon(pin({ IconUrl: 'https://x/u.png', PinIconUrl: 'https://x/p.png' }), icons)?.scale).toBe(UPLOADED_ICON_SCALE);
+    expect(resolvePinIcon(pin({ Type: MapPinType.Station, ImagePath: 'Station', IconUrl: 'https://x/station.png' }), icons)?.scale).toBe(UPLOADED_ICON_SCALE);
+    expect(resolvePinIcon(pin({ PinIconUrl: 'https://x/p.png' }), icons)?.scale).toBe(1);
+    expect(resolvePinIcon(pin({ ImagePath: 'Station' }), icons)?.scale).toBe(1);
+
+    const collection = buildPinCollection([pin({ Id: 'c1', IconUrl: 'https://x/u.png' }), pin({ Id: 'c2' }), pin({ Id: 'c3', ImagePath: 'unknown' })], { icons: {}, canViewPersonnel: true });
+    expect(collection.features.features.map((feature) => feature.properties.iconScale)).toEqual([UPLOADED_ICON_SCALE, 1, 1]);
   });
 
   it('builds one feature per pin with deduplicated images, hides personnel without PII rights and excludes the selected pin', () => {

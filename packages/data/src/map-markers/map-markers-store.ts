@@ -54,6 +54,30 @@ const applyMapData = (data: MapDataAndMarkersData | null, state: MapMarkersData)
   };
 };
 
+type PersistedMapMarkers = Omit<MapMarkersData, 'loading' | 'errors'>;
+
+/** What version 0 wrote: this version's shape (the same partialize), any field possibly missing. */
+type PersistedMapMarkersV0 = Partial<PersistedMapMarkers>;
+
+/**
+ * v0 → v1: version 0 was written by builds that fetched without `fullSizeIcons`, so Core linked an Omni store build's
+ * uploaded `IconUrl` to its 32 px rendition, while `@resgrid/maps` now draws an upload at a quarter of its pixel size
+ * (it expects the 128 px image). A restored v0 pin would show at 8 px until the next fetch, so v0 uploads are dropped:
+ * those pins draw with their status pin (`PinIconUrl`) or bundled icon at full size until a fetch brings the uploads back.
+ */
+export function migrateMapMarkersStorage(persisted: PersistedMapMarkersV0 | null, version: number): PersistedMapMarkers {
+  const base = initialData();
+  const markers = Array.isArray(persisted?.markers) ? persisted.markers : base.markers;
+
+  return {
+    markers: version < 1 ? markers.map((marker) => ({ ...marker, IconUrl: null })) : markers,
+    centerLatitude: persisted?.centerLatitude ?? base.centerLatitude,
+    centerLongitude: persisted?.centerLongitude ?? base.centerLongitude,
+    zoomLevel: persisted?.zoomLevel ?? base.zoomLevel,
+    fetchedAt: persisted?.fetchedAt ?? base.fetchedAt,
+  };
+}
+
 let runner: SliceRunner<MarkersSlice, MapMarkersState>;
 
 export const useMapMarkersStore = create<MapMarkersState>()(
@@ -67,9 +91,13 @@ export const useMapMarkersStore = create<MapMarkersState>()(
         },
       };
     },
-    dataPersistOptions<MapMarkersState, Omit<MapMarkersData, 'loading' | 'errors'>>({
+    dataPersistOptions<MapMarkersState, PersistedMapMarkers>({
+      // Frozen name. Version 1: markers fetched with `fullSizeIcons` (128 px uploads); see migrateMapMarkersStorage.
       name: 'omni-map-markers-storage',
+      version: 1,
       partialize: (state) => ({ markers: state.markers, centerLatitude: state.centerLatitude, centerLongitude: state.centerLongitude, zoomLevel: state.zoomLevel, fetchedAt: state.fetchedAt }),
+      // SAFETY: zustand hands over whatever JSON this name held; version 0 is the PersistedMapMarkersV0 shape and every field is optional.
+      migrate: (persisted, version) => migrateMapMarkersStorage(persisted as PersistedMapMarkersV0 | null, version),
     })
   )
 );
