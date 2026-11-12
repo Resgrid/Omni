@@ -133,6 +133,12 @@ describe('mapping (IC path params + Responder legend + Dispatch GeoJSON)', () =>
     expect(lastRequest(adapter).url).toBe('/Mapping/GetMayLayers?type=1');
   });
 
+  it('asks for full size marker icons (the map scales the 128 px uploads itself; without it Core sends 32 px ones)', async () => {
+    const { ctx, adapter } = createTestContext();
+    await api.getMapDataAndMarkers(ctx);
+    expect(lastRequest(adapter).url).toBe('/Mapping/GetMapDataAndMarkers?fullSizeIcons=true');
+  });
+
   it('caches a POI by its resolved path', async () => {
     const { ctx, adapter } = createTestContext();
     adapter.mockImplementation(async (config) => ok(config, { Status: 'success', Data: { PoiId: 5 } }));

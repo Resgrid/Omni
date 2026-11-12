@@ -1,3 +1,4 @@
+import type { SymbolLayerStyle } from '@maplibre/maplibre-react-native';
 import type { MapMakerInfoData } from '@resgrid/models';
 import React, { useCallback, useMemo } from 'react';
 
@@ -41,19 +42,20 @@ export const MapPins: React.FC<MapPinsProps> = ({ pins, onPinPress, selectedPinI
     [collection, onPinPress]
   );
 
-  const symbolStyle = useMemo(
+  const symbolStyle = useMemo<SymbolLayerStyle>(
     () => ({
-      iconImage: ['get', 'icon'] as ['get', string],
-      iconSize,
+      iconImage: ['get', 'icon'],
+      // Per pin: uploads are 128 px images drawn at the 32 px pin size (`PinIcon.scale`); bundled and status pins are 1:1.
+      iconSize: ['*', iconSize, ['get', 'iconScale']],
       iconAllowOverlap: true,
       iconIgnorePlacement: true,
-      symbolSortKey: ['get', 'sortKey'] as ['get', string],
+      symbolSortKey: ['get', 'sortKey'],
       ...(labels
         ? {
-            textField: ['get', 'title'] as ['get', string],
+            textField: ['get', 'title'],
             textSize: 10,
             textOffset: [0, 1.6],
-            textAnchor: 'top' as const,
+            textAnchor: 'top',
             textOptional: true,
             textMaxWidth: 10,
             textColor: theme.text,

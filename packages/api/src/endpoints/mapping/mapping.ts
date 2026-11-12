@@ -32,7 +32,7 @@ export const mappingEndpoints = defineEndpoints('mapping', {
   getIndoorMapFloor: { method: 'GET', path: '/Mapping/GetIndoorMapFloor/{floorId}' },
   getIndoorMaps: { method: 'GET', path: '/Mapping/GetIndoorMaps', cacheTtlMs: 5 * 60 * 1000 },
   getIndoorMapZonesGeoJSON: { method: 'GET', path: '/Mapping/GetIndoorMapZonesGeoJSON/{floorId}' },
-  getMapDataAndMarkers: { method: 'GET', path: '/Mapping/GetMapDataAndMarkers' },
+  getMapDataAndMarkers: { method: 'GET', path: '/Mapping/GetMapDataAndMarkers', query: ['fullSizeIcons'] },
   getMapIconLegend: { method: 'GET', path: '/Mapping/GetMapIconLegend' },
   getMapLayerGeoJSON: { method: 'GET', path: '/Mapping/GetMapLayerGeoJSON/{layerId}' },
   getMapLayers: { method: 'GET', path: '/Mapping/GetMayLayers', query: ['type'] },
@@ -80,8 +80,13 @@ export const getIndoorMaps = (ctx: ApiContext, options?: CachedRequestOptions): 
 export const getIndoorMapZonesGeoJSON = (ctx: ApiContext, params: { floorId: string }, options?: RequestOptions): Promise<UnknownV4Result> =>
   request<UnknownV4Result>(ctx, E.getIndoorMapZonesGeoJSON, { params }, options);
 
-/** Data to center the map and it's default location plus marker information for displaying makers on the map. `GET /Mapping/GetMapDataAndMarkers` — legacy: BDIRU. */
-export const getMapDataAndMarkers = (ctx: ApiContext, options?: RequestOptions): Promise<GetMapDataAndMarkersResult> => request<GetMapDataAndMarkersResult>(ctx, E.getMapDataAndMarkers, {}, options);
+/**
+ * Data to center the map and it's default location plus marker information for displaying makers on the map. `GET /Mapping/GetMapDataAndMarkers` — legacy: BDIRU.
+ * Always sends `fullSizeIcons=true`: `@resgrid/maps` scales the 128 px uploaded `IconUrl` to the 32 px pin size itself. Without it Core
+ * hands Omni store builds a 32 px rendition (a temporary fix for builds that drew the 128 px image at full size).
+ */
+export const getMapDataAndMarkers = (ctx: ApiContext, options?: RequestOptions): Promise<GetMapDataAndMarkersResult> =>
+  request<GetMapDataAndMarkersResult>(ctx, E.getMapDataAndMarkers, { params: { fullSizeIcons: true } }, options);
 
 /** Every icon the department's map can show, for an in-app map legend: calls by type and priority, units by type and status, members by role and status, the status and priority colours and the POI types. Built from the same icons as GetMapDataAndMarkers, so the department's uploads, the built-in pin each type picked and its own names for types, priorities, status sets, statuses and roles all show as they do on the map. `GET /Mapping/GetMapIconLegend` — legacy: IRU. */
 export const getMapIconLegend = (ctx: ApiContext, options?: RequestOptions): Promise<GetMapIconLegendResult> => request<GetMapIconLegendResult>(ctx, E.getMapIconLegend, {}, options);

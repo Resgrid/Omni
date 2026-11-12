@@ -48,7 +48,8 @@ describe('MapPins', () => {
     const source = screen.getByTestId('mlrn-source-resgrid-pins-source');
     expect(source.props.data.features.map((feature: { id: string }) => feature.id)).toEqual(['c1', 's1']);
     expect(screen.getByTestId('mlrn-images').props.images).toEqual({ 'pin-bundled-call': 1, 'pin-bundled-station': 2 });
-    expect(screen.getByTestId('mlrn-layer-resgrid-pins-symbols').props.layout).toMatchObject({ 'icon-image': ['get', 'icon'], 'icon-allow-overlap': true });
+    expect(screen.getByTestId('mlrn-layer-resgrid-pins-symbols').props.layout).toMatchObject({ 'icon-image': ['get', 'icon'], 'icon-size': ['*', 1, ['get', 'iconScale']], 'icon-allow-overlap': true });
+    expect(source.props.data.features.map((feature: { properties: { iconScale: number } }) => feature.properties.iconScale)).toEqual([1, 1]);
     expect(screen.getByTestId('mlrn-marker-resgrid-pins-selected').props.lngLat).toEqual([3.7, 50.9]);
     expect(screen.getAllByTestId('pin-marker')).toHaveLength(1);
   });
