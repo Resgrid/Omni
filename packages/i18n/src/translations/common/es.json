@@ -2399,7 +2399,8 @@
       "expires_hours": "{{count}} h",
       "until": "Hasta {{time}}",
       "saved": "Disponibilidad guardada",
-      "save_failed": "No se pudo guardar la disponibilidad"
+      "save_failed": "No se pudo guardar la disponibilidad",
+      "expiry_passed": "La hora de fin del informe ya pasó. Elija cuánto dura."
     }
   },
   "protocols": {

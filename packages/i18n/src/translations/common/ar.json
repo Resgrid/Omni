@@ -2399,7 +2399,8 @@
       "expires_hours": "{{count}} س",
       "until": "حتى {{time}}",
       "saved": "تم حفظ التوفر",
-      "save_failed": "تعذر حفظ التوفر"
+      "save_failed": "تعذر حفظ التوفر",
+      "expiry_passed": "انقضى وقت انتهاء البلاغ. اختر مدة سريانه."
     }
   },
   "protocols": {

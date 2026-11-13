@@ -2399,7 +2399,8 @@
       "expires_hours": "{{count}} h",
       "until": "Till {{time}}",
       "saved": "Tillgängligheten sparades",
-      "save_failed": "Tillgängligheten kunde inte sparas"
+      "save_failed": "Tillgängligheten kunde inte sparas",
+      "expiry_passed": "Rapportens sluttid har passerat. Välj hur länge den gäller."
     }
   },
   "protocols": {

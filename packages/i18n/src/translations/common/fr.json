@@ -2399,7 +2399,8 @@
       "expires_hours": "{{count}} h",
       "until": "Jusqu'à {{time}}",
       "saved": "Disponibilité enregistrée",
-      "save_failed": "La disponibilité n'a pas pu être enregistrée"
+      "save_failed": "La disponibilité n'a pas pu être enregistrée",
+      "expiry_passed": "L'heure de fin du signalement est passée. Choisissez sa durée."
     }
   },
   "protocols": {

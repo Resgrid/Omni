@@ -2399,7 +2399,8 @@
       "expires_hours": "{{count}} Std.",
       "until": "Bis {{time}}",
       "saved": "Verfügbarkeit gespeichert",
-      "save_failed": "Verfügbarkeit konnte nicht gespeichert werden"
+      "save_failed": "Verfügbarkeit konnte nicht gespeichert werden",
+      "expiry_passed": "Das Ende der Meldung ist bereits vorbei. Wählen Sie, wie lange sie gilt."
     }
   },
   "protocols": {

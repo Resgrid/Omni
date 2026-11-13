@@ -2399,7 +2399,8 @@
       "expires_hours": "{{count}} h",
       "until": "Until {{time}}",
       "saved": "Availability saved",
-      "save_failed": "Availability could not be saved"
+      "save_failed": "Availability could not be saved",
+      "expiry_passed": "The report's end time has passed. Choose how long it lasts."
     }
   },
   "protocols": {

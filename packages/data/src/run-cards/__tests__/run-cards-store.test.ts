@@ -103,6 +103,32 @@ describe('run cards store — New Call preview', () => {
     }
   });
 
+  it('aborts a lookup still out when a new one is scheduled, so its answer cannot land while the new one waits', async () => {
+    let resolveFirst: (envelope: ReturnType<typeof ok>) => void = () => undefined;
+    let firstSignal: AbortSignal | undefined;
+    jest.mocked(getDispatchRecommendation).mockImplementationOnce((_context, _params, options) => {
+      firstSignal = options?.signal ?? undefined;
+
+      // SAFETY: the test settles this promise with the v4 envelope the store unwraps.
+      return new Promise((resolve) => (resolveFirst = resolve)) as never;
+    });
+    const first = useRunCardsStore.getState().fetchRecommendation({ priority: 1, type: 'Fire' });
+
+    try {
+      useRunCardsStore.getState().fetchRecommendationDebounced({ priority: 2, type: 'Fire' });
+      expect(firstSignal?.aborted).toBe(true);
+
+      // The old lookup answers inside the debounce window, before the new one starts.
+      resolveFirst(ok(recommendation([1])));
+      await first;
+
+      expect(useRunCardsStore.getState().recommendation).toBeNull();
+      expect(useRunCardsStore.getState().hasFetched).toBe(false);
+    } finally {
+      useRunCardsStore.getState().clear();
+    }
+  });
+
   it('drops a superseded answer', async () => {
     let resolveFirst: (value: unknown) => void = () => undefined;
     jest.mocked(getDispatchRecommendation).mockImplementationOnce(() => new Promise((resolve) => (resolveFirst = resolve)) as never);

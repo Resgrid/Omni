@@ -2399,7 +2399,8 @@
       "expires_hours": "{{count}} h",
       "until": "Fino a {{time}}",
       "saved": "Disponibilità salvata",
-      "save_failed": "Impossibile salvare la disponibilità"
+      "save_failed": "Impossibile salvare la disponibilità",
+      "expiry_passed": "L'ora di fine della segnalazione è passata. Scegli quanto dura."
     }
   },
   "protocols": {

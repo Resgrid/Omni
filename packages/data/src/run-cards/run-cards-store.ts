@@ -157,7 +157,9 @@ export const useRunCardsStore = create<RunCardsState>()((set, get) => {
     },
 
     fetchRecommendationDebounced: (request) => {
-      if (debounceTimer) clearTimeout(debounceTimer);
+      // A lookup still out was asked for the call details before this change: it is aborted now, so its answer cannot
+      // land while the new lookup waits for the debounce.
+      cancelPreview();
 
       // The proposal on screen belongs to the call details before this change: it goes now, so its outcome cannot be
       // saved with the call while the new lookup waits. Code choices stay; the new proposal keeps those of its units.

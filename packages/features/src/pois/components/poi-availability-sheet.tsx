@@ -83,6 +83,16 @@ export const PoiAvailabilitySheet: React.FC<PoiAvailabilitySheetProps> = ({ isOp
 
   const save = async () => {
     if (isSaving) return;
+
+    // The report lapsed while the sheet was open: keeping its end would restrict the destination again. The choice to
+    // keep it goes and the dispatcher picks how long the new report lasts (or sets it open).
+    if (!isOpenStatus && expiresIn === KEEP_EXPIRY && (currentExpiry === null || currentExpiry <= Date.now())) {
+      setCurrentExpiry(null);
+      toast.error(t('pois.availability.expiry_passed'));
+
+      return;
+    }
+
     setIsSaving(true);
 
     const outcome = await usePoisStore.getState().setPoiAvailability({

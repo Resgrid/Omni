@@ -210,6 +210,32 @@ describe('POI availability on screen', () => {
     await waitFor(() => expect(setPoiAvailability).toHaveBeenCalledWith({ PoiId: 5, Status: PoiAvailabilityStatuses.Limited, UnavailableCapabilityIds: [], Note: 'CT down', ExpiresInMinutes: 90 }));
   });
 
+  it('does not renew a report that lapsed while the sheet was open: the dispatcher picks a new expiry', async () => {
+    const expiresAt = Date.now() + 30 * 60000;
+    const expiring = { ...CATH_DIVERSION, AvailabilityExpiresOnUtc: new Date(expiresAt).toISOString() };
+    const setPoiAvailability = jest.fn(async () => ({ ok: true as const, poi: expiring }));
+    usePoisStore.setState({ setPoiAvailability });
+
+    await render(<PoiAvailabilitySheet isOpen onClose={jest.fn()} poi={expiring} />);
+    expect(screen.getByTestId('poi-availability-expires-keep', q).props.accessibilityState).toMatchObject({ selected: true });
+    const now = jest.spyOn(Date, 'now').mockReturnValue(expiresAt + 1000);
+
+    try {
+      await fireEvent.press(screen.getByTestId('poi-availability-save', q));
+
+      expect(setPoiAvailability).not.toHaveBeenCalled();
+      expect(useToastStore.getState().toasts[0]).toMatchObject({ type: 'error', message: 'pois.availability.expiry_passed' });
+      expect(screen.queryByTestId('poi-availability-expires-keep', q)).toBeNull();
+
+      await fireEvent.press(screen.getByTestId('poi-availability-expires-60', q));
+      await fireEvent.press(screen.getByTestId('poi-availability-save', q));
+
+      await waitFor(() => expect(setPoiAvailability).toHaveBeenCalledWith(expect.objectContaining({ PoiId: 3, Status: PoiAvailabilityStatuses.Diversion, ExpiresInMinutes: 60 })));
+    } finally {
+      now.mockRestore();
+    }
+  });
+
   it('keeps the edits when the same destination is re-read while the sheet is open', async () => {
     const setPoiAvailability = jest.fn(async () => ({ ok: true as const, poi: CATH_DIVERSION }));
     usePoisStore.setState({ setPoiAvailability });

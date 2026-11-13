@@ -2399,7 +2399,8 @@
       "expires_hours": "{{count}} godz.",
       "until": "Do {{time}}",
       "saved": "Zapisano dostępność",
-      "save_failed": "Nie udało się zapisać dostępności"
+      "save_failed": "Nie udało się zapisać dostępności",
+      "expiry_passed": "Czas zakończenia zgłoszenia już minął. Wybierz, jak długo ma obowiązywać."
     }
   },
   "protocols": {
