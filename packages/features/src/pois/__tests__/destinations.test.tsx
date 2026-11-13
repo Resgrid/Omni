@@ -8,8 +8,23 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react-nativ
 import React from 'react';
 
 import { activateVariant } from '../../calls/__tests__/test-utils';
+import { PoiAvailabilitySheet } from '../components/poi-availability-sheet';
 import { PoiCard } from '../components/poi-card';
-import { canPoiProvide, collectCapabilityOptions, isPoiCapabilityUnavailable, poiAvailabilityStatus, poiOffersCapability, rankDestinations, straightLineMeters, toDestinationOrigin } from '../lib/poi-availability';
+import {
+  availabilityBadgeKeys,
+  availabilityExpiresAt,
+  canPoiProvide,
+  collectCapabilityOptions,
+  hasCapabilityId,
+  isPoiCapabilityUnavailable,
+  minutesUntil,
+  poiAvailabilityStatus,
+  poiOffersCapability,
+  rankDestinations,
+  straightLineMeters,
+  toDestinationOrigin,
+  toggleCapabilityId,
+} from '../lib/poi-availability';
 import PoiDetailScreen from '../screens/poi-detail';
 
 /**
@@ -51,6 +66,31 @@ describe('destination availability rules', () => {
     expect(poiAvailabilityStatus({ AvailabilityStatus: 3, AvailabilityExpiresOnUtc: new Date(Date.now() - 60000).toISOString() })).toBe(PoiAvailabilityStatuses.Open);
     expect(poiAvailabilityStatus({ AvailabilityStatus: 9 })).toBe(PoiAvailabilityStatuses.Open);
     expect(poiAvailabilityStatus(undefined)).toBe(PoiAvailabilityStatuses.Open);
+  });
+
+  it('reads an expiry without a zone designator as UTC', () => {
+    const report = { AvailabilityStatus: PoiAvailabilityStatuses.Closed, AvailabilityExpiresOnUtc: '2026-11-13T10:00:00' };
+
+    expect(poiAvailabilityStatus(report, Date.UTC(2026, 10, 13, 9, 30))).toBe(PoiAvailabilityStatuses.Closed);
+    expect(poiAvailabilityStatus(report, Date.UTC(2026, 10, 13, 10, 30))).toBe(PoiAvailabilityStatuses.Open);
+    expect(availabilityExpiresAt(report, Date.UTC(2026, 10, 13, 9, 30))).toBe(Date.UTC(2026, 10, 13, 10, 0));
+    expect(availabilityExpiresAt(report, Date.UTC(2026, 10, 13, 10, 30))).toBeNull();
+    expect(availabilityExpiresAt({ AvailabilityStatus: PoiAvailabilityStatuses.Closed, AvailabilityExpiresOnUtc: null })).toBeNull();
+    expect(minutesUntil(Date.UTC(2026, 10, 13, 10, 0), Date.UTC(2026, 10, 13, 9, 30, 20))).toBe(30);
+    expect(minutesUntil(Date.UTC(2026, 10, 13, 10, 0), Date.UTC(2026, 10, 13, 10, 0))).toBe(1);
+  });
+
+  it('matches capability ids without case when checking and toggling', () => {
+    expect(hasCapabilityId(['CATH'], 'cath')).toBe(true);
+    expect(toggleCapabilityId(['CATH', 'stroke'], 'cath')).toEqual(['stroke']);
+    expect(toggleCapabilityId(['stroke'], 'cath')).toEqual(['stroke', 'cath']);
+  });
+
+  it('lists what the availability badge says', () => {
+    expect(availabilityBadgeKeys(CATH_2)).toEqual([]);
+    expect(availabilityBadgeKeys(CATH_2, { showOpen: true })).toEqual(['pois.availability.open']);
+    expect(availabilityBadgeKeys(CATH_DIVERSION, { capabilityId: 'cath' })).toEqual(['pois.availability.diversion']);
+    expect(availabilityBadgeKeys(CATH_DOWN, { capabilityId: 'cath' })).toEqual(['pois.availability.limited', 'pois.availability.capability_unavailable']);
   });
 
   it('knows what a destination can still take', () => {
@@ -98,6 +138,21 @@ describe('destination availability rules', () => {
     expect(ranked[0].travelSeconds).toBe(400);
   });
 
+  it("takes what the server's ranking says each destination can provide", () => {
+    // The server answered after both reports changed: the cath lab nearby is down, the one on diversion is back.
+    const ranking: NearestDestinationResultData[] = [
+      { Poi: CATH_2, DistanceMeters: 2200, TravelSeconds: 300, CanProvide: false },
+      { Poi: CATH_DOWN, DistanceMeters: 1700, TravelSeconds: 500, CanProvide: true },
+    ];
+
+    const ranked = rankDestinations(ALL, { origin: ORIGIN, capabilityId: 'cath', ranking });
+
+    expect(ranked.find((row) => row.poi.PoiId === 2)?.canProvide).toBe(false);
+    expect(ranked.find((row) => row.poi.PoiId === 5)).toMatchObject({ canProvide: true, isNearest: true });
+    // Rows the ranking left out keep the local rule.
+    expect(ranked.find((row) => row.poi.PoiId === 4)?.canProvide).toBe(false);
+  });
+
   it('keeps list order without an origin', () => {
     expect(rankDestinations(ALL, {}).map((row) => row.poi.PoiId)).toEqual([1, 2, 3, 4, 5]);
     expect(rankDestinations(ALL, {})[0].distanceMeters).toBeNull();
@@ -138,6 +193,33 @@ describe('POI availability on screen', () => {
 
     await waitFor(() => expect(setPoiAvailability).toHaveBeenCalledWith({ PoiId: 3, Status: PoiAvailabilityStatuses.Closed, UnavailableCapabilityIds: ['cath'], Note: 'ED full', ExpiresInMinutes: 120 }));
     await waitFor(() => expect(screen.getByTestId('poi-detail-availability-badge', q)).toHaveTextContent('pois.availability.closed'));
+  });
+
+  it('keeps a report’s expiry when only its note or capabilities change', async () => {
+    const expiring = { ...CATH_DOWN, AvailabilityNote: 'CT down', AvailabilityExpiresOnUtc: new Date(Date.now() + 90 * 60000).toISOString() };
+    const setPoiAvailability = jest.fn(async () => ({ ok: true as const, poi: expiring }));
+    usePoisStore.setState({ setPoiAvailability });
+
+    await render(<PoiAvailabilitySheet isOpen onClose={jest.fn()} poi={expiring} />);
+
+    expect(screen.getByTestId('poi-availability-expires-keep', q).props.accessibilityState).toMatchObject({ selected: true });
+    // Checked by the capability's own case ("CATH" stored, "cath" offered): pressing it clears it.
+    await fireEvent.press(screen.getByTestId('poi-availability-capability-cath', q));
+    await fireEvent.press(screen.getByTestId('poi-availability-save', q));
+
+    await waitFor(() => expect(setPoiAvailability).toHaveBeenCalledWith({ PoiId: 5, Status: PoiAvailabilityStatuses.Limited, UnavailableCapabilityIds: [], Note: 'CT down', ExpiresInMinutes: 90 }));
+  });
+
+  it('keeps the edits when the same destination is re-read while the sheet is open', async () => {
+    const setPoiAvailability = jest.fn(async () => ({ ok: true as const, poi: CATH_DIVERSION }));
+    usePoisStore.setState({ setPoiAvailability });
+
+    const { rerender } = await render(<PoiAvailabilitySheet isOpen onClose={jest.fn()} poi={CATH_DIVERSION} />);
+    await fireEvent.press(screen.getByTestId('poi-availability-status-3', q));
+    await rerender(<PoiAvailabilitySheet isOpen onClose={jest.fn()} poi={{ ...CATH_DIVERSION }} />);
+    await fireEvent.press(screen.getByTestId('poi-availability-save', q));
+
+    await waitFor(() => expect(setPoiAvailability).toHaveBeenCalledWith(expect.objectContaining({ PoiId: 3, Status: PoiAvailabilityStatuses.Closed, ExpiresInMinutes: null })));
   });
 
   it('does not offer the change outside the dispatch desks', async () => {

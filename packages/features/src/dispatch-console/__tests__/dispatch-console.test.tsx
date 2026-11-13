@@ -230,6 +230,17 @@ describe('DispatchConsoleScreen layout', () => {
     }
   });
 
+  it('flags a unit taking a patient somewhere other than its call’s destination in the units panel and the single list', async () => {
+    useCallsStore.setState({ calls: [makeCall('9', { Name: 'Kitchen fire', DestinationPoiId: 900, DestinationName: 'AZ Zottegem' })] });
+    useUnitsStore.setState({ unitInfos: [unit('4', { CurrentStatusBaseType: 12, CurrentDestinationType: 3, CurrentDestinationId: '901', ActiveCallId: '9' })] });
+    await setWindow(1366, 1024);
+    await renderConsole();
+    expect(screen.getByTestId('console-unit-4-destination-mismatch')).toHaveTextContent(/AZ Zottegem/);
+    await fireEvent.press(screen.getByTestId('toggle-single-list'));
+    expect(screen.getByTestId('resources-panel')).toBeTruthy();
+    expect(screen.getByTestId('console-unit-4-destination-mismatch')).toHaveTextContent(/AZ Zottegem/);
+  });
+
   it('merges units and personnel into one panel with "Single list" and hides unavailable ones with "Available only"', async () => {
     await setWindow(1366, 1024);
     await renderConsole();

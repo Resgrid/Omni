@@ -1,6 +1,8 @@
 import { useCapability } from '@resgrid/config';
+import { formatInTimeZone } from '@resgrid/core/utils/dates';
 import { usePoisStore } from '@resgrid/data';
 import { useNavigationHandoff } from '@resgrid/features/contacts';
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import { type PoiResultData } from '@resgrid/models';
 import { Box, Button, ButtonText, Heading, HStack, Loading, ScreenHeader, ScrollView, Text, TypeIcon, View, VStack, ZeroState } from '@resgrid/ui';
@@ -10,7 +12,7 @@ import React, { useEffect, useState } from 'react';
 
 import { PoiAvailabilityBadge } from '../components/destination-parts';
 import { PoiAvailabilitySheet } from '../components/poi-availability-sheet';
-import { isPoiCapabilityUnavailable, poiAvailabilityStatus } from '../lib/poi-availability';
+import { availabilityExpiresAt, isPoiCapabilityUnavailable, poiAvailabilityStatus } from '../lib/poi-availability';
 import { parsePoiId, poiLabel } from '../lib/poi-filters';
 
 export interface PoiDetailScreenProps {
@@ -32,6 +34,7 @@ export default function PoiDetailScreen({ poiId: poiIdProp, renderMap }: PoiDeta
   const [isLoading, setIsLoading] = useState(!cached && !!poiId);
   const [isAvailabilityOpen, setIsAvailabilityOpen] = useState(false);
   const { destinationAvailability } = useCapability('calls');
+  const timeZone = useDepartmentTimeZone();
 
   useEffect(() => {
     if (!poiId) return;
@@ -72,6 +75,9 @@ export default function PoiDetailScreen({ poiId: poiIdProp, renderMap }: PoiDeta
   }
 
   const positioned = hasPosition(current);
+  // When the current report lapses, in the department's time ('' when it is open or lasts until changed).
+  const expiresAtMs = availabilityExpiresAt(current);
+  const expiresAt = expiresAtMs === null ? '' : formatInTimeZone(new Date(expiresAtMs), timeZone);
 
   return (
     <View className="flex-1 bg-background-50" testID="poi-detail-screen">
@@ -118,9 +124,7 @@ export default function PoiDetailScreen({ poiId: poiIdProp, renderMap }: PoiDeta
               <PoiAvailabilityBadge poi={current} showOpen testID="poi-detail-availability-badge" />
             </HStack>
             {poiAvailabilityStatus(current) !== 0 && current.AvailabilityNote ? <Text className="mt-2 text-sm text-typography-900">{current.AvailabilityNote}</Text> : null}
-            {poiAvailabilityStatus(current) !== 0 && current.AvailabilityExpiresOnUtc ? (
-              <Text className="mt-1 text-xs text-typography-500">{t('pois.availability.until', { time: new Date(current.AvailabilityExpiresOnUtc).toLocaleString() })}</Text>
-            ) : null}
+            {expiresAt ? <Text className="mt-1 text-xs text-typography-500">{t('pois.availability.until', { time: expiresAt })}</Text> : null}
             {destinationAvailability ? (
               <Button variant="outline" size="sm" className="mt-3" onPress={() => setIsAvailabilityOpen(true)} testID="poi-detail-set-availability">
                 <Activity size={14} color="#3b82f6" />

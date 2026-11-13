@@ -1623,7 +1623,6 @@
     "anti-slop/no-conditional-empty-object-spread": 2,
     "anti-slop/no-runtime-typeof": 1,
     "anti-slop/no-unknown-parameters": 1,
-    "anti-slop/require-readable-spacing": 14,
     "anti-slop/require-safety-comment-for-type-assertion": 2
   },
   "packages/data/src/shifts/__tests__/shifts-store.test.ts": {

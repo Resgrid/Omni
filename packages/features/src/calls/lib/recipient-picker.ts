@@ -30,6 +30,15 @@ export interface RecipientPickerEntry {
   hiddenUnlessPicked?: boolean;
 }
 
+/**
+ * What a screen reader says for an entry: the row is one checkbox named by this label, so it carries everything the row
+ * shows — name, badges, metric, detail, chips, the further line and the warning note.
+ */
+export const recipientEntrySpokenLabel = (entry: RecipientPickerEntry): string =>
+  [entry.name, ...(entry.badges ?? []).map((badge) => badge.label), entry.metric, entry.detail, ...(entry.chips ?? []).map((chip) => chip.label), entry.subDetail, entry.note]
+    .filter((part): part is string => !!part)
+    .join(', ');
+
 /** Whether a picker lists an entry: everything, apart from a filtered-out entry nobody picked. */
 export const isRecipientListed = (entry: RecipientPickerEntry, picked: readonly string[]): boolean => !entry.hiddenUnlessPicked || picked.includes(entry.id);
 

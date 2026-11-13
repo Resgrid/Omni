@@ -15,7 +15,7 @@ import { useTranslation } from '@resgrid/i18n';
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 
 import { refreshConsoleUnits } from '../hooks/use-console-data';
-import { destinationForUnitStatus, resolveCommonUnitStatusOptions } from '../lib/bulk-status';
+import { bulkStatusAttemptKey, destinationForUnitStatus, resolveCommonUnitStatusOptions } from '../lib/bulk-status';
 
 /** Department-wide destination lists (open calls, stations, destination POIs) for on-behalf statuses. */
 function useDestinationLists(isOpen: boolean): { lists: DestinationLists; isLoading: boolean } {
@@ -63,7 +63,7 @@ export const ConsoleUnitStatusSheet: React.FC<ConsoleUnitStatusSheetProps> = ({ 
   const unitInfos = useUnitsStore((state) => state.unitInfos);
   const statusSets = useUnitsStore((state) => state.unitTypeStatuses);
   const { lists, isLoading } = useDestinationLists(isOpen);
-  // The units a partly refused submit saved, by status option: they are not sent that status twice.
+  // The units a partly refused submit saved, by what it sent (status, destination, note): they are not sent it twice.
   const savedRef = useRef<{ key: string; unitIds: ReadonlySet<string> } | null>(null);
   const unitIdsKey = unitIds.join(',');
 
@@ -93,7 +93,8 @@ export const ConsoleUnitStatusSheet: React.FC<ConsoleUnitStatusSheetProps> = ({ 
       const option = options.find((entry) => entry.status === selection.status || String(entry.status.Id) === String(selection.status.Id));
 
       if (!option) return 'rejected';
-      const alreadySaved = savedRef.current?.key === option.key ? savedRef.current.unitIds : new Set<string>();
+      const attemptKey = bulkStatusAttemptKey(option.key, selection);
+      const alreadySaved = savedRef.current?.key === attemptKey ? savedRef.current.unitIds : new Set<string>();
       const location = await locationForStatus(selection.status, true);
 
       const results = await Promise.all(
@@ -129,7 +130,7 @@ export const ConsoleUnitStatusSheet: React.FC<ConsoleUnitStatusSheetProps> = ({ 
       }
 
       if (units.length === 1) return 'rejected';
-      savedRef.current = { key: option.key, unitIds: new Set([...alreadySaved, ...saved.map((result) => result.unit.UnitId)]) };
+      savedRef.current = { key: attemptKey, unitIds: new Set([...alreadySaved, ...saved.map((result) => result.unit.UnitId)]) };
       throw new StatusSubmitError(t('dispatch.bulk_unit_actions.partial_failure', { units: refused.map((result) => result.unit.Name).join(', ') }));
     },
     [defaultCall, onSubmitted, options, t, units]

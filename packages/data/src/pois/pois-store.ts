@@ -53,6 +53,32 @@ export interface PoisState extends PoisData {
 
 const replacePoi = (list: PoiResultData[], poi: PoiResultData): PoiResultData[] => (list.some((item) => item.PoiId === poi.PoiId) ? list.map((item) => (item.PoiId === poi.PoiId ? poi : item)) : list);
 
+/**
+ * Availability saved here, by POI, with the write it came from. A read that started before a save can answer after it with
+ * the old report: the saved destination replaces that answer's copy, so a destination marked closed never reads as open
+ * again until a read that started after the save. Cleared on reset.
+ */
+let availabilityWrites = 0;
+const savedAvailability = new Map<number, { write: number; poi: PoiResultData }>();
+
+/** The read's answer with every destination saved after the read started in place of its copy. */
+const withLaterSaves = (list: PoiResultData[], readStartedAt: number): PoiResultData[] => {
+  if (savedAvailability.size === 0) return list;
+
+  return list.map((item) => {
+    const saved = savedAvailability.get(item.PoiId);
+
+    return saved && saved.write > readStartedAt ? saved.poi : item;
+  });
+};
+
+/** One destination as a read answered it, or the copy saved after the read started. */
+const laterSaveOf = (poi: PoiResultData, readStartedAt: number): PoiResultData => {
+  const saved = savedAvailability.get(poi.PoiId);
+
+  return saved && saved.write > readStartedAt ? saved.poi : poi;
+};
+
 const initialData = (): PoisData => ({ ...emptySliceMeta<PoisSlice>(), pois: [], destinationPois: [], poiTypes: [], poiDetailsById: {}, poiCapabilities: [] });
 
 let runner: SliceRunner<PoisSlice, PoisState>;
@@ -67,19 +93,21 @@ export const usePoisStore = create<PoisState>()(
 
         fetchPois: async (options) => {
           if (!options?.bypassCache && get().pois.length > 0) return;
+          const readStartedAt = availabilityWrites;
           await runner.run(
             'pois',
             async () => unwrapList(await getPois(getDataApiContext(), {}, cacheOptions(options))),
-            (pois) => ({ pois })
+            (pois) => ({ pois: withLaterSaves(pois, readStartedAt) })
           );
         },
 
         fetchDestinationPois: async (options) => {
           if (!options?.bypassCache && get().destinationPois.length > 0) return;
+          const readStartedAt = availabilityWrites;
           await runner.run(
             'destinationPois',
             async () => unwrapList(await getPois(getDataApiContext(), { destinationOnly: true }, cacheOptions(options))),
-            (destinationPois) => ({ destinationPois })
+            (destinationPois) => ({ destinationPois: withLaterSaves(destinationPois, readStartedAt) })
           );
         },
 
@@ -97,14 +125,18 @@ export const usePoisStore = create<PoisState>()(
 
           if (cached && !options?.bypassCache) return cached;
 
+          const readStartedAt = availabilityWrites;
+
           const result = await runner.run(
             'detail',
             async () => unwrapItem(await getPoi(getDataApiContext(), { poiId }, cacheOptions(options))),
-            (poi, state) => (poi ? { poiDetailsById: { ...state.poiDetailsById, [poiId]: poi } } : {}),
+            (poi, state) => (poi ? { poiDetailsById: { ...state.poiDetailsById, [poiId]: laterSaveOf(poi, readStartedAt) } } : {}),
             { flightKey: `detail:${poiId}` }
           );
 
-          return result.ok ? result.value : (cached ?? null);
+          if (!result.ok) return cached ?? null;
+
+          return result.value ? laterSaveOf(result.value, readStartedAt) : null;
         },
 
         fetchPoiCapabilities: async (options) => {
@@ -117,12 +149,17 @@ export const usePoisStore = create<PoisState>()(
         },
 
         setPoiAvailability: async (input) => {
+          // A sign-out or department switch while the request is out: its answer belongs to the old session.
+          const startedIn = runner.generation();
+
           try {
             const response = await setPoiAvailability(getDataApiContext(), input);
             // SAFETY: SetPoiAvailabilityResult is the v4 envelope (Data + Status); unwrapItem checks Status and returns null for a missing Data.
             const poi = unwrapItem(response as Enveloped<PoiResultData>);
 
-            if (poi) {
+            if (poi && startedIn === runner.generation()) {
+              availabilityWrites += 1;
+              savedAvailability.set(poi.PoiId, { write: availabilityWrites, poi });
               set((state) => ({
                 pois: replacePoi(state.pois, poi),
                 destinationPois: replacePoi(state.destinationPois, poi),
@@ -133,7 +170,7 @@ export const usePoisStore = create<PoisState>()(
             return { ok: true, poi };
           } catch (error) {
             const dataError = toDataError(error);
-            getDataLogger().warn({ message: 'Setting destination availability failed', context: { code: dataError.code, status: dataError.status } });
+            getDataLogger().warn({ message: 'Setting destination availability failed', context: { poiId: input.PoiId, code: dataError.code, status: dataError.status } });
 
             return { ok: false, error: dataError };
           }
@@ -180,6 +217,9 @@ export const usePoisStore = create<PoisState>()(
 
 registerPersistedStore('omni-pois-storage', usePoisStore);
 
-registerDataStoreReset<PoisState>('pois', usePoisStore, initialData, () => runner.invalidate());
+registerDataStoreReset<PoisState>('pois', usePoisStore, initialData, () => {
+  runner.invalidate();
+  savedAvailability.clear();
+});
 
 export const selectPoiById = (state: Pick<PoisState, 'pois' | 'poiDetailsById'>, poiId: number): PoiResultData | undefined => state.poiDetailsById[poiId] ?? state.pois.find((poi) => poi.PoiId === poiId);

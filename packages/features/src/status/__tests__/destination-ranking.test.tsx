@@ -127,6 +127,13 @@ describe('call form destination picker', () => {
     expect(onSelect).toHaveBeenCalledWith(3);
   });
 
+  it('names a destination on diversion as such to screen readers', async () => {
+    await render(<DestinationPoiPicker isOpen onClose={jest.fn()} pois={POIS} selectedId={null} onSelect={jest.fn()} />);
+
+    expect(screen.getByTestId('call-destination-poi-3', q).props.accessibilityLabel).toBe('Cath on diversion, Hospital, pois.availability.diversion');
+    expect(screen.getByTestId('call-destination-poi-2', q).props.accessibilityLabel).toBe('Far cath lab, Hospital');
+  });
+
   it('stays alphabetical without a call location', async () => {
     await render(<DestinationPoiPicker isOpen onClose={jest.fn()} pois={POIS} selectedId={null} onSelect={jest.fn()} />);
 

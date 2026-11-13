@@ -23,4 +23,17 @@ describe('Awaiting Resources badge (Dispatch side menu)', () => {
 
     expect(selectBadgeCount('awaitingResources')(useBadgeCountsStore.getState())).toBeNull();
   });
+
+  it('starts from the calls the store already holds when its badge link is set up', () => {
+    // A fresh module registry: the same modules as the imports above, loaded again in order.
+    jest.isolateModules(() => {
+      const badges = jest.requireActual<{ useBadgeCountsStore: typeof useBadgeCountsStore }>('../badge-counts-store');
+
+      // A count left from before (a module loaded after the storage was set rehydrates before its subscription exists).
+      badges.useBadgeCountsStore.getState().setAwaitingResources(5);
+      const awaiting = jest.requireActual<{ useAwaitingResourcesStore: typeof useAwaitingResourcesStore }>('../../awaiting-resources/awaiting-resources-store');
+
+      expect(badges.useBadgeCountsStore.getState().awaitingResources).toBe(awaiting.useAwaitingResourcesStore.getState().calls.length);
+    });
+  });
 });

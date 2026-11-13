@@ -1,4 +1,4 @@
-import { getDestinationTabs, getUnitStatusOptions, NO_DESTINATION, type StatusDestination, statusDetailType, statusNoteType, toBaseTypeNumber } from '@resgrid/features/status';
+import { getDestinationTabs, getUnitStatusOptions, NO_DESTINATION, type StatusDestination, statusDetailType, statusNoteType, toBaseTypeNumber, toRespondingTo } from '@resgrid/features/status';
 import {
   type CallResultData,
   CustomStateDetailTypes,
@@ -21,6 +21,17 @@ export interface CommonUnitStatusOption {
   /** Each unit's own option: the id, destinations and note rule its status set uses. */
   statusByUnitId: Record<string, StatusesResultData>;
 }
+
+/**
+ * What one bulk status submit sends: the status, the destination picked and the note. After a partial refusal only a retry
+ * that sends the same skips the units already saved; a changed destination or note goes to every unit again, so the
+ * selection never ends with two destinations or notes for one status.
+ */
+export const bulkStatusAttemptKey = (optionKey: string, selection: { destination: StatusDestination; note: string }): string => {
+  const { respondingTo, respondingToType } = toRespondingTo(selection.destination);
+
+  return JSON.stringify([optionKey, respondingToType, respondingTo, selection.note.trim()]);
+};
 
 /** How one status is recognised across status sets: its name, trimmed and lower-cased. */
 export const commonStatusKey = (status: Pick<StatusesResultData, 'Text'>): string => (status.Text ?? '').trim().toLowerCase();

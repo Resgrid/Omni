@@ -1,4 +1,4 @@
-import { usePersonnelStore, useUnitsStore } from '@resgrid/data';
+import { useCallsStore, usePersonnelStore, useUnitsStore } from '@resgrid/data';
 import { useUnitAlertsByUnit } from '@resgrid/features/unit-status-alerts';
 import { useTranslation } from '@resgrid/i18n';
 import type { PersonnelInfoResultData, UnitInfoResultData } from '@resgrid/models';
@@ -11,6 +11,7 @@ import { useConsoleStore } from '../hooks/use-console-store';
 import { useDashboardViewStore } from '../hooks/use-dashboard-view-store';
 import { usePendingPersonnelIds, usePendingUnitIds } from '../hooks/use-pending-resource-ids';
 import { type ConsoleCallFilter, filterConsolePersonnel, filterConsoleUnits, isPersonOnCall, isUnitOnCall } from '../lib/console-filters';
+import { indexCallsById, unitTransportDestinationMismatch } from '../lib/transport-destination';
 import { PanelFrame, PanelIconButton } from './panel-frame';
 import { PanelSearch } from './panel-search';
 import { ConsolePersonnelRow, ConsoleUnitRow, readPressModifiers } from './resource-rows';
@@ -43,6 +44,9 @@ export const ResourcesPanel: React.FC<ResourcesPanelProps> = ({ callFilter, onSe
   const pendingUnits = usePendingUnitIds();
   const pendingPeople = usePendingPersonnelIds();
   const timers = useUnitAlertsByUnit();
+  // A unit taking a patient somewhere other than its call's destination is flagged here as in the units panel.
+  const calls = useCallsStore((state) => state.calls);
+  const callsById = useMemo(() => indexCallsById(calls), [calls]);
   const [query, setQuery] = useState('');
 
   const rows = useMemo<ResourceRow[]>(() => {
@@ -94,6 +98,7 @@ export const ResourcesPanel: React.FC<ResourcesPanelProps> = ({ callFilter, onSe
             timerLevel={timer?.alert.level}
             timerAcknowledgement={timer?.acknowledgementState}
             timerSeconds={timer?.alert.secondsInStatus}
+            callDestinationMismatch={unitTransportDestinationMismatch(item.unit, callsById)}
           />
         );
       }
@@ -112,6 +117,7 @@ export const ResourcesPanel: React.FC<ResourcesPanelProps> = ({ callFilter, onSe
     },
     [
       callFilter,
+      callsById,
       handleUnitPress,
       isSelectionMode,
       onOpenPersonnel,

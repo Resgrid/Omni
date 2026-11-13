@@ -83,6 +83,26 @@ describe('run cards store — New Call preview', () => {
     }
   });
 
+  it('drops the proposal for the old call details as soon as a new lookup is scheduled, keeping code choices', async () => {
+    // SAFETY: the mocked endpoint returns the v4 envelope the store unwraps; the fixture builds only the fields it reads.
+    jest.mocked(getDispatchRecommendation).mockResolvedValueOnce(ok(recommendation([1], { OutcomeNodeKey: 'old' })) as never);
+    await useRunCardsStore.getState().fetchRecommendation({ priority: 1, type: 'Fire' });
+    useRunCardsStore.getState().setUnitResponseCode(1, 3);
+    jest.useFakeTimers();
+
+    try {
+      useRunCardsStore.getState().fetchRecommendationDebounced({ priority: 2, type: 'Fire' });
+
+      // Before the lookup even starts, nothing from the old proposal can reach the save.
+      expect(useRunCardsStore.getState().recommendation).toBeNull();
+      expect(useRunCardsStore.getState().isLoading).toBe(true);
+      expect(useRunCardsStore.getState().unitResponseCodes).toEqual({ 1: 3 });
+    } finally {
+      useRunCardsStore.getState().clear();
+      jest.useRealTimers();
+    }
+  });
+
   it('drops a superseded answer', async () => {
     let resolveFirst: (value: unknown) => void = () => undefined;
     jest.mocked(getDispatchRecommendation).mockImplementationOnce(() => new Promise((resolve) => (resolveFirst = resolve)) as never);

@@ -566,10 +566,11 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
 
   const linkedContactName = !values.contactId
     ? null
-    : pickedContact?.contactId === values.contactId
-      ? pickedContact.name
-      : storedContactName === REDACTION_VALUE
-        ? t('data_protection.protected_value')
+    : storedContactName === REDACTION_VALUE
+      ? // Withheld as last read (a conceal re-read the call): the name picked while revealed must not stay on screen.
+        t('data_protection.protected_value')
+      : pickedContact?.contactId === values.contactId
+        ? pickedContact.name
         : storedContactName || null;
 
   const attachedProtocols = isEdit ? (detail?.extraData?.Protocols ?? []) : [];

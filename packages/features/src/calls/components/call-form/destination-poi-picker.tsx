@@ -1,6 +1,6 @@
 import { CapabilityFilterChips, DestinationMetrics, PoiAvailabilityBadge } from '@resgrid/features/pois/components/destination-parts';
 import { useNearestDestinations } from '@resgrid/features/pois/hooks/use-nearest-destinations';
-import { collectCapabilityOptions, type DestinationOrigin, rankDestinations, type RankedDestination } from '@resgrid/features/pois/lib/poi-availability';
+import { availabilityBadgeKeys, collectCapabilityOptions, type DestinationOrigin, rankDestinations, type RankedDestination } from '@resgrid/features/pois/lib/poi-availability';
 import { useTranslation } from '@resgrid/i18n';
 import type { PoiResultData } from '@resgrid/models';
 import { FlatList, Input, InputField, InputIcon, InputSlot, Pressable, Text, useThemeColors } from '@resgrid/ui';
@@ -61,12 +61,14 @@ export const DestinationPoiPicker: React.FC<DestinationPoiPickerProps> = ({ isOp
       const label = destinationPoiLabel(item);
       const detail = [item.PoiTypeName, item.Address && item.Address !== label ? item.Address : ''].filter((part) => !!part?.trim()).join(' · ');
       const isSelected = item.PoiId === selectedId;
+      // The row names itself for screen readers, so it also says what its availability badge shows (closed, diversion…).
+      const spoken = [label, detail, ...availabilityBadgeKeys(item, { capabilityId }).map((key) => t(key))].filter((part) => !!part).join(', ');
 
       return (
         <Pressable
           onPress={() => onSelect(item.PoiId)}
           accessibilityRole="button"
-          accessibilityLabel={detail ? `${label}, ${detail}` : label}
+          accessibilityLabel={spoken}
           accessibilityState={{ selected: isSelected }}
           testID={`call-destination-poi-${item.PoiId}`}
           className="flex-row items-center border-b border-outline-100 px-4 py-3"
@@ -94,7 +96,7 @@ export const DestinationPoiPicker: React.FC<DestinationPoiPickerProps> = ({ isOp
         </Pressable>
       );
     },
-    [capabilityId, colors.primary, onSelect, origin, rankedById, selectedId]
+    [capabilityId, colors.primary, onSelect, origin, rankedById, selectedId, t]
   );
 
   return (

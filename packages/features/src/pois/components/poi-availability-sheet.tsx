@@ -1,16 +1,23 @@
+import { formatInTimeZone } from '@resgrid/core/utils/dates';
 import { usePoisStore } from '@resgrid/data';
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import { PoiAvailabilityStatuses, type PoiResultData } from '@resgrid/models';
 import { Button, ButtonText, Checkbox, CheckboxIndicator, CheckboxLabel, CustomBottomSheet, HStack, Pressable, ScrollView, Spinner, Text, Textarea, TextareaInput, useToast, VStack } from '@resgrid/ui';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
-import { availabilityLabelKey, poiAvailabilityStatus, poiCapabilityOptions } from '../lib/poi-availability';
+import { availabilityExpiresAt, availabilityLabelKey, hasCapabilityId, minutesUntil, poiAvailabilityStatus, poiCapabilityOptions, toggleCapabilityId } from '../lib/poi-availability';
 
 /** Core caps a note at 500 characters (PoiAvailability.MaxNoteLength). */
 export const AVAILABILITY_NOTE_MAX = 500;
 
 /** Expiry choices in minutes; null lasts until someone changes it. */
 export const AVAILABILITY_EXPIRY_CHOICES: readonly (number | null)[] = [null, 60, 120, 240, 480, 720, 1440];
+
+/** The expiry choice that keeps the current report's end (offered while it has one). */
+const KEEP_EXPIRY = 'keep';
+
+type ExpiryChoice = number | null | typeof KEEP_EXPIRY;
 
 const STATUSES: readonly PoiAvailabilityStatuses[] = [PoiAvailabilityStatuses.Open, PoiAvailabilityStatuses.Limited, PoiAvailabilityStatuses.Diversion, PoiAvailabilityStatuses.Closed];
 
@@ -29,25 +36,50 @@ export interface PoiAvailabilitySheetProps {
 export const PoiAvailabilitySheet: React.FC<PoiAvailabilitySheetProps> = ({ isOpen, onClose, poi, onSaved }) => {
   const { t } = useTranslation();
   const toast = useToast();
+  const timeZone = useDepartmentTimeZone();
   const capabilities = useMemo(() => poiCapabilityOptions(poi), [poi]);
   const [status, setStatus] = useState<PoiAvailabilityStatuses>(PoiAvailabilityStatuses.Open);
   const [unavailable, setUnavailable] = useState<string[]>([]);
   const [note, setNote] = useState('');
-  const [expiresIn, setExpiresIn] = useState<number | null>(null);
+  const [expiresIn, setExpiresIn] = useState<ExpiryChoice>(null);
+  // When the report being edited lapses (epoch ms), so a save that leaves the expiry alone keeps it; null without one.
+  const [currentExpiry, setCurrentExpiry] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  // The destination this open was started from: a refreshed copy of it (the detail screen re-reads it) keeps the edits.
+  const draftFor = useRef<number | null>(null);
 
   // Each open starts from what the destination reports now.
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      draftFor.current = null;
+
+      return;
+    }
+
+    if (draftFor.current === poi.PoiId) return;
+    draftFor.current = poi.PoiId;
+    const expiresAt = availabilityExpiresAt(poi);
+
     setStatus(poiAvailabilityStatus(poi));
     setUnavailable([...(poi.UnavailableCapabilityIds ?? [])]);
     setNote(poi.AvailabilityNote ?? '');
-    setExpiresIn(null);
+    setCurrentExpiry(expiresAt);
+    setExpiresIn(expiresAt === null ? null : KEEP_EXPIRY);
     setIsSaving(false);
   }, [isOpen, poi]);
 
   const isOpenStatus = status === PoiAvailabilityStatuses.Open;
-  const toggle = (id: string) => setUnavailable((current) => (current.includes(id) ? current.filter((value) => value !== id) : [...current, id]));
+  const toggle = (id: string) => setUnavailable((current) => toggleCapabilityId(current, id));
+  const expiryChoices: readonly ExpiryChoice[] = currentExpiry === null ? AVAILABILITY_EXPIRY_CHOICES : [KEEP_EXPIRY, ...AVAILABILITY_EXPIRY_CHOICES];
+
+  const expiryLabel = (choice: ExpiryChoice): string => {
+    if (choice === KEEP_EXPIRY) return t('pois.availability.until', { time: currentExpiry === null ? '' : formatInTimeZone(new Date(currentExpiry), timeZone) });
+
+    return choice === null ? t('pois.availability.expires_never') : t('pois.availability.expires_hours', { count: choice / 60 });
+  };
+
+  // Leaving the expiry alone sends what is left of it: a note or capability change does not make the report last forever.
+  const expiresInMinutes = (): number | null => (expiresIn === KEEP_EXPIRY ? (currentExpiry === null ? null : minutesUntil(currentExpiry)) : expiresIn);
 
   const save = async () => {
     if (isSaving) return;
@@ -58,7 +90,7 @@ export const PoiAvailabilitySheet: React.FC<PoiAvailabilitySheetProps> = ({ isOp
       Status: status,
       UnavailableCapabilityIds: isOpenStatus ? [] : unavailable,
       Note: isOpenStatus ? '' : note.trim().slice(0, AVAILABILITY_NOTE_MAX),
-      ExpiresInMinutes: isOpenStatus ? null : expiresIn,
+      ExpiresInMinutes: isOpenStatus ? null : expiresInMinutes(),
     });
 
     setIsSaving(false);
@@ -104,7 +136,7 @@ export const PoiAvailabilitySheet: React.FC<PoiAvailabilitySheetProps> = ({ isOp
                   <Checkbox
                     key={capability.id}
                     value={capability.id}
-                    isChecked={unavailable.some((id) => id.toLowerCase() === capability.id.toLowerCase())}
+                    isChecked={hasCapabilityId(unavailable, capability.id)}
                     onChange={() => toggle(capability.id)}
                     aria-label={capability.name}
                     testID={`poi-availability-capability-${capability.id}`}
@@ -130,18 +162,16 @@ export const PoiAvailabilitySheet: React.FC<PoiAvailabilitySheetProps> = ({ isOp
                 </Textarea>
                 <Text className="text-sm font-semibold text-typography-700">{t('pois.availability.expires')}</Text>
                 <HStack space="sm" className="flex-wrap">
-                  {AVAILABILITY_EXPIRY_CHOICES.map((minutes) => (
+                  {expiryChoices.map((choice) => (
                     <Pressable
-                      key={minutes ?? 'never'}
-                      onPress={() => setExpiresIn(minutes)}
+                      key={choice ?? 'never'}
+                      onPress={() => setExpiresIn(choice)}
                       accessibilityRole="radio"
-                      accessibilityState={{ selected: expiresIn === minutes }}
-                      testID={`poi-availability-expires-${minutes ?? 'never'}`}
-                      className={`mb-2 rounded-full px-3 py-1.5 ${expiresIn === minutes ? 'bg-primary-500' : 'bg-background-100'}`}
+                      accessibilityState={{ selected: expiresIn === choice }}
+                      testID={`poi-availability-expires-${choice ?? 'never'}`}
+                      className={`mb-2 rounded-full px-3 py-1.5 ${expiresIn === choice ? 'bg-primary-500' : 'bg-background-100'}`}
                     >
-                      <Text className={`text-sm ${expiresIn === minutes ? 'text-typography-0' : 'text-typography-700'}`}>
-                        {minutes === null ? t('pois.availability.expires_never') : t('pois.availability.expires_hours', { count: minutes / 60 })}
-                      </Text>
+                      <Text className={`text-sm ${expiresIn === choice ? 'text-typography-0' : 'text-typography-700'}`}>{expiryLabel(choice)}</Text>
                     </Pressable>
                   ))}
                 </HStack>

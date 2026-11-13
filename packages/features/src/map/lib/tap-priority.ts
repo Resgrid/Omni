@@ -12,38 +12,43 @@ export interface TapPriority {
   whenUnclaimed: (open: () => void) => void;
   /**
    * For a lookup that answers later (a rendered-feature query): starts `lookup` after the tap's handlers unless a pin
-   * claimed the tap, and runs `open` with its answer only if no pin was pressed in the meantime. A failed lookup opens
-   * nothing.
+   * claimed the tap, and runs `open` with its answer only if nothing newer was selected in the meantime (a pin press, a
+   * feature opened, or a later lookup started). A failed lookup opens nothing.
    */
   whenUnclaimedAsync: <T>(lookup: () => Promise<T>, open: (value: T) => void) => void;
 }
 
 export const createTapPriority = (): TapPriority => {
   let claimed = false;
-  // Bumped by every pin press, so an answer that arrives after one is dropped.
-  let pinPresses = 0;
+  // Bumped by every selection (a pin press, a feature opened, a lookup started): a lookup's answer opens only while its
+  // own selection is still the newest, so a slower, older lookup never replaces a newer panel.
+  let selection = 0;
 
   return {
     claimForPin: () => {
       claimed = true;
-      pinPresses += 1;
+      selection += 1;
+      // The claim covers this tap only: it ends with the macrotask the tap's handlers ran in.
       setTimeout(() => {
         claimed = false;
       }, 0);
     },
     whenUnclaimed: (open) => {
       queueMicrotask(() => {
-        if (!claimed) open();
+        if (claimed) return;
+        selection += 1;
+        open();
       });
     },
     whenUnclaimedAsync: (lookup, open) => {
       queueMicrotask(() => {
         if (claimed) return;
-        const startedAt = pinPresses;
+        selection += 1;
+        const startedAt = selection;
 
         lookup().then(
           (value) => {
-            if (pinPresses === startedAt) open(value);
+            if (selection === startedAt) open(value);
           },
           () => undefined
         );

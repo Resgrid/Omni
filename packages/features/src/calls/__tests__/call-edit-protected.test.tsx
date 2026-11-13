@@ -1,7 +1,7 @@
 import './test-setup';
 
 import { useNetInfo } from '@react-native-community/netinfo';
-import { useCallDetailStore, useCallsStore } from '@resgrid/data';
+import { useCallDetailStore, useCallsStore, useContactsStore } from '@resgrid/data';
 import type { CallResultData, NewCallFieldRuleData } from '@resgrid/models';
 import { useToastStore } from '@resgrid/ui';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
@@ -161,5 +161,26 @@ describe('CallFormScreen: edit with withheld fields', () => {
     await waitFor(() => expect(screen.getByTestId('call-form-name-protected')).toBeTruthy());
     await act(async () => fireEvent.press(screen.getByTestId('call-form-submit')));
     expect(mockUpdateCall).toHaveBeenCalledWith(expect.objectContaining({ name: 'REDACTED', address: '' }));
+  });
+
+  it('names the call’s contact as protected after a conceal, even when it was picked while revealed', async () => {
+    mockRules = [{ Key: 'primaryContact', Visible: true, Required: false }];
+    const contact = (Name: string) => [{ ContactId: 'c9', Name, ContactType: 1, CallContactType: 0, HasPreplan: false, AlertNoteCount: 0, HazardCount: 0 }];
+    useContactsStore.setState({
+      // SAFETY: the picker reads only these fields of a contact record.
+      contacts: [{ ContactId: 'c9', CompanyName: 'Acme Corp', ContactType: 1 } as never],
+      fetchContacts: jest.fn(async () => undefined),
+    });
+    setDetail({ ...revealedCall(), Contacts: contact('Acme Corp') });
+
+    await render(<CallFormScreen mode="edit" callId="42" />);
+    await waitFor(() => expect(screen.getByTestId('call-form-linked-contact')).toHaveTextContent('calls.contact_picker.linked:Acme Corp'));
+    await fireEvent.press(screen.getByTestId('call-form-contact-picker'));
+    await fireEvent.press(screen.getByTestId('call-contact-c9', { includeHiddenElements: true }));
+    expect(screen.getByTestId('call-form-linked-contact')).toHaveTextContent('calls.contact_picker.linked:Acme Corp');
+
+    await act(async () => setDetail({ ...withheldCall(), Contacts: contact('REDACTED') }));
+    await waitFor(() => expect(screen.getByTestId('call-form-linked-contact')).toHaveTextContent('calls.contact_picker.linked:data_protection.protected_value'));
+    expect(screen.queryByText(/Acme Corp/)).toBeNull();
   });
 });

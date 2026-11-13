@@ -263,6 +263,9 @@ useAwaitingResourcesStore.subscribe((state, previous) => {
   if (state.calls !== previous.calls) useBadgeCountsStore.getState().setAwaitingResources(state.calls.length);
 });
 
+// Calls restored before the subscription existed (a module loaded after the storage was set rehydrates at once) count too.
+useBadgeCountsStore.getState().setAwaitingResources(useAwaitingResourcesStore.getState().calls.length);
+
 /** The busy key for dispatching a unit to a waiting call (button spinners). */
 export const awaitingDispatchKey = (callId: number, unitId: number): string => `dispatch:${callId}:${unitId}`;
 /** The busy key for dismissing a requirement. */

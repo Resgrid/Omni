@@ -9,7 +9,7 @@ import { buildAddResourcesRequest } from '../components/add-resources-sheet';
 import { readPressModifiers, toPressModifiers } from '../components/resource-rows';
 import { useConsoleStore } from '../hooks/use-console-store';
 import { DASHBOARD_VIEW_STORE_NAME, selectCardCollapsed, useDashboardViewStore } from '../hooks/use-dashboard-view-store';
-import { commonStatusKey, destinationForUnitStatus, mergeStatusDetails, resolveCommonUnitStatusOptions } from '../lib/bulk-status';
+import { bulkStatusAttemptKey, commonStatusKey, destinationForUnitStatus, mergeStatusDetails, resolveCommonUnitStatusOptions } from '../lib/bulk-status';
 import { filterConsoleCalls, filterConsolePersonnel, filterConsoleUnits, getUnitCrew, isPersonOnCall, isUnitOnCall, plainText } from '../lib/console-filters';
 import { resolveConsoleLayout } from '../lib/console-layout';
 import { computeConsoleStats } from '../lib/console-stats';
@@ -193,6 +193,19 @@ describe('layout and bulk statuses', () => {
     expect(destinationForUnitStatus({ Detail: 0 }, poi, call, true)).toEqual({ type: 'call', call });
     expect(destinationForUnitStatus({ Detail: 0 }, callDestination, call, true)).toBe(callDestination);
     expect(destinationForUnitStatus({ Detail: 0 }, poi, null, true)).toEqual({ type: 'none' });
+  });
+
+  it('retries only the refused units when the same status, destination and note are sent again', () => {
+    const poi: StatusDestination = { type: 'poi', poi: Object.assign(new PoiResultData(), { PoiId: 3, Name: 'AZ Oudenaarde' }) };
+    const otherPoi: StatusDestination = { type: 'poi', poi: Object.assign(new PoiResultData(), { PoiId: 4, Name: 'UZ Gent' }) };
+    const first = bulkStatusAttemptKey('transporting', { destination: poi, note: 'Two patients ' });
+
+    expect(bulkStatusAttemptKey('transporting', { destination: poi, note: 'Two patients' })).toBe(first);
+    // A changed destination, note or status goes to every unit again.
+    expect(bulkStatusAttemptKey('transporting', { destination: otherPoi, note: 'Two patients' })).not.toBe(first);
+    expect(bulkStatusAttemptKey('transporting', { destination: poi, note: 'One patient' })).not.toBe(first);
+    expect(bulkStatusAttemptKey('transporting', { destination: { type: 'none' }, note: 'Two patients' })).not.toBe(first);
+    expect(bulkStatusAttemptKey('at hospital', { destination: poi, note: 'Two patients' })).not.toBe(first);
   });
 
   it('builds an additive EditCall request for add-resources', () => {

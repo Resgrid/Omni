@@ -73,6 +73,34 @@ describe('tap priority for lookups that answer later', () => {
     expect(open).not.toHaveBeenCalled();
   });
 
+  it('drops an older lookup that answers after a newer tap opened its own answer', async () => {
+    const priority = createTapPriority();
+    let answerFirst: (value: string) => void = () => undefined;
+    const open = jest.fn();
+    priority.whenUnclaimedAsync(() => new Promise<string>((resolve) => (answerFirst = resolve)), open);
+    await nextMacrotask();
+    priority.whenUnclaimedAsync(async () => 'Stage B', open);
+    await nextMacrotask();
+    answerFirst('Stage A');
+    await nextMacrotask();
+    expect(open.mock.calls).toEqual([['Stage B']]);
+  });
+
+  it('drops a lookup that answers after a layer feature was opened on a later tap', async () => {
+    const priority = createTapPriority();
+    let answer: (value: string) => void = () => undefined;
+    const openLookup = jest.fn();
+    const openFeature = jest.fn();
+    priority.whenUnclaimedAsync(() => new Promise<string>((resolve) => (answer = resolve)), openLookup);
+    await nextMacrotask();
+    priority.whenUnclaimed(openFeature);
+    await nextMacrotask();
+    answer('Stage A');
+    await nextMacrotask();
+    expect(openFeature).toHaveBeenCalledTimes(1);
+    expect(openLookup).not.toHaveBeenCalled();
+  });
+
   it('opens nothing when the lookup fails', async () => {
     const priority = createTapPriority();
     const open = jest.fn();

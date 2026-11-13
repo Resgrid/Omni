@@ -7,6 +7,11 @@ describe('map colours', () => {
     for (const value of ['#f00', '#ff0000', '#FF000080', '#f008', ' #12ab9f ', 'rgb(255, 0, 0)', 'rgba(255,0,0,0.5)', 'hsl(120, 50%, 40%)', 'rgb(255 0 0 / 50%)']) expect(isMapColor(value)).toBe(true);
 
     for (const value of ['', '   ', 'red', '#ff000', '#gg0000', 'ff0000', 'url(javascript:x)', 'rgb(1,2)', null, undefined]) expect(isMapColor(value)).toBe(false);
+
+    // Every component needs a digit: MapLibre reads a bare sign or dot as NaN and the feature would draw black.
+    for (const value of ['rgb(+,0,0)', 'rgb(0,-,0)', 'rgba(0,0,0,.)', 'hsl(%, 50%, 40%)']) expect(isMapColor(value)).toBe(false);
+
+    for (const value of ['rgb(0,0,0,0)', 'rgba(-1, +2, 3.5, .5)', 'hsl(120 50% 40% / .25)']) expect(isMapColor(value)).toBe(true);
     expect(toMapColor(' #12ab9f ')).toBe('#12ab9f');
     expect(toMapColor('nope')).toBeNull();
   });

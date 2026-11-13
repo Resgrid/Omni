@@ -11,6 +11,7 @@ import {
   offeredRecipientSelection,
   pickedCount,
   pickedIds,
+  recipientEntrySpokenLabel,
   type RecipientPickerBadge,
   type RecipientPickerChip,
   type RecipientPickerSection,
@@ -173,7 +174,7 @@ export function RecipientPickerModal<K extends string>({
                 {section.entries.map((entry) => {
                   const checked = picked.includes(entry.id);
                   const entryTestID = `${optionTestID}-${section.key}-${entry.id}`;
-                  const spoken = [entry.name, ...(entry.badges ?? []).map((badge) => badge.label), entry.metric, entry.detail].filter(Boolean).join(', ');
+                  const spoken = recipientEntrySpokenLabel(entry);
 
                   return (
                     <Pressable

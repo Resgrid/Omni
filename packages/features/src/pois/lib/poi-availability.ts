@@ -3,6 +3,7 @@
  * take a patient now, and how destinations rank from a point (a unit's position or a call's location). Shared by the status
  * destination list, the call form's destination picker and the POI screens.
  */
+import { parseUtcMs } from '@resgrid/core/utils/dates';
 import { type NearestDestinationResultData, PoiAvailabilityStatuses, type PoiResultData } from '@resgrid/models';
 
 /** A capability as a filter option: its id (or name on servers that send names only) and its name. */
@@ -13,22 +14,40 @@ export interface PoiCapabilityOption {
 
 const sameId = (a: string, b: string): boolean => a.trim().toLowerCase() === b.trim().toLowerCase();
 
+/** True when the list holds the capability id (ids compare without case or surrounding spaces). */
+export const hasCapabilityId = (ids: readonly string[], id: string): boolean => ids.some((value) => sameId(value, id));
+
+/** The list with the capability id removed when it holds it (in any case), else added. */
+export const toggleCapabilityId = (ids: readonly string[], id: string): string[] => (hasCapabilityId(ids, id) ? ids.filter((value) => !sameId(value, id)) : [...ids, id]);
+
 /** The destination's current availability: Open when it has none, an unknown value, or a report that has lapsed. */
 export const poiAvailabilityStatus = (poi: Pick<PoiResultData, 'AvailabilityStatus' | 'AvailabilityExpiresOnUtc'> | null | undefined, now: number = Date.now()): PoiAvailabilityStatuses => {
   const status = Number(poi?.AvailabilityStatus ?? PoiAvailabilityStatuses.Open);
 
   if (status !== PoiAvailabilityStatuses.Limited && status !== PoiAvailabilityStatuses.Diversion && status !== PoiAvailabilityStatuses.Closed) return PoiAvailabilityStatuses.Open;
 
-  const expires = poi?.AvailabilityExpiresOnUtc ? Date.parse(poi.AvailabilityExpiresOnUtc) : NaN;
+  // `*Utc` fields can arrive without a zone designator: the shared parser reads them as UTC, not device-local time.
+  const expires = parseUtcMs(poi?.AvailabilityExpiresOnUtc) ?? NaN;
 
   return Number.isFinite(expires) && expires <= now ? PoiAvailabilityStatuses.Open : status;
 };
+
+/** When the destination's current report lapses (epoch ms): null when it is open, has no end, or has already lapsed. */
+export const availabilityExpiresAt = (poi: Pick<PoiResultData, 'AvailabilityStatus' | 'AvailabilityExpiresOnUtc'> | null | undefined, now: number = Date.now()): number | null => {
+  if (poiAvailabilityStatus(poi, now) === PoiAvailabilityStatuses.Open) return null;
+  const expires = parseUtcMs(poi?.AvailabilityExpiresOnUtc);
+
+  return expires !== null && expires > now ? expires : null;
+};
+
+/** Whole minutes left until `expiresAt` (at least 1), to send a report again without changing when it lapses. */
+export const minutesUntil = (expiresAt: number, now: number = Date.now()): number => Math.max(1, Math.ceil((expiresAt - now) / 60000));
 
 /** True when the destination reports this capability unavailable right now. */
 export const isPoiCapabilityUnavailable = (poi: PoiResultData | null | undefined, capabilityId: string | null | undefined, now: number = Date.now()): boolean => {
   if (!poi || !capabilityId || poiAvailabilityStatus(poi, now) === PoiAvailabilityStatuses.Open) return false;
 
-  return (poi.UnavailableCapabilityIds ?? []).some((id) => sameId(id, capabilityId));
+  return hasCapabilityId(poi.UnavailableCapabilityIds ?? [], capabilityId);
 };
 
 /** True when it can take a patient (needing the capability, when one is given) now: not closed, the capability not down. */
@@ -78,6 +97,20 @@ export const availabilityLabelKey = (status: PoiAvailabilityStatuses): string =>
     default:
       return 'pois.availability.open';
   }
+};
+
+/**
+ * The i18n keys of what a destination's availability badge says, in order: its status (none for an open destination unless
+ * `showOpen`), then "Unavailable now" when the chosen capability is down. A row that names itself for screen readers adds
+ * these, so the badge's warning is heard too.
+ */
+export const availabilityBadgeKeys = (poi: PoiResultData, options: { capabilityId?: string | null; showOpen?: boolean; now?: number } = {}): string[] => {
+  const now = options.now ?? Date.now();
+  const status = poiAvailabilityStatus(poi, now);
+
+  if (status === PoiAvailabilityStatuses.Open && !options.showOpen) return [];
+
+  return [availabilityLabelKey(status), ...(isPoiCapabilityUnavailable(poi, options.capabilityId, now) ? ['pois.availability.capability_unavailable'] : [])];
 };
 
 const EARTH_RADIUS_M = 6371000;
@@ -163,7 +196,11 @@ export const rankDestinations = (
     rankIndex.set(entry.Poi.PoiId, index);
     const row = rows.find((candidate) => candidate.poi.PoiId === entry.Poi?.PoiId);
 
-    if (row && entry.TravelSeconds >= 0) row.travelSeconds = entry.TravelSeconds;
+    if (!row) return;
+
+    if (entry.TravelSeconds >= 0) row.travelSeconds = entry.TravelSeconds;
+    // The server ordered the ranking by what it could provide when it answered: Nearest follows the same answer.
+    row.canProvide = entry.CanProvide;
   });
 
   const ordered = [...rows].sort((a, b) => {

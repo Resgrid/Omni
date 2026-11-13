@@ -11,7 +11,9 @@ import { z } from 'zod';
 export const RESOLVED_COLOR_PROPERTY = 'rgColor';
 
 const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
-const FUNCTIONAL = /^(?:rgba?|hsla?)\(\s*[0-9.%+-]+(?:\s*[,\s/]\s*[0-9.%+-]+){2,3}\s*\)$/i;
+
+// Each component is a signed number with at least one digit (and an optional %): a bare sign or dot is not a number.
+const FUNCTIONAL = /^(?:rgba?|hsla?)\(\s*[+-]?(?:\d+(?:\.\d*)?|\.\d+)%?(?:\s*[,\s/]\s*[+-]?(?:\d+(?:\.\d*)?|\.\d+)%?){2,3}\s*\)$/i;
 
 /** True for a colour MapLibre reads the same on native and web: hex (3, 4, 6, 8 digits) or rgb(a) / hsl(a). */
 export const isMapColor = (value: string | null | undefined): value is string => !!value && (HEX.test(value.trim()) || FUNCTIONAL.test(value.trim()));
