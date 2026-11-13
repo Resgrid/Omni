@@ -6,6 +6,7 @@ import React from 'react';
 import { StyleSheet } from 'react-native';
 
 import { poiLabel } from '../lib/poi-filters';
+import { PoiAvailabilityBadge } from './destination-parts';
 
 export interface PoiCardProps {
   poi: PoiResultData;
@@ -41,6 +42,7 @@ export const PoiCard: React.FC<PoiCardProps> = React.memo(({ poi, onPress }) => 
               ))}
             </HStack>
           ) : null}
+          <PoiAvailabilityBadge poi={poi} testID={`poi-card-${poi.PoiId}-availability`} />
         </VStack>
       </HStack>
     </Pressable>

@@ -59,6 +59,8 @@ const QaDepartmentSchema = z.object({
   otherPeople: z.number(),
   groups: z.record(z.string(), z.number()),
   units: z.record(z.string(), z.number()),
+  /** POI ids by name (seeders before destination capabilities, 2026-11-13, have none). */
+  pois: z.record(z.string(), z.number()).default({}),
   calls: z.record(z.string(), z.object({ id: z.number(), name: z.string(), state: z.string() })),
   flags: z.object({
     profile: z.enum(['server', 'all-on', 'all-off']),
@@ -180,6 +182,9 @@ interface RouteParameter {
   value: (department: QaDepartment) => string | number | undefined;
 }
 
+/** The baseline destination seeded on diversion, offering Cath Lab (reported unavailable) and Stroke Center (Core: Docker/qa-departments). */
+export const QA_DIVERSION_HOSPITAL = "St. John's (QA)";
+
 const PARAMETERS: readonly RouteParameter[] = [
   { pattern: '/call/[id]', value: (d) => d.calls['structure-fire']?.id },
   { pattern: '/call/[id]/edit', value: (d) => d.calls['structure-fire']?.id },
@@ -187,6 +192,8 @@ const PARAMETERS: readonly RouteParameter[] = [
   { pattern: '/units/[id]', value: (d) => d.units['Engine 1'] },
   { pattern: '/unit/[id]', value: (d) => d.units['Engine 1'] },
   { pattern: '/personnel/[id]', value: (d) => persona(d, 'member')?.userId },
+  // The baseline's hospital on diversion with a cath lab down: the detail screen shows its capabilities and availability.
+  { pattern: '/poi/[id]', value: (d) => d.pois?.[QA_DIVERSION_HOSPITAL] },
 ];
 
 export function resolveRoute(pattern: string, department: QaDepartment): QaRoute {

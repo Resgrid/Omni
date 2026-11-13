@@ -1,5 +1,5 @@
 import { useTerm } from '@resgrid/auth';
-import { useUnitsStore } from '@resgrid/data';
+import { useCallsStore, useUnitsStore } from '@resgrid/data';
 import { useUnitAlertsByUnit } from '@resgrid/features/unit-status-alerts';
 import { useTranslation } from '@resgrid/i18n';
 import type { UnitInfoResultData } from '@resgrid/models';
@@ -13,9 +13,10 @@ import { useDashboardViewStore } from '../hooks/use-dashboard-view-store';
 import { usePendingUnitIds } from '../hooks/use-pending-resource-ids';
 import { type ConsoleCallFilter, filterConsoleUnits, isUnitOnCall } from '../lib/console-filters';
 import { isUnitAvailable } from '../lib/console-stats';
+import { indexCallsById, unitTransportDestinationMismatch } from '../lib/transport-destination';
 import { PanelFrame, PanelIconButton } from './panel-frame';
 import { PanelSearch } from './panel-search';
-import { ConsoleUnitRow, isMultiSelectClick } from './resource-rows';
+import { ConsoleUnitRow, readPressModifiers } from './resource-rows';
 
 export interface UnitsPanelProps {
   callFilter: ConsoleCallFilter | null;
@@ -32,6 +33,7 @@ export interface UnitsPanelProps {
 /** Bar under the search while multi-select is on: count, select all, clear, done. */
 const SelectionBar: React.FC<{ count: number; onSelectAll: () => void }> = ({ count, onSelectAll }) => {
   const { t } = useTranslation();
+
   return (
     <HStack space="sm" className="items-center justify-between border-b border-primary-200 bg-primary-50 px-2 py-1.5" testID="unit-selection-bar">
       <Text className="flex-1 text-xs text-primary-700" numberOfLines={1}>
@@ -54,8 +56,8 @@ const SelectionBar: React.FC<{ count: number; onSelectAll: () => void }> = ({ co
 
 /**
  * The console's units (Dispatch baseline): search, "available only", filtered to the call's units while the console is
- * filtered, crew seats and status. Multi-select (header toggle, long press, Ctrl/Cmd-click on web) builds a group for
- * one status change (an ambulance and the MUG following it, all apparatus returning).
+ * filtered, crew seats and status. Multi-select (header toggle, long press, Ctrl/Cmd-click or Shift-click for a range on
+ * web) builds a group for one status change (an ambulance and the MUG following it, all apparatus returning).
  */
 export const UnitsPanel: React.FC<UnitsPanelProps> = ({ callFilter, onSelectUnit, onSetStatusForCall, onOpenUnit, flex, maxHeight }) => {
   const { t } = useTranslation();
@@ -68,24 +70,31 @@ export const UnitsPanel: React.FC<UnitsPanelProps> = ({ callFilter, onSelectUnit
   const selectedUnitIds = useConsoleStore((state) => state.selectedUnitIds);
   const pendingUnitIds = usePendingUnitIds();
   const timers = useUnitAlertsByUnit();
+  const calls = useCallsStore((state) => state.calls);
+  const callsById = useMemo(() => indexCallsById(calls), [calls]);
   const [query, setQuery] = useState('');
 
   const visible = useMemo(() => filterConsoleUnits(units, { query, availableOnly, callFilter }), [availableOnly, callFilter, query, units]);
   const selectedSet = useMemo(() => new Set(selectedUnitIds), [selectedUnitIds]);
   const availableCount = useMemo(() => visible.filter(isUnitAvailable).length, [visible]);
+  const visibleIds = useMemo(() => visible.map((unit) => unit.UnitId), [visible]);
 
   const handlePress = useCallback(
     (unitId: string, event?: GestureResponderEvent) => {
       const store = useConsoleStore.getState();
-      if (store.isSelectionMode) store.toggleUnitInSelection(unitId);
-      else if (isMultiSelectClick(event)) store.startSelection([unitId]);
+      const modifiers = readPressModifiers(event);
+
+      if (modifiers.isRangeSelect) store.selectUnitRange(visibleIds, unitId);
+      else if (store.isSelectionMode) store.toggleUnitInSelection(unitId);
+      else if (modifiers.isMultiSelect) store.startSelection([unitId]);
       else onSelectUnit(unitId);
     },
-    [onSelectUnit]
+    [onSelectUnit, visibleIds]
   );
 
   const handleLongPress = useCallback((unitId: string) => {
     const store = useConsoleStore.getState();
+
     if (store.isSelectionMode) store.toggleUnitInSelection(unitId);
     else store.startSelection([unitId]);
   }, []);
@@ -108,10 +117,11 @@ export const UnitsPanel: React.FC<UnitsPanelProps> = ({ callFilter, onSelectUnit
           timerLevel={timer?.alert.level}
           timerAcknowledgement={timer?.acknowledgementState}
           timerSeconds={timer?.alert.secondsInStatus}
+          callDestinationMismatch={unitTransportDestinationMismatch(item, callsById)}
         />
       );
     },
-    [callFilter, handleLongPress, handlePress, isSelectionMode, onOpenUnit, onSetStatusForCall, pendingUnitIds, selectedSet, selectedUnitId, timers]
+    [callFilter, callsById, handleLongPress, handlePress, isSelectionMode, onOpenUnit, onSetStatusForCall, pendingUnitIds, selectedSet, selectedUnitId, timers]
   );
 
   return (

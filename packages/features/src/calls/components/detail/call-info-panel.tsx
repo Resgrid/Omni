@@ -18,7 +18,7 @@ export interface CallInfoPanelProps {
 }
 
 /**
- * Info tab (Dispatch): priority, alarm level once escalated, type, location, destination and its type, contact,
+ * Info tab (Dispatch): priority, alarm level once escalated, type, location, destination and its type, map page, contact,
  * references, times (with the scheduled dispatch time while the call waits for it), the full nature and the call's note (HtmlRenderer).
  */
 export const CallInfoPanel: React.FC<CallInfoPanelProps> = ({ call }) => {
@@ -42,6 +42,7 @@ export const CallInfoPanel: React.FC<CallInfoPanelProps> = ({ call }) => {
       <DetailRow label={t('calls.what3words')} value={call.What3Words} isProtected={redacted(ProtectedFieldIds.callWhat3Words, call.What3Words)} />
       <DetailRow label={t('call_detail.destination')} value={destination} />
       <DetailRow label={t('call_detail.destination_type')} value={call.DestinationTypeName} />
+      <DetailRow label={t('calls.map_page')} value={call.MapPage} testID="call-info-map-page" />
       <DetailRow label={t('call_detail.contact_name')} value={call.ContactName} isProtected={redacted(ProtectedFieldIds.callContactName, call.ContactName)} />
       <DetailRow label={t('call_detail.contact_info')} value={call.ContactInfo} isProtected={redacted(ProtectedFieldIds.callContactNumber, call.ContactInfo)} />
       <DetailRow label={t('calls.incident_id')} value={call.IncidentId} />

@@ -34,7 +34,7 @@ jest.mock('@resgrid/maps', () => {
     RouteLine: ({ line }: { line: unknown[] | null }) => mockReact.createElement(Text, { testID: 'mock-route-line' }, String(line?.length ?? 0)),
     UnitLocationMarker: () => mockReact.createElement(Text, { testID: 'mock-vehicle' }, 'vehicle'),
     TrafficLayer: () => mockReact.createElement(Text, { testID: 'mock-traffic' }, 'traffic'),
-    useMapTraffic: () => ({ available: true, tileUrl: 'https://api.test/traffic/{z}/{x}/{y}.pbf', refreshSeconds: 300 }),
+    useMapTraffic: () => ({ available: true, tileUrl: 'https://api.test/traffic/{z}/{x}/{y}.pbf', type: 'vector', refreshSeconds: 300 }),
     useMapRouting: () => ({ provider: 'valhalla', supportsTraffic: false, supportsIncidents: false, supportsVoice: true, navigationAvailable: true }),
   };
 });

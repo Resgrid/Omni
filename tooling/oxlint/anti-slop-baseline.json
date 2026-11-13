@@ -1585,9 +1585,6 @@
   "packages/data/src/personnel/personnel-store.ts": {
     "anti-slop/require-readable-spacing": 2
   },
-  "packages/data/src/pois/pois-store.ts": {
-    "anti-slop/require-readable-spacing": 5
-  },
   "packages/data/src/protocols/protocols-store.ts": {
     "anti-slop/require-readable-spacing": 5
   },
@@ -2497,8 +2494,7 @@
   },
   "packages/features/src/dispatch-console/__tests__/console-lib.test.ts": {
     "anti-slop/no-unsafe-dictionary-type": 2,
-    "anti-slop/require-readable-spacing": 3,
-    "anti-slop/require-safety-comment-for-type-assertion": 5
+    "anti-slop/require-safety-comment-for-type-assertion": 4
   },
   "packages/features/src/dispatch-console/__tests__/console-map-traffic.test.tsx": {
     "anti-slop/require-readable-spacing": 1
@@ -2522,8 +2518,7 @@
     "anti-slop/require-safety-comment-for-type-assertion": 3
   },
   "packages/features/src/dispatch-console/components/console-status-sheets.tsx": {
-    "anti-slop/no-known-value-widening": 1,
-    "anti-slop/require-readable-spacing": 10
+    "anti-slop/no-known-value-widening": 1
   },
   "packages/features/src/dispatch-console/components/map-panel.tsx": {
     "anti-slop/require-readable-spacing": 2
@@ -2534,23 +2529,12 @@
   "packages/features/src/dispatch-console/components/panel-search.tsx": {
     "anti-slop/require-readable-spacing": 1
   },
-  "packages/features/src/dispatch-console/components/resource-rows.tsx": {
-    "anti-slop/no-chained-type-assertions": 1,
-    "anti-slop/require-safety-comment-for-type-assertion": 2
-  },
-  "packages/features/src/dispatch-console/components/resources-panel.tsx": {
-    "anti-slop/require-readable-spacing": 5
-  },
-  "packages/features/src/dispatch-console/components/units-panel.tsx": {
-    "anti-slop/require-readable-spacing": 3
-  },
   "packages/features/src/dispatch-console/hooks/use-console-data.ts": {
     "anti-slop/no-known-value-widening": 1,
     "anti-slop/require-readable-spacing": 2
   },
   "packages/features/src/dispatch-console/hooks/use-console-store.ts": {
     "anti-slop/no-conditional-empty-object-spread": 2,
-    "anti-slop/require-readable-spacing": 12,
     "anti-slop/require-safety-comment-for-type-assertion": 2
   },
   "packages/features/src/dispatch-console/hooks/use-pending-resource-ids.ts": {
@@ -2561,10 +2545,6 @@
   },
   "packages/features/src/dispatch-console/index.ts": {
     "anti-slop/require-readable-spacing": 28
-  },
-  "packages/features/src/dispatch-console/lib/bulk-status.ts": {
-    "anti-slop/require-readable-spacing": 7,
-    "anti-slop/require-safety-comment-for-type-assertion": 1
   },
   "packages/features/src/dispatch-console/lib/console-filters.ts": {
     "anti-slop/require-readable-spacing": 14
@@ -2798,7 +2778,7 @@
     "anti-slop/no-known-value-widening": 1,
     "anti-slop/no-shape-in-symbol-names": 5,
     "anti-slop/no-unknown-parameters": 2,
-    "anti-slop/require-readable-spacing": 5
+    "anti-slop/require-readable-spacing": 4
   },
   "packages/features/src/map/components/active-route-overlay.tsx": {
     "anti-slop/no-shape-in-symbol-names": 20,
@@ -3047,7 +3027,7 @@
     "anti-slop/require-readable-spacing": 1
   },
   "packages/features/src/pois/index.ts": {
-    "anti-slop/require-readable-spacing": 6
+    "anti-slop/require-readable-spacing": 10
   },
   "packages/features/src/pois/lib/poi-filters.ts": {
     "anti-slop/no-runtime-typeof": 1,
@@ -3187,7 +3167,7 @@
     "anti-slop/require-readable-spacing": 3
   },
   "packages/features/src/runcards/components/run-card-recommendation.tsx": {
-    "anti-slop/require-readable-spacing": 5
+    "anti-slop/require-readable-spacing": 2
   },
   "packages/features/src/runcards/hooks/use-add-resources-recommendation.ts": {
     "anti-slop/require-readable-spacing": 5
@@ -3204,13 +3184,12 @@
   },
   "packages/features/src/runcards/lib/run-card-conditions.ts": {
     "anti-slop/no-conditional-empty-object-spread": 2,
-    "anti-slop/no-runtime-typeof": 2,
-    "anti-slop/require-readable-spacing": 13
+    "anti-slop/no-runtime-typeof": 1,
+    "anti-slop/require-readable-spacing": 12
   },
   "packages/features/src/runcards/lib/run-cards.ts": {
     "anti-slop/no-known-value-widening": 2,
-    "anti-slop/no-runtime-typeof": 2,
-    "anti-slop/require-readable-spacing": 6
+    "anti-slop/require-readable-spacing": 4
   },
   "packages/features/src/settings/__tests__/app-updates-section.test.tsx": {
     "anti-slop/require-readable-spacing": 7,
@@ -3990,7 +3969,6 @@
   },
   "packages/maps/src/__tests__/traffic.test.tsx": {
     "anti-slop/no-chained-type-assertions": 2,
-    "anti-slop/require-readable-spacing": 5,
     "anti-slop/require-safety-comment-for-type-assertion": 4
   },
   "packages/maps/src/__tests__/url-signer.test.ts": {
@@ -4352,8 +4330,7 @@
     "anti-slop/require-readable-spacing": 4
   },
   "packages/maps/src/provider/routing-traffic.ts": {
-    "anti-slop/no-runtime-typeof": 1,
-    "anti-slop/require-readable-spacing": 2
+    "anti-slop/no-runtime-typeof": 1
   },
   "packages/maps/src/provider/services.ts": {
     "anti-slop/require-readable-spacing": 6
@@ -4436,9 +4413,6 @@
     "anti-slop/no-unsafe-dictionary-type": 1,
     "anti-slop/require-readable-spacing": 8,
     "anti-slop/require-safety-comment-for-type-assertion": 2
-  },
-  "packages/maps/src/rg/traffic-layer.tsx": {
-    "anti-slop/require-readable-spacing": 6
   },
   "packages/maps/src/rg/types.ts": {
     "anti-slop/no-shape-in-symbol-names": 2,
@@ -4556,7 +4530,7 @@
     "anti-slop/require-readable-spacing": 65
   },
   "packages/models/src/v4/mapping/index.ts": {
-    "anti-slop/require-readable-spacing": 16
+    "anti-slop/require-readable-spacing": 17
   },
   "packages/models/src/v4/messages/index.ts": {
     "anti-slop/require-readable-spacing": 9

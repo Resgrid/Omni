@@ -1,7 +1,10 @@
+import { CapabilityFilterChips, DestinationMetrics, PoiAvailabilityBadge } from '@resgrid/features/pois/components/destination-parts';
+import { useNearestDestinations } from '@resgrid/features/pois/hooks/use-nearest-destinations';
+import { collectCapabilityOptions, type DestinationOrigin, rankDestinations, type RankedDestination } from '@resgrid/features/pois/lib/poi-availability';
 import { useTranslation } from '@resgrid/i18n';
 import { HStack, Pressable, Spinner, Text, TypeIcon, View, VStack } from '@resgrid/ui';
 import { Building2, Check, MapPinned, Phone, X } from 'lucide-react-native';
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 
 import { destinationLabel, type DestinationLists, type DestinationTab, type StatusDestination } from '../lib/status-destination';
 
@@ -14,6 +17,15 @@ export interface StatusDestinationListProps {
   selected: StatusDestination;
   isLoading: boolean;
   onSelect: (destination: StatusDestination) => void;
+  /** The call's assigned destination for a transport status, marked on its POI row. */
+  assignedPoiId?: number | string | null;
+  /**
+   * Where the unit is (its last position): POIs are then ranked nearest first, with drive times for the closest and those
+   * that can take a patient ahead of diversion and closed ones (`GetNearestDestinations`). Without it they keep list order.
+   */
+  origin?: DestinationOrigin | null;
+  /** The unit travelling, so its travel mode and vehicle limits apply to the drive times. */
+  unitId?: string | number | null;
 }
 
 const TAB_KEYS: Record<DestinationTab, string> = { call: 'status.calls_tab', station: 'status.stations_tab', poi: 'status.pois_tab' };
@@ -34,7 +46,17 @@ const isSameDestination = (a: StatusDestination, b: StatusDestination): boolean 
   }
 };
 
-const DestinationRow: React.FC<{ destination: StatusDestination; isSelected: boolean; onPress: () => void; testID: string; label: string }> = ({ destination, isSelected, onPress, testID, label }) => {
+const DestinationRow: React.FC<{
+  destination: StatusDestination;
+  isSelected: boolean;
+  onPress: () => void;
+  testID: string;
+  label: string;
+  badge?: string | null;
+  /** A POI row ranked from the unit: distance, drive time, Nearest, availability. */
+  ranked?: RankedDestination | null;
+  capabilityId?: string | null;
+}> = ({ destination, isSelected, onPress, testID, label, badge = null, ranked = null, capabilityId = null }) => {
   const fallback =
     destination.type === 'call' ? (
       <Phone size={18} color="#6b7280" />
@@ -58,9 +80,18 @@ const DestinationRow: React.FC<{ destination: StatusDestination; isSelected: boo
     >
       <HStack space="sm" className="items-center">
         <TypeIcon iconUrl={iconUrl ?? null} size={18} fallback={fallback} />
-        <Text className="flex-1 text-sm font-medium text-typography-900" numberOfLines={2}>
-          {label}
-        </Text>
+        <VStack className="flex-1">
+          <Text className="text-sm font-medium text-typography-900" numberOfLines={2}>
+            {label}
+          </Text>
+          {badge ? (
+            <Text className="text-xs font-semibold text-primary-600" testID={`${testID}-badge`}>
+              {badge}
+            </Text>
+          ) : null}
+          {ranked ? <DestinationMetrics row={ranked} testID={`${testID}-metrics`} /> : null}
+          {destination.type === 'poi' ? <PoiAvailabilityBadge poi={destination.poi} capabilityId={capabilityId} testID={`${testID}-availability`} /> : null}
+        </VStack>
         {isSelected ? <Check size={18} color="#3b82f6" /> : null}
       </HStack>
     </Pressable>
@@ -68,15 +99,22 @@ const DestinationRow: React.FC<{ destination: StatusDestination; isSelected: boo
 };
 
 /** The destination step: calls / stations / POIs tabs (as the status Detail allows) and "No destination". */
-export const StatusDestinationList: React.FC<StatusDestinationListProps> = ({ tabs, activeTab, onTabChange, lists, selected, isLoading, onSelect }) => {
+export const StatusDestinationList: React.FC<StatusDestinationListProps> = ({ tabs, activeTab, onTabChange, lists, selected, isLoading, onSelect, assignedPoiId = null, origin = null, unitId = null }) => {
   const { t } = useTranslation();
+  // "Nearest cath lab": one capability at a time narrows the POIs and ranks them for it.
+  const [capabilityId, setCapabilityId] = useState<string | null>(null);
+  const isPoiTab = activeTab === 'poi';
+  const capabilityOptions = useMemo(() => collectCapabilityOptions(lists.pois), [lists.pois]);
+  const { ranking } = useNearestDestinations({ origin, capabilityId, unitId, enabled: isPoiTab && lists.pois.length > 0 });
+  const rankedPois = useMemo(() => (isPoiTab ? rankDestinations(lists.pois, { origin, capabilityId, ranking }) : []), [capabilityId, isPoiTab, lists.pois, origin, ranking]);
+  const rankedById = useMemo(() => new Map(rankedPois.map((row) => [row.poi.PoiId, row])), [rankedPois]);
 
   const items: StatusDestination[] =
     activeTab === 'call'
       ? lists.calls.map((call) => ({ type: 'call', call }))
       : activeTab === 'station'
         ? lists.stations.map((station) => ({ type: 'station', station }))
-        : lists.pois.map((poi) => ({ type: 'poi', poi }));
+        : rankedPois.map((row) => ({ type: 'poi', poi: row.poi }));
 
   const keyOf = (destination: StatusDestination): string =>
     destination.type === 'call' ? destination.call.CallId : destination.type === 'station' ? destination.station.GroupId : destination.type === 'poi' ? String(destination.poi.PoiId) : 'none';
@@ -100,6 +138,8 @@ export const StatusDestinationList: React.FC<StatusDestinationListProps> = ({ ta
         </HStack>
       ) : null}
 
+      {isPoiTab ? <CapabilityFilterChips options={capabilityOptions} selectedId={capabilityId} onChange={setCapabilityId} testID="status-destination-capabilities" /> : null}
+
       <DestinationRow destination={{ type: 'none' }} isSelected={selected.type === 'none'} onPress={() => onSelect({ type: 'none' })} testID="status-destination-none" label={t('status.no_destination')} />
 
       {isLoading && items.length === 0 ? (
@@ -117,6 +157,9 @@ export const StatusDestinationList: React.FC<StatusDestinationListProps> = ({ ta
             onPress={() => onSelect(destination)}
             testID={`status-destination-${destination.type}-${keyOf(destination)}`}
             label={destinationLabel(destination, t('data_protection.protected_value'))}
+            badge={assignedPoiId != null && destination.type === 'poi' && Number(destination.poi.PoiId) === Number(assignedPoiId) ? t('status.assigned_to_call') : null}
+            ranked={destination.type === 'poi' && origin ? (rankedById.get(destination.poi.PoiId) ?? null) : null}
+            capabilityId={capabilityId}
           />
         ))
       )}

@@ -33,7 +33,16 @@ export { deriveMapStyleState, MapProvider, type MapProviderProps } from './provi
 export { isPublicMapboxToken, type MapboxResourceKind, parseMapboxStyleUrl, rewriteMapboxUrl, transformMapboxStyle } from './provider/mapbox-compat';
 export type { MapModalSlotProps, MapOverlaySlots, MapSheetSlotProps } from './provider/overlay-types';
 export { MapModal, MapSheet } from './provider/overlays';
-export { DEFAULT_TRAFFIC_REFRESH_SECONDS, type MapRoutingCapabilities, type MapTrafficConfig, NO_MAP_ROUTING, NO_MAP_TRAFFIC, resolveMapRouting, resolveMapTraffic } from './provider/routing-traffic';
+export {
+  DEFAULT_TRAFFIC_REFRESH_SECONDS,
+  type MapRoutingCapabilities,
+  type MapTrafficConfig,
+  type MapTrafficTileType,
+  NO_MAP_ROUTING,
+  NO_MAP_TRAFFIC,
+  resolveMapRouting,
+  resolveMapTraffic,
+} from './provider/routing-traffic';
 export { createMapServices, type MapCurrentPosition, type MapServices } from './provider/services';
 export { clearMapStyleCache, type MapFetch } from './provider/style-loader';
 export {
@@ -83,7 +92,7 @@ export {
 } from './components/map-controls';
 export { MapLegendSheet, type MapLegendSheetProps, type NormalizedLegend, normalizeMapLegend } from './components/map-legend-sheet';
 export { MapPins, type MapPinsProps } from './components/map-pins';
-export { OFFLINE_LAYERS_SECTION, OfflineDepartmentLayers, type OfflineDepartmentLayersProps, offlineLayersFilter } from './components/offline-department-layers';
+export { OFFLINE_LAYERS_SECTION, offlineDepartmentLayerIds, OfflineDepartmentLayers, type OfflineDepartmentLayersProps, offlineLayersFilter } from './components/offline-department-layers';
 export { PinDetailSheet, type PinDetailSheetProps } from './components/pin-detail-sheet';
 export { PinMarker, PinMarkerIcon, type PinMarkerIconProps, type PinMarkerProps } from './components/pin-marker';
 export { PixelImageMap, type PixelImageMapProps, useImageSize } from './components/pixel-image-map';

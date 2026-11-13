@@ -17,11 +17,15 @@ const useMountCount = (key: string): void => {
   }, [key]);
 };
 
+/** The map ref's `queryRenderedFeatures` (tests set what it answers). */
+export const mockQueryRenderedFeatures = jest.fn(async (): Promise<GeoJSON.Feature[]> => []);
+
 export const Map = forwardRef<any, any>(function Map({ children, testID, ...props }, ref) {
   useImperativeHandle(ref, () => ({
     getCenter: async () => [1, 2],
     getZoom: async () => 10,
     getBounds: async () => [0, 1, 2, 3],
+    queryRenderedFeatures: mockQueryRenderedFeatures,
   }));
   return (
     <View testID={testID ?? 'mlrn-map'} {...props}>

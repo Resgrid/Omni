@@ -30,6 +30,8 @@ export class CallResultData {
   public ContactName: string = '';
   public ContactInfo: string = '';
   public ReferenceId: string = '';
+  /** The map book page for the call's location; blank when none was entered, undefined from older servers. */
+  public MapPage?: string | null;
   public ExternalId: string = '';
   public IncidentId: string = '';
   public AudioFileId: string = '';

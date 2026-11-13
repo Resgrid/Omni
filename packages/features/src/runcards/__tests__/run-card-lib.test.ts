@@ -68,8 +68,11 @@ describe('run card presentation helpers', () => {
     expect(formatDistance(450.4)).toBe('450 m');
     expect(formatDistance(1530)).toBe('1.5 km');
     expect(formatDistance(-1)).toBeNull();
-    expect(formatEta(42)).toBe('42s');
-    expect(formatEta(61)).toBe('2 min');
+    expect(formatEta(42)).toBe('0:42 min');
+    expect(formatEta(61)).toBe('1:01 min');
+    // 16:35 and 17:10 both read "17 min" in whole minutes, which hid why one ranked ahead of the other.
+    expect(formatEta(995)).toBe('16:35 min');
+    expect(formatEta(1029.6)).toBe('17:10 min');
     expect(formatEta(null)).toBeNull();
   });
 
@@ -88,7 +91,7 @@ describe('run card presentation helpers', () => {
   });
 
   it('builds detail lines and status colours', () => {
-    expect(unitDetailParts({ StationGroupName: 'Station 1', DistanceMeters: 1200, EtaSeconds: 300 } as never)).toEqual(['Station 1', '1.2 km', '5 min']);
+    expect(unitDetailParts({ StationGroupName: 'Station 1', DistanceMeters: 1200, EtaSeconds: 300 } as never)).toEqual(['Station 1', '1.2 km', '5:00 min']);
     expect(personnelDetailParts({ RoleName: 'Medic', CurrentStatusText: 'Available' } as never)).toEqual(['Medic', 'Available']);
     expect(unitStatusColors({ CurrentStatusColor: '#000000', CurrentStatusTextColor: '#000' })).toEqual({ backgroundColor: '#000000', color: '#FFFFFF' });
     expect(unitStatusColors({ CurrentStatusColor: '#ff0000', CurrentStatusTextColor: '#ffffff' })).toEqual({ backgroundColor: '#ff0000', color: '#ffffff' });

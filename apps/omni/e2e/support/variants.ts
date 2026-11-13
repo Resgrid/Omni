@@ -19,7 +19,7 @@ export interface VariantManifest {
     schemes: string[];
     electron: { appId: string; productName: string; protocol: string | null };
   };
-  capabilities: { platform: { webEdition: boolean; electron: boolean } };
+  capabilities: { platform: { webEdition: boolean; electron: boolean }; calls: { destinationAvailability: boolean } };
   shell: { homeRoute: string; sidebar: { phone: string; tablet: string; desktop: string } };
 }
 

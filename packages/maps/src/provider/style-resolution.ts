@@ -40,6 +40,8 @@ export interface MapConfigInput {
   /** §5.4 / §11.1 traffic overlay: Mapbox Traffic v1 vector tile template (carries the traffic token) and reload interval. */
   TrafficAvailable?: boolean | null;
   TrafficTileUrl?: string | null;
+  /** The department's own traffic image tiles (`{z}/{x}/{y}`), drawn as a raster overlay instead of `TrafficTileUrl`. */
+  TrafficRasterTileUrl?: string | null;
   TrafficRefreshSeconds?: number | null;
   /** §5.4 routing capabilities (absent on older servers). */
   RoutingProvider?: string | null;

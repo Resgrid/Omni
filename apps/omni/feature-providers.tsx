@@ -69,12 +69,13 @@ export const clearActiveCall = (): void => setActiveCallId(null);
  */
 export function ShellStatusProvider({ children }: ProviderProps) {
   const departmentEnabled = useShellStore((state) => state.departmentConfig?.StatusHoldToConfirm === true);
+  const transportDestinationChecks = useShellStore((state) => state.departmentConfig?.TransportDestinationChecks === true);
   const appAllowsHold = useActiveVariant().capabilities.status.holdToConfirm;
   const holdToConfirm = statusHoldApplies({ departmentEnabled, appAllowsHold, isNativeApp: isNative() });
   const activeUnitId = useActiveUnitId();
   const activeCallId = useActiveCallId();
   return (
-    <StatusProvider holdToConfirm={holdToConfirm} activeUnitId={activeUnitId} activeCallId={activeCallId} onActiveCallChange={changeActiveCall}>
+    <StatusProvider holdToConfirm={holdToConfirm} transportDestinationChecks={transportDestinationChecks} activeUnitId={activeUnitId} activeCallId={activeCallId} onActiveCallChange={changeActiveCall}>
       {children}
     </StatusProvider>
   );

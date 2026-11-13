@@ -1,3 +1,6 @@
+import { CapabilityFilterChips, DestinationMetrics, PoiAvailabilityBadge } from '@resgrid/features/pois/components/destination-parts';
+import { useNearestDestinations } from '@resgrid/features/pois/hooks/use-nearest-destinations';
+import { collectCapabilityOptions, type DestinationOrigin, rankDestinations, type RankedDestination } from '@resgrid/features/pois/lib/poi-availability';
 import { useTranslation } from '@resgrid/i18n';
 import type { PoiResultData } from '@resgrid/models';
 import { FlatList, Input, InputField, InputIcon, InputSlot, Pressable, Text, useThemeColors } from '@resgrid/ui';
@@ -26,21 +29,35 @@ export interface DestinationPoiPickerProps {
   pois: readonly PoiResultData[];
   selectedId: number | null;
   onSelect: (poiId: number) => void;
+  /**
+   * The call's location: destinations are then ranked nearest first (drive times for the closest, those that can take the
+   * patient ahead of diversion and closed ones). Without it they stay alphabetical.
+   */
+  origin?: DestinationOrigin | null;
 }
 
 /** Picks the call's destination POI from a searchable list. */
-export const DestinationPoiPicker: React.FC<DestinationPoiPickerProps> = ({ isOpen, onClose, pois, selectedId, onSelect }) => {
+export const DestinationPoiPicker: React.FC<DestinationPoiPickerProps> = ({ isOpen, onClose, pois, selectedId, onSelect, origin = null }) => {
   const { t } = useTranslation();
   const colors = useThemeColors();
   const [query, setQuery] = useState('');
-  const visible = useMemo(() => filterDestinationPois(pois, query), [pois, query]);
+  // "Nearest cath lab to the incident": one capability at a time narrows and ranks the destinations.
+  const [capabilityId, setCapabilityId] = useState<string | null>(null);
+  const capabilityOptions = useMemo(() => collectCapabilityOptions(pois), [pois]);
+  const { ranking } = useNearestDestinations({ origin, capabilityId, enabled: isOpen && pois.length > 0 });
+  const ranked = useMemo(() => rankDestinations(filterDestinationPois(pois, query), { origin, capabilityId, ranking }), [capabilityId, origin, pois, query, ranking]);
+  const rankedById = useMemo(() => new Map<number, RankedDestination>(ranked.map((row) => [row.poi.PoiId, row])), [ranked]);
+  const visible = useMemo(() => ranked.map((row) => row.poi), [ranked]);
 
   useEffect(() => {
-    if (isOpen) setQuery('');
+    if (!isOpen) return;
+    setQuery('');
+    setCapabilityId(null);
   }, [isOpen]);
 
   const renderItem = useCallback(
     ({ item }: { item: PoiResultData }) => {
+      const row = origin ? (rankedById.get(item.PoiId) ?? null) : null;
       const label = destinationPoiLabel(item);
       const detail = [item.PoiTypeName, item.Address && item.Address !== label ? item.Address : ''].filter((part) => !!part?.trim()).join(' · ');
       const isSelected = item.PoiId === selectedId;
@@ -61,6 +78,13 @@ export const DestinationPoiPicker: React.FC<DestinationPoiPickerProps> = ({ isOp
                 {detail}
               </Text>
             ) : null}
+            {(item.Capabilities ?? []).length > 0 ? (
+              <Text size="xs" className="text-typography-600" testID={`call-destination-poi-${item.PoiId}-capabilities`}>
+                {(item.Capabilities ?? []).join(', ')}
+              </Text>
+            ) : null}
+            {row ? <DestinationMetrics row={row} testID={`call-destination-poi-${item.PoiId}-metrics`} /> : null}
+            <PoiAvailabilityBadge poi={item} capabilityId={capabilityId} testID={`call-destination-poi-${item.PoiId}-availability`} />
           </View>
           {isSelected ? (
             <View>
@@ -70,7 +94,7 @@ export const DestinationPoiPicker: React.FC<DestinationPoiPickerProps> = ({ isOp
         </Pressable>
       );
     },
-    [colors.primary, onSelect, selectedId]
+    [capabilityId, colors.primary, onSelect, origin, rankedById, selectedId]
   );
 
   return (
@@ -82,6 +106,9 @@ export const DestinationPoiPicker: React.FC<DestinationPoiPickerProps> = ({ isOp
           </InputSlot>
           <InputField value={query} onChangeText={setQuery} placeholder={t('calls.destination_poi_search')} accessibilityLabel={t('calls.destination_poi_search')} testID="call-destination-search" />
         </Input>
+      </View>
+      <View style={styles.chips}>
+        <CapabilityFilterChips options={capabilityOptions} selectedId={capabilityId} onChange={setCapabilityId} testID="call-destination-capabilities" />
       </View>
       {visible.length === 0 ? (
         <Text className="py-4 text-center text-typography-500" testID="call-destination-empty">
@@ -96,5 +123,6 @@ export const DestinationPoiPicker: React.FC<DestinationPoiPickerProps> = ({ isOp
 
 const styles = StyleSheet.create({
   search: { paddingHorizontal: 16, paddingVertical: 8 },
+  chips: { paddingHorizontal: 16 },
   rowText: { flex: 1 },
 });

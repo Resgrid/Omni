@@ -42,6 +42,7 @@ jest.mock('@resgrid/api', () => {
     'newWorkOrder',
     'getUserCertifications',
     'getCustomMaps',
+    'getMapLayers',
     'searchAllMapFeatures',
     'getRecordDeployments',
     'getChecklistAccess',
@@ -286,6 +287,49 @@ describe('custom maps feature search', () => {
 
     await useCustomMapsStore.getState().searchMapFeatures('   ');
     expect(useCustomMapsStore.getState().searchResults).toEqual([]);
+  });
+});
+
+describe('custom maps layer details (GetMayLayers)', () => {
+  const getMapLayers = (): jest.Mock => jest.requireMock<Record<string, jest.Mock>>('@resgrid/api').getMapLayers;
+
+  const layer = {
+    Id: 'E1',
+    Name: 'City marathon',
+    Color: '#ff8800',
+    IsOnByDefault: true,
+    Description: 'Route with four water points',
+    EventStartsOnUtc: '2026-11-15T08:00:00Z',
+    EventEndsOnUtc: '2026-11-15T16:00:00Z',
+    EventPhase: 'upcoming',
+    ContactPhone: '+32 9 123 45 67',
+    Data: { Type: 'FeatureCollection', Features: { type: 'FeatureCollection', features: [{ type: 'Feature', geometry: { type: 'Point', coordinates: [3.7, 51.05] }, properties: { name: 'Stage' } }] } },
+  };
+
+  it('keeps every top-level layer’s details without its geometry, persists them and skips a fresh list', async () => {
+    getMapLayers().mockResolvedValue(ok({ LayerJson: '[]', Layers: [layer, { Id: '', Name: 'blank id' }] }));
+    await useCustomMapsStore.getState().fetchMapLayers();
+    expect(getMapLayers()).toHaveBeenCalledWith(expect.anything(), { type: 0 });
+    const { Data: _geometry, ...details } = layer;
+    expect(useCustomMapsStore.getState().mapLayers).toEqual([details]);
+    expect(persisted(runtime.kv, 'omni-custom-maps-storage')?.state.mapLayers).toEqual([details]);
+
+    await useCustomMapsStore.getState().fetchMapLayers();
+    expect(getMapLayers()).toHaveBeenCalledTimes(1);
+    await useCustomMapsStore.getState().fetchMapLayers({ bypassCache: true });
+    expect(getMapLayers()).toHaveBeenCalledTimes(2);
+  });
+
+  it('reads not_found as no layers and keeps the list on an error', async () => {
+    getMapLayers().mockResolvedValue(ok({ LayerJson: '[]', Layers: [layer] }));
+    await useCustomMapsStore.getState().fetchMapLayers({ bypassCache: true });
+    getMapLayers().mockRejectedValue(httpError(500));
+    await useCustomMapsStore.getState().fetchMapLayers({ bypassCache: true });
+    expect(useCustomMapsStore.getState().mapLayers.map((entry) => entry.Id)).toEqual(['E1']);
+    expect(useCustomMapsStore.getState().errors.mapLayers).toMatchObject({ code: 'server' });
+    getMapLayers().mockResolvedValue(notFound(null));
+    await useCustomMapsStore.getState().fetchMapLayers({ bypassCache: true });
+    expect(useCustomMapsStore.getState().mapLayers).toEqual([]);
   });
 });
 

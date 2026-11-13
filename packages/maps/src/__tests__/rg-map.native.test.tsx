@@ -3,8 +3,8 @@ import React, { createRef } from 'react';
 
 import { MapProvider } from '../provider/map-provider';
 import { Camera, CircleLayer, Images, LineLayer, MapView, MarkerView, ShapeSource, SymbolLayer } from '../rg';
-import type { CameraRef } from '../rg/types';
-import { mockCameraCalls, mockMountCounts, resetMaplibreFakes } from './fakes/maplibre-react-native';
+import type { CameraRef, MapViewRef } from '../rg/types';
+import { mockCameraCalls, mockMountCounts, mockQueryRenderedFeatures, resetMaplibreFakes } from './fakes/maplibre-react-native';
 
 const DAY = 'https://maps.example.org/day.json';
 const NIGHT = 'https://maps.example.org/night.json';
@@ -59,6 +59,30 @@ describe('rg wrapper — native renderer', () => {
     );
     expect(screen.getByTestId('map-unavailable')).toBeTruthy();
     expect(screen.queryByTestId('map')).toBeNull();
+  });
+
+  it('looks up rendered features in a box around a press point, and answers [] when it cannot', async () => {
+    const ref = createRef<MapViewRef>();
+    const stage: GeoJSON.Feature = { type: 'Feature', geometry: { type: 'Point', coordinates: [3.7, 51.05] }, properties: { name: 'Stage A' } };
+    mockQueryRenderedFeatures.mockResolvedValueOnce([stage]);
+    await render(
+      <MapProvider config={config} colorScheme="light">
+        <MapView testID="map" ref={ref} />
+      </MapProvider>
+    );
+    await expect(ref.current?.queryRenderedFeatures([100, 200], { layerIds: ['a', 'b'] })).resolves.toEqual([stage]);
+    expect(mockQueryRenderedFeatures).toHaveBeenLastCalledWith(
+      [
+        [90, 190],
+        [110, 210],
+      ],
+      { layers: ['a', 'b'] }
+    );
+    mockQueryRenderedFeatures.mockClear();
+    await expect(ref.current?.queryRenderedFeatures([100, 200], { layerIds: [] })).resolves.toEqual([]);
+    expect(mockQueryRenderedFeatures).not.toHaveBeenCalled();
+    mockQueryRenderedFeatures.mockRejectedValueOnce(new Error('style mid-swap'));
+    await expect(ref.current?.queryRenderedFeatures([100, 200], { layerIds: ['a'], radius: 4 })).resolves.toEqual([]);
   });
 
   it('normalizes press and camera events', async () => {

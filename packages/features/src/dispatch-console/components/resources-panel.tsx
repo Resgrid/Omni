@@ -13,7 +13,7 @@ import { usePendingPersonnelIds, usePendingUnitIds } from '../hooks/use-pending-
 import { type ConsoleCallFilter, filterConsolePersonnel, filterConsoleUnits, isPersonOnCall, isUnitOnCall } from '../lib/console-filters';
 import { PanelFrame, PanelIconButton } from './panel-frame';
 import { PanelSearch } from './panel-search';
-import { ConsolePersonnelRow, ConsoleUnitRow, isMultiSelectClick } from './resource-rows';
+import { ConsolePersonnelRow, ConsoleUnitRow, readPressModifiers } from './resource-rows';
 
 type ResourceRow = { kind: 'header'; key: string; title: string } | { kind: 'unit'; key: string; unit: UnitInfoResultData } | { kind: 'person'; key: string; person: PersonnelInfoResultData };
 
@@ -49,27 +49,34 @@ export const ResourcesPanel: React.FC<ResourcesPanelProps> = ({ callFilter, onSe
     const options = { query, availableOnly, callFilter };
     const unitRows = filterConsoleUnits(units, options).map<ResourceRow>((unit) => ({ kind: 'unit', key: `u-${unit.UnitId}`, unit }));
     const personRows = filterConsolePersonnel(personnel, options).map<ResourceRow>((person) => ({ kind: 'person', key: `p-${person.UserId}`, person }));
+
     return [
       ...(unitRows.length > 0 ? [{ kind: 'header' as const, key: 'h-units', title: t('dispatch.units') }, ...unitRows] : []),
       ...(personRows.length > 0 ? [{ kind: 'header' as const, key: 'h-personnel', title: t('dispatch.personnel') }, ...personRows] : []),
     ];
   }, [availableOnly, callFilter, personnel, query, t, units]);
+
   const count = rows.filter((row) => row.kind !== 'header').length;
   const selectedSet = useMemo(() => new Set(selectedUnitIds), [selectedUnitIds]);
+  const visibleUnitIds = useMemo(() => rows.flatMap((row) => (row.kind === 'unit' ? [row.unit.UnitId] : [])), [rows]);
 
   const handleUnitPress = useCallback(
     (unitId: string, event?: GestureResponderEvent) => {
       const store = useConsoleStore.getState();
-      if (store.isSelectionMode) store.toggleUnitInSelection(unitId);
-      else if (isMultiSelectClick(event)) store.startSelection([unitId]);
+      const modifiers = readPressModifiers(event);
+
+      if (modifiers.isRangeSelect) store.selectUnitRange(visibleUnitIds, unitId);
+      else if (store.isSelectionMode) store.toggleUnitInSelection(unitId);
+      else if (modifiers.isMultiSelect) store.startSelection([unitId]);
       else onSelectUnit(unitId);
     },
-    [onSelectUnit]
+    [onSelectUnit, visibleUnitIds]
   );
 
   const renderItem = useCallback(
     ({ item }: { item: ResourceRow }) => {
       if (item.kind === 'header') return <Text className="mb-1 mt-2 text-xs font-semibold uppercase text-typography-500">{item.title}</Text>;
+
       if (item.kind === 'unit') {
         const timer = timers.get(item.unit.UnitId);
 
@@ -90,6 +97,7 @@ export const ResourcesPanel: React.FC<ResourcesPanelProps> = ({ callFilter, onSe
           />
         );
       }
+
       return (
         <ConsolePersonnelRow
           person={item.person}

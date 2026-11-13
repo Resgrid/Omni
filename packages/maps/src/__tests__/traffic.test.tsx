@@ -8,11 +8,13 @@ import { MapProvider, type MapProviderProps } from '../provider/map-provider';
 import { resolveMapRouting, resolveMapTraffic } from '../provider/routing-traffic';
 import type { MapConfigInput } from '../provider/style-resolution';
 import { MapView } from '../rg';
-import { TRAFFIC_COLORS, TrafficLayer, trafficTilesFor } from '../rg/traffic-layer';
+import { TRAFFIC_COLORS, TRAFFIC_RASTER_OPACITY, TrafficLayer, trafficTilesFor } from '../rg/traffic-layer';
 import type { StyleSpecification } from '../types';
 import { resetMaplibreFakes } from './fakes/maplibre-react-native';
 
 const TRAFFIC_URL = 'https://api.mapbox.com/v4/mapbox.mapbox-traffic-v1/{z}/{x}/{y}.vector.pbf?access_token=pk.test';
+const RASTER_URL = 'https://api.tomtom.com/traffic/map/4/tile/flow/relative0/{z}/{x}/{y}.png?key=test';
+
 const CONFIG: MapConfigInput = {
   MapLibreStyleUrlDay: 'https://maps.example.org/day.json',
   TrafficAvailable: true,
@@ -24,6 +26,7 @@ const CONFIG: MapConfigInput = {
   RoutingSupportsVoice: true,
   NavigationAvailable: true,
 };
+
 const CAPABILITIES = { layers: true, customIndoor: false, navigationInApp: true };
 
 const renderWith = async (ui: React.ReactElement, props: Partial<MapProviderProps> = {}) =>
@@ -36,6 +39,7 @@ const renderWith = async (ui: React.ReactElement, props: Partial<MapProviderProp
 function Probe() {
   const routing = useMapRouting();
   const traffic = useMapTraffic();
+
   return <Text testID="probe">{JSON.stringify({ routing, traffic })}</Text>;
 }
 
@@ -45,22 +49,33 @@ describe('routing and traffic capabilities (§5.4)', () => {
   it('exposes the provider, its support flags and navigation availability from config', async () => {
     await renderWith(<Probe />);
     expect(probe().routing).toEqual({ provider: 'valhalla', supportsTraffic: true, supportsIncidents: false, supportsVoice: true, navigationAvailable: true });
-    expect(probe().traffic).toEqual({ available: true, tileUrl: TRAFFIC_URL, refreshSeconds: 120 });
+    expect(probe().traffic).toEqual({ available: true, tileUrl: TRAFFIC_URL, type: 'vector', refreshSeconds: 120 });
   });
 
   it('keeps navigation off without the variant capability and everything off against an older server', async () => {
     expect(resolveMapRouting(CONFIG, false).navigationAvailable).toBe(false);
     await renderWith(<Probe />, { config: { MapLibreStyleUrlDay: 'https://maps.example.org/day.json' } });
     expect(probe().routing).toEqual({ provider: null, supportsTraffic: false, supportsIncidents: false, supportsVoice: false, navigationAvailable: false });
-    expect(probe().traffic).toEqual({ available: false, tileUrl: null, refreshSeconds: 300 });
+    expect(probe().traffic).toEqual({ available: false, tileUrl: null, type: 'vector', refreshSeconds: 300 });
   });
 
   it('accepts traffic tiles only over https with {z}/{x}/{y}, and not while the map is offline', () => {
     expect(resolveMapTraffic({ ...CONFIG, TrafficTileUrl: 'http://tiles.example.org/{z}/{x}/{y}.pbf' }, false, false).available).toBe(false);
     expect(resolveMapTraffic({ ...CONFIG, TrafficTileUrl: 'https://tiles.example.org/traffic.pbf' }, false).available).toBe(false);
     expect(resolveMapTraffic({ ...CONFIG, TrafficAvailable: false }, false).available).toBe(false);
-    expect(resolveMapTraffic(CONFIG, true)).toEqual({ available: false, tileUrl: TRAFFIC_URL, refreshSeconds: 120 });
+    expect(resolveMapTraffic(CONFIG, true)).toEqual({ available: false, tileUrl: TRAFFIC_URL, type: 'vector', refreshSeconds: 120 });
     expect(resolveMapTraffic({ ...CONFIG, TrafficRefreshSeconds: 5 }, false).refreshSeconds).toBe(60);
+  });
+
+  it("uses the department's own image tiles over the vector overlay, under the same https and template rules", () => {
+    // Core sends image tiles with TrafficAvailable false, so builds without raster support show no traffic.
+    const rasterConfig: MapConfigInput = { ...CONFIG, TrafficAvailable: false, TrafficTileUrl: null, TrafficRasterTileUrl: RASTER_URL };
+    expect(resolveMapTraffic(rasterConfig, false)).toEqual({ available: true, tileUrl: RASTER_URL, type: 'raster', refreshSeconds: 120 });
+    expect(resolveMapTraffic({ ...CONFIG, TrafficRasterTileUrl: RASTER_URL }, false).type).toBe('raster');
+    expect(resolveMapTraffic(rasterConfig, true).available).toBe(false);
+    expect(resolveMapTraffic({ ...rasterConfig, TrafficRasterTileUrl: 'http://tiles.example.org/{z}/{x}/{y}.png' }, false, false).available).toBe(false);
+    // A broken image template falls back to the vector overlay when the server also has one.
+    expect(resolveMapTraffic({ ...CONFIG, TrafficRasterTileUrl: 'https://tiles.example.org/flow.png' }, false)).toEqual({ available: true, tileUrl: TRAFFIC_URL, type: 'vector', refreshSeconds: 120 });
   });
 });
 
@@ -113,11 +128,13 @@ describe('TrafficLayer (§11.1)', () => {
         { id: 'road-label', type: 'symbol', source: 'x' },
       ],
     } as unknown as StyleSpecification;
+
     const { rerender } = await renderWith(
       <MapView testID="map" mapStyle={style}>
         <TrafficLayer drivingSide="left" />
       </MapView>
     );
+
     const line = screen.getByTestId('mlrn-layer-rg-traffic-line');
     expect(line.props.beforeId).toBe('road-label');
     expect(line.props.paint['line-offset']).toEqual(['interpolate', ['linear'], ['zoom'], 10, -1, 16, -4]);
@@ -159,6 +176,42 @@ describe('TrafficLayer (§11.1)', () => {
     });
     appState.currentState = original;
     expect(screen.getByTestId('mlrn-vector-source-rg-traffic-source').props.tiles[0]).toBe(second);
+  });
+
+  it("draws the department's image tiles as one raster layer under the labels, hides it and reloads it like the vector overlay", async () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-11-01T12:00:00Z'));
+    const rasterConfig: MapConfigInput = { ...CONFIG, TrafficAvailable: false, TrafficTileUrl: null, TrafficRasterTileUrl: RASTER_URL };
+
+    const { rerender } = await renderWith(
+      <MapView testID="map">
+        <TrafficLayer />
+      </MapView>,
+      { config: rasterConfig }
+    );
+
+    expect(screen.queryByTestId('mlrn-vector-source-rg-traffic-source')).toBeNull();
+    const first = screen.getByTestId('mlrn-raster-source-rg-traffic-raster-source').props.tiles[0];
+    expect(first).toBe(trafficTilesFor(RASTER_URL, Math.floor(Date.now() / 60_000))[0]);
+    const layer = screen.getByTestId('mlrn-layer-rg-traffic-raster');
+    expect(layer.props).toMatchObject({ type: 'raster', source: 'rg-traffic-raster-source', beforeId: 'rg-overlay-anchor' });
+    expect(layer.props.paint).toMatchObject({ 'raster-opacity': TRAFFIC_RASTER_OPACITY });
+    expect(layer.props.layout).toMatchObject({ visibility: 'visible' });
+    expect(screen.queryByTestId('mlrn-layer-rg-traffic-line')).toBeNull();
+
+    await act(async () => {
+      jest.advanceTimersByTime(120_000);
+    });
+    expect(screen.getByTestId('mlrn-raster-source-rg-traffic-raster-source').props.tiles[0]).not.toBe(first);
+
+    await rerender(
+      <MapProvider config={rasterConfig} colorScheme="light" capabilities={CAPABILITIES}>
+        <MapView testID="map">
+          <TrafficLayer visible={false} />
+        </MapView>
+      </MapProvider>
+    );
+    expect(screen.getByTestId('mlrn-layer-rg-traffic-raster').props.layout).toMatchObject({ visibility: 'none' });
   });
 
   it('renders nothing when the server has no traffic', async () => {

@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { AppState } from 'react-native';
 
 import { useMapTraffic } from '../provider/context';
-import { LineLayer, VectorSource } from './rg-map';
+import { LineLayer, RasterLayer, RasterSource, VectorSource } from './rg-map';
 import type { LineLayerProps } from './types';
 
 /**
@@ -12,6 +12,9 @@ import type { LineLayerProps } from './types';
  * place it there (web always; native when the style is a JSON document — otherwise mount it before the app's own layers).
  * The tiles reload every `TrafficRefreshSeconds` while the overlay is visible and the app is in the foreground. Renders
  * nothing when the server has no traffic or the map is offline. Same look as the web kit's `rgTraffic.ts`.
+ *
+ * A department's own traffic image tiles (`TrafficRasterTileUrl`, e.g. TomTom flow) draw as one raster layer at
+ * `TRAFFIC_RASTER_OPACITY`, in the same place and with the same reloads; their colours are the provider's.
  */
 
 export interface TrafficLayerProps {
@@ -30,10 +33,14 @@ export interface TrafficLayerProps {
 
 export const TRAFFIC_SOURCE_LAYER = 'traffic';
 export const TRAFFIC_MIN_ZOOM = 10;
+
 /** Mapbox Traffic v1 is tiled up to z16; MapLibre overzooms beyond. */
 const TRAFFIC_MAX_SOURCE_ZOOM = 16;
 
 export const TRAFFIC_COLORS = { low: '#2ecc71', moderate: '#f1c40f', heavy: '#e67e22', severe: '#c0392b', closed: '#7b0d0d' } as const;
+
+/** Image traffic tiles keep the roads under them readable (the web kit uses the same value). */
+export const TRAFFIC_RASTER_OPACITY = 0.85;
 
 /** The template with a minute stamp, so each reload fetches fresh congestion instead of a cached tile. */
 export const trafficTilesFor = (tileUrl: string, stamp: number): string[] => [`${tileUrl}${tileUrl.includes('?') ? '&' : '?'}rgts=${stamp}`];
@@ -47,6 +54,7 @@ export const useTrafficRefreshStamp = (refreshSeconds: number, active: boolean):
     if (!active) return undefined;
     // A remount after a pause picks up congestion that changed meanwhile.
     setStamp(minuteStamp());
+
     const handle = setInterval(
       () => {
         // Android keeps JS timers running in the background: never reload tiles nobody sees.
@@ -54,8 +62,10 @@ export const useTrafficRefreshStamp = (refreshSeconds: number, active: boolean):
       },
       Math.max(60, refreshSeconds) * 1000
     );
+
     return () => clearInterval(handle);
   }, [active, refreshSeconds]);
+
   return stamp;
 };
 
@@ -74,6 +84,7 @@ const congestionColor: LineStyle['lineColor'] = [
   TRAFFIC_COLORS.severe,
   TRAFFIC_COLORS.low,
 ];
+
 const lineWidth: LineStyle['lineWidth'] = ['interpolate', ['linear'], ['zoom'], 10, 1.5, 16, 4];
 const offsetFor = (side: 'right' | 'left'): LineStyle['lineOffset'] => (side === 'left' ? ['interpolate', ['linear'], ['zoom'], 10, -1, 16, -4] : ['interpolate', ['linear'], ['zoom'], 10, 1, 16, 4]);
 
@@ -87,6 +98,15 @@ export const TrafficLayer: React.FC<TrafficLayerProps> = ({ visible = true, belo
   const visibility = visible ? 'visible' : 'none';
 
   if (!available) return null;
+
+  if (traffic.type === 'raster') {
+    return (
+      <RasterSource id={`${idPrefix}-raster-source`} tileUrlTemplates={tiles}>
+        <RasterLayer id={`${idPrefix}-raster`} {...placement} style={{ rasterOpacity: TRAFFIC_RASTER_OPACITY, visibility }} />
+      </RasterSource>
+    );
+  }
+
   return (
     <VectorSource id={`${idPrefix}-source`} tileUrlTemplates={tiles} maxZoomLevel={TRAFFIC_MAX_SOURCE_ZOOM}>
       <LineLayer

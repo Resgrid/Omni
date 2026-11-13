@@ -137,6 +137,32 @@ describe('sheets', () => {
     expect(screen.queryByTestId('map-layers-sheet')).toBeNull();
   });
 
+  it('shows an event layer’s phase badge and dates, and a details button only for layers that have details', async () => {
+    const Sheet = ({ isOpen, children }: { isOpen: boolean; children: React.ReactNode }) => (isOpen ? <>{children}</> : null);
+    const onShowDetails = jest.fn();
+    await renderWithProvider(
+      <MapLayersSheet
+        isOpen={true}
+        onClose={jest.fn()}
+        layers={[
+          { Id: 'event', Name: 'Marathon', Color: '#f00', Detail: 'Nov 15, 2026, 9:00 AM – 5:00 PM', Badge: { label: 'Happening now', tone: 'primary' }, HasDetails: true },
+          { Id: 'plain', Name: 'Districts' },
+        ]}
+        toggles={{ event: true, plain: false }}
+        onToggle={jest.fn()}
+        onShowDetails={onShowDetails}
+      />,
+      { overlays: { Sheet } }
+    );
+    expect(screen.getByTestId('layer-badge-event')).toHaveTextContent('Happening now');
+    expect(screen.getByTestId('layer-detail-event')).toHaveTextContent('Nov 15, 2026, 9:00 AM – 5:00 PM');
+    expect(screen.queryByTestId('layer-badge-plain')).toBeNull();
+    expect(screen.queryByTestId('layer-detail-plain')).toBeNull();
+    expect(screen.queryByTestId('layer-details-plain')).toBeNull();
+    await fireEvent.press(screen.getByTestId('layer-details-event'));
+    expect(onShowDetails).toHaveBeenCalledWith('event');
+  });
+
   it('loads the legend when opened and hides personnel without PII rights', async () => {
     const loadLegend = jest.fn(async () => ({
       StatusStyles: [{ Key: 'available', Color: '#00ff00', UnitStatuses: ['Available'], PersonnelStatuses: ['Standing by'] }],

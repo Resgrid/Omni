@@ -1,8 +1,9 @@
 import type { UpdateCallRequest } from '@resgrid/api';
-import type { CallResultData, DispatchedEventResultData } from '@resgrid/models';
+import { type CallResultData, type DispatchedEventResultData, type NewCallFieldKey, NewCallFieldKeys } from '@resgrid/models';
 import { richTextForSave, richTextToPlain } from '@resgrid/ui';
 
 import { dispatchKind } from './call-dispatch';
+import type { DispatchListKey } from './field-policy';
 
 /** Who a call goes to, as the dispatch picker produces it. An empty selection dispatches nobody; "everyone" is its own switch. */
 export interface DispatchSelection {
@@ -18,6 +19,30 @@ export const EMPTY_DISPATCH_SELECTION: DispatchSelection = { everyone: false, us
 export const dispatchSelectionCount = (selection: DispatchSelection): number => selection.users.length + selection.groups.length + selection.roles.length + selection.units.length;
 
 export const isDispatchSelectionEmpty = (selection: DispatchSelection): boolean => !selection.everyone && dispatchSelectionCount(selection) === 0;
+
+/** One recipient list of a dispatch selection (personnel, groups, roles, units). */
+export type DispatchListBucket = 'users' | 'groups' | 'roles' | 'units';
+
+/** Every recipient list, in the order the picker shows them. */
+export const DISPATCH_LIST_BUCKETS: readonly DispatchListBucket[] = ['users', 'groups', 'roles', 'units'];
+
+/** The New Call Form Fields key that hides each recipient list. */
+const LIST_POLICY_KEYS: Record<DispatchListBucket, DispatchListKey> = {
+  users: NewCallFieldKeys.DispatchPersonnel,
+  groups: NewCallFieldKeys.DispatchGroups,
+  roles: NewCallFieldKeys.DispatchRoles,
+  units: NewCallFieldKeys.DispatchUnits,
+};
+
+/** The recipient lists the department's policy shows (all four with no policy). */
+export const shownDispatchLists = (isVisible: (key: NewCallFieldKey) => boolean): DispatchListBucket[] => DISPATCH_LIST_BUCKETS.filter((bucket) => isVisible(LIST_POLICY_KEYS[bucket]));
+
+/**
+ * What a form sends while the department hides every recipient list: only its All Call switch counts — everyone, or no
+ * entries at all (create: nobody, an informational call; edit: the recipients the call already has). Never the ids the
+ * form holds, which the dispatcher could neither see nor change.
+ */
+export const allCallSelection = (allCall: boolean): DispatchSelection => ({ ...EMPTY_DISPATCH_SELECTION, everyone: allCall });
 
 const BUCKETS = { personnel: 'users', group: 'groups', role: 'roles', unit: 'units' } as const;
 

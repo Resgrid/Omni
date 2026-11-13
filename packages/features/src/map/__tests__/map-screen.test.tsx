@@ -4,19 +4,26 @@ import type { VariantId } from '@resgrid/config';
 import { useCustomMapsStore, useMapMarkersStore } from '@resgrid/data';
 import { NavigationHandoffProvider } from '@resgrid/features/contacts';
 import { StatusProvider } from '@resgrid/features/status';
+import type { GetMapLayersData } from '@resgrid/models';
 import { emitRealtimeEvent } from '@resgrid/realtime';
 import { useToastStore } from '@resgrid/ui';
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import React from 'react';
-import { Dimensions } from 'react-native';
+import { Dimensions, Linking } from 'react-native';
 
 import { activateVariant, hidden, setRights } from '../../calls/__tests__/test-utils';
 import { useMapViewStore } from '../hooks/use-map-view-store';
 import MapScreen, { type MapScreenLinks } from '../screens/map-screen';
 import { pin } from './fixtures';
 
-const { mockCamera, useFollowCamera } = jest.requireMock('@resgrid/maps') as { mockCamera: { setCamera: jest.Mock }; useFollowCamera: jest.Mock };
+const { mockCamera, mockMapStyle, mockMapView, useFollowCamera } = jest.requireMock('@resgrid/maps') as {
+  mockCamera: { setCamera: jest.Mock };
+  mockMapStyle: { isOffline: boolean };
+  mockMapView: { queryRenderedFeatures: jest.Mock };
+  useFollowCamera: jest.Mock;
+};
+
 const { mockCurrentLocation } = jest.requireMock('@resgrid/location') as { mockCurrentLocation: { value: unknown } };
 
 const PINS = [
@@ -41,6 +48,7 @@ const UNIT_LINKS: MapScreenLinks = { ...ALL_LINKS, unitDetail: () => null, perso
 const mocks = {
   fetchMarkers: jest.fn(async () => undefined),
   fetchActiveLayers: jest.fn(async () => undefined),
+  fetchMapLayers: jest.fn(async () => undefined),
   fetchLayerGeoJSON: jest.fn(async () => null),
   navigateTo: jest.fn(async () => true),
   onActiveCallChange: jest.fn(),
@@ -74,6 +82,8 @@ const markedPin = () => String(screen.getByTestId('mock-map-pins').props.accessi
 
 beforeEach(async () => {
   jest.clearAllMocks();
+  mockMapStyle.isOffline = false;
+  mockMapView.queryRenderedFeatures.mockResolvedValue([]);
   await setWindow(390, 844);
   setRights({ CanViewPII: true });
   mockCurrentLocation.value = null;
@@ -87,8 +97,10 @@ beforeEach(async () => {
       { Id: 'L2', Name: 'Flood zones', LayerSource: 'maplayer', Type: 0, Color: '#0000ff', IsSearchable: false, IsOnByDefault: false },
       { Id: 'R1', Name: 'Campus regions', LayerSource: 'custommaplayer', Type: 0, Color: '', IsSearchable: false, IsOnByDefault: true },
     ],
+    mapLayers: [],
     layerGeoJSON: { L1: { type: 'FeatureCollection', features: [{ type: 'Feature', geometry: { type: 'Point', coordinates: [1, 2] }, properties: {} }] } },
     fetchActiveLayers: mocks.fetchActiveLayers,
+    fetchMapLayers: mocks.fetchMapLayers,
     fetchLayerGeoJSON: mocks.fetchLayerGeoJSON,
   });
 });
@@ -139,6 +151,150 @@ describe('MapScreen pins and live refresh', () => {
     await fireEvent.press(screen.getByTestId('map-screen-layers-button'));
     await fireEvent.press(screen.getByTestId('layer-toggle-layer:L2'));
     expect(JSON.parse(String(screen.getByTestId('mock-map-screen-offline-layers').props.children))).toEqual({ visible: ['L1', 'L2'], exclude: ['L1'] });
+  });
+});
+
+describe('MapScreen event layers and their features', () => {
+  const HOUR = 60 * 60 * 1000;
+
+  const eventLayer = (overrides: Partial<Omit<GetMapLayersData, 'Data'>> = {}): Omit<GetMapLayersData, 'Data'> => ({
+    Id: 'E1',
+    DepartmentId: 1,
+    Name: 'City marathon',
+    Type: 0,
+    Color: '#ff8800',
+    IsSearchable: false,
+    IsOnByDefault: true,
+    AddedById: '',
+    AddedOn: '',
+    UpdatedById: '',
+    UpdatedOn: '',
+    Description: 'Route with four water points',
+    EventStartsOnUtc: new Date(Date.now() - HOUR).toISOString(),
+    EventEndsOnUtc: new Date(Date.now() + 5 * HOUR).toISOString(),
+    EventPhase: 'active',
+    Organizer: 'Running Club',
+    ContactName: 'An Peeters',
+    ContactPhone: '+32 9 123 45 67',
+    ContactEmail: 'an@example.org',
+    SourceFileName: 'marathon.kml',
+    ...overrides,
+  });
+
+  const layerFeatures = (...properties: GeoJSON.GeoJsonProperties[]): GeoJSON.FeatureCollection => ({
+    type: 'FeatureCollection',
+    features: properties.map((props, index) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [3.7 + index / 100, 51.05] }, properties: props })),
+  });
+
+  it('lists every department layer with an event layer’s phase badge and dates, and opens its details sheet', async () => {
+    const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
+    useCustomMapsStore.setState({
+      mapLayers: [eventLayer(), eventLayer({ Id: 'E2', Name: 'Christmas market', IsOnByDefault: false, EventStartsOnUtc: new Date(Date.now() + 48 * HOUR).toISOString(), EventEndsOnUtc: null, EventPhase: 'upcoming' })],
+    });
+    await renderMap();
+    expect(mocks.fetchMapLayers).toHaveBeenCalled();
+    await fireEvent.press(screen.getByTestId('map-screen-layers-button'));
+    // GetMayLayers lists layers GetAllActiveLayers leaves out (E2 is off until it starts).
+    expect(within(screen.getByTestId('mock-layers-sheet')).getByText('Christmas market:off')).toBeTruthy();
+    expect(screen.getByTestId('layer-badge-layer:E1')).toHaveTextContent('maps.layer_info.phase_active|primary');
+    expect(screen.getByTestId('layer-detail-layer:E1')).toHaveTextContent(/^maps\.layer_info\.range:/);
+    expect(screen.getByTestId('layer-badge-layer:E2')).toHaveTextContent('maps.layer_info.phase_upcoming|outline');
+    expect(screen.getByTestId('layer-detail-layer:E2')).toHaveTextContent(/^maps\.layer_info\.from:/);
+    // Plain layers have no details button.
+    expect(screen.queryByTestId('layer-details-layer:L1')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('layer-details-layer:E1'));
+    expect(screen.queryByTestId('mock-layers-sheet')).toBeNull();
+    expect(screen.getByTestId('layer-details-title', hidden)).toHaveTextContent('City marathon');
+    expect(screen.getByTestId('layer-details-phase', hidden)).toHaveTextContent('maps.layer_info.phase_active');
+    expect(screen.getByTestId('layer-details-description', hidden)).toHaveTextContent('Route with four water points');
+    expect(screen.getByTestId('layer-details-organizer', hidden)).toHaveTextContent(/Running Club/);
+    expect(screen.getByTestId('layer-details-contact', hidden)).toHaveTextContent(/An Peeters/);
+    expect(screen.getByTestId('layer-details-source', hidden)).toHaveTextContent('maps.layer_info.source_file:marathon.kml');
+    await fireEvent.press(screen.getByTestId('layer-details-phone', hidden));
+    expect(openURL).toHaveBeenLastCalledWith('tel:+3291234567');
+    await fireEvent.press(screen.getByTestId('layer-details-email', hidden));
+    expect(openURL).toHaveBeenLastCalledWith('mailto:an@example.org');
+    await fireEvent.press(screen.getByTestId('layer-details-close', hidden));
+    expect(screen.queryByTestId('layer-details-title', hidden)).toBeNull();
+    openURL.mockRestore();
+  });
+
+  it('opens a tapped feature’s name, category and description as plain text', async () => {
+    useCustomMapsStore.setState({
+      layerGeoJSON: { L1: layerFeatures({ color: '#00ff00' }, { name: 'Food truck 3', category: 'Vendor', description: '<b>Fries</b>\r\nCash only' }) },
+    });
+    await renderMap();
+    await fireEvent.press(screen.getByTestId('mock-map-layer-L1-press'));
+    await act(async () => undefined);
+    expect(screen.getByTestId('layer-feature-layer', hidden)).toHaveTextContent('Fire districts');
+    expect(screen.getByTestId('layer-feature-title', hidden)).toHaveTextContent('Food truck 3');
+    expect(screen.getByTestId('layer-feature-category', hidden)).toHaveTextContent(/Vendor/);
+    // Markup in an imported description is shown literally, never rendered.
+    expect(screen.getByTestId('layer-feature-description', hidden)).toHaveTextContent('<b>Fries</b> Cash only');
+
+    // A pin tap replaces the feature panel.
+    await fireEvent.press(screen.getByTestId('pin-c12'));
+    await act(async () => undefined);
+    expect(screen.queryByTestId('layer-feature-title', hidden)).toBeNull();
+    expect(screen.getByTestId('map-pin-sheet', hidden)).toBeTruthy();
+  });
+
+  it('ignores taps on features without a name or description', async () => {
+    useCustomMapsStore.setState({ layerGeoJSON: { L1: layerFeatures({ color: '#00ff00', category: 'Vendor' }) } });
+    await renderMap();
+    await fireEvent.press(screen.getByTestId('mock-map-layer-L1-press'));
+    await act(async () => undefined);
+    expect(screen.queryByTestId('layer-feature-details', hidden)).toBeNull();
+  });
+});
+
+describe('MapScreen offline layer features', () => {
+  const MAP_PRESS = { point: [120, 340], coordinates: [3.7, 51.05], geometry: { type: 'Point', coordinates: [3.7, 51.05] } };
+  const OFFLINE_LAYER_IDS = ['map-screen-offline-layers-labels', 'map-screen-offline-layers-points', 'map-screen-offline-layers-line', 'map-screen-offline-layers-fill'];
+
+  const bundleFeature = (properties: GeoJSON.GeoJsonProperties): GeoJSON.Feature => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [3.7, 51.05] }, properties });
+
+  it('looks a tapped offline feature up in the offline layers and names it after the live layer list', async () => {
+    mockMapStyle.isOffline = true;
+    mockMapView.queryRenderedFeatures.mockResolvedValue([
+      bundleFeature({ layerId: 'L9', layerName: 'Old name', color: '#ff0000' }),
+      bundleFeature({ layerId: 'L1', layerName: 'Districts (bundle)', name: 'Water point 2', category: 'Water', description: 'Cups and sponges' }),
+    ]);
+    await renderMap();
+    await fireEvent(screen.getByTestId('map-screen-map'), 'press', MAP_PRESS);
+    await act(async () => undefined);
+    expect(mockMapView.queryRenderedFeatures).toHaveBeenCalledWith([120, 340], { layerIds: OFFLINE_LAYER_IDS });
+    expect(screen.getByTestId('layer-feature-layer', hidden)).toHaveTextContent('Fire districts');
+    expect(screen.getByTestId('layer-feature-title', hidden)).toHaveTextContent('Water point 2');
+    expect(screen.getByTestId('layer-feature-description', hidden)).toHaveTextContent('Cups and sponges');
+  });
+
+  it('falls back to the bundle’s layer name for a layer the device does not list', async () => {
+    mockMapStyle.isOffline = true;
+    mockMapView.queryRenderedFeatures.mockResolvedValue([bundleFeature({ layerId: 'L404', layerName: 'Street fair', name: 'Stage A' })]);
+    await renderMap();
+    await fireEvent(screen.getByTestId('map-screen-map'), 'press', MAP_PRESS);
+    await act(async () => undefined);
+    expect(screen.getByTestId('layer-feature-layer', hidden)).toHaveTextContent('Street fair');
+  });
+
+  it('keeps the pin when a pin is pressed before the lookup answers', async () => {
+    mockMapStyle.isOffline = true;
+    let answer: (features: GeoJSON.Feature[]) => void = () => undefined;
+    mockMapView.queryRenderedFeatures.mockImplementation(() => new Promise<GeoJSON.Feature[]>((resolve) => (answer = resolve)));
+    await renderMap();
+    await fireEvent(screen.getByTestId('map-screen-map'), 'press', MAP_PRESS);
+    await act(async () => undefined);
+    await fireEvent.press(screen.getByTestId('pin-c12'));
+    await act(async () => answer([bundleFeature({ layerId: 'L1', name: 'Water point 2' })]));
+    expect(screen.queryByTestId('layer-feature-title', hidden)).toBeNull();
+    expect(screen.getByTestId('map-pin-sheet', hidden)).toBeTruthy();
+  });
+
+  it('does not look anything up while the map is online (online layers press their own features)', async () => {
+    await renderMap();
+    expect(screen.getByTestId('map-screen-map').props.onPress).toBeUndefined();
   });
 });
 

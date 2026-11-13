@@ -1,6 +1,6 @@
 import { type CallRights, type CallsCapability, isCallReporter, resolveCallPermissions } from '../lib/call-permissions';
 
-const ALL_CALLS: CallsCapability = { create: 'full', dispatch: true, close: true, queues: true, runCards: true };
+const ALL_CALLS: CallsCapability = { create: 'full', dispatch: true, close: true, queues: true, runCards: true, nearestBoard: true, destinationAvailability: true };
 const MEMBER: CallRights = { isAdmin: false, canCreateCalls: true, canCloseCalls: true, canDeleteCalls: true };
 const NOW = Date.parse('2026-11-04T12:00:00Z');
 

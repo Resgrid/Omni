@@ -1,15 +1,16 @@
-import { getPoi, getPois, getPoiTypes } from '@resgrid/api';
-import type { PoiResultData, PoiTypeResultData } from '@resgrid/models';
+import { getNearestDestinations, getPoi, getPoiCapabilities, getPois, getPoiTypes, setPoiAvailability } from '@resgrid/api';
+import type { NearestDestinationResultData, PoiCapabilityResultData, PoiResultData, PoiTypeResultData, SetPoiAvailabilityInput } from '@resgrid/models';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-import { unwrapItem, unwrapList } from '../core/envelope';
+import { type Enveloped, unwrapItem, unwrapList } from '../core/envelope';
+import { type DataError, toDataError } from '../core/errors';
 import { dataPersistOptions, registerPersistedStore } from '../core/persist';
 import { registerDataStoreReset } from '../core/reset';
-import { getDataApiContext } from '../core/runtime';
+import { getDataApiContext, getDataLogger } from '../core/runtime';
 import { cacheOptions, createSliceRunner, emptySliceMeta, type FetchOptions, type SliceMeta, type SliceRunner } from '../core/slices';
 
-type PoisSlice = 'pois' | 'destinationPois' | 'poiTypes' | 'detail';
+type PoisSlice = 'pois' | 'destinationPois' | 'poiTypes' | 'detail' | 'capabilities';
 
 interface PoisData extends SliceMeta<PoisSlice> {
   pois: PoiResultData[];
@@ -18,6 +19,20 @@ interface PoisData extends SliceMeta<PoisSlice> {
   poiTypes: PoiTypeResultData[];
   /** Responder detail cache: a POI opened once stays readable offline. */
   poiDetailsById: Record<number, PoiResultData>;
+  /** The department's POI capabilities ("Cath Lab"), in its order (Core M0315; empty on older servers). */
+  poiCapabilities: PoiCapabilityResultData[];
+}
+
+/** What a destination availability change returned: the destination after it, or why it failed. */
+export type SetPoiAvailabilityOutcome = { ok: true; poi: PoiResultData | null } | { ok: false; error: DataError };
+
+/** Parameters of a nearest-destination ranking (`GET /Mapping/GetNearestDestinations`). */
+export interface NearestDestinationsQuery {
+  latitude: number;
+  longitude: number;
+  capabilityId?: string | null;
+  unitId?: number | string | null;
+  take?: number;
 }
 
 export interface PoisState extends PoisData {
@@ -26,9 +41,19 @@ export interface PoisState extends PoisData {
   fetchDestinationPois: (options?: FetchOptions) => Promise<void>;
   fetchPoiTypes: (options?: FetchOptions) => Promise<void>;
   fetchPoi: (poiId: number, options?: FetchOptions) => Promise<PoiResultData | null>;
+  fetchPoiCapabilities: (options?: FetchOptions) => Promise<void>;
+  /**
+   * Sets a destination's availability online (dispatchers; Core refuses others). The loaded copies of the POI are replaced
+   * with what the server returned. Not queued offline: an availability report is only true now.
+   */
+  setPoiAvailability: (input: SetPoiAvailabilityInput) => Promise<SetPoiAvailabilityOutcome>;
+  /** Ranks destinations from a point; null when the server could not answer (callers keep their own order). Not stored. */
+  fetchNearestDestinations: (query: NearestDestinationsQuery, signal?: AbortSignal) => Promise<NearestDestinationResultData[] | null>;
 }
 
-const initialData = (): PoisData => ({ ...emptySliceMeta<PoisSlice>(), pois: [], destinationPois: [], poiTypes: [], poiDetailsById: {} });
+const replacePoi = (list: PoiResultData[], poi: PoiResultData): PoiResultData[] => (list.some((item) => item.PoiId === poi.PoiId) ? list.map((item) => (item.PoiId === poi.PoiId ? poi : item)) : list);
+
+const initialData = (): PoisData => ({ ...emptySliceMeta<PoisSlice>(), pois: [], destinationPois: [], poiTypes: [], poiDetailsById: {}, poiCapabilities: [] });
 
 let runner: SliceRunner<PoisSlice, PoisState>;
 
@@ -36,6 +61,7 @@ export const usePoisStore = create<PoisState>()(
   persist(
     (set, get) => {
       runner = createSliceRunner<PoisSlice, PoisState>('pois', set);
+
       return {
         ...initialData(),
 
@@ -68,25 +94,92 @@ export const usePoisStore = create<PoisState>()(
 
         fetchPoi: async (poiId, options) => {
           const cached = get().poiDetailsById[poiId] ?? get().pois.find((poi) => poi.PoiId === poiId);
+
           if (cached && !options?.bypassCache) return cached;
+
           const result = await runner.run(
             'detail',
             async () => unwrapItem(await getPoi(getDataApiContext(), { poiId }, cacheOptions(options))),
             (poi, state) => (poi ? { poiDetailsById: { ...state.poiDetailsById, [poiId]: poi } } : {}),
             { flightKey: `detail:${poiId}` }
           );
+
           return result.ok ? result.value : (cached ?? null);
+        },
+
+        fetchPoiCapabilities: async (options) => {
+          if (!options?.bypassCache && get().poiCapabilities.length > 0) return;
+          await runner.run(
+            'capabilities',
+            async () => unwrapList(await getPoiCapabilities(getDataApiContext(), cacheOptions(options))),
+            (poiCapabilities) => ({ poiCapabilities })
+          );
+        },
+
+        setPoiAvailability: async (input) => {
+          try {
+            const response = await setPoiAvailability(getDataApiContext(), input);
+            // SAFETY: SetPoiAvailabilityResult is the v4 envelope (Data + Status); unwrapItem checks Status and returns null for a missing Data.
+            const poi = unwrapItem(response as Enveloped<PoiResultData>);
+
+            if (poi) {
+              set((state) => ({
+                pois: replacePoi(state.pois, poi),
+                destinationPois: replacePoi(state.destinationPois, poi),
+                poiDetailsById: { ...state.poiDetailsById, [poi.PoiId]: poi },
+              }));
+            }
+
+            return { ok: true, poi };
+          } catch (error) {
+            const dataError = toDataError(error);
+            getDataLogger().warn({ message: 'Setting destination availability failed', context: { code: dataError.code, status: dataError.status } });
+
+            return { ok: false, error: dataError };
+          }
+        },
+
+        fetchNearestDestinations: async (query, signal) => {
+          try {
+            const params: Parameters<typeof getNearestDestinations>[1] = { latitude: query.latitude, longitude: query.longitude };
+
+            if (query.capabilityId) params.capabilityId = query.capabilityId;
+
+            if (query.unitId !== null && query.unitId !== undefined && query.unitId !== '') params.unitId = query.unitId;
+
+            if (query.take) params.take = query.take;
+
+            const response = await getNearestDestinations(getDataApiContext(), params, signal ? { signal } : undefined);
+
+            // SAFETY: NearestDestinationsResult is the v4 list envelope (Data + Status); unwrapList checks Status.
+            return unwrapList(response as Enveloped<NearestDestinationResultData[]>);
+          } catch (error) {
+            if (signal?.aborted) return null;
+            const dataError = toDataError(error);
+            getDataLogger().warn({ message: 'Nearest destinations failed', context: { code: dataError.code, status: dataError.status } });
+
+            // Never block a status or a call: the lists fall back to their own order.
+            return null;
+          }
         },
       };
     },
     dataPersistOptions<PoisState, Omit<PoisData, 'loading' | 'errors'>>({
       name: 'omni-pois-storage',
-      partialize: (state) => ({ pois: state.pois, destinationPois: state.destinationPois, poiTypes: state.poiTypes, poiDetailsById: state.poiDetailsById, fetchedAt: state.fetchedAt }),
+      partialize: (state) => ({
+        pois: state.pois,
+        destinationPois: state.destinationPois,
+        poiTypes: state.poiTypes,
+        poiDetailsById: state.poiDetailsById,
+        poiCapabilities: state.poiCapabilities,
+        fetchedAt: state.fetchedAt,
+      }),
     })
   )
 );
 
 registerPersistedStore('omni-pois-storage', usePoisStore);
+
 registerDataStoreReset<PoisState>('pois', usePoisStore, initialData, () => runner.invalidate());
 
 export const selectPoiById = (state: Pick<PoisState, 'pois' | 'poiDetailsById'>, poiId: number): PoiResultData | undefined => state.poiDetailsById[poiId] ?? state.pois.find((poi) => poi.PoiId === poiId);

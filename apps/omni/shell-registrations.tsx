@@ -17,6 +17,7 @@ import { setDashboardStorage } from '@resgrid/features/dashboard';
 import { StepUpPromptHost } from '@resgrid/features/data-protection';
 import { setDepartmentConfig } from '@resgrid/features/department-config';
 import { createIncidentCommandCallTab } from '@resgrid/features/incident-command';
+import { DispatchBoardLayers } from '@resgrid/features/map';
 import { registerOfflineMapsSettings } from '@resgrid/features/offline-maps';
 import { CALL_RECORDS_TAB, configureRecords, registerRecordsContextHook } from '@resgrid/features/records';
 import { registerRunCardCallDetailTab, registerRunCardHookPoints } from '@resgrid/features/runcards';
@@ -73,9 +74,9 @@ function MemberMenu({ nav, onNavigate }: SidebarContentProps) {
   return <NavMenu nav={nav} onNavigate={onNavigate} actions={<VoiceMenuButtons />} />;
 }
 
-/** The call form's full-screen map picker (the address of the picked point comes from the server). */
-function CallLocationPicker({ isOpen, onClose, initial, onSelect }: LocationPickerProps) {
-  return <FullScreenLocationPicker isOpen={isOpen} initialLocation={initial} onClose={onClose} onLocationSelected={onSelect} />;
+/** The call form's full-screen map picker (the address of the picked point comes from the server), with the nearest-unit board drawn on it in Dispatch. */
+function CallLocationPicker({ isOpen, onClose, initial, onSelect, overlay }: LocationPickerProps) {
+  return <FullScreenLocationPicker isOpen={isOpen} initialLocation={initial} onClose={onClose} onLocationSelected={onSelect} overlay={overlay ? <DispatchBoardLayers overlay={overlay} /> : undefined} />;
 }
 
 /** The map of a call (detail) or of the location being entered (form). */

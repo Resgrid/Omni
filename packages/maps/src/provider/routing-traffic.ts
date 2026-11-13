@@ -20,11 +20,19 @@ export interface MapRoutingCapabilities {
   navigationAvailable: boolean;
 }
 
+/**
+ * `vector`: Mapbox Traffic v1 (congestion lines drawn by the app). `raster`: a department's own traffic image tiles (e.g.
+ * TomTom flow), drawn as they come.
+ */
+export type MapTrafficTileType = 'vector' | 'raster';
+
 export interface MapTrafficConfig {
   /** The overlay can be shown: the server has traffic tiles and the map is online (not on an offline pack style). */
   available: boolean;
-  /** Mapbox Traffic v1 vector tile template (`{z}/{x}/{y}`, carries the traffic token); null when unavailable. */
+  /** Tile template (`{z}/{x}/{y}`, carries the provider's key); null when unavailable. */
   tileUrl: string | null;
+  /** What `tileUrl` serves. */
+  type: MapTrafficTileType;
   /** Seconds between tile reloads while the overlay is shown (at least 60). */
   refreshSeconds: number;
 }
@@ -34,12 +42,13 @@ export const DEFAULT_TRAFFIC_REFRESH_SECONDS = 300;
 export const MIN_TRAFFIC_REFRESH_SECONDS = 60;
 
 export const NO_MAP_ROUTING: MapRoutingCapabilities = { provider: null, supportsTraffic: false, supportsIncidents: false, supportsVoice: false, navigationAvailable: false };
-export const NO_MAP_TRAFFIC: MapTrafficConfig = { available: false, tileUrl: null, refreshSeconds: DEFAULT_TRAFFIC_REFRESH_SECONDS };
+export const NO_MAP_TRAFFIC: MapTrafficConfig = { available: false, tileUrl: null, type: 'vector', refreshSeconds: DEFAULT_TRAFFIC_REFRESH_SECONDS };
 
 const hasTilePlaceholders = (url: string): boolean => url.includes('{z}') && url.includes('{x}') && url.includes('{y}');
 
 export const resolveMapRouting = (config: MapConfigInput | null | undefined, navigationInApp: boolean): MapRoutingCapabilities => {
   const provider = cleanString(config?.RoutingProvider).toLowerCase();
+
   return {
     provider: provider || null,
     supportsTraffic: config?.RoutingSupportsTraffic === true,
@@ -49,11 +58,21 @@ export const resolveMapRouting = (config: MapConfigInput | null | undefined, nav
   };
 };
 
-/** Traffic tiles only over https (http to localhost in development) and only as a `{z}/{x}/{y}` template. */
+const isTileTemplate = (url: string, allowLocalHttp?: boolean): boolean => isSafeMapUrl(url, allowLocalHttp) && hasTilePlaceholders(url);
+
+/**
+ * Traffic tiles only over https (http to localhost in development) and only as a `{z}/{x}/{y}` template. A department's own
+ * image tiles (`TrafficRasterTileUrl`) win over the vector overlay; Core sends them in their own field (with
+ * `TrafficAvailable` false) so builds without this code show no traffic rather than load images as vector tiles.
+ */
 export const resolveMapTraffic = (config: MapConfigInput | null | undefined, isOffline: boolean, allowLocalHttp?: boolean): MapTrafficConfig => {
   const seconds = typeof config?.TrafficRefreshSeconds === 'number' && Number.isFinite(config.TrafficRefreshSeconds) ? Math.round(config.TrafficRefreshSeconds) : DEFAULT_TRAFFIC_REFRESH_SECONDS;
   const refreshSeconds = Math.max(MIN_TRAFFIC_REFRESH_SECONDS, seconds);
+  const raster = cleanString(config?.TrafficRasterTileUrl);
+
+  if (isTileTemplate(raster, allowLocalHttp)) return { available: !isOffline, tileUrl: raster, type: 'raster', refreshSeconds };
   const url = cleanString(config?.TrafficTileUrl);
-  const usable = config?.TrafficAvailable === true && isSafeMapUrl(url, allowLocalHttp) && hasTilePlaceholders(url);
-  return { available: usable && !isOffline, tileUrl: usable ? url : null, refreshSeconds };
+  const usable = config?.TrafficAvailable === true && isTileTemplate(url, allowLocalHttp);
+
+  return { available: usable && !isOffline, tileUrl: usable ? url : null, type: 'vector', refreshSeconds };
 };

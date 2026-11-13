@@ -5,18 +5,39 @@ import { useTranslation } from '@resgrid/i18n';
 import type { PersonnelInfoResultData, UnitInfoResultData } from '@resgrid/models';
 import { Badge, BadgeText, contentOnFill, HStack, Pressable, Text, TypeIcon, useReadableColor, useThemeColors, VStack } from '@resgrid/ui';
 import type { LucideIcon } from 'lucide-react-native';
-import { Circle, ExternalLink, MapPin, Plus, Square, SquareCheck, Truck, User, Users } from 'lucide-react-native';
+import { AlertTriangle, Circle, ExternalLink, MapPin, Plus, Square, SquareCheck, Truck, User, Users } from 'lucide-react-native';
 import React, { useMemo } from 'react';
 import { type GestureResponderEvent, Platform, StyleSheet, View } from 'react-native';
+import { z } from 'zod';
 
 import { getUnitCrew } from '../lib/console-filters';
 
-/** Ctrl/Cmd-click on web adds a unit to a multi-unit selection, as in a desktop list. */
-export const isMultiSelectClick = (event?: GestureResponderEvent): boolean => {
-  if (Platform.OS !== 'web' || !event) return false;
-  const pressEvent = event as unknown as { ctrlKey?: boolean; metaKey?: boolean; nativeEvent?: { ctrlKey?: boolean; metaKey?: boolean } };
+const modifierFlagsSchema = z.object({ ctrlKey: z.boolean().optional(), metaKey: z.boolean().optional(), shiftKey: z.boolean().optional() });
 
-  return !!(pressEvent.ctrlKey || pressEvent.metaKey || pressEvent.nativeEvent?.ctrlKey || pressEvent.nativeEvent?.metaKey);
+/** A press on web: react-native-web puts the modifier flags on the press event or on its DOM event. */
+const webPressSchema = modifierFlagsSchema.extend({ nativeEvent: modifierFlagsSchema.optional() });
+
+/** The selection a modified click asks for on web: Ctrl/Cmd adds one unit, Shift adds a range. */
+export interface PressModifiers {
+  isMultiSelect: boolean;
+  isRangeSelect: boolean;
+}
+
+export type WebPressFlags = z.infer<typeof webPressSchema>;
+
+const NO_MODIFIERS: PressModifiers = { isMultiSelect: false, isRangeSelect: false };
+
+export const toPressModifiers = ({ ctrlKey, metaKey, shiftKey, nativeEvent }: WebPressFlags): PressModifiers => ({
+  isMultiSelect: !!(ctrlKey || metaKey || nativeEvent?.ctrlKey || nativeEvent?.metaKey),
+  isRangeSelect: !!(shiftKey || nativeEvent?.shiftKey),
+});
+
+/** The modifier keys held during a press, as in a desktop list; none on native or for a press without them. */
+export const readPressModifiers = (event?: GestureResponderEvent): PressModifiers => {
+  if (Platform.OS !== 'web' || !event) return NO_MODIFIERS;
+  const parsed = webPressSchema.safeParse(event);
+
+  return parsed.success ? toPressModifiers(parsed.data) : NO_MODIFIERS;
 };
 
 /** Dispatch's row card: indigo border when selected, washed in indigo while it is in a multi-unit selection. */
@@ -101,6 +122,26 @@ const DestinationLine: React.FC<{ name: string }> = ({ name }) => {
   );
 };
 
+/**
+ * A unit's transport status going somewhere other than its call's assigned destination (transport destination checks): the
+ * call's destination in red, so the dispatcher can confirm the change by radio.
+ */
+const CallDestinationMismatchLine: React.FC<{ name: string; testID: string }> = ({ name, testID }) => {
+  const { t } = useTranslation();
+  const colors = useThemeColors();
+
+  return (
+    <HStack space="xs" className="mt-0.5 items-center" testID={testID}>
+      <View>
+        <AlertTriangle size={10} color={colors.token('error-500')} />
+      </View>
+      <Text className="flex-1 text-xs font-medium text-error-600" numberOfLines={1}>
+        {t('status.call_assigned_destination', { name })}
+      </Text>
+    </HStack>
+  );
+};
+
 const PendingSyncBadge: React.FC = () => {
   const { t } = useTranslation();
 
@@ -127,6 +168,8 @@ export interface ConsoleUnitRowProps {
   timerLevel?: UnitStatusAlertLevel;
   timerAcknowledgement?: UnitAlertAcknowledgementState;
   timerSeconds?: number | null;
+  /** The call's assigned destination when the unit's transport status goes elsewhere (`unitTransportDestinationMismatch`). */
+  callDestinationMismatch?: string | null;
 }
 
 /**
@@ -135,7 +178,21 @@ export interface ConsoleUnitRowProps {
  * unit over its status timer gets the timer's edge colour and badge (until someone mutes it): the cue to contact it.
  */
 export const ConsoleUnitRow: React.FC<ConsoleUnitRowProps> = React.memo(
-  ({ unit, isSelected, isOnCall, isSelectionMode, hasPendingStatus = false, onPress, onLongPress, onOpen, onSetStatusForCall, timerLevel = 'none', timerAcknowledgement = 'none', timerSeconds = null }) => {
+  ({
+    unit,
+    isSelected,
+    isOnCall,
+    isSelectionMode,
+    hasPendingStatus = false,
+    onPress,
+    onLongPress,
+    onOpen,
+    onSetStatusForCall,
+    timerLevel = 'none',
+    timerAcknowledgement = 'none',
+    timerSeconds = null,
+    callDestinationMismatch = null,
+  }) => {
     const { t } = useTranslation();
     const colors = useThemeColors();
     const readable = useReadableColor();
@@ -154,7 +211,8 @@ export const ConsoleUnitRow: React.FC<ConsoleUnitRowProps> = React.memo(
           onLongPress={() => onLongPress(unit.UnitId)}
           accessibilityRole="button"
           accessibilityState={{ selected: isSelected }}
-          className="flex-1 rounded-lg p-2"
+          // No text selection on web: a Shift-click would otherwise highlight the rows' text instead of only selecting units.
+          className="flex-1 rounded-lg p-2 web:select-none"
           testID={`console-unit-${unit.UnitId}`}
         >
           <HStack space="sm" className="items-center">
@@ -179,6 +237,7 @@ export const ConsoleUnitRow: React.FC<ConsoleUnitRowProps> = React.memo(
               </Text>
               <UnitCrewLine unit={unit} />
               {unit.CurrentDestinationName?.trim() ? <DestinationLine name={unit.CurrentDestinationName} /> : null}
+              {callDestinationMismatch ? <CallDestinationMismatchLine name={callDestinationMismatch} testID={`console-unit-${unit.UnitId}-destination-mismatch`} /> : null}
               <UnitNavigationEtaChip unitId={unit.UnitId} testID={`console-unit-${unit.UnitId}-eta`} />
             </VStack>
             <VStack space="xs" className="max-w-[140px] items-end">

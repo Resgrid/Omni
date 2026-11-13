@@ -517,7 +517,39 @@
     "destination_poi_select": "Select a destination",
     "destination_poi_search": "Search destinations...",
     "destination_poi_none_found": "No destinations match your search",
-    "destination_poi_clear": "Clear destination"
+    "destination_poi_clear": "Clear destination",
+    "dispatch_board": {
+      "at_station": "En la estación",
+      "available_only": "Solo disponibles",
+      "board_error": "No se pudieron cargar las distancias. Se muestran todos por nombre.",
+      "crew": "Dotación: {{names}}",
+      "includes_turnout": "incl. {{seconds}} s de salida",
+      "loading_board": "Buscando las unidades y el personal más cercanos…",
+      "location_hidden": "Ubicación oculta",
+      "location_stale": "Ubicación de hace {{age}}",
+      "location_stale_unknown": "La ubicación es antigua",
+      "map_boundaries": "Límites de estaciones",
+      "map_personnel": "Personal disponible",
+      "map_units": "Unidades disponibles",
+      "nearest": "Más cercano #{{rank}}",
+      "no_crew": "Sin dotación asignada",
+      "no_location": "Sin ubicación",
+      "on_unit": "En {{unit}}",
+      "ranked_from_location": "Ordenados por tiempo de respuesta a la ubicación de la llamada.",
+      "run_card_pick": "Plan de respuesta",
+      "set_location_to_rank": "Indique la ubicación de la llamada para ver quién está más cerca.",
+      "sort_closest": "Más cercanos",
+      "sort_name": "Nombre"
+    },
+    "map_page": "Página del mapa",
+    "all_call": "Llamada general",
+    "all_call_dispatch_everyone": "Llamada general (despachar a todos)",
+    "all_call_help": "Todas las listas de despacho están ocultas. Active la llamada general para enviar esta llamada a todos, o déjela desactivada para guardar una llamada informativa que no avisa a nadie.",
+    "all_call_edit_help": "Active la llamada general para añadir a todos a esta llamada y avisarles. Déjela desactivada para mantener los destinatarios que ya tiene la llamada.",
+    "all_call_dispatch_now_help": "Todas las listas de despacho están ocultas. Active la llamada general para enviar esta llamada a todos, o déjela desactivada para enviarla a los destinatarios con los que se guardó.",
+    "additional_contacts": "Contactos adicionales",
+    "check_in_timers": "Temporizadores de registro",
+    "part2_consent": "Consentimiento 42 CFR Part 2"
   },
   "chat": {
     "ack_pending_count": "Tienes {{count}} mensajes urgentes por confirmar",
@@ -1810,6 +1842,22 @@
       "badge_details": "This map is drawn from maps saved on this device.",
       "badge_stale": "These maps have not been updated for a while. Connect to the internet to refresh them.",
       "badge_attribution": "Map data: {{attribution}}"
+    },
+    "layer_info": {
+      "show_details": "Detalles de {{name}}",
+      "phase_upcoming": "Próximo",
+      "phase_active": "En curso",
+      "phase_ended": "Finalizado",
+      "range": "{{start}} – {{end}}",
+      "from": "Desde {{start}}",
+      "until": "Hasta {{end}}",
+      "organizer": "Organizador",
+      "contact": "Contacto",
+      "phone": "Teléfono",
+      "email": "Correo electrónico",
+      "category": "Categoría",
+      "no_details": "Esta capa no tiene detalles.",
+      "source_file": "Importado de {{name}}"
     }
   },
   "mfa": {
@@ -2331,7 +2379,28 @@
     "destinations_only": "Destinations",
     "empty": "No points of interest",
     "not_found": "Point of interest not found",
-    "search": "Search points of interest..."
+    "search": "Search points of interest...",
+    "all_capabilities": "Todos",
+    "nearest": "Más cercano",
+    "availability": {
+      "open": "Abierto",
+      "limited": "Limitado",
+      "diversion": "Desvío",
+      "closed": "Cerrado",
+      "capability_unavailable": "No disponible ahora",
+      "title": "Disponibilidad",
+      "set": "Establecer disponibilidad",
+      "set_title": "Disponibilidad del destino",
+      "unavailable_capabilities": "No disponible ahora",
+      "note": "Lo comunicado",
+      "note_placeholder": "p. ej., urgencias saturadas, TAC averiado",
+      "expires": "Duración",
+      "expires_never": "Hasta que se cambie",
+      "expires_hours": "{{count}} h",
+      "until": "Hasta {{time}}",
+      "saved": "Disponibilidad guardada",
+      "save_failed": "No se pudo guardar la disponibilidad"
+    }
   },
   "protocols": {
     "details": {
@@ -3015,7 +3084,12 @@
     "show_next_statuses": "Mostrar solo los estados siguientes",
     "staffing_tab": "Staffing",
     "status_queued": "Saved on this device. It will be sent when the connection is back.",
-    "status_tab": "Status"
+    "status_tab": "Status",
+    "assigned_to_call": "Asignado a la llamada",
+    "call_assigned_destination": "Destino de la llamada: {{name}}",
+    "transport_destination_differs": "Difiere del destino asignado de la llamada: {{name}}",
+    "transport_reason_required": "Este destino difiere del destino asignado de la llamada ({{name}}). Indique un motivo (obligatorio).",
+    "destination_availability": "{{name}}: {{status}}"
   },
   "tabs": {
     "calendar": "Calendario",

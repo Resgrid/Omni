@@ -69,6 +69,8 @@ export interface EditCallInput {
   IncidentId?: string | null;
   /** Reference Id */
   ReferenceId?: string | null;
+  /** Optional. The map book page for the call's location. Null or blank keeps the stored page; leave it out (null) when the client has no input for it, so the department's map page requirement is not enforced against it. */
+  MapPage?: string | null;
   /** Optional. Indoor map zone the incident is in. Blank keeps the stored zone; leave it out (null) when the client has no indoor location picker, which also leaves the department's indoor location requirement unenforced. */
   IndoorMapZoneId?: string | null;
   /** Optional. Floor of Resgrid.Web.Services.Models.v4.Calls.EditCallInput.IndoorMapZoneId. */
@@ -194,6 +196,8 @@ export interface NewCallInput {
   IncidentId?: string | null;
   /** Reference Id */
   ReferenceId?: string | null;
+  /** Optional. The map book page for the call's location. Leave it out (null) when the client has no input for it: the department's map page requirement is then not enforced; sent blank, it is. */
+  MapPage?: string | null;
   /** Optional. Id of an existing call in the department to link this call to (shown as a linked call on both). Leave it out (null) when the client has no way to pick one: the department's linked-call requirement is then not enforced; sent blank, it is. */
   LinkedCallId?: string | null;
   /** Optional. Ids of the department's dispatch protocols to attach to the call. Leave it out (null) when the client has no protocol picker: the department's protocols requirement is then not enforced; sent empty, it is. */

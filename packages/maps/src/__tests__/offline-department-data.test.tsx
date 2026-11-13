@@ -4,7 +4,7 @@ import React from 'react';
 import { Image } from 'react-native';
 
 import { CustomMapRasterLayer, IndoorMapFloorLayer } from '../components/department-map-layers';
-import { OfflineDepartmentLayers, offlineLayersFilter } from '../components/offline-department-layers';
+import { offlineDepartmentLayerIds, OfflineDepartmentLayers, offlineLayersFilter } from '../components/offline-department-layers';
 import { PixelImageMap } from '../components/pixel-image-map';
 import { offlineCustomMapSourceId, offlineDepartmentSourceId, offlineFloorSourceId, styleHasGlyphs, styleHasSource, styleImageSourceUrl } from '../lib/offline-style-sources';
 import { createPixelFrame, hasGeoBounds, parsePixelRing, pixelRegionsToFeatureCollection } from '../lib/pixel-frame';
@@ -165,6 +165,15 @@ describe('OfflineDepartmentLayers', () => {
     );
     expect(screen.getByTestId('mlrn-layer-offline-dept-layers-fill').props.source).toBe('offline-dept-layers');
     expect(screen.getByTestId('mlrn-layer-offline-dept-layers-labels')).toBeTruthy();
+    // Drawn from the decoder's checked colour (never a raw `color` / `layerColor`), else the theme's.
+    expect(screen.getByTestId('mlrn-layer-offline-dept-layers-fill').props.paint['fill-color']).toEqual(['coalesce', ['get', 'rgColor'], expect.any(String)]);
+    expect(screen.getByTestId('mlrn-layer-offline-dept-layers-points').props.paint['circle-color']).toEqual(['coalesce', ['get', 'rgColor'], expect.any(String)]);
+    // The ids a tap lookup queries are the layers drawn, topmost first.
+    expect(offlineDepartmentLayerIds()).toEqual(['offline-dept-layers-labels', 'offline-dept-layers-points', 'offline-dept-layers-line', 'offline-dept-layers-fill']);
+
+    for (const id of offlineDepartmentLayerIds()) expect(screen.getByTestId(`mlrn-layer-${id}`)).toBeTruthy();
+
+    expect(offlineDepartmentLayerIds('map-screen-offline-layers')[0]).toBe('map-screen-offline-layers-labels');
 
     await view.rerender(
       <MapProvider config={config} colorScheme="light" services={services} offline={offline(offlineStyle(false))}>

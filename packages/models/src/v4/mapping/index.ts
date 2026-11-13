@@ -9,6 +9,7 @@ export * from './getMapLayersResult';
 export * from './getMapLayersResultData';
 export * from './indoorMapResultData';
 export * from './mappingResults';
+export * from './poiDestinationResults';
 export * from './poiLayerData';
 export * from './poiResult';
 export * from './poiResultData';

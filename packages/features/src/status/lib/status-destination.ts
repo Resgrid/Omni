@@ -6,6 +6,8 @@
 import { callDisplayName } from '@resgrid/features/calls/lib/call-display';
 import { type CallResultData, DestinationEntityTypes, type GroupResultData, type PoiResultData, statusDetailAllowsCalls, statusDetailAllowsPois, statusDetailAllowsStations } from '@resgrid/models';
 
+import { ActionBaseTypes } from './base-types';
+
 export type DestinationTab = 'call' | 'station' | 'poi';
 
 export type StatusDestination = { type: 'none' } | { type: 'call'; call: CallResultData } | { type: 'station'; station: GroupResultData } | { type: 'poi'; poi: PoiResultData };
@@ -70,6 +72,81 @@ export const resolveDefaultStatusCall = (calls: readonly CallResultData[], activ
   return currentCallId ? (calls.find((call) => String(call.CallId) === currentCallId) ?? null) : null;
 };
 
+/** Transporting and At Hospital: the status meanings that go to a call's assigned destination. */
+export const TRANSPORT_BASE_TYPES: readonly number[] = [ActionBaseTypes.Transporting, ActionBaseTypes.AtHospital];
+
+/**
+ * Transport destination checks (Core `TransportDestinationRules`; the Unit and Dispatch apps carry the same rules): a status
+ * whose base type is Transporting or At Hospital goes to the destination assigned on its call (`DestinationPoiId`).
+ */
+export const isTransportBaseType = (baseType: number | string | null | undefined): boolean => {
+  if (baseType == null || baseType === '') return false;
+
+  const value = Number(baseType);
+
+  return Number.isInteger(value) && TRANSPORT_BASE_TYPES.includes(value);
+};
+
+/**
+ * The call's assigned destination as a row of the loaded POI list, or null when the call has none or the POI is not
+ * offered (not a destination POI, or not loaded): only a POI the user could pick is pre-selected or compared against.
+ */
+export const resolveAssignedDestinationPoi = (call: Pick<CallResultData, 'DestinationPoiId'> | null | undefined, pois: readonly PoiResultData[]): PoiResultData | null => {
+  const id = call?.DestinationPoiId == null ? NaN : Number(call.DestinationPoiId);
+
+  if (!Number.isFinite(id) || id <= 0) return null;
+
+  return pois.find((poi) => Number(poi.PoiId) === id) ?? null;
+};
+
+/** What a unit's current status means and points at, for `getCurrentTransportPoiId`. */
+export interface CurrentTransportRef {
+  baseType?: number | string | null;
+  destinationId?: number | string | null;
+  destinationType?: number | string | null;
+}
+
+/**
+ * The POI the unit is already transporting to: its current status is a transport status pointing at a POI. A crew that
+ * changed hospital on "Departing" keeps that hospital for "At Hospital", and is not asked for the reason again.
+ */
+export const getCurrentTransportPoiId = (current: CurrentTransportRef | null | undefined): string | null => {
+  if (!current || !isTransportBaseType(current.baseType) || Number(current.destinationType) !== DestinationEntityTypes.Poi) return null;
+
+  const id = Number(current.destinationId);
+
+  return Number.isFinite(id) && id > 0 ? String(id) : null;
+};
+
+/** The loaded POI with this id (number or string), or null. */
+export const findPoiById = (pois: readonly PoiResultData[], poiId: number | string | null | undefined): PoiResultData | null => {
+  if (poiId == null || poiId === '') return null;
+
+  const id = Number(poiId);
+
+  return Number.isFinite(id) && id > 0 ? (pois.find((poi) => Number(poi.PoiId) === id) ?? null) : null;
+};
+
+/**
+ * True when a deviation needs a reason: the department turned the checks on and the destination is not the one the unit
+ * already reported (its reason was given then).
+ */
+export const isTransportReasonRequired = (checksEnabled: boolean, isDeviation: boolean, destination: StatusDestination, currentTransportPoi: PoiResultData | null): boolean => {
+  if (!checksEnabled || !isDeviation) return false;
+
+  return !(currentTransportPoi && destination.type === 'poi' && Number(destination.poi.PoiId) === Number(currentTransportPoi.PoiId));
+};
+
+/**
+ * True when a transport status goes to a POI other than the call's assigned one. No destination, a call or a station is
+ * never a deviation, and neither is anything when no assigned destination resolved.
+ */
+export const isTransportDestinationDeviation = (baseType: number | string | null | undefined, destination: StatusDestination, assigned: PoiResultData | null): boolean => {
+  if (!assigned || !isTransportBaseType(baseType) || destination.type !== 'poi') return false;
+
+  return Number(destination.poi.PoiId) !== Number(assigned.PoiId);
+};
+
 export interface EffectiveDestinationInput {
   detail: number;
   lenient: boolean;
@@ -77,18 +154,25 @@ export interface EffectiveDestinationInput {
   /** True once the user tapped a destination row (including "No destination"): the default is then never re-applied. */
   hasExplicitChoice: boolean;
   defaultCall: CallResultData | null;
+  /**
+   * A transport status's default: the default call's assigned destination (`resolveAssignedDestinationPoi`), preferred
+   * over the call when the status offers POIs. Pass null for any other status.
+   */
+  defaultPoi?: PoiResultData | null;
 }
 
 /**
  * What a submit sends. A status without a destination step still carries the open default call silently (a department
- * whose "On Scene" has no destination still needs it tied to the call); a status with one sends the selection, else
- * the default call until the user chose otherwise.
+ * whose "On Scene" has no destination still needs it tied to the call); a status with one sends the selection, else the
+ * default (a transport status's assigned destination POI, else the call) until the user chose otherwise.
  */
-export const resolveEffectiveDestination = ({ detail, lenient, selection, hasExplicitChoice, defaultCall }: EffectiveDestinationInput): StatusDestination => {
+export const resolveEffectiveDestination = ({ detail, lenient, selection, hasExplicitChoice, defaultCall, defaultPoi = null }: EffectiveDestinationInput): StatusDestination => {
   if (detail === 0) return defaultCall ? { type: 'call', call: defaultCall } : NO_DESTINATION;
   const tabs = getDestinationTabs(detail, lenient);
 
   if (selection.type !== 'none' && tabs.includes(selection.type)) return selection;
+
+  if (!hasExplicitChoice && defaultPoi && tabs.includes('poi')) return { type: 'poi', poi: defaultPoi };
 
   if (!hasExplicitChoice && tabs.includes('call') && defaultCall) return { type: 'call', call: defaultCall };
 

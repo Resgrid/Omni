@@ -60,6 +60,16 @@ export function callLocationTarget(call: CallLocationFields): NavigationTarget |
   return address !== '' ? { address, label } : null;
 }
 
+/**
+ * The call's point to rank the nearest-unit board from: its coordinates, else its geolocation; null without one or when
+ * the location is withheld from the viewer (a ranking would reveal it).
+ */
+export function callPoint(call: CallLocationFields | null | undefined): { latitude: number; longitude: number } | null {
+  const target = call ? callLocationTarget(call) : null;
+
+  return target && 'latitude' in target ? { latitude: target.latitude, longitude: target.longitude } : null;
+}
+
 type CallDestinationFields = Pick<CallResultData, 'DestinationLatitude' | 'DestinationLongitude' | 'DestinationAddress' | 'DestinationName'>;
 
 /** The call's destination POI (e.g. a hospital): its coordinates, else its address; null when the call has none. */

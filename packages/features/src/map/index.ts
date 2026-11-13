@@ -3,6 +3,7 @@
 //
 // The map lock (Unit's sidebar "Lock map to unit") is re-exported through one statement at the end: Oxlint's readable
 // spacing wants a blank line between top-level statements, which the export sorter removes.
+import { DispatchBoardLayers, type DispatchBoardLayersProps } from './components/dispatch-board-layers';
 import { LEGACY_LOCATION_STORE_NAME, MAP_LOCK_STORE_NAME, type MapLockState, useMapLock, useMapLockStore } from './hooks/use-map-lock';
 
 export { ActiveRouteOverlay, type ActiveRouteOverlayProps, activeRouteShapes } from './components/active-route-overlay';
@@ -20,4 +21,4 @@ export { type FeatureNavEntry, mapNav } from './nav';
 export { MAP_FOCUS_PARAMS, MAP_ROUTE_PATTERNS, mapRoutes } from './routes';
 export { default as MapScreen, type MapScreenLinks, type MapScreenProps } from './screens/map-screen';
 
-export { LEGACY_LOCATION_STORE_NAME, MAP_LOCK_STORE_NAME, type MapLockState, useMapLock, useMapLockStore };
+export { DispatchBoardLayers, type DispatchBoardLayersProps, LEGACY_LOCATION_STORE_NAME, MAP_LOCK_STORE_NAME, type MapLockState, useMapLock, useMapLockStore };

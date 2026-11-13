@@ -1,7 +1,7 @@
 import { isApiError } from '@resgrid/api';
-import { useFeatureFlag } from '@resgrid/auth';
+import { REDACTION_VALUE, useFeatureFlag } from '@resgrid/auth';
 import { useCapability } from '@resgrid/config';
-import { useCallDetailStore, useCallsStore } from '@resgrid/data';
+import { useCallDetailStore, useCallsStore, useRunCardsStore } from '@resgrid/data';
 import { ProtectedLabel, ProtectedRevealBar } from '@resgrid/features/data-protection';
 import { useTranslation } from '@resgrid/i18n';
 import { type CallQuickTemplateResultData, type NewCallFieldKey, NewCallFieldKeys, type UdfFieldValueInput } from '@resgrid/models';
@@ -44,6 +44,7 @@ import { useCallPermissions } from '../hooks/use-call-permissions';
 import { CALL_SHORTCUTS_AVAILABLE, useCallShortcuts } from '../hooks/use-call-shortcuts';
 import { useCallUdfFields } from '../hooks/use-call-udf-fields';
 import { useIsOnline } from '../hooks/use-connectivity';
+import { useDispatchBoardOverlay } from '../hooks/use-dispatch-board-overlay';
 import {
   applyCallTemplate,
   callDispatchSelection,
@@ -72,7 +73,8 @@ import { type GeocodeLookup, isWhat3WordsFormat, lookupAddress, lookupAddressAt,
 import { defaultPriorityId, priorityOptions } from '../lib/call-priority';
 import { MIN_DISPATCH_LEAD_MINUTES } from '../lib/call-schedule';
 import { CallState } from '../lib/call-time';
-import { describeCallFields } from '../lib/field-policy';
+import { shownDispatchLists } from '../lib/dispatch-selection';
+import { areAllDispatchListsHidden, describeCallFields } from '../lib/field-policy';
 import { getMissingCallFieldsFromRefusal } from '../lib/server-refusal';
 import { PENDING_CALLS_ROUTE } from '../routes';
 
@@ -116,7 +118,9 @@ const mergeUdfValues = (initial: readonly UdfFieldValueInput[], current: readonl
  * (`calls.queues`), honouring the department's new-call field policy — which also holds the save back until it has
  * loaded. `calls.create` `quick` shows the core fields plus whatever the policy requires; `full` shows everything the
  * policy allows. An edit adds protocols and a linked call (EditCall keeps the ones the call has), resends only a newly
- * picked dispatch time, can tell resources taken off the call, and leaves the fields the policy hides as stored.
+ * picked dispatch time, can tell resources taken off the call, and leaves the fields the policy hides as stored. The
+ * policy can hide each recipient list of Dispatch To; with all four hidden the form offers only an optional All Call
+ * (off: create pages nobody, edit keeps the recipients; on: everyone).
  *
  * Offline (plan §8.5): creating goes through the outbox — the call is saved on the device as "Queued — not dispatched
  * yet" (no number, nobody paged) and sent on reconnect; a refused call stays in Pending sync and opens here for
@@ -129,6 +133,7 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
   const colors = useThemeColors();
   const calls = useCapability('calls');
   const runCardsFlag = useFeatureFlag('Dispatch.RunCards');
+  const runCardPreview = useRunCardsStore((state) => state.recommendation);
   const { isDesktop } = useFormFactor();
   const isOnline = useIsOnline();
   const policy = useNewCallFieldPolicy();
@@ -165,6 +170,8 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
   const [udfApplied, setUdfApplied] = useState(false);
   // Edit: set once this screen's own read of the call has finished, so the form never starts from a cached copy.
   const [detailRead, setDetailRead] = useState(false);
+  // The primary contact picked here, so the form can name it (an edit names the call's own from the call).
+  const [pickedContact, setPickedContact] = useState<{ contactId: string; name: string } | null>(null);
 
   const readDetail = useCallback(
     async (options?: { bypassCache?: boolean }) => {
@@ -255,15 +262,23 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
   }, []);
 
   const show = (key: NewCallFieldKey): boolean => policy.isVisible(key) && (isFull || QUICK_FIELDS.has(key) || policy.isRequired(key));
+  // A hide-only field (a switch, one recipient list) is never required, so it never gets a marker.
   const req = (key: NewCallFieldKey): string => (policy.isRequired(key) ? ' *' : '');
   const showContactFields = show(NewCallFieldKeys.ContactName) || show(NewCallFieldKeys.ContactInfo);
+  const showContactPicker = show(NewCallFieldKeys.PrimaryContact);
+  // The recipient lists the department shows; with none, the form offers only an optional All Call (any variant, any
+  // create mode: the call must never go up blank, which Core reads as "everyone").
+  const dispatchLists = useMemo(() => shownDispatchLists(policy.isVisible), [policy]);
+  const allCall = areAllDispatchListsHidden(policy);
 
   const pickers: CallFormPickers = {
     protocols: show(NewCallFieldKeys.Protocols),
     linkedCall: show(NewCallFieldKeys.LinkedCall),
     udf: isFull && udf.fields !== null && udfApplied,
-    contact: showContactFields,
+    contact: showContactPicker,
     dispatchList: show(NewCallFieldKeys.DispatchList),
+    mapPage: show(NewCallFieldKeys.MapPage),
+    allCall,
   };
 
   // The point the latitude and longitude fields give (what the save sends).
@@ -278,6 +293,8 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
   const [heldMapPoint, setHeldMapPoint] = useState<{ point: CallFormLocation | null } | null>(null);
   const coordinatesBlank = !values.latitude.trim() && !values.longitude.trim();
   const mapLocation = coordinatesBlank ? null : heldMapPoint ? heldMapPoint.point : location;
+  // Dispatch's nearest-unit board on the location picker's map (asked for only while the picker is open).
+  const boardOverlay = useDispatchBoardOverlay(location, recipients.groups, open === 'location');
 
   /** Fills a blank address for a point (Dispatch: a typed or picked point never overwrites the address the caller gave). */
   const fillBlankAddress = useCallback(
@@ -541,6 +558,20 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
   const RunCardRecommendation = hookPoints.RunCardRecommendation;
   const { LocationPicker, StaticLocationMap } = hookPoints;
   const isPendingCall = isEdit ? detail?.call?.State === CallState.Pending : values.isPending;
+  // Like "Everyone", All Call is not offered for a pending call: the dispatcher who sends it picks its recipients.
+  const allCallOffered = allCall && !isPendingCall;
+  const pendingSwitchShown = !isEdit && policy.isVisible(NewCallFieldKeys.PendingCall);
+  const scheduleShown = isEdit ? policy.isVisible(NewCallFieldKeys.DispatchOn) : show(NewCallFieldKeys.DispatchOn);
+  const storedContactName = isEdit && values.contactId ? detail?.call?.Contacts?.find((contact) => contact.ContactId === values.contactId)?.Name : undefined;
+
+  const linkedContactName = !values.contactId
+    ? null
+    : pickedContact?.contactId === values.contactId
+      ? pickedContact.name
+      : storedContactName === REDACTION_VALUE
+        ? t('data_protection.protected_value')
+        : storedContactName || null;
+
   const attachedProtocols = isEdit ? (detail?.extraData?.Protocols ?? []) : [];
   const submitLabel = isEdit ? t('common.save') : correctingId ? t('calls.queued.resubmit') : values.isPending ? t('calls.save_pending_call') : t('calls.create');
 
@@ -856,6 +887,7 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
                 ) : null}
               </View>
             ) : null}
+            {show(NewCallFieldKeys.MapPage) ? textField('mapPage', `${t('calls.map_page')}${req(NewCallFieldKeys.MapPage)}`, { errorKey: NewCallFieldKeys.MapPage, testID: 'call-form-map-page' }) : null}
             {!isOnline ? (
               <Text size="xs" className="text-typography-500">
                 {t('calls.offline.no_geocoding')}
@@ -865,14 +897,26 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
           'call-form-location'
         )}
 
-        {showContactFields || show(NewCallFieldKeys.ExternalId) || show(NewCallFieldKeys.IncidentId) || show(NewCallFieldKeys.ReferenceId)
+        {showContactPicker || showContactFields || show(NewCallFieldKeys.ExternalId) || show(NewCallFieldKeys.IncidentId) || show(NewCallFieldKeys.ReferenceId)
           ? section(
               'call_detail.tabs.contact',
               <>
-                {showContactFields ? (
-                  <Button variant="outline" size="sm" className="mb-2 self-start" onPress={() => setOpen('contact')} accessibilityLabel={t('calls.contact_picker.select')} testID="call-form-contact-picker">
-                    <ButtonText>{t('calls.contact_picker.select')}</ButtonText>
-                  </Button>
+                {showContactPicker ? (
+                  <View style={styles.field}>
+                    <Button variant="outline" size="sm" className="self-start" onPress={() => setOpen('contact')} accessibilityLabel={t('calls.contact_picker.select')} testID="call-form-contact-picker">
+                      <ButtonText>{`${t('calls.contact_picker.select')}${req(NewCallFieldKeys.PrimaryContact)}`}</ButtonText>
+                    </Button>
+                    {linkedContactName ? (
+                      <Text size="xs" className="mt-1 text-typography-500" testID="call-form-linked-contact">
+                        {t('calls.contact_picker.linked', { name: linkedContactName })}
+                      </Text>
+                    ) : null}
+                    {errors[NewCallFieldKeys.PrimaryContact] ? (
+                      <Text size="xs" className="mt-1 text-error-600" testID="call-form-contact-picker-error">
+                        {t('calls.validation.required')}
+                      </Text>
+                    ) : null}
+                  </View>
                 ) : null}
                 {show(NewCallFieldKeys.ContactName)
                   ? textField('contactName', `${t('calls.contact_name')}${req(NewCallFieldKeys.ContactName)}`, {
@@ -1007,13 +1051,27 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
               </>,
               'call-form-dispatch-section'
             )
-          : null}
+          : allCallOffered
+            ? section(
+                'calls.dispatch_to',
+                <View style={styles.switchRow} testID="call-form-all-call-row">
+                  <View style={styles.switchText}>
+                    <Text className="text-typography-900">{t('calls.all_call_dispatch_everyone')}</Text>
+                    <Text size="xs" className="text-typography-500">
+                      {t(isEdit ? 'calls.all_call_edit_help' : 'calls.all_call_help')}
+                    </Text>
+                  </View>
+                  <Switch value={values.dispatch.everyone} onValueChange={(everyone: boolean) => set('dispatch', { ...values.dispatch, everyone })} accessibilityLabel={t('calls.all_call')} testID="call-form-all-call" />
+                </View>,
+                'call-form-dispatch-section'
+              )
+            : null}
 
-        {calls.queues && isFull && (!isEdit || policy.isVisible(NewCallFieldKeys.DispatchOn))
+        {calls.queues && isFull && (pendingSwitchShown || scheduleShown)
           ? section(
               'calls.scheduling.title',
               <>
-                {!isEdit ? (
+                {pendingSwitchShown ? (
                   <View style={styles.switchRow}>
                     <View style={styles.switchText}>
                       <Text className="text-typography-900">{t('calls.scheduling.pending')}</Text>
@@ -1024,7 +1082,7 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
                     <Switch value={values.isPending} onValueChange={(pending: boolean) => set('isPending', pending)} accessibilityLabel={t('calls.scheduling.pending')} testID="call-form-pending" />
                   </View>
                 ) : null}
-                {!values.isPending && (isEdit || show(NewCallFieldKeys.DispatchOn)) ? (
+                {!values.isPending && scheduleShown ? (
                   <View style={styles.field}>
                     <DateTimeField
                       mode="datetime"
@@ -1075,6 +1133,13 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
         recipients={recipients}
         value={values.dispatch}
         allowEveryone={!isPendingCall}
+        lists={dispatchLists}
+        callLocation={location}
+        recommended={
+          !isEdit && runCardsAvailable && runCardPreview
+            ? { units: (runCardPreview.Units ?? []).map((unit) => String(unit.UnitId)), users: (runCardPreview.Personnel ?? []).flatMap((person) => (person.UserId ? [person.UserId] : [])) }
+            : null
+        }
         onConfirm={(selection) => {
           set('dispatch', selection);
           setOpen(null);
@@ -1085,17 +1150,37 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
         <LinkedCallModal isOpen={open === 'linked'} onClose={() => setOpen(null)} selectedCallId={values.linkedCall?.callId} excludeCallId={callId} onSelect={(linked) => set('linkedCall', linked)} />
       ) : null}
       {pickers.protocols ? <ProtocolSelectorModal isOpen={open === 'protocols'} onClose={() => setOpen(null)} selected={values.protocolIds} onConfirm={(ids) => set('protocolIds', ids)} /> : null}
-      {showContactFields ? (
+      {showContactPicker ? (
         <ContactPicker
           isOpen={open === 'contact'}
           onClose={() => setOpen(null)}
           onSelect={(contact) => {
+            // The contact's name and reach fill the contact text fields the department shows (a hidden one is not this form's).
+            const fillName = policy.isVisible(NewCallFieldKeys.ContactName);
+            const fillInfo = policy.isVisible(NewCallFieldKeys.ContactInfo);
+
             setValues((current) => {
-              const next = { ...current, contactId: contact.contactId, contactName: contact.name, contactInfo: contact.info ?? current.contactInfo, address: current.address || contact.address || '' };
+              const next = {
+                ...current,
+                contactId: contact.contactId,
+                contactName: fillName ? contact.name : current.contactName,
+                contactInfo: fillInfo ? (contact.info ?? current.contactInfo) : current.contactInfo,
+                address: current.address || contact.address || '',
+              };
+
               const hasPoint = !!current.latitude.trim() || !!current.longitude.trim();
 
               // The contact's point fills blank coordinates only, as its address fills a blank address.
               return hasPoint || contact.latitude === undefined || contact.longitude === undefined ? next : { ...next, ...toCoordinateFields(contact.latitude, contact.longitude) };
+            });
+            setPickedContact({ contactId: contact.contactId, name: contact.name });
+            setErrors((current) => {
+              if (!(NewCallFieldKeys.PrimaryContact in current)) return current;
+              const next = { ...current };
+
+              delete next[NewCallFieldKeys.PrimaryContact];
+
+              return next;
             });
 
             if (coordinatesBlank && contact.latitude !== undefined && contact.longitude !== undefined) clearCoordinateErrors();
@@ -1108,6 +1193,7 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
         isOpen={open === 'destination'}
         onClose={() => setOpen(null)}
         pois={destinationPois}
+        origin={location}
         selectedId={values.destinationPoiId}
         onSelect={(poiId) => {
           set('destinationPoiId', poiId);
@@ -1119,6 +1205,7 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
           isOpen={open === 'location'}
           onClose={() => setOpen(null)}
           initial={location}
+          overlay={boardOverlay}
           onSelect={(picked) => {
             pickLocation(picked);
             setOpen(null);

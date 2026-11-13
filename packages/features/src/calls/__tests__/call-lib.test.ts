@@ -28,8 +28,8 @@ import { defaultPriorityId, priorityOptions, resolvePriority } from '../lib/call
 import { getScheduledDispatchPrefill, isDispatchTimeTooSoon } from '../lib/call-schedule';
 import { isClosedCall, isScheduledCall, timeAgo } from '../lib/call-time';
 import { getCallCloseErrorMessage, isActiveCommandFor } from '../lib/close-call';
-import { buildAddResourcesRequest, dispatchesToSelection, mergeDispatchSelections } from '../lib/dispatch-selection';
-import { createFieldPolicy, describeCallFields } from '../lib/field-policy';
+import { buildAddResourcesRequest, dispatchesToSelection, mergeDispatchSelections, shownDispatchLists } from '../lib/dispatch-selection';
+import { areAllDispatchListsHidden, canBeRequired, createFieldPolicy, describeCallFields } from '../lib/field-policy';
 import { getMissingCallFieldsFromRefusal } from '../lib/server-refusal';
 import { callCorrect, callDetail, callEdit, callNew } from '../routes';
 import { makeCall } from './test-utils';
@@ -161,6 +161,52 @@ describe('new-call field policy', () => {
     expect(policy.missingRequired({ contactName: '  ' })).toEqual(['contactName']);
     expect(policy.missingRequired({ contactName: 'Pat' })).toEqual([]);
   });
+
+  it('requires a map page and a primary contact, never a hide-only field (Core HideOnly)', () => {
+    const hideOnly = ['additionalContacts', 'checkInTimers', 'part2Consent', 'pendingCall', 'dispatchPersonnel', 'dispatchGroups', 'dispatchRoles', 'dispatchUnits'] as const;
+    const policy = createFieldPolicy([rule('mapPage', true, true), rule('primaryContact', true, true), ...hideOnly.map((key) => rule(key, true, true))]);
+    expect(policy.isRequired('mapPage')).toBe(true);
+    expect(policy.isRequired('primaryContact')).toBe(true);
+
+    for (const key of hideOnly) {
+      expect(policy.isRequired(key)).toBe(false);
+      expect(canBeRequired(key)).toBe(false);
+    }
+
+    expect(policy.missingRequired({ mapPage: ' ', primaryContact: null })).toEqual(['mapPage', 'primaryContact']);
+    expect(policy.missingRequired({ mapPage: '14-B', primaryContact: 'c1' })).toEqual([]);
+    // Every key the server can send has a name for "Your department requires …".
+    expect(describeCallFields(['mapPage', 'primaryContact', 'dispatchUnits'], (key) => key)).toBe('calls.map_page, site_info.primary_contact, calls.units');
+  });
+
+  it('hides each recipient list on its own, and the dispatch list (and its requirement) only with all four', () => {
+    const some = createFieldPolicy([rule('dispatchPersonnel', false, false), rule('dispatchRoles', false, false), rule('dispatchList', true, true)]);
+    expect(shownDispatchLists(some.isVisible)).toEqual(['groups', 'units']);
+    expect(some.isVisible('dispatchList')).toBe(true);
+    expect(some.isRequired('dispatchList')).toBe(true);
+    expect(areAllDispatchListsHidden(some)).toBe(false);
+
+    const all = createFieldPolicy([
+      rule('dispatchPersonnel', false, false),
+      rule('dispatchGroups', false, false),
+      rule('dispatchRoles', false, false),
+      rule('dispatchUnits', false, false),
+      rule('dispatchList', true, true),
+    ]);
+
+    expect(shownDispatchLists(all.isVisible)).toEqual([]);
+    expect(areAllDispatchListsHidden(all)).toBe(true);
+    expect(all.isVisible('dispatchList')).toBe(false);
+    expect(all.isRequired('dispatchList')).toBe(false);
+    expect(all.missingRequired({ dispatchList: false })).toEqual([]);
+
+    // A server that predates the per-list keys: hiding the section hid every list.
+    const legacy = createFieldPolicy([rule('dispatchList', false, false)]);
+    expect(shownDispatchLists(legacy.isVisible)).toEqual([]);
+    expect(areAllDispatchListsHidden(legacy)).toBe(true);
+    expect(shownDispatchLists(createFieldPolicy(null).isVisible)).toEqual(['users', 'groups', 'roles', 'units']);
+    expect(areAllDispatchListsHidden(createFieldPolicy(null))).toBe(false);
+  });
 });
 
 describe('call form', () => {
@@ -203,6 +249,76 @@ describe('call form', () => {
     expect(buildEditCallInput(toUpdateCallRequest('9', values, shown, { edit, isVisible: () => true })).DispatchList).toBe(DISPATCH_LIST_NOBODY);
     // With the list hidden the request is not marked as picked: blank, which EditCall reads as "keep the dispatches".
     expect(buildEditCallInput(toUpdateCallRequest('9', values, { ...shown, dispatchList: false }, { edit, isVisible: () => false })).DispatchList).toBe('');
+  });
+
+  it('with every recipient list hidden sends only the All Call switch: "0" on, "|" off, never blank', () => {
+    const allCall = { protocols: false, linkedCall: false, udf: false, contact: false, dispatchList: false, allCall: true };
+    // Ids the form holds (a run card, a refused request) are not the dispatcher's pick: only the switch counts.
+    const values = { ...emptyCallFormValues(1), name: 'Fire', nature: 'Smoke', dispatch: { everyone: false, users: ['u1'], groups: [], roles: [], units: ['7'] } };
+    const on = { ...values, dispatch: { ...values.dispatch, everyone: true } };
+    // New call: off is an informational call that pages nobody; on dispatches everyone.
+    expect(buildNewCallInput(toCreateCallRequest(values, allCall)).DispatchList).toBe(DISPATCH_LIST_NOBODY);
+    expect(buildNewCallInput(toCreateCallRequest(on, allCall)).DispatchList).toBe('0');
+    // A pending call is never saved for everyone.
+    expect(buildNewCallInput(toCreateCallRequest({ ...on, isPending: true }, allCall)).DispatchList).toBe(DISPATCH_LIST_NOBODY);
+    // Edit: off keeps the call's recipients ("|" with every list hidden), on adds everyone.
+    const call = makeCall('9');
+    const edit = { call, storedProtocolCount: 0, initialDispatchOnUtc: '' };
+    const hiddenLists = createFieldPolicy(['dispatchPersonnel', 'dispatchGroups', 'dispatchRoles', 'dispatchUnits'].map((key) => rule(key, false, false)));
+    const stored = callToFormValues(call, [dispatch({ Id: 'u1', Type: 'User' }), dispatch({ Id: '7', Type: 'Unit' })]);
+    expect(buildEditCallInput(toUpdateCallRequest('9', stored, allCall, { edit, isVisible: hiddenLists.isVisible })).DispatchList).toBe(DISPATCH_LIST_NOBODY);
+    expect(buildEditCallInput(toUpdateCallRequest('9', { ...stored, dispatch: { ...stored.dispatch, everyone: true } }, allCall, { edit, isVisible: hiddenLists.isVisible })).DispatchList).toBe('0');
+    // The dispatch list requirement does not apply with every list hidden.
+    const required = createFieldPolicy([...['dispatchPersonnel', 'dispatchGroups', 'dispatchRoles', 'dispatchUnits'].map((key) => rule(key, false, false)), rule('dispatchList', true, true)]);
+    expect(missingPolicyFields({ ...emptyCallFormValues(1), name: 'A', nature: 'B' }, required)).toEqual([]);
+  });
+
+  it('sends the map page only from its input: text (blank enforced) when shown, null when hidden; an edit keeps the stored one', () => {
+    const shown = { protocols: false, linkedCall: false, udf: false, contact: false, dispatchList: false, mapPage: true };
+    const values = { ...emptyCallFormValues(1), name: 'Fire', nature: 'Smoke', mapPage: ' 14-B ' };
+    expect(buildNewCallInput(toCreateCallRequest(values, shown)).MapPage).toBe('14-B');
+    expect(buildNewCallInput(toCreateCallRequest({ ...values, mapPage: '' }, shown)).MapPage).toBe('');
+    expect(buildNewCallInput(toCreateCallRequest(values, { ...shown, mapPage: false })).MapPage).toBeNull();
+
+    const call = makeCall('9', { MapPage: '22-C' });
+    const start = callToFormValues(call);
+    expect(start.mapPage).toBe('22-C');
+    const edit = { call, storedProtocolCount: 0, initialDispatchOnUtc: '' };
+    const policy = createFieldPolicy([rule('mapPage', true, true)]);
+    expect(buildEditCallInput(toUpdateCallRequest('9', { ...start, mapPage: '23-D' }, shown, { edit, isVisible: policy.isVisible })).MapPage).toBe('23-D');
+    // A blank page on an edit is the stored one (EditCall keeps it), so a required page is still there.
+    expect(missingPolicyFields({ ...start, name: 'A', nature: 'B', mapPage: '' }, policy, edit)).toEqual([]);
+    expect(missingPolicyFields({ ...emptyCallFormValues(1), name: 'A', nature: 'B' }, policy)).toEqual(['mapPage']);
+    const hidden = createFieldPolicy([rule('mapPage', false, false)]);
+    expect(buildEditCallInput(toUpdateCallRequest('9', { ...start, mapPage: 'typed' }, shown, { edit, isVisible: hidden.isVisible })).MapPage).toBeNull();
+  });
+
+  it('sends the primary contact only from its picker; a changed one keeps the call’s additional contacts', () => {
+    const values = { ...emptyCallFormValues(1), name: 'Fire', nature: 'Smoke', contactId: 'c9' };
+    const picker = { protocols: false, linkedCall: false, udf: false, contact: true, dispatchList: false };
+    expect(buildNewCallInput(toCreateCallRequest(values, picker)).ContactId).toBe('c9');
+    // No picker: ContactId is left out (null), so the server does not enforce a required primary contact.
+    expect(buildNewCallInput(toCreateCallRequest(values, { ...picker, contact: false }))).not.toHaveProperty('ContactId');
+    const policy = createFieldPolicy([rule('primaryContact', true, true)]);
+    expect(missingPolicyFields({ ...values, contactId: null }, policy)).toEqual(['primaryContact']);
+
+    // SAFETY: the edit reads only ContactId and CallContactType from the call's contacts; partial entries stand in for the server's records.
+    const call = makeCall('9', {
+      Contacts: [
+        { ContactId: 'c1', CallContactType: 0 },
+        { ContactId: 'c2', CallContactType: 1 },
+      ] as never,
+    });
+
+    const edit = { call, storedProtocolCount: 0, initialDispatchOnUtc: '' };
+    const start = callToFormValues(call);
+    const changed = buildEditCallInput(toUpdateCallRequest('9', { ...start, contactId: 'c3' }, picker, { edit, isVisible: () => true }));
+    expect(changed).toMatchObject({ ContactId: 'c3', AdditionalContactIds: ['c2'] });
+    // Hidden picker: neither is sent, and EditCall keeps the call's contacts.
+    const hidden = createFieldPolicy([rule('primaryContact', false, false)]);
+    const kept = buildEditCallInput(toUpdateCallRequest('9', { ...start, contactId: 'c3' }, picker, { edit, isVisible: hidden.isVisible }));
+    expect(kept).not.toHaveProperty('ContactId');
+    expect(kept).not.toHaveProperty('AdditionalContactIds');
   });
 
   it('starts an edit from the call and leaves fields the policy hides as stored (Dispatch keepHiddenEditFieldsUnchanged)', () => {

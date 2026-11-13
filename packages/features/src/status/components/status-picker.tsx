@@ -1,10 +1,25 @@
+import { availabilityLabelKey, type DestinationOrigin, poiAvailabilityStatus } from '@resgrid/features/pois/lib/poi-availability';
 import { useTranslation } from '@resgrid/i18n';
-import { type CallResultData } from '@resgrid/models';
+import { type CallResultData, PoiAvailabilityStatuses } from '@resgrid/models';
 import { Button, ButtonText, CustomBottomSheet, getBottomSheetHeight, HStack, Pressable, ScrollView, Spinner, Text, Textarea, TextareaInput, useThemeColors, useToast, VStack } from '@resgrid/ui';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, useWindowDimensions } from 'react-native';
 
-import { destinationLabel, type DestinationLists, type DestinationTab, getDestinationTabs, NO_DESTINATION, resolveEffectiveDestination, type StatusDestination, toRespondingTo } from '../lib/status-destination';
+import {
+  destinationLabel,
+  type DestinationLists,
+  type DestinationTab,
+  findPoiById,
+  getDestinationTabs,
+  isTransportBaseType,
+  isTransportDestinationDeviation,
+  isTransportReasonRequired,
+  NO_DESTINATION,
+  resolveAssignedDestinationPoi,
+  resolveEffectiveDestination,
+  type StatusDestination,
+  toRespondingTo,
+} from '../lib/status-destination';
 import {
   canSubmitStatusWithoutInput,
   type CurrentStatusRef,
@@ -77,6 +92,21 @@ export interface StatusPickerProps {
   lenientDestinations?: boolean;
   /** Department "Hold to set status" (config StatusHoldToConfirm): statuses are held on the list, and the last step saves on a hold. */
   holdToConfirm?: boolean;
+  /**
+   * Department "Transport destination checks" (config TransportDestinationChecks): a unit's transport status to a POI other
+   * than its call's assigned destination needs a reason, entered as the note. The assigned destination is pre-selected and
+   * a different one is flagged either way.
+   */
+  transportDestinationChecks?: boolean;
+  /**
+   * The POI the unit is already transporting to (`getCurrentTransportPoiId`): pre-selected before the call's assigned
+   * destination, and going there again needs no new reason.
+   */
+  currentTransportPoiId?: number | string | null;
+  /** The unit's last position: POI destinations are ranked nearest first from it (drive times for the closest). */
+  destinationOrigin?: DestinationOrigin | null;
+  /** The unit whose travel mode and vehicle limits apply to the drive times. */
+  destinationUnitId?: string | number | null;
   onSubmitStatus: (selection: StatusSelection) => Promise<StatusSubmitOutcome>;
   onSubmitStaffing?: (selection: StaffingSelection) => Promise<StatusSubmitOutcome>;
   testID?: string;
@@ -121,6 +151,10 @@ export const StatusPicker: React.FC<StatusPickerProps> = ({
   fixedCall = null,
   lenientDestinations = false,
   holdToConfirm = false,
+  transportDestinationChecks = false,
+  currentTransportPoiId = null,
+  destinationOrigin = null,
+  destinationUnitId = null,
   onSubmitStatus,
   onSubmitStaffing,
   testID = 'status-picker',
@@ -185,18 +219,34 @@ export const StatusPicker: React.FC<StatusPickerProps> = ({
   const hasDestinationStep = destinationTabs.length > 0 && !fixedCall;
   const allowsCalls = destinationTabs.includes('call');
 
+  // Transport destination checks (units only, as the server records them): a Transporting / At Hospital status starts on
+  // the default call's assigned destination, and another POI is a deviation. A fixed call has no destination step.
+  const isTransportStatus = subject === 'unit' && !fixedCall && !isStaffingTab && isTransportBaseType(selectedStatus?.BaseType);
+  const assignedPoi = useMemo(() => (isTransportStatus ? resolveAssignedDestinationPoi(defaultCall, destinations.pois) : null), [defaultCall, destinations.pois, isTransportStatus]);
+  // The hospital the unit already reported going to wins over the call's (a crew that changed hospital keeps it).
+  const currentTransportPoi = useMemo(() => (isTransportStatus ? findPoiById(destinations.pois, currentTransportPoiId) : null), [currentTransportPoiId, destinations.pois, isTransportStatus]);
+  const defaultPoi = currentTransportPoi ?? assignedPoi;
+  const hasDefaultPoi = !!defaultPoi && destinationTabs.includes('poi');
+
   const effectiveDestination = useMemo(
-    () => (selectedStatus ? resolveEffectiveDestination({ detail, lenient: lenientDestinations, selection, hasExplicitChoice, defaultCall }) : NO_DESTINATION),
-    [defaultCall, detail, hasExplicitChoice, lenientDestinations, selectedStatus, selection]
+    () => (selectedStatus ? resolveEffectiveDestination({ detail, lenient: lenientDestinations, selection, hasExplicitChoice, defaultCall, defaultPoi }) : NO_DESTINATION),
+    [defaultCall, defaultPoi, detail, hasExplicitChoice, lenientDestinations, selectedStatus, selection]
   );
+
+  const isDeviation = isTransportStatus && isTransportDestinationDeviation(selectedStatus?.BaseType, effectiveDestination, assignedPoi);
+  const reasonRequired = isTransportReasonRequired(transportDestinationChecks, isDeviation, effectiveDestination, currentTransportPoi);
+  // A hospital on diversion or closed is said plainly before the crew heads there (it is not refused: they may have no alternative).
+  const chosenAvailability = effectiveDestination.type === 'poi' ? poiAvailabilityStatus(effectiveDestination.poi) : PoiAvailabilityStatuses.Open;
+  const assignedPoiLabel = assignedPoi ? destinationLabel({ type: 'poi', poi: assignedPoi }, t('data_protection.protected_value')) : '';
 
   // Before a status is picked, a fixed call is what the sheet is for.
   const summaryDestination = useMemo<StatusDestination>(() => (selectedStatus || !fixedCall ? effectiveDestination : { type: 'call', call: fixedCall }), [effectiveDestination, fixedCall, selectedStatus]);
 
   const isAwaitingDestinations = isLoadingDestinations && (hasDestinationStep || hasPotentialDefaultCall);
 
-  const noteRequired = isStaffingTab ? isNoteRequired(selectedStaffing) : isNoteRequired(selectedStatus);
-  const optionHasNoteStep = isStaffingTab ? hasNoteStep(selectedStaffing) : !!fixedCall || hasNoteStep(selectedStatus);
+  // A required reason for a different destination adds the note step to a status that has none.
+  const noteRequired = isStaffingTab ? isNoteRequired(selectedStaffing) : isNoteRequired(selectedStatus) || reasonRequired;
+  const optionHasNoteStep = isStaffingTab ? hasNoteStep(selectedStaffing) : !!fixedCall || hasNoteStep(selectedStatus) || reasonRequired;
   // The status passed in skips the list once its option has loaded (were it missing, the list lets the user pick another).
   const hasPresetStatus = initialStatusId != null && selectedStatus !== null && selectedId === toOptionId(initialStatusId);
 
@@ -216,9 +266,9 @@ export const StatusPicker: React.FC<StatusPickerProps> = ({
     if (destinationTabs.length === 0) return;
     const preferred = effectiveDestination.type !== 'none' && destinationTabs.includes(effectiveDestination.type) ? effectiveDestination.type : destinationTabs[0];
     setDestinationTab(preferred);
-    // Only when the status changes: later manual tab taps must win.
+    // Only when the status changes (or its assigned destination arrives with the lists): later manual tab taps must win.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedId, destinationTabs.length]);
+  }, [selectedId, destinationTabs.length, defaultPoi?.PoiId]);
 
   const finish = useCallback(
     (outcome: StatusSubmitOutcome) => {
@@ -283,14 +333,14 @@ export const StatusPicker: React.FC<StatusPickerProps> = ({
     const nextStep = steps.find((value) => value !== 'select');
 
     // With a fixed call the hold picks the status and the note step follows: that sheet always offers a note.
-    if (!nextStep || (!fixedCall && canSubmitStatusWithoutInput(selectedStatus, { allowsCalls, hasDefaultCall: !!defaultCall }))) {
+    if (!nextStep || (!fixedCall && canSubmitStatusWithoutInput(selectedStatus, { allowsCalls, hasDefaultCall: !!defaultCall, hasDefaultPoi }))) {
       submitStatus();
 
       return;
     }
 
     setStep(nextStep);
-  }, [allowsCalls, defaultCall, fixedCall, holdPending, isAwaitingDestinations, isOpen, isSubmitting, selectedStatus, steps, submitStatus]);
+  }, [allowsCalls, defaultCall, fixedCall, hasDefaultPoi, holdPending, isAwaitingDestinations, isOpen, isSubmitting, selectedStatus, steps, submitStatus]);
 
   const handleSelectStatus = useCallback((option: StatusOption) => {
     setSelectedId(toOptionId(option.Id));
@@ -449,12 +499,17 @@ export const StatusPicker: React.FC<StatusPickerProps> = ({
               selected={effectiveDestination}
               isLoading={isLoadingDestinations}
               onSelect={handleSelectDestination}
+              assignedPoiId={assignedPoi?.PoiId ?? null}
+              origin={destinationOrigin}
+              unitId={destinationUnitId}
             />
           ) : null}
 
           {currentStep === 'note' ? (
             <VStack space="sm">
-              <Text className="text-sm text-typography-600">{noteRequired ? t('status.note_required') : t('status.note_optional')}</Text>
+              <Text className="text-sm text-typography-600" testID={reasonRequired ? `${testID}-transport-reason-required` : undefined}>
+                {reasonRequired ? t('status.transport_reason_required', { name: assignedPoiLabel }) : noteRequired ? t('status.note_required') : t('status.note_optional')}
+              </Text>
               <Textarea size="md" className="min-h-[100px]">
                 <TextareaInput testID={`${testID}-note-input`} value={note} onChangeText={setNote} placeholder={t('status.note')} accessibilityLabel={t('status.note')} />
               </Textarea>
@@ -467,6 +522,16 @@ export const StatusPicker: React.FC<StatusPickerProps> = ({
           <VStack className="rounded-lg bg-background-50 p-3" testID={`${testID}-summary`}>
             {selectedStatus ? <Text className="text-sm text-typography-700">{`${t('status.selected_status')}: ${selectedStatus.Text}`}</Text> : null}
             <Text className="text-sm text-typography-700">{`${t('status.selected_destination')}: ${summaryDestination.type === 'none' ? t('status.no_destination') : destinationLabel(summaryDestination, t('data_protection.protected_value'))}`}</Text>
+            {chosenAvailability !== PoiAvailabilityStatuses.Open && effectiveDestination.type === 'poi' ? (
+              <Text className="mt-1 text-sm font-semibold text-error-700" testID={`${testID}-destination-availability`}>
+                {t('status.destination_availability', { name: destinationLabel(effectiveDestination, t('data_protection.protected_value')), status: t(availabilityLabelKey(chosenAvailability)) })}
+              </Text>
+            ) : null}
+            {isDeviation ? (
+              <Text className="mt-1 text-sm font-semibold text-warning-700" testID={`${testID}-transport-deviation`} accessibilityLiveRegion="polite">
+                {t('status.transport_destination_differs', { name: assignedPoiLabel })}
+              </Text>
+            ) : null}
           </VStack>
         ) : null}
 

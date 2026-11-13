@@ -112,9 +112,12 @@ export const getStatusPickerSteps = (options: { isStaffing: boolean; hasPresetSt
  * Whether a status can be saved the moment it is held: no required note, and either no destination step or a
  * destination step whose call the picker can fill from the active / dispatched call.
  */
-export const canSubmitStatusWithoutInput = (status: Pick<StatusOption, 'Detail' | 'Note'> | null | undefined, options: { allowsCalls: boolean; hasDefaultCall: boolean }): boolean => {
+export const canSubmitStatusWithoutInput = (status: Pick<StatusOption, 'Detail' | 'Note'> | null | undefined, options: { allowsCalls: boolean; hasDefaultCall: boolean; hasDefaultPoi?: boolean }): boolean => {
   if (!status) return false;
   if (isNoteRequired(status)) return false;
   if (statusDetailType(status) === 0) return true;
+  // A transport status pre-selects its call's assigned destination (status-destination `defaultPoi`).
+  if (options.hasDefaultPoi) return true;
+
   return options.allowsCalls && options.hasDefaultCall;
 };

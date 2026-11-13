@@ -1,5 +1,6 @@
 import { gunzipSync, strFromU8 } from 'fflate';
 
+import { withCheckedLayerColors } from '../lib/feature-colors';
 import type { OfflineDepartmentData } from './types';
 
 /**
@@ -8,7 +9,8 @@ import type { OfflineDepartmentData } from './types';
  * `layers` (map layers and geofences, `layerId`/`layerName`/`layerColor`/`onByDefault` properties), `stations` (station
  * points and boundaries, `kind` = `station` | `boundary`), `pois`, `customMapRegions` and `indoorZones`; unknown sections
  * are kept when they are valid FeatureCollections (later Core versions add more). The composer turns each section into an
- * `offline-dept-<section>` GeoJSON source.
+ * `offline-dept-<section>` GeoJSON source. The `layers` features get their checked colour here (`withCheckedLayerColors`), as the
+ * online layers do, so a colour MapLibre cannot read never reaches the style.
  */
 export const OFFLINE_DEPARTMENT_SECTIONS = ['layers', 'stations', 'pois', 'customMapRegions', 'indoorZones'] as const;
 export type OfflineDepartmentSection = (typeof OFFLINE_DEPARTMENT_SECTIONS)[number];
@@ -51,7 +53,9 @@ export function toOfflineDepartmentData(value: unknown): OfflineDepartmentData |
       .filter(isFeature)
       .map(unwrapNestedFeature)
       .filter((feature): feature is GeoJSON.Feature => feature !== null);
-    data[section] = { type: 'FeatureCollection', features };
+    const checked: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features };
+
+    data[section] = section === 'layers' ? withCheckedLayerColors(checked) : checked;
   }
   return Object.keys(data).length > 0 ? data : null;
 }

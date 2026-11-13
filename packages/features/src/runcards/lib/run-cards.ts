@@ -1,3 +1,4 @@
+import { formatDistance, formatEta } from '@resgrid/features/calls/lib/dispatch-board';
 import { readableTextColor } from '@resgrid/features/status';
 import {
   DispatchRecommendationMode,
@@ -46,17 +47,8 @@ export const shortfallReasonKey = (reason: RequirementShortfallReason): string =
 export const dispatchModeKey = (mode: DispatchRecommendationMode): string =>
   mode === DispatchRecommendationMode.StationBased ? 'run_cards.mode.station_based' : mode === DispatchRecommendationMode.ClosestUnit ? 'run_cards.mode.closest_unit' : 'run_cards.mode.manual_only';
 
-/** Metres below 1 km, kilometres to one decimal above. Null when the engine had no distance. */
-export const formatDistance = (meters: number | null | undefined): string | null => {
-  if (typeof meters !== 'number' || !Number.isFinite(meters) || meters < 0) return null;
-  return meters < 1000 ? `${Math.round(meters)} m` : `${(meters / 1000).toFixed(1)} km`;
-};
-
-/** Rounded-up minutes, or seconds under a minute. Null when no routed ETA was computed. */
-export const formatEta = (seconds: number | null | undefined): string | null => {
-  if (typeof seconds !== 'number' || !Number.isFinite(seconds) || seconds < 0) return null;
-  return seconds < 60 ? `${Math.round(seconds)}s` : `${Math.ceil(seconds / 60)} min`;
-};
+// Distances and ETAs read the same on a run card as on the nearest-unit board (m:ss, to the second Core ranks on).
+export { formatDistance, formatEta };
 
 /**
  * True when the recommendation is worth putting on screen: a card matched and it selected something, could not fill

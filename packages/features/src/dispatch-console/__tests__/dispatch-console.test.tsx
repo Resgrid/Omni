@@ -13,7 +13,9 @@ import {
   usePoisStore,
   useUnitsStore,
   useUnitStatusAlertsStore,
+  useUnitStatusStore,
   useWeatherAlertsStore,
+  type WriteResult,
 } from '@resgrid/data';
 import { useDepartmentConfigStore } from '@resgrid/features/department-config';
 import { emitRealtimeEvent } from '@resgrid/realtime';
@@ -369,6 +371,36 @@ describe('DispatchConsoleScreen call filter and actions', () => {
     expect(screen.getByTestId('console-unit-status-sheet', hidden)).toBeTruthy();
     await fireEvent.press(screen.getByTestId('unit-select-done'));
     expect(useConsoleStore.getState().isSelectionMode).toBe(false);
+  });
+
+  it('names the units the server refused and retries only those', async () => {
+    const original = useUnitStatusStore.getState().saveUnitStatus;
+    let refuseE3 = true;
+    const save = jest.fn(async ({ unitId }: { unitId: string }): Promise<WriteResult> => ({ outcome: unitId === '3' && refuseE3 ? 'rejected' : 'queued', id: `status-${unitId}` }));
+    useUnitStatusStore.setState({ saveUnitStatus: save });
+
+    try {
+      await setWindow(1366, 1024);
+      await renderConsole();
+      await fireEvent.press(screen.getByTestId('unit-multi-select-toggle'));
+      await fireEvent.press(screen.getByTestId('console-unit-1'));
+      await fireEvent.press(screen.getByTestId('console-unit-3'));
+      expect(screen.getByLabelText('dispatch.bulk_unit_actions.remove_unit:E1')).toBeTruthy();
+      await fireEvent.press(screen.getByTestId('console-bulk-set-status'));
+      await fireEvent.press(screen.getByTestId('status-option-1', hidden));
+      await fireEvent.press(screen.getByTestId('console-unit-status-sheet-submit', hidden));
+
+      expect(save.mock.calls.map(([input]) => input.unitId)).toEqual(['1', '3']);
+      expect(screen.getByTestId('console-unit-status-sheet-error', hidden)).toHaveTextContent('dispatch.bulk_unit_actions.partial_failure:E3');
+      expect(useConsoleStore.getState().activityLog[0]).toMatchObject({ action: 'dispatch_console.status_saved', description: 'E1' });
+
+      refuseE3 = false;
+      await fireEvent.press(screen.getByTestId('console-unit-status-sheet-submit', hidden));
+      expect(save.mock.calls.map(([input]) => input.unitId)).toEqual(['1', '3', '3']);
+      expect(useConsoleStore.getState().activityLog[0]).toMatchObject({ action: 'dispatch_console.status_saved', description: 'E3' });
+    } finally {
+      useUnitStatusStore.setState({ saveUnitStatus: original });
+    }
   });
 });
 

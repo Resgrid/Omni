@@ -83,6 +83,7 @@ const pickMapConfig = (config: MapConfigInput | null | undefined): MapConfigInpu
   StaticMapUrlTemplate: config?.StaticMapUrlTemplate,
   TrafficAvailable: config?.TrafficAvailable,
   TrafficTileUrl: config?.TrafficTileUrl,
+  TrafficRasterTileUrl: config?.TrafficRasterTileUrl,
   TrafficRefreshSeconds: config?.TrafficRefreshSeconds,
   RoutingProvider: config?.RoutingProvider,
   RoutingSupportsTraffic: config?.RoutingSupportsTraffic,

@@ -1,4 +1,4 @@
-import { useCallDetailStore, useCallsStore } from '@resgrid/data';
+import { selectCallRecommendation, useCallDetailStore, useCallsStore, useRunCardsStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import type { CallResultData } from '@resgrid/models';
 import { Button, ButtonSpinner, ButtonText, HStack, NativeModal, NativeModalScreen, Pressable, ScrollView, Text, useThemeColors, useToast, VStack } from '@resgrid/ui';
@@ -9,6 +9,7 @@ import { StyleSheet, View } from 'react-native';
 import { useCallFormHookPoints } from '../hook-points';
 import { useDispatchRecipients } from '../hooks/use-call-form-data';
 import { callDisplayName } from '../lib/call-display';
+import { callPoint } from '../lib/call-location';
 import { buildAddResourcesRequest, dispatchesToSelection, type DispatchSelection, EMPTY_DISPATCH_SELECTION, selectionSize } from '../lib/dispatch-selection';
 import { DispatchSelectionModal } from './dispatch-selection';
 
@@ -36,6 +37,12 @@ export const AddResourcesSheet: React.FC<AddResourcesSheetProps> = ({ call, onCl
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const { recipients } = useDispatchRecipients(isOpen);
+  // What the run card still proposes for the call gets a "Run card" badge in the picker.
+  const runCardEntry = useRunCardsStore((state) => selectCallRecommendation(state, call?.CallId));
+
+  const runCardPicks = runCardEntry.recommendation
+    ? { units: (runCardEntry.recommendation.Units ?? []).map((unit) => String(unit.UnitId)), users: (runCardEntry.recommendation.Personnel ?? []).flatMap((person) => (person.UserId ? [person.UserId] : [])) }
+    : null;
 
   useEffect(() => {
     if (isOpen) {
@@ -120,6 +127,8 @@ export const AddResourcesSheet: React.FC<AddResourcesSheetProps> = ({ call, onCl
         onClose={() => setIsPickerOpen(false)}
         recipients={recipients}
         value={added}
+        callLocation={callPoint(call)}
+        recommended={runCardPicks}
         onConfirm={(selection) => {
           setAdded(selection);
           setIsPickerOpen(false);

@@ -112,6 +112,33 @@ describe('DispatchSelectionModal', () => {
     expect(onConfirm).toHaveBeenCalledWith(EMPTY_DISPATCH_SELECTION);
   });
 
+  it('offers only the recipient lists the department shows, and keeps the picks of a hidden list', async () => {
+    const onConfirm = jest.fn();
+    await render(<DispatchSelectionModal isOpen onClose={jest.fn()} recipients={recipients} value={{ ...EMPTY_DISPATCH_SELECTION, users: ['u1'] }} onConfirm={onConfirm} lists={['groups', 'units']} />);
+    expect(screen.queryByTestId('dispatch-selection-users', hidden)).toBeNull();
+    expect(screen.queryByTestId('dispatch-selection-roles', hidden)).toBeNull();
+    expect(screen.getByTestId('dispatch-selection-groups', hidden)).toBeTruthy();
+    expect(screen.getByTestId('dispatch-selection-everyone', hidden)).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('dispatch-option-units-7', hidden));
+    await fireEvent.press(screen.getByTestId('dispatch-selection-confirm', hidden));
+    // The person the call already had stays on it: confirming never drops a pick the dispatcher could not see.
+    expect(onConfirm).toHaveBeenCalledWith({ everyone: false, users: ['u1'], groups: [], roles: [], units: ['7'] });
+  });
+
+  it('with every list hidden is only an All Call switch, with what leaving it off does', async () => {
+    const onConfirm = jest.fn();
+    await render(<DispatchSelectionModal isOpen onClose={jest.fn()} recipients={recipients} value={EMPTY_DISPATCH_SELECTION} onConfirm={onConfirm} lists={[]} allCallHint="HINT" />);
+    expect(screen.queryByTestId('dispatch-selection-search', hidden)).toBeNull();
+    expect(screen.queryByTestId('dispatch-selection-empty', hidden)).toBeNull();
+    expect(screen.queryByTestId('dispatch-option-users-u1', hidden)).toBeNull();
+    expect(screen.getByText('calls.all_call_dispatch_everyone', hidden)).toBeTruthy();
+    expect(screen.getByTestId('dispatch-selection-all-call-hint', hidden)).toHaveTextContent('HINT');
+    await fireEvent(screen.getByTestId('dispatch-selection-everyone', hidden), 'valueChange', true);
+    expect(screen.getByText('common.done — calls.all_call', hidden)).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('dispatch-selection-confirm', hidden));
+    expect(onConfirm).toHaveBeenCalledWith({ ...EMPTY_DISPATCH_SELECTION, everyone: true });
+  });
+
   it('summarizes a selection', () => {
     const labels = { everyone: 'ALL', none: 'NONE' };
     expect(summarizeDispatchSelection(EMPTY_DISPATCH_SELECTION, recipients, labels)).toBe('NONE');

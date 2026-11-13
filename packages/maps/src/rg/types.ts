@@ -65,10 +65,23 @@ export interface MapViewProps {
   unavailableFallback?: ReactNode;
 }
 
+export interface RenderedFeatureQuery {
+  /** Style layers to look in (ids that are not in the style are skipped). */
+  layerIds: readonly string[];
+  /** Pixels around the point that still count as a hit (a finger is wider than a 5-px dot). Default 10. */
+  radius?: number;
+}
+
 export interface MapViewRef {
   getCenter(): Promise<LngLat | null>;
   getZoom(): Promise<number | null>;
   getVisibleBounds(): Promise<CoordinateBounds | null>;
+  /**
+   * The features the given layers draw around a screen point (a `MapPressEvent`'s `point`), topmost first; [] when there
+   * are none, the map is not ready or the query fails. For layers drawn from a style source the app has no `ShapeSource`
+   * for (the offline department data), whose features cannot be pressed directly.
+   */
+  queryRenderedFeatures(point: PixelPoint, query: RenderedFeatureQuery): Promise<GeoJSON.Feature[]>;
 }
 
 export type CameraAnimationMode = 'flyTo' | 'easeTo' | 'linearTo' | 'moveTo' | 'none';

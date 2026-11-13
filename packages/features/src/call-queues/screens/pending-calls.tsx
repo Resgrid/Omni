@@ -1,7 +1,7 @@
 import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { formatUtcInDepartmentTime } from '@resgrid/core/utils/dates';
 import { useCallsStore } from '@resgrid/data';
-import { CALL_LIST_REFRESH_EVENTS, callRoutes, useCallPermissionsResolver, useCallRights } from '@resgrid/features/calls';
+import { CALL_LIST_REFRESH_EVENTS, callPoint, callRoutes, useCallPermissionsResolver, useCallRights } from '@resgrid/features/calls';
 import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import type { CallResultData } from '@resgrid/models';
@@ -81,7 +81,7 @@ export default function PendingCallsScreen({ showHeader = true, realtime = true 
               label={t('call_queues.dispatch')}
               icon={Send}
               isBusy={isBusy}
-              onPress={() => void openDispatchPicker(call.CallId)}
+              onPress={() => void openDispatchPicker(call.CallId, null, callPoint(call))}
               accessibilityLabel={`${t('call_queues.dispatch')} ${label}`}
               testID={`pending-call-dispatch-${call.CallId}`}
             />

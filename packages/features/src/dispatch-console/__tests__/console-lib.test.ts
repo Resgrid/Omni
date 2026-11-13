@@ -1,15 +1,23 @@
 import '../../calls/__tests__/test-setup';
 
+import type { StatusDestination } from '@resgrid/features/status';
+import { PoiResultData, StatusesResultData, UnitTypeStatusResultData } from '@resgrid/models';
+import { Platform } from 'react-native';
+
 import { makeCall } from '../../calls/__tests__/test-utils';
 import { buildAddResourcesRequest } from '../components/add-resources-sheet';
+import { readPressModifiers, toPressModifiers } from '../components/resource-rows';
 import { useConsoleStore } from '../hooks/use-console-store';
 import { DASHBOARD_VIEW_STORE_NAME, selectCardCollapsed, useDashboardViewStore } from '../hooks/use-dashboard-view-store';
-import { commonStatusKey, resolveCommonUnitStatusOptions } from '../lib/bulk-status';
+import { commonStatusKey, destinationForUnitStatus, mergeStatusDetails, resolveCommonUnitStatusOptions } from '../lib/bulk-status';
 import { filterConsoleCalls, filterConsolePersonnel, filterConsoleUnits, getUnitCrew, isPersonOnCall, isUnitOnCall, plainText } from '../lib/console-filters';
 import { resolveConsoleLayout } from '../lib/console-layout';
 import { computeConsoleStats } from '../lib/console-stats';
 
 const NOW = Date.parse('2026-10-31T12:00:00Z');
+
+const statusSet = (UnitType: string, StatusId: string, statuses: Partial<StatusesResultData>[]): UnitTypeStatusResultData =>
+  Object.assign(new UnitTypeStatusResultData(), { UnitType, StatusId, Statuses: statuses.map((fields) => Object.assign(new StatusesResultData(), fields)) });
 
 const unit = (UnitId: string, overrides: Record<string, unknown> = {}) =>
   ({
@@ -106,41 +114,97 @@ describe('layout and bulk statuses', () => {
     expect(resolveConsoleLayout({ formFactor: 'phone', isLandscape: true })).toBe('single-column');
   });
 
-  it('matches statuses across status sets by meaning, keeping each unit’s own id', () => {
+  it('matches statuses across status sets by name, else by an unambiguous meaning, keeping each unit’s own id', () => {
     const sets = [
-      {
-        UnitType: '0',
-        StatusId: '0',
-        Statuses: [
-          { Id: 1, Text: 'Available', BaseType: 0 },
-          { Id: 2, Text: 'Responding', BaseType: 2 },
-          { Id: 3, Text: 'Custom', BaseType: -1 },
-        ],
-      },
-      {
-        UnitType: 'Ambulance',
-        StatusId: '7',
-        Statuses: [
-          { Id: 70, Text: 'In service', BaseType: 0 },
-          { Id: 71, Text: 'custom ', BaseType: null },
-        ],
-      },
-    ] as never;
+      statusSet('0', '0', [
+        { Id: 1, Text: 'Available', BaseType: 0 },
+        { Id: 2, Text: 'Responding', BaseType: 2 },
+        { Id: 3, Text: 'Custom', BaseType: -1 },
+      ]),
+      statusSet('Ambulance', '7', [
+        { Id: 70, Text: 'In service', BaseType: 0 },
+        { Id: 71, Text: 'custom ', BaseType: null },
+      ]),
+    ];
+
     const options = resolveCommonUnitStatusOptions([unit('1'), unit('2', { Type: 'Ambulance', CustomStatusSetId: '7' })], sets);
-    expect(options.map((option) => option.key)).toEqual(['base:0', 'text:custom']);
+
+    expect(options.map((option) => option.key)).toEqual(['available', 'custom']);
     expect(options[0].statusByUnitId).toMatchObject({ '1': { Id: 1 }, '2': { Id: 70 } });
-    expect(commonStatusKey({ BaseType: 15, Text: 'At Hospital' })).toBe('base:15');
+    expect(options[1].statusByUnitId).toMatchObject({ '1': { Id: 3 }, '2': { Id: 71 } });
+    expect(commonStatusKey({ Text: ' At Hospital ' })).toBe('at hospital');
     expect(resolveCommonUnitStatusOptions([], sets)).toEqual([]);
+  });
+
+  it('keeps statuses that share a meaning as separate choices (an MUG and an ambulance demobilising)', () => {
+    const statuses = (offset: number) => [
+      { Id: offset + 1, Text: 'Departing to Hospital', BaseType: 12 },
+      { Id: offset + 2, Text: 'Transporting Patient', BaseType: 12 },
+      { Id: offset + 3, Text: 'Returning to Station', BaseType: 8 },
+      { Id: offset + 4, Text: 'Available on Radio', BaseType: 0 },
+      { Id: offset + 5, Text: 'Available', BaseType: 0 },
+    ];
+
+    const sets = [statusSet('Ambulance', '7', statuses(70)), statusSet('MUG', '8', [...statuses(80), { Id: 90, Text: 'In Quarters', BaseType: 23 }])];
+    const options = resolveCommonUnitStatusOptions([unit('1', { Type: 'Ambulance', CustomStatusSetId: '7' }), unit('2', { Type: 'MUG', CustomStatusSetId: '8' })], sets);
+
+    expect(options.map((option) => option.status.Text)).toEqual(['Departing to Hospital', 'Transporting Patient', 'Returning to Station', 'Available on Radio', 'Available']);
+    expect(options[4].statusByUnitId).toMatchObject({ '1': { Id: 75 }, '2': { Id: 85 } });
+  });
+
+  it('matches by meaning only when one status in each set has it', () => {
+    const sets = [
+      statusSet('Engine', '1', [
+        { Id: 1, Text: 'Available on Radio', BaseType: 0 },
+        { Id: 2, Text: 'Available', BaseType: 0 },
+        { Id: 3, Text: 'At Hospital', BaseType: 15 },
+      ]),
+      statusSet('Ambulance', '7', [
+        { Id: 70, Text: 'In service', BaseType: 0 },
+        { Id: 71, Text: 'Arrived at hospital', BaseType: 15 },
+      ]),
+    ];
+
+    const options = resolveCommonUnitStatusOptions([unit('1', { Type: 'Engine', CustomStatusSetId: '1' }), unit('2', { Type: 'Ambulance', CustomStatusSetId: '7' })], sets);
+
+    expect(options.map((option) => option.key)).toEqual(['at hospital']);
+    expect(options[0].statusByUnitId).toMatchObject({ '1': { Id: 3 }, '2': { Id: 71 } });
+  });
+
+  it('offers every destination kind and the strictest note rule of the units’ own statuses', () => {
+    const sets = [statusSet('Ambulance', '7', [{ Id: 70, Text: 'At Hospital', BaseType: 15, Detail: 2, Note: 0 }]), statusSet('MUG', '8', [{ Id: 80, Text: 'At Hospital', BaseType: 15, Detail: 4, Note: 2 }])];
+    const [option] = resolveCommonUnitStatusOptions([unit('1', { Type: 'Ambulance', CustomStatusSetId: '7' }), unit('2', { Type: 'MUG', CustomStatusSetId: '8' })], sets);
+
+    expect(option.status).toMatchObject({ Id: 70, Text: 'At Hospital', Detail: 5, Note: 2 });
+    expect(option.statusByUnitId['1']).toMatchObject({ Detail: 2, Note: 0 });
+    expect(mergeStatusDetails([{ Detail: 1 }, { Detail: 4 }])).toBe(6);
+    expect(mergeStatusDetails([{ Detail: 3 }, { Detail: 5 }])).toBe(7);
+    expect(mergeStatusDetails([{ Detail: 0 }])).toBe(0);
+  });
+
+  it('sends each unit only the destination its own status takes', () => {
+    const call = makeCall('9');
+    const otherCall = makeCall('10');
+    const poi: StatusDestination = { type: 'poi', poi: Object.assign(new PoiResultData(), { PoiId: 3, Name: 'AZ Oudenaarde' }) };
+    const callDestination: StatusDestination = { type: 'call', call: otherCall };
+
+    expect(destinationForUnitStatus({ Detail: 4 }, poi, call, true)).toBe(poi);
+    expect(destinationForUnitStatus({ Detail: 1 }, poi, call, false)).toEqual({ type: 'none' });
+    expect(destinationForUnitStatus({ Detail: 0 }, poi, call, true)).toEqual({ type: 'call', call });
+    expect(destinationForUnitStatus({ Detail: 0 }, callDestination, call, true)).toBe(callDestination);
+    expect(destinationForUnitStatus({ Detail: 0 }, poi, null, true)).toEqual({ type: 'none' });
   });
 
   it('builds an additive EditCall request for add-resources', () => {
     const call = makeCall('42', { Latitude: '40.1', Longitude: '-105.2', Name: 'Fire', DestinationPoiId: 3 });
+
     const request = buildAddResourcesRequest(
       call,
       { everyone: false, users: ['u1'], groups: [], roles: [], units: ['1'] },
       { everyone: false, users: [], groups: [], roles: [], units: ['1', '2'] },
       { callFormData: '{"a":1}', unitResponseCodes: '2:5' }
     );
+
     expect(request).toMatchObject({
       callId: '42',
       name: 'Fire',
@@ -180,6 +244,35 @@ describe('console view state', () => {
     expect(useConsoleStore.getState().selectedUnitIds).toEqual(['2', '3']);
     useConsoleStore.getState().selectUnit('4');
     expect(useConsoleStore.getState()).toMatchObject({ isSelectionMode: false, selectedUnitIds: [], selectedUnitId: '4' });
+  });
+
+  it('adds a Shift-click range from the anchor in list order', () => {
+    const order = ['1', '2', '3', '4', '5'];
+    // From the single selected unit.
+    useConsoleStore.getState().selectUnit('2');
+    useConsoleStore.getState().selectUnitRange(order, '4');
+    expect(useConsoleStore.getState()).toMatchObject({ isSelectionMode: true, selectedUnitIds: ['2', '3', '4'], selectedUnitId: null, selectionAnchorId: '2', activeTab: 'actions' });
+    // The anchor stays: a second range from it adds upwards, keeping what was selected.
+    useConsoleStore.getState().selectUnitRange(order, '1');
+    expect(useConsoleStore.getState().selectedUnitIds).toEqual(['2', '3', '4', '1']);
+    // A toggled unit becomes the anchor.
+    useConsoleStore.getState().toggleUnitInSelection('5');
+    useConsoleStore.getState().selectUnitRange(order, '4');
+    expect(useConsoleStore.getState()).toMatchObject({ selectedUnitIds: ['2', '3', '4', '1', '5'], selectionAnchorId: '5' });
+    // No anchor on the list: the clicked unit starts the range.
+    useConsoleStore.getState().endSelection();
+    useConsoleStore.getState().selectUnitRange(order, '3');
+    expect(useConsoleStore.getState()).toMatchObject({ selectedUnitIds: ['3'], selectionAnchorId: '3' });
+  });
+
+  it('reads Ctrl/Cmd and Shift clicks from the press event or its DOM event, on web only', () => {
+    expect(toPressModifiers({ nativeEvent: { shiftKey: true } })).toEqual({ isMultiSelect: false, isRangeSelect: true });
+    expect(toPressModifiers({ ctrlKey: true })).toEqual({ isMultiSelect: true, isRangeSelect: false });
+    expect(toPressModifiers({ nativeEvent: { metaKey: true } })).toEqual({ isMultiSelect: true, isRangeSelect: false });
+    expect(toPressModifiers({})).toEqual({ isMultiSelect: false, isRangeSelect: false });
+    expect(readPressModifiers(undefined)).toEqual({ isMultiSelect: false, isRangeSelect: false });
+    jest.replaceProperty(Platform, 'OS', 'web');
+    expect(readPressModifiers(undefined)).toEqual({ isMultiSelect: false, isRangeSelect: false });
   });
 
   it('caps the logs and times radio transmissions', () => {
