@@ -70,10 +70,21 @@ export const MapTrafficButton: React.FC<MapTrafficButtonProps> = ({ isOn, testID
   return available ? <MapControlButton icon={Car} accessibilityLabel={t('maps.traffic')} active={isOn} testID={testID} {...props} /> : null;
 };
 
+/** A small pill after a layer's name (an event layer's phase): `primary` filled, `outline` outlined, `muted` greyed. */
+export interface MapLayerBadge {
+  label: string;
+  tone: 'primary' | 'outline' | 'muted';
+}
+
 export interface MapLayerToggleItem {
   Id: string;
   Name: string;
   Color?: string | null;
+  /** A second line under the name (an event layer's dates). */
+  Detail?: string | null;
+  Badge?: MapLayerBadge | null;
+  /** The row gets a details button (with `onShowDetails`). */
+  HasDetails?: boolean;
 }
 
 export interface MapLayersSheetProps {
@@ -82,13 +93,15 @@ export interface MapLayersSheetProps {
   layers: readonly MapLayerToggleItem[];
   toggles: Readonly<Record<string, boolean>>;
   onToggle: (layerId: string) => void;
+  /** A row's details button was pressed (rows with `HasDetails`). */
+  onShowDetails?: (layerId: string) => void;
   /** Shown when the variant has `maps.customIndoor`: open the custom/indoor maps browser and search. */
   onBrowseMaps?: () => void;
   onSearchMaps?: () => void;
 }
 
 /** Toggle department GeoJSON layers and jump to the custom/indoor maps (baseline IC map-layers-sheet). */
-export const MapLayersSheet: React.FC<MapLayersSheetProps> = ({ isOpen, onClose, layers, toggles, onToggle, onBrowseMaps, onSearchMaps }) => {
+export const MapLayersSheet: React.FC<MapLayersSheetProps> = ({ isOpen, onClose, layers, toggles, onToggle, onShowDetails, onBrowseMaps, onSearchMaps }) => {
   const { t } = useTranslation();
   const { colors } = useMapTheme();
   const activeCount = layers.filter((layer) => toggles[layer.Id]).length;
@@ -106,7 +119,31 @@ export const MapLayersSheet: React.FC<MapLayersSheetProps> = ({ isOpen, onClose,
             {layers.map((layer) => (
               <View key={layer.Id} style={StyleSheet.flatten([styles.row, { backgroundColor: colors.surface }])} testID={`layer-row-${layer.Id}`}>
                 {layer.Color ? <View style={StyleSheet.flatten([styles.dot, { backgroundColor: layer.Color }])} /> : null}
-                <Text style={StyleSheet.flatten([styles.name, { color: colors.text }])}>{layer.Name}</Text>
+                <View style={styles.label}>
+                  <View style={styles.nameLine}>
+                    <Text style={StyleSheet.flatten([styles.name, { color: colors.text }])}>{layer.Name}</Text>
+                    {layer.Badge ? <LayerBadge badge={layer.Badge} testID={`layer-badge-${layer.Id}`} /> : null}
+                  </View>
+                  {layer.Detail ? (
+                    <Text style={StyleSheet.flatten([styles.detail, { color: colors.mutedText }])} testID={`layer-detail-${layer.Id}`}>
+                      {layer.Detail}
+                    </Text>
+                  ) : null}
+                </View>
+                {layer.HasDetails && onShowDetails ? (
+                  <Pressable
+                    onPress={() => onShowDetails(layer.Id)}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('maps.layer_info.show_details', { name: layer.Name })}
+                    hitSlop={8}
+                    style={styles.detailsButton}
+                    testID={`layer-details-${layer.Id}`}
+                  >
+                    <View>
+                      <Info size={20} color={colors.primary} />
+                    </View>
+                  </Pressable>
+                ) : null}
                 <Switch value={!!toggles[layer.Id]} onValueChange={() => onToggle(layer.Id)} accessibilityLabel={layer.Name} testID={`layer-toggle-${layer.Id}`} />
               </View>
             ))}
@@ -116,6 +153,18 @@ export const MapLayersSheet: React.FC<MapLayersSheetProps> = ({ isOpen, onClose,
       {onBrowseMaps ? <SheetButton label={t('maps.title')} onPress={onBrowseMaps} icon={<Building2 size={18} color={colors.primary} />} testID="browse-maps-button" /> : null}
       {onSearchMaps ? <SheetButton label={t('maps.search_maps')} onPress={onSearchMaps} icon={<Search size={18} color={colors.primary} />} testID="search-maps-button" /> : null}
     </MapSheet>
+  );
+};
+
+const LayerBadge: React.FC<{ badge: MapLayerBadge; testID?: string }> = ({ badge, testID }) => {
+  const { colors } = useMapTheme();
+  const filled = badge.tone === 'primary';
+  const accent = badge.tone === 'muted' ? colors.mutedText : colors.primary;
+
+  return (
+    <View style={StyleSheet.flatten([styles.badge, { backgroundColor: filled ? colors.primary : 'transparent', borderColor: badge.tone === 'muted' ? colors.border : colors.primary }])} testID={testID}>
+      <Text style={StyleSheet.flatten([styles.badgeText, { color: filled ? colors.onPrimary : accent }])}>{badge.label}</Text>
+    </View>
   );
 };
 
@@ -162,8 +211,34 @@ const styles = StyleSheet.create({
     marginRight: 8,
     borderRadius: 6,
   },
-  name: {
+  label: {
     flex: 1,
+  },
+  nameLine: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+  },
+  name: {
+    flexShrink: 1,
+    marginRight: 6,
     fontSize: 15,
+  },
+  detail: {
+    marginTop: 2,
+    fontSize: 12,
+  },
+  detailsButton: {
+    paddingHorizontal: 8,
+  },
+  badge: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  badgeText: {
+    fontSize: 11,
+    fontWeight: '600',
   },
 });

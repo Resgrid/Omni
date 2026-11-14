@@ -1,6 +1,7 @@
 import type { FilterSpecification } from '@maplibre/maplibre-react-native';
 import React, { useMemo } from 'react';
 
+import { RESOLVED_COLOR_PROPERTY } from '../lib/feature-colors';
 import { offlineDepartmentSourceId, styleHasGlyphs, styleHasSource } from '../lib/offline-style-sources';
 import { useMapStyle, useMapTheme } from '../provider/context';
 import { CircleLayer, FillLayer, LineLayer, SymbolLayer } from '../rg';
@@ -22,15 +23,11 @@ export interface OfflineDepartmentLayersProps {
 
 export const OFFLINE_LAYERS_SECTION = 'layers';
 
-/** The feature's own colour, else its layer's, else the theme's (empty strings count as missing). */
-const colorExpression = (fallback: string): unknown => [
-  'case',
-  ['all', ['has', 'color'], ['!=', ['get', 'color'], '']],
-  ['get', 'color'],
-  ['all', ['has', 'layerColor'], ['!=', ['get', 'layerColor'], '']],
-  ['get', 'layerColor'],
-  fallback,
-];
+/**
+ * The checked colour the bundle decoder gave the feature (`rgColor`: its own readable `color`, else its layer's readable
+ * `layerColor`), else the theme's — a colour MapLibre cannot read never reaches the expression, as with `GeoJsonMapLayer`.
+ */
+const colorExpression = (fallback: string): unknown => ['coalesce', ['get', RESOLVED_COLOR_PROPERTY], fallback];
 
 /** Which features of the section draw (pure; exported for tests). */
 export function offlineLayersFilter(visibleLayerIds: readonly string[] | null | undefined, excludeLayerIds: readonly string[] = []): FilterSpecification | null {
@@ -43,28 +40,50 @@ export function offlineLayersFilter(visibleLayerIds: readonly string[] | null | 
 
 const withGeometry = (filter: FilterSpecification, geometry: unknown): FilterSpecification => ['all', filter, geometry] as unknown as FilterSpecification;
 
-export const OfflineDepartmentLayers: React.FC<OfflineDepartmentLayersProps> = ({ visibleLayerIds, excludeLayerIds, showLabels = true, idPrefix = 'offline-dept-layers' }) => {
+const DEFAULT_ID_PREFIX = 'offline-dept-layers';
+
+interface OfflineStyleLayerIds {
+  fill: string;
+  line: string;
+  points: string;
+  labels: string;
+}
+
+const styleLayerIds = (idPrefix: string): OfflineStyleLayerIds => ({ fill: `${idPrefix}-fill`, line: `${idPrefix}-line`, points: `${idPrefix}-points`, labels: `${idPrefix}-labels` });
+
+/**
+ * The style layers `OfflineDepartmentLayers` draws with this `idPrefix`, topmost first: their features come from the
+ * offline style's own source, so a tap is looked up with `MapViewRef.queryRenderedFeatures` instead of a source press.
+ */
+export const offlineDepartmentLayerIds = (idPrefix: string = DEFAULT_ID_PREFIX): string[] => {
+  const ids = styleLayerIds(idPrefix);
+
+  return [ids.labels, ids.points, ids.line, ids.fill];
+};
+
+export const OfflineDepartmentLayers: React.FC<OfflineDepartmentLayersProps> = ({ visibleLayerIds, excludeLayerIds, showLabels = true, idPrefix = DEFAULT_ID_PREFIX }) => {
   const { mapStyle, isOffline } = useMapStyle();
   const { colors } = useMapTheme();
   const sourceId = offlineDepartmentSourceId(OFFLINE_LAYERS_SECTION);
   const available = isOffline && styleHasSource(mapStyle, sourceId);
   const labels = showLabels && styleHasGlyphs(mapStyle);
   const filter = useMemo(() => offlineLayersFilter(visibleLayerIds, excludeLayerIds), [visibleLayerIds, excludeLayerIds]);
+  const ids = styleLayerIds(idPrefix);
   if (!available || !filter) return null;
   const color = colorExpression(colors.primary) as never;
   return (
     <>
-      <FillLayer id={`${idPrefix}-fill`} sourceID={sourceId} filter={withGeometry(filter, ['==', ['geometry-type'], 'Polygon'])} style={{ fillColor: color, fillOpacity: 0.15 }} />
-      <LineLayer id={`${idPrefix}-line`} sourceID={sourceId} filter={withGeometry(filter, ['!=', ['geometry-type'], 'Point'])} style={{ lineColor: color, lineWidth: 2 }} />
+      <FillLayer id={ids.fill} sourceID={sourceId} filter={withGeometry(filter, ['==', ['geometry-type'], 'Polygon'])} style={{ fillColor: color, fillOpacity: 0.15 }} />
+      <LineLayer id={ids.line} sourceID={sourceId} filter={withGeometry(filter, ['!=', ['geometry-type'], 'Point'])} style={{ lineColor: color, lineWidth: 2 }} />
       <CircleLayer
-        id={`${idPrefix}-points`}
+        id={ids.points}
         sourceID={sourceId}
         filter={withGeometry(filter, ['==', ['geometry-type'], 'Point'])}
         style={{ circleRadius: 5, circleColor: color, circleStrokeColor: colors.background, circleStrokeWidth: 1.5 }}
       />
       {labels ? (
         <SymbolLayer
-          id={`${idPrefix}-labels`}
+          id={ids.labels}
           sourceID={sourceId}
           filter={withGeometry(filter, ['==', ['geometry-type'], 'Point'])}
           style={{ textField: ['coalesce', ['get', 'name'], ['get', 'Name'], ''], textSize: 11, textOffset: [0, 1.2], textColor: colors.text, textHaloColor: colors.background, textHaloWidth: 1 }}

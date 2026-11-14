@@ -33,6 +33,7 @@ const department = (scenario: string, sso: QaDepartment['features']['sso'] = 'no
   otherPeople: 0,
   groups: {},
   units: { 'Engine 1': 21 },
+  pois: { "St. John's (QA)": 31 },
   calls: { 'structure-fire': { id: 101, name: 'Structure Fire', state: 'active' } },
   flags: { profile: 'server', overrides: {}, expected: {} },
 });

@@ -1,5 +1,5 @@
-import { getAllActiveLayers, getCustomMap, getCustomMaps, getIndoorMap, getIndoorMapFloor, getIndoorMaps, getIndoorMapZonesGeoJSON, getMapLayerGeoJSON, searchAllMapFeatures } from '@resgrid/api';
-import type { ActiveLayerResultData, CustomMapResultData, GetCustomMapResultData, GetIndoorMapResultData, IndoorMapFloorResultData, IndoorMapResultData, MapFeatureResultData } from '@resgrid/models';
+import { getAllActiveLayers, getCustomMap, getCustomMaps, getIndoorMap, getIndoorMapFloor, getIndoorMaps, getIndoorMapZonesGeoJSON, getMapLayerGeoJSON, getMapLayers, searchAllMapFeatures } from '@resgrid/api';
+import type { ActiveLayerResultData, CustomMapResultData, GetCustomMapResultData, GetIndoorMapResultData, GetMapLayersData, IndoorMapFloorResultData, IndoorMapResultData, MapFeatureResultData } from '@resgrid/models';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
@@ -7,9 +7,20 @@ import { unwrapItem, unwrapList } from '../core/envelope';
 import { dataPersistOptions, registerPersistedStore } from '../core/persist';
 import { registerDataStoreReset } from '../core/reset';
 import { getDataApiContext } from '../core/runtime';
-import { createSliceRunner, emptySliceMeta, type FetchOptions, type SliceMeta, type SliceRunner } from '../core/slices';
+import { createSliceRunner, emptySliceMeta, type FetchOptions, isSliceFresh, type SliceMeta, type SliceRunner } from '../core/slices';
 
-type MapsSlice = 'activeLayers' | 'layerGeoJSON' | 'indoorMaps' | 'indoorMap' | 'floor' | 'zones' | 'customMaps' | 'customMap' | 'search';
+type MapsSlice = 'activeLayers' | 'mapLayers' | 'layerGeoJSON' | 'indoorMaps' | 'indoorMap' | 'floor' | 'zones' | 'customMaps' | 'customMap' | 'search';
+
+/** A department map layer's details from `Mapping/GetMayLayers`, without its geometry (that comes per layer, on demand). */
+export type MapLayerInfo = Omit<GetMapLayersData, 'Data'>;
+
+/** GetMayLayers sends every layer's geometry, so a map opened again within this window reuses the list. */
+export const MAP_LAYERS_MAX_AGE_MS = 5 * 60 * 1000;
+
+/** Top-level department layers (Core `MapLayerTypes.TopLevel`). */
+const TOP_LEVEL_LAYER_TYPE = 0;
+
+const withoutGeometry = ({ Data: _geometry, ...info }: GetMapLayersData): MapLayerInfo => info;
 
 /** `Mapping/SearchAllMapFeatures` scope. */
 export type MapFeatureSearchScope = 'all' | 'indoor' | 'custom';
@@ -21,6 +32,8 @@ export type MapFeatureSearchScope = 'all' | 'indoor' | 'custom';
  */
 interface CustomMapsData extends SliceMeta<MapsSlice> {
   activeLayers: ActiveLayerResultData[];
+  /** Every department layer with its description, event dates and contact (`Mapping/GetMayLayers`, geometry dropped). */
+  mapLayers: MapLayerInfo[];
   /** GeoJSON per layer id (FeatureCollection; typed loosely here, parsed by @resgrid/maps). */
   layerGeoJSON: Record<string, unknown>;
   indoorMaps: IndoorMapResultData[];
@@ -36,6 +49,8 @@ interface CustomMapsData extends SliceMeta<MapsSlice> {
 
 export interface CustomMapsState extends CustomMapsData {
   fetchActiveLayers: (options?: FetchOptions) => Promise<void>;
+  /** The department's layers with their details; skipped while the list is fresh (it carries every layer's geometry). */
+  fetchMapLayers: (options?: FetchOptions) => Promise<void>;
   fetchLayerGeoJSON: (layerId: string, options?: FetchOptions) => Promise<unknown>;
   fetchIndoorMaps: (options?: FetchOptions) => Promise<void>;
   fetchIndoorMap: (mapId: string, options?: FetchOptions) => Promise<void>;
@@ -51,6 +66,7 @@ export interface CustomMapsState extends CustomMapsData {
 const initialData = (): CustomMapsData => ({
   ...emptySliceMeta<MapsSlice>(),
   activeLayers: [],
+  mapLayers: [],
   layerGeoJSON: {},
   indoorMaps: [],
   indoorMapById: {},
@@ -76,6 +92,15 @@ export const useCustomMapsStore = create<CustomMapsState>()(
             'activeLayers',
             async () => unwrapList(await getAllActiveLayers(getDataApiContext())),
             (activeLayers) => ({ activeLayers })
+          );
+        },
+
+        fetchMapLayers: async (options) => {
+          if (!options?.bypassCache && isSliceFresh(get(), 'mapLayers', MAP_LAYERS_MAX_AGE_MS)) return;
+          await runner.run(
+            'mapLayers',
+            async () => (unwrapItem(await getMapLayers(getDataApiContext(), { type: TOP_LEVEL_LAYER_TYPE }))?.Layers ?? []).filter((layer) => !!layer?.Id).map(withoutGeometry),
+            (mapLayers) => ({ mapLayers })
           );
         },
 
@@ -170,6 +195,7 @@ export const useCustomMapsStore = create<CustomMapsState>()(
       // GeoJSON can be large; it is re-read online or comes from the DepartmentData offline bundle (MapLibre §19).
       partialize: (state) => ({
         activeLayers: state.activeLayers,
+        mapLayers: state.mapLayers,
         indoorMaps: state.indoorMaps,
         indoorMapById: state.indoorMapById,
         floorById: state.floorById,

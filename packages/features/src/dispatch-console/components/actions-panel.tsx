@@ -93,7 +93,7 @@ export const ActionsPanel: React.FC<ActionsPanelProps> = ({ selectedCall, onCrea
                 key={row.UnitId}
                 onPress={() => useConsoleStore.getState().toggleUnitInSelection(row.UnitId)}
                 accessibilityRole="button"
-                accessibilityLabel={`${t('dispatch.bulk_unit_actions.remove_unit')} ${row.Name}`}
+                accessibilityLabel={t('dispatch.bulk_unit_actions.remove_unit', { name: row.Name })}
                 className="mb-1 mr-1 flex-row items-center rounded-full bg-background-0 px-2 py-1"
                 testID={`console-bulk-unit-${row.UnitId}`}
               >
@@ -212,13 +212,15 @@ export const ActionsPanel: React.FC<ActionsPanelProps> = ({ selectedCall, onCrea
           onClose={() => setSheet(null)}
           unitIds={sheet.unitIds}
           defaultCallId={sheet.withCall ? callId : null}
-          onSubmitted={saved(
-            'unit',
-            unitInfos
-              .filter((row) => sheet.unitIds.includes(row.UnitId))
-              .map((row) => row.Name)
-              .join(', ')
-          )}
+          onSubmitted={(outcome, savedUnitIds) =>
+            saved(
+              'unit',
+              unitInfos
+                .filter((row) => savedUnitIds.includes(row.UnitId))
+                .map((row) => row.Name)
+                .join(', ')
+            )(outcome)
+          }
         />
       ) : null}
       {sheet?.kind === 'unit-status' && !sheet.withCall && sheet.unitIds.length === 1 ? <UnitStatusSheet isOpen onClose={() => setSheet(null)} unitId={sheet.unitIds[0]} isOnBehalf /> : null}

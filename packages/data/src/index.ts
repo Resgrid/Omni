@@ -162,7 +162,7 @@ export { CHECKLIST_RUN_SAVE_EVENT, checklistRunSaveHandler, type ChecklistRunSav
 export { type ContactsState, useContactsStore } from './contacts/contacts-store';
 export { type CustomMapsState, type MapFeatureSearchScope, useCustomMapsStore } from './mapping/custom-maps-store';
 export { type NotesState, searchNotes, useNotesStore } from './notes/notes-store';
-export { type PoisState, selectPoiById, usePoisStore } from './pois/pois-store';
+export { type NearestDestinationsQuery, type PoisState, selectPoiById, type SetPoiAvailabilityOutcome, usePoisStore } from './pois/pois-store';
 export { type ProtocolsState, useProtocolsStore } from './protocols/protocols-store';
 export {
   canAdministerWeatherAlerts,
@@ -300,3 +300,6 @@ export * from './run-cards';
 
 // Live ETAs of navigating units (Dispatch, Big Board)
 export * from './navigation';
+
+// Nearest-unit board for a call location (Dispatch): the dispatch picker's ranking and the location picker's map
+export * from './dispatch-board';

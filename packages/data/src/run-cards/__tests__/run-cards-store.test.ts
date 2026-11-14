@@ -83,6 +83,52 @@ describe('run cards store — New Call preview', () => {
     }
   });
 
+  it('drops the proposal for the old call details as soon as a new lookup is scheduled, keeping code choices', async () => {
+    // SAFETY: the mocked endpoint returns the v4 envelope the store unwraps; the fixture builds only the fields it reads.
+    jest.mocked(getDispatchRecommendation).mockResolvedValueOnce(ok(recommendation([1], { OutcomeNodeKey: 'old' })) as never);
+    await useRunCardsStore.getState().fetchRecommendation({ priority: 1, type: 'Fire' });
+    useRunCardsStore.getState().setUnitResponseCode(1, 3);
+    jest.useFakeTimers();
+
+    try {
+      useRunCardsStore.getState().fetchRecommendationDebounced({ priority: 2, type: 'Fire' });
+
+      // Before the lookup even starts, nothing from the old proposal can reach the save.
+      expect(useRunCardsStore.getState().recommendation).toBeNull();
+      expect(useRunCardsStore.getState().isLoading).toBe(true);
+      expect(useRunCardsStore.getState().unitResponseCodes).toEqual({ 1: 3 });
+    } finally {
+      useRunCardsStore.getState().clear();
+      jest.useRealTimers();
+    }
+  });
+
+  it('aborts a lookup still out when a new one is scheduled, so its answer cannot land while the new one waits', async () => {
+    let resolveFirst: (envelope: ReturnType<typeof ok>) => void = () => undefined;
+    let firstSignal: AbortSignal | undefined;
+    jest.mocked(getDispatchRecommendation).mockImplementationOnce((_context, _params, options) => {
+      firstSignal = options?.signal ?? undefined;
+
+      // SAFETY: the test settles this promise with the v4 envelope the store unwraps.
+      return new Promise((resolve) => (resolveFirst = resolve)) as never;
+    });
+    const first = useRunCardsStore.getState().fetchRecommendation({ priority: 1, type: 'Fire' });
+
+    try {
+      useRunCardsStore.getState().fetchRecommendationDebounced({ priority: 2, type: 'Fire' });
+      expect(firstSignal?.aborted).toBe(true);
+
+      // The old lookup answers inside the debounce window, before the new one starts.
+      resolveFirst(ok(recommendation([1])));
+      await first;
+
+      expect(useRunCardsStore.getState().recommendation).toBeNull();
+      expect(useRunCardsStore.getState().hasFetched).toBe(false);
+    } finally {
+      useRunCardsStore.getState().clear();
+    }
+  });
+
   it('drops a superseded answer', async () => {
     let resolveFirst: (value: unknown) => void = () => undefined;
     jest.mocked(getDispatchRecommendation).mockImplementationOnce(() => new Promise((resolve) => (resolveFirst = resolve)) as never);

@@ -9,12 +9,16 @@ import type {
   GetMapDataAndMarkersResult,
   GetMapIconLegendResult,
   GetMapLayersResult,
+  NearestDestinationsResult,
+  PoiCapabilitiesResult,
   PoiResult,
   PoisResult,
   PoiTypesResult,
   SearchAllMapFeaturesResult,
   SearchCustomMapRegionsResult,
   SearchIndoorLocationsResult,
+  SetPoiAvailabilityInput,
+  SetPoiAvailabilityResult,
   SignMapResourceUrlsInput,
   SignMapResourceUrlsResult,
 } from '@resgrid/models';
@@ -37,12 +41,15 @@ export const mappingEndpoints = defineEndpoints('mapping', {
   getMapLayerGeoJSON: { method: 'GET', path: '/Mapping/GetMapLayerGeoJSON/{layerId}' },
   getMapLayers: { method: 'GET', path: '/Mapping/GetMayLayers', query: ['type'] },
   getNearbyIndoorMaps: { method: 'GET', path: '/Mapping/GetNearbyIndoorMaps', query: ['lat', 'lon', 'radiusMeters'] },
+  getNearestDestinations: { method: 'GET', path: '/Mapping/GetNearestDestinations', query: ['latitude', 'longitude', 'capabilityId', 'unitId', 'take'] },
   getPoi: { method: 'GET', path: '/Mapping/GetPoi/{poiId}', cacheTtlMs: 5 * 60 * 1000 },
+  getPoiCapabilities: { method: 'GET', path: '/Mapping/GetPoiCapabilities', cacheTtlMs: 5 * 60 * 1000 },
   getPois: { method: 'GET', path: '/Mapping/GetPois', query: ['poiTypeId', 'destinationOnly'], cacheTtlMs: 5 * 60 * 1000 },
   getPoiTypes: { method: 'GET', path: '/Mapping/GetPoiTypes', cacheTtlMs: 5 * 60 * 1000 },
   searchAllMapFeatures: { method: 'GET', path: '/Mapping/SearchAllMapFeatures', query: ['term', 'type'] },
   searchCustomMapRegions: { method: 'GET', path: '/Mapping/SearchCustomMapRegions', query: ['term', 'layerId'] },
   searchIndoorLocations: { method: 'GET', path: '/Mapping/SearchIndoorLocations', query: ['term', 'mapId'] },
+  setPoiAvailability: { method: 'POST', path: '/Mapping/SetPoiAvailability', body: 'json' },
   signMapResourceUrls: { method: 'POST', path: '/Mapping/SignMapResourceUrls', body: 'json' },
 });
 
@@ -104,6 +111,19 @@ export const getNearbyIndoorMaps = (ctx: ApiContext, params: { lat?: number | st
 /** `GET /Mapping/GetPoi/{poiId}` (cached) — legacy: DIRU. */
 export const getPoi = (ctx: ApiContext, params: { poiId: number | string }, options?: CachedRequestOptions): Promise<PoiResult> => cachedRequest<PoiResult>(ctx, E.getPoi, { params }, options);
 
+/**
+ * The department's destinations nearest a point, best first (those that can take the patient, then diversion, then the
+ * rest; the closest routed). `GET /Mapping/GetNearestDestinations` — new in Omni (destination capabilities, M0315).
+ */
+export const getNearestDestinations = (
+  ctx: ApiContext,
+  params: { latitude: number; longitude: number; capabilityId?: string; unitId?: number | string; take?: number },
+  options?: RequestOptions
+): Promise<NearestDestinationsResult> => request<NearestDestinationsResult>(ctx, E.getNearestDestinations, { params }, options);
+
+/** The capabilities the department's POIs can offer. `GET /Mapping/GetPoiCapabilities` (cached) — new in Omni (M0315). */
+export const getPoiCapabilities = (ctx: ApiContext, options?: CachedRequestOptions): Promise<PoiCapabilitiesResult> => cachedRequest<PoiCapabilitiesResult>(ctx, E.getPoiCapabilities, {}, options);
+
 /** `GET /Mapping/GetPois` (cached) — legacy: DIRU. */
 export const getPois = (ctx: ApiContext, params: { poiTypeId?: number | string; destinationOnly?: boolean } = {}, options?: CachedRequestOptions): Promise<PoisResult> =>
   cachedRequest<PoisResult>(ctx, E.getPois, { params }, options);
@@ -122,6 +142,10 @@ export const searchCustomMapRegions = (ctx: ApiContext, params: { term?: string;
 /** Searches for indoor map zones matching the specified term. `GET /Mapping/SearchIndoorLocations` — legacy: IU. */
 export const searchIndoorLocations = (ctx: ApiContext, params: { term?: string; mapId?: string } = {}, options?: RequestOptions): Promise<SearchIndoorLocationsResult> =>
   request<SearchIndoorLocationsResult>(ctx, E.searchIndoorLocations, { params }, options);
+
+/** Sets a destination's availability (status 0 clears it). Dispatchers only. `POST /Mapping/SetPoiAvailability` — new in Omni (M0315). */
+export const setPoiAvailability = (ctx: ApiContext, body: SetPoiAvailabilityInput, options?: RequestOptions): Promise<SetPoiAvailabilityResult> =>
+  request<SetPoiAvailabilityResult>(ctx, E.setPoiAvailability, { body }, options);
 
 /**
  * Expiring signatures for custom map tile/image and indoor floor image URLs of the caller's department (MapLibre plan D12):

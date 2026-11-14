@@ -4,6 +4,7 @@ import {
   matchesRecipientQuery,
   offeredRecipientSelection,
   pickedCount,
+  recipientEntrySpokenLabel,
   type RecipientPickerSection,
   type RecipientPickerSelection,
   summarizeRecipientSelection,
@@ -58,5 +59,23 @@ describe('recipient picker selection', () => {
     expect(summarizeRecipientSelection(everyoneRecipientSelection<Key>(), sections, labels)).toBe('ALL');
     expect(summarizeRecipientSelection({ everyone: false, ids: { units: ['7', '8', '9'], people: ['u1'] } }, sections, labels)).toBe('Pat Smith, Engine 7, Ladder 8 +1');
     expect(summarizeRecipientSelection({ everyone: false, ids: { people: ['gone'] } }, sections, labels)).toBe('gone');
+  });
+});
+
+describe('recipient entry spoken label', () => {
+  it('says everything the row shows, in order, skipping what is empty', () => {
+    expect(
+      recipientEntrySpokenLabel({
+        id: '7',
+        name: 'Engine 7',
+        badges: [{ label: 'Run card', tone: 'runCard' }],
+        metric: '2.1 km · 4 min',
+        detail: 'Station 1',
+        chips: [{ label: 'Available', color: '#00ff00' }, { label: 'ALS' }],
+        subDetail: 'Pat Smith, Alex Kim',
+        note: 'Position 2 h old',
+      })
+    ).toBe('Engine 7, Run card, 2.1 km · 4 min, Station 1, Available, ALS, Pat Smith, Alex Kim, Position 2 h old');
+    expect(recipientEntrySpokenLabel({ id: 'u2', name: 'Alex Kim', detail: null, note: '' })).toBe('Alex Kim');
   });
 });

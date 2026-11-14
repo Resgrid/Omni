@@ -1,10 +1,46 @@
+/** A small pill beside an entry's name: "Nearest #1", "Run card". */
+export interface RecipientPickerBadge {
+  label: string;
+  tone: 'nearest' | 'runCard';
+}
+
+/** A status or staffing label in the department's colour. */
+export interface RecipientPickerChip {
+  label: string;
+  color?: string | null;
+}
+
 /** One person, group, role or unit a recipient picker offers. */
 export interface RecipientPickerEntry {
   id: string;
   name: string;
   /** Second line (a person's group, a unit's station or type); also searched. */
   detail?: string | null;
+  /** Further line (a unit's crew, a person's roles). */
+  subDetail?: string | null;
+  badges?: readonly RecipientPickerBadge[];
+  /** Right-aligned figure: distance and ETA to the call. */
+  metric?: string | null;
+  chips?: readonly RecipientPickerChip[];
+  /** A warning about the entry's data (a stale or hidden position). */
+  note?: string | null;
+  /** Shown dimmed: it cannot take the assignment right now (it can still be picked). */
+  muted?: boolean;
+  /** Left out of the list (an "available only" filter) unless it is picked: a pick never disappears from view. */
+  hiddenUnlessPicked?: boolean;
 }
+
+/**
+ * What a screen reader says for an entry: the row is one checkbox named by this label, so it carries everything the row
+ * shows — name, badges, metric, detail, chips, the further line and the warning note.
+ */
+export const recipientEntrySpokenLabel = (entry: RecipientPickerEntry): string =>
+  [entry.name, ...(entry.badges ?? []).map((badge) => badge.label), entry.metric, entry.detail, ...(entry.chips ?? []).map((chip) => chip.label), entry.subDetail, entry.note]
+    .filter((part): part is string => !!part)
+    .join(', ');
+
+/** Whether a picker lists an entry: everything, apart from a filtered-out entry nobody picked. */
+export const isRecipientListed = (entry: RecipientPickerEntry, picked: readonly string[]): boolean => !entry.hiddenUnlessPicked || picked.includes(entry.id);
 
 /** A titled list in the picker; `key` names the bucket the section's picks are kept in. */
 export interface RecipientPickerSection<K extends string> {

@@ -119,6 +119,18 @@ export const capabilitiesSchema = z.object({
     close: z.boolean(),
     queues: z.boolean(),
     runCards: z.boolean(),
+    /**
+     * The nearest-unit board (`/Dispatch/GetNearestUnits`) in the dispatch picker and on the call location map: rows
+     * ranked closest first by response time, Nearest badges, distance and ETA, resources and boundaries on the map. The
+     * dispatch desk's tool (legacy Dispatch only); other apps keep the plain picker.
+     */
+    nearestBoard: z.boolean(),
+    /**
+     * Setting a destination's availability (a hospital on diversion, closed, or with a service down) from the POI screen
+     * (`/Mapping/SetPoiAvailability`, Core checks the caller may create calls). The desks that track hospitals: Dispatch
+     * and IC. Every app shows availability and capabilities; only these change them.
+     */
+    destinationAvailability: z.boolean(),
   }),
   /**
    * `holdToConfirm`: the app honours the department's "Hold to set status" (config `StatusHoldToConfirm`) — on its iOS

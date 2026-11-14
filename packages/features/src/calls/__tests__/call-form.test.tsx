@@ -1,7 +1,7 @@
 import './test-setup';
 
 import { useNetInfo } from '@react-native-community/netinfo';
-import { ApiError, buildNewCallInput, type CreateCallRequest } from '@resgrid/api';
+import { ApiError, buildEditCallInput, buildNewCallInput, type CreateCallRequest, type UpdateCallRequest } from '@resgrid/api';
 import { featureFlagsStore } from '@resgrid/auth';
 import { useCallDetailStore, useCallsStore, useContactsStore } from '@resgrid/data';
 import type { NewCallFieldRuleData } from '@resgrid/models';
@@ -59,6 +59,12 @@ const lastToast = () => {
 
   return toasts[toasts.length - 1];
 };
+
+// SAFETY: the form hands the store's createCall a CreateCallRequest; the mock only records it.
+const lastCreateRequest = () => mockCreateCall.mock.calls.at(-1)?.[0] as CreateCallRequest;
+
+// SAFETY: the form hands the store's updateCall an UpdateCallRequest; the mock only records it.
+const lastUpdateRequest = () => mockUpdateCall.mock.calls.at(-1)?.[0] as UpdateCallRequest;
 
 afterEach(() => {
   useToastStore.getState().clearToasts();
@@ -488,6 +494,92 @@ describe('CallFormScreen: create', () => {
     expect(mapSlot).toHaveBeenLastCalledWith({ latitude: 39.5, longitude: -105 }, expect.any(Function));
   });
 
+  it('offers only the recipient lists the department shows in Dispatch To', async () => {
+    mockRules = [
+      { Key: 'dispatchPersonnel', Visible: false, Required: false },
+      { Key: 'dispatchRoles', Visible: false, Required: false },
+    ];
+    activateVariant('responder');
+    await render(<CallFormScreen mode="create" />);
+    await fireEvent.press(screen.getByTestId('call-form-dispatch'));
+    expect(screen.queryByTestId('dispatch-selection-users', hidden)).toBeNull();
+    expect(screen.queryByTestId('dispatch-selection-roles', hidden)).toBeNull();
+    expect(screen.getByTestId('dispatch-selection-groups', hidden)).toBeTruthy();
+    expect(screen.getByTestId('dispatch-selection-units', hidden)).toBeTruthy();
+  });
+
+  it('with every list hidden offers only an optional All Call: off saves a call that pages nobody, on pages everyone', async () => {
+    // The department still "requires" recipients: with every list hidden that rule no longer applies.
+    mockRules = [...['dispatchPersonnel', 'dispatchGroups', 'dispatchRoles', 'dispatchUnits'].map((Key) => ({ Key, Visible: false, Required: false })), { Key: 'dispatchList', Visible: false, Required: true }];
+    activateVariant('dispatch');
+    await render(<CallFormScreen mode="create" />);
+    expect(screen.queryByTestId('call-form-dispatch')).toBeNull();
+    expect(screen.getByText('calls.all_call_help')).toBeTruthy();
+    expect(screen.getByTestId('call-form-all-call').props.value).toBe(false);
+    await fillBasics();
+    await act(async () => fireEvent.press(screen.getByTestId('call-form-submit')));
+    expect(buildNewCallInput(lastCreateRequest()).DispatchList).toBe('|');
+
+    await fireEvent(screen.getByTestId('call-form-all-call'), 'valueChange', true);
+    await act(async () => fireEvent.press(screen.getByTestId('call-form-submit')));
+    expect(buildNewCallInput(lastCreateRequest()).DispatchList).toBe('0');
+
+    // Like "Everyone", All Call is not offered for a pending call, which then proposes nobody.
+    await fireEvent(screen.getByTestId('call-form-pending'), 'valueChange', true);
+    expect(screen.queryByTestId('call-form-all-call')).toBeNull();
+  });
+
+  it('gates the map page, the primary contact picker and the pending switch on the policy', async () => {
+    mockRules = [
+      { Key: 'mapPage', Visible: true, Required: true },
+      { Key: 'primaryContact', Visible: true, Required: true },
+      { Key: 'pendingCall', Visible: false, Required: false },
+    ];
+    activateVariant('dispatch');
+    const { unmount } = await render(<CallFormScreen mode="create" />);
+    expect(screen.getByText('calls.map_page *')).toBeTruthy();
+    expect(screen.getByText('calls.contact_picker.select *')).toBeTruthy();
+    expect(screen.queryByTestId('call-form-pending')).toBeNull();
+    // The schedule stays: only the pending switch is hidden.
+    expect(screen.getByTestId('call-form-dispatch-on')).toBeTruthy();
+    await fillBasics();
+    await act(async () => fireEvent.press(screen.getByTestId('call-form-submit')));
+    expect(mockCreateCall).not.toHaveBeenCalled();
+    expect(lastToast().message).toBe('calls.required_fields_missing:calls.map_page, site_info.primary_contact');
+    expect(screen.getByTestId('call-form-map-page-error')).toBeTruthy();
+    expect(screen.getByTestId('call-form-contact-picker-error')).toBeTruthy();
+    await fireEvent.changeText(screen.getByTestId('call-form-map-page'), '14-B');
+    useContactsStore.setState({
+      // SAFETY: the picker reads only these fields of a contact record.
+      contacts: [{ ContactId: 'c9', CompanyName: 'Acme Corp', Email: 'ops@acme.test', ContactType: 1 } as never],
+      fetchContacts: jest.fn(async () => undefined),
+    });
+    await fireEvent.press(screen.getByTestId('call-form-contact-picker'));
+    await fireEvent.press(screen.getByTestId('call-contact-c9', hidden));
+    expect(screen.getByTestId('call-form-linked-contact')).toHaveTextContent('calls.contact_picker.linked:Acme Corp');
+    expect(screen.queryByTestId('call-form-contact-picker-error')).toBeNull();
+    await act(async () => fireEvent.press(screen.getByTestId('call-form-submit')));
+    expect(mockCreateCall).toHaveBeenCalledWith(expect.objectContaining({ mapPage: '14-B', contactId: 'c9' }));
+    await unmount();
+
+    // Hidden: no input, and nothing sent for it (the server then enforces nothing).
+    mockRules = [
+      { Key: 'mapPage', Visible: false, Required: false },
+      { Key: 'primaryContact', Visible: false, Required: false },
+    ];
+    mockCreateCall.mockClear();
+    await render(<CallFormScreen mode="create" />);
+    expect(screen.queryByTestId('call-form-map-page')).toBeNull();
+    expect(screen.queryByTestId('call-form-contact-picker')).toBeNull();
+    expect(screen.getByTestId('call-form-contact-name')).toBeTruthy();
+    await fillBasics();
+    await act(async () => fireEvent.press(screen.getByTestId('call-form-submit')));
+    const request = lastCreateRequest();
+    expect(request.mapPage).toBeUndefined();
+    expect(request.contactId).toBeUndefined();
+    expect(buildNewCallInput(request).MapPage).toBeNull();
+  });
+
   it('refuses to create where calls.create is none or without the right', async () => {
     activateVariant('bigboard');
     const { unmount } = await render(<CallFormScreen mode="create" />);
@@ -611,6 +703,36 @@ describe('CallFormScreen: edit', () => {
     await act(async () => fireEvent.press(screen.getByTestId('call-form-submit')));
     expect(mockUpdateCall).toHaveBeenCalledWith(expect.objectContaining({ notifyCancelledEntities: true, protocolIds: [] }));
     expect(lastToast().message).toBe('calls.required_fields_missing_edit:calls.address');
+  });
+
+  it('with every list hidden keeps the call’s recipients unless All Call adds everyone, and keeps a hidden map page', async () => {
+    mockRules = [...['dispatchPersonnel', 'dispatchGroups', 'dispatchRoles', 'dispatchUnits'].map((Key) => ({ Key, Visible: false, Required: false })), { Key: 'mapPage', Visible: false, Required: false }];
+    useCallDetailStore.setState({
+      details: {
+        '42': {
+          call: makeCall('42', { Name: 'Edit me', MapPage: '22-C' }),
+          // SAFETY: the edit reads only the dispatches from the extra data.
+          extraData: { Dispatches: [{ Id: '7', Type: 'Unit', Name: 'Engine 7' }] } as never,
+          notes: [],
+          images: null,
+          files: null,
+          audio: null,
+          fetchedAt: 1,
+        },
+      },
+    });
+    activateVariant('dispatch');
+    await render(<CallFormScreen mode="edit" callId="42" />);
+    await waitFor(() => expect(screen.getByTestId('call-form-all-call')).toBeTruthy());
+    expect(screen.queryByTestId('call-form-dispatch')).toBeNull();
+    expect(screen.queryByTestId('call-form-map-page')).toBeNull();
+    expect(screen.getByText('calls.all_call_edit_help')).toBeTruthy();
+    await act(async () => fireEvent.press(screen.getByTestId('call-form-submit')));
+    expect(buildEditCallInput(lastUpdateRequest())).toMatchObject({ DispatchList: '|', MapPage: null });
+
+    await fireEvent(screen.getByTestId('call-form-all-call'), 'valueChange', true);
+    await act(async () => fireEvent.press(screen.getByTestId('call-form-submit')));
+    expect(buildEditCallInput(lastUpdateRequest()).DispatchList).toBe('0');
   });
 
   it('does not save an edit offline', async () => {

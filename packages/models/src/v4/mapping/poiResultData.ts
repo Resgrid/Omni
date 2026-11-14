@@ -14,6 +14,18 @@ export class PoiResultData {
   public PoiImage?: string;
   /** Absolute URL of the POI type's uploaded icon (128x128 transparent PNG, anonymous GET). Null when none; undefined from older servers. */
   public IconUrl?: string | null = null;
-  /** Capability keys of the POI (Dispatch; Core branch `poi-capabilities`, not yet on develop). Absent from current servers. */
+  /** Ids of the department capabilities the POI offers (`GetPoiCapabilities`), in the department's order. Absent from older servers. */
+  public CapabilityIds?: string[];
+  /** The names of `CapabilityIds`, same order (e.g. "Cath Lab"). Absent from older servers. */
   public Capabilities?: string[];
+  /** PoiAvailabilityStatuses: 0 open, 1 limited, 2 diversion, 3 closed. Absent (open) from older servers. */
+  public AvailabilityStatus?: number;
+  /** Capability ids the destination cannot provide right now. */
+  public UnavailableCapabilityIds?: string[];
+  /** What the destination reported (e.g. "ED capacity overload"). */
+  public AvailabilityNote?: string | null;
+  /** When the current report was set (UTC ISO), or null when open. */
+  public AvailabilitySetOnUtc?: string | null;
+  /** When the current report lapses (UTC ISO); null when open or until changed. */
+  public AvailabilityExpiresOnUtc?: string | null;
 }

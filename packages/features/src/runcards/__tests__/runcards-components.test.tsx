@@ -245,6 +245,22 @@ describe('RunCardRecommendation (call form hook point)', () => {
     expect(useRunCardsStore.getState().appliedRunCardId).toBe(3);
   });
 
+  it('hands the form the reviewed decision without Apply, leaving a hand-picked dispatch as it is', async () => {
+    useRunCardsStore.setState({ fetchRecommendationDebounced: jest.fn() });
+    const onApply = jest.fn();
+    const handPicked = { everyone: false, users: [], groups: [], roles: [], units: ['9'] };
+    await render(<RunCardRecommendation {...props({ onApply, selection: handPicked })} />);
+    expect(onApply).not.toHaveBeenCalled();
+
+    await act(() => {
+      enableFlags(true);
+      useRunCardsStore.setState({ recommendation: recommendation({ Decision: { OutcomeNodeKey: 'node-1' } }), hasFetched: true });
+    });
+
+    expect(onApply).toHaveBeenLastCalledWith(handPicked, { outcomeNodeKey: 'node-1', unitResponseCodes: undefined });
+    expect(useRunCardsStore.getState().appliedRunCardId).toBeNull();
+  });
+
   it('clears the preview when priority or type is missing', async () => {
     const clear = jest.fn();
     useRunCardsStore.setState({ clear, fetchRecommendationDebounced: jest.fn() });

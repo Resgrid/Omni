@@ -56,6 +56,9 @@ const EMPTY_COLLECTION: GeoJSON.FeatureCollection = { type: 'FeatureCollection',
 /** Empty layer added before the app's layers when the style is a URL (its label layers are unknown here). */
 const OVERLAY_ANCHOR_LAYER_ID = 'rg-overlay-anchor';
 
+/** `queryRenderedFeatures` hit radius, in points: about a fingertip around the press. */
+const DEFAULT_QUERY_RADIUS = 10;
+
 const ORNAMENT_POSITIONS: Record<AttributionPosition, { top: number; left: number } | { top: number; right: number } | { bottom: number; right: number } | { bottom: number; left: number }> = {
   'bottom-right': { bottom: 8, right: 8 },
   'bottom-left': { bottom: 8, left: 8 },
@@ -101,6 +104,23 @@ export const MapView = forwardRef<MapViewRef, MapViewProps>(function MapView(pro
       getVisibleBounds: async () => {
         const bounds = await mapRef.current?.getBounds();
         return bounds ? { ne: [bounds[2], bounds[3]], sw: [bounds[0], bounds[1]] } : null;
+      },
+      queryRenderedFeatures: async (point, { layerIds, radius = DEFAULT_QUERY_RADIUS }) => {
+        if (layerIds.length === 0 || !mapRef.current) return [];
+        const [x, y] = point;
+
+        try {
+          return await mapRef.current.queryRenderedFeatures(
+            [
+              [x - radius, y - radius],
+              [x + radius, y + radius],
+            ],
+            { layers: [...layerIds] }
+          );
+        } catch {
+          // Style mid-swap or a layer the style no longer has.
+          return [];
+        }
       },
     }),
     []

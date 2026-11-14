@@ -80,8 +80,9 @@ interface CallRequestBase {
   dispatchUnits?: string[];
   dispatchEveryone?: boolean;
   /**
-   * The dispatcher picked the recipients (the form showed the dispatch list), so an empty selection dispatches nobody
-   * and goes up as DISPATCH_LIST_NOBODY. Unset, an empty selection goes up blank: "everyone" on an immediate create,
+   * The dispatcher picked the recipients (the form showed the dispatch list, or the All Call switch that replaces it when
+   * the department hides every list), so an empty selection goes up as DISPATCH_LIST_NOBODY: nobody, or on an edit with
+   * every list hidden, the recipients the call already has. Unset, an empty selection goes up blank: "everyone" on an immediate create,
    * and on an edit whose dispatch list the department hides, "keep the call's dispatches".
    */
   dispatchPicked?: boolean;
@@ -94,6 +95,11 @@ interface CallRequestBase {
   incidentId?: string;
   externalId?: string;
   referenceId?: string;
+  /**
+   * The map book page. Undefined goes up as null (the client has no input, so the server does not enforce "map page
+   * required"); a string, even blank, is sent and enforced. On an edit, null or blank keeps the stored page.
+   */
+  mapPage?: string;
   /** Dispatch time as an ISO-8601 UTC instant (`DispatchOnUtc`); blank dispatches now (create) or keeps the schedule (edit). */
   dispatchOnUtc?: string;
   destinationPoiId?: number | null;
@@ -154,6 +160,7 @@ const commonFields = (request: CallRequestBase) => ({
   ...(Array.isArray(request.protocolIds) ? { ProtocolIds: request.protocolIds } : {}),
   ExternalId: request.externalId || '',
   ReferenceId: request.referenceId || '',
+  MapPage: request.mapPage ?? null,
   ...(request.unitResponseCodes ? { UnitResponseCodes: request.unitResponseCodes } : {}),
   ...(Array.isArray(request.udfValues) ? { UdfValues: request.udfValues.map((value) => ({ UdfFieldId: value.UdfFieldId, Value: value.Value })) } : {}),
 });

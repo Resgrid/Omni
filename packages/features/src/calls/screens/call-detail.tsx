@@ -49,7 +49,7 @@ import { useCallPermissions } from '../hooks/use-call-permissions';
 import { CALL_SHORTCUTS_AVAILABLE, useCallShortcuts } from '../hooks/use-call-shortcuts';
 import { readableColors } from '../lib/call-colors';
 import { callDisplayName, revealedCallText } from '../lib/call-display';
-import { callLocationTarget } from '../lib/call-location';
+import { callLocationTarget, callPoint } from '../lib/call-location';
 import { resolvePriority } from '../lib/call-priority';
 import { isPendingCall, isScheduledCall, scheduledDispatchUtc } from '../lib/call-time';
 import { callCorrect, callEdit } from '../routes';
@@ -297,7 +297,7 @@ function ServerCallDetail({ callId, mapSlot, menuItems, onMenuAction, onClosed, 
           kind={isPending ? 'pending' : 'scheduled'}
           dispatchAtUtc={scheduledDispatchUtc(call)}
           isBusy={dispatchNow.busyCallId === callId}
-          onDispatch={canDispatch ? () => (isPending ? void dispatchNow.openDispatchPicker(callId, extraData?.Dispatches) : dispatchNow.confirmDispatchNow(callId)) : undefined}
+          onDispatch={canDispatch ? () => (isPending ? void dispatchNow.openDispatchPicker(callId, extraData?.Dispatches, callPoint(call)) : dispatchNow.confirmDispatchNow(callId)) : undefined}
         />
       ) : null}
       {mapSlot ? (

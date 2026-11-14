@@ -1,6 +1,7 @@
 import { useSecurity, useTerm } from '@resgrid/auth';
 import { useCapability, useHasModule } from '@resgrid/config';
 import { useNavigationHandoff } from '@resgrid/features/contacts';
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useNavigationEtaPins } from '@resgrid/features/navigation-eta';
 import { useStatusContext } from '@resgrid/features/status';
 import { useTranslation } from '@resgrid/i18n';
@@ -18,14 +19,18 @@ import {
   MapLegendButton,
   MapLegendSheet,
   MapPins,
+  type MapPressEvent,
   MapRecenterButton,
   MapTrafficButton,
   MapView,
+  type MapViewRef,
+  offlineDepartmentLayerIds,
   OfflineDepartmentLayers,
   TrafficLayer,
   UnitLocationMarker,
   useFollowCamera,
   useMapCenter,
+  useMapStyle,
   useMapTheme,
 } from '@resgrid/maps';
 import type { MapMakerInfoData } from '@resgrid/models';
@@ -36,16 +41,20 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { StyleSheet, View } from 'react-native';
 
 import { ActiveRouteOverlay } from '../components/active-route-overlay';
+import { LayerDetailsSheet } from '../components/layer-details-sheet';
+import { LayerFeaturePanel, type LayerFeatureSelection } from '../components/layer-feature-details';
 import { MapHighlights } from '../components/map-highlights';
 import { type MapPinAction, MapPinPanel } from '../components/map-pin-details';
 import { useActiveRouteOverlay } from '../hooks/use-active-route-overlay';
-import { useDepartmentLayers } from '../hooks/use-department-layers';
+import { type DepartmentMapLayer, useDepartmentLayers } from '../hooks/use-department-layers';
 import { useLiveMapPins } from '../hooks/use-live-map-pins';
 import { useMapLockStore } from '../hooks/use-map-lock';
 import { useMapViewStore } from '../hooks/use-map-view-store';
 import { TRAFFIC_SURFACES, useTrafficPreference } from '../hooks/use-traffic-preference';
+import { eventPhaseAt, eventPhaseLabelKey, firstFeatureDetails, firstOfflineFeatureHit, formatLayerEventDates, hasLayerDetails, type LayerEventPhase } from '../lib/layer-details';
 import { departmentTarget, OWN_LOCATION_ZOOM, pinTarget, resolveHomeTarget } from '../lib/map-camera';
 import { filterMarkers, findEntityPin, findFocusPin, highlightTargets, markerKindOf, parseMapFocus, poiTypeLayers, presentMarkerKinds, type ToggleableMarkerKind } from '../lib/map-markers';
+import { createTapPriority } from '../lib/tap-priority';
 
 /**
  * Links out of the map, built by the app layer from the variant's route contract (`useHref()`): a builder returns null
@@ -70,6 +79,8 @@ export interface MapScreenProps {
 const NO_LINKS: MapScreenLinks = {};
 const LAYER_ID_PREFIX = 'layer:';
 const KIND_ID_PREFIX = 'kind:';
+const OFFLINE_LAYERS_ID_PREFIX = 'map-screen-offline-layers';
+const PHASE_BADGE_TONE: Record<Exclude<LayerEventPhase, 'none'>, 'primary' | 'outline' | 'muted'> = { active: 'primary', upcoming: 'outline', ended: 'muted' };
 
 /** A link builder's result, or null when it has none or refuses the id (unsafe ids throw in the features' builders). */
 const linkOf = <A,>(builder: ((arg: A) => string | null) | undefined, arg: A): string | null => {
@@ -98,7 +109,7 @@ const isPositiveInt = (value: string): boolean => /^[1-9]\d*$/.test(value);
  * `/map?callId=` (`unitId`, `userId`, `poiId`) frames one pin.
  */
 export default function MapScreen({ links = NO_LINKS, realtime = true }: MapScreenProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const router = useRouter();
   const toast = useToast();
   const params = useLocalSearchParams();
@@ -112,6 +123,8 @@ export default function MapScreen({ links = NO_LINKS, realtime = true }: MapScre
   const { activeCallId, activeUnitId, onActiveCallChange } = useStatusContext();
   const handoff = useNavigationHandoff();
   const providerCenter = useMapCenter();
+  const { isOffline } = useMapStyle();
+  const departmentTimeZone = useDepartmentTimeZone();
   const ownLocation = useCurrentLocation();
 
   const isUnitDevice = statusCapability.subject === 'unit';
@@ -160,7 +173,53 @@ export default function MapScreen({ links = NO_LINKS, realtime = true }: MapScre
   const selectedPin = useMemo(() => (selectedPinId === null ? null : (visiblePins.find((pin) => String(pin.Id) === selectedPinId) ?? null)), [selectedPinId, visiblePins]);
   const markedPinId = selectedPin ? String(selectedPin.Id) : focusPin ? String(focusPin.Id) : activeCallPin ? String(activeCallPin.Id) : null;
   const closePin = useCallback(() => setSelectedPinId(null), []);
-  const handlePinPress = useCallback((pin: MapMakerInfoData) => setSelectedPinId(String(pin.Id)), []);
+  // A tapped layer shape (vendor, stop, zone) with a name or description. One panel at a time: a pin wins over a shape
+  // under the same tap (the web map reports both; the native map only the topmost source).
+  const [selectedFeature, setSelectedFeature] = useState<LayerFeatureSelection | null>(null);
+  const [tapPriority] = useState(createTapPriority);
+  const closeFeature = useCallback(() => setSelectedFeature(null), []);
+
+  const handlePinPress = useCallback(
+    (pin: MapMakerInfoData) => {
+      tapPriority.claimForPin();
+      setSelectedFeature(null);
+      setSelectedPinId(String(pin.Id));
+    },
+    [tapPriority]
+  );
+
+  const handleFeaturePress = useCallback(
+    (layer: DepartmentMapLayer, features: readonly GeoJSON.Feature[]) => {
+      const details = firstFeatureDetails(features);
+
+      if (!details) return;
+      tapPriority.whenUnclaimed(() => {
+        setSelectedPinId(null);
+        setSelectedFeature({ ...details, layerName: layer.name });
+      });
+    },
+    [tapPriority]
+  );
+
+  // Offline, the layers are drawn from the department data bundle in the offline style's own source, which has no press
+  // handler: the map's press looks the tapped feature up in those style layers instead.
+  const mapViewRef = useRef<MapViewRef>(null);
+
+  const handleMapPress = useCallback(
+    (event: MapPressEvent) => {
+      tapPriority.whenUnclaimedAsync(
+        async () => firstOfflineFeatureHit((await mapViewRef.current?.queryRenderedFeatures(event.point, { layerIds: offlineDepartmentLayerIds(OFFLINE_LAYERS_ID_PREFIX) })) ?? []),
+        (hit) => {
+          if (!hit) return;
+          const { layerId, layerName, ...details } = hit;
+
+          setSelectedPinId(null);
+          setSelectedFeature({ ...details, layerName: departmentLayers.find((layer) => layer.id === layerId)?.name || layerName });
+        }
+      );
+    },
+    [departmentLayers, tapPriority]
+  );
 
   // ---- camera -----------------------------------------------------------------------------------------------------
 
@@ -350,6 +409,22 @@ export default function MapScreen({ links = NO_LINKS, realtime = true }: MapScre
   const [isLegendOpen, setIsLegendOpen] = useState(false);
   // Mounted on first open (nothing to load while the map starts) and kept so it can animate closed.
   const [isLegendMounted, setIsLegendMounted] = useState(false);
+  // Event phases are judged when the sheet opens (a wall board keeps the map open for days).
+  const [layersOpenedAt, setLayersOpenedAt] = useState(() => Date.now());
+  const [detailsLayerId, setDetailsLayerId] = useState<string | null>(null);
+  const detailsLayer = useMemo(() => (detailsLayerId === null ? null : (departmentLayers.find((layer) => layer.id === detailsLayerId) ?? null)), [departmentLayers, detailsLayerId]);
+
+  const openLayers = useCallback(() => {
+    setLayersOpenedAt(Date.now());
+    setIsLayersOpen(true);
+  }, []);
+
+  const showLayerDetails = useCallback((id: string) => {
+    if (!id.startsWith(LAYER_ID_PREFIX)) return;
+    setLayersOpenedAt(Date.now());
+    setIsLayersOpen(false);
+    setDetailsLayerId(id.slice(LAYER_ID_PREFIX.length));
+  }, []);
 
   const kinds = useMemo(() => presentMarkerKinds(permittedPins, canUserViewPII), [canUserViewPII, permittedPins]);
   const poiLayers = useMemo(() => poiTypeLayers(permittedPins), [permittedPins]);
@@ -361,9 +436,21 @@ export default function MapScreen({ links = NO_LINKS, realtime = true }: MapScre
     () => [
       ...kinds.map((kind) => ({ Id: `${KIND_ID_PREFIX}${kind}`, Name: kindLabels[kind] })),
       ...poiLayers.map((layer) => ({ Id: layer.id, Name: layer.name, Color: layer.color || null })),
-      ...departmentLayers.map((layer) => ({ Id: `${LAYER_ID_PREFIX}${layer.id}`, Name: layer.name, Color: layer.color || null })),
+      ...departmentLayers.map((layer) => {
+        const phase = eventPhaseAt(layer.details?.event, layersOpenedAt);
+        const phaseKey = eventPhaseLabelKey(phase);
+
+        return {
+          Id: `${LAYER_ID_PREFIX}${layer.id}`,
+          Name: layer.name,
+          Color: layer.color || null,
+          Detail: formatLayerEventDates(layer.details?.event, departmentTimeZone, i18n.language, t) || null,
+          Badge: phase !== 'none' && phaseKey ? { label: t(phaseKey), tone: PHASE_BADGE_TONE[phase] } : null,
+          HasDetails: hasLayerDetails(layer.details),
+        };
+      }),
     ],
-    [departmentLayers, kindLabels, kinds, poiLayers]
+    [departmentLayers, departmentTimeZone, i18n.language, kindLabels, kinds, layersOpenedAt, poiLayers, t]
   );
   const layerToggles = useMemo<Record<string, boolean>>(() => {
     const toggles: Record<string, boolean> = {};
@@ -409,12 +496,13 @@ export default function MapScreen({ links = NO_LINKS, realtime = true }: MapScre
       : null;
 
   // Controls move to the left while the docked details cover the right edge.
-  const controlSide = docked && selectedPin ? 'left' : 'right';
+  const controlSide = docked && (selectedPin || selectedFeature) ? 'left' : 'right';
   const legendOffset = controlSide === 'left' && mapsCapability.layers ? 140 : 80;
 
   return (
     <View style={styles.container} testID="map-screen">
       <MapView
+        ref={mapViewRef}
         style={styles.map}
         compassEnabled
         scrollEnabled={!isMapLocked}
@@ -422,13 +510,18 @@ export default function MapScreen({ links = NO_LINKS, realtime = true }: MapScre
         rotateEnabled={!isMapLocked}
         pitchEnabled={!isMapLocked}
         onCameraChanged={handleCameraChanged}
+        onPress={mapsCapability.layers && isOffline ? handleMapPress : undefined}
         testID="map-screen-map"
         unavailableFallback={<MapUnavailable label={t('maps.unavailable')} />}
       >
         <Camera ref={cameraRef} defaultSettings={initialCamera} />
         <TrafficLayer visible={isTrafficOn} idPrefix="map-screen-traffic" />
-        {departmentLayers.map((layer) => (layer.isOn && layer.data ? <GeoJsonMapLayer key={layer.id} id={`map-layer-${layer.id}`} data={layer.data} color={layer.color} showLabels /> : null))}
-        {mapsCapability.layers ? <OfflineDepartmentLayers visibleLayerIds={offlineLayerIds} excludeLayerIds={onlineLayerIds} idPrefix="map-screen-offline-layers" /> : null}
+        {departmentLayers.map((layer) =>
+          layer.isOn && layer.data ? (
+            <GeoJsonMapLayer key={layer.id} id={`map-layer-${layer.id}`} data={layer.data} color={layer.color} showLabels onFeaturePress={(_feature, features) => handleFeaturePress(layer, features)} />
+          ) : null
+        )}
+        {mapsCapability.layers ? <OfflineDepartmentLayers visibleLayerIds={offlineLayerIds} excludeLayerIds={onlineLayerIds} idPrefix={OFFLINE_LAYERS_ID_PREFIX} /> : null}
         {activeRoute ? <ActiveRouteOverlay route={activeRoute} /> : null}
         <MapHighlights targets={highlights} colors={highlightColors} />
         <MapPins pins={drawnPins} onPinPress={handlePinPress} selectedPinId={markedPinId} canViewPersonnel={canUserViewPII} idPrefix="map-screen-pins" />
@@ -460,12 +553,13 @@ export default function MapScreen({ links = NO_LINKS, realtime = true }: MapScre
         </View>
       ) : null}
 
-      {mapsCapability.layers ? <MapLayersButton side="left" onPress={() => setIsLayersOpen(true)} testID="map-screen-layers-button" /> : null}
+      {mapsCapability.layers ? <MapLayersButton side="left" onPress={openLayers} testID="map-screen-layers-button" /> : null}
       <MapLegendButton side={controlSide} bottomOffset={legendOffset} onPress={openLegend} testID="map-screen-legend-button" />
       <MapTrafficButton isOn={isTrafficOn} side={controlSide} bottomOffset={legendOffset + 60} onPress={toggleTraffic} testID="map-screen-traffic-button" />
       {showRecenter ? <MapRecenterButton side={controlSide} bottomOffset={controlSide === 'left' && mapsCapability.layers ? 80 : 20} onPress={recenter} testID="map-screen-recenter-button" /> : null}
 
       {selectedPin ? <MapPinPanel isOpen={true} presentation={docked ? 'docked' : 'sheet'} pin={selectedPin} kindLabel={kindLabelOf(selectedPin)} badges={pinBadges} actions={pinActions} onClose={closePin} /> : null}
+      {selectedFeature && !selectedPin ? <LayerFeaturePanel isOpen={true} presentation={docked ? 'docked' : 'sheet'} feature={selectedFeature} onClose={closeFeature} /> : null}
 
       {mapsCapability.layers ? (
         <MapLayersSheet
@@ -474,10 +568,12 @@ export default function MapScreen({ links = NO_LINKS, realtime = true }: MapScre
           layers={layerItems}
           toggles={layerToggles}
           onToggle={handleToggleLayer}
+          onShowDetails={showLayerDetails}
           onBrowseMaps={customMapsHref ? () => browseMaps(customMapsHref) : undefined}
           onSearchMaps={searchMapsHref ? () => browseMaps(searchMapsHref) : undefined}
         />
       ) : null}
+      {mapsCapability.layers && detailsLayer ? <LayerDetailsSheet isOpen={true} layer={detailsLayer} onClose={() => setDetailsLayerId(null)} now={layersOpenedAt} timeZone={departmentTimeZone} /> : null}
       {isLegendMounted ? <MapLegendSheet isOpen={isLegendOpen} onClose={() => setIsLegendOpen(false)} canViewPersonnel={canUserViewPII} terms={legendTerms} /> : null}
     </View>
   );

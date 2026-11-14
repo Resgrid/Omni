@@ -117,24 +117,40 @@ export interface MapPinPanelProps extends MapPinDetailsProps {
   presentation: 'sheet' | 'docked';
 }
 
-/** The pin details as a bottom sheet on phones and a docked card on wide layouts (useFormFactor decides). */
-export const MapPinPanel: React.FC<MapPinPanelProps> = ({ isOpen, presentation, ...details }) => {
+export interface MapDetailsPanelProps {
+  isOpen: boolean;
+  presentation: 'sheet' | 'docked';
+  onClose: () => void;
+  /** `${testID}-sheet` / `${testID}-docked`. */
+  testID: string;
+  children: React.ReactNode;
+}
+
+/** What the map shows about a tapped item: a bottom sheet over the map on phones, a docked card beside it on wide layouts. */
+export const MapDetailsPanel: React.FC<MapDetailsPanelProps> = ({ isOpen, presentation, onClose, testID, children }) => {
   const colors = useThemeColors();
   if (presentation === 'sheet') {
     return (
-      <CustomBottomSheet isOpen={isOpen} onClose={details.onClose} snapPoints={[55]} testID="map-pin-sheet">
-        <MapPinDetails {...details} />
+      <CustomBottomSheet isOpen={isOpen} onClose={onClose} snapPoints={[55]} testID={`${testID}-sheet`}>
+        {children}
       </CustomBottomSheet>
     );
   }
   return isOpen ? (
-    <View style={StyleSheet.flatten([styles.docked, { backgroundColor: colors.background, borderColor: colors.border }])} testID="map-pin-docked">
+    <View style={StyleSheet.flatten([styles.docked, { backgroundColor: colors.background, borderColor: colors.border }])} testID={`${testID}-docked`}>
       <ScrollView contentContainerStyle={styles.dockedContent} keyboardShouldPersistTaps="handled">
-        <MapPinDetails {...details} />
+        {children}
       </ScrollView>
     </View>
   ) : null;
 };
+
+/** The pin details as a bottom sheet on phones and a docked card on wide layouts (useFormFactor decides). */
+export const MapPinPanel: React.FC<MapPinPanelProps> = ({ isOpen, presentation, ...details }) => (
+  <MapDetailsPanel isOpen={isOpen} presentation={presentation} onClose={details.onClose} testID="map-pin">
+    <MapPinDetails {...details} />
+  </MapDetailsPanel>
+);
 
 const styles = StyleSheet.create({
   docked: {

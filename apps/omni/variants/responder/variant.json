@@ -52,7 +52,9 @@
       "dispatch": true,
       "close": true,
       "queues": false,
-      "runCards": false
+      "runCards": false,
+      "nearestBoard": false,
+      "destinationAvailability": false
     },
     "status": {
       "subject": "personnel",

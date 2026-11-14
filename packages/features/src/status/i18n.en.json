@@ -1,11 +1,14 @@
 {
+  "status.assigned_to_call": "Assigned to call",
   "status.availability.all": "All",
   "status.availability.available": "Available",
   "status.availability.committed": "Committed",
   "status.availability.delayed": "Delayed",
   "status.availability.unavailable": "Unavailable",
   "status.availability.unknown": "Unknown",
+  "status.call_assigned_destination": "Call destination: {{name}}",
   "status.current": "Current",
+  "status.destination_availability": "{{name}}: {{status}}",
   "status.hold_to_set_hint": "Press and hold a status to set it",
   "status.hold_to_submit": "Hold to submit",
   "status.no_calls_available": "No calls available",
@@ -18,5 +21,7 @@
   "status.show_next_statuses": "Show next statuses only",
   "status.staffing_tab": "Staffing",
   "status.status_queued": "Saved on this device. It will be sent when the connection is back.",
-  "status.status_tab": "Status"
+  "status.status_tab": "Status",
+  "status.transport_destination_differs": "Differs from the call's assigned destination: {{name}}",
+  "status.transport_reason_required": "This destination differs from the call's assigned destination ({{name}}). Give a reason (required)."
 }

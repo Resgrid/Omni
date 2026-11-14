@@ -48,9 +48,11 @@ export class GetConfigResultData {
   public MapRasterTileUrl?: string;
   /** Signed static map URL template. */
   public StaticMapUrlTemplate?: string;
-  /** Live traffic overlay availability and tile URL. */
+  /** Live traffic overlay availability and tile URL (Mapbox Traffic v1 vector tiles). */
   public TrafficAvailable?: boolean;
   public TrafficTileUrl?: string;
+  /** The department's own traffic image tiles (`{z}/{x}/{y}`, e.g. TomTom flow), drawn instead of the vector overlay. */
+  public TrafficRasterTileUrl?: string;
   public TrafficRefreshSeconds?: number;
   /** In-app navigation availability (Navigation.InApp flag + provider support). */
   public NavigationAvailable?: boolean;
@@ -76,6 +78,12 @@ export class GetConfigResultData {
   public UnitStatusAlertNoteRequirement?: number = 0;
   /** Department sets statuses with a two-second press and hold instead of tap + Next/Submit. */
   public StatusHoldToConfirm?: boolean = false;
+  /**
+   * Transport destination checks (Dispatch Settings): a Transporting / At Hospital status to a destination other than its
+   * call's assigned one needs a reason (the status note), and the server notes the change on the call. Missing on servers
+   * that predate it.
+   */
+  public TransportDestinationChecks?: boolean = false;
   /** Map provider/style overrides (Core GetConfigResultData); absent from older servers. */
   public NavigationMapKey?: string;
   public MapProvider?: string;

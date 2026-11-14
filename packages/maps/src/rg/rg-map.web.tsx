@@ -66,6 +66,10 @@ const WebMapContext = createContext<GLMap | null>(null);
 const SourceContext = createContext<string | null>(null);
 
 const EMPTY_COLLECTION: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
+
+/** `queryRenderedFeatures` hit radius, in CSS pixels (pointer and touch). */
+const DEFAULT_QUERY_RADIUS = 10;
+
 const removedMaps = new WeakSet<GLMap>();
 const PROGRAMMATIC = { resgridProgrammatic: true };
 /** Back-off between attempts to load maplibre-gl after a failed load (doubling up to the cap); going online retries at once. */
@@ -184,6 +188,32 @@ export const MapView = forwardRef<MapViewRef, MapViewProps>(function MapView(pro
       getVisibleBounds: async () => {
         const bounds = mapRef.current?.getBounds();
         return bounds ? { ne: [bounds.getEast(), bounds.getNorth()], sw: [bounds.getWest(), bounds.getSouth()] } : null;
+      },
+      queryRenderedFeatures: async (point, { layerIds, radius = DEFAULT_QUERY_RADIUS }) => {
+        const instance = mapRef.current;
+
+        if (!instance || layerIds.length === 0) return [];
+        const [x, y] = point;
+
+        try {
+          // maplibre-gl throws for a layer the style does not have (not drawn yet, or dropped by a style swap).
+          const layers = layerIds.filter((id) => !!instance.getLayer(id));
+
+          if (layers.length === 0) return [];
+
+          return instance
+            .queryRenderedFeatures(
+              [
+                [x - radius, y - radius],
+                [x + radius, y + radius],
+              ],
+              { layers }
+            )
+            .map((feature): GeoJSON.Feature => ({ type: 'Feature', id: feature.id, geometry: feature.geometry, properties: feature.properties }));
+        } catch {
+          // Style mid-swap.
+          return [];
+        }
       },
     }),
     []

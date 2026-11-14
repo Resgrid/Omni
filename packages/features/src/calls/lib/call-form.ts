@@ -14,10 +14,10 @@ import { richTextForSave, richTextToPlain } from '@resgrid/ui';
 
 import { getScheduledDispatchPrefill, isDispatchTimeTooSoon, toDispatchOnUtc } from './call-schedule';
 import { CallState, scheduledDispatchUtc } from './call-time';
-import { dispatchesToSelection, type DispatchSelection, EMPTY_DISPATCH_SELECTION, isDispatchSelectionEmpty } from './dispatch-selection';
+import { allCallSelection, dispatchesToSelection, type DispatchSelection, EMPTY_DISPATCH_SELECTION, isDispatchSelectionEmpty } from './dispatch-selection';
 import { hasFieldValue, type NewCallFieldPolicy, type PolicyFieldValues } from './field-policy';
 
-export { type DispatchSelection, dispatchSelectionCount, EMPTY_DISPATCH_SELECTION, isDispatchSelectionEmpty } from './dispatch-selection';
+export { allCallSelection, type DispatchSelection, dispatchSelectionCount, EMPTY_DISPATCH_SELECTION, isDispatchSelectionEmpty } from './dispatch-selection';
 
 export interface LinkedCallRef {
   callId: string;
@@ -45,6 +45,8 @@ export interface CallFormValues {
   externalId: string;
   referenceId: string;
   incidentId: string;
+  /** The map book page for the call's location. Edit: blank keeps the stored page (EditCall cannot clear it). */
+  mapPage: string;
   destinationPoiId: number | null;
   /** Create: the call's link. Edit: a link this edit adds (EditCall keeps the links a call has and cannot remove one). */
   linkedCall: LinkedCallRef | null;
@@ -80,6 +82,7 @@ export const emptyCallFormValues = (priority: number | null = null): CallFormVal
   externalId: '',
   referenceId: '',
   incidentId: '',
+  mapPage: '',
   destinationPoiId: null,
   linkedCall: null,
   protocolIds: [],
@@ -98,6 +101,13 @@ export const emptyCallFormValues = (priority: number | null = null): CallFormVal
  * The pick itself stays in the form: turning Pending off again brings it back.
  */
 export const callDispatchSelection = (values: Pick<CallFormValues, 'dispatch' | 'isPending'>): DispatchSelection => (values.isPending && values.dispatch.everyone ? EMPTY_DISPATCH_SELECTION : values.dispatch);
+
+/**
+ * The dispatch selection a save sends. With every recipient list hidden only the All Call switch (`dispatch.everyone`,
+ * never offered for a pending call) counts: everyone, or no entries — never blank, which Core reads as "everyone".
+ */
+export const requestDispatchSelection = (values: Pick<CallFormValues, 'dispatch' | 'isPending'>, pickers: Pick<CallFormPickers, 'allCall'>): DispatchSelection =>
+  pickers.allCall ? allCallSelection(values.dispatch.everyone && !values.isPending) : callDispatchSelection(values);
 
 export type CoordinateParse = { ok: true; latitude: number; longitude: number } | { ok: false; reason: 'empty' | 'invalid_format' | 'out_of_range' };
 
@@ -193,9 +203,17 @@ export interface CallFormPickers {
   protocols: boolean;
   linkedCall: boolean;
   udf: boolean;
+  /** The primary contact picker is shown (`primaryContact`): its pick goes up as ContactId and its requirement applies. */
   contact: boolean;
   /** The dispatch list is shown: the selection is exactly who the call goes to, so an empty one dispatches nobody. */
   dispatchList: boolean;
+  /** The Map Page input is shown: its text goes up (blank enforces a required page); hidden, MapPage is left out. */
+  mapPage?: boolean;
+  /**
+   * Every recipient list is hidden (`areAllDispatchListsHidden`): no picker, only the optional All Call switch. The save
+   * sends "0" with it on and DISPATCH_LIST_NOBODY with it off (create: nobody; edit: the call keeps its recipients).
+   */
+  allCall?: boolean;
 }
 
 export type CallFormErrorKey = 'name' | 'nature' | 'priority' | 'type' | 'latitude' | 'longitude' | 'dispatchOnUtc' | 'udf' | NewCallFieldKey;
@@ -253,9 +271,11 @@ export function policyValues(values: CallFormValues): PolicyFieldValues {
     [NewCallFieldKeys.Geolocation]: coordinatesAsGeolocation(values),
     [NewCallFieldKeys.What3Words]: values.what3words,
     [NewCallFieldKeys.DestinationPoi]: values.destinationPoiId,
+    [NewCallFieldKeys.MapPage]: values.mapPage,
     [NewCallFieldKeys.Note]: values.note,
     [NewCallFieldKeys.ContactName]: values.contactName,
     [NewCallFieldKeys.ContactInfo]: values.contactInfo,
+    [NewCallFieldKeys.PrimaryContact]: values.contactId,
     [NewCallFieldKeys.ExternalId]: values.externalId,
     [NewCallFieldKeys.IncidentId]: values.incidentId,
     [NewCallFieldKeys.ReferenceId]: values.referenceId,
@@ -297,6 +317,9 @@ export function editPolicyValues(values: CallFormValues, edit: CallFormEditConte
     [NewCallFieldKeys.ExternalId]: textOrStored(values.externalId, call.ExternalId),
     [NewCallFieldKeys.IncidentId]: textOrStored(values.incidentId, call.IncidentId),
     [NewCallFieldKeys.ReferenceId]: textOrStored(values.referenceId, call.ReferenceId),
+    [NewCallFieldKeys.MapPage]: textOrStored(values.mapPage, call.MapPage),
+    // The form starts from the call's primary contact; the picker only replaces it.
+    [NewCallFieldKeys.PrimaryContact]: values.contactId,
     [NewCallFieldKeys.DestinationPoi]: values.destinationPoiId,
     [NewCallFieldKeys.Protocols]: (edit.storedProtocolCount ?? 0) > 0 || values.protocolIds.length > 0,
     [NewCallFieldKeys.LinkedCall]: !!values.linkedCall,
@@ -428,13 +451,15 @@ const commonRequestFields = (values: CallFormValues, pickers: CallFormPickers) =
   contactInfo: values.contactInfo,
   ...(pickers.contact ? { contactId: values.contactId } : {}),
   what3words: values.what3words,
-  ...dispatchRequestFields(callDispatchSelection(values)),
-  dispatchPicked: pickers.dispatchList,
+  ...dispatchRequestFields(requestDispatchSelection(values, pickers)),
+  dispatchPicked: pickers.dispatchList || pickers.allCall === true,
   ...(pickers.linkedCall ? { linkedCallId: values.linkedCall?.callId ?? '' } : {}),
   ...(pickers.protocols ? { protocolIds: values.protocolIds } : {}),
   incidentId: optional(values.incidentId),
   externalId: optional(values.externalId),
   referenceId: optional(values.referenceId),
+  // No input, no value: undefined goes up as null, so the server does not enforce a required map page against this form.
+  mapPage: pickers.mapPage ? values.mapPage.trim() : undefined,
   destinationPoiId: values.destinationPoiId,
   ...(values.unitResponseCodes ? { unitResponseCodes: values.unitResponseCodes } : {}),
   ...(pickers.udf ? { udfValues: values.udfValues } : {}),
@@ -456,10 +481,12 @@ export function toCreateCallRequest(values: CallFormValues, pickers: CallFormPic
  * - text fields go up blank, which EditCall reads as "keep the stored value";
  * - no point is posted for a hidden location, so the stored one stays;
  * - the destination is sent as stored (a missing one clears it on servers that do not yet ignore hidden fields);
- * - protocols and linked call are left out, which tells the server this edit does not touch them;
+ * - protocols, linked call, map page and primary contact are left out, which tells the server this edit does not touch
+ *   them;
  * - no dispatch time is sent, which keeps the call's schedule.
- * The dispatch list needs nothing here: with its picker hidden the request is not marked as picked, so an empty
- * selection goes up blank and EditCall keeps the call's dispatches.
+ * The dispatch list needs nothing here: a hidden recipient list sends none of its kind, which EditCall reads as "keep
+ * the ones the call has", and with every list hidden the All Call switch sends DISPATCH_LIST_NOBODY (keep them all) or
+ * "0" (add everyone).
  */
 export function keepHiddenEditFieldsUnchanged(request: UpdateCallRequest, isVisible: (key: NewCallFieldKey) => boolean, call: CallResultData): UpdateCallRequest {
   const next: UpdateCallRequest = { ...request };
@@ -484,6 +511,13 @@ export function keepHiddenEditFieldsUnchanged(request: UpdateCallRequest, isVisi
   if (!isVisible(NewCallFieldKeys.IncidentId)) next.incidentId = '';
 
   if (!isVisible(NewCallFieldKeys.ReferenceId)) next.referenceId = '';
+
+  if (!isVisible(NewCallFieldKeys.MapPage)) next.mapPage = undefined;
+
+  if (!isVisible(NewCallFieldKeys.PrimaryContact)) {
+    next.contactId = undefined;
+    next.additionalContactIds = undefined;
+  }
 
   if (!isVisible(NewCallFieldKeys.DestinationPoi)) next.destinationPoiId = call.DestinationPoiId ?? null;
 
@@ -558,7 +592,13 @@ export function toUpdateCallRequest(callId: string, values: CallFormValues, pick
     rebroadcastCall: options.rebroadcast ?? false,
   };
 
-  if (contactChanged) request.contactId = contactId;
+  if (contactChanged) {
+    request.contactId = contactId;
+
+    // Sending ContactId replaces every contact link on the call. This form has no additional contacts picker, so it sends
+    // back the ones the call has rather than dropping them (left out when the server did not list the call's contacts).
+    if (call.Contacts) request.additionalContactIds = call.Contacts.filter((contact) => contact.CallContactType === 1).map((contact) => contact.ContactId);
+  }
 
   if (dispatchOnUtc) request.dispatchOnUtc = dispatchOnUtc;
 
@@ -658,6 +698,7 @@ export function callToFormValues(call: CallResultData, dispatches: readonly Disp
     externalId: call.ExternalId ?? '',
     referenceId: call.ReferenceId ?? '',
     incidentId: call.IncidentId ?? '',
+    mapPage: call.MapPage ?? '',
     destinationPoiId: call.DestinationPoiId ?? null,
     dispatch: dispatchSelectionFromDispatches(dispatches),
     dispatchOnUtc: getScheduledDispatchPrefill(scheduledDispatchUtc(call), options.now),
@@ -717,6 +758,7 @@ export function createRequestToFormValues(request: CreateCallRequest): CallFormV
     externalId: request.externalId ?? '',
     referenceId: request.referenceId ?? '',
     incidentId: request.incidentId ?? '',
+    mapPage: request.mapPage ?? '',
     destinationPoiId: request.destinationPoiId ?? null,
     protocolIds: request.protocolIds ?? [],
     dispatch: {

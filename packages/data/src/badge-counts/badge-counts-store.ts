@@ -22,8 +22,11 @@ export const SERVER_BADGE_COUNT_KEYS = ['calls', 'messages', 'chats', 'weather',
 
 export type ServerBadgeCountKey = (typeof SERVER_BADGE_COUNT_KEYS)[number];
 
-/** Every count a badge can show: the server counts plus the Novu inbox's unread count. */
-export type NavBadgeKey = ServerBadgeCountKey | 'notifications';
+/**
+ * Every count a badge can show: the server counts, the Novu inbox's unread count, and the calls awaiting resources
+ * (Dispatch's run card requirements, counted from the awaiting-resources store; Core has no badge count for them).
+ */
+export type NavBadgeKey = ServerBadgeCountKey | 'notifications' | 'awaitingResources';
 
 /** What a nav entry or tab shows: one count, or several as their sum (Shifts: today's shifts and trade requests). */
 export type NavBadge = NavBadgeKey | readonly NavBadgeKey[];
@@ -32,7 +35,7 @@ type ServerCounts = Partial<Record<ServerBadgeCountKey, number>>;
 
 const isServerKey = (key: string): key is ServerBadgeCountKey => SERVER_BADGE_COUNT_KEYS.some((known) => known === key);
 
-export const isServerBadgeCountKey = (key: NavBadgeKey): key is ServerBadgeCountKey => key !== 'notifications';
+export const isServerBadgeCountKey = (key: NavBadgeKey): key is ServerBadgeCountKey => key !== 'notifications' && key !== 'awaitingResources';
 
 const NO_KEYS: readonly NavBadgeKey[] = [];
 
@@ -82,6 +85,8 @@ interface BadgeCountsData extends SliceMeta<BadgeCountsSlice> {
   unsupported: boolean;
   /** The Novu inbox's unread count, set by the shell while the inbox is ready. */
   unreadNotifications: number;
+  /** Calls still awaiting run card resources, set by the awaiting-resources store. */
+  awaitingResources: number;
 }
 
 export interface BadgeCountsState extends BadgeCountsData {
@@ -93,6 +98,7 @@ export interface BadgeCountsState extends BadgeCountsData {
   /** One request for every wanted count. Overlapping calls share it, plus one trailing run for a call made mid-flight. */
   fetchBadgeCounts: (params?: BadgeCountsParams, options?: FetchOptions) => Promise<void>;
   setUnreadNotifications: (count: number) => void;
+  setAwaitingResources: (count: number) => void;
 }
 
 export interface BadgeCountsParams {
@@ -100,7 +106,7 @@ export interface BadgeCountsParams {
   activeUnitId?: number | null;
 }
 
-const initialData = (): BadgeCountsData => ({ ...emptySliceMeta<BadgeCountsSlice>(), counts: {}, wanted: [], unsupported: false, unreadNotifications: 0 });
+const initialData = (): BadgeCountsData => ({ ...emptySliceMeta<BadgeCountsSlice>(), counts: {}, wanted: [], unsupported: false, unreadNotifications: 0, awaitingResources: 0 });
 
 let runner: SliceRunner<BadgeCountsSlice, BadgeCountsState>;
 let lastParams: BadgeCountsParams = {};
@@ -163,6 +169,12 @@ export const useBadgeCountsStore = create<BadgeCountsState>()(
 
           if (get().unreadNotifications !== next) set({ unreadNotifications: next });
         },
+
+        setAwaitingResources: (count) => {
+          const next = countOf(count) ?? 0;
+
+          if (get().awaitingResources !== next) set({ awaitingResources: next });
+        },
       };
     },
     dataPersistOptions<BadgeCountsState, Pick<BadgeCountsData, 'counts' | 'fetchedAt'>>({
@@ -218,11 +230,11 @@ registerDataStoreReset<BadgeCountsState>('badge-counts', useBadgeCountsStore, in
 /** The count a badge shows, or null for none (unknown, unsupported server, or zero). Several keys show their sum. */
 export const selectBadgeCount =
   (badge: NavBadge) =>
-  (state: Pick<BadgeCountsData, 'counts' | 'unreadNotifications'>): number | null => {
+  (state: Pick<BadgeCountsData, 'counts' | 'unreadNotifications'> & Partial<Pick<BadgeCountsData, 'awaitingResources'>>): number | null => {
     let total = 0;
 
     for (const key of badgeKeysOf(badge)) {
-      const value = key === 'notifications' ? state.unreadNotifications : state.counts[key];
+      const value = key === 'notifications' ? state.unreadNotifications : key === 'awaitingResources' ? (state.awaitingResources ?? 0) : state.counts[key];
 
       if (value && value > 0) total += value;
     }
@@ -255,8 +267,9 @@ export function useBadgeCount(badge: NavBadge | null | undefined): number | null
 export function useBadgeCountLookup(): (badge: NavBadge | null | undefined) => number | null {
   const counts = useBadgeCountsStore((state) => state.counts);
   const unreadNotifications = useBadgeCountsStore((state) => state.unreadNotifications);
+  const awaitingResources = useBadgeCountsStore((state) => state.awaitingResources);
 
-  return useCallback((badge) => (badge ? selectBadgeCount(badge)({ counts, unreadNotifications }) : null), [counts, unreadNotifications]);
+  return useCallback((badge) => (badge ? selectBadgeCount(badge)({ counts, unreadNotifications, awaitingResources }) : null), [counts, unreadNotifications, awaitingResources]);
 }
 
 /**

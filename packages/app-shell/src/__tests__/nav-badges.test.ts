@@ -31,6 +31,8 @@ const EXPECTED_BADGES = new Map<string, NavBadge>([
   ['checklists', 'checklists'],
   ['shifts', ['shifts', 'shiftTrades']],
   ['work-orders', 'workOrders'],
+  // Calls still awaiting run card resources (Dispatch), counted from the awaiting-resources store.
+  ['awaiting-resources', 'awaitingResources'],
 ]);
 
 describe('nav badges', () => {

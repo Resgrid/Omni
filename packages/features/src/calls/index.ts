@@ -12,9 +12,25 @@ import { CallSummaryModal, type CallSummaryModalProps } from './components/call-
 import { type CallDispatchNowControls, useCallDispatchNow, type UseCallDispatchNowOptions } from './hooks/use-call-dispatch-now';
 import { useCallPermissions, useCallPermissionsResolver, useCallRights } from './hooks/use-call-permissions';
 import { callDisplayName, callDisplayText, type CallTextField, type CallTextFields, revealedCallText } from './lib/call-display';
-import { callDestinationTarget, callLocationTarget, isUsablePoint } from './lib/call-location';
+import { callDestinationTarget, callLocationTarget, callPoint, isUsablePoint } from './lib/call-location';
 import { type CallPermissionInput, type CallPermissions, type CallRights, type CallsCapability, isCallReporter, resolveCallPermissions } from './lib/call-permissions';
 import { getScheduledDispatchPrefill, isDispatchTimeTooSoon, MIN_DISPATCH_LEAD_MINUTES, toDispatchOnUtc } from './lib/call-schedule';
+import {
+  type BoardRank,
+  boundsAround,
+  buildDispatchMapOverlay,
+  callLocationOf,
+  type DispatchMapOverlay,
+  formatDistance,
+  formatDistanceEta,
+  formatDuration,
+  formatEta,
+  NEAREST_BADGE_COUNT,
+  positionNote,
+  rankBoardPersonnel,
+  rankBoardUnits,
+  type RecipientSort,
+} from './lib/dispatch-board';
 import { buildAddResourcesRequest, dispatchesToSelection, isDispatchSelectionEmpty, mergeDispatchSelections, selectionSize } from './lib/dispatch-selection';
 import { getMissingCallFieldsFromRefusal } from './lib/server-refusal';
 
@@ -109,16 +125,21 @@ export { CALL_ROUTE_PATTERNS, callCorrect, callDetail, callEdit, callNew, callRo
 export {
   AddResourcesSheet,
   type AddResourcesSheetProps,
+  type BoardRank,
+  boundsAround,
   buildAddResourcesRequest,
+  buildDispatchMapOverlay,
   CallConfirmDialog,
   type CallConfirmDialogProps,
   callDestinationTarget,
   type CallDispatchNowControls,
   callDisplayName,
   callDisplayText,
+  callLocationOf,
   callLocationTarget,
   type CallPermissionInput,
   type CallPermissions,
+  callPoint,
   type CallRights,
   type CallsCapability,
   CallSummaryModal,
@@ -126,6 +147,11 @@ export {
   type CallTextField,
   type CallTextFields,
   dispatchesToSelection,
+  type DispatchMapOverlay,
+  formatDistance,
+  formatDistanceEta,
+  formatDuration,
+  formatEta,
   getMissingCallFieldsFromRefusal,
   getScheduledDispatchPrefill,
   isCallReporter,
@@ -134,6 +160,11 @@ export {
   isUsablePoint,
   mergeDispatchSelections,
   MIN_DISPATCH_LEAD_MINUTES,
+  NEAREST_BADGE_COUNT,
+  positionNote,
+  rankBoardPersonnel,
+  rankBoardUnits,
+  type RecipientSort,
   resolveCallPermissions,
   revealedCallText,
   selectionSize,

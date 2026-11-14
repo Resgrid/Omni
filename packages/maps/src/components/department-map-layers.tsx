@@ -3,9 +3,10 @@ import React, { useMemo } from 'react';
 
 import { useSignedMapUrl } from '../hooks/use-signed-map-url';
 import { boundsToImageCoordinates, buildIndoorFloorImageUrl, indoorZonesToFeatureCollection, resolveCustomMapLayerRendering } from '../lib/custom-maps';
+import { RESOLVED_COLOR_PROPERTY, toMapColor, withResolvedFeatureColors } from '../lib/feature-colors';
 import { offlineCustomMapSourceId, offlineFloorSourceId, styleHasSource } from '../lib/offline-style-sources';
 import { useMapServices, useMapStyle, useMapTheme } from '../provider/context';
-import { FillLayer, ImageSource, LineLayer, RasterLayer, RasterSource, ShapeSource, SymbolLayer } from '../rg';
+import { CircleLayer, FillLayer, ImageSource, LineLayer, RasterLayer, RasterSource, ShapeSource, SymbolLayer } from '../rg';
 import type { SourcePressEvent } from '../rg/types';
 
 /**
@@ -148,28 +149,52 @@ export const IndoorMapFloorLayer: React.FC<IndoorMapFloorLayerProps> = ({ floor,
 export interface GeoJsonMapLayerProps {
   id: string;
   data: GeoJSON.FeatureCollection | null | undefined;
-  /** Layer colour (map layers / geofences carry one); features may override with a `color` property. */
+  /** Layer colour (map layers / geofences carry one); a feature's own readable `color` property wins (imported shapes). */
   color?: string | null;
   fillOpacity?: number;
+  /** Name labels under point shapes (vendors, stops). */
   showLabels?: boolean;
-  onFeaturePress?: (feature: GeoJSON.Feature) => void;
+  /** A shape was tapped: the topmost feature, and every feature under the tap (shapes can overlap). */
+  onFeaturePress?: (feature: GeoJSON.Feature, features: readonly GeoJSON.Feature[]) => void;
 }
 
-/** A department map layer / geofence (`GetMapLayerGeoJSON/{layerId}`): fill + outline + points + labels. */
+const FEATURE_COLOR: ['get', string] = ['get', RESOLVED_COLOR_PROPERTY];
+const POINT_HITBOX = { width: 24, height: 24 };
+
+/**
+ * A department map layer / geofence (`GetMapLayerGeoJSON/{layerId}`): fill + outline, points as dots, optional point
+ * labels. Each shape draws in its own colour when it has a readable one (`withResolvedFeatureColors`), else the layer's,
+ * else the theme's.
+ */
 export const GeoJsonMapLayer: React.FC<GeoJsonMapLayerProps> = ({ id, data, color, fillOpacity = 0.15, showLabels = false, onFeaturePress }) => {
   const { colors } = useMapTheme();
-  const base = color?.trim() || colors.primary;
-  const featureColor: ['coalesce', ['get', string], string] = ['coalesce', ['get', 'color'], base];
-  if (!data || data.features.length === 0) return null;
+  const base = toMapColor(color) ?? colors.primary;
+  const colored = useMemo(() => withResolvedFeatureColors(data, base), [data, base]);
+  if (!colored || colored.features.length === 0) return null;
   return (
-    <ShapeSource id={`${id}-source`} shape={data} onPress={onFeaturePress ? (event) => (event.features[0] ? onFeaturePress(event.features[0]) : undefined) : undefined}>
-      <FillLayer id={`${id}-fill`} filter={['==', ['geometry-type'], 'Polygon']} style={{ fillColor: featureColor, fillOpacity }} />
-      <LineLayer id={`${id}-line`} filter={['!=', ['geometry-type'], 'Point']} style={{ lineColor: featureColor, lineWidth: 2 }} />
-      <SymbolLayer
-        id={`${id}-points`}
-        filter={['==', ['geometry-type'], 'Point']}
-        style={{ textField: showLabels ? ['coalesce', ['get', 'name'], ['get', 'Name'], ''] : '', textSize: 11, textColor: colors.text, textHaloColor: colors.background, textHaloWidth: 1 }}
-      />
+    <ShapeSource
+      id={`${id}-source`}
+      shape={colored}
+      hitbox={onFeaturePress ? POINT_HITBOX : undefined}
+      onPress={onFeaturePress ? (event: SourcePressEvent) => (event.features[0] ? onFeaturePress(event.features[0], event.features) : undefined) : undefined}
+    >
+      <FillLayer id={`${id}-fill`} filter={['==', ['geometry-type'], 'Polygon']} style={{ fillColor: FEATURE_COLOR, fillOpacity }} />
+      <LineLayer id={`${id}-line`} filter={['!=', ['geometry-type'], 'Point']} style={{ lineColor: FEATURE_COLOR, lineWidth: 2 }} />
+      <CircleLayer id={`${id}-points`} filter={['==', ['geometry-type'], 'Point']} style={{ circleRadius: 6, circleColor: FEATURE_COLOR, circleStrokeColor: colors.background, circleStrokeWidth: 1.5 }} />
+      {showLabels ? (
+        <SymbolLayer
+          id={`${id}-labels`}
+          filter={['==', ['geometry-type'], 'Point']}
+          style={{
+            textField: ['to-string', ['coalesce', ['get', 'name'], ['get', 'Name'], '']],
+            textSize: 11,
+            textOffset: [0, 1.2],
+            textColor: colors.text,
+            textHaloColor: colors.background,
+            textHaloWidth: 1,
+          }}
+        />
+      ) : null}
     </ShapeSource>
   );
 };

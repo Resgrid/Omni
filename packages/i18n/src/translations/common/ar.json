@@ -517,7 +517,39 @@
     "destination_poi_select": "Select a destination",
     "destination_poi_search": "Search destinations...",
     "destination_poi_none_found": "No destinations match your search",
-    "destination_poi_clear": "Clear destination"
+    "destination_poi_clear": "Clear destination",
+    "dispatch_board": {
+      "at_station": "في المحطة",
+      "available_only": "المتاحون فقط",
+      "board_error": "تعذر تحميل المسافات. يُعرض الجميع حسب الاسم.",
+      "crew": "الطاقم: {{names}}",
+      "includes_turnout": "يشمل {{seconds}} ث للانطلاق",
+      "loading_board": "جارٍ البحث عن أقرب الوحدات والأفراد…",
+      "location_hidden": "الموقع مخفي",
+      "location_stale": "الموقع منذ {{age}}",
+      "location_stale_unknown": "الموقع قديم",
+      "map_boundaries": "حدود المحطات",
+      "map_personnel": "الأفراد المتاحون",
+      "map_units": "الوحدات المتاحة",
+      "nearest": "الأقرب رقم {{rank}}",
+      "no_crew": "لا يوجد طاقم معيّن",
+      "no_location": "لا يوجد موقع",
+      "on_unit": "على {{unit}}",
+      "ranked_from_location": "مرتبة حسب زمن الاستجابة إلى موقع البلاغ.",
+      "run_card_pick": "خطة الاستجابة",
+      "set_location_to_rank": "حدد موقع البلاغ لمعرفة الأقرب.",
+      "sort_closest": "الأقرب",
+      "sort_name": "الاسم"
+    },
+    "map_page": "صفحة الخريطة",
+    "all_call": "نداء عام",
+    "all_call_dispatch_everyone": "نداء عام (إرسال إلى الجميع)",
+    "all_call_help": "جميع قوائم الإرسال مخفية. فعّل النداء العام لإرسال هذه المكالمة إلى الجميع، أو اتركه متوقفًا لحفظ مكالمة للعلم فقط لا يُنبَّه فيها أحد.",
+    "all_call_edit_help": "فعّل النداء العام لإضافة الجميع إلى هذه المكالمة وتنبيههم. اتركه متوقفًا للإبقاء على مستلمي المكالمة الحاليين.",
+    "all_call_dispatch_now_help": "جميع قوائم الإرسال مخفية. فعّل النداء العام لإرسال هذه المكالمة إلى الجميع، أو اتركه متوقفًا لإرسالها إلى المستلمين الذين حُفظت معهم.",
+    "additional_contacts": "جهات اتصال إضافية",
+    "check_in_timers": "مؤقتات تسجيل الحضور",
+    "part2_consent": "موافقة 42 CFR Part 2"
   },
   "chat": {
     "ack_pending_count": "لديك {{count}} رسائل عاجلة بحاجة إلى إقرار",
@@ -1810,6 +1842,22 @@
       "badge_details": "This map is drawn from maps saved on this device.",
       "badge_stale": "These maps have not been updated for a while. Connect to the internet to refresh them.",
       "badge_attribution": "Map data: {{attribution}}"
+    },
+    "layer_info": {
+      "show_details": "تفاصيل {{name}}",
+      "phase_upcoming": "قادم",
+      "phase_active": "جارٍ الآن",
+      "phase_ended": "انتهى",
+      "range": "{{start}} – {{end}}",
+      "from": "من {{start}}",
+      "until": "حتى {{end}}",
+      "organizer": "المنظِّم",
+      "contact": "جهة الاتصال",
+      "phone": "الهاتف",
+      "email": "البريد الإلكتروني",
+      "category": "الفئة",
+      "no_details": "لا توجد تفاصيل لهذه الطبقة.",
+      "source_file": "مستورد من {{name}}"
     }
   },
   "mfa": {
@@ -2331,7 +2379,29 @@
     "destinations_only": "Destinations",
     "empty": "No points of interest",
     "not_found": "Point of interest not found",
-    "search": "Search points of interest..."
+    "search": "Search points of interest...",
+    "all_capabilities": "الكل",
+    "nearest": "الأقرب",
+    "availability": {
+      "open": "متاح",
+      "limited": "محدود",
+      "diversion": "تحويل",
+      "closed": "مغلق",
+      "capability_unavailable": "غير متاح الآن",
+      "title": "التوفر",
+      "set": "تعيين التوفر",
+      "set_title": "توفر الوجهة",
+      "unavailable_capabilities": "غير متاح الآن",
+      "note": "ما تم الإبلاغ عنه",
+      "note_placeholder": "مثال: الطوارئ مكتظة، جهاز التصوير المقطعي معطل",
+      "expires": "المدة",
+      "expires_never": "حتى يتم تغييره",
+      "expires_hours": "{{count}} س",
+      "until": "حتى {{time}}",
+      "saved": "تم حفظ التوفر",
+      "save_failed": "تعذر حفظ التوفر",
+      "expiry_passed": "انقضى وقت انتهاء البلاغ. اختر مدة سريانه."
+    }
   },
   "protocols": {
     "details": {
@@ -3015,7 +3085,12 @@
     "show_next_statuses": "إظهار الحالات التالية فقط",
     "staffing_tab": "Staffing",
     "status_queued": "Saved on this device. It will be sent when the connection is back.",
-    "status_tab": "Status"
+    "status_tab": "Status",
+    "assigned_to_call": "محددة في البلاغ",
+    "call_assigned_destination": "وجهة البلاغ: {{name}}",
+    "transport_destination_differs": "تختلف عن الوجهة المحددة في البلاغ: {{name}}",
+    "transport_reason_required": "تختلف هذه الوجهة عن الوجهة المحددة في البلاغ ({{name}}). اذكر السبب (مطلوب).",
+    "destination_availability": "{{name}}: {{status}}"
   },
   "tabs": {
     "calendar": "التقويم",

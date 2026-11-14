@@ -1,5 +1,6 @@
 import { parseUtcMs } from '@resgrid/core/utils/dates';
 import type { UnitResponseCodeChoices } from '@resgrid/data';
+import { formatDuration } from '@resgrid/features/calls/lib/dispatch-board';
 import { readableTextColor } from '@resgrid/features/status';
 import {
   type DispatchRecommendationResultData,
@@ -18,12 +19,8 @@ import {
  * Call, add-resources and awaiting-resources surfaces read them the same way.
  */
 
-/** A response time as m:ss ("4:05"). Null when the engine had no time. */
-export const formatResponseSeconds = (seconds: number | null | undefined): string | null => {
-  if (typeof seconds !== 'number' || !Number.isFinite(seconds) || seconds < 0) return null;
-  const total = Math.round(seconds);
-  return `${Math.floor(total / 60)}:${(total % 60).toString().padStart(2, '0')}`;
-};
+/** A response time as m:ss ("4:05"), as the nearest-unit board shows it. Null when the engine had no time. */
+export const formatResponseSeconds = (seconds: number | null | undefined): string | null => formatDuration(seconds);
 
 /** A signed margin as m:ss ("+1:30", "-0:20"). Null when there is none. */
 export const formatMarginSeconds = (seconds: number | null | undefined): string | null => {

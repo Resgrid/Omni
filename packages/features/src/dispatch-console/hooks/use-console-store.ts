@@ -19,6 +19,8 @@ interface ConsoleData {
   /** Multi-unit selection: a tap adds/removes a unit instead of opening its own actions. */
   isSelectionMode: boolean;
   selectedUnitIds: string[];
+  /** The unit a Shift-click range starts from: the last unit toggled into or out of the selection. */
+  selectionAnchorId: string | null;
   activeTab: ConsoleTab;
   activityLog: ActivityLogEntry[];
   radioLog: RadioLogEntry[];
@@ -43,6 +45,11 @@ export interface ConsoleState extends ConsoleData {
   endSelection: () => void;
   toggleUnitInSelection: (unitId: string) => void;
   addUnitsToSelection: (unitIds: string[]) => void;
+  /**
+   * Shift-click: adds the units from the anchor (else the single selected unit) to `unitId`, in the order the list
+   * shows them (`orderedUnitIds`), to the selection. Without an anchor on the list it starts from `unitId`.
+   */
+  selectUnitRange: (orderedUnitIds: readonly string[], unitId: string) => void;
   clearSelection: () => void;
 }
 
@@ -53,14 +60,17 @@ const initialData = (): ConsoleData => ({
   selectedPersonnelId: null,
   isSelectionMode: false,
   selectedUnitIds: [],
+  selectionAnchorId: null,
   activeTab: 'activity',
   activityLog: [],
   radioLog: [],
 });
 
 let sequence = 0;
+
 const nextId = (): string => {
   sequence += 1;
+
   return `${Date.now().toString(36)}-${sequence.toString(36)}`;
 };
 
@@ -69,12 +79,16 @@ export const useConsoleStore = create<ConsoleState>()((set, get) => ({
 
   toggleCallFilter: (callId) => {
     const { selectedCallId, isCallFilterActive } = get();
+
     if (selectedCallId === callId && isCallFilterActive) {
       set({ selectedCallId: null, isCallFilterActive: false, activeTab: get().activeTab === 'checkins' ? 'activity' : get().activeTab });
+
       return false;
     }
+
     // A call picked for filtering surfaces its quick actions (note, close, add resources).
     set({ selectedCallId: callId, isCallFilterActive: true, activeTab: 'actions' });
+
     return true;
   },
 
@@ -83,19 +97,25 @@ export const useConsoleStore = create<ConsoleState>()((set, get) => ({
   selectUnit: (unitId) => {
     if (get().selectedUnitId === unitId) {
       set({ selectedUnitId: null });
+
       return false;
     }
+
     // A single unit selected ends a multi-unit selection; its actions take the tab.
-    set({ selectedUnitId: unitId, selectedPersonnelId: null, isSelectionMode: false, selectedUnitIds: [], activeTab: 'actions' });
+    set({ selectedUnitId: unitId, selectedPersonnelId: null, isSelectionMode: false, selectedUnitIds: [], selectionAnchorId: null, activeTab: 'actions' });
+
     return true;
   },
 
   selectPersonnel: (userId) => {
     if (get().selectedPersonnelId === userId) {
       set({ selectedPersonnelId: null });
+
       return false;
     }
-    set({ selectedPersonnelId: userId, selectedUnitId: null, isSelectionMode: false, selectedUnitIds: [], activeTab: 'actions' });
+
+    set({ selectedPersonnelId: userId, selectedUnitId: null, isSelectionMode: false, selectedUnitIds: [], selectionAnchorId: null, activeTab: 'actions' });
+
     return true;
   },
 
@@ -123,16 +143,23 @@ export const useConsoleStore = create<ConsoleState>()((set, get) => ({
   startSelection: (seed = []) => {
     const { selectedUnitId } = get();
     const ids = Array.from(new Set([...(selectedUnitId ? [selectedUnitId] : []), ...seed]));
-    set({ isSelectionMode: true, selectedUnitIds: ids, selectedUnitId: null, selectedPersonnelId: null, activeTab: ids.length > 0 ? 'actions' : get().activeTab });
+    set({
+      isSelectionMode: true,
+      selectedUnitIds: ids,
+      selectionAnchorId: ids.length > 0 ? ids[ids.length - 1] : null,
+      selectedUnitId: null,
+      selectedPersonnelId: null,
+      activeTab: ids.length > 0 ? 'actions' : get().activeTab,
+    });
   },
 
-  endSelection: () => set({ isSelectionMode: false, selectedUnitIds: [] }),
+  endSelection: () => set({ isSelectionMode: false, selectedUnitIds: [], selectionAnchorId: null }),
 
   toggleUnitInSelection: (unitId) => {
     const { selectedUnitIds } = get();
     const next = selectedUnitIds.includes(unitId) ? selectedUnitIds.filter((id) => id !== unitId) : [...selectedUnitIds, unitId];
     // The first unit of a selection surfaces the bulk status form.
-    set({ isSelectionMode: true, selectedUnitIds: next, ...(selectedUnitIds.length === 0 && next.length > 0 ? { activeTab: 'actions' as ConsoleTab } : {}) });
+    set({ isSelectionMode: true, selectedUnitIds: next, selectionAnchorId: unitId, ...(selectedUnitIds.length === 0 && next.length > 0 ? { activeTab: 'actions' as ConsoleTab } : {}) });
   },
 
   addUnitsToSelection: (unitIds) => {
@@ -140,7 +167,26 @@ export const useConsoleStore = create<ConsoleState>()((set, get) => ({
     set({ isSelectionMode: true, selectedUnitIds: next, ...(next.length > 0 ? { activeTab: 'actions' as ConsoleTab } : {}) });
   },
 
-  clearSelection: () => set({ selectedUnitIds: [] }),
+  selectUnitRange: (orderedUnitIds, unitId) => {
+    const { isSelectionMode, selectedUnitIds, selectedUnitId, selectionAnchorId } = get();
+    const anchor = isSelectionMode ? selectionAnchorId : selectedUnitId;
+    const from = anchor ? orderedUnitIds.indexOf(anchor) : -1;
+    const to = orderedUnitIds.indexOf(unitId);
+    const range = from < 0 || to < 0 ? [unitId] : orderedUnitIds.slice(Math.min(from, to), Math.max(from, to) + 1);
+    const base = isSelectionMode ? selectedUnitIds : selectedUnitId ? [selectedUnitId] : [];
+
+    // The anchor stays put, so a second Shift-click extends the range from the same unit.
+    set({
+      isSelectionMode: true,
+      selectedUnitIds: Array.from(new Set([...base, ...range])),
+      selectionAnchorId: from < 0 ? unitId : anchor,
+      selectedUnitId: null,
+      selectedPersonnelId: null,
+      activeTab: 'actions',
+    });
+  },
+
+  clearSelection: () => set({ selectedUnitIds: [], selectionAnchorId: null }),
 }));
 
 registerDataStoreReset<ConsoleState>('dispatch-console', useConsoleStore, initialData);

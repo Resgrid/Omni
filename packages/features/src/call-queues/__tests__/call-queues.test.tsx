@@ -1,6 +1,6 @@
 import '../../calls/__tests__/test-setup';
 
-import { useArchivedCallsStore, useCallQueueActionsStore, useCallsStore } from '@resgrid/data';
+import { useArchivedCallsStore, useCallQueueActionsStore, useCallsStore, usePersonnelStore, useUnitsStore } from '@resgrid/data';
 import { emitRealtimeEvent } from '@resgrid/realtime';
 import { useToastStore } from '@resgrid/ui';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
@@ -21,6 +21,14 @@ jest.mock('@resgrid/api', () => ({
   getNewCallData: jest.fn(async () => ({ Status: 'success', Data: { Personnel: [], Groups: [], Roles: [], Units: [{ UnitId: 'u7', Name: 'E7', GroupName: 'Station 1', Type: 'Engine' }] } })),
 }));
 
+let mockPolicyRules: { Key: string; Visible: boolean; Required: boolean }[] = [];
+
+jest.mock('../../calls/hooks/use-call-form-data', () => {
+  const { createFieldPolicy } = jest.requireActual('../../calls/lib/field-policy');
+
+  return { ...jest.requireActual('../../calls/hooks/use-call-form-data'), useNewCallFieldPolicy: () => createFieldPolicy(mockPolicyRules) };
+});
+
 const mockFetchPending = jest.fn(async () => undefined);
 const mockFetchScheduled = jest.fn(async () => undefined);
 const mockDispatchNow = jest.fn(async () => ({ ok: true, error: null }));
@@ -28,6 +36,7 @@ const mockCancelPending = jest.fn(async () => ({ ok: true, error: null }));
 const mockExtraData = jest.fn(async () => ({ Dispatches: [{ Id: 'u1', Type: 'Unit', Name: 'E1' }] }));
 
 beforeEach(() => {
+  mockPolicyRules = [];
   activateVariant('dispatch');
   setRights({});
   useToastStore.setState({ toasts: [] });
@@ -116,6 +125,37 @@ describe('PendingCallsScreen', () => {
     await act(async () => fireEvent.press(screen.getByTestId('dispatch-selection-confirm', hidden)));
     expect(mockDispatchNow).toHaveBeenCalledWith('p1', { dispatchList: 'U:u1' });
     expect(useToastStore.getState().toasts[0]).toMatchObject({ type: 'success', message: 'call_queues.dispatch_now_success' });
+  });
+
+  it('offers only the recipient lists the department shows, and only All Call with every list hidden', async () => {
+    // SAFETY: the picker reads only ids and names from the rosters.
+    usePersonnelStore.setState({ personnel: [{ UserId: 'p9', FirstName: 'Pat', LastName: 'Lee' }] as never, groups: [] });
+    // SAFETY: as above.
+    useUnitsStore.setState({ units: [{ UnitId: 'u1', Name: 'E1' }] as never });
+
+    try {
+      mockPolicyRules = [{ Key: 'dispatchUnits', Visible: false, Required: false }];
+      const { unmount } = await render(<PendingCallsScreen realtime={false} />);
+      await act(async () => fireEvent.press(screen.getByTestId('pending-call-dispatch-p1')));
+      expect(screen.getByTestId('dispatch-option-users-p9', hidden)).toBeTruthy();
+      expect(screen.queryByTestId('dispatch-selection-units', hidden)).toBeNull();
+      // The unit proposed on the call stays on it, though its list is hidden.
+      await act(async () => fireEvent.press(screen.getByTestId('dispatch-selection-confirm', hidden)));
+      expect(mockDispatchNow).toHaveBeenLastCalledWith('p1', { dispatchList: 'U:u1' });
+      await unmount();
+
+      mockPolicyRules = ['dispatchPersonnel', 'dispatchGroups', 'dispatchRoles', 'dispatchUnits'].map((Key) => ({ Key, Visible: false, Required: false }));
+      await render(<PendingCallsScreen realtime={false} />);
+      await act(async () => fireEvent.press(screen.getByTestId('pending-call-dispatch-p1')));
+      expect(screen.getByTestId('dispatch-selection-all-call-hint', hidden)).toHaveTextContent('calls.all_call_dispatch_now_help');
+      expect(screen.queryByTestId('dispatch-selection-search', hidden)).toBeNull();
+      await fireEvent(screen.getByTestId('dispatch-selection-everyone', hidden), 'valueChange', true);
+      await act(async () => fireEvent.press(screen.getByTestId('dispatch-selection-confirm', hidden)));
+      expect(mockDispatchNow).toHaveBeenLastCalledWith('p1', { dispatchList: '0' });
+    } finally {
+      usePersonnelStore.setState({ personnel: [], groups: [] });
+      useUnitsStore.setState({ units: [] });
+    }
   });
 
   it('cancels a pending call only after confirming', async () => {

@@ -517,7 +517,39 @@
     "destination_poi_select": "Select a destination",
     "destination_poi_search": "Search destinations...",
     "destination_poi_none_found": "No destinations match your search",
-    "destination_poi_clear": "Clear destination"
+    "destination_poi_clear": "Clear destination",
+    "dispatch_board": {
+      "at_station": "Στον σταθμό",
+      "available_only": "Μόνο διαθέσιμοι",
+      "board_error": "Δεν ήταν δυνατή η φόρτωση των αποστάσεων. Εμφανίζονται όλοι κατά όνομα.",
+      "crew": "Πλήρωμα: {{names}}",
+      "includes_turnout": "συμπ. {{seconds}} δ. εξόδου",
+      "loading_board": "Αναζήτηση των πλησιέστερων μονάδων και προσωπικού…",
+      "location_hidden": "Η θέση είναι κρυφή",
+      "location_stale": "Θέση πριν από {{age}}",
+      "location_stale_unknown": "Η θέση είναι παλιά",
+      "map_boundaries": "Όρια σταθμών",
+      "map_personnel": "Διαθέσιμο προσωπικό",
+      "map_units": "Διαθέσιμες μονάδες",
+      "nearest": "Πλησιέστερος #{{rank}}",
+      "no_crew": "Δεν έχει οριστεί πλήρωμα",
+      "no_location": "Χωρίς θέση",
+      "on_unit": "Στο {{unit}}",
+      "ranked_from_location": "Ταξινόμηση κατά χρόνο απόκρισης προς τη θέση της κλήσης.",
+      "run_card_pick": "Σχέδιο απόκρισης",
+      "set_location_to_rank": "Ορίστε τη θέση της κλήσης για να δείτε ποιος είναι πλησιέστερα.",
+      "sort_closest": "Πλησιέστεροι",
+      "sort_name": "Όνομα"
+    },
+    "map_page": "Σελίδα χάρτη",
+    "all_call": "Γενική κλήση",
+    "all_call_dispatch_everyone": "Γενική κλήση (αποστολή σε όλους)",
+    "all_call_help": "Όλες οι λίστες αποστολής είναι κρυφές. Ενεργοποιήστε τη Γενική κλήση για να σταλεί αυτή η κλήση σε όλους ή αφήστε την ανενεργή για να αποθηκευτεί μια ενημερωτική κλήση χωρίς ειδοποίηση.",
+    "all_call_edit_help": "Ενεργοποιήστε τη Γενική κλήση για να προστεθούν όλοι σε αυτή την κλήση και να ειδοποιηθούν. Αφήστε την ανενεργή για να διατηρηθούν οι υπάρχοντες παραλήπτες της κλήσης.",
+    "all_call_dispatch_now_help": "Όλες οι λίστες αποστολής είναι κρυφές. Ενεργοποιήστε τη Γενική κλήση για να σταλεί αυτή η κλήση σε όλους ή αφήστε την ανενεργή για να σταλεί στους παραλήπτες με τους οποίους αποθηκεύτηκε.",
+    "additional_contacts": "Πρόσθετες επαφές",
+    "check_in_timers": "Χρονόμετρα παρουσίας",
+    "part2_consent": "Συγκατάθεση 42 CFR Part 2"
   },
   "chat": {
     "ack_pending_count": "Έχετε {{count}} επείγοντα μηνύματα προς επιβεβαίωση",
@@ -1810,6 +1842,22 @@
       "badge_details": "This map is drawn from maps saved on this device.",
       "badge_stale": "These maps have not been updated for a while. Connect to the internet to refresh them.",
       "badge_attribution": "Map data: {{attribution}}"
+    },
+    "layer_info": {
+      "show_details": "Λεπτομέρειες για {{name}}",
+      "phase_upcoming": "Επερχόμενο",
+      "phase_active": "Σε εξέλιξη",
+      "phase_ended": "Ολοκληρώθηκε",
+      "range": "{{start}} – {{end}}",
+      "from": "Από {{start}}",
+      "until": "Έως {{end}}",
+      "organizer": "Διοργανωτής",
+      "contact": "Υπεύθυνος επικοινωνίας",
+      "phone": "Τηλέφωνο",
+      "email": "Email",
+      "category": "Κατηγορία",
+      "no_details": "Δεν υπάρχουν λεπτομέρειες για αυτό το επίπεδο.",
+      "source_file": "Εισήχθη από {{name}}"
     }
   },
   "mfa": {
@@ -2331,7 +2379,29 @@
     "destinations_only": "Destinations",
     "empty": "No points of interest",
     "not_found": "Point of interest not found",
-    "search": "Search points of interest..."
+    "search": "Search points of interest...",
+    "all_capabilities": "Όλα",
+    "nearest": "Πλησιέστερος",
+    "availability": {
+      "open": "Ανοιχτό",
+      "limited": "Περιορισμένο",
+      "diversion": "Εκτροπή",
+      "closed": "Κλειστό",
+      "capability_unavailable": "Μη διαθέσιμο τώρα",
+      "title": "Διαθεσιμότητα",
+      "set": "Ορισμός διαθεσιμότητας",
+      "set_title": "Διαθεσιμότητα προορισμού",
+      "unavailable_capabilities": "Μη διαθέσιμα τώρα",
+      "note": "Τι αναφέρθηκε",
+      "note_placeholder": "π.χ. υπερφόρτωση ΤΕΠ, αξονικός εκτός λειτουργίας",
+      "expires": "Διάρκεια",
+      "expires_never": "Μέχρι να αλλάξει",
+      "expires_hours": "{{count}} ώ",
+      "until": "Έως {{time}}",
+      "saved": "Η διαθεσιμότητα αποθηκεύτηκε",
+      "save_failed": "Η διαθεσιμότητα δεν αποθηκεύτηκε",
+      "expiry_passed": "Η ώρα λήξης της αναφοράς έχει περάσει. Επιλέξτε πόσο διαρκεί."
+    }
   },
   "protocols": {
     "details": {
@@ -3015,7 +3085,12 @@
     "show_next_statuses": "Εμφάνιση μόνο των επόμενων καταστάσεων",
     "staffing_tab": "Staffing",
     "status_queued": "Saved on this device. It will be sent when the connection is back.",
-    "status_tab": "Status"
+    "status_tab": "Status",
+    "assigned_to_call": "Ορισμένος στην κλήση",
+    "call_assigned_destination": "Προορισμός κλήσης: {{name}}",
+    "transport_destination_differs": "Διαφέρει από τον ορισμένο προορισμό της κλήσης: {{name}}",
+    "transport_reason_required": "Αυτός ο προορισμός διαφέρει από τον ορισμένο προορισμό της κλήσης ({{name}}). Δώστε αιτιολογία (υποχρεωτικό).",
+    "destination_availability": "{{name}}: {{status}}"
   },
   "tabs": {
     "calendar": "Ημερολόγιο",

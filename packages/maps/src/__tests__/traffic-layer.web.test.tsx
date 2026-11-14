@@ -102,6 +102,27 @@ describe('TrafficLayer — web renderer', () => {
     expect(source.setTiles).toHaveBeenCalledTimes(1);
   });
 
+  it("adds the department's image tiles as a raster source and layer under the labels", () => {
+    const rasterUrl = 'https://api.tomtom.com/traffic/map/4/tile/flow/relative0/{z}/{x}/{y}.png?key=test';
+    act(() =>
+      root.render(
+        <MapProvider config={{ MapLibreStyleUrlDay: DAY, TrafficAvailable: false, TrafficRasterTileUrl: rasterUrl, TrafficRefreshSeconds: 60 }} colorScheme="light">
+          <MapView testID="map">
+            <TrafficLayer />
+          </MapView>
+        </MapProvider>
+      )
+    );
+    const map = loadedMap();
+    const source = map.getSource('rg-traffic-raster-source');
+    expect(source).toMatchObject({ type: 'raster', tileSize: 256 });
+    expect(source.tiles[0]).toMatch(/^https:\/\/api\.tomtom\.com\/traffic\/map\/4\/tile\/flow\/relative0\/\{z\}\/\{x\}\/\{y\}\.png\?key=test&rgts=\d+$/);
+    expect(map.getSource('rg-traffic-source')).toBeUndefined();
+    const added = mockCalls.addLayer.filter((call) => call.id.startsWith('rg-traffic'));
+    expect(added.map((call) => [call.id, call.beforeId])).toEqual([['rg-traffic-raster', 'road-label']]);
+    expect(added[0].spec).toMatchObject({ type: 'raster', paint: { 'raster-opacity': 0.85 }, layout: { visibility: 'visible' } });
+  });
+
   it('draws nothing without server traffic', () => {
     act(() =>
       root.render(

@@ -28,6 +28,23 @@ describe('decodeOfflineDepartmentData', () => {
     expect(data?.layers.features[0].properties).toMatchObject({ layerId: 'l1', onByDefault: true });
   });
 
+  it('gives the layers section its checked colours, as the online layers get, and leaves other sections as sent', () => {
+    const data = toOfflineDepartmentData({
+      ...BUNDLE,
+      layers: {
+        type: 'FeatureCollection',
+        features: [
+          { type: 'Feature', geometry: { type: 'Point', coordinates: [3.7, 51.05] }, properties: { layerId: 'l1', layerColor: '#f00', color: '#00ff00', name: 'Food truck' } },
+          { type: 'Feature', geometry: { type: 'Point', coordinates: [3.7, 51.05] }, properties: { layerId: 'l1', layerColor: '#f00', color: 'chartreuse-ish' } },
+          { type: 'Feature', geometry: { type: 'Point', coordinates: [3.7, 51.05] }, properties: { layerId: 'l2', layerColor: 'nope' } },
+        ],
+      },
+    });
+
+    expect(data?.layers.features.map((feature) => feature.properties?.rgColor)).toEqual(['#00ff00', '#f00', undefined]);
+    expect(data?.stations.features[1].properties).toEqual({ groupId: 3, name: 'Station 3', color: '#00f', kind: 'boundary' });
+  });
+
   it('reads plain JSON too (an older server) and drops what is not GeoJSON', () => {
     const data = decodeOfflineDepartmentData(
       strToU8(

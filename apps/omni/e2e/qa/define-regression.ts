@@ -5,8 +5,9 @@
 // navigation shows in flags-on and hides in flags-off.
 import type { Page } from '@playwright/test';
 
-import { flagGatedNav, flagsExpected, loadQaManifest, persona, type QaDepartment, type QaUser, resolveRoute, selectedQaDepartments, signedInRoutes } from '../support/qa-departments';
+import { flagGatedNav, flagsExpected, loadQaManifest, persona, QA_DIVERSION_HOSPITAL, type QaDepartment, type QaUser, resolveRoute, selectedQaDepartments, signedInRoutes } from '../support/qa-departments';
 import { expect, shellRoot, type test as qaTest } from '../support/qa-fixtures';
+import { loadManifest } from '../support/variants';
 
 const manifest = loadQaManifest();
 const departments = manifest ? selectedQaDepartments(manifest) : [];
@@ -95,6 +96,28 @@ export function defineQaRegression(test: typeof qaTest): void {
               .map(([key, expected]) => `${key}: app has ${flags.has(key) ? (flags.get(key) ? 'on' : 'off') : 'none (off)'}, seeded ${expected.enabled ? 'on' : 'off'} (${expected.source})`);
 
             expect(mismatches).toEqual([]);
+            await page.waitForTimeout(SETTLE_MS);
+          });
+
+          test('a destination shows its capabilities and availability', async ({ page, signIn, variantId, appUrl }) => {
+            const route = resolveRoute('/poi/[id]', department);
+            const hasPoiScreen = signedInRoutes(variantId).includes('/poi/[id]');
+
+            test.skip(!hasPoiScreen, 'this app has no POI screen');
+            test.skip(!route.url, `${department.scenario} has no seeded ${QA_DIVERSION_HOSPITAL}`);
+            expect((await signIn(department, admin)).outcome).toBe('signed-in');
+
+            await page.goto(appUrl(route.url ?? '/'));
+            await expect(shellRoot(page)).toBeVisible({ timeout: 45_000 });
+            await expect(page.getByTestId('poi-detail-availability-badge'), 'the diversion is shown').toContainText(/diversion/i, { timeout: 30_000 });
+            await expect(page.getByText('ED capacity overload (QA)'), 'the reported note is shown').toBeVisible();
+            await expect(page.getByText('Stroke Center'), 'its capabilities are listed').toBeVisible();
+
+            // Only the dispatch desks change availability (capabilities.calls.destinationAvailability).
+            const setAvailability = page.getByTestId('poi-detail-set-availability');
+
+            if (loadManifest(variantId).capabilities.calls.destinationAvailability) await expect(setAvailability).toBeVisible();
+            else await expect(setAvailability).toHaveCount(0);
             await page.waitForTimeout(SETTLE_MS);
           });
 

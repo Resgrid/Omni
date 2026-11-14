@@ -26,5 +26,19 @@
   "maps.offline.badge_updated_days": "Offline map · updated {{count}} d ago",
   "maps.offline.badge_details": "This map is drawn from maps saved on this device.",
   "maps.offline.badge_stale": "These maps have not been updated for a while. Connect to the internet to refresh them.",
-  "maps.offline.badge_attribution": "Map data: {{attribution}}"
+  "maps.offline.badge_attribution": "Map data: {{attribution}}",
+  "maps.layer_info.show_details": "Details for {{name}}",
+  "maps.layer_info.phase_upcoming": "Upcoming",
+  "maps.layer_info.phase_active": "Happening now",
+  "maps.layer_info.phase_ended": "Ended",
+  "maps.layer_info.range": "{{start}} – {{end}}",
+  "maps.layer_info.from": "From {{start}}",
+  "maps.layer_info.until": "Until {{end}}",
+  "maps.layer_info.organizer": "Organizer",
+  "maps.layer_info.contact": "Contact",
+  "maps.layer_info.phone": "Phone",
+  "maps.layer_info.email": "Email",
+  "maps.layer_info.category": "Category",
+  "maps.layer_info.no_details": "No details for this layer.",
+  "maps.layer_info.source_file": "Imported from {{name}}"
 }

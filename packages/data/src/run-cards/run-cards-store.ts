@@ -102,6 +102,7 @@ const cancelPreview = (): void => {
     clearTimeout(debounceTimer);
     debounceTimer = null;
   }
+
   inFlight?.abort();
   inFlight = null;
 };
@@ -118,6 +119,7 @@ export const useRunCardsStore = create<RunCardsState>()((set, get) => {
       if (!isUsableNumber(request.priority) || !request.type.trim()) {
         cancelPreview();
         set({ recommendation: null, isLoading: false, error: null, hasFetched: false });
+
         return;
       }
 
@@ -134,7 +136,9 @@ export const useRunCardsStore = create<RunCardsState>()((set, get) => {
           ...(isUsableNumber(request.latitude) && isUsableNumber(request.longitude) ? { latitude: request.latitude, longitude: request.longitude } : {}),
           ...(request.alarmLevel && request.alarmLevel > 1 ? { alarmLevel: request.alarmLevel } : {}),
         };
+
         const recommendation = recommendationOf(await getDispatchRecommendation(getDataApiContext(), params, { signal: controller.signal }));
+
         // A newer request (or a reset) superseded this one while it was out.
         if (inFlight !== controller || startedIn !== generation) return;
         inFlight = null;
@@ -153,7 +157,13 @@ export const useRunCardsStore = create<RunCardsState>()((set, get) => {
     },
 
     fetchRecommendationDebounced: (request) => {
-      if (debounceTimer) clearTimeout(debounceTimer);
+      // A lookup still out was asked for the call details before this change: it is aborted now, so its answer cannot
+      // land while the new lookup waits for the debounce.
+      cancelPreview();
+
+      // The proposal on screen belongs to the call details before this change: it goes now, so its outcome cannot be
+      // saved with the call while the new lookup waits. Code choices stay; the new proposal keeps those of its units.
+      if (get().recommendation !== null) set({ recommendation: null, isLoading: true, error: null });
       debounceTimer = setTimeout(() => {
         debounceTimer = null;
         void get().fetchRecommendation(request);
@@ -171,14 +181,17 @@ export const useRunCardsStore = create<RunCardsState>()((set, get) => {
 
     escalate: async (callId) => {
       set({ isEscalating: true, escalationError: null });
+
       try {
         const result = assertV4Success(await escalateCall(getDataApiContext(), { callId }));
         set({ isEscalating: false });
+
         return result;
       } catch (error) {
         const dataError = toDataError(error);
         getDataLogger().warn({ message: 'Alarm escalation failed', context: { code: dataError.code, status: dataError.status } });
         set({ isEscalating: false, escalationError: dataError });
+
         return null;
       }
     },
@@ -194,21 +207,27 @@ export const useRunCardsStore = create<RunCardsState>()((set, get) => {
       try {
         const params = reevaluate ? { callId, reevaluate: true } : { callId };
         const recommendation = recommendationOf(await getCallRecommendation(getDataApiContext(), params, { signal: controller.signal }));
+
         if (callControllers.get(callId) !== controller || startedIn !== generation) return true;
         callControllers.delete(callId);
         patchCall(callId, { recommendation, isLoading: false, isReevaluating: false, hasFetched: true, error: null });
+
         return true;
       } catch (error) {
         if (controller.signal.aborted || callControllers.get(callId) !== controller || startedIn !== generation) return true;
         callControllers.delete(callId);
         const dataError = toDataError(error);
         getDataLogger().warn({ message: 'Add-resources recommendation failed', context: { code: dataError.code, status: dataError.status, reevaluate } });
+
         if (reevaluate) {
           // The pinned answer is still valid: a failed fresh walk must not take it off screen.
           patchCall(callId, { isReevaluating: false });
+
           return false;
         }
+
         patchCall(callId, { recommendation: null, isLoading: false, isReevaluating: false, hasFetched: true, error: dataError });
+
         return true;
       }
     },
@@ -220,6 +239,7 @@ export const useRunCardsStore = create<RunCardsState>()((set, get) => {
         if (!(callId in state.callRecommendations)) return {};
         const next = { ...state.callRecommendations };
         delete next[callId];
+
         return { callRecommendations: next };
       });
     },

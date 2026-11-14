@@ -11,7 +11,7 @@ import { fakeSignalR } from '../fakes/signalr';
 export const VARIANTS: Record<'responder' | 'unit' | 'ic' | 'dispatch' | 'bigboard', RealtimeVariantInput> = {
   responder: {
     capabilities: {
-      calls: { create: 'full', dispatch: true, close: true, queues: false, runCards: false },
+      calls: { create: 'full', dispatch: true, close: true, queues: false, runCards: false, nearestBoard: false, destinationAvailability: false },
       incidentCommand: 'view',
       checkIn: { self: true, others: false, actions: true },
       location: { background: true, transmission: 'person', geoHubDefault: false },
@@ -21,7 +21,7 @@ export const VARIANTS: Record<'responder' | 'unit' | 'ic' | 'dispatch' | 'bigboa
   },
   unit: {
     capabilities: {
-      calls: { create: 'full', dispatch: true, close: true, queues: false, runCards: false },
+      calls: { create: 'full', dispatch: true, close: true, queues: false, runCards: false, nearestBoard: false, destinationAvailability: false },
       incidentCommand: 'view',
       checkIn: { self: true, others: false, actions: true },
       location: { background: true, transmission: 'unit', geoHubDefault: true },
@@ -31,7 +31,7 @@ export const VARIANTS: Record<'responder' | 'unit' | 'ic' | 'dispatch' | 'bigboa
   },
   ic: {
     capabilities: {
-      calls: { create: 'full', dispatch: true, close: true, queues: false, runCards: false },
+      calls: { create: 'full', dispatch: true, close: true, queues: false, runCards: false, nearestBoard: false, destinationAvailability: false },
       incidentCommand: 'command',
       checkIn: { self: true, others: true, actions: false },
       location: { background: false, transmission: 'none', geoHubDefault: true },
@@ -41,7 +41,7 @@ export const VARIANTS: Record<'responder' | 'unit' | 'ic' | 'dispatch' | 'bigboa
   },
   dispatch: {
     capabilities: {
-      calls: { create: 'full', dispatch: true, close: true, queues: true, runCards: true },
+      calls: { create: 'full', dispatch: true, close: true, queues: true, runCards: true, nearestBoard: true, destinationAvailability: true },
       incidentCommand: 'assist',
       checkIn: { self: false, others: true, actions: false },
       location: { background: false, transmission: 'none', geoHubDefault: true },
@@ -51,7 +51,7 @@ export const VARIANTS: Record<'responder' | 'unit' | 'ic' | 'dispatch' | 'bigboa
   },
   bigboard: {
     capabilities: {
-      calls: { create: 'none', dispatch: false, close: false, queues: false, runCards: false },
+      calls: { create: 'none', dispatch: false, close: false, queues: false, runCards: false, nearestBoard: false, destinationAvailability: false },
       incidentCommand: 'none',
       checkIn: { self: false, others: false, actions: false },
       location: { background: false, transmission: 'none', geoHubDefault: true },

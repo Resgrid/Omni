@@ -1,9 +1,10 @@
 import { selectUnitById, useUnitRolesStore, useUnitsStore, useUnitStatusStore } from '@resgrid/data';
+import { toDestinationOrigin } from '@resgrid/features/pois/lib/poi-availability';
 import { type ActiveUnitRoleResultData, type CallResultData, type StatusesResultData, type UnitTypeStatusResultData } from '@resgrid/models';
 import React, { useCallback, useEffect, useMemo } from 'react';
 
 import { locationForStatus } from '../lib/location-for-status';
-import { type DestinationLists, getCurrentStatusCallId, resolveDefaultStatusCall } from '../lib/status-destination';
+import { type DestinationLists, getCurrentStatusCallId, getCurrentTransportPoiId, resolveDefaultStatusCall } from '../lib/status-destination';
 import { getUnitStatusOptions } from '../lib/unit-status-set';
 import { useStatusContext } from '../status-context';
 import { StatusPicker, type StatusSelection, type StatusSubmitOutcome } from './status-picker';
@@ -60,6 +61,18 @@ export const UnitStatusSheet: React.FC<UnitStatusSheetProps> = ({ isOpen, onClos
   const defaultCall = useMemo(() => resolveDefaultStatusCall(lists.calls, activeCallId, currentStatus), [activeCallId, currentStatus, lists.calls]);
   const hasPotentialDefaultCall = !!activeCallId || !!getCurrentStatusCallId(currentStatus);
 
+  const currentTransportPoiId = useMemo(
+    () =>
+      getCurrentTransportPoiId({
+        baseType: unitInfo?.CurrentStatusBaseType,
+        destinationId: currentStatus ? currentStatus.DestinationId : unitInfo?.CurrentDestinationId,
+        destinationType: currentStatus ? currentStatus.DestinationType : unitInfo?.CurrentDestinationType,
+      }),
+    [currentStatus, unitInfo]
+  );
+
+  const destinationOrigin = useMemo(() => toDestinationOrigin(unitInfo?.Latitude, unitInfo?.Longitude), [unitInfo?.Latitude, unitInfo?.Longitude]);
+
   const sheetOpen = isOpen && !!unitId;
   const onActiveCallChange = context.onActiveCallChange;
   const handleSubmit = useCallback(
@@ -99,6 +112,10 @@ export const UnitStatusSheet: React.FC<UnitStatusSheetProps> = ({ isOpen, onClos
       hasPotentialDefaultCall={hasPotentialDefaultCall}
       lenientDestinations
       holdToConfirm={context.holdToConfirm}
+      transportDestinationChecks={context.transportDestinationChecks}
+      currentTransportPoiId={currentTransportPoiId}
+      destinationOrigin={destinationOrigin}
+      destinationUnitId={unitId}
       initialStatusId={initialStatusId}
       initialHoldConfirmed={initialHoldConfirmed}
       fixedCall={isOnBehalf ? null : fixedCall}

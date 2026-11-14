@@ -8,6 +8,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import React from 'react';
 import { StyleSheet, Text } from 'react-native';
 
+import { activateVariant } from '../../calls/__tests__/test-utils';
 import { parsePoiId } from '../lib/poi-filters';
 import { poisRoutes } from '../routes';
 import PoiDetailScreen from '../screens/poi-detail';
@@ -30,6 +31,7 @@ const poi = (PoiId: number, Name: string, extra: Partial<PoiResultData> = {}): P
 });
 
 beforeEach(() => {
+  activateVariant('responder');
   (router.push as jest.Mock).mockClear();
   usePoisStore.setState({
     pois: [poi(1, 'General Hospital', { IsDestination: true, Capabilities: ['trauma-1'] }), poi(2, 'Hydrant 7', { PoiTypeId: 2, PoiTypeName: 'Hydrant' }), poi(3, 'Clinic', { IsDestination: true })],

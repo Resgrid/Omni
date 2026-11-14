@@ -3,7 +3,7 @@ import React, { act } from 'react';
 import { MapProvider } from '../provider/map-provider';
 import { Images, LineLayer, MapView, MarkerView, ShapeSource } from '../rg';
 import { loadMapLibre } from '../rg/maplibre-loader.web';
-import type { MapPressEvent } from '../rg/types';
+import type { MapPressEvent, MapViewRef } from '../rg/types';
 import { type FakeMap, mockCalls, mockMaps, mockMarkers, resetMaplibreGlFakes } from './fakes/maplibre-gl';
 
 interface Root {
@@ -82,6 +82,37 @@ describe('rg wrapper — web renderer (maplibre-gl)', () => {
     const attribution = map.controls.find((entry) => entry.control.constructor.name === 'AttributionControl');
     expect(attribution?.control.options).toEqual({ compact: true, customAttribution: '© OpenStreetMap' });
     expect(attribution?.position).toBe('bottom-right');
+  });
+
+  it('looks up rendered features around a point in the layers the style has, as plain GeoJSON features', async () => {
+    const ref = React.createRef<MapViewRef>();
+    act(() =>
+      root.render(
+        <MapProvider config={{ MapLibreStyleUrlDay: DAY }} colorScheme="light">
+          <MapView testID="map" ref={ref} />
+        </MapProvider>
+      )
+    );
+    const map = loadedMap();
+    // A layer of the style itself (as the offline style's department layers are).
+    map.addLayer({ id: 'route-line', type: 'line' });
+    map.queryRenderedFeatures.mockReturnValue([{ type: 'Feature', id: 7, geometry: line.geometry, properties: { name: 'Stage A' }, layer: { id: 'route-line' }, source: 'route' }]);
+
+    await expect(ref.current?.queryRenderedFeatures([100, 200], { layerIds: ['route-line', 'not-in-style'] })).resolves.toEqual([{ type: 'Feature', id: 7, geometry: line.geometry, properties: { name: 'Stage A' } }]);
+    expect(map.queryRenderedFeatures).toHaveBeenLastCalledWith(
+      [
+        [90, 190],
+        [110, 210],
+      ],
+      { layers: ['route-line'] }
+    );
+    map.queryRenderedFeatures.mockClear();
+    await expect(ref.current?.queryRenderedFeatures([100, 200], { layerIds: ['not-in-style'] })).resolves.toEqual([]);
+    expect(map.queryRenderedFeatures).not.toHaveBeenCalled();
+    map.queryRenderedFeatures.mockImplementation(() => {
+      throw new Error('style mid-swap');
+    });
+    await expect(ref.current?.queryRenderedFeatures([100, 200], { layerIds: ['route-line'] })).resolves.toEqual([]);
   });
 
   it('adds sources and layers (camelCase style converted to paint/layout) once the map has loaded', () => {

@@ -1,5 +1,6 @@
 import { FeatureFlagKeys } from '@resgrid/auth';
 import type { Capabilities } from '@resgrid/config';
+import type { NavBadge } from '@resgrid/data';
 import type { LucideIcon } from 'lucide-react-native';
 import { Hourglass } from 'lucide-react-native';
 
@@ -19,6 +20,8 @@ export interface FeatureNavEntry {
   /** Department feature flag(s); unknown flags are disabled. */
   requiresFlag?: string | readonly string[];
   requiresCapability?: (capabilities: Capabilities) => boolean;
+  /** Count shown on the entry. */
+  badge?: NavBadge;
 }
 
 export const awaitingResourcesNav: readonly FeatureNavEntry[] = [
@@ -28,6 +31,7 @@ export const awaitingResourcesNav: readonly FeatureNavEntry[] = [
     labelKey: 'awaiting_resources.title',
     defaultLabel: 'Awaiting Resources',
     icon: Hourglass,
+    badge: 'awaitingResources',
     requiresFlag: [FeatureFlagKeys.DispatchRunCards, FeatureFlagKeys.DispatchRunCardConditions],
     requiresCapability: (capabilities) => capabilities.calls.runCards,
   },

@@ -47,7 +47,9 @@
       "dispatch": true,
       "close": true,
       "queues": false,
-      "runCards": false
+      "runCards": false,
+      "nearestBoard": false,
+      "destinationAvailability": true
     },
     "status": {
       "subject": "personnel",

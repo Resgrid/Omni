@@ -517,7 +517,39 @@
     "destination_poi_select": "Select a destination",
     "destination_poi_search": "Search destinations...",
     "destination_poi_none_found": "No destinations match your search",
-    "destination_poi_clear": "Clear destination"
+    "destination_poi_clear": "Clear destination",
+    "dispatch_board": {
+      "at_station": "At station",
+      "available_only": "Available only",
+      "board_error": "Couldn't load distances. Showing everyone by name.",
+      "crew": "Crew: {{names}}",
+      "includes_turnout": "incl. {{seconds}} s turnout",
+      "loading_board": "Finding the closest units and personnel…",
+      "location_hidden": "Location hidden",
+      "location_stale": "Location {{age}} old",
+      "location_stale_unknown": "Location is old",
+      "map_boundaries": "Station boundaries",
+      "map_personnel": "Available personnel",
+      "map_units": "Available units",
+      "nearest": "Nearest #{{rank}}",
+      "no_crew": "No crew assigned",
+      "no_location": "No location",
+      "on_unit": "On {{unit}}",
+      "ranked_from_location": "Ranked by response time to the call location.",
+      "run_card_pick": "Run card",
+      "set_location_to_rank": "Set the call location to see who is closest.",
+      "sort_closest": "Closest",
+      "sort_name": "Name"
+    },
+    "map_page": "Map Page",
+    "all_call": "All Call",
+    "all_call_dispatch_everyone": "All Call (dispatch everyone)",
+    "all_call_help": "Every dispatch list is hidden. Turn on All Call to send this call to everyone, or leave it off to save an informational call that pages nobody.",
+    "all_call_edit_help": "Turn on All Call to add everyone to this call and page them. Leave it off to keep the recipients the call already has.",
+    "all_call_dispatch_now_help": "Every dispatch list is hidden. Turn on All Call to send this call to everyone, or leave it off to send it to the recipients it was saved with.",
+    "additional_contacts": "Additional contacts",
+    "check_in_timers": "Check-in timers",
+    "part2_consent": "42 CFR Part 2 consent"
   },
   "chat": {
     "ack_pending_count": "You have {{count}} urgent messages to acknowledge",
@@ -1810,6 +1842,22 @@
       "badge_details": "This map is drawn from maps saved on this device.",
       "badge_stale": "These maps have not been updated for a while. Connect to the internet to refresh them.",
       "badge_attribution": "Map data: {{attribution}}"
+    },
+    "layer_info": {
+      "show_details": "Details for {{name}}",
+      "phase_upcoming": "Upcoming",
+      "phase_active": "Happening now",
+      "phase_ended": "Ended",
+      "range": "{{start}} – {{end}}",
+      "from": "From {{start}}",
+      "until": "Until {{end}}",
+      "organizer": "Organizer",
+      "contact": "Contact",
+      "phone": "Phone",
+      "email": "Email",
+      "category": "Category",
+      "no_details": "No details for this layer.",
+      "source_file": "Imported from {{name}}"
     }
   },
   "mfa": {
@@ -2331,7 +2379,29 @@
     "destinations_only": "Destinations",
     "empty": "No points of interest",
     "not_found": "Point of interest not found",
-    "search": "Search points of interest..."
+    "search": "Search points of interest...",
+    "all_capabilities": "All",
+    "nearest": "Nearest",
+    "availability": {
+      "open": "Open",
+      "limited": "Limited",
+      "diversion": "Diversion",
+      "closed": "Closed",
+      "capability_unavailable": "Unavailable now",
+      "title": "Availability",
+      "set": "Set availability",
+      "set_title": "Destination availability",
+      "unavailable_capabilities": "Not available now",
+      "note": "What was reported",
+      "note_placeholder": "e.g. ED capacity overload, CT down",
+      "expires": "Lasts",
+      "expires_never": "Until changed",
+      "expires_hours": "{{count}} h",
+      "until": "Until {{time}}",
+      "saved": "Availability saved",
+      "save_failed": "Availability could not be saved",
+      "expiry_passed": "The report's end time has passed. Choose how long it lasts."
+    }
   },
   "protocols": {
     "details": {
@@ -3015,7 +3085,12 @@
     "show_next_statuses": "Show next statuses only",
     "staffing_tab": "Staffing",
     "status_queued": "Saved on this device. It will be sent when the connection is back.",
-    "status_tab": "Status"
+    "status_tab": "Status",
+    "assigned_to_call": "Assigned to call",
+    "call_assigned_destination": "Call destination: {{name}}",
+    "transport_destination_differs": "Differs from the call's assigned destination: {{name}}",
+    "transport_reason_required": "This destination differs from the call's assigned destination ({{name}}). Give a reason (required).",
+    "destination_availability": "{{name}}: {{status}}"
   },
   "tabs": {
     "calendar": "Calendar",

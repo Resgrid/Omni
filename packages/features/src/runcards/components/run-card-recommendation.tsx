@@ -39,19 +39,17 @@ export const RunCardRecommendation: React.FC<RunCardRecommendationProps> = ({ ca
     onApply(next, decision);
   }, [applyToSelection, decisionFor, onApply, selection]);
 
-  // Codes picked (or units removed) after applying still reach the save: re-send the decision when it changes.
+  // The decision the dispatcher reviewed reaches the save whether or not they pressed Apply (Dispatch baseline
+  // `newCallRunCardSaveFields`): a hand-picked dispatch still records the outcome on screen, and codes picked (or units
+  // removed) later still go. The selection is handed back unchanged; only Apply merges the proposal into it.
   useEffect(() => {
-    if (!isApplied) {
-      lastSent.current = null;
-      return;
-    }
     const decision = decisionFor(selection.units);
     const key = `${decision.outcomeNodeKey ?? ''}|${decision.unitResponseCodes ?? ''}`;
-    if (lastSent.current !== null && key !== lastSent.current) {
-      lastSent.current = key;
-      onApply(selection, decision);
-    }
-  }, [decisionFor, isApplied, onApply, selection]);
+
+    if (key === (lastSent.current ?? '|')) return;
+    lastSent.current = key;
+    onApply(selection, decision);
+  }, [decisionFor, onApply, selection]);
 
   return (
     <RecommendationPanel

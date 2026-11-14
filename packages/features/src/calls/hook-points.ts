@@ -3,6 +3,7 @@ import type React from 'react';
 import { useSyncExternalStore } from 'react';
 
 import type { DispatchSelection } from './lib/call-form';
+import type { DispatchMapOverlay } from './lib/dispatch-board';
 
 /**
  * Extension points of the call form and call detail that other modules fill in (omni-plan §7.10), so the screens never
@@ -23,7 +24,10 @@ export interface RunCardRecommendationProps {
   /** Form state the recommendation is computed from. */
   call: { type: string; priority: number | null; latitude?: number; longitude?: number; address: string };
   selection: DispatchSelection;
-  /** Apply the recommended dispatch (and the decision key the server records). */
+  /**
+   * Apply the recommended dispatch (and the decision key the server records). Also called with the selection unchanged
+   * whenever the reviewed decision changes, so a hand-picked dispatch still saves the outcome and codes on screen.
+   */
   onApply: (selection: DispatchSelection, decision: { outcomeNodeKey?: string; unitResponseCodes?: string }) => void;
 }
 
@@ -41,6 +45,8 @@ export interface LocationPickerProps {
   onClose: () => void;
   initial?: { latitude: number; longitude: number } | null;
   onSelect: (location: { latitude: number; longitude: number; address?: string }) => void;
+  /** The nearest-unit board for the call's location (Dispatch): who can be sent and the group boundaries, to draw on the map. */
+  overlay?: DispatchMapOverlay | null;
 }
 
 export interface StaticLocationMapProps {
