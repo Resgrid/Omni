@@ -42,6 +42,9 @@ const commandTier = { requires: (m: VariantManifest) => m.capabilities.incidentC
 /** The custom / indoor maps browser (`features/custom-maps`). */
 const customIndoorMaps = { requires: (m: VariantManifest) => m.capabilities.maps.customIndoor } as const;
 
+/** Recurring call schedules, their calendar and the dispatcher alerts (`features/recurring-calls`). */
+const recurringCalls = { requires: (m: VariantManifest) => m.capabilities.calls.recurringCalls } as const;
+
 export const CANONICAL_ROUTES = {
   home: route('/'),
   /** The variant's `shell.homeRoute` when it is not `/` (Responder's member home; later Dispatch's console, BigBoard's dashboard). */
@@ -139,6 +142,13 @@ export const CANONICAL_ROUTES = {
   scheduledCalls: route('/scheduled-calls', [], { requires: (m) => m.capabilities.calls.queues, module: 'call-queues' }),
   archivedCalls: route('/archived-calls', [], { requires: (m) => m.capabilities.calls.queues, module: 'call-queues' }),
   awaitingResources: route('/awaiting-resources', [], { requires: (m) => m.capabilities.calls.runCards, module: 'awaiting-resources' }),
+  // Dispatch: recurring calls — schedules, the occurrence calendar and the alerts a dispatcher acts on.
+  recurringCalls: route('/recurring-calls', [], recurringCalls),
+  recurringCallNew: route('/recurring-calls/new', [], recurringCalls),
+  recurringCallsCalendar: route('/recurring-calls/calendar', [], recurringCalls),
+  recurringCallDetail: route('/recurring-calls/[id]', ['id'], recurringCalls),
+  recurringCallEdit: route('/recurring-calls/[id]/edit', ['id'], recurringCalls),
+  recurringCallAlerts: route('/recurring-call-alerts', [], recurringCalls),
   // Public routes (outside the gated `(app)` group): the sign-in pages for deep links and the web, and the SSO return.
   login: route('/login'),
   loginSso: route('/login/sso'),

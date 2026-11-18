@@ -18,6 +18,10 @@ import type {
   NewCallFieldPolicyResult,
   NewCallInput,
   PendingCallsResult,
+  ReleasePersonnelInput,
+  ReleasePersonnelResult,
+  ReleaseUnitInput,
+  ReleaseUnitResult,
   SaveCallNoteInput,
   SaveCallNoteResult,
   SaveCallResult,
@@ -46,6 +50,8 @@ export const callsEndpoints = defineEndpoints('calls', {
   getCallSiteInfo: { method: 'GET', path: '/Calls/GetCallSiteInfo', query: ['callId'] },
   getNewCallFieldPolicy: { method: 'GET', path: '/Calls/GetNewCallFieldPolicy' },
   getPendingCalls: { method: 'GET', path: '/Calls/GetPendingCalls' },
+  releasePersonnel: { method: 'POST', path: '/Calls/ReleasePersonnel', body: 'json' },
+  releaseUnit: { method: 'POST', path: '/Calls/ReleaseUnit', body: 'json' },
   saveCall: { method: 'POST', path: '/Calls/SaveCall', body: 'json' },
   saveCallNote: { method: 'POST', path: '/CallNotes/SaveCallNote', body: 'json' },
   updateScheduledDispatchTime: { method: 'PUT', path: '/Calls/UpdateScheduledDispatchTime', body: 'json' },
@@ -105,6 +111,12 @@ export const getNewCallFieldPolicy = (ctx: ApiContext, options?: RequestOptions)
 
 /** Returns the department's pending calls: saved but not yet dispatched (State 8), oldest first. Pending calls come from Calls/SaveCall with IsPending, e.g. follow-ups fed in from another system, and wait here for a dispatcher to send them with Calls/DispatchCallNow. `GET /Calls/GetPendingCalls` — legacy: D. */
 export const getPendingCalls = (ctx: ApiContext, options?: RequestOptions): Promise<PendingCallsResult> => request<PendingCallsResult>(ctx, E.getPendingCalls, {}, options);
+
+/** Takes one person off an open call without closing it; they get the department's release status unless already available, out of service or on another open call. Answers 400 with a plain-text reason (call not open or not dispatched yet, person not on the call, already released) and 401 without permission. `POST /Calls/ReleasePersonnel` — new in Omni. */
+export const releasePersonnel = (ctx: ApiContext, body: ReleasePersonnelInput, options?: RequestOptions): Promise<ReleasePersonnelResult> => request<ReleasePersonnelResult>(ctx, E.releasePersonnel, { body }, options);
+
+/** Stands one unit down from an open call without closing it; the unit gets the department's release status unless already available, out of service or on another open call. Answers 400 with a plain-text reason (call not open or not dispatched yet, unit not on the call, already released) and 401 without permission. `POST /Calls/ReleaseUnit` — new in Omni. */
+export const releaseUnit = (ctx: ApiContext, body: ReleaseUnitInput, options?: RequestOptions): Promise<ReleaseUnitResult> => request<ReleaseUnitResult>(ctx, E.releaseUnit, { body }, options);
 
 /** `POST /Calls/SaveCall` — legacy: BDIRU. */
 export const saveCall = (ctx: ApiContext, body: NewCallInput, options?: RequestOptions): Promise<SaveCallResult> => request<SaveCallResult>(ctx, E.saveCall, { body }, options);

@@ -13,16 +13,17 @@
  * | `NWO:{workOrderId}`   | work order                               | workOrder           |
  * | `NA:{requestId}`      | sign-in approval (MFA / passkey)         | signInApproval      |
  * | `W:{alertId}`         | weather alert                            | weatherAlert        |
+ * | `RCA:{alertId}`       | recurring call alert (Dispatch)          | recurringCallAlert  |
  *
  * Parsing (Responder baseline): split on the FIRST ':' so an id containing one survives; whole multi-letter
- * prefixes (`nc`, `ct`, `nwo`, `na`) win over the first character; otherwise the first character decides. The
+ * prefixes (`nc`, `ct`, `nwo`, `na`, `rca`) win over the first character; otherwise the first character decides. The
  * colon-less legacy form is one type letter followed by digits only (`C1234`), so a multi-letter code that lost its
  * colon (`CT123`) is never read as a call. Every id must pass `isSafeRouteId` before it can become a target.
  */
 import { isSafeRouteId } from '@resgrid/core';
 
 /** `unitStatusTimer` (the unit's status console) comes only from notifications the app schedules itself, never a code. */
-export type NotificationKind = 'call' | 'message' | 'notification' | 'chat' | 'chatbot' | 'weatherAlert' | 'workOrder' | 'signInApproval' | 'communicationTest' | 'unitStatusTimer';
+export type NotificationKind = 'call' | 'message' | 'notification' | 'chat' | 'chatbot' | 'weatherAlert' | 'workOrder' | 'signInApproval' | 'communicationTest' | 'unitStatusTimer' | 'recurringCallAlert';
 
 /** Where a notification points. The variant maps it to a route (`resolveRoute`) — or to nothing when it lacks the screen. */
 export interface NotificationTarget {
@@ -63,6 +64,8 @@ export const WHOLE_PREFIX_KINDS: Readonly<Record<string, NotificationKind>> = {
   ct: 'communicationTest',
   nwo: 'workOrder',
   na: 'signInApproval',
+  // Core M0320: a recurring call alert raised for its alert recipients (R maps to an ordinary notification, never critical).
+  rca: 'recurringCallAlert',
 };
 
 /** First character of the code. */

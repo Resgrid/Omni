@@ -31,6 +31,7 @@ import { operationsEndpoints } from './endpoints/operations/operations';
 import { personnelEndpoints } from './endpoints/personnel/personnel';
 import { protocolsEndpoints } from './endpoints/protocols/protocols';
 import { recordsEndpoints } from './endpoints/records/records';
+import { recurringCallsEndpoints } from './endpoints/recurring-calls/recurring-calls';
 import { routesEndpoints } from './endpoints/routes/routes';
 import { routingEndpoints } from './endpoints/routing/routing';
 import { runCardsEndpoints } from './endpoints/run-cards/run-cards';
@@ -78,6 +79,7 @@ export const endpointDomains = {
   personnel: personnelEndpoints,
   protocols: protocolsEndpoints,
   records: recordsEndpoints,
+  'recurring-calls': recurringCallsEndpoints,
   routes: routesEndpoints,
   routing: routingEndpoints,
   'run-cards': runCardsEndpoints,

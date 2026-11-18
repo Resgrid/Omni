@@ -131,6 +131,57 @@ describe('ActiveCallCard', () => {
   });
 });
 
+describe('ActiveCallCard: releasing the crew’s own unit ("we were stood down")', () => {
+  const releaseFromCall = jest.fn(async () => ({ releasedOn: '2026-11-16T10:32:00Z', statusApplied: true }));
+  const fetchCallDispatches = jest.fn(async () => undefined);
+
+  const renderWithUnit = async (dispatches: { Id: string; Type: string; Name: string }[], onClearCall = jest.fn()) => {
+    // SAFETY: dispatch rows with only the fields the card reads.
+    useCallsStore.setState({ callDispatches: { '7': dispatches as never }, fetchCallDispatches });
+
+    const { unmount } = await render(
+      <NavigationHandoffProvider value={{ navigateTo }}>
+        <StatusProvider activeUnitId="u1" activeCallId="7">
+          <ActiveCallCard activeCallId="7" onClearCall={onClearCall} />
+        </StatusProvider>
+      </NavigationHandoffProvider>
+    );
+
+    return { onClearCall, unmount };
+  };
+
+  beforeEach(() => {
+    releaseFromCall.mockClear();
+    fetchCallDispatches.mockClear();
+    useCallDetailStore.setState({ releaseFromCall });
+    useUnitsStore.setState({ fetchUnitInfos: jest.fn(async () => undefined) });
+  });
+
+  it('releases the active unit from its call after confirming, then clears the active call', async () => {
+    const { onClearCall } = await renderWithUnit([{ Id: 'u1', Type: 'Unit', Name: 'Engine 1' }]);
+    expect(fetchCallDispatches).toHaveBeenCalledWith(['7']);
+
+    await fireEvent.press(screen.getByTestId('unit-active-call-release'));
+    expect(screen.getByText('calls.release.title:Engine 1,C-7', hidden)).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('unit-active-call-release-dialog-confirm', hidden));
+
+    expect(releaseFromCall).toHaveBeenCalledWith({ kind: 'unit', callId: '7', resourceId: 'u1', notify: true });
+    expect(onClearCall).toHaveBeenCalled();
+    expect(useToastStore.getState().toasts.at(-1)).toMatchObject({ type: 'success', message: 'calls.release.unit_success:Engine 1' });
+  });
+
+  it('is offered only while the unit is dispatched to the call, and only where the app releases its own unit', async () => {
+    const { unmount } = await renderWithUnit([{ Id: 'u2', Type: 'Unit', Name: 'Engine 2' }]);
+    expect(screen.queryByTestId('unit-active-call-release')).toBeNull();
+    await unmount();
+
+    resetActiveVariantForTests();
+    setActiveVariant(parseVariantManifest(responderManifest));
+    await renderWithUnit([{ Id: 'u1', Type: 'Unit', Name: 'Engine 1' }]);
+    expect(screen.queryByTestId('unit-active-call-release')).toBeNull();
+  });
+});
+
 describe('SetActiveCallButton', () => {
   const renderButton = async (call: CallResultData, context: { activeUnitId?: string | null; activeCallId?: string | null; onActiveCallChange?: (callId: string) => void } = {}) => {
     const onActiveCallChange = 'onActiveCallChange' in context ? context.onActiveCallChange : jest.fn();

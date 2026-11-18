@@ -360,6 +360,65 @@ describe('DispatchConsoleScreen call filter and actions', () => {
     expect(screen.getByTestId('console-unit-status-sheet', hidden)).toBeTruthy();
   });
 
+  it('releases a unit or member from the filtered call, which stays open, and logs it', async () => {
+    await setWindow(1366, 1024);
+    const releaseFromCall = jest.fn(async () => ({ releasedOn: '2026-10-31T11:58:00Z', statusApplied: true }));
+    useCallDetailStore.setState({ releaseFromCall });
+    await renderConsole();
+    await fireEvent.press(screen.getByTestId('console-call-9'));
+
+    await fireEvent.press(screen.getByTestId('console-unit-2-release'));
+    expect(screen.getByText('calls.release.title:E2,26-9', hidden)).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('console-release-dialog-confirm', hidden));
+    expect(releaseFromCall).toHaveBeenCalledWith({ kind: 'unit', callId: '9', resourceId: '2', notify: true });
+    expect(mocks.fetchUnitInfos).toHaveBeenCalledWith({ bypassCache: true });
+    expect(useToastStore.getState().toasts.at(-1)).toMatchObject({ type: 'success', message: 'calls.release.unit_success:E2' });
+
+    // On the call through their status, so the release takes the member off it.
+    await fireEvent.press(screen.getByTestId('console-person-b-release'));
+    await fireEvent.press(screen.getByTestId('console-release-dialog-confirm', hidden));
+    expect(releaseFromCall).toHaveBeenLastCalledWith({ kind: 'personnel', callId: '9', resourceId: 'b', notify: true });
+    expect(screen.getByTestId('active-call-filter-banner')).toBeTruthy();
+
+    await fireEvent.press(screen.getByTestId('activity-tab-activity'));
+    expect(within(screen.getByTestId('console-activity-log')).getAllByText('calls.release.action')).toHaveLength(2);
+  });
+
+  it('keeps released units and members out of the call’s lists although their status still points at the call', async () => {
+    await setWindow(1366, 1024);
+    useCallDetailStore.setState({
+      details: {
+        // SAFETY: a call detail record with only the extra data the console's call filter reads.
+        '9': {
+          call: makeCall('9', { Number: '26-9' }),
+          extraData: { Dispatches: [], ReleasedUnits: [{ Id: '2', Type: 'Unit', Name: 'E2' }], ReleasedPersonnel: [{ Id: 'b', Type: 'User', Name: 'Pat b' }] },
+          notes: [],
+          images: null,
+          files: null,
+          audio: null,
+          fetchedAt: 1,
+        } as never,
+      },
+    });
+    await renderConsole();
+    await fireEvent.press(screen.getByTestId('console-call-9'));
+
+    expect(screen.queryByTestId('console-unit-2')).toBeNull();
+    expect(screen.queryByTestId('console-person-b')).toBeNull();
+    expect(screen.getByText('dispatch.no_units_on_call')).toBeTruthy();
+  });
+
+  it('offers no release to a member who may not edit the call', async () => {
+    await setWindow(1366, 1024);
+    useCallsStore.setState({ calls: [makeCall('9', { Name: 'Kitchen fire', Number: '26-9', Priority: 1, ReportingUserId: 'someone-else' })] });
+    await renderConsole();
+    await fireEvent.press(screen.getByTestId('console-call-9'));
+
+    expect(screen.getByTestId('console-unit-2')).toBeTruthy();
+    expect(screen.queryByTestId('console-unit-2-release')).toBeNull();
+    expect(screen.queryByTestId('console-person-b-release')).toBeNull();
+  });
+
   it('selects a unit, shows its actions and logs it', async () => {
     await setWindow(1366, 1024);
     await renderConsole();

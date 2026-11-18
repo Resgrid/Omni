@@ -1,4 +1,5 @@
 import { useCallDetailStore, useCallsStore } from '@resgrid/data';
+import { getReleasedPersonnel, getReleasedUnits } from '@resgrid/features/calls';
 import type { CallExtraDataResultData, CallResultData, DispatchedEventResultData } from '@resgrid/models';
 import { useEffect, useMemo } from 'react';
 
@@ -11,7 +12,7 @@ export interface SelectedCall {
   callId: string | null;
   call: CallResultData | null;
   extraData: CallExtraDataResultData | null;
-  /** The filter the resource panels apply (null when the console is not filtered to a call). */
+  /** The filter the resource panels apply (null when the console is not filtered to a call): its dispatches and who was released. */
   callFilter: ConsoleCallFilter | null;
   isLoading: boolean;
 }
@@ -33,7 +34,10 @@ export function useSelectedCall(): SelectedCall {
 
   const extraData = record?.extraData ?? null;
   const dispatches = extraData?.Dispatches ?? dispatchesFromList ?? NO_DISPATCHES;
-  const callFilter = useMemo<ConsoleCallFilter | null>(() => (callId ? { callId, dispatches } : null), [callId, dispatches]);
+  // Until the extra data loads (or from an older server) nobody reads as released.
+  const releasedUnits = getReleasedUnits(extraData);
+  const releasedPersonnel = getReleasedPersonnel(extraData);
+  const callFilter = useMemo<ConsoleCallFilter | null>(() => (callId ? { callId, dispatches, releasedUnits, releasedPersonnel } : null), [callId, dispatches, releasedPersonnel, releasedUnits]);
 
   return { callId, call: listCall ?? record?.call ?? null, extraData, callFilter, isLoading };
 }

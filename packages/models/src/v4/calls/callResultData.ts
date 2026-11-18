@@ -49,6 +49,8 @@ export class CallResultData {
   public AlarmLevel: number = 1;
   /** The run card driving this call's dispatch, or null when no card matched. */
   public ActiveRunCardId: number | null = null;
+  /** The recurring call schedule that created this call; null for other calls, undefined from older servers. */
+  public RecurringCallId?: number | null;
   public LoggedOnUtc: string = '';
   /**
    * The user who logged the call; null when none did (an email or API import), undefined from older servers. Core lets a

@@ -1,5 +1,6 @@
 import { useTerm } from '@resgrid/auth';
 import { useCallsStore, useUnitsStore } from '@resgrid/data';
+import { isUnitDispatchedToCall } from '@resgrid/features/calls';
 import { useUnitAlertsByUnit } from '@resgrid/features/unit-status-alerts';
 import { useTranslation } from '@resgrid/i18n';
 import type { UnitInfoResultData } from '@resgrid/models';
@@ -24,6 +25,8 @@ export interface UnitsPanelProps {
   onSelectUnit: (unitId: string) => void;
   /** "+" on a unit while filtered to a call. */
   onSetStatusForCall?: (unitId: string) => void;
+  /** "−" (release from the call) on a unit dispatched to the filtered call; undefined where the member may not release. */
+  onReleaseFromCall?: (unitId: string) => void;
   /** The row's details button: opens the unit's screen. */
   onOpenUnit?: (unitId: string) => void;
   flex?: number;
@@ -59,7 +62,7 @@ const SelectionBar: React.FC<{ count: number; onSelectAll: () => void }> = ({ co
  * filtered, crew seats and status. Multi-select (header toggle, long press, Ctrl/Cmd-click or Shift-click for a range on
  * web) builds a group for one status change (an ambulance and the MUG following it, all apparatus returning).
  */
-export const UnitsPanel: React.FC<UnitsPanelProps> = ({ callFilter, onSelectUnit, onSetStatusForCall, onOpenUnit, flex, maxHeight }) => {
+export const UnitsPanel: React.FC<UnitsPanelProps> = ({ callFilter, onSelectUnit, onSetStatusForCall, onReleaseFromCall, onOpenUnit, flex, maxHeight }) => {
   const { t } = useTranslation();
   const title = useTerm('module.units', t('dispatch.units'));
   const units = useUnitsStore((state) => state.unitInfos);
@@ -114,6 +117,7 @@ export const UnitsPanel: React.FC<UnitsPanelProps> = ({ callFilter, onSelectUnit
           onLongPress={handleLongPress}
           onOpen={isSelectionMode ? undefined : onOpenUnit}
           onSetStatusForCall={callFilter && !isSelectionMode ? onSetStatusForCall : undefined}
+          onReleaseFromCall={callFilter && !isSelectionMode && isUnitDispatchedToCall(item, callFilter.dispatches) ? onReleaseFromCall : undefined}
           timerLevel={timer?.alert.level}
           timerAcknowledgement={timer?.acknowledgementState}
           timerSeconds={timer?.alert.secondsInStatus}
@@ -121,7 +125,7 @@ export const UnitsPanel: React.FC<UnitsPanelProps> = ({ callFilter, onSelectUnit
         />
       );
     },
-    [callFilter, callsById, handleLongPress, handlePress, isSelectionMode, onOpenUnit, onSetStatusForCall, pendingUnitIds, selectedSet, selectedUnitId, timers]
+    [callFilter, callsById, handleLongPress, handlePress, isSelectionMode, onOpenUnit, onReleaseFromCall, onSetStatusForCall, pendingUnitIds, selectedSet, selectedUnitId, timers]
   );
 
   return (

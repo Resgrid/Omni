@@ -20,6 +20,7 @@ import { createIncidentCommandCallTab } from '@resgrid/features/incident-command
 import { DispatchBoardLayers } from '@resgrid/features/map';
 import { registerOfflineMapsSettings } from '@resgrid/features/offline-maps';
 import { CALL_RECORDS_TAB, configureRecords, registerRecordsContextHook } from '@resgrid/features/records';
+import { RecurringCallAlertsBanner, RecurringCallAlertsHost, recurringCallsRoutes, registerRecurringCallsHookPoints } from '@resgrid/features/recurring-calls';
 import { registerRunCardCallDetailTab, registerRunCardHookPoints } from '@resgrid/features/runcards';
 import { configureSettings } from '@resgrid/features/settings';
 import { registerUnitStatusCallDetailAction, StatusTimerBanner, StatusTimerNotifications, unitStatusRoutes, UnitStatusSidebar } from '@resgrid/features/unit-status';
@@ -91,6 +92,13 @@ function AwaitingBanner() {
   return <AwaitingResourcesBanner hidden={pathname === awaitingResourcesRoutes.list()} />;
 }
 
+/** The recurring call alerts strip under the app bar, except on the alerts screen itself. */
+function RecurringAlertsBanner() {
+  const pathname = usePathname();
+
+  return <RecurringCallAlertsBanner hidden={pathname === recurringCallsRoutes.alerts()} />;
+}
+
 registerShellScreens({
   Login: GateLogin,
   Onboarding: GateOnboarding,
@@ -117,6 +125,11 @@ registerShellOverlay('audio-streams', AudioStreamSheet);
 registerShellOverlay('awaiting-resources', AwaitingResourcesHost);
 
 registerShellBanner('awaiting-resources', AwaitingBanner);
+
+// Dispatch's recurring call alerts (badge count, new-alert cue) and their banner (inert without calls.recurringCalls).
+registerShellOverlay('recurring-call-alerts', RecurringCallAlertsHost);
+
+registerShellBanner('recurring-call-alerts', RecurringAlertsBanner);
 
 // Unit's own status timer strip (inert without the unit-status module and an active unit).
 registerShellBanner('unit-status-timer', UnitTimerBanner);
@@ -153,6 +166,9 @@ registerRunCardCallDetailTab();
 registerAwaitingResourcesCallDetailTab();
 
 registerRunCardHookPoints();
+
+// "Created by a recurring call" on the call detail (a link to the schedule where the app has recurring calls).
+registerRecurringCallsHookPoints();
 
 // The calls screens never import maps or native audio: the app hands them the map picker, the static map and clip playback.
 registerCallFormHookPoints({ LocationPicker: CallLocationPicker, StaticLocationMap: CallStaticMap, playAudioClip });

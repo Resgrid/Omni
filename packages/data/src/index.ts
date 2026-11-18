@@ -69,6 +69,7 @@ export {
   type CallFileReader,
   type CallNoteListItem,
   type CallNotePayload,
+  type CallReleaseOutcome,
   type CurrentCallData,
   type QueueCallFileInput,
   type QueuedCallFile,
@@ -292,10 +293,13 @@ export {
 export { type CommandSupportState, useCommandSupportStore } from './incident-command/command-support-store';
 export { type AssistantMessage, type IncidentAssistantState, type ResourceViewState, useIncidentAssistantStore, useResourceViewStore } from './incident-command/resource-view-store';
 
-// Dispatch modules (run cards, awaiting resources, call queues, console map)
+// Dispatch modules (run cards, awaiting resources, call queues, recurring calls, console map)
 export * from './awaiting-resources';
 export * from './call-queues';
 export * from './map-markers';
+
+// Recurring call schedules, calendar and alerts; the modules stay alphabetical across this break.
+export * from './recurring-calls';
 export * from './run-cards';
 
 // Live ETAs of navigating units (Dispatch, Big Board)

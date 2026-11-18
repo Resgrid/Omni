@@ -60,6 +60,12 @@ export function isCallReporter(call: Pick<CallResultData, 'ReportingUserId'>, us
 }
 
 /**
+ * Core's per-call edit check (`CanUserEditCallAsync`): the Call_Update claim (Create Call permission) and being a
+ * department admin or the call's reporting user. Edits, dispatching and releasing resources from the call all need it.
+ */
+export const mayChangeCall = (rights: CallRights, call: Pick<CallResultData, 'ReportingUserId'>, userId: string | null | undefined): boolean => rights.canCreateCalls && (rights.isAdmin || isCallReporter(call, userId));
+
+/**
  * The call actions this member may take, mirroring Core's checks so the app never offers one the server refuses:
  * - create: the Create Call permission;
  * - edit, add resources, reschedule and dispatch now: the Call_Update claim (Create Call permission) and being a
@@ -74,7 +80,7 @@ export function resolveCallPermissions({ calls, rights, userId, call, now = Date
 
   if (!call) return { canCreate, ...NO_CALL_ACTIONS };
 
-  const mayChange = rights.canCreateCalls && (rights.isAdmin || isCallReporter(call, userId));
+  const mayChange = mayChangeCall(rights, call, userId);
   const isOpen = call.State === CallState.Active || isPendingCall(call);
   const mayDispatch = calls.dispatch && mayChange;
 

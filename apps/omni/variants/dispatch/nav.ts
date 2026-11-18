@@ -17,6 +17,7 @@ import { personnelNav } from '@resgrid/features/personnel/nav';
 import { poisNav } from '@resgrid/features/pois/nav';
 import { protocolsNav } from '@resgrid/features/protocols/nav';
 import { recordsNav } from '@resgrid/features/records/nav';
+import { recurringCallsNav } from '@resgrid/features/recurring-calls/nav';
 import { settingsNavEntries } from '@resgrid/features/settings/nav';
 import { unitsNav } from '@resgrid/features/units/nav';
 import { weatherAlertsNav } from '@resgrid/features/weather-alerts/nav';
@@ -41,6 +42,12 @@ export const routes = defineRoutes([
   'scheduledCalls',
   'archivedCalls',
   'awaitingResources',
+  'recurringCalls',
+  'recurringCallNew',
+  'recurringCallsCalendar',
+  'recurringCallDetail',
+  'recurringCallEdit',
+  'recurringCallAlerts',
   'pois',
   'poiDetail',
   'map',
@@ -91,10 +98,12 @@ export const routes = defineRoutes([
 export const nav = defineNav([
   // The console is the home (shell.homeRoute '/').
   ...featureNav(dispatchConsoleNav, 'sidebar', { order: 0 }),
-  // Legacy order: calls, pending, awaiting resources, scheduled, archived, new call.
+  // Legacy order: calls, pending, awaiting resources, scheduled, archived, new call; the recurring call alerts sit beside
+  // awaiting resources and the recurring calls beside the scheduled calls.
   ...featureNav(callsNav, 'sidebar', { order: 10, overrides: { 'call-new': { order: 15 } } }),
   ...featureNav(callQueuesNav, 'sidebar', { overrides: { 'pending-calls': { order: 11 }, 'scheduled-calls': { order: 13 }, 'archived-calls': { order: 14 } } }),
   ...featureNav(awaitingResourcesNav, 'sidebar', { order: 12 }),
+  ...featureNav(recurringCallsNav, 'sidebar', { overrides: { 'recurring-call-alerts': { order: 12 }, 'recurring-calls': { order: 13 } } }),
   ...featureNav(poisNav, 'sidebar', { order: 20 }),
   ...featureNav(mapNav, 'sidebar', { order: 25 }),
   ...featureNav(personnelNav, 'sidebar', { order: 30 }),

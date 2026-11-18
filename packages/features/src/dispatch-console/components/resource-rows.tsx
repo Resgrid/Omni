@@ -5,7 +5,7 @@ import { useTranslation } from '@resgrid/i18n';
 import type { PersonnelInfoResultData, UnitInfoResultData } from '@resgrid/models';
 import { Badge, BadgeText, contentOnFill, HStack, Pressable, Text, TypeIcon, useReadableColor, useThemeColors, VStack } from '@resgrid/ui';
 import type { LucideIcon } from 'lucide-react-native';
-import { AlertTriangle, Circle, ExternalLink, MapPin, Plus, Square, SquareCheck, Truck, User, Users } from 'lucide-react-native';
+import { AlertTriangle, Circle, CircleMinus, ExternalLink, MapPin, Plus, Square, SquareCheck, Truck, User, Users } from 'lucide-react-native';
 import React, { useMemo } from 'react';
 import { type GestureResponderEvent, Platform, StyleSheet, View } from 'react-native';
 import { z } from 'zod';
@@ -61,21 +61,19 @@ const StatusLine: React.FC<{ text: string; color: string | null | undefined; tes
   );
 };
 
-/** A small square button beside a row (details, set status for the call): never inside the row's own button. */
-const RowIconButton: React.FC<{ icon: LucideIcon; tone: 'neutral' | 'accent'; onPress: () => void; accessibilityLabel: string; testID: string }> = ({ icon: Icon, tone, onPress, accessibilityLabel, testID }) => {
+type RowIconTone = 'neutral' | 'accent' | 'danger';
+
+const ROW_ICON_TOKENS = { neutral: 'typography-500', accent: 'primary-500', danger: 'error-600' } as const;
+
+/** A small square button beside a row (details, set status for the call, release from the call): never inside the row's own button. */
+const RowIconButton: React.FC<{ icon: LucideIcon; tone: RowIconTone; onPress: () => void; accessibilityLabel: string; testID: string }> = ({ icon: Icon, tone, onPress, accessibilityLabel, testID }) => {
   const colors = useThemeColors();
+  const toneStyle = { neutral: styles.neutralButton, accent: styles.accentButton, danger: styles.dangerButton }[tone];
 
   return (
-    <Pressable
-      onPress={onPress}
-      hitSlop={8}
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel}
-      style={StyleSheet.flatten([styles.iconButton, tone === 'accent' ? styles.accentButton : styles.neutralButton])}
-      testID={testID}
-    >
+    <Pressable onPress={onPress} hitSlop={8} accessibilityRole="button" accessibilityLabel={accessibilityLabel} style={StyleSheet.flatten([styles.iconButton, toneStyle])} testID={testID}>
       <View>
-        <Icon size={12} color={tone === 'accent' ? colors.token('primary-500') : colors.token('typography-500')} />
+        <Icon size={12} color={colors.token(ROW_ICON_TOKENS[tone])} />
       </View>
     </Pressable>
   );
@@ -164,6 +162,8 @@ export interface ConsoleUnitRowProps {
   onOpen?: (unitId: string) => void;
   /** "+": set this unit's status with the filtered call as destination. */
   onSetStatusForCall?: (unitId: string) => void;
+  /** "−": release (stand down) this unit from the filtered call; only for a unit dispatched to it. */
+  onReleaseFromCall?: (unitId: string) => void;
   /** The unit's status timer while it is over it (primitives, so a row re-renders only when its own timer moves). */
   timerLevel?: UnitStatusAlertLevel;
   timerAcknowledgement?: UnitAlertAcknowledgementState;
@@ -188,6 +188,7 @@ export const ConsoleUnitRow: React.FC<ConsoleUnitRowProps> = React.memo(
     onLongPress,
     onOpen,
     onSetStatusForCall,
+    onReleaseFromCall,
     timerLevel = 'none',
     timerAcknowledgement = 'none',
     timerSeconds = null,
@@ -254,7 +255,7 @@ export const ConsoleUnitRow: React.FC<ConsoleUnitRowProps> = React.memo(
             </VStack>
           </HStack>
         </Pressable>
-        {onOpen || onSetStatusForCall ? (
+        {onOpen || onSetStatusForCall || onReleaseFromCall ? (
           <VStack space="xs" className="items-center pr-2">
             {onOpen ? <RowIconButton icon={ExternalLink} tone="neutral" onPress={() => onOpen(unit.UnitId)} accessibilityLabel={t('dispatch.view_details')} testID={`console-unit-${unit.UnitId}-open`} /> : null}
             {onSetStatusForCall ? (
@@ -264,6 +265,15 @@ export const ConsoleUnitRow: React.FC<ConsoleUnitRowProps> = React.memo(
                 onPress={() => onSetStatusForCall(unit.UnitId)}
                 accessibilityLabel={t('dispatch_console.set_status_for_call')}
                 testID={`console-unit-${unit.UnitId}-status-for-call`}
+              />
+            ) : null}
+            {onReleaseFromCall ? (
+              <RowIconButton
+                icon={CircleMinus}
+                tone="danger"
+                onPress={() => onReleaseFromCall(unit.UnitId)}
+                accessibilityLabel={t('calls.release.action_named', { name: unit.Name })}
+                testID={`console-unit-${unit.UnitId}-release`}
               />
             ) : null}
           </VStack>
@@ -284,13 +294,15 @@ export interface ConsolePersonnelRowProps {
   /** Opens the member's detail screen. */
   onOpen?: (userId: string) => void;
   onSetStatusForCall?: (userId: string) => void;
+  /** "−": release this member from the filtered call. */
+  onReleaseFromCall?: (userId: string) => void;
 }
 
 /**
  * A member on the console (Dispatch's row): their role icon in a ring of their status colour, name, group, roles, status
  * destination, and status and staffing as dots with their names.
  */
-export const ConsolePersonnelRow: React.FC<ConsolePersonnelRowProps> = React.memo(({ person, isSelected, isOnCall, hasPendingStatus = false, onPress, onOpen, onSetStatusForCall }) => {
+export const ConsolePersonnelRow: React.FC<ConsolePersonnelRowProps> = React.memo(({ person, isSelected, isOnCall, hasPendingStatus = false, onPress, onOpen, onSetStatusForCall, onReleaseFromCall }) => {
   const { t } = useTranslation();
   const readable = useReadableColor();
   const name = personnelFullName(person) || person.UserId;
@@ -340,7 +352,7 @@ export const ConsolePersonnelRow: React.FC<ConsolePersonnelRowProps> = React.mem
           </VStack>
         </HStack>
       </Pressable>
-      {onOpen || onSetStatusForCall ? (
+      {onOpen || onSetStatusForCall || onReleaseFromCall ? (
         <VStack space="xs" className="items-center pr-2">
           {onOpen ? <RowIconButton icon={ExternalLink} tone="neutral" onPress={() => onOpen(person.UserId)} accessibilityLabel={t('dispatch.view_details')} testID={`console-person-${person.UserId}-open`} /> : null}
           {onSetStatusForCall ? (
@@ -350,6 +362,15 @@ export const ConsolePersonnelRow: React.FC<ConsolePersonnelRowProps> = React.mem
               onPress={() => onSetStatusForCall(person.UserId)}
               accessibilityLabel={t('dispatch_console.set_status_for_call')}
               testID={`console-person-${person.UserId}-status-for-call`}
+            />
+          ) : null}
+          {onReleaseFromCall ? (
+            <RowIconButton
+              icon={CircleMinus}
+              tone="danger"
+              onPress={() => onReleaseFromCall(person.UserId)}
+              accessibilityLabel={t('calls.release.action_named', { name })}
+              testID={`console-person-${person.UserId}-release`}
             />
           ) : null}
         </VStack>
@@ -369,4 +390,5 @@ const styles = StyleSheet.create({
   iconButton: { padding: 4, borderRadius: 4 },
   neutralButton: { backgroundColor: 'rgba(107, 114, 128, 0.1)' },
   accentButton: { backgroundColor: 'rgba(99, 102, 241, 0.12)' },
+  dangerButton: { backgroundColor: 'rgba(239, 68, 68, 0.1)' },
 });

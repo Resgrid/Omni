@@ -1,7 +1,7 @@
-import type { CloseCallInput, CloseCallResult, EditCallInput, NewCallInput, SaveCallResult, UdfFieldValueInput, UpdateDispatchTimeInput } from '@resgrid/models';
+import type { CloseCallInput, CloseCallResult, EditCallInput, NewCallInput, ReleasePersonnelResult, ReleaseUnitResult, SaveCallResult, UdfFieldValueInput, UpdateDispatchTimeInput } from '@resgrid/models';
 
 import { type ApiContext, type RequestOptions } from '../../core';
-import { closeCall, editCall, saveCall, updateScheduledDispatchTime } from './calls';
+import { closeCall, editCall, releasePersonnel, releaseUnit, saveCall, updateScheduledDispatchTime } from './calls';
 
 /**
  * Call save/edit request builders (Dispatch baseline, omni-plan §7.2). They encode the server's "missing property
@@ -203,3 +203,21 @@ export const rescheduleCallDispatch = (ctx: ApiContext, callId: string, date: st
   const body: UpdateDispatchTimeInput = { Id: callId, Date: date };
   return updateScheduledDispatchTime(ctx, body, options);
 };
+
+/** What a release takes off a call: a unit, or one person. */
+export type ReleaseResourceKind = 'unit' | 'personnel';
+
+export interface ReleaseFromCallRequest {
+  kind: ReleaseResourceKind;
+  callId: string;
+  /** The unit's id, or the person's user id. */
+  resourceId: string;
+  /** Send the released unit or person a cancellation notice for the call. */
+  notify: boolean;
+}
+
+/** Releases (stands down) a unit (`Calls/ReleaseUnit`) or a person (`Calls/ReleasePersonnel`) from an open call that stays open. */
+export const releaseFromCallWith = (ctx: ApiContext, release: ReleaseFromCallRequest, options?: RequestOptions): Promise<ReleaseUnitResult | ReleasePersonnelResult> =>
+  release.kind === 'unit'
+    ? releaseUnit(ctx, { CallId: release.callId, UnitId: release.resourceId, Notify: release.notify }, options)
+    : releasePersonnel(ctx, { CallId: release.callId, UserId: release.resourceId, Notify: release.notify }, options);

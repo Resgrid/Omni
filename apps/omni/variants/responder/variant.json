@@ -54,7 +54,10 @@
       "queues": false,
       "runCards": false,
       "nearestBoard": false,
-      "destinationAvailability": false
+      "destinationAvailability": false,
+      "releaseResources": false,
+      "releaseOwnUnit": false,
+      "recurringCalls": false
     },
     "status": {
       "subject": "personnel",

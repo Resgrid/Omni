@@ -11,9 +11,27 @@ import { CallConfirmDialog, type CallConfirmDialogProps } from './components/cal
 import { CallSummaryModal, type CallSummaryModalProps } from './components/call-summary-modal';
 import { type CallDispatchNowControls, useCallDispatchNow, type UseCallDispatchNowOptions } from './hooks/use-call-dispatch-now';
 import { useCallPermissions, useCallPermissionsResolver, useCallRights } from './hooks/use-call-permissions';
+import { type CallRelease, type ReleaseCall, type ReleaseFromCall, type ReleaseTarget, useReleaseFromCall, type UseReleaseFromCallOptions } from './hooks/use-release-from-call';
 import { callDisplayName, callDisplayText, type CallTextField, type CallTextFields, revealedCallText } from './lib/call-display';
 import { callDestinationTarget, callLocationTarget, callPoint, isUsablePoint } from './lib/call-location';
-import { type CallPermissionInput, type CallPermissions, type CallRights, type CallsCapability, isCallReporter, resolveCallPermissions } from './lib/call-permissions';
+import { type CallPermissionInput, type CallPermissions, type CallRights, type CallsCapability, isCallReporter, mayChangeCall, resolveCallPermissions } from './lib/call-permissions';
+import {
+  type CallPersonCandidate,
+  type CallResourceLists,
+  type CallUnitCandidate,
+  canReleaseFromCall,
+  getReleasedPersonnel,
+  getReleasedUnits,
+  isPersonDispatchedToCall,
+  isPersonOnCall,
+  isPersonReleasedFromCall,
+  isUnitDispatchedToCall,
+  isUnitOnCall,
+  isUnitReleasedFromCall,
+  type ReleasableCall,
+  type ReleasePermissions,
+  resolveReleasePermissions,
+} from './lib/call-release';
 import { getScheduledDispatchPrefill, isDispatchTimeTooSoon, MIN_DISPATCH_LEAD_MINUTES, toDispatchOnUtc } from './lib/call-schedule';
 import {
   type BoardRank,
@@ -139,13 +157,18 @@ export {
   callLocationTarget,
   type CallPermissionInput,
   type CallPermissions,
+  type CallPersonCandidate,
   callPoint,
+  type CallRelease,
+  type CallResourceLists,
   type CallRights,
   type CallsCapability,
   CallSummaryModal,
   type CallSummaryModalProps,
   type CallTextField,
   type CallTextFields,
+  type CallUnitCandidate,
+  canReleaseFromCall,
   dispatchesToSelection,
   type DispatchMapOverlay,
   formatDistance,
@@ -153,11 +176,20 @@ export {
   formatDuration,
   formatEta,
   getMissingCallFieldsFromRefusal,
+  getReleasedPersonnel,
+  getReleasedUnits,
   getScheduledDispatchPrefill,
   isCallReporter,
   isDispatchSelectionEmpty,
   isDispatchTimeTooSoon,
+  isPersonDispatchedToCall,
+  isPersonOnCall,
+  isPersonReleasedFromCall,
+  isUnitDispatchedToCall,
+  isUnitOnCall,
+  isUnitReleasedFromCall,
   isUsablePoint,
+  mayChangeCall,
   mergeDispatchSelections,
   MIN_DISPATCH_LEAD_MINUTES,
   NEAREST_BADGE_COUNT,
@@ -165,7 +197,13 @@ export {
   rankBoardPersonnel,
   rankBoardUnits,
   type RecipientSort,
+  type ReleasableCall,
+  type ReleaseCall,
+  type ReleaseFromCall,
+  type ReleasePermissions,
+  type ReleaseTarget,
   resolveCallPermissions,
+  resolveReleasePermissions,
   revealedCallText,
   selectionSize,
   toDispatchOnUtc,
@@ -174,4 +212,6 @@ export {
   useCallPermissions,
   useCallPermissionsResolver,
   useCallRights,
+  useReleaseFromCall,
+  type UseReleaseFromCallOptions,
 };

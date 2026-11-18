@@ -121,8 +121,9 @@ function ServerCallDetail({ callId, mapSlot, menuItems, onMenuAction, onClosed, 
   const priorities = useCallsStore((state) => state.callPriorities);
   const attentionCheckIns = useCheckInTimersStore((state) => (state.statusesByCall[callId] ?? []).filter((status) => ATTENTION_TIMER_STATES.has(status.Status)).length);
   const registered = useRegisteredCallDetailTabs();
-  // A module-supplied action beside the title (Unit "Set Active"); it renders nothing where it does not apply.
-  const { CallDetailAction } = useCallFormHookPoints();
+  // Module-supplied extras: an action beside the title (Unit "Set Active") and a notice under the summary (the recurring
+  // call that created it); each renders nothing where it does not apply.
+  const { CallDetailAction, CallDetailNotice } = useCallFormHookPoints();
   const [modal, setModal] = useState<DetailModal>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -300,6 +301,7 @@ function ServerCallDetail({ callId, mapSlot, menuItems, onMenuAction, onClosed, 
           onDispatch={canDispatch ? () => (isPending ? void dispatchNow.openDispatchPicker(callId, extraData?.Dispatches, callPoint(call)) : dispatchNow.confirmDispatchNow(callId)) : undefined}
         />
       ) : null}
+      {CallDetailNotice ? <CallDetailNotice call={call} /> : null}
       {mapSlot ? (
         <View style={styles.map} testID="call-detail-map-slot">
           {mapSlot(call)}

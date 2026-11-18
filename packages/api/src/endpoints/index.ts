@@ -32,6 +32,9 @@ export * from './operations';
 export * from './personnel';
 export * from './protocols';
 export * from './records';
+
+// Recurring calls (Core M0319/M0320); the domains stay alphabetical across this break.
+export * from './recurring-calls';
 export * from './routes';
 export * from './routing';
 export * from './run-cards';

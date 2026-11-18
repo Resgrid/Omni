@@ -9,11 +9,13 @@ import {
   getCallLocationHistory,
   getCallNotes,
   getCallSiteInfo,
+  type ReleaseFromCallRequest,
+  releaseFromCallWith,
   rescheduleCallDispatch,
   updateCall,
   type UpdateCallRequest,
 } from '@resgrid/api';
-import type { CallExtraDataResultData, CallFileResultData, CallNoteResultData, CallResultData, CallSiteInfoData, LocationHistoryData } from '@resgrid/models';
+import type { CallExtraDataResultData, CallFileResultData, CallNoteResultData, CallResultData, CallSiteInfoData, LocationHistoryData, ReleasePersonnelResultData, ReleaseUnitResultData } from '@resgrid/models';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
@@ -107,6 +109,14 @@ export interface QueueCallFileInput {
   stagedUri?: string;
 }
 
+/** A unit or person the server released from a call. */
+export interface CallReleaseOutcome {
+  /** When the server released them (ISO 8601 UTC). */
+  releasedOn: string;
+  /** False when they kept their status (already available, out of service or on another open call). */
+  statusApplied: boolean;
+}
+
 /** A call and its extra data as the server has them now. */
 export interface CurrentCallData {
   call: CallResultData;
@@ -134,6 +144,12 @@ export interface CallDetailState extends CallDetailData {
   closeCall: (request: CloseCallRequest) => Promise<void>;
   deleteCall: (callId: string) => Promise<void>;
   rescheduleDispatchTime: (callId: string, date: string) => Promise<void>;
+  /**
+   * Releases a unit or person from an open call that stays open (online only: the server decides whether the release
+   * status applies), then re-reads the call's dispatches. Null when the call no longer exists (`not_found`); throws on a
+   * refusal (400 with the reason as plain text, 401 without permission) or a failed request.
+   */
+  releaseFromCall: (request: ReleaseFromCallRequest) => Promise<CallReleaseOutcome | null>;
   clearCallFiles: (callId: string) => void;
   // Used by outbox handlers.
   applyQueuedNote: (note: QueuedCallNote) => void;
@@ -210,12 +226,14 @@ export const useCallDetailStore = create<CallDetailState>()(
         );
       };
 
-      const write = async (fn: () => Promise<void>): Promise<void> => {
+      const write = async <T>(fn: () => Promise<T>): Promise<T> => {
         set({ isWriting: true, writeError: null });
 
         try {
-          await fn();
+          const value = await fn();
           set({ isWriting: false });
+
+          return value;
         } catch (error) {
           // A refused save is not a failed load (Dispatch): keep the loaded call, report the refusal.
           set({ isWriting: false, writeError: toDataError(error) });
@@ -326,6 +344,17 @@ export const useCallDetailStore = create<CallDetailState>()(
           write(async () => {
             assertV4Success(await rescheduleCallDispatch(getDataApiContext(), callId, date));
             await get().fetchCallDetail(callId);
+          }),
+
+        releaseFromCall: (request) =>
+          write(async () => {
+            const released = unwrapItem<ReleasePersonnelResultData | ReleaseUnitResultData>(await releaseFromCallWith(getDataApiContext(), request));
+
+            if (!released) return null;
+            // The released unit or person moves from Dispatches to the released lists.
+            await get().fetchCallDetail(request.callId, { bypassCache: true });
+
+            return { releasedOn: released.ReleasedOn ?? '', statusApplied: released.StatusApplied === true };
           }),
 
         clearCallFiles: (callId) => set((state) => patchRecord(state, callId, { images: null, files: null, audio: null })),

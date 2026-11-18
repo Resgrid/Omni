@@ -131,6 +131,24 @@ export const capabilitiesSchema = z.object({
      * and IC. Every app shows availability and capabilities; only these change them.
      */
     destinationAvailability: z.boolean(),
+    /**
+     * Releasing (standing down) any unit or person from an open call without closing it (`/Calls/ReleaseUnit`,
+     * `/Calls/ReleasePersonnel`): an ambulance on scene stands the physician car down and it is free for the next call.
+     * Offered to members who may edit the call (Core's `CanUserEditCallAsync`) on the desks that run calls: Dispatch and IC.
+     */
+    releaseResources: z.boolean(),
+    /**
+     * Releasing the crew's own active unit from its open call ("we were stood down"), where the device sets a unit's
+     * status (Unit). Core accepts it from anyone allowed to set that unit's status.
+     */
+    releaseOwnUnit: z.boolean(),
+    /**
+     * Recurring calls (`/RecurringCalls/*`, Core M0319/M0320): schedules that dispatch a call on a pattern (interfacility
+     * transfers every Tuesday and Thursday at 08:00 and 13:00), the scheduled calls calendar with per-occurrence actions,
+     * and the dispatcher alerts (missed, held for no resources, resources unavailable, dispatcher-mode occurrence due) with
+     * their badge and banner. The dispatch desk's module, beside the pending and scheduled call queues: Dispatch.
+     */
+    recurringCalls: z.boolean(),
   }),
   /**
    * `holdToConfirm`: the app honours the department's "Hold to set status" (config `StatusHoldToConfirm`) — on its iOS
