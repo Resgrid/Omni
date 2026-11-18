@@ -348,11 +348,14 @@ export const useCallDetailStore = create<CallDetailState>()(
 
         releaseFromCall: (request) =>
           write(async () => {
+            const generation = runner.generation();
             const released = unwrapItem<ReleasePersonnelResultData | ReleaseUnitResultData>(await releaseFromCallWith(getDataApiContext(), request));
 
             if (!released) return null;
-            // The released unit or person moves from Dispatches to the released lists.
-            await get().fetchCallDetail(request.callId, { bypassCache: true });
+
+            // The released unit or person moves from Dispatches to the released lists. An answer that lands after sign-out
+            // reads nothing as the next session; the read never fails the release (a failed read keeps the last copy).
+            if (generation === runner.generation()) await get().fetchCallDetail(request.callId, { bypassCache: true });
 
             return { releasedOn: released.ReleasedOn ?? '', statusApplied: released.StatusApplied === true };
           }),

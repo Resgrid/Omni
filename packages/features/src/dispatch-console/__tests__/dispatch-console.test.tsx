@@ -160,7 +160,7 @@ beforeEach(() => {
     fetchUnits: jest.fn(async () => undefined),
   });
   usePersonnelStore.setState({
-    personnel: [person('a'), person('b', { StatusBaseType: 3, Status: 'On scene', StatusDestinationId: '9' })],
+    personnel: [person('a'), person('b', { StatusBaseType: 3, Status: 'On scene', StatusDestinationId: '9', StatusDestinationType: 2 })],
     statusOptions: [],
     groups: [],
     loading: {},

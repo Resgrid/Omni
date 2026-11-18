@@ -3,10 +3,10 @@ import { useTranslation } from '@resgrid/i18n';
 import type { DispatchedEventResultData } from '@resgrid/models';
 import { Button, ButtonText, Pressable, Text, TypeIcon, useThemeColors } from '@resgrid/ui';
 import { CircleMinus, UserPlus } from 'lucide-react-native';
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { type ReleaseCall, useReleaseFromCall } from '../../hooks/use-release-from-call';
+import { type ReleaseCall, type ReleaseTarget, useReleaseFromCall } from '../../hooks/use-release-from-call';
 import { dispatchKey, getDispatchTypeStyle, getUniqueDispatches, isUnitDispatchType } from '../../lib/call-dispatch';
 import { releaseKindOf } from '../../lib/call-release';
 import { ReleasedResourcesList } from './released-resources-list';
@@ -38,8 +38,10 @@ export const CallDispatchedPanel: React.FC<CallDispatchedPanelProps> = ({ dispat
   const unique = useMemo(() => getUniqueDispatches(dispatches), [dispatches]);
   const showEtas = useIsNavigationEtaEnabled() && !!callId;
   useNavigationEtaSync(showEtas);
+  // A confirmation open for a unit or person that is no longer listed (released elsewhere) closes with their row.
+  const isReleasable = useCallback((target: ReleaseTarget) => unique.some((dispatch) => dispatch.Id === target.id && releaseKindOf(dispatch.Type) === target.kind), [unique]);
   // A release re-reads the call (the detail store), so the row moves to the released list by itself.
-  const release = useReleaseFromCall({ call, testID: 'call-dispatched-release-dialog' });
+  const release = useReleaseFromCall({ call, isReleasable, testID: 'call-dispatched-release-dialog' });
   const released = <ReleasedResourcesList releasedUnits={releasedUnits} releasedPersonnel={releasedPersonnel} />;
 
   const dispatchMore = onDispatchMore ? (

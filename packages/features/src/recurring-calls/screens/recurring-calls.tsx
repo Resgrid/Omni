@@ -3,6 +3,7 @@ import { useRecurringCallsStore } from '@resgrid/data';
 import { OptionChips } from '@resgrid/features/calls';
 import { useTranslation } from '@resgrid/i18n';
 import type { RecurringCallResultData } from '@resgrid/models';
+import { useRealtimeRefetch } from '@resgrid/realtime';
 import { Fab, FlatList, Loading, RefreshControl, Text, useThemeColors, ZeroState } from '@resgrid/ui';
 import { useRouter } from 'expo-router';
 import { CalendarDays, Plus, Repeat } from 'lucide-react-native';
@@ -23,6 +24,9 @@ export interface RecurringCallsScreenProps {
 type StatusFilter = 'all' | RecurringCallStatus;
 
 const FILTERS: readonly StatusFilter[] = ['all', 'active', 'paused', 'ended'];
+
+/** Pushes that change the schedules' open-alert counts. */
+const SCHEDULES_REFRESH_EVENTS = ['recurringCallAlertsUpdated'] as const;
 
 /**
  * The department's recurring call schedules (Dispatch): status (active, paused, ended), mode, how often, the pickup
@@ -49,13 +53,17 @@ export default function RecurringCallsScreen({ showHeader = true }: RecurringCal
     void store.fetchOptions();
   }, [isEnabled]);
 
+  // Each row's open-alert count comes with the schedules: an alerts push reads them again.
+  const refetchSchedules = useCallback(() => useRecurringCallsStore.getState().fetchRecurringCalls({ bypassCache: true }), []);
+
+  useRealtimeRefetch(SCHEDULES_REFRESH_EVENTS, refetchSchedules, isEnabled);
+
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
+    const store = useRecurringCallsStore.getState();
 
-    return useRecurringCallsStore
-      .getState()
-      .fetchRecurringCalls({ bypassCache: true })
-      .finally(() => setIsRefreshing(false));
+    // Options that failed to load (New hidden) are asked for again; a failure there leaves the list as it is.
+    return Promise.allSettled([store.fetchRecurringCalls({ bypassCache: true }), store.fetchOptions()]).then(() => setIsRefreshing(false));
   }, []);
 
   const visible = useMemo(() => (filter === 'all' ? schedules : schedules.filter((schedule) => recurringCallStatus(schedule) === filter)), [filter, schedules]);

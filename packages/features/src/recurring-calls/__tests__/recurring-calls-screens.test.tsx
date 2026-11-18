@@ -1,15 +1,17 @@
 import '../../calls/__tests__/test-setup';
 
 import { ApiError } from '@resgrid/api';
-import { type RecurringOccurrenceOutcome, useRecurringCallsStore } from '@resgrid/data';
-import { RecurringCallCreationMode, RecurringCallFrequency, type RecurringCallResultData } from '@resgrid/models';
+import { type RecurringOccurrenceOutcome, usePoisStore, useRecurringCallsStore } from '@resgrid/data';
+import { RecurringCallCreationMode, type RecurringCallDetailResultData, RecurringCallFrequency, type RecurringCallResultData } from '@resgrid/models';
+import { emitRealtimeEvent } from '@resgrid/realtime';
 import { useToastStore } from '@resgrid/ui';
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import React from 'react';
 
 import { activateVariant, hidden, setRights } from '../../calls/__tests__/test-utils';
-import { agendaWindow, startOfDay } from '../lib/calendar-agenda';
+import { PoiPickerModal } from '../components/poi-picker-modal';
+import { agendaWindow, departmentDay } from '../lib/calendar-agenda';
 import RecurringCallDetailScreen from '../screens/recurring-call-detail';
 import RecurringCallFormScreen from '../screens/recurring-call-form';
 import RecurringCallsScreen from '../screens/recurring-calls';
@@ -103,7 +105,7 @@ const OPTIONS = {
 
 const actions = {
   fetchRecurringCalls: jest.fn(async () => undefined),
-  fetchRecurringCall: jest.fn(async () => null),
+  fetchRecurringCall: jest.fn(async (): Promise<RecurringCallDetailResultData | null> => null),
   fetchOptions: jest.fn(async () => OPTIONS),
   fetchCalendar: jest.fn(async () => undefined),
   saveRecurringCall: jest.fn(async () => ({ RecurringCallId: 4, CreatedCalls: 0, ReplacedCalls: 1 })),
@@ -126,7 +128,7 @@ beforeEach(() => {
     options: OPTIONS,
     calendar: [],
     calendarWindow: null,
-    busyKey: null,
+    busyKeys: [],
     loading: {},
     errors: {},
     fetchedAt: { list: 1, options: 1 },
@@ -173,11 +175,47 @@ describe('RecurringCallsScreen', () => {
     expect(screen.getByTestId('recurring-calls-disabled')).toBeTruthy();
     expect(actions.fetchRecurringCalls).not.toHaveBeenCalled();
   });
+
+  it('reads the schedules again on an alerts push (their open-alert counts), and names each row for screen readers', async () => {
+    await render(<RecurringCallsScreen />);
+    actions.fetchRecurringCalls.mockClear();
+
+    await act(() => emitRealtimeEvent('recurringCallAlertsUpdated', '4', '{"alertId":"a9","kind":2,"raised":true}'));
+    expect(actions.fetchRecurringCalls).toHaveBeenCalledWith({ bypassCache: true });
+    expect(screen.getByTestId('recurring-call-1').props.accessibilityLabel).toMatch(/^Transfers 1 · recurring_calls\.status_active · recurring_calls\.facility_value:General Hospital · /);
+  });
+
+  it('asks again for options that failed to load when the list is refreshed', async () => {
+    useRecurringCallsStore.setState({ schedules: [] });
+    await render(<RecurringCallsScreen />);
+    actions.fetchOptions.mockClear();
+
+    await act(async () => fireEvent.press(screen.getByTestId('recurring-calls-empty-retry')));
+    expect(actions.fetchRecurringCalls).toHaveBeenLastCalledWith({ bypassCache: true });
+    expect(actions.fetchOptions).toHaveBeenCalledWith();
+  });
+});
+
+describe('PoiPickerModal', () => {
+  it('offers a retry instead of "none found" when the list could not be read', async () => {
+    const onRetry = jest.fn();
+    const { rerender } = await render(<PoiPickerModal isOpen onClose={jest.fn()} title="Facility" pois={[]} selectedId={null} onSelect={jest.fn()} loadFailed onRetry={onRetry} testID="picker" />);
+
+    expect(screen.getByTestId('picker-error', hidden)).toHaveTextContent(/recurring_calls\.poi_load_error/);
+    expect(screen.queryByTestId('picker-empty', hidden)).toBeNull();
+    await fireEvent.press(screen.getByTestId('picker-retry', hidden));
+    expect(onRetry).toHaveBeenCalled();
+
+    await rerender(<PoiPickerModal isOpen onClose={jest.fn()} title="Facility" pois={[]} selectedId={null} onSelect={jest.fn()} testID="picker" />);
+    expect(screen.getByTestId('picker-empty', hidden)).toBeTruthy();
+  });
 });
 
 describe('RecurringCallFormScreen', () => {
+  const detailOf = (overrides: Partial<RecurringCallResultData> = {}): RecurringCallDetailResultData => ({ RecurringCall: schedule(4, overrides), NextDispatches: [], UpcomingCalls: [] });
+
   it('shows what is missing before sending anything', async () => {
-    await render(<RecurringCallFormScreen />);
+    await render(<RecurringCallFormScreen mode="create" />);
     await act(async () => fireEvent.press(screen.getByTestId('recurring-call-form-submit')));
 
     expect(actions.saveRecurringCall).not.toHaveBeenCalled();
@@ -189,13 +227,106 @@ describe('RecurringCallFormScreen', () => {
   });
 
   it('explains why the run card is off when the department has none', async () => {
-    await render(<RecurringCallFormScreen />);
+    await render(<RecurringCallFormScreen mode="create" />);
     expect(screen.getByTestId('recurring-call-form-run-card-hint')).toHaveTextContent('recurring_calls.run_card_disabled_hint');
+  });
+
+  it('starts a new schedule from freshly read options and ignores an id on the create route', async () => {
+    jest.mocked(useLocalSearchParams).mockReturnValue({ id: '42' });
+    actions.fetchOptions.mockImplementationOnce(async () => {
+      useRecurringCallsStore.setState({ options: { ...OPTIONS, Today: '2026-11-18', DefaultLeadTimeMinutes: 60 } });
+
+      return { ...OPTIONS, Today: '2026-11-18', DefaultLeadTimeMinutes: 60 };
+    });
+    await render(<RecurringCallFormScreen mode="create" />);
+
+    expect(actions.fetchOptions).toHaveBeenCalledWith(true);
+    expect(actions.fetchRecurringCall).not.toHaveBeenCalled();
+    expect(screen.getByTestId('recurring-call-form-lead-time-60')).toHaveProp('accessibilityState', expect.objectContaining({ selected: true }));
+  });
+
+  it('edits nothing for an edit link without a valid schedule id', async () => {
+    jest.mocked(useLocalSearchParams).mockReturnValue({ id: 'nope' });
+    await render(<RecurringCallFormScreen mode="edit" />);
+
+    expect(screen.getByTestId('recurring-call-form-invalid')).toBeTruthy();
+    expect(screen.queryByTestId('recurring-call-form-submit')).toBeNull();
+  });
+
+  it('edits the schedule as the server has it now, not a cached copy', async () => {
+    jest.mocked(useLocalSearchParams).mockReturnValue({ id: '4' });
+    useRecurringCallsStore.setState({ details: { '4': detailOf({ Name: 'Old name' }) } });
+    actions.fetchRecurringCall.mockResolvedValueOnce(detailOf({ Name: 'Fresh name' }));
+    await render(<RecurringCallFormScreen mode="edit" />);
+
+    expect(screen.getByTestId('recurring-call-form-name')).toHaveProp('value', 'Fresh name');
+  });
+
+  it('shows the read error instead of a cached copy when the schedule cannot be read', async () => {
+    jest.mocked(useLocalSearchParams).mockReturnValue({ id: '4' });
+    useRecurringCallsStore.setState({ details: { '4': detailOf() } });
+    actions.fetchRecurringCall.mockImplementationOnce(async () => {
+      useRecurringCallsStore.setState({ detailErrors: { '4': { code: 'not_found', messageKey: 'errors.data.not_found' } } });
+
+      return null;
+    });
+    await render(<RecurringCallFormScreen mode="edit" />);
+
+    expect(screen.getByTestId('recurring-call-form-load-error')).toHaveTextContent(/recurring_calls\.not_found/);
+    expect(screen.queryByTestId('recurring-call-form-submit')).toBeNull();
+  });
+
+  it('is unavailable, not loading, where the app has no recurring calls', async () => {
+    activateVariant('responder');
+    jest.mocked(useLocalSearchParams).mockReturnValue({ id: '4' });
+    await render(<RecurringCallFormScreen mode="edit" />);
+
+    expect(screen.getByTestId('recurring-call-form-not-allowed')).toBeTruthy();
+    expect(actions.fetchRecurringCall).not.toHaveBeenCalled();
+  });
+
+  it('keeps a schedule’s run card choice while the department has run cards off, without listing a run card as its dispatch', async () => {
+    jest.mocked(useLocalSearchParams).mockReturnValue({ id: '4' });
+    actions.fetchRecurringCall.mockResolvedValueOnce(detailOf({ UseRunCard: true, DispatchUnitIds: [] }));
+    await render(<RecurringCallFormScreen mode="edit" />);
+
+    expect(screen.getByTestId('recurring-call-form-run-card')).toHaveProp('value', true);
+    expect(screen.getByTestId('recurring-call-form-dispatch')).toHaveTextContent('recurring_calls.targets_none');
+
+    await act(async () => fireEvent.press(screen.getByTestId('recurring-call-form-submit')));
+    expect(actions.saveRecurringCall).toHaveBeenCalledWith(expect.objectContaining({ RecurringCallId: 4, UseRunCard: true }));
+  });
+
+  it('lets a facility name the form filled in follow the facility, and keeps one the dispatcher typed', async () => {
+    // SAFETY: points of interest with only the fields the picker and the form read.
+    const pois = [
+      { PoiId: 1, Name: 'Station A', Address: null, PoiTypeName: null },
+      { PoiId: 2, Name: 'Station B', Address: null, PoiTypeName: null },
+    ] as never;
+
+    usePoisStore.setState({ pois, fetchPois: jest.fn(async () => undefined) });
+    await render(<RecurringCallFormScreen mode="create" />);
+
+    const pick = async (poiId: number) => {
+      await fireEvent.press(screen.getByTestId('recurring-call-form-facility-poi'));
+      await fireEvent.press(screen.getByTestId(`recurring-call-facility-picker-poi-${poiId}`, hidden));
+    };
+
+    await pick(1);
+    expect(screen.getByTestId('recurring-call-form-facility-name')).toHaveProp('value', 'Station A');
+    await pick(2);
+    expect(screen.getByTestId('recurring-call-form-facility-name')).toHaveProp('value', 'Station B');
+
+    await fireEvent.changeText(screen.getByTestId('recurring-call-form-facility-name'), 'Ward 3 entrance');
+    await pick(1);
+    expect(screen.getByTestId('recurring-call-form-facility-name')).toHaveProp('value', 'Ward 3 entrance');
+    usePoisStore.setState({ pois: [] });
   });
 
   it('edits a schedule and words the server’s validation keys', async () => {
     jest.mocked(useLocalSearchParams).mockReturnValue({ id: '4' });
-    useRecurringCallsStore.setState({ details: { '4': { RecurringCall: schedule(4), NextDispatches: [], UpcomingCalls: [] } } });
+    useRecurringCallsStore.setState({ details: { '4': detailOf() } });
+    actions.fetchRecurringCall.mockResolvedValueOnce(detailOf());
     actions.saveRecurringCall.mockRejectedValueOnce(
       new ApiError({
         kind: 'http',
@@ -209,7 +340,7 @@ describe('RecurringCallFormScreen', () => {
       })
     );
 
-    await render(<RecurringCallFormScreen />);
+    await render(<RecurringCallFormScreen mode="edit" />);
     expect(screen.getByTestId('recurring-call-form-name')).toHaveProp('value', 'Transfers 4');
     await fireEvent.changeText(screen.getByTestId('recurring-call-form-name'), 'Dialysis transfers');
     await act(async () => fireEvent.press(screen.getByTestId('recurring-call-form-submit')));
@@ -228,8 +359,9 @@ describe('RecurringCallFormScreen', () => {
 
   it('refuses a schedule the person may not change', async () => {
     jest.mocked(useLocalSearchParams).mockReturnValue({ id: '4' });
-    useRecurringCallsStore.setState({ details: { '4': { RecurringCall: schedule(4, { CanManage: false }), NextDispatches: [], UpcomingCalls: [] } } });
-    await render(<RecurringCallFormScreen />);
+    useRecurringCallsStore.setState({ details: { '4': detailOf({ CanManage: false }) } });
+    actions.fetchRecurringCall.mockResolvedValueOnce(detailOf({ CanManage: false }));
+    await render(<RecurringCallFormScreen mode="edit" />);
     expect(screen.getByTestId('recurring-call-form-not-allowed')).toBeTruthy();
   });
 });
@@ -304,10 +436,28 @@ describe('RecurringCallDetailScreen', () => {
     await render(<RecurringCallDetailScreen />);
     expect(screen.getByTestId('recurring-call-detail-error')).toHaveTextContent(/recurring_calls\.not_found/);
   });
+
+  it('keeps "Send call" a button of its own beside the held call’s row', async () => {
+    showDetail();
+    await render(<RecurringCallDetailScreen />);
+
+    expect(screen.getByTestId('recurring-call-upcoming-55-send')).toBeTruthy();
+    expect(within(screen.getByTestId('recurring-call-upcoming-55')).queryByTestId('recurring-call-upcoming-55-send')).toBeNull();
+  });
+
+  it('shows neither a cached schedule nor its actions where the app has no recurring calls', async () => {
+    activateVariant('responder');
+    showDetail();
+    await render(<RecurringCallDetailScreen />);
+
+    expect(screen.getByTestId('recurring-call-detail-disabled')).toBeTruthy();
+    expect(screen.queryByTestId('recurring-call-edit')).toBeNull();
+    expect(actions.fetchRecurringCall).not.toHaveBeenCalled();
+  });
 });
 
 describe('RecurringCallsCalendarScreen', () => {
-  const window = agendaWindow(startOfDay(NOW));
+  const window = agendaWindow(departmentDay(NOW, null), null);
 
   const projected = {
     Kind: 'Projected',

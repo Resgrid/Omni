@@ -87,9 +87,13 @@ export const PushNotificationModal: React.FC = () => {
   const notification = usePushNotificationModalStore((state) => state.notification);
   const hide = usePushNotificationModalStore((state) => state.hideNotificationModal);
   const [isConfirming, setIsConfirming] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
 
   useEffect(() => {
-    if (!isOpen) setIsConfirming(false);
+    if (!isOpen) {
+      setIsConfirming(false);
+      setIsNavigating(false);
+    }
   }, [isOpen]);
 
   if (!notification) return null;
@@ -99,10 +103,16 @@ export const PushNotificationModal: React.FC = () => {
   const viewKey = target ? VIEW_KEYS[target.kind] : undefined;
   const showView = !!viewKey && canRoute(target);
 
-  const view = () => {
-    if (!target) return;
-    hide();
-    void navigateToNotificationTarget(target);
+  // The push stays here until its screen opens: if navigating gives up, "View" can be pressed again. A newer push that
+  // arrived meanwhile is not closed with it.
+  const view = async () => {
+    if (!target || isNavigating) return;
+    const shown = notification;
+    setIsNavigating(true);
+    const opened = await navigateToNotificationTarget(target);
+    setIsNavigating(false);
+
+    if (opened && usePushNotificationModalStore.getState().notification === shown) hide();
   };
 
   const confirmReceipt = async () => {
@@ -168,7 +178,7 @@ export const PushNotificationModal: React.FC = () => {
               <ButtonText>{t('common.dismiss')}</ButtonText>
             </Button>
             {showView && viewKey ? (
-              <Button className="flex-1" onPress={view} testID="push-notification-view">
+              <Button className="flex-1" onPress={() => void view()} isDisabled={isNavigating} testID="push-notification-view">
                 <ButtonText>{t(viewKey)}</ButtonText>
               </Button>
             ) : null}

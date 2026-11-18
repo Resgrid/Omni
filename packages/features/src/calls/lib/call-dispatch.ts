@@ -71,18 +71,20 @@ const idKeyOf = (dispatch: DispatchedEventResultData): string | null => {
  */
 export const dispatchKey = (dispatch: DispatchedEventResultData): string => idKeyOf(dispatch) ?? nameKeyOf(dispatch);
 
-/** One row per entity: the same dispatch can arrive twice (by id and by name). */
+/**
+ * One row per entity: the same dispatch can arrive twice (by id, and again by id or by name alone). An entry with an id
+ * is that entity, so two people who share a name stay two rows; an entry without one is dropped when an entry with an id
+ * (or an earlier one without) already names the same type and name.
+ */
 export const getUniqueDispatches = (dispatches: readonly DispatchedEventResultData[]): DispatchedEventResultData[] => {
+  const namedById = new Set(dispatches.flatMap((dispatch) => (idKeyOf(dispatch) === null ? [] : [nameKeyOf(dispatch)])));
   const seen = new Set<string>();
 
   return dispatches.filter((dispatch) => {
-    const nameKey = nameKeyOf(dispatch);
-    const idKey = idKeyOf(dispatch);
+    const key = idKeyOf(dispatch) ?? nameKeyOf(dispatch);
 
-    if (seen.has(nameKey) || (idKey !== null && seen.has(idKey))) return false;
-    seen.add(nameKey);
-
-    if (idKey !== null) seen.add(idKey);
+    if (seen.has(key) || (idKeyOf(dispatch) === null && namedById.has(key))) return false;
+    seen.add(key);
 
     return true;
   });

@@ -20,7 +20,7 @@ import { registerRecurringCallsHookPoints } from './register';
 import { RECURRING_CALLS_ROUTE_PATTERNS, recurringCallsRoutes } from './routes';
 import RecurringCallAlertsScreen, { type RecurringCallAlertsScreenProps } from './screens/recurring-call-alerts';
 import RecurringCallDetailScreen, { type RecurringCallDetailScreenProps } from './screens/recurring-call-detail';
-import RecurringCallFormScreen from './screens/recurring-call-form';
+import RecurringCallFormScreen, { RecurringCallCreateScreen, RecurringCallEditScreen, type RecurringCallFormScreenProps } from './screens/recurring-call-form';
 import RecurringCallsScreen, { type RecurringCallsScreenProps } from './screens/recurring-calls';
 import RecurringCallsCalendarScreen, { type RecurringCallsCalendarScreenProps } from './screens/recurring-calls-calendar';
 
@@ -53,9 +53,12 @@ export {
   RecurringCallAlertsHost,
   RecurringCallAlertsScreen,
   type RecurringCallAlertsScreenProps,
+  RecurringCallCreateScreen,
   RecurringCallDetailScreen,
   type RecurringCallDetailScreenProps,
+  RecurringCallEditScreen,
   RecurringCallFormScreen,
+  type RecurringCallFormScreenProps,
   type RecurringCallFormValues,
   RecurringCallNotice,
   RecurringCallsCalendarScreen,

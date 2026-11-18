@@ -35,6 +35,8 @@ const mockDispatchNow = jest.fn(async () => ({ ok: true, error: null }));
 const mockCancelPending = jest.fn(async () => ({ ok: true, error: null }));
 const mockExtraData = jest.fn(async () => ({ Dispatches: [{ Id: 'u1', Type: 'Unit', Name: 'E1' }] }));
 
+type ExtraDataAnswer = Awaited<ReturnType<typeof mockExtraData>>;
+
 beforeEach(() => {
   mockPolicyRules = [];
   activateVariant('dispatch');
@@ -125,6 +127,27 @@ describe('PendingCallsScreen', () => {
     await act(async () => fireEvent.press(screen.getByTestId('dispatch-selection-confirm', hidden)));
     expect(mockDispatchNow).toHaveBeenCalledWith('p1', { dispatchList: 'U:u1' });
     expect(useToastStore.getState().toasts[0]).toMatchObject({ type: 'success', message: 'call_queues.dispatch_now_success' });
+  });
+
+  it('opens the picker for the call pressed last, even when an earlier call’s lookup finishes after it', async () => {
+    let answerFirst: (value: ExtraDataAnswer) => void = () => undefined;
+
+    mockExtraData.mockImplementationOnce(
+      () =>
+        new Promise<ExtraDataAnswer>((resolve) => {
+          answerFirst = resolve;
+        })
+    );
+    mockExtraData.mockResolvedValueOnce({ Dispatches: [{ Id: 'u2', Type: 'Unit', Name: 'E2' }] });
+    await render(<PendingCallsScreen realtime={false} />);
+
+    await act(async () => fireEvent.press(screen.getByTestId('pending-call-dispatch-p1')));
+    await act(async () => fireEvent.press(screen.getByTestId('pending-call-dispatch-p2')));
+    await act(async () => answerFirst({ Dispatches: [{ Id: 'u1', Type: 'Unit', Name: 'E1' }] }));
+    await act(async () => fireEvent.press(screen.getByTestId('dispatch-selection-confirm', hidden)));
+
+    expect(mockDispatchNow).toHaveBeenCalledTimes(1);
+    expect(mockDispatchNow).toHaveBeenCalledWith('p2', { dispatchList: 'U:u2' });
   });
 
   it('offers only the recipient lists the department shows, and only All Call with every list hidden', async () => {

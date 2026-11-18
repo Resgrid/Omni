@@ -72,7 +72,7 @@ export const PauseRecurringCallDialog: React.FC<PauseRecurringCallDialogProps> =
               ) : null}
               <View style={styles.switchRow}>
                 <Text className="flex-1 pr-3">{t('recurring_calls.delete_upcoming_calls')}</Text>
-                <Switch value={deleteUpcomingCalls} onValueChange={setDeleteUpcomingCalls} accessibilityLabel={t('recurring_calls.delete_upcoming_calls')} testID={`${testID}-delete-upcoming`} />
+                <Switch value={deleteUpcomingCalls} onValueChange={setDeleteUpcomingCalls} isDisabled={isSubmitting} accessibilityLabel={t('recurring_calls.delete_upcoming_calls')} testID={`${testID}-delete-upcoming`} />
               </View>
               <HStack space="sm" className="justify-end">
                 <Button variant="outline" action="secondary" onPress={onClose} isDisabled={isSubmitting} testID={`${testID}-cancel`}>

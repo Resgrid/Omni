@@ -1,1 +1,1 @@
-export { RecurringCallFormScreen as default } from '@resgrid/features/recurring-calls';
+export { RecurringCallEditScreen as default } from '@resgrid/features/recurring-calls';

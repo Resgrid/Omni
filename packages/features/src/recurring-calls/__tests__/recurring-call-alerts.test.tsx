@@ -9,11 +9,13 @@ import { useToastStore } from '@resgrid/ui';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import React from 'react';
+import { AppState, type AppStateStatus } from 'react-native';
 
 import { activateVariant, hidden, makeCall, setRights } from '../../calls/__tests__/test-utils';
 import { RecurringCallAlertsBanner } from '../components/recurring-call-alerts-banner';
 import { RecurringCallAlertsHost } from '../components/recurring-call-alerts-host';
 import { RecurringCallNotice } from '../components/recurring-call-notice';
+import { ALERTS_FOREGROUND_REFRESH_MS } from '../hooks/use-recurring-calls';
 import { registerRecurringCallsHookPoints } from '../register';
 import RecurringCallAlertsScreen from '../screens/recurring-call-alerts';
 
@@ -71,7 +73,7 @@ beforeEach(() => {
     ],
     newAlertIds: ['a2'],
     lastNewAt: 0,
-    busyKey: null,
+    busyKeys: [],
     unsupported: false,
     loading: {},
     errors: {},
@@ -82,7 +84,7 @@ beforeEach(() => {
     markAlertsSeen,
     disable,
   });
-  useRecurringCallsStore.setState({ busyKey: null, runOccurrenceAction, fetchRecurringCalls: jest.fn(async () => undefined), schedules: [], fetchedAt: {} });
+  useRecurringCallsStore.setState({ busyKeys: [], runOccurrenceAction, fetchRecurringCalls: jest.fn(async () => undefined), schedules: [], fetchedAt: {} });
 });
 
 afterEach(() => useToastStore.getState().clearToasts());
@@ -156,6 +158,38 @@ describe('RecurringCallAlertsScreen', () => {
     jest.mocked(useLocalSearchParams).mockReturnValue({ alertId: 'a1' });
     await render(<RecurringCallAlertsScreen />);
     expect(screen.getByTestId('recurring-alert-a1-new')).toBeTruthy();
+    expect(screen.queryByTestId('recurring-call-alerts-focus-closed')).toBeNull();
+  });
+
+  it('says when the alert a push opened was closed before the list was read, only after a successful read', async () => {
+    jest.mocked(useLocalSearchParams).mockReturnValue({ alertId: 'gone' });
+    await render(<RecurringCallAlertsScreen />);
+
+    // Nothing read yet since the screen opened: the list cannot tell.
+    expect(screen.queryByTestId('recurring-call-alerts-focus-closed')).toBeNull();
+
+    await act(() => {
+      useRecurringCallAlertsStore.setState({ fetchedAt: { alerts: 2 } });
+    });
+    expect(screen.getByTestId('recurring-call-alerts-focus-closed')).toHaveTextContent('recurring_calls.alerts.no_longer_open');
+
+    await act(() => {
+      useRecurringCallAlertsStore.setState({ errors: { alerts: { code: 'network', messageKey: 'errors.data.network' } } });
+    });
+    expect(screen.queryByTestId('recurring-call-alerts-focus-closed')).toBeNull();
+  });
+
+  it('keeps the dismiss dialog busy while its own alert is being dismissed', async () => {
+    await render(<RecurringCallAlertsScreen />);
+    await fireEvent.press(screen.getByTestId('recurring-alert-a2-dismiss'));
+    await act(() => {
+      useRecurringCallAlertsStore.setState({ busyKeys: ['alert:a1', 'alert:a2'] });
+    });
+    await act(() => {
+      useRecurringCallAlertsStore.setState({ busyKeys: ['alert:a2'] });
+    });
+
+    expect(screen.getByTestId('dismiss-alert-dialog-confirm', hidden)).toBeDisabled();
   });
 
   it('shows the empty state with a refresh', async () => {
@@ -197,6 +231,57 @@ describe('banner, host and the call detail notice', () => {
     expect(notificationSoundService.playForNotification).toHaveBeenCalledWith({ kind: 'recurringCallAlert' });
   });
 
+  it('announces nothing when the new alerts were seen before the announcement', async () => {
+    await render(<RecurringCallAlertsHost />);
+    await act(() => {
+      useRecurringCallAlertsStore.setState({ lastNewAt: 1234, newAlertIds: [] });
+    });
+
+    expect(useToastStore.getState().toasts).toEqual([]);
+    expect(notificationSoundService.playForNotification).not.toHaveBeenCalled();
+
+    await act(() => {
+      useRecurringCallAlertsStore.setState({ lastNewAt: 1300, newAlertIds: ['a9'] });
+    });
+    expect(useToastStore.getState().toasts[0]).toMatchObject({ message: 'recurring_calls.alerts.new_toast:1' });
+  });
+
+  it('reads the alerts once the foreground throttle ends when the app comes back inside it', async () => {
+    let onChange: (state: AppStateStatus) => void = () => undefined;
+    const remove = jest.fn();
+
+    const subscribe = jest.spyOn(AppState, 'addEventListener').mockImplementation((_type, listener) => {
+      onChange = listener;
+
+      return { remove };
+    });
+
+    jest.useFakeTimers({ now: 1_000_000 });
+
+    try {
+      await render(<RecurringCallAlertsHost />);
+      fetchAlerts.mockClear();
+      jest.setSystemTime(1_000_000 + 4000);
+      await act(() => onChange('active'));
+
+      expect(fetchAlerts).not.toHaveBeenCalled();
+
+      await act(() => jest.advanceTimersByTime(ALERTS_FOREGROUND_REFRESH_MS));
+      expect(fetchAlerts).toHaveBeenCalledTimes(1);
+      expect(fetchAlerts).toHaveBeenCalledWith({ bypassCache: true });
+
+      // Leaving again before the trailing read cancels it.
+      jest.setSystemTime(1_000_000 + 4000 + ALERTS_FOREGROUND_REFRESH_MS + 1000);
+      await act(() => onChange('active'));
+      await act(() => onChange('background'));
+      await act(() => jest.advanceTimersByTime(ALERTS_FOREGROUND_REFRESH_MS));
+      expect(fetchAlerts).toHaveBeenCalledTimes(1);
+    } finally {
+      jest.useRealTimers();
+      subscribe.mockRestore();
+    }
+  });
+
   it('clears the alerts where the app has no recurring calls', async () => {
     activateVariant('responder');
     await render(<RecurringCallAlertsHost />);
@@ -219,6 +304,22 @@ describe('banner, host and the call detail notice', () => {
 
     await rerender(<RecurringCallNotice call={makeCall('56')} />);
     expect(screen.queryByTestId('recurring-call-notice')).toBeNull();
+  });
+
+  it('reads a schedule made after the list was loaded, once', async () => {
+    const fetchRecurringCall = jest.fn(async () => {
+      // SAFETY: the notice reads the schedule's id and name only.
+      useRecurringCallsStore.setState({ details: { '4': { RecurringCall: { RecurringCallId: 4, Name: 'New transfers' } as never, NextDispatches: [], UpcomingCalls: [] } } });
+
+      return null;
+    });
+
+    useRecurringCallsStore.setState({ schedules: [], details: {}, detailErrors: {}, fetchedAt: { list: 1 }, fetchRecurringCall });
+    await render(<RecurringCallNotice call={makeCall('55', { RecurringCallId: 4 })} />);
+
+    expect(fetchRecurringCall).toHaveBeenCalledTimes(1);
+    expect(fetchRecurringCall).toHaveBeenCalledWith(4);
+    expect(screen.getByText('recurring_calls.created_by_schedule:New transfers')).toBeTruthy();
   });
 
   it('registers the notice with the call detail', () => {

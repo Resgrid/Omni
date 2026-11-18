@@ -31,8 +31,16 @@ export const RecurringCallRow: React.FC<RecurringCallRowProps> = ({ schedule, on
   const next = schedule.NextDispatchOn ? formatUtcInDepartmentTime(schedule.NextDispatchOn, timeZone, { dateStyle: 'medium', timeStyle: 'short' }, locale) : '';
   const testID = `recurring-call-${schedule.RecurringCallId}`;
 
+  // Two schedules may share a name: the label also says its status, facility and next dispatch, as the row shows them.
+  const label = joinParts([
+    name,
+    t(STATUS_LABEL_KEYS[status]),
+    schedule.FacilityName ? t('recurring_calls.facility_value', { facility: schedule.FacilityName }) : null,
+    next ? t('recurring_calls.next_dispatch', { time: next }) : t('recurring_calls.no_next_dispatch'),
+  ]);
+
   return (
-    <Pressable onPress={() => onPress(schedule)} accessibilityRole="button" accessibilityLabel={name} className="mb-3 rounded-xl border border-outline-100 bg-background-0 p-3" testID={testID}>
+    <Pressable onPress={() => onPress(schedule)} accessibilityRole="button" accessibilityLabel={label} className="mb-3 rounded-xl border border-outline-100 bg-background-0 p-3" testID={testID}>
       <View className="flex-row items-center">
         <Text className="flex-1 font-bold text-typography-900" numberOfLines={1}>
           {name}

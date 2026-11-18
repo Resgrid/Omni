@@ -1,8 +1,7 @@
-import { destinationPoiLabel, filterDestinationPois } from '@resgrid/features/calls/components/call-form/destination-poi-picker';
-import { CallModalFrame } from '@resgrid/features/calls/components/call-modal-frame';
+import { CallModalFrame, destinationPoiLabel, filterDestinationPois } from '@resgrid/features/calls';
 import { useTranslation } from '@resgrid/i18n';
 import type { PoiResultData } from '@resgrid/models';
-import { FlatList, Input, InputField, Pressable, Text, useThemeColors } from '@resgrid/ui';
+import { Button, ButtonText, FlatList, Input, InputField, Pressable, Spinner, Text, useThemeColors } from '@resgrid/ui';
 import { Check } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -15,6 +14,11 @@ export interface PoiPickerModalProps {
   selectedId: number | null;
   /** The picked POI, or null to clear the choice. */
   onSelect: (poi: PoiResultData | null) => void;
+  /** The list is being read. */
+  isLoading?: boolean;
+  /** The last read failed: with nothing to show, the picker offers `onRetry` instead of "none found". */
+  loadFailed?: boolean;
+  onRetry?: () => void;
   testID: string;
 }
 
@@ -22,7 +26,7 @@ export interface PoiPickerModalProps {
  * Picks one of the department's points of interest from a searchable list (a schedule's pickup facility or its call's
  * destination), with "None" to clear the choice. Same search and order as the call form's destination picker.
  */
-export const PoiPickerModal: React.FC<PoiPickerModalProps> = ({ isOpen, onClose, title, pois, selectedId, onSelect, testID }) => {
+export const PoiPickerModal: React.FC<PoiPickerModalProps> = ({ isOpen, onClose, title, pois, selectedId, onSelect, isLoading = false, loadFailed = false, onRetry, testID }) => {
   const { t } = useTranslation();
   const colors = useThemeColors();
   const [query, setQuery] = useState('');
@@ -62,6 +66,36 @@ export const PoiPickerModal: React.FC<PoiPickerModalProps> = ({ isOpen, onClose,
     );
   };
 
+  // "None found" only after a list was read (or for a search with no match): a failed read offers a retry instead.
+  const renderEmpty = () => {
+    if (pois.length === 0 && isLoading) {
+      return (
+        <View className="py-4" testID={`${testID}-loading`}>
+          <Spinner />
+        </View>
+      );
+    }
+
+    if (pois.length === 0 && loadFailed) {
+      return (
+        <View className="items-center px-4 py-4" testID={`${testID}-error`}>
+          <Text className="mb-2 text-center text-typography-600">{t('recurring_calls.poi_load_error')}</Text>
+          {onRetry ? (
+            <Button size="sm" variant="outline" onPress={onRetry} testID={`${testID}-retry`}>
+              <ButtonText>{t('common.retry')}</ButtonText>
+            </Button>
+          ) : null}
+        </View>
+      );
+    }
+
+    return (
+      <Text className="py-4 text-center text-typography-500" testID={`${testID}-empty`}>
+        {t('recurring_calls.poi_none_found')}
+      </Text>
+    );
+  };
+
   return (
     <CallModalFrame isOpen={isOpen} onClose={onClose} title={title} scrollable={false} testID={testID}>
       <View style={styles.search}>
@@ -72,13 +106,7 @@ export const PoiPickerModal: React.FC<PoiPickerModalProps> = ({ isOpen, onClose,
       <Pressable onPress={() => onSelect(null)} accessibilityRole="button" className="border-b border-outline-100 px-4 py-3" testID={`${testID}-none`}>
         <Text className="text-typography-700">{t('recurring_calls.poi_none')}</Text>
       </Pressable>
-      {visible.length === 0 ? (
-        <Text className="py-4 text-center text-typography-500" testID={`${testID}-empty`}>
-          {t('recurring_calls.poi_none_found')}
-        </Text>
-      ) : (
-        <FlatList data={visible} keyExtractor={(poi: PoiResultData) => String(poi.PoiId)} renderItem={renderItem} keyboardShouldPersistTaps="handled" testID={`${testID}-list`} />
-      )}
+      {visible.length === 0 ? renderEmpty() : <FlatList data={visible} keyExtractor={(poi: PoiResultData) => String(poi.PoiId)} renderItem={renderItem} keyboardShouldPersistTaps="handled" testID={`${testID}-list`} />}
     </CallModalFrame>
   );
 };

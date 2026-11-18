@@ -78,12 +78,11 @@ export default function RecurringCallDetailScreen({ recurringCallId: idProp }: R
   const key = recurringCallId ? String(recurringCallId) : '';
   const detail = useRecurringCallsStore((state) => (key ? state.details[key] : undefined));
   const detailError = useRecurringCallsStore((state) => (key ? state.detailErrors[key] : undefined));
-  const busyKey = useRecurringCallsStore((state) => state.busyKey);
+  const busyKeys = useRecurringCallsStore((state) => state.busyKeys);
   const canCreate = useRecurringCallsStore((state) => state.options?.CanCreate === true);
   const today = useRecurringCallsStore((state) => state.options?.Today ?? null);
   const priorities = useCallsStore((state) => state.callPriorities);
   const { recipients } = useDispatchRecipients(isEnabled && !!detail);
-  const dispatchNow = useCallDispatchNow();
   const [modal, setModal] = useState<null | 'pause' | 'delete'>(null);
   const [deleteUpcoming, setDeleteUpcoming] = useState(true);
   const locale = i18n?.language ?? 'en';
@@ -91,6 +90,9 @@ export default function RecurringCallDetailScreen({ recurringCallId: idProp }: R
   const refresh = useCallback(async () => {
     if (recurringCallId) await useRecurringCallsStore.getState().fetchRecurringCall(recurringCallId, { bypassCache: true });
   }, [recurringCallId]);
+
+  // A held call that was sent leaves the schedule's waiting calls: read the schedule again (no push may reach this desk).
+  const dispatchNow = useCallDispatchNow({ onDispatched: () => void refresh() });
 
   useEffect(() => {
     if (!isEnabled || !recurringCallId) return;
@@ -105,6 +107,16 @@ export default function RecurringCallDetailScreen({ recurringCallId: idProp }: R
   const schedule = detail?.RecurringCall ?? null;
   const title = schedule ? scheduleName(schedule) : t('recurring_calls.detail_title');
   const header = <ScreenHeader title={title} onBack={back} />;
+
+  // Off in this app or department: no request runs, so neither a cached schedule nor its actions are shown.
+  if (!isEnabled) {
+    return (
+      <View style={styles.screen} testID="recurring-call-detail-screen">
+        <ScreenHeader title={t('recurring_calls.detail_title')} onBack={back} />
+        <ZeroState heading={t('recurring_calls.not_available')} icon={CalendarDays} testID="recurring-call-detail-disabled" />
+      </View>
+    );
+  }
 
   if (!recurringCallId) {
     return (
@@ -135,7 +147,7 @@ export default function RecurringCallDetailScreen({ recurringCallId: idProp }: R
   }
 
   const status = recurringCallStatus(schedule);
-  const isBusy = busyKey === recurringScheduleKey(schedule.RecurringCallId);
+  const isBusy = busyKeys.includes(recurringScheduleKey(schedule.RecurringCallId));
   const priority = resolvePriority(priorities, schedule.Priority);
   const protectedLabel = t('data_protection.protected_value');
   const formatInstant = (value: string | null | undefined): string => formatUtcInDepartmentTime(value, timeZone, { dateStyle: 'medium', timeStyle: 'short' }, locale);
@@ -179,23 +191,30 @@ export default function RecurringCallDetailScreen({ recurringCallId: idProp }: R
     }
   };
 
+  // The row opens the call; "Send call" sits beside it, not inside it, so screen readers reach it as its own button.
   const renderUpcoming = (call: RecurringCallUpcomingCallData) => (
-    <Pressable
-      key={call.CallId}
-      onPress={() => pushRoutePath(router, callRoutes.callDetail(String(call.CallId)))}
-      accessibilityRole="button"
-      accessibilityLabel={joinParts([call.Number, callDisplayName(call, protectedLabel)])}
-      className="mt-2 flex-row items-center border-t border-outline-100 pt-2"
-      testID={`recurring-call-upcoming-${call.CallId}`}
-    >
-      <View className="flex-1">
-        <Text size="sm" className="font-semibold text-typography-900" numberOfLines={1}>
-          {joinParts([call.Number ? `#${call.Number}` : null, callDisplayName(call, protectedLabel)])}
-        </Text>
-        <Text size="xs" className="text-typography-500">
-          {call.IsHeld ? t('recurring_calls.upcoming_held') : t('recurring_calls.upcoming_dispatch_on', { time: formatInstant(call.DispatchOn) })}
-        </Text>
-      </View>
+    <View key={call.CallId} className="mt-2 flex-row items-center border-t border-outline-100 pt-2">
+      <Pressable
+        onPress={() => pushRoutePath(router, callRoutes.callDetail(String(call.CallId)))}
+        accessibilityRole="button"
+        accessibilityLabel={joinParts([call.Number, callDisplayName(call, protectedLabel)])}
+        className="flex-1 flex-row items-center"
+        testID={`recurring-call-upcoming-${call.CallId}`}
+      >
+        <View className="flex-1">
+          <Text size="sm" className="font-semibold text-typography-900" numberOfLines={1}>
+            {joinParts([call.Number ? `#${call.Number}` : null, callDisplayName(call, protectedLabel)])}
+          </Text>
+          <Text size="xs" className="text-typography-500">
+            {call.IsHeld ? t('recurring_calls.upcoming_held') : t('recurring_calls.upcoming_dispatch_on', { time: formatInstant(call.DispatchOn) })}
+          </Text>
+        </View>
+        {call.IsHeld && canCreate ? null : (
+          <View>
+            <ChevronRight size={16} color={colors.textSubtle} />
+          </View>
+        )}
+      </Pressable>
       {call.IsHeld && canCreate ? (
         <ActionButton
           label={t('recurring_calls.alerts.send_held')}
@@ -204,12 +223,8 @@ export default function RecurringCallDetailScreen({ recurringCallId: idProp }: R
           onPress={() => void dispatchNow.openDispatchPicker(String(call.CallId))}
           testID={`recurring-call-upcoming-${call.CallId}-send`}
         />
-      ) : (
-        <View>
-          <ChevronRight size={16} color={colors.textSubtle} />
-        </View>
-      )}
-    </Pressable>
+      ) : null}
+    </View>
   );
 
   return (

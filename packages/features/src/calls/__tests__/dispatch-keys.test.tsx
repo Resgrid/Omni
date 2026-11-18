@@ -17,6 +17,15 @@ describe('dispatch keys', () => {
     expect(getUniqueDispatches([...SHARED_ID, dispatch({ Type: 'Role', Name: 'Driver' })]).map(dispatchKey)).toEqual(['id:user:7', 'id:unit:7', 'id:groups:7', 'name:role:driver']);
   });
 
+  it('keeps two people who share a name, and drops a second arrival of one entity by id or by name alone', () => {
+    const twoPats = [dispatch({ Id: 'u1', Type: 'User', Name: 'Pat Doe' }), dispatch({ Id: 'u2', Type: 'User', Name: 'Pat Doe' })];
+
+    expect(getUniqueDispatches(twoPats).map(dispatchKey)).toEqual(['id:user:u1', 'id:user:u2']);
+    expect(getUniqueDispatches([...twoPats, dispatch({ Id: 'u1', Type: 'User', Name: 'Pat Doe' })])).toHaveLength(2);
+    // The same entity by name first, by id after: the row with the id stays (it is the one that can be released).
+    expect(getUniqueDispatches([dispatch({ Type: 'Unit', Name: 'Engine 7' }), dispatch({ Id: '7', Type: 'Unit', Name: 'Engine 7' })]).map(dispatchKey)).toEqual(['id:unit:7']);
+  });
+
   it('renders the ticker of a call dispatched to entities sharing an id without duplicate React keys', async () => {
     const consoleError = jest.spyOn(console, 'error').mockImplementation(() => undefined);
 

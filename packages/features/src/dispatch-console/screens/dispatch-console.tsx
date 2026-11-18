@@ -1,7 +1,7 @@
 import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { personnelFullName, useCallsStore, usePersonnelStore, useUnitsStore, useWeatherAlertsStore } from '@resgrid/data';
 import { callQueuesRoutes } from '@resgrid/features/call-queues';
-import { callDisplayName, callDisplayText, CallNotesModal, callRoutes, CloseCallSheet, useReleaseFromCall } from '@resgrid/features/calls';
+import { callDisplayName, callDisplayText, CallNotesModal, type CallRelease, callRoutes, CloseCallSheet, isPersonReleasableFromCall, isUnitDispatchedToCall, useReleaseFromCall } from '@resgrid/features/calls';
 import { personnelRoutes } from '@resgrid/features/personnel';
 import { unitsRoutes } from '@resgrid/features/units';
 import { weatherAlertsRoutes } from '@resgrid/features/weather-alerts';
@@ -98,9 +98,23 @@ export default function DispatchConsoleScreen({ realtime = true, mapHref = '/map
 
   const log = useConsoleStore((state) => state.addActivity);
 
+  // A confirmation open for a unit or member that has left the filtered call (released elsewhere, another call picked) closes.
+  const isReleasable = useCallback(
+    (target: CallRelease) => {
+      if (!callFilter || callFilter.callId !== target.callId) return false;
+
+      if (target.kind === 'unit') return isUnitDispatchedToCall(units.find((unit) => unit.UnitId === target.id) ?? { UnitId: target.id, Name: target.name }, callFilter.dispatches);
+      const person = personnel.find((entry) => entry.UserId === target.id);
+
+      return person ? isPersonReleasableFromCall(person, callFilter) : false;
+    },
+    [callFilter, personnel, units]
+  );
+
   // Release (stand down) a unit or member from the filtered call; the call stays open.
   const release = useReleaseFromCall({
     call: filteredCall,
+    isReleasable,
     onReleased: (released) => log({ type: released.kind === 'unit' ? 'unit' : 'personnel', action: t('calls.release.action'), description: released.name, metadata: { callId: released.callId } }),
     testID: 'console-release-dialog',
   });

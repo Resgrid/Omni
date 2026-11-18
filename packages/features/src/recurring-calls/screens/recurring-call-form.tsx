@@ -1,6 +1,6 @@
 import { isApiError } from '@resgrid/api';
 import { replaceRoutePath } from '@resgrid/core/navigation/route-paths';
-import { personnelFullName, recurringScheduleKey, useCallsStore, usePoisStore, useRecurringCallsStore } from '@resgrid/data';
+import { type DataError, personnelFullName, recurringScheduleKey, useCallsStore, usePoisStore, useRecurringCallsStore } from '@resgrid/data';
 import {
   type ChipOption,
   defaultPriorityId,
@@ -14,11 +14,11 @@ import {
   useDispatchRecipients,
 } from '@resgrid/features/calls';
 import { useTranslation } from '@resgrid/i18n';
-import { RecurringCallCreationMode, type RecurringCallErrorData, RecurringCallFrequency } from '@resgrid/models';
+import { type PoiResultData, RecurringCallCreationMode, type RecurringCallErrorData, RecurringCallFrequency } from '@resgrid/models';
 import { Button, ButtonSpinner, ButtonText, DateTimeField, KeyboardAwareScrollView, Loading, Pressable, ScreenHeader, Text, useThemeColors, useToast, ZeroState } from '@resgrid/ui';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { MapPin, Users, X } from 'lucide-react-native';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { ActionButton } from '../components/action-button';
@@ -59,6 +59,24 @@ const parseScheduleId = (value: string | string[] | undefined): number | null =>
 /** The choices offered, with the current value kept even when the department's list no longer has it. */
 const withCurrent = (choices: readonly number[], current: number): number[] => (choices.includes(current) ? [...choices] : [...choices, current].sort((a, b) => a - b));
 
+/** The schedule to edit could not be read and nothing said why (no answer for it). */
+const SCHEDULE_NOT_FOUND: DataError = { code: 'not_found', messageKey: 'errors.data.not_found' };
+
+/**
+ * The name to keep when the POI changes: one the form filled in from the previous POI (or none) follows the new POI, one
+ * the dispatcher typed stays.
+ */
+const nameForPoi = (current: string, previous: PoiResultData | null, next: PoiResultData | null): string => {
+  const followsPoi = !current.trim() || (previous !== null && current === (previous.Name ?? ''));
+
+  return followsPoi ? (next?.Name ?? '') : current;
+};
+
+export interface RecurringCallFormScreenProps {
+  /** `create` (`/recurring-calls/new`) ignores any id; `edit` (`/recurring-calls/[id]/edit`) needs a valid one. */
+  mode: 'create' | 'edit';
+}
+
 /**
  * Creates (`/recurring-calls/new`) or edits (`/recurring-calls/[id]/edit`) a recurring call schedule (Dispatch): its name
  * and description; how it repeats (daily, weekly on chosen days, monthly by date or by the nth/last weekday) at one or more
@@ -67,48 +85,76 @@ const withCurrent = (choices: readonly number[], current: number): number[] => (
  * the call each occurrence creates; the schedule's contact, pickup facility and destination; who it dispatches and who is
  * alerted. Core's validation keys (and the department's New Call Form Fields) come back worded in the user's language.
  */
-export default function RecurringCallFormScreen() {
+export default function RecurringCallFormScreen({ mode }: RecurringCallFormScreenProps) {
   const { t, i18n } = useTranslation();
   const router = useRouter();
   const toast = useToast();
   const colors = useThemeColors();
   const isEnabled = useIsRecurringCallsEnabled();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
-  const recurringCallId = parseScheduleId(params.id);
-  const isEdit = recurringCallId !== null;
+  const isEdit = mode === 'edit';
+  // The route decides: a create never edits whatever id it is given, and an edit with a bad id edits nothing.
+  const recurringCallId = isEdit ? parseScheduleId(params.id) : null;
   const options = useRecurringCallsStore((state) => state.options);
   const optionsLoaded = useRecurringCallsStore((state) => (state.fetchedAt.options ?? 0) > 0);
   const detail = useRecurringCallsStore((state) => (recurringCallId ? state.details[String(recurringCallId)] : undefined));
-  const detailError = useRecurringCallsStore((state) => (recurringCallId ? state.detailErrors[String(recurringCallId)] : undefined));
-  const isSaving = useRecurringCallsStore((state) => state.busyKey === recurringScheduleKey(recurringCallId ?? 0));
+  const isSaving = useRecurringCallsStore((state) => state.busyKeys.includes(recurringScheduleKey(recurringCallId ?? 0)));
   const priorities = useCallsStore((state) => state.callPriorities);
   const callTypes = useCallsStore((state) => state.callTypes);
   const pois = usePoisStore((state) => state.pois);
   const destinationPois = usePoisStore((state) => state.destinationPois);
+  const poisLoading = usePoisStore((state) => state.loading.pois === true);
+  const poisFailed = usePoisStore((state) => !!state.errors.pois);
+  const destinationPoisLoading = usePoisStore((state) => state.loading.destinationPois === true);
+  const destinationPoisFailed = usePoisStore((state) => !!state.errors.destinationPois);
   const { recipients, isLoading: recipientsLoading } = useDispatchRecipients(isEnabled);
   const { LocationPicker } = useCallFormHookPoints();
   const [values, setValues] = useState<RecurringCallFormValues | null>(null);
+  const [loadError, setLoadError] = useState<DataError | null>(null);
+  const [optionsReady, setOptionsReady] = useState(false);
   const [errors, setErrors] = useState<RecurringCallErrorData[]>([]);
   const [open, setOpen] = useState<OpenPicker>(null);
   const [newTime, setNewTime] = useState('');
   const locale = i18n?.language ?? 'en';
 
+  // An edit starts from the schedule as the server has it now, never from a cached copy: another dispatcher may have
+  // changed it since, and saving the old copy would undo that change. Local edits are kept once it has started.
+  const loadSchedule = useCallback(async () => {
+    if (!recurringCallId) return;
+    setLoadError(null);
+    const fresh = await useRecurringCallsStore.getState().fetchRecurringCall(recurringCallId, { bypassCache: true });
+    const failure = useRecurringCallsStore.getState().detailErrors[String(recurringCallId)] ?? null;
+
+    if (fresh && !failure) setValues((current) => current ?? scheduleToFormValues(fresh.RecurringCall));
+    else setLoadError(failure ?? SCHEDULE_NOT_FOUND);
+  }, [recurringCallId]);
+
   useEffect(() => {
-    if (!isEnabled) return;
-    void useRecurringCallsStore.getState().fetchOptions();
+    if (!isEnabled) return undefined;
+    let active = true;
+
+    // A new schedule starts from the department's defaults and today as they are now (the session's copy can be from
+    // yesterday); an edit only needs the choices.
+    void useRecurringCallsStore
+      .getState()
+      .fetchOptions(!isEdit)
+      .finally(() => {
+        if (active) setOptionsReady(true);
+      });
     void useCallsStore.getState().fetchCallPriorities();
     void useCallsStore.getState().fetchCallTypes();
 
-    if (recurringCallId) void useRecurringCallsStore.getState().fetchRecurringCall(recurringCallId, { bypassCache: true });
-  }, [isEnabled, recurringCallId]);
+    if (isEdit) void loadSchedule();
 
-  // The form starts once there is something to start from: the schedule being edited, or the department's defaults.
+    return () => {
+      active = false;
+    };
+  }, [isEdit, isEnabled, loadSchedule]);
+
+  // A new schedule starts once the options read has settled, so its lead times and start date are the department's.
   useEffect(() => {
-    if (values !== null) return;
-
-    if (isEdit && detail) setValues(scheduleToFormValues(detail.RecurringCall));
-    else if (!isEdit) setValues(emptyRecurringCallForm(options, defaultPriorityId(priorities)));
-  }, [detail, isEdit, options, priorities, values]);
+    if (values === null && !isEdit && optionsReady) setValues(emptyRecurringCallForm(options, defaultPriorityId(priorities)));
+  }, [isEdit, options, optionsReady, priorities, values]);
 
   // The department's today arrives with the options: a new schedule starts on it unless one was picked.
   useEffect(() => {
@@ -135,24 +181,35 @@ export default function RecurringCallFormScreen() {
   const alertRecipients = values?.alertRecipients;
   const dispatchSelection = useMemo(() => ({ everyone: false, users: [], groups: [], roles: [], units: [], ...dispatchTargets }), [dispatchTargets]);
   const alertSelection = useMemo(() => ({ everyone: false, ids: alertRecipients ?? {} }), [alertRecipients]);
+  // The names behind the picks: read through the whole directory, so only when the picks or the directory change.
+  const dispatchNames = useMemo(() => (dispatchTargets ? targetNames(dispatchTargets, recipients) : []), [dispatchTargets, recipients]);
+  const alertNames = useMemo(() => (alertRecipients ? targetNames(alertRecipients, recipients) : []), [alertRecipients, recipients]);
 
   const back = () => router.back();
   const title = isEdit ? t('recurring_calls.edit_title') : t('recurring_calls.new_title');
   const header = <ScreenHeader title={title} onBack={back} />;
   const schedule = detail?.RecurringCall ?? null;
 
-  if (isEdit && !values) {
+  if (isEdit && isEnabled && !recurringCallId) {
     return (
       <View style={styles.screen} testID="recurring-call-form-screen">
         {header}
-        {detailError ? (
+        <ZeroState isError heading={t('recurring_calls.not_found')} testID="recurring-call-form-invalid" />
+      </View>
+    );
+  }
+
+  // Off in this app or department: nothing loads, so the edit never waits on a read that does not run.
+  if (isEdit && isEnabled && !values) {
+    return (
+      <View style={styles.screen} testID="recurring-call-form-screen">
+        {header}
+        {loadError ? (
           <ZeroState
             isError
-            heading={detailError.code === 'not_found' ? t('recurring_calls.not_found') : t('common.errorOccurred')}
-            description={t(detailError.messageKey)}
-            onRetry={async () => {
-              if (recurringCallId) await useRecurringCallsStore.getState().fetchRecurringCall(recurringCallId, { bypassCache: true });
-            }}
+            heading={loadError.code === 'not_found' ? t('recurring_calls.not_found') : t('common.errorOccurred')}
+            description={t(loadError.messageKey)}
+            onRetry={loadSchedule}
             testID="recurring-call-form-load-error"
           />
         ) : (
@@ -181,11 +238,13 @@ export default function RecurringCallFormScreen() {
   const point = location.ok ? { latitude: location.latitude, longitude: location.longitude } : null;
   const facilityPoi = values.facilityPoiId === null ? null : (pois.find((poi) => poi.PoiId === values.facilityPoiId) ?? null);
   const destinationPoi = values.destinationPoiId === null ? null : (destinationPois.find((poi) => poi.PoiId === values.destinationPoiId) ?? null);
-  const dispatchSummary = summarizeNames(targetNames(values.dispatch, recipients), values.useRunCard ? t('recurring_calls.targets_run_card_only') : t('recurring_calls.targets_none'));
-  const alertSummary = summarizeNames(targetNames(values.alertRecipients, recipients), t('recurring_calls.alert_recipients_owner'));
   const leadChoices = withCurrent(options?.LeadTimeChoices?.length ? options.LeadTimeChoices : FALLBACK_LEAD_CHOICES, values.leadTimeMinutes);
   const alertChoices = withCurrent(options?.ManualAlertChoices?.length ? options.ManualAlertChoices : FALLBACK_ALERT_CHOICES, values.manualAlertMinutes);
   const runCardsEnabled = options?.RunCardsEnabled === true;
+  // The schedule keeps its run card choice while the department has run cards off (Core applies it again once they are
+  // back on), but nobody is added by a run card meanwhile.
+  const dispatchSummary = summarizeNames(dispatchNames, values.useRunCard && runCardsEnabled ? t('recurring_calls.targets_run_card_only') : t('recurring_calls.targets_none'));
+  const alertSummary = summarizeNames(alertNames, t('recurring_calls.alert_recipients_owner'));
 
   const frequencyOptions: ChipOption<RecurringCallFrequency>[] = [
     { value: RecurringCallFrequency.Daily, label: t('recurring_calls.frequency_daily') },
@@ -407,7 +466,7 @@ export default function RecurringCallFormScreen() {
           )}
           <FormSwitchRow
             label={t('recurring_calls.field_use_run_card')}
-            value={values.useRunCard ? runCardsEnabled : false}
+            value={values.useRunCard}
             onChange={(value) => update('useRunCard', value)}
             disabled={!runCardsEnabled}
             hint={runCardsEnabled ? t('recurring_calls.run_card_hint') : t('recurring_calls.run_card_disabled_hint')}
@@ -625,9 +684,12 @@ export default function RecurringCallFormScreen() {
         pois={pois}
         selectedId={values.facilityPoiId}
         onSelect={(poi) => {
-          setValues((current) => (current ? { ...current, facilityPoiId: poi?.PoiId ?? null, facilityName: current.facilityName || (poi?.Name ?? '') } : current));
+          setValues((current) => (current ? { ...current, facilityPoiId: poi?.PoiId ?? null, facilityName: nameForPoi(current.facilityName, facilityPoi, poi) } : current));
           setOpen(null);
         }}
+        isLoading={poisLoading}
+        loadFailed={poisFailed}
+        onRetry={() => void usePoisStore.getState().fetchPois({ bypassCache: true })}
         testID="recurring-call-facility-picker"
       />
       <PoiPickerModal
@@ -637,9 +699,12 @@ export default function RecurringCallFormScreen() {
         pois={destinationPois}
         selectedId={values.destinationPoiId}
         onSelect={(poi) => {
-          setValues((current) => (current ? { ...current, destinationPoiId: poi?.PoiId ?? null, destinationName: current.destinationName || (poi?.Name ?? '') } : current));
+          setValues((current) => (current ? { ...current, destinationPoiId: poi?.PoiId ?? null, destinationName: nameForPoi(current.destinationName, destinationPoi, poi) } : current));
           setOpen(null);
         }}
+        isLoading={destinationPoisLoading}
+        loadFailed={destinationPoisFailed}
+        onRetry={() => void usePoisStore.getState().fetchDestinationPois({ bypassCache: true })}
         testID="recurring-call-destination-picker"
       />
       {LocationPicker ? (
@@ -658,6 +723,12 @@ export default function RecurringCallFormScreen() {
     </View>
   );
 }
+
+/** `/recurring-calls/new`: a new schedule, whatever the link carries. */
+export const RecurringCallCreateScreen: React.FC = () => <RecurringCallFormScreen mode="create" />;
+
+/** `/recurring-calls/[id]/edit`: the schedule the id names. */
+export const RecurringCallEditScreen: React.FC = () => <RecurringCallFormScreen mode="edit" />;
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },

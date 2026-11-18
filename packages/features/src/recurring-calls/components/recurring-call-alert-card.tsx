@@ -27,9 +27,9 @@ export interface RecurringCallAlertCardProps {
   alert: RecurringCallAlertResultData;
   /** Raised since the dispatcher last looked: drawn highlighted. */
   isNew: boolean;
-  /** An alert or occurrence action in flight (busy keys of the stores). */
-  alertBusyKey: string | null;
-  occurrenceBusyKey: string | null;
+  /** The alert and occurrence actions in flight (busy keys of the stores). */
+  alertBusyKeys: readonly string[];
+  occurrenceBusyKeys: readonly string[];
   onOccurrenceAction: (action: RecurringOccurrenceAction, occurrence: RecurringCallOccurrenceInput) => void;
   onAcknowledge: (alert: RecurringCallAlertResultData) => void;
   onDismiss: (alert: RecurringCallAlertResultData) => void;
@@ -48,8 +48,8 @@ export interface RecurringCallAlertCardProps {
 export const RecurringCallAlertCard: React.FC<RecurringCallAlertCardProps> = ({
   alert,
   isNew,
-  alertBusyKey,
-  occurrenceBusyKey,
+  alertBusyKeys,
+  occurrenceBusyKeys,
   onOccurrenceAction,
   onAcknowledge,
   onDismiss,
@@ -66,7 +66,7 @@ export const RecurringCallAlertCard: React.FC<RecurringCallAlertCardProps> = ({
   const schedule = alert.ScheduleName?.trim() || `#${alert.RecurringCallId}`;
   const when = formatWallClock(alert.OccurrenceOnLocal, locale);
   const held = isHeldCall(alert);
-  const busy = alertBusyKey === recurringAlertKey(alert.AlertId);
+  const busy = alertBusyKeys.includes(recurringAlertKey(alert.AlertId));
   const testID = `recurring-alert-${alert.AlertId}`;
   const occurrence: RecurringCallOccurrenceInput = { RecurringCallId: alert.RecurringCallId, OccurrenceOn: alert.OccurrenceOn };
 
@@ -119,7 +119,7 @@ export const RecurringCallAlertCard: React.FC<RecurringCallAlertCardProps> = ({
         </Text>
       ) : null}
       {alert.CanAct && alert.CanSend ? (
-        <OccurrenceButtons occurrence={occurrence} actions={SEND_ACTIONS} busyKey={occurrenceBusyKey} onAction={onOccurrenceAction} label={`${schedule} ${when}`} testID={`${testID}-occurrence`} />
+        <OccurrenceButtons occurrence={occurrence} actions={SEND_ACTIONS} busyKeys={occurrenceBusyKeys} onAction={onOccurrenceAction} label={`${schedule} ${when}`} testID={`${testID}-occurrence`} />
       ) : null}
       <View className="mt-2 flex-row flex-wrap justify-end">
         {alert.CanAct && held && onDispatchHeld && alert.CallId ? (

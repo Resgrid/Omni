@@ -5,11 +5,14 @@ import type { CallRights } from '../lib/call-permissions';
 import {
   type CallResourceLists,
   classifyReleaseError,
+  crewOnCall,
   getReleasedPersonnel,
   getReleasedUnits,
   isPersonOnCall,
+  isPersonReleasableFromCall,
   isUnitDispatchedToCall,
   isUnitOnCall,
+  newerDispatches,
   releaseKindOf,
   type ReleasePermissionInput,
   resolveReleasePermissions,
@@ -70,6 +73,56 @@ describe('who is on a call once some were released', () => {
     expect(getReleasedUnits({})).toEqual([]);
     expect(getReleasedPersonnel(null)).toEqual([]);
     expect(isUnitOnCall({ ...MUG, CurrentDestinationId: '123' }, { callId: '123', dispatches: [] })).toBe(true);
+  });
+
+  it('matches a unit by id when both have one, by name only when one has none', () => {
+    // Medic 1 was unit 7 when the dispatch was read; unit 8 has the name now.
+    const dispatches = [entry('Unit', '7', 'Medic 1')];
+
+    expect(isUnitDispatchedToCall({ UnitId: '8', Name: 'Medic 1' }, dispatches)).toBe(false);
+    expect(isUnitDispatchedToCall({ UnitId: '7', Name: 'Medic 1 (old)' }, dispatches)).toBe(true);
+    expect(isUnitDispatchedToCall({ UnitId: '8', Name: 'Medic 1' }, [entry('Unit', '', 'Medic 1')])).toBe(true);
+  });
+
+  it('puts the crew of a dispatched unit on the call and lets them be released, unless released already', () => {
+    // SAFETY: the crew reads the unit id, name and role seats only.
+    const units = [
+      {
+        UnitId: '46',
+        Name: 'Ambulance 2',
+        Roles: [
+          { RoleId: '1', UserId: 'u-lee', RoleName: 'Driver', Name: 'Lee' },
+          { RoleId: '2', UserId: '', RoleName: 'Medic', Name: '' },
+        ],
+      },
+      { UnitId: '45', Name: 'MUG 1', Roles: [{ RoleId: '3', UserId: 'u-mug', RoleName: 'Driver', Name: 'Mo' }] },
+    ];
+
+    const withCrew = { ...lists, crewUserIds: crewOnCall(units, lists.dispatches) };
+
+    expect(withCrew.crewUserIds).toEqual(['u-lee']);
+    expect(isPersonOnCall({ UserId: 'u-lee' }, withCrew)).toBe(true);
+    expect(isPersonReleasableFromCall({ UserId: 'u-lee' }, withCrew)).toBe(true);
+    expect(isPersonOnCall({ UserId: 'u-mug' }, withCrew)).toBe(false);
+    expect(isPersonReleasableFromCall({ UserId: 'u-lee' }, { ...withCrew, releasedPersonnel: [entry('User', 'u-lee', 'Lee')] })).toBe(false);
+  });
+
+  it('releases someone on the call through their status only when the status is typed to the call', () => {
+    // An untyped legacy destination may be a station with the call's id: shown on the call, never offered for release.
+    expect(isPersonOnCall({ UserId: 'u-legacy', StatusDestinationId: '123', StatusDestinationType: 0 }, lists)).toBe(true);
+    expect(isPersonReleasableFromCall({ UserId: 'u-legacy', StatusDestinationId: '123', StatusDestinationType: 0 }, lists)).toBe(false);
+    expect(isPersonReleasableFromCall({ UserId: 'u-typed', StatusDestinationId: '123', StatusDestinationType: 2 }, lists)).toBe(true);
+    expect(isPersonReleasableFromCall({ UserId: 'u-direct' }, lists)).toBe(true);
+  });
+
+  it('reads the newer of two dispatch reads, an empty newer one included', () => {
+    const older = { dispatches: [entry('Unit', '46', 'Ambulance 2')], fetchedAt: 100 };
+    const newerEmpty = { dispatches: [], fetchedAt: 200 };
+
+    expect(newerDispatches(older, newerEmpty)).toEqual([]);
+    expect(newerDispatches({ ...newerEmpty, fetchedAt: 50 }, older)).toBe(older.dispatches);
+    expect(newerDispatches({ dispatches: undefined, fetchedAt: 500 }, older)).toBe(older.dispatches);
+    expect(newerDispatches({ dispatches: null, fetchedAt: 0 }, { dispatches: undefined, fetchedAt: 0 })).toBeNull();
   });
 
   it('releases units and people, never a group or role', () => {

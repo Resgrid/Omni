@@ -1,16 +1,17 @@
 import type { ReleaseResourceKind } from '@resgrid/api';
 import { useAuthStore } from '@resgrid/auth';
 import { useCapability } from '@resgrid/config';
+import { logger } from '@resgrid/core/logging/logger';
 import { type CallReleaseOutcome, useCallDetailStore, useCallsStore, usePersonnelStore, useUnitsStore, useUnitStatusStore } from '@resgrid/data';
 import { useStatusContext } from '@resgrid/features/status/status-context';
 import { useTranslation } from '@resgrid/i18n';
 import type { CallResultData } from '@resgrid/models';
 import { Checkbox, CheckboxIcon, CheckboxIndicator, CheckboxLabel, Text, useToast } from '@resgrid/ui';
 import { CheckIcon } from '@resgrid/ui/icon';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
 import { CallConfirmDialog } from '../components/call-confirm-dialog';
-import { classifyReleaseError, type ReleasableCall, RELEASE_TEXT_KEYS, type ReleasePermissions, resolveReleasePermissions } from '../lib/call-release';
+import { classifyReleaseError, type ReleasableCall, RELEASE_TEXT_KEYS, type ReleaseFailure, type ReleasePermissions, resolveReleasePermissions } from '../lib/call-release';
 import { useCallRights } from './use-call-permissions';
 import { useIsOnline } from './use-connectivity';
 
@@ -29,8 +30,13 @@ export type ReleaseCall = ReleasableCall & Pick<CallResultData, 'CallId' | 'Numb
 export interface UseReleaseFromCallOptions {
   /** The call released from; none (not loaded yet) offers no release. */
   call: ReleaseCall | null | undefined;
-  /** After a release went through (the hook has already re-read the call, its dispatches and the released resource's list). */
+  /** After a release went through, once the call, its dispatches and the released resource's list have been read again. */
   onReleased?: (release: CallRelease, outcome: CallReleaseOutcome) => void;
+  /**
+   * Whether a unit or person can still be released here (the screen's current rows). A confirmation open for one that has
+   * left the call meanwhile (released by another operator, stood down) closes, so it cannot reopen for them later.
+   */
+  isReleasable?: (target: CallRelease) => boolean;
   testID?: string;
 }
 
@@ -50,20 +56,25 @@ export interface CallRelease extends ReleaseTarget {
   callNumber: string;
 }
 
-/** Re-reads what a release changed: the call's dispatches (call cards) and the released unit's or person's status. */
-const refreshAfterRelease = (pending: CallRelease): void => {
-  void useCallsStore.getState().fetchCallDispatches([pending.callId], { bypassCache: true });
+/**
+ * Re-reads what a release changed: the call's dispatches (call cards) and the released unit's or person's status. Settles
+ * when every read has (the reads never fail the release: a failed one keeps the last copy).
+ */
+const refreshAfterRelease = async (pending: CallRelease): Promise<void> => {
+  const reads: Promise<void>[] = [useCallsStore.getState().fetchCallDispatches([pending.callId], { bypassCache: true })];
 
   if (pending.kind === 'personnel') {
-    void usePersonnelStore.getState().fetchPersonnel({ bypassCache: true });
+    reads.push(usePersonnelStore.getState().fetchPersonnel({ bypassCache: true }));
+  } else {
+    reads.push(useUnitsStore.getState().fetchUnitInfos({ bypassCache: true }));
+    const unitStatus = useUnitStatusStore.getState();
 
-    return;
+    // The unit's own status (Unit's console), when this device shows it or is reading it now: a read that left before
+    // the release would otherwise land the old status with nothing after it (a trailing read follows it).
+    if (unitStatus.currentStatusByUnit[pending.id] !== undefined || unitStatus.loading.currentStatus === true) reads.push(unitStatus.fetchCurrentStatus(pending.id, { bypassCache: true }));
   }
 
-  void useUnitsStore.getState().fetchUnitInfos({ bypassCache: true });
-
-  // The unit's own status (Unit's console), when this device shows it.
-  if (useUnitStatusStore.getState().currentStatusByUnit[pending.id] !== undefined) void useUnitStatusStore.getState().fetchCurrentStatus(pending.id, { bypassCache: true });
+  await Promise.allSettled(reads);
 };
 
 /**
@@ -74,7 +85,7 @@ const refreshAfterRelease = (pending: CallRelease): void => {
  * says how it went, "status kept" when the server left the status alone. Online only, like closing a call: the server
  * decides whether the release status applies, so offline the confirmation says it needs a connection.
  */
-export function useReleaseFromCall({ call, onReleased, testID = 'release-from-call' }: UseReleaseFromCallOptions): ReleaseFromCall {
+export function useReleaseFromCall({ call, onReleased, isReleasable, testID = 'release-from-call' }: UseReleaseFromCallOptions): ReleaseFromCall {
   const { t } = useTranslation();
   const toast = useToast();
   const isOnline = useIsOnline();
@@ -105,6 +116,25 @@ export function useReleaseFromCall({ call, onReleased, testID = 'release-from-ca
     if (!isReleasing) setPending(null);
   }, [isReleasing]);
 
+  // The target left the call while its confirmation was open: close it rather than keep it for whoever comes next.
+  useEffect(() => {
+    if (pending && !isReleasing && isReleasable && !isReleasable(pending)) setPending(null);
+  }, [isReleasable, isReleasing, pending]);
+
+  /** A release the server refused or could not take: says why, and keeps the dialog open only when trying again can help. */
+  const reportFailure = (failure: ReleaseFailure, target: CallRelease) => {
+    if (failure.kind === 'offline') toast.error(t('calls.release.offline'));
+    else if (failure.kind === 'retry') toast.error(t('calls.release.error', { name: target.name }));
+    else {
+      // Sending it again cannot change a refusal (already released, no longer on the call, call closed): close, say
+      // why, and catch this screen up with the call as it is now.
+      setPending(null);
+      toast.error(failure.kind === 'forbidden' ? t('calls.release.not_allowed', { name: target.name }) : (failure.message ?? t('calls.release.error', { name: target.name })));
+      void useCallDetailStore.getState().fetchCallDetail(target.callId, { bypassCache: true });
+      void refreshAfterRelease(target);
+    }
+  };
+
   const confirm = async () => {
     if (!pending || isReleasing) return;
 
@@ -116,36 +146,36 @@ export function useReleaseFromCall({ call, onReleased, testID = 'release-from-ca
 
     const target = pending;
     const keys = RELEASE_TEXT_KEYS[target.kind];
+    let outcome: CallReleaseOutcome | null;
     setIsReleasing(true);
 
     try {
-      const outcome = await useCallDetailStore.getState().releaseFromCall({ kind: target.kind, callId: target.callId, resourceId: target.id, notify });
-      setPending(null);
+      outcome = await useCallDetailStore.getState().releaseFromCall({ kind: target.kind, callId: target.callId, resourceId: target.id, notify });
+    } catch (error) {
+      setIsReleasing(false);
+      reportFailure(classifyReleaseError(error), target);
 
-      if (!outcome) {
-        toast.error(t('call_detail.not_found'));
+      return;
+    }
 
-        return;
-      }
+    // The server has taken the release: nothing after this point reports it as failed.
+    setPending(null);
+    setIsReleasing(false);
 
-      toast.success(outcome.statusApplied ? t(keys.success, { name: target.name }) : t(keys.statusKept, { name: target.name }));
-      refreshAfterRelease(target);
+    if (!outcome) {
+      toast.error(t('call_detail.not_found'));
+
+      return;
+    }
+
+    toast.success(outcome.statusApplied ? t(keys.success, { name: target.name }) : t(keys.statusKept, { name: target.name }));
+    await refreshAfterRelease(target);
+
+    try {
       onReleased?.(target, outcome);
     } catch (error) {
-      const failure = classifyReleaseError(error);
-
-      if (failure.kind === 'offline') toast.error(t('calls.release.offline'));
-      else if (failure.kind === 'retry') toast.error(t('calls.release.error', { name: target.name }));
-      else {
-        // Sending it again cannot change a refusal (already released, no longer on the call, call closed): close, say
-        // why, and catch this screen up with the call as it is now.
-        setPending(null);
-        toast.error(failure.kind === 'forbidden' ? t('calls.release.not_allowed', { name: target.name }) : (failure.message ?? t('calls.release.error', { name: target.name })));
-        void useCallDetailStore.getState().fetchCallDetail(target.callId, { bypassCache: true });
-        refreshAfterRelease(target);
-      }
-    } finally {
-      setIsReleasing(false);
+      // The screen's own follow-up failed, not the release.
+      logger.warn({ message: 'A release follow-up failed', context: { kind: target.kind, errorType: error instanceof Error ? error.name : 'unknown' } });
     }
   };
 

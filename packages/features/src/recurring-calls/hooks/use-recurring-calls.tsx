@@ -1,5 +1,5 @@
 import { useCapability } from '@resgrid/config';
-import { type RecurringOccurrenceAction, type RecurringOccurrenceOutcome, useRecurringCallAlertsStore, useRecurringCallsStore } from '@resgrid/data';
+import { type RecurringOccurrenceAction, recurringOccurrenceKey, type RecurringOccurrenceOutcome, useRecurringCallAlertsStore, useRecurringCallsStore } from '@resgrid/data';
 import { CallConfirmDialog } from '@resgrid/features/calls';
 import { useTranslation } from '@resgrid/i18n';
 import type { RecurringCallOccurrenceInput } from '@resgrid/models';
@@ -54,20 +54,46 @@ export function useRecurringCallAlertsSync(enabledOverride?: boolean): void {
   useEffect(() => {
     if (!enabled) return undefined;
     let lastRefresh = Date.now();
+    let trailing: ReturnType<typeof setTimeout> | null = null;
 
-    const subscription = AppState.addEventListener('change', (state) => {
-      if (state !== 'active' || Date.now() - lastRefresh < ALERTS_FOREGROUND_REFRESH_MS) return;
+    const cancelTrailing = () => {
+      if (trailing !== null) clearTimeout(trailing);
+      trailing = null;
+    };
+
+    const refresh = () => {
+      cancelTrailing();
       lastRefresh = Date.now();
       void useRecurringCallAlertsStore.getState().fetchAlerts({ bypassCache: true });
+    };
+
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state !== 'active') {
+        cancelTrailing();
+
+        return;
+      }
+
+      // Back within the interval: one refresh when it ends, so a return during an app-switching burst is not lost.
+      const wait = ALERTS_FOREGROUND_REFRESH_MS - (Date.now() - lastRefresh);
+
+      if (wait <= 0) refresh();
+      else if (trailing === null) trailing = setTimeout(refresh, wait);
     });
 
-    return () => subscription.remove();
+    return () => {
+      cancelTrailing();
+      subscription.remove();
+    };
   }, [enabled]);
 
   useEffect(() => {
     if (!enabled || lastNewAt === 0 || lastNewAt === announcedAt.current) return;
-    announcedAt.current = lastNewAt;
     const count = useRecurringCallAlertsStore.getState().newAlertIds.length;
+
+    // Seen in the meantime (the alerts screen marked them): nothing to announce.
+    if (count === 0) return;
+    announcedAt.current = lastNewAt;
 
     toast.warning(t('recurring_calls.alerts.new_toast', { count }), t('recurring_calls.alerts.title'));
     void notificationSoundService.playForNotification({ kind: 'recurringCallAlert' });
@@ -79,8 +105,8 @@ const callLabel = (outcome: RecurringOccurrenceOutcome): string => outcome.callN
 export interface OccurrenceActionControls {
   /** Runs an action and reports how it went; sending asks first (it pages people). */
   request: (action: RecurringOccurrenceAction, occurrence: RecurringCallOccurrenceInput) => void;
-  /** The occurrence or schedule a write is running for. */
-  busyKey: string | null;
+  /** The occurrences and schedules writes are running for. */
+  busyKeys: readonly string[];
   /** Render once in the screen that uses the hook. */
   dialogs: React.ReactNode;
 }
@@ -93,7 +119,7 @@ export interface OccurrenceActionControls {
 export function useOccurrenceActions(onDone?: (action: RecurringOccurrenceAction, outcome: RecurringOccurrenceOutcome) => void): OccurrenceActionControls {
   const { t } = useTranslation();
   const toast = useToast();
-  const busyKey = useRecurringCallsStore((state) => state.busyKey);
+  const busyKeys = useRecurringCallsStore((state) => state.busyKeys);
   const [confirm, setConfirm] = useState<RecurringCallOccurrenceInput | null>(null);
 
   const report = useCallback(
@@ -112,6 +138,8 @@ export function useOccurrenceActions(onDone?: (action: RecurringOccurrenceAction
 
   const run = useCallback(
     async (action: RecurringOccurrenceAction, occurrence: RecurringCallOccurrenceInput) => {
+      // An action already running on this occurrence reports for itself; a second press says nothing twice.
+      if (useRecurringCallsStore.getState().busyKeys.includes(recurringOccurrenceKey(occurrence))) return;
       const outcome = await useRecurringCallsStore.getState().runOccurrenceAction(action, occurrence);
       report(action, outcome);
       onDone?.(action, outcome);
@@ -145,5 +173,5 @@ export function useOccurrenceActions(onDone?: (action: RecurringOccurrenceAction
     />
   );
 
-  return { request, busyKey, dialogs };
+  return { request, busyKeys, dialogs };
 }

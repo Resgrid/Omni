@@ -27,8 +27,8 @@ export const filterConsoleCalls = (calls: readonly CallResultData[], query: stri
 export const isUnitOnCall = (unit: CallUnitCandidate, filter: ConsoleCallFilter | null): boolean => filter !== null && isUnitOnCallLists(unit, filter);
 
 /**
- * A person is on the filtered call when dispatched to it by name, through their group or a role, or their status points
- * at it, unless they were released from the call (`isPersonOnCall` in calls).
+ * A person is on the filtered call when dispatched to it by name, through their group or a role, riding a unit dispatched
+ * to it, or their status points at it, unless they were released from the call (`isPersonOnCall` in calls).
  */
 export const isPersonOnCall = (person: CallPersonCandidate, filter: ConsoleCallFilter | null): boolean => filter !== null && isPersonOnCallLists(person, filter);
 

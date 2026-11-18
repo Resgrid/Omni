@@ -1,6 +1,7 @@
 import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { useRecurringCallsStore } from '@resgrid/data';
 import { callRoutes, useCallDispatchNow } from '@resgrid/features/calls';
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import { type ScheduledCallCalendarEntryData, ScheduledCallCalendarEntryKind } from '@resgrid/models';
 import { useRealtimeRefetch } from '@resgrid/realtime';
@@ -14,7 +15,7 @@ import { ActionButton } from '../components/action-button';
 import { OccurrenceButtons } from '../components/occurrence-buttons';
 import { type PillTone, StatusPill } from '../components/status-pill';
 import { useIsRecurringCallsEnabled, useOccurrenceActions } from '../hooks/use-recurring-calls';
-import { addDays, AGENDA_DAYS, type AgendaDay, agendaRange, agendaWindow, entryKindLabelKey, groupAgenda, occurrenceActionsFor, startOfDay } from '../lib/calendar-agenda';
+import { addDays, AGENDA_DAYS, type AgendaDay, agendaRange, agendaWindow, departmentDay, entryKindLabelKey, groupAgenda, occurrenceActionsFor } from '../lib/calendar-agenda';
 import { formatDateKey, joinParts, wallClockTime } from '../lib/schedule-format';
 import { recurringCallsRoutes } from '../routes';
 
@@ -55,9 +56,11 @@ export default function RecurringCallsCalendarScreen({ now = () => new Date() }:
   const isEnabled = useIsRecurringCallsEnabled();
   const params = useLocalSearchParams<{ recurringCallId?: string | string[] }>();
   const [filterId, setFilterId] = useState<number | null>(() => parseScheduleId(params.recurringCallId));
-  const [from, setFrom] = useState(() => startOfDay(now()));
+  const timeZone = useDepartmentTimeZone();
+  // The first department day shown: the agenda pages by the department's days, which its entries are grouped by.
+  const [from, setFrom] = useState(() => departmentDay(now(), timeZone));
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const window = useMemo(() => agendaWindow(from), [from]);
+  const window = useMemo(() => agendaWindow(from, timeZone), [from, timeZone]);
   const entries = useRecurringCallsStore((state) => state.calendar);
   const storeWindow = useRecurringCallsStore((state) => state.calendarWindow);
   const isLoading = useRecurringCallsStore((state) => state.loading.calendar === true);
@@ -135,7 +138,7 @@ export default function RecurringCallsCalendarScreen({ now = () => new Date() }:
           </View>
         </Pressable>
         {occurrence ? (
-          <OccurrenceButtons occurrence={occurrence} actions={actions} busyKey={occurrenceActions.busyKey} onAction={occurrenceActions.request} label={label} testID={`calendar-entry-${key}-actions`} />
+          <OccurrenceButtons occurrence={occurrence} actions={actions} busyKeys={occurrenceActions.busyKeys} onAction={occurrenceActions.request} label={label} testID={`calendar-entry-${key}-actions`} />
         ) : null}
         {isHeld && canCreate ? (
           <View className="mt-2 flex-row justify-end">
@@ -203,7 +206,7 @@ export default function RecurringCallsCalendarScreen({ now = () => new Date() }:
               <ChevronRight size={20} color={colors.icon} />
             </View>
           </Pressable>
-          <ActionButton label={t('recurring_calls.calendar.today')} icon={CalendarDays} tone="secondary" onPress={() => setFrom(startOfDay(now()))} testID="calendar-today" />
+          <ActionButton label={t('recurring_calls.calendar.today')} icon={CalendarDays} tone="secondary" onPress={() => setFrom(departmentDay(now(), timeZone))} testID="calendar-today" />
         </View>
       ) : null}
       {isEnabled && filterId ? (

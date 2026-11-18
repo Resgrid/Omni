@@ -23,12 +23,20 @@ export const RecurringCallNotice: React.FC<CallDetailActionProps> = ({ call }) =
   const colors = useThemeColors();
   const canOpen = useIsRecurringCallsEnabled();
   const recurringCallId = call.RecurringCallId ?? null;
-  const schedule = useRecurringCallsStore((state) => (recurringCallId ? state.schedules.find((entry) => entry.RecurringCallId === recurringCallId) : undefined));
+  const listed = useRecurringCallsStore((state) => (recurringCallId ? state.schedules.find((entry) => entry.RecurringCallId === recurringCallId) : undefined));
+  const detailed = useRecurringCallsStore((state) => (recurringCallId ? state.details[String(recurringCallId)]?.RecurringCall : undefined));
+  const lookupFailed = useRecurringCallsStore((state) => (recurringCallId ? state.detailErrors[String(recurringCallId)] !== undefined : false));
   const listLoaded = useRecurringCallsStore((state) => (state.fetchedAt.list ?? 0) > 0);
+  const schedule = listed ?? detailed;
 
   useEffect(() => {
-    if (canOpen && recurringCallId && !listLoaded) void useRecurringCallsStore.getState().fetchRecurringCalls();
-  }, [canOpen, listLoaded, recurringCallId]);
+    if (!canOpen || !recurringCallId || schedule) return;
+
+    // The list first; a schedule made after it was read (by another dispatcher) is read on its own, once. A failed read
+    // leaves the generic text.
+    if (!listLoaded) void useRecurringCallsStore.getState().fetchRecurringCalls();
+    else if (!lookupFailed) void useRecurringCallsStore.getState().fetchRecurringCall(recurringCallId);
+  }, [canOpen, listLoaded, lookupFailed, recurringCallId, schedule]);
 
   if (!recurringCallId) return null;
 

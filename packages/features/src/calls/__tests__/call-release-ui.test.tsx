@@ -8,8 +8,10 @@ import type { DispatchedEventResultData } from '@resgrid/models';
 import { useToastStore } from '@resgrid/ui';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import React from 'react';
+import { Pressable } from 'react-native';
 
 import { CallDispatchedPanel } from '../components/detail/call-dispatched-panel';
+import { useReleaseFromCall } from '../hooks/use-release-from-call';
 import { activateVariant, hidden, makeCall, setRights } from './test-utils';
 
 const DIALOG = 'call-dispatched-release-dialog';
@@ -149,6 +151,54 @@ describe('releasing from the call detail (Dispatch, IC)', () => {
 
     await renderPanel({ call: makeCall('123', { State: 8 }) });
     expect(screen.queryByTestId('call-dispatched-45-release')).toBeNull();
+  });
+
+  it('closes a confirmation whose unit left the call meanwhile, so it never reopens for it', async () => {
+    const { rerender } = await renderPanel();
+
+    await fireEvent.press(screen.getByTestId('call-dispatched-45-release'));
+    expect(screen.getByText('calls.release.title:MUG 1,26-118', hidden)).toBeTruthy();
+
+    // Another operator released MUG 1: the refreshed call no longer lists it.
+    await rerender(<CallDispatchedPanel dispatches={[]} callId="123" call={makeCall('123', { Number: '26-118' })} />);
+    await rerender(<CallDispatchedPanel dispatches={[entry('Unit', '46', 'Ambulance 2')]} callId="123" call={makeCall('123', { Number: '26-118' })} />);
+
+    expect(screen.queryByText('calls.release.title:MUG 1,26-118', hidden)).toBeNull();
+    expect(mockRelease).not.toHaveBeenCalled();
+  });
+
+  it('calls the screen back after the release and its reads, and never reports its follow-up failing as a failed release', async () => {
+    const order: string[] = [];
+    mockRelease.mockResolvedValue({ releasedOn: '2026-11-16T10:32:00Z', statusApplied: true });
+
+    useCallsStore.setState({
+      fetchCallDispatches: jest.fn(async () => {
+        order.push('dispatches read');
+      }),
+    });
+
+    const onReleased = jest.fn(() => {
+      order.push('called back');
+      throw new Error('follow-up failed');
+    });
+
+    const Harness: React.FC = () => {
+      const release = useReleaseFromCall({ call: makeCall('123', { Number: '26-118' }), onReleased, testID: 'harness' });
+
+      return (
+        <>
+          <Pressable testID="harness-open" onPress={() => release.requestRelease({ kind: 'unit', id: '45', name: 'MUG 1' })} />
+          {release.dialog}
+        </>
+      );
+    };
+
+    await render(<Harness />);
+    await fireEvent.press(screen.getByTestId('harness-open'));
+    await act(async () => fireEvent.press(screen.getByTestId('harness-confirm', hidden)));
+
+    expect(order).toEqual(['dispatches read', 'called back']);
+    expect(useToastStore.getState().toasts.map((toast) => toast.type)).toEqual(['success']);
   });
 
   it('lists released units and people apart, with when and by whom', async () => {

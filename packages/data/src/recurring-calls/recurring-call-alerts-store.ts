@@ -6,6 +6,7 @@ import { persist } from 'zustand/middleware';
 import { useBadgeCountsStore } from '../badge-counts/badge-counts-store';
 import { assertV4Success, unwrapList } from '../core/envelope';
 import { type DataError, toDataError } from '../core/errors';
+import { createKeyedFlight } from '../core/keyed-flight';
 import { dataPersistOptions, registerPersistedStore } from '../core/persist';
 import { registerDataStoreReset } from '../core/reset';
 import { dataNow, getDataApiContext, getDataLogger } from '../core/runtime';
@@ -38,14 +39,15 @@ interface RecurringCallAlertsData extends SliceMeta<AlertsSlice> {
   newAlertIds: string[];
   /** When the last batch of new alerts arrived (epoch ms); 0 when none this session. */
   lastNewAt: number;
-  /** The action in flight (`alert:<id>`), so its button can spin. */
-  busyKey: string | null;
+  /** The actions in flight (`alert:<id>`), so their buttons can spin. One per alert. */
+  busyKeys: string[];
   /** The server has no recurring calls (an older Core): no requests until the next sign-in. */
   unsupported: boolean;
 }
 
 export interface RecurringCallAlertsState extends RecurringCallAlertsData {
   fetchAlerts: (options?: FetchOptions) => Promise<void>;
+  /** Acknowledging or dismissing an alert while an action on it runs joins the one in flight. */
   acknowledgeAlert: (alertId: string) => Promise<RecurringCallAlertOutcome>;
   dismissAlert: (alertId: string, note?: string) => Promise<RecurringCallAlertOutcome>;
   /** The dispatcher has seen these alerts (all of them when no ids are given): they stop being highlighted. */
@@ -75,7 +77,7 @@ export const findNewAlertIds = (previous: readonly RecurringCallAlertResultData[
   return next.flatMap((alert) => (known.has(alert.AlertId) ? [] : [alert.AlertId]));
 };
 
-const initialData = (): RecurringCallAlertsData => ({ ...emptySliceMeta<AlertsSlice>(), alerts: [], newAlertIds: [], lastNewAt: 0, busyKey: null, unsupported: false });
+const initialData = (): RecurringCallAlertsData => ({ ...emptySliceMeta<AlertsSlice>(), alerts: [], newAlertIds: [], lastNewAt: 0, busyKeys: [], unsupported: false });
 
 type PersistedAlerts = Pick<RecurringCallAlertsData, 'alerts' | 'fetchedAt'>;
 
@@ -84,27 +86,41 @@ let runner: SliceRunner<AlertsSlice, RecurringCallAlertsState>;
 /** Whether this session has had an answer yet (the persisted list may be from an earlier one). */
 let loadedThisSession = false;
 
+/** One action per alert: pressing again, or acknowledging while a dismiss runs, joins the one in flight. */
+const writes = createKeyedFlight();
+
 export const useRecurringCallAlertsStore = create<RecurringCallAlertsState>()(
   persist(
     (set, get) => {
       runner = createSliceRunner<AlertsSlice, RecurringCallAlertsState>('recurring-call-alerts', set);
 
-      const runAlertWrite = async (alertId: string, label: string, write: () => Promise<RecurringCallActionResult>): Promise<RecurringCallAlertOutcome> => {
-        set({ busyKey: recurringAlertKey(alertId) });
+      const runAlertWrite = (alertId: string, label: string, write: () => Promise<RecurringCallActionResult>): Promise<RecurringCallAlertOutcome> => {
+        const key = recurringAlertKey(alertId);
 
-        try {
-          const result = assertV4Success(await write());
+        return writes.run(key, async () => {
+          // Disabling the alerts or signing out ends the session the action started in: a late answer then clears no busy
+          // state and starts no read that could refill the cleared list.
+          const generation = runner.generation();
+          set((state) => ({ busyKeys: [...state.busyKeys.filter((entry) => entry !== key), key] }));
+          let outcome: RecurringCallAlertOutcome;
 
-          return { ok: result?.Success === true, message: result?.Message ?? null, error: null };
-        } catch (error) {
-          const dataError = toDataError(error);
-          getDataLogger().warn({ message: label, context: { code: dataError.code, status: dataError.status } });
+          try {
+            const result = assertV4Success(await write());
+            outcome = { ok: result?.Success === true, message: result?.Message ?? null, error: null };
+          } catch (error) {
+            const dataError = toDataError(error);
+            getDataLogger().warn({ message: label, context: { alertId, code: dataError.code, status: dataError.status } });
+            outcome = { ok: false, message: null, error: dataError };
+          }
 
-          return { ok: false, message: null, error: dataError };
-        } finally {
-          set({ busyKey: null });
-          void get().fetchAlerts({ bypassCache: true });
-        }
+          if (generation === runner.generation()) {
+            // Only this alert's key: an action still running on another alert keeps its spinner.
+            set((state) => ({ busyKeys: state.busyKeys.filter((entry) => entry !== key) }));
+            void get().fetchAlerts({ bypassCache: true });
+          }
+
+          return outcome;
+        });
       };
 
       return {
@@ -148,6 +164,7 @@ export const useRecurringCallAlertsStore = create<RecurringCallAlertsState>()(
 
         disable: () => {
           runner.invalidate();
+          writes.clear();
           loadedThisSession = false;
           set(initialData());
         },
@@ -164,6 +181,7 @@ registerPersistedStore('omni-recurring-call-alerts-storage', useRecurringCallAle
 
 registerDataStoreReset<RecurringCallAlertsState>('recurring-call-alerts', useRecurringCallAlertsStore, initialData, () => {
   runner.invalidate();
+  writes.clear();
   loadedThisSession = false;
 });
 

@@ -49,6 +49,33 @@ describe('releasing a resource from a call', () => {
     expect(getCallExtraData).not.toHaveBeenCalled();
   });
 
+  it('keeps a release whose call read fails, and reads nothing for a release answered after sign-out', async () => {
+    // SAFETY: a ReleaseUnit envelope with the fields Core sends.
+    const released = { Status: 'updated', Data: { CallId: '123', UnitId: '45', ReleasedOn: '2026-11-16T10:32:00Z', StatusApplied: true } } as never;
+    jest.mocked(releaseFromCallWith).mockResolvedValueOnce(released);
+    jest.mocked(getCallExtraData).mockRejectedValueOnce(httpError(503));
+
+    await expect(useCallDetailStore.getState().releaseFromCall({ kind: 'unit', callId: '123', resourceId: '45', notify: true })).resolves.toEqual({ releasedOn: '2026-11-16T10:32:00Z', statusApplied: true });
+    expect(useCallDetailStore.getState().writeError).toBeNull();
+
+    let answer: (value: never) => void = () => undefined;
+
+    jest.mocked(releaseFromCallWith).mockReturnValueOnce(
+      new Promise<never>((resolve) => {
+        answer = resolve;
+      })
+    );
+
+    const releasing = useCallDetailStore.getState().releaseFromCall({ kind: 'unit', callId: '123', resourceId: '45', notify: true });
+    await defaultResetRegistry.getStoreResets().get('data.call-detail')?.('logout');
+    jest.mocked(getCallExtraData).mockClear();
+    answer(released);
+    await releasing;
+
+    expect(getCallExtraData).not.toHaveBeenCalled();
+    expect(useCallDetailStore.getState().details['123']).toBeUndefined();
+  });
+
   it('rethrows a refusal and records it as the last write error', async () => {
     jest.mocked(releaseFromCallWith).mockRejectedValue(httpError(400));
 

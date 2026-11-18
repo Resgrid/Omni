@@ -6,7 +6,7 @@ import type { RecurringCallAlertResultData } from '@resgrid/models';
 import { FlatList, HStack, Loading, Pressable, RefreshControl, Spinner, Text, useThemeColors, useToast, VStack, ZeroState } from '@resgrid/ui';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { BellRing, RefreshCw } from 'lucide-react-native';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { DismissAlertDialog } from '../components/dismiss-alert-dialog';
@@ -39,7 +39,10 @@ export default function RecurringCallAlertsScreen({ showHeader = true }: Recurri
   const isLoading = useRecurringCallAlertsStore((state) => state.loading.alerts === true);
   const error = useRecurringCallAlertsStore((state) => state.errors.alerts ?? null);
   const fetchedAt = useRecurringCallAlertsStore((state) => state.fetchedAt.alerts ?? 0);
-  const alertBusyKey = useRecurringCallAlertsStore((state) => state.busyKey);
+  const alertBusyKeys = useRecurringCallAlertsStore((state) => state.busyKeys);
+  // A successful read since the screen opened (fetchedAt moves only on success).
+  const openedFetchedAt = useRef(fetchedAt);
+  const readSinceOpen = fetchedAt !== openedFetchedAt.current;
   const occurrenceActions = useOccurrenceActions();
   const dispatchNow = useCallDispatchNow({ onDispatched: () => void useRecurringCallAlertsStore.getState().fetchAlerts({ bypassCache: true }) });
   const [dismissTarget, setDismissTarget] = useState<RecurringCallAlertResultData | null>(null);
@@ -93,8 +96,8 @@ export default function RecurringCallAlertsScreen({ showHeader = true }: Recurri
       <RecurringCallAlertCard
         alert={item}
         isNew={newAlertIds.includes(item.AlertId) || item.AlertId === focusId}
-        alertBusyKey={alertBusyKey}
-        occurrenceBusyKey={occurrenceActions.busyKey}
+        alertBusyKeys={alertBusyKeys}
+        occurrenceBusyKeys={occurrenceActions.busyKeys}
         onOccurrenceAction={occurrenceActions.request}
         onAcknowledge={(alert) => void acknowledge(alert)}
         onDismiss={setDismissTarget}
@@ -103,8 +106,20 @@ export default function RecurringCallAlertsScreen({ showHeader = true }: Recurri
         onOpenSchedule={(recurringCallId) => pushRoutePath(router, recurringCallsRoutes.detail(recurringCallId))}
       />
     ),
-    [acknowledge, alertBusyKey, dispatchNow, focusId, newAlertIds, occurrenceActions.busyKey, occurrenceActions.request, router]
+    [acknowledge, alertBusyKeys, dispatchNow, focusId, newAlertIds, occurrenceActions.busyKeys, occurrenceActions.request, router]
   );
+
+  // The tapped alert was closed (acknowledged and dismissed elsewhere) before the list was read: say so, not "all went out".
+  // Only after a successful read: while loading, or when the read failed, the list cannot tell.
+  const focusClosed = !!focusId && readSinceOpen && !isLoading && !error && !alerts.some((alert) => alert.AlertId === focusId);
+
+  const closedNotice = focusClosed ? (
+    <View className="mb-3 rounded-xl border border-info-300 bg-info-50 p-3" accessibilityRole="alert" testID="recurring-call-alerts-focus-closed">
+      <Text size="sm" className="text-info-800">
+        {t('recurring_calls.alerts.no_longer_open')}
+      </Text>
+    </View>
+  ) : null;
 
   const renderContent = () => {
     if (!isEnabled) return <ZeroState heading={t('recurring_calls.not_available')} icon={BellRing} testID="recurring-call-alerts-disabled" />;
@@ -122,7 +137,7 @@ export default function RecurringCallAlertsScreen({ showHeader = true }: Recurri
         data={alerts}
         renderItem={renderAlert}
         keyExtractor={(item: RecurringCallAlertResultData) => item.AlertId}
-        extraData={[newAlertIds, alertBusyKey, occurrenceActions.busyKey]}
+        extraData={[newAlertIds, alertBusyKeys, occurrenceActions.busyKeys]}
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
         contentContainerStyle={styles.list}
       />
@@ -148,10 +163,11 @@ export default function RecurringCallAlertsScreen({ showHeader = true }: Recurri
           </Pressable>
         </HStack>
       ) : null}
+      {isEnabled ? closedNotice : null}
       <View className="flex-1">{renderContent()}</View>
       <DismissAlertDialog
         isOpen={dismissTarget !== null}
-        isSubmitting={dismissTarget !== null ? alertBusyKey === recurringAlertKey(dismissTarget.AlertId) : false}
+        isSubmitting={dismissTarget !== null ? alertBusyKeys.includes(recurringAlertKey(dismissTarget.AlertId)) : false}
         onConfirm={(note) => void confirmDismiss(note)}
         onClose={() => setDismissTarget(null)}
       />

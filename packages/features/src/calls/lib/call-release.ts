@@ -21,6 +21,8 @@ export interface CallResourceLists {
   releasedUnits?: readonly DispatchedEventResultData[];
   /** `ReleasedPersonnel`; missing reads as none. */
   releasedPersonnel?: readonly DispatchedEventResultData[];
+  /** Who rides the units dispatched to the call (their active role seats, `crewOnCall`); missing reads as nobody. */
+  crewUserIds?: readonly string[];
 }
 
 /** The unit fields the matching reads; a `UnitInfoResultData` fits. */
@@ -48,7 +50,12 @@ const sameId = (a: IdValue, b: IdValue): boolean => {
   return left.length > 0 && left === normalize(b);
 };
 
-const matchesUnit = (entry: DispatchedEventResultData, unit: CallUnitCandidate): boolean => sameId(entry.Id, unit.UnitId) || sameId(entry.Name, unit.Name);
+/**
+ * The entry names the unit: by id when both have one (Core checks the id; a name can pass to another unit before the
+ * dispatches are read again), by name only when one of them has no id.
+ */
+const matchesUnit = (entry: DispatchedEventResultData, unit: CallUnitCandidate): boolean =>
+  normalize(entry.Id).length > 0 && normalize(unit.UnitId).length > 0 ? sameId(entry.Id, unit.UnitId) : sameId(entry.Name, unit.Name);
 
 /**
  * A status pointing at the call: its destination is the call (or an untyped destination with the call's id, saved before
@@ -60,6 +67,15 @@ const pointsAtCall = (destinationId: IdValue, destinationType: number | null | u
 
   return type === DestinationEntityTypes.Call || type === DestinationEntityTypes.None;
 };
+
+/**
+ * A status typed to the call. Core releases a member through their status only then: an untyped legacy destination may be
+ * a station that shares the call's id, so it shows the member on the call but never offers their release.
+ */
+const typedToCall = (destinationId: IdValue, destinationType: number | null | undefined, callId: string): boolean => destinationType === DestinationEntityTypes.Call && sameId(destinationId, callId);
+
+/** The person rides a unit dispatched to the call. */
+const isOnDispatchedUnitCrew = (person: CallPersonCandidate, lists: CallResourceLists): boolean => (lists.crewUserIds ?? []).some((userId) => sameId(userId, person.UserId));
 
 /** What a dispatch entry would release: its unit or person; null for a group or role, which stays on the call. */
 export const releaseKindOf = (type: string): ReleaseResourceKind | null => {
@@ -112,16 +128,53 @@ export const isPersonReleasedFromCall = (person: CallPersonCandidate, lists: Cal
   !isPersonDispatchedToCall(person, lists.dispatches) && (lists.releasedPersonnel ?? NONE).some((entry) => sameId(entry.Id, person.UserId));
 
 /**
- * The person is on the call: dispatched to it by name, through their group or one of their roles, or their status points
- * at it. Someone released from the call is not, even though the group or role they were reached through is still on
- * the call and their status may still point at it; dispatching them by name again brings them back.
+ * The person is on the call: dispatched to it by name, through their group or one of their roles, riding a unit
+ * dispatched to it, or their status points at it. Someone released from the call is not, even though the group, role or
+ * unit they were reached through is still on the call and their status may still point at it; dispatching them by name
+ * again brings them back.
  */
 export const isPersonOnCall = (person: CallPersonCandidate, lists: CallResourceLists): boolean => {
   if (isPersonDispatchedToCall(person, lists.dispatches)) return true;
 
   if (isPersonReleasedFromCall(person, lists)) return false;
 
-  return isReachedThroughGroupOrRole(person, lists.dispatches) || pointsAtCall(person.StatusDestinationId, person.StatusDestinationType, lists.callId);
+  return isReachedThroughGroupOrRole(person, lists.dispatches) || isOnDispatchedUnitCrew(person, lists) || pointsAtCall(person.StatusDestinationId, person.StatusDestinationType, lists.callId);
+};
+
+/**
+ * The person can be released from the call, as Core decides (`CallResourceReleaseService`): on it by name, group, role,
+ * a dispatched unit's crew, or a status typed to the call, and not released already. A member on the call only through an
+ * untyped legacy destination is shown on it but not offered for release.
+ */
+export const isPersonReleasableFromCall = (person: CallPersonCandidate, lists: CallResourceLists): boolean => {
+  if (isPersonDispatchedToCall(person, lists.dispatches)) return true;
+
+  if (isPersonReleasedFromCall(person, lists)) return false;
+
+  return isReachedThroughGroupOrRole(person, lists.dispatches) || isOnDispatchedUnitCrew(person, lists) || typedToCall(person.StatusDestinationId, person.StatusDestinationType, lists.callId);
+};
+
+/** The user ids on the role seats of the units dispatched to the call (and not released from it): its crews. */
+export const crewOnCall = (units: readonly Pick<UnitInfoResultData, 'UnitId' | 'Name' | 'Roles'>[], dispatches: readonly DispatchedEventResultData[]): string[] =>
+  units.flatMap((unit) => (isUnitDispatchedToCall(unit, dispatches) ? (unit.Roles ?? []).flatMap((role) => (role?.UserId ? [role.UserId] : [])) : []));
+
+/** One read of a call's dispatches and when it landed (epoch ms). */
+export interface DispatchSnapshot {
+  /** Missing when that read has not happened (or failed). */
+  dispatches: readonly DispatchedEventResultData[] | null | undefined;
+  fetchedAt: number | null | undefined;
+}
+
+/**
+ * The newer of two reads of a call's dispatches (the call list's `GetCallExtraData` read and the call detail's): an older
+ * read, empty or not, never hides what a newer one shows, and a newer empty one wins too (the unit stood down).
+ */
+export const newerDispatches = (a: DispatchSnapshot, b: DispatchSnapshot): readonly DispatchedEventResultData[] | null => {
+  if (!a.dispatches) return b.dispatches ?? null;
+
+  if (!b.dispatches) return a.dispatches;
+
+  return (a.fetchedAt ?? 0) >= (b.fetchedAt ?? 0) ? a.dispatches : b.dispatches;
 };
 
 /** The call fields that decide whether resources can be released from it, and by whom. */

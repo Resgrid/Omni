@@ -8,6 +8,8 @@
 // one statement: Oxlint's readable spacing wants a blank line between top-level statements, which the export sorter removes.
 import { AddResourcesSheet, type AddResourcesSheetProps } from './components/add-resources-sheet';
 import { CallConfirmDialog, type CallConfirmDialogProps } from './components/call-confirm-dialog';
+import { destinationPoiLabel, filterDestinationPois } from './components/call-form/destination-poi-picker';
+import { CallModalFrame, type CallModalFrameProps } from './components/call-modal-frame';
 import { CallSummaryModal, type CallSummaryModalProps } from './components/call-summary-modal';
 import { type CallDispatchNowControls, useCallDispatchNow, type UseCallDispatchNowOptions } from './hooks/use-call-dispatch-now';
 import { useCallPermissions, useCallPermissionsResolver, useCallRights } from './hooks/use-call-permissions';
@@ -20,14 +22,18 @@ import {
   type CallResourceLists,
   type CallUnitCandidate,
   canReleaseFromCall,
+  crewOnCall,
+  type DispatchSnapshot,
   getReleasedPersonnel,
   getReleasedUnits,
   isPersonDispatchedToCall,
   isPersonOnCall,
+  isPersonReleasableFromCall,
   isPersonReleasedFromCall,
   isUnitDispatchedToCall,
   isUnitOnCall,
   isUnitReleasedFromCall,
+  newerDispatches,
   type ReleasableCall,
   type ReleasePermissions,
   resolveReleasePermissions,
@@ -155,6 +161,8 @@ export {
   callDisplayText,
   callLocationOf,
   callLocationTarget,
+  CallModalFrame,
+  type CallModalFrameProps,
   type CallPermissionInput,
   type CallPermissions,
   type CallPersonCandidate,
@@ -169,8 +177,12 @@ export {
   type CallTextFields,
   type CallUnitCandidate,
   canReleaseFromCall,
+  crewOnCall,
+  destinationPoiLabel,
   dispatchesToSelection,
   type DispatchMapOverlay,
+  type DispatchSnapshot,
+  filterDestinationPois,
   formatDistance,
   formatDistanceEta,
   formatDuration,
@@ -184,6 +196,7 @@ export {
   isDispatchTimeTooSoon,
   isPersonDispatchedToCall,
   isPersonOnCall,
+  isPersonReleasableFromCall,
   isPersonReleasedFromCall,
   isUnitDispatchedToCall,
   isUnitOnCall,
@@ -193,6 +206,7 @@ export {
   mergeDispatchSelections,
   MIN_DISPATCH_LEAD_MINUTES,
   NEAREST_BADGE_COUNT,
+  newerDispatches,
   positionNote,
   rankBoardPersonnel,
   rankBoardUnits,

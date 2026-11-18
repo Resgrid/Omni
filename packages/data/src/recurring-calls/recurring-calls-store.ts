@@ -30,6 +30,7 @@ import { persist } from 'zustand/middleware';
 import { useCallsStore } from '../calls/calls-store';
 import { assertV4Success, unwrapItem, unwrapList } from '../core/envelope';
 import { type DataError, toDataError } from '../core/errors';
+import { createKeyedFlight } from '../core/keyed-flight';
 import { dataPersistOptions, registerPersistedStore } from '../core/persist';
 import { registerDataStoreReset } from '../core/reset';
 import { getDataApiContext, getDataLogger } from '../core/runtime';
@@ -82,11 +83,13 @@ interface RecurringCallsData extends SliceMeta<RecurringSlice> {
   /** Why a schedule's detail could not be read, by id (`not_found` once it was deleted). */
   detailErrors: Record<string, DataError>;
   options: RecurringCallOptionsResultData | null;
-  /** The window the calendar entries belong to. */
+  /** The window the calendar entries belong to (the last one that loaded). */
   calendarWindow: RecurringCallsCalendarWindow | null;
+  /** The window the screen asked for last: only its answer replaces the entries. */
+  calendarRequest: RecurringCallsCalendarWindow | null;
   calendar: ScheduledCallCalendarEntryData[];
-  /** The write in flight (`schedule:<id>` or `occurrence:<id>@<instant>`), so its button can spin. */
-  busyKey: string | null;
+  /** The writes in flight (`schedule:<id>` or `occurrence:<id>@<instant>`), so their buttons can spin. One per key. */
+  busyKeys: string[];
 }
 
 export interface RecurringCallsState extends RecurringCallsData {
@@ -97,12 +100,14 @@ export interface RecurringCallsState extends RecurringCallsData {
   fetchCalendar: (window: RecurringCallsCalendarWindow, options?: FetchOptions) => Promise<void>;
   /**
    * Creates or updates a schedule. Throws what the request threw: a 400 carries the server's validation keys in its body
-   * (`Errors`), which the form reads and words itself.
+   * (`Errors`), which the form reads and words itself. A timeout or server error may still have saved it, so the lists are
+   * read again before the error is thrown (the save itself never is).
    */
   saveRecurringCall: (input: RecurringCallInput) => Promise<SaveRecurringCallResultData | null>;
   pauseRecurringCall: (input: PauseRecurringCallInput) => Promise<RecurringCallActionOutcome>;
   resumeRecurringCall: (recurringCallId: number) => Promise<RecurringCallActionOutcome>;
   deleteRecurringCall: (recurringCallId: number, deleteUpcomingCalls: boolean) => Promise<RecurringCallActionOutcome>;
+  /** A second action on an occurrence (like a second write on a schedule) while one runs joins the one in flight. */
   runOccurrenceAction: (action: RecurringOccurrenceAction, occurrence: RecurringCallOccurrenceInput) => Promise<RecurringOccurrenceOutcome>;
 }
 
@@ -119,8 +124,9 @@ const initialData = (): RecurringCallsData => ({
   detailErrors: {},
   options: null,
   calendarWindow: null,
+  calendarRequest: null,
   calendar: [],
-  busyKey: null,
+  busyKeys: [],
 });
 
 const OCCURRENCE_ACTIONS: Record<RecurringOccurrenceAction, (input: RecurringCallOccurrenceInput) => Promise<RecurringCallOccurrenceResult>> = {
@@ -137,12 +143,23 @@ const failedOccurrence = (error: DataError): RecurringOccurrenceOutcome => ({ ok
 
 const withoutKey = <V>(record: Record<string, V>, key: string): Record<string, V> => Object.fromEntries(Object.entries(record).filter(([entry]) => entry !== key));
 
+const sameWindow = (a: RecurringCallsCalendarWindow | null, b: RecurringCallsCalendarWindow): boolean => a?.start === b.start && a?.end === b.end;
+
+/** A failed write the server may still have made: no answer, a timeout or a server error. */
+const mayHaveCommitted = (error: DataError): boolean => error.code === 'network' || error.code === 'timeout' || error.code === 'server' || error.code === 'unknown';
+
 type PersistedRecurringCalls = Pick<RecurringCallsData, 'schedules' | 'options' | 'fetchedAt'>;
 
 let runner: SliceRunner<RecurringSlice, RecurringCallsState>;
 
 /** The form options were read this session (persisted ones may be from an earlier one). */
 let optionsLoaded = false;
+
+/** One write per busy key: pressing again, or a second write on the same schedule or occurrence, joins the one in flight. */
+const writes = createKeyedFlight();
+
+/** Schedules deleted this session: a list read that left before the delete must not bring them back. */
+const deletedIds = new Set<number>();
 
 export const useRecurringCallsStore = create<RecurringCallsState>()(
   persist(
@@ -154,7 +171,7 @@ export const useRecurringCallsStore = create<RecurringCallsState>()(
         void get().fetchRecurringCalls({ bypassCache: true });
 
         if (recurringCallId !== null && get().details[String(recurringCallId)]) void get().fetchRecurringCall(recurringCallId, { bypassCache: true });
-        const window = get().calendarWindow;
+        const window = get().calendarRequest ?? get().calendarWindow;
 
         if (window) void get().fetchCalendar(window, { bypassCache: true });
         void useRecurringCallAlertsStore.getState().fetchAlerts({ bypassCache: true });
@@ -166,23 +183,44 @@ export const useRecurringCallsStore = create<RecurringCallsState>()(
         }
       };
 
-      const runScheduleWrite = async (recurringCallId: number, label: string, write: () => Promise<RecurringCallActionResult>, callsChanged: boolean): Promise<RecurringCallActionOutcome> => {
-        set({ busyKey: recurringScheduleKey(recurringCallId) });
+      /**
+       * Runs a write under its busy key. `isCurrent` turns false once the session it started in has ended (sign-out, reset):
+       * a write that lands after that clears no busy state and starts no refresh in the next session.
+       */
+      const runWrite = <T>(key: string, write: (isCurrent: () => boolean) => Promise<T>): Promise<T> =>
+        writes.run(key, async () => {
+          const generation = runner.generation();
+          const isCurrent = (): boolean => generation === runner.generation();
+          set((state) => ({ busyKeys: [...state.busyKeys.filter((entry) => entry !== key), key] }));
 
-        try {
-          const result = assertV4Success(await write());
+          try {
+            return await write(isCurrent);
+          } finally {
+            // Only this write's key: another write still running keeps its spinner.
+            if (isCurrent()) set((state) => ({ busyKeys: state.busyKeys.filter((entry) => entry !== key) }));
+          }
+        });
 
-          return { ok: result?.Success === true, message: result?.Message ?? null, schedule: result?.Data ?? null, error: null };
-        } catch (error) {
-          const dataError = toDataError(error);
-          getDataLogger().warn({ message: label, context: { code: dataError.code, status: dataError.status } });
+      const runScheduleWrite = (recurringCallId: number, label: string, write: () => Promise<RecurringCallActionResult>, callsChanged: boolean, onSuccess?: () => void): Promise<RecurringCallActionOutcome> =>
+        runWrite(recurringScheduleKey(recurringCallId), async (isCurrent) => {
+          let outcome: RecurringCallActionOutcome;
 
-          return { ok: false, message: null, schedule: null, error: dataError };
-        } finally {
-          set({ busyKey: null });
-          refreshAfterWrite(recurringCallId, callsChanged);
-        }
-      };
+          try {
+            const result = assertV4Success(await write());
+            outcome = { ok: result?.Success === true, message: result?.Message ?? null, schedule: result?.Data ?? null, error: null };
+          } catch (error) {
+            const dataError = toDataError(error);
+            getDataLogger().warn({ message: label, context: { recurringCallId, code: dataError.code, status: dataError.status } });
+            outcome = { ok: false, message: null, schedule: null, error: dataError };
+          }
+
+          if (isCurrent()) {
+            if (outcome.ok) onSuccess?.();
+            refreshAfterWrite(recurringCallId, callsChanged);
+          }
+
+          return outcome;
+        });
 
       return {
         ...initialData(),
@@ -192,7 +230,7 @@ export const useRecurringCallsStore = create<RecurringCallsState>()(
           await runner.run(
             'list',
             async () => unwrapList(await getRecurringCalls(getDataApiContext())),
-            (schedules) => ({ schedules }),
+            (schedules) => ({ schedules: deletedIds.size > 0 ? schedules.filter((schedule) => !deletedIds.has(schedule.RecurringCallId)) : schedules }),
             { trailing: options?.bypassCache === true }
           );
         },
@@ -234,73 +272,80 @@ export const useRecurringCallsStore = create<RecurringCallsState>()(
             { silent: current !== null }
           );
 
-          if (result.ok) optionsLoaded = true;
+          // An empty answer (not_found, no data) keeps the stored options for offline use but asks again next time.
+          if (result.ok && result.value) optionsLoaded = true;
 
           return get().options;
         },
 
         fetchCalendar: async (window, options) => {
-          set({ calendarWindow: window });
+          // Coming back to a window whose earlier read is still out starts a read of its own: the window asked for in
+          // between took the lane, so that earlier answer is dropped as stale.
+          const changed = !sameWindow(get().calendarRequest, window);
+          set({ calendarRequest: window });
           await runner.run(
             'calendar',
             async () => unwrapList(await getScheduledCallsCalendar(getDataApiContext(), { start: window.start, end: window.end })),
-            // An answer for a window the screen has left is not shown (the newest request wins its lane too).
-            (calendar, state) => (state.calendarWindow?.start === window.start && state.calendarWindow?.end === window.end ? { calendar } : {}),
-            { flightKey: `calendar:${window.start}|${window.end}`, raceKey: 'calendar', trailing: options?.bypassCache === true }
+            // Only the window asked for last is shown, and its entries arrive with it: a window never shows another's entries.
+            (calendar, state) => (sameWindow(state.calendarRequest, window) ? { calendar, calendarWindow: window } : {}),
+            { flightKey: `calendar:${window.start}|${window.end}`, raceKey: 'calendar', trailing: options?.bypassCache === true || changed }
           );
         },
 
-        saveRecurringCall: async (input) => {
-          set({ busyKey: recurringScheduleKey(input.RecurringCallId) });
+        saveRecurringCall: (input) =>
+          runWrite(recurringScheduleKey(input.RecurringCallId), async (isCurrent) => {
+            try {
+              const saved = unwrapItem(assertV4Success(await saveRecurringCall(getDataApiContext(), input)));
 
-          try {
-            const saved = unwrapItem(assertV4Success(await saveRecurringCall(getDataApiContext(), input)));
-            refreshAfterWrite(saved?.RecurringCallId ?? null, (saved?.CreatedCalls ?? 0) > 0 || (saved?.ReplacedCalls ?? 0) > 0);
+              if (isCurrent()) refreshAfterWrite(saved?.RecurringCallId ?? null, (saved?.CreatedCalls ?? 0) > 0 || (saved?.ReplacedCalls ?? 0) > 0);
 
-            return saved;
-          } finally {
-            set({ busyKey: null });
-          }
-        },
+              return saved;
+            } catch (error) {
+              const dataError = toDataError(error);
+              getDataLogger().warn({ message: 'Saving a recurring call failed', context: { recurringCallId: input.RecurringCallId, code: dataError.code, status: dataError.status } });
+
+              // It may have been saved: show the lists as the server has them before the dispatcher tries again.
+              if (isCurrent() && mayHaveCommitted(dataError)) refreshAfterWrite(input.RecurringCallId > 0 ? input.RecurringCallId : null, true);
+
+              throw error;
+            }
+          }),
 
         pauseRecurringCall: (input) => runScheduleWrite(input.RecurringCallId, 'Pausing a recurring call failed', () => pauseRecurringCall(getDataApiContext(), input), input.DeleteUpcomingCalls),
 
         resumeRecurringCall: (recurringCallId) => runScheduleWrite(recurringCallId, 'Resuming a recurring call failed', () => resumeRecurringCall(getDataApiContext(), { RecurringCallId: recurringCallId }), true),
 
-        deleteRecurringCall: async (recurringCallId, deleteUpcomingCalls) => {
-          const outcome = await runScheduleWrite(
+        deleteRecurringCall: (recurringCallId, deleteUpcomingCalls) =>
+          runScheduleWrite(
             recurringCallId,
             'Deleting a recurring call failed',
             () => deleteRecurringCall(getDataApiContext(), { RecurringCallId: recurringCallId, DeleteUpcomingCalls: deleteUpcomingCalls }),
-            deleteUpcomingCalls
-          );
+            deleteUpcomingCalls,
+            () => {
+              deletedIds.add(recurringCallId);
+              const key = String(recurringCallId);
+              set((state) => ({ schedules: state.schedules.filter((schedule) => schedule.RecurringCallId !== recurringCallId), details: withoutKey(state.details, key) }));
+            }
+          ),
 
-          if (outcome.ok) {
-            const key = String(recurringCallId);
-            set((state) => ({ schedules: state.schedules.filter((schedule) => schedule.RecurringCallId !== recurringCallId), details: withoutKey(state.details, key) }));
-          }
+        runOccurrenceAction: (action, occurrence) =>
+          runWrite(recurringOccurrenceKey(occurrence), async (isCurrent) => {
+            let outcome: RecurringOccurrenceOutcome;
 
-          return outcome;
-        },
+            try {
+              const result = assertV4Success(await OCCURRENCE_ACTIONS[action](occurrence));
+              const data = result?.Data ?? null;
+              outcome = { ok: result?.Success === true, outcome: data?.Outcome ?? null, callId: data?.CallId ?? null, callNumber: data?.CallNumber ?? null, callState: data?.CallState ?? null, error: null };
+            } catch (error) {
+              const dataError = toDataError(error);
+              getDataLogger().warn({ message: 'A recurring call occurrence action failed', context: { action, recurringCallId: occurrence.RecurringCallId, code: dataError.code, status: dataError.status } });
+              outcome = failedOccurrence(dataError);
+            }
 
-        runOccurrenceAction: async (action, occurrence) => {
-          set({ busyKey: recurringOccurrenceKey(occurrence) });
+            if (isCurrent()) refreshAfterWrite(occurrence.RecurringCallId, action === 'dispatch' || action === 'create');
 
-          try {
-            const result = assertV4Success(await OCCURRENCE_ACTIONS[action](occurrence));
-            const data = result?.Data ?? null;
-
-            return { ok: result?.Success === true, outcome: data?.Outcome ?? null, callId: data?.CallId ?? null, callNumber: data?.CallNumber ?? null, callState: data?.CallState ?? null, error: null };
-          } catch (error) {
-            const dataError = toDataError(error);
-            getDataLogger().warn({ message: 'A recurring call occurrence action failed', context: { action, code: dataError.code, status: dataError.status } });
-
-            return failedOccurrence(dataError);
-          } finally {
-            set({ busyKey: null });
-            refreshAfterWrite(occurrence.RecurringCallId, action === 'dispatch' || action === 'create');
-          }
-        },
+            return outcome;
+          }),
       };
     },
     dataPersistOptions<RecurringCallsState, PersistedRecurringCalls>({
@@ -314,5 +359,7 @@ registerPersistedStore('omni-recurring-calls-storage', useRecurringCallsStore);
 
 registerDataStoreReset<RecurringCallsState>('recurring-calls', useRecurringCallsStore, initialData, () => {
   runner.invalidate();
+  writes.clear();
+  deletedIds.clear();
   optionsLoaded = false;
 });

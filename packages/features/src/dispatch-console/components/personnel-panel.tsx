@@ -1,5 +1,6 @@
 import { useTerm } from '@resgrid/auth';
 import { usePersonnelStore } from '@resgrid/data';
+import { isPersonReleasableFromCall } from '@resgrid/features/calls';
 import { useTranslation } from '@resgrid/i18n';
 import type { PersonnelInfoResultData } from '@resgrid/models';
 import { FlatList, Text } from '@resgrid/ui';
@@ -52,7 +53,7 @@ export const PersonnelPanel: React.FC<PersonnelPanelProps> = ({ callFilter, onSe
         onPress={onSelectPersonnel}
         onOpen={onOpenPersonnel}
         onSetStatusForCall={callFilter ? onSetStatusForCall : undefined}
-        onReleaseFromCall={callFilter ? onReleaseFromCall : undefined}
+        onReleaseFromCall={callFilter && isPersonReleasableFromCall(item, callFilter) ? onReleaseFromCall : undefined}
       />
     ),
     [callFilter, onOpenPersonnel, onReleaseFromCall, onSelectPersonnel, onSetStatusForCall, pendingIds, selectedPersonnelId]

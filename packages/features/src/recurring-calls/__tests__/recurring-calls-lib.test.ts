@@ -4,7 +4,7 @@ import { ApiError } from '@resgrid/api';
 import { RecurringCallCreationMode, RecurringCallFrequency, type RecurringCallResultData } from '@resgrid/models';
 
 import { alertKindLabelKey, alertReasonLabelKey, alertTone, isHeldCall, unavailableNames } from '../lib/alert-format';
-import { addDays, agendaRange, agendaWindow, groupAgenda, occurrenceActionsFor } from '../lib/calendar-agenda';
+import { addDays, agendaRange, agendaWindow, departmentDay, groupAgenda, occurrenceActionsFor } from '../lib/calendar-agenda';
 import { readSaveErrors } from '../lib/save-errors';
 import { addTime, describeSaveError, emptyRecurringCallForm, errorField, scheduleToFormValues, toRecurringCallInput, validateRecurringCallForm } from '../lib/schedule-form';
 import { describeMode, describePattern, describeSchedule, formatAlertLead, formatMinutes, recurringCallStatus, wallClockTime } from '../lib/schedule-format';
@@ -189,12 +189,16 @@ describe('alerts and the calendar agenda', () => {
     expect(occurrenceActionsFor({ KindId: 1, RecurringCallId: null, OccurrenceOn: null, CallId: 3 })).toEqual([]);
   });
 
-  it('asks for two weeks plus yesterday, within Core’s 100-day limit', () => {
-    const from = new Date(2026, 10, 17, 15, 30);
-    const window = agendaWindow(from);
-    expect(new Date(window.start).getTime()).toBe(new Date(2026, 10, 16).getTime());
-    expect(new Date(window.end).getTime()).toBe(addDays(new Date(2026, 10, 17), 14).getTime());
+  it('asks for two weeks plus yesterday from the department’s midnights, wherever the desk is', () => {
+    // 01:30 UTC on the 18th is still the 17th in New York: the agenda starts on the department's day.
+    const from = departmentDay(new Date('2026-11-18T01:30:00Z'), 'America/New_York');
+
+    expect(from).toBe('2026-11-17');
+    expect(agendaWindow(from, 'America/New_York')).toEqual({ start: '2026-11-16T05:00:00.000Z', end: '2026-12-01T05:00:00.000Z' });
     expect(agendaRange(from)).toEqual({ first: '2026-11-16', last: '2026-11-30' });
+    // Across a daylight-saving change each bound is still that day's own midnight.
+    expect(agendaWindow('2026-03-20', 'Europe/Berlin')).toEqual({ start: '2026-03-18T23:00:00.000Z', end: '2026-04-02T22:00:00.000Z' });
+    expect(addDays('2026-12-31', 1)).toBe('2027-01-01');
   });
 });
 

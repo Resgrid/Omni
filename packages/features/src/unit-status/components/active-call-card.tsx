@@ -1,6 +1,6 @@
 import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { selectCallById, selectUnitById, useCallDetailStore, useCallsStore, useUnitsStore } from '@resgrid/data';
-import { CallCard, callRoutes, CallSummaryModal, isUnitDispatchedToCall, resolvePriority, useReleaseFromCall } from '@resgrid/features/calls';
+import { CallCard, callRoutes, CallSummaryModal, isUnitDispatchedToCall, newerDispatches, resolvePriority, useReleaseFromCall } from '@resgrid/features/calls';
 import { useNavigationHandoff } from '@resgrid/features/contacts';
 import { useTranslation } from '@resgrid/i18n';
 import type { DispatchedEventResultData } from '@resgrid/models';
@@ -58,16 +58,20 @@ export const ActiveCallCard: React.FC<ActiveCallCardProps> = ({ activeCallId, on
   const release = useReleaseFromCall({ call, onReleased: () => onClearCall?.(), testID: `${testID}-release-dialog` });
   const ownUnitId = release.permissions.ownUnitId;
   const ownUnitName = useUnitsStore((state) => (ownUnitId ? (selectUnitById(state, ownUnitId)?.Name ?? state.unitInfos.find((info) => info.UnitId === ownUnitId)?.Name) : undefined)) || ownUnitId || '';
-  // The call list's copy is re-read after every release (and every 5 minutes); the detail's copy when the summary opened.
+  // The call list's copy is re-read when the call or unit changes and after every release; the detail's copy when the
+  // summary opened. The newer read wins, empty or not: an old empty list never hides Release, an old dispatch never brings it back.
   const listDispatches = useCallsStore((state) => (activeCallId ? state.callDispatches[activeCallId] : undefined));
+  const listFetchedAt = useCallsStore((state) => (activeCallId ? state.callDispatchesFetchedAt[activeCallId] : undefined));
   const detailDispatches = useCallDetailStore((state) => (activeCallId ? state.details[activeCallId]?.extraData?.Dispatches : undefined));
-  const dispatches = listDispatches ?? detailDispatches ?? NO_DISPATCHES;
+  const detailFetchedAt = useCallDetailStore((state) => (activeCallId ? state.details[activeCallId]?.fetchedAt : undefined));
+  const dispatches = newerDispatches({ dispatches: listDispatches, fetchedAt: listFetchedAt }, { dispatches: detailDispatches, fetchedAt: detailFetchedAt }) ?? NO_DISPATCHES;
   const canReleaseOwnUnit = !!ownUnitId && isUnitDispatchedToCall({ UnitId: ownUnitId, Name: ownUnitName }, dispatches);
   const requestRelease = release.requestRelease;
 
   useEffect(() => {
-    // The call's dispatches decide whether the unit is still on it (cached; a release re-reads them).
-    if (activeCallId && ownUnitId) void useCallsStore.getState().fetchCallDispatches([activeCallId]);
+    // The call's dispatches decide whether the unit is still on it: read them now, not from a copy cached before the
+    // unit was dispatched (a release re-reads them too).
+    if (activeCallId && ownUnitId) void useCallsStore.getState().fetchCallDispatches([activeCallId], { bypassCache: true });
   }, [activeCallId, ownUnitId]);
 
   const priority = useMemo(() => (call ? resolvePriority(priorities, call.Priority) : null), [call, priorities]);

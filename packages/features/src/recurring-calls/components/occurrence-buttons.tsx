@@ -18,17 +18,18 @@ const ACTIONS: Record<RecurringOccurrenceAction, { labelKey: string; icon: Lucid
 export interface OccurrenceButtonsProps {
   occurrence: RecurringCallOccurrenceInput;
   actions: readonly RecurringOccurrenceAction[];
-  busyKey: string | null;
+  /** The occurrence actions in flight (busy keys of the store). */
+  busyKeys: readonly string[];
   onAction: (action: RecurringOccurrenceAction, occurrence: RecurringCallOccurrenceInput) => void;
   /** Names the occurrence for screen readers ("Transfers 08:00"). */
   label: string;
   testID: string;
 }
 
-/** The actions one occurrence offers (Send now, Create call, Skip, Restore), spinning while any of them runs. */
-export const OccurrenceButtons: React.FC<OccurrenceButtonsProps> = ({ occurrence, actions, busyKey, onAction, label, testID }) => {
+/** The actions one occurrence offers (Send now, Create call, Skip, Restore), spinning while one of them runs on it. */
+export const OccurrenceButtons: React.FC<OccurrenceButtonsProps> = ({ occurrence, actions, busyKeys, onAction, label, testID }) => {
   const { t } = useTranslation();
-  const isBusy = busyKey === recurringOccurrenceKey(occurrence);
+  const isBusy = busyKeys.includes(recurringOccurrenceKey(occurrence));
 
   if (actions.length === 0) return null;
 

@@ -1,6 +1,7 @@
 import {
   acknowledgeRecurringCallAlert,
   ApiError,
+  deleteRecurringCall,
   dismissRecurringCallAlert,
   dispatchOccurrenceNow,
   getRecurringCall,
@@ -9,6 +10,7 @@ import {
   getRecurringCalls,
   getScheduledCallsCalendar,
   pauseRecurringCall,
+  resumeRecurringCall,
   saveRecurringCall,
   skipOccurrence,
 } from '@resgrid/api';
@@ -31,7 +33,7 @@ import { createDataTestRuntime, type DataTestRuntime, flush, httpError, persiste
 import { selectBadgeCount, useBadgeCountsStore } from '../../badge-counts/badge-counts-store';
 import { useCallsStore } from '../../calls/calls-store';
 import { findNewAlertIds, sortRecurringCallAlerts, useRecurringCallAlertsStore } from '../recurring-call-alerts-store';
-import { recurringOccurrenceKey, useRecurringCallsStore } from '../recurring-calls-store';
+import { recurringOccurrenceKey, recurringScheduleKey, useRecurringCallsStore } from '../recurring-calls-store';
 
 jest.mock('@resgrid/api', () => ({
   ...jest.requireActual('@resgrid/api'),
@@ -168,6 +170,22 @@ const alertsAnswer = (alerts: RecurringCallAlertResultData[]): RecurringCallAler
 
 const actionAnswer = (fields: Partial<RecurringCallActionResult>): RecurringCallActionResult => answer(new RecurringCallActionResult(), { Success: true, ...fields });
 
+/** A request the test answers when it chooses. */
+interface Deferred<T> {
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+}
+
+const deferred = <T>(): Deferred<T> => {
+  let resolve: (value: T) => void = () => undefined;
+
+  const promise = new Promise<T>((settle) => {
+    resolve = settle;
+  });
+
+  return { promise, resolve };
+};
+
 let runtime: DataTestRuntime;
 
 const reset = async (name: string) => defaultResetRegistry.getStoreResets().get(name)?.('logout');
@@ -260,7 +278,9 @@ describe('recurring calls store', () => {
     jest.mocked(saveRecurringCall).mockRejectedValueOnce(new ApiError({ kind: 'http', status: 400, data: { Errors: [{ Key: 'ErrorNameRequired', Message: 'A name is required.' }] } }));
     await expect(useRecurringCallsStore.getState().saveRecurringCall(input)).rejects.toMatchObject({ status: 400 });
 
-    expect(useRecurringCallsStore.getState().busyKey).toBeNull();
+    expect(useRecurringCallsStore.getState().busyKeys).toEqual([]);
+    // A refusal saved nothing: no list is read again.
+    expect(getRecurringCalls).not.toHaveBeenCalled();
 
     jest.mocked(saveRecurringCall).mockResolvedValueOnce(answer(new SaveRecurringCallResult(), { Data: { RecurringCallId: 7, CreatedCalls: 1, ReplacedCalls: 0 } }));
     await expect(useRecurringCallsStore.getState().saveRecurringCall({ ...input, Name: 'Transfers' })).resolves.toMatchObject({ RecurringCallId: 7 });
@@ -286,7 +306,7 @@ describe('recurring calls store', () => {
     const occurrence = { RecurringCallId: 4, OccurrenceOn: '2026-11-18T16:00:00Z' };
 
     jest.mocked(dispatchOccurrenceNow).mockImplementationOnce(async () => {
-      expect(useRecurringCallsStore.getState().busyKey).toBe(recurringOccurrenceKey(occurrence));
+      expect(useRecurringCallsStore.getState().busyKeys).toEqual([recurringOccurrenceKey(occurrence)]);
 
       return answer(new RecurringCallOccurrenceResult(), {
         Success: true,
@@ -300,11 +320,131 @@ describe('recurring calls store', () => {
     expect(outcome).toMatchObject({ ok: true, outcome: 'Held', callId: 55, callNumber: '26-55', callState: 8 });
     expect(getRecurringCallAlerts).toHaveBeenCalled();
     expect(useCallsStore.getState().refreshQueuedCallLists).toHaveBeenCalled();
-    expect(useRecurringCallsStore.getState().busyKey).toBeNull();
+    expect(useRecurringCallsStore.getState().busyKeys).toEqual([]);
 
     jest.mocked(skipOccurrence).mockRejectedValueOnce(httpError(404));
 
     expect(await useRecurringCallsStore.getState().runOccurrenceAction('skip', occurrence)).toMatchObject({ ok: false, error: { code: 'not_found' } });
+  });
+
+  it('keeps each write busy until that write finishes, and joins a second press on the same occurrence', async () => {
+    const pause = deferred<RecurringCallActionResult>();
+    const remove = deferred<RecurringCallActionResult>();
+    const send = deferred<RecurringCallOccurrenceResult>();
+    const occurrence = { RecurringCallId: 4, OccurrenceOn: '2026-11-18T16:00:00Z' };
+
+    jest.mocked(pauseRecurringCall).mockReturnValueOnce(pause.promise);
+    jest.mocked(deleteRecurringCall).mockReturnValueOnce(remove.promise);
+    jest.mocked(dispatchOccurrenceNow).mockReturnValueOnce(send.promise);
+    const pausing = useRecurringCallsStore.getState().pauseRecurringCall({ RecurringCallId: 11, DeleteUpcomingCalls: false });
+    const deleting = useRecurringCallsStore.getState().deleteRecurringCall(12, false);
+    const sending = useRecurringCallsStore.getState().runOccurrenceAction('dispatch', occurrence);
+    const sendingAgain = useRecurringCallsStore.getState().runOccurrenceAction('create', occurrence);
+
+    expect(useRecurringCallsStore.getState().busyKeys).toEqual([recurringScheduleKey(11), recurringScheduleKey(12), recurringOccurrenceKey(occurrence)]);
+    expect(dispatchOccurrenceNow).toHaveBeenCalledTimes(1);
+
+    pause.resolve(actionAnswer({}));
+    await pausing;
+
+    expect(useRecurringCallsStore.getState().busyKeys).toEqual([recurringScheduleKey(12), recurringOccurrenceKey(occurrence)]);
+
+    send.resolve(
+      answer(new RecurringCallOccurrenceResult(), { Success: true, Data: { Outcome: 'Dispatched', CallId: 9, CallNumber: '26-9', CallState: 0, UnavailableUnitIds: [], UnavailableUserIds: [], RunCardApplied: false } })
+    );
+    remove.resolve(actionAnswer({}));
+    await Promise.all([deleting, sending]);
+
+    expect(await sendingAgain).toMatchObject({ ok: true, outcome: 'Dispatched' });
+    expect(useRecurringCallsStore.getState().busyKeys).toEqual([]);
+  });
+
+  it('leaves the next session alone when a write lands after sign-out', async () => {
+    const pause = deferred<RecurringCallActionResult>();
+    const resume = deferred<RecurringCallActionResult>();
+
+    jest.mocked(pauseRecurringCall).mockReturnValueOnce(pause.promise);
+    const pausing = useRecurringCallsStore.getState().pauseRecurringCall({ RecurringCallId: 4, DeleteUpcomingCalls: false });
+
+    await reset('data.recurring-calls');
+    jest.mocked(resumeRecurringCall).mockReturnValueOnce(resume.promise);
+    const resuming = useRecurringCallsStore.getState().resumeRecurringCall(4);
+    jest.mocked(getRecurringCalls).mockClear();
+
+    pause.resolve(actionAnswer({}));
+    await pausing;
+    await flush();
+
+    expect(useRecurringCallsStore.getState().busyKeys).toEqual([recurringScheduleKey(4)]);
+    expect(getRecurringCalls).not.toHaveBeenCalled();
+
+    resume.resolve(actionAnswer({}));
+    await resuming;
+
+    expect(useRecurringCallsStore.getState().busyKeys).toEqual([]);
+  });
+
+  it('reads the lists again when a save may have been made before it failed', async () => {
+    const input = { RecurringCallId: 0, Name: 'Transfers', Frequency: 2, RepeatInterval: 1, Times: ['08:00'], StartsOn: '2026-11-18', CreationMode: 0, UseRunCard: false, Priority: 0, CheckInTimersEnabled: false };
+
+    jest.mocked(saveRecurringCall).mockRejectedValueOnce(httpError(503));
+    await expect(useRecurringCallsStore.getState().saveRecurringCall(input)).rejects.toMatchObject({ status: 503 });
+    await flush();
+
+    expect(getRecurringCalls).toHaveBeenCalledWith(expect.anything());
+    expect(saveRecurringCall).toHaveBeenCalledTimes(1);
+  });
+
+  it('asks for the options again when the last read brought none', async () => {
+    jest.mocked(getRecurringCallOptions).mockResolvedValue(answer(new RecurringCallOptionsResult(), { Status: 'not_found', Data: null }));
+    await useRecurringCallsStore.getState().fetchOptions();
+    await useRecurringCallsStore.getState().fetchOptions();
+
+    expect(getRecurringCallOptions).toHaveBeenCalledTimes(2);
+  });
+
+  it('never brings back a deleted schedule from a list read that left before the delete', async () => {
+    const list = deferred<RecurringCallsResult>();
+
+    await useRecurringCallsStore.getState().fetchRecurringCalls();
+    jest.mocked(getRecurringCalls).mockReturnValueOnce(list.promise);
+    const reading = useRecurringCallsStore.getState().fetchRecurringCalls({ bypassCache: true });
+
+    jest.mocked(deleteRecurringCall).mockResolvedValueOnce(actionAnswer({}));
+    jest.mocked(getRecurringCalls).mockRejectedValue(httpError(503));
+    expect(await useRecurringCallsStore.getState().deleteRecurringCall(2, false)).toMatchObject({ ok: true });
+    list.resolve(answer(new RecurringCallsResult(), { Data: [schedule(1), schedule(2)] }));
+    await reading;
+    await flush();
+
+    expect(useRecurringCallsStore.getState().schedules.map((item) => item.RecurringCallId)).toEqual([1]);
+  });
+
+  it('shows a window asked for again while its first read is still out, and never another window’s entries', async () => {
+    const firstA = deferred<ScheduledCallsCalendarResult>();
+    const windowA = { start: 'a', end: 'b' };
+    const windowB = { start: 'c', end: 'd' };
+
+    jest
+      .mocked(getScheduledCallsCalendar)
+      .mockReturnValueOnce(firstA.promise)
+      .mockResolvedValueOnce(answer(new ScheduledCallsCalendarResult(), { Data: [entry(4, '2026-12-01T08:00:00')] }))
+      .mockResolvedValueOnce(answer(new ScheduledCallsCalendarResult(), { Data: [entry(7, '2026-11-17T09:00:00')] }));
+    const readingA = useRecurringCallsStore.getState().fetchCalendar(windowA);
+
+    await useRecurringCallsStore.getState().fetchCalendar(windowB);
+    const readingAAgain = useRecurringCallsStore.getState().fetchCalendar(windowA);
+    firstA.resolve(answer(new ScheduledCallsCalendarResult(), { Data: [entry(1, '2026-11-17T08:00:00')] }));
+    await Promise.all([readingA, readingAAgain]);
+
+    expect(useRecurringCallsStore.getState().calendarWindow).toEqual(windowA);
+    expect(useRecurringCallsStore.getState().calendar.map((item) => item.KindId)).toEqual([7]);
+
+    // A window whose read fails keeps the last window's entries with that window, not with the new one.
+    jest.mocked(getScheduledCallsCalendar).mockRejectedValueOnce(httpError(503));
+    await useRecurringCallsStore.getState().fetchCalendar(windowB);
+
+    expect(useRecurringCallsStore.getState()).toMatchObject({ calendarWindow: windowA, calendarRequest: windowB });
   });
 
   it('clears everything on sign-out', async () => {
@@ -372,6 +512,31 @@ describe('recurring call alerts store', () => {
     await useRecurringCallAlertsStore.getState().fetchAlerts({ bypassCache: true });
 
     expect(getRecurringCallAlerts).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps each alert busy until its own action finishes, and drops an action that lands after disabling', async () => {
+    const acknowledge = deferred<RecurringCallActionResult>();
+    const dismiss = deferred<RecurringCallActionResult>();
+
+    jest.mocked(acknowledgeRecurringCallAlert).mockReturnValueOnce(acknowledge.promise);
+    jest.mocked(dismissRecurringCallAlert).mockReturnValueOnce(dismiss.promise);
+    const acknowledging = useRecurringCallAlertsStore.getState().acknowledgeAlert('a');
+    const dismissing = useRecurringCallAlertsStore.getState().dismissAlert('b');
+
+    acknowledge.resolve(actionAnswer({}));
+    await acknowledging;
+
+    expect(useRecurringCallAlertsStore.getState().busyKeys).toEqual(['alert:b']);
+
+    useRecurringCallAlertsStore.getState().disable();
+    await flush();
+    jest.mocked(getRecurringCallAlerts).mockClear();
+    dismiss.resolve(actionAnswer({}));
+    await dismissing;
+    await flush();
+
+    expect(useRecurringCallAlertsStore.getState().busyKeys).toEqual([]);
+    expect(getRecurringCallAlerts).not.toHaveBeenCalled();
   });
 
   it('is cleared when disabled and on sign-out', async () => {

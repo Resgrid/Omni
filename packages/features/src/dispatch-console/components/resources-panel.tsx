@@ -1,5 +1,5 @@
 import { useCallsStore, usePersonnelStore, useUnitsStore } from '@resgrid/data';
-import { isUnitDispatchedToCall } from '@resgrid/features/calls';
+import { isPersonReleasableFromCall, isUnitDispatchedToCall } from '@resgrid/features/calls';
 import { useUnitAlertsByUnit } from '@resgrid/features/unit-status-alerts';
 import { useTranslation } from '@resgrid/i18n';
 import type { PersonnelInfoResultData, UnitInfoResultData } from '@resgrid/models';
@@ -129,7 +129,7 @@ export const ResourcesPanel: React.FC<ResourcesPanelProps> = ({
           onPress={onSelectPersonnel}
           onOpen={onOpenPersonnel}
           onSetStatusForCall={callFilter ? onSetPersonnelStatusForCall : undefined}
-          onReleaseFromCall={callFilter ? onReleasePersonnelFromCall : undefined}
+          onReleaseFromCall={callFilter && isPersonReleasableFromCall(item.person, callFilter) ? onReleasePersonnelFromCall : undefined}
         />
       );
     },

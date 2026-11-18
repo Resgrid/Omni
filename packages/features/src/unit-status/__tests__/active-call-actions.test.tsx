@@ -6,7 +6,7 @@ import { NavigationHandoffProvider } from '@resgrid/features/contacts';
 import { ActionBaseTypes, StatusProvider } from '@resgrid/features/status';
 import { CallResultData, type StatusesResultData, UnitResultData, UnitTypeStatusResultData } from '@resgrid/models';
 import { useToastStore } from '@resgrid/ui';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { router } from 'expo-router';
 import React from 'react';
 
@@ -159,15 +159,32 @@ describe('ActiveCallCard: releasing the crew’s own unit ("we were stood down")
 
   it('releases the active unit from its call after confirming, then clears the active call', async () => {
     const { onClearCall } = await renderWithUnit([{ Id: 'u1', Type: 'Unit', Name: 'Engine 1' }]);
-    expect(fetchCallDispatches).toHaveBeenCalledWith(['7']);
+    // Read now, not from a copy cached before the unit was dispatched.
+    expect(fetchCallDispatches).toHaveBeenCalledWith(['7'], { bypassCache: true });
 
     await fireEvent.press(screen.getByTestId('unit-active-call-release'));
     expect(screen.getByText('calls.release.title:Engine 1,C-7', hidden)).toBeTruthy();
-    await fireEvent.press(screen.getByTestId('unit-active-call-release-dialog-confirm', hidden));
+    await act(async () => fireEvent.press(screen.getByTestId('unit-active-call-release-dialog-confirm', hidden)));
 
     expect(releaseFromCall).toHaveBeenCalledWith({ kind: 'unit', callId: '7', resourceId: 'u1', notify: true });
     expect(onClearCall).toHaveBeenCalled();
     expect(useToastStore.getState().toasts.at(-1)).toMatchObject({ type: 'success', message: 'calls.release.unit_success:Engine 1' });
+  });
+
+  it('reads the newer of the call list’s and the call detail’s dispatches, so an older empty list does not hide Release', async () => {
+    useCallsStore.setState({ callDispatchesFetchedAt: { '7': 100 } });
+    // SAFETY: a detail record with only the dispatches and read time the card reads.
+    useCallDetailStore.setState({ details: { '7': { extraData: { Dispatches: [{ Id: 'u1', Type: 'Unit', Name: 'Engine 1' }] }, fetchedAt: 200 } as never } });
+    const { unmount } = await renderWithUnit([]);
+
+    expect(screen.getByTestId('unit-active-call-release')).toBeTruthy();
+    await unmount();
+
+    // The unit stood down: the newer empty list wins over the older detail.
+    useCallsStore.setState({ callDispatchesFetchedAt: { '7': 300 } });
+    await renderWithUnit([]);
+    expect(screen.queryByTestId('unit-active-call-release')).toBeNull();
+    useCallDetailStore.setState({ details: {} });
   });
 
   it('is offered only while the unit is dispatched to the call, and only where the app releases its own unit', async () => {

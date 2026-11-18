@@ -1,32 +1,55 @@
+import { toZonedWallClock, type WallClock, zonedWallClockToUtc } from '@resgrid/core/utils/dates';
 import type { RecurringCallsCalendarWindow, RecurringOccurrenceAction } from '@resgrid/data';
 import { type ScheduledCallCalendarEntryData, ScheduledCallCalendarEntryKind } from '@resgrid/models';
 
 import { wallClockDay } from './schedule-format';
 
-/** Days the agenda shows at once (Core answers at most 100). */
+/** Days the agenda shows at once (Core reads at most 100 days per request). */
 export const AGENDA_DAYS = 14;
 
 /** Days before the start day that are still shown, so yesterday's missed or held occurrences stay in view. */
 export const AGENDA_LOOKBACK_DAYS = 1;
 
-const DAY_MS = 24 * 60 * 60 * 1000;
+const pad = (value: number): string => String(value).padStart(2, '0');
 
-/** Local midnight of the day `date` falls on. */
-export const startOfDay = (date: Date): Date => new Date(date.getFullYear(), date.getMonth(), date.getDate());
+const toDayKey = (year: number, month: number, day: number): string => `${year}-${pad(month)}-${pad(day)}`;
 
-/** `date` moved by whole days (calendar days, so a daylight-saving change does not shift midnight). */
-export const addDays = (date: Date, days: number): Date => new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
+/** A "yyyy-MM-dd" day as its parts; month 1–12. */
+const dayParts = (day: string): Pick<WallClock, 'year' | 'month' | 'day'> => {
+  const [year = 1970, month = 1, date = 1] = day.split('-').map((part) => Number.parseInt(part, 10));
 
-/** The calendar request for the agenda starting on `from`: the lookback day through `AGENDA_DAYS` later, as UTC instants. */
-export function agendaWindow(from: Date): RecurringCallsCalendarWindow {
-  const start = addDays(startOfDay(from), -AGENDA_LOOKBACK_DAYS);
-  const end = addDays(startOfDay(from), AGENDA_DAYS);
+  return { year, month, day: date };
+};
 
-  return { start: start.toISOString(), end: end.toISOString() };
+/**
+ * The department calendar day ("yyyy-MM-dd") `instant` falls on in the department's zone (the device's when the department
+ * has none). The agenda pages by these days, the same days its entries are grouped by.
+ */
+export const departmentDay = (instant: Date, timeZone: string | null | undefined): string => {
+  const wall = toZonedWallClock(instant, timeZone);
+
+  return toDayKey(wall.year, wall.month, wall.day);
+};
+
+/** A "yyyy-MM-dd" day moved by whole calendar days. */
+export const addDays = (day: string, days: number): string => {
+  const parts = dayParts(day);
+  const moved = new Date(Date.UTC(parts.year, parts.month - 1, parts.day + days));
+
+  return toDayKey(moved.getUTCFullYear(), moved.getUTCMonth() + 1, moved.getUTCDate());
+};
+
+/** The instant the department's day begins (its midnight; a daylight-saving gap moves it forward). */
+const dayStart = (day: string, timeZone: string | null | undefined): Date => zonedWallClockToUtc({ ...dayParts(day), hour: 0, minute: 0, second: 0 }, timeZone);
+
+/**
+ * The calendar request for the agenda starting on the department day `from`: the lookback day's midnight through the
+ * midnight `AGENDA_DAYS` later, both in the department's zone, as UTC instants. The request covers exactly the days shown,
+ * wherever the desk is.
+ */
+export function agendaWindow(from: string, timeZone: string | null | undefined): RecurringCallsCalendarWindow {
+  return { start: dayStart(addDays(from, -AGENDA_LOOKBACK_DAYS), timeZone).toISOString(), end: dayStart(addDays(from, AGENDA_DAYS), timeZone).toISOString() };
 }
-
-/** A local day as "yyyy-MM-dd". */
-export const dayKey = (date: Date): string => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 
 /** The first and last day an agenda shows ("yyyy-MM-dd"). */
 export interface AgendaRange {
@@ -34,11 +57,8 @@ export interface AgendaRange {
   last: string;
 }
 
-/** The days the agenda starting on `from` shows. */
-export const agendaRange = (from: Date): AgendaRange => ({ first: dayKey(addDays(from, -AGENDA_LOOKBACK_DAYS)), last: dayKey(addDays(from, AGENDA_DAYS - 1)) });
-
-/** Whole days between two local midnights (navigation and tests). */
-export const daysBetween = (a: Date, b: Date): number => Math.round((startOfDay(b).getTime() - startOfDay(a).getTime()) / DAY_MS);
+/** The department days the agenda starting on `from` shows. */
+export const agendaRange = (from: string): AgendaRange => ({ first: addDays(from, -AGENDA_LOOKBACK_DAYS), last: addDays(from, AGENDA_DAYS - 1) });
 
 export interface AgendaDay {
   /** The department calendar day ("yyyy-MM-dd"). */

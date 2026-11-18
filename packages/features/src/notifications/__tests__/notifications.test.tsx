@@ -251,9 +251,20 @@ describe('PushNotificationModal', () => {
 
     expect(screen.getByText('Structure Fire', q)).toBeTruthy();
     expect(screen.getByTestId('push-notification-type', q)).toHaveTextContent('push_notifications.types.call');
-    await fireEvent.press(screen.getByTestId('push-notification-view', q));
+    await act(async () => fireEvent.press(screen.getByTestId('push-notification-view', q)));
     expect(mockNavigate).toHaveBeenCalledWith(expect.objectContaining({ kind: 'call', id: '55' }));
     expect(usePushNotificationModalStore.getState().isOpen).toBe(false);
+  });
+
+  it('keeps the push open, and View pressable again, when its screen could not be opened', async () => {
+    mockNavigate.mockResolvedValueOnce(false);
+    await render(<PushNotificationModal />);
+    await act(() => usePushNotificationModalStore.getState().showNotificationModal({ eventCode: 'C55', title: 'Structure Fire', body: '1 Main St' }));
+    await act(async () => fireEvent.press(screen.getByTestId('push-notification-view', q)));
+
+    expect(usePushNotificationModalStore.getState().isOpen).toBe(true);
+    expect(screen.getByText('Structure Fire', q)).toBeTruthy();
+    expect(screen.getByTestId('push-notification-view', q)).not.toBeDisabled();
   });
 
   it('hides "View" for a target the variant has no route for and for unsafe ids', async () => {
