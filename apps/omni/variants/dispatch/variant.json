@@ -49,7 +49,10 @@
       "queues": true,
       "runCards": true,
       "nearestBoard": true,
-      "destinationAvailability": true
+      "destinationAvailability": true,
+      "releaseResources": true,
+      "releaseOwnUnit": false,
+      "recurringCalls": true
     },
     "status": {
       "subject": "personnel",

@@ -15,11 +15,13 @@
   "push_notifications.confirm_receipt": "Confirm receipt",
   "push_notifications.confirming_receipt": "Confirming...",
   "push_notifications.types.communication_test": "Communication Test",
+  "push_notifications.types.recurring_call_alert": "Recurring Call Alert",
   "push_notifications.types.sign_in_approval": "Sign-in Approval",
   "push_notifications.types.weather": "Weather Alert",
   "push_notifications.types.work_order": "Work Order",
   "push_notifications.view_alert": "View Alert",
   "push_notifications.view_chat": "View Chat",
+  "push_notifications.view_recurring_call_alerts": "View Alerts",
   "push_notifications.view_sign_in": "Review",
   "push_notifications.view_work_order": "View Work Order"
 }

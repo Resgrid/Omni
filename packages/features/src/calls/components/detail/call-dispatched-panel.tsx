@@ -1,12 +1,15 @@
 import { UnitNavigationEtaChip, useIsNavigationEtaEnabled, useNavigationEtaSync } from '@resgrid/features/navigation-eta';
 import { useTranslation } from '@resgrid/i18n';
 import type { DispatchedEventResultData } from '@resgrid/models';
-import { Button, ButtonText, Text, TypeIcon, useThemeColors } from '@resgrid/ui';
-import { UserPlus } from 'lucide-react-native';
-import React, { useMemo } from 'react';
+import { Button, ButtonText, Pressable, Text, TypeIcon, useThemeColors } from '@resgrid/ui';
+import { CircleMinus, UserPlus } from 'lucide-react-native';
+import React, { useCallback, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import { type ReleaseCall, type ReleaseTarget, useReleaseFromCall } from '../../hooks/use-release-from-call';
 import { dispatchKey, getDispatchTypeStyle, getUniqueDispatches, isUnitDispatchType } from '../../lib/call-dispatch';
+import { isReleaseTargetRow, releaseKindOf } from '../../lib/call-release';
+import { ReleasedResourcesList } from './released-resources-list';
 
 export interface CallDispatchedPanelProps {
   dispatches: readonly DispatchedEventResultData[];
@@ -14,18 +17,32 @@ export interface CallDispatchedPanelProps {
   callId?: string | null;
   /** "Dispatch more" (Dispatch): shown for a call already out to users who may dispatch. */
   onDispatchMore?: () => void;
+  /** The call itself: where the app releases resources (`calls.releaseResources`), members who may edit it get "Release from call" on each unit and person. */
+  call?: ReleaseCall | null;
+  /** Units and people released from the call, listed apart and muted (`getReleasedUnits` / `getReleasedPersonnel`). */
+  releasedUnits?: readonly DispatchedEventResultData[];
+  releasedPersonnel?: readonly DispatchedEventResultData[];
 }
+
+const NONE: readonly DispatchedEventResultData[] = [];
 
 /**
  * Who the call was dispatched to (personnel, groups, roles, units), with response codes when the department shows them
- * and, where the app shows live ETAs (Dispatch, Big Board), each unit's ETA while it navigates to this call.
+ * and, where the app shows live ETAs (Dispatch, Big Board), each unit's ETA while it navigates to this call. On the
+ * desks that release resources (Dispatch, IC) a member who may edit the call can release a unit or person from it; the
+ * units and people released are listed below, muted.
  */
-export const CallDispatchedPanel: React.FC<CallDispatchedPanelProps> = ({ dispatches, callId = null, onDispatchMore }) => {
+export const CallDispatchedPanel: React.FC<CallDispatchedPanelProps> = ({ dispatches, callId = null, onDispatchMore, call = null, releasedUnits = NONE, releasedPersonnel = NONE }) => {
   const { t } = useTranslation();
   const colors = useThemeColors();
   const unique = useMemo(() => getUniqueDispatches(dispatches), [dispatches]);
   const showEtas = useIsNavigationEtaEnabled() && !!callId;
   useNavigationEtaSync(showEtas);
+  // A confirmation open for a unit or person that is no longer listed (released elsewhere) closes with their row.
+  const isReleasable = useCallback((target: ReleaseTarget) => unique.some((dispatch) => isReleaseTargetRow(dispatch, target.kind, target.id)), [unique]);
+  // A release re-reads the call (the detail store), so the row moves to the released list by itself.
+  const release = useReleaseFromCall({ call, isReleasable, testID: 'call-dispatched-release-dialog' });
+  const released = <ReleasedResourcesList releasedUnits={releasedUnits} releasedPersonnel={releasedPersonnel} />;
 
   const dispatchMore = onDispatchMore ? (
     <Button size="sm" className="mb-3 self-start" onPress={onDispatchMore} accessibilityLabel={t('call_detail.dispatch_more')} testID="call-dispatched-dispatch-more">
@@ -41,6 +58,7 @@ export const CallDispatchedPanel: React.FC<CallDispatchedPanelProps> = ({ dispat
       <View style={styles.panel} testID="call-dispatched-panel">
         {dispatchMore}
         <Text className="text-typography-600">{t('call_detail.no_dispatched')}</Text>
+        {released}
       </View>
     );
   }
@@ -51,6 +69,7 @@ export const CallDispatchedPanel: React.FC<CallDispatchedPanelProps> = ({ dispat
       {unique.map((dispatch, index) => {
         const style = getDispatchTypeStyle(dispatch.Type);
         const isUnit = isUnitDispatchType(dispatch.Type);
+        const releaseKind = dispatch.Id && release.permissions.canReleaseAny ? releaseKindOf(dispatch.Type) : null;
 
         return (
           <View key={dispatchKey(dispatch)} style={styles.row} className="bg-background-50" testID={`call-dispatched-${dispatch.Id || index}`}>
@@ -74,9 +93,25 @@ export const CallDispatchedPanel: React.FC<CallDispatchedPanelProps> = ({ dispat
                 <Text style={styles.codeText}>{dispatch.ResponseCode}</Text>
               </View>
             ) : null}
+            {releaseKind ? (
+              <Pressable
+                onPress={() => release.requestRelease({ kind: releaseKind, id: dispatch.Id, name: dispatch.Name })}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel={t('calls.release.action_named', { name: dispatch.Name })}
+                style={styles.release}
+                testID={`call-dispatched-${dispatch.Id}-release`}
+              >
+                <View>
+                  <CircleMinus size={18} color={colors.token('error-600')} />
+                </View>
+              </Pressable>
+            ) : null}
           </View>
         );
       })}
+      {released}
+      {release.dialog}
     </View>
   );
 };
@@ -91,4 +126,5 @@ const styles = StyleSheet.create({
   body: { flex: 1 },
   code: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
   codeText: { color: '#FFFFFF', fontSize: 12, lineHeight: 16, fontWeight: '700' },
+  release: { marginLeft: 8, padding: 6, borderRadius: 6, backgroundColor: 'rgba(239, 68, 68, 0.1)' },
 });

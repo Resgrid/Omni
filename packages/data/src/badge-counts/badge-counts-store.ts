@@ -23,10 +23,14 @@ export const SERVER_BADGE_COUNT_KEYS = ['calls', 'messages', 'chats', 'weather',
 export type ServerBadgeCountKey = (typeof SERVER_BADGE_COUNT_KEYS)[number];
 
 /**
- * Every count a badge can show: the server counts, the Novu inbox's unread count, and the calls awaiting resources
- * (Dispatch's run card requirements, counted from the awaiting-resources store; Core has no badge count for them).
+ * Every count a badge can show: the server counts, the Novu inbox's unread count, the calls awaiting resources
+ * (Dispatch's run card requirements, counted from the awaiting-resources store) and the open recurring call alerts
+ * (Dispatch, counted from the recurring-call-alerts store). Core has no badge count for the last two.
  */
-export type NavBadgeKey = ServerBadgeCountKey | 'notifications' | 'awaitingResources';
+export type NavBadgeKey = ServerBadgeCountKey | 'notifications' | 'awaitingResources' | 'recurringCallAlerts';
+
+/** Counts kept on the device (set by the stores that hold what they count), never asked of the server. */
+type LocalBadgeKey = Exclude<NavBadgeKey, ServerBadgeCountKey>;
 
 /** What a nav entry or tab shows: one count, or several as their sum (Shifts: today's shifts and trade requests). */
 export type NavBadge = NavBadgeKey | readonly NavBadgeKey[];
@@ -35,7 +39,7 @@ type ServerCounts = Partial<Record<ServerBadgeCountKey, number>>;
 
 const isServerKey = (key: string): key is ServerBadgeCountKey => SERVER_BADGE_COUNT_KEYS.some((known) => known === key);
 
-export const isServerBadgeCountKey = (key: NavBadgeKey): key is ServerBadgeCountKey => key !== 'notifications' && key !== 'awaitingResources';
+export const isServerBadgeCountKey = (key: NavBadgeKey): key is ServerBadgeCountKey => key !== 'notifications' && key !== 'awaitingResources' && key !== 'recurringCallAlerts';
 
 const NO_KEYS: readonly NavBadgeKey[] = [];
 
@@ -87,6 +91,8 @@ interface BadgeCountsData extends SliceMeta<BadgeCountsSlice> {
   unreadNotifications: number;
   /** Calls still awaiting run card resources, set by the awaiting-resources store. */
   awaitingResources: number;
+  /** Open recurring call alerts, set by the recurring-call-alerts store. */
+  recurringCallAlerts: number;
 }
 
 export interface BadgeCountsState extends BadgeCountsData {
@@ -99,6 +105,7 @@ export interface BadgeCountsState extends BadgeCountsData {
   fetchBadgeCounts: (params?: BadgeCountsParams, options?: FetchOptions) => Promise<void>;
   setUnreadNotifications: (count: number) => void;
   setAwaitingResources: (count: number) => void;
+  setRecurringCallAlerts: (count: number) => void;
 }
 
 export interface BadgeCountsParams {
@@ -106,7 +113,7 @@ export interface BadgeCountsParams {
   activeUnitId?: number | null;
 }
 
-const initialData = (): BadgeCountsData => ({ ...emptySliceMeta<BadgeCountsSlice>(), counts: {}, wanted: [], unsupported: false, unreadNotifications: 0, awaitingResources: 0 });
+const initialData = (): BadgeCountsData => ({ ...emptySliceMeta<BadgeCountsSlice>(), counts: {}, wanted: [], unsupported: false, unreadNotifications: 0, awaitingResources: 0, recurringCallAlerts: 0 });
 
 let runner: SliceRunner<BadgeCountsSlice, BadgeCountsState>;
 let lastParams: BadgeCountsParams = {};
@@ -175,6 +182,12 @@ export const useBadgeCountsStore = create<BadgeCountsState>()(
 
           if (get().awaitingResources !== next) set({ awaitingResources: next });
         },
+
+        setRecurringCallAlerts: (count) => {
+          const next = countOf(count) ?? 0;
+
+          if (get().recurringCallAlerts !== next) set({ recurringCallAlerts: next });
+        },
       };
     },
     dataPersistOptions<BadgeCountsState, Pick<BadgeCountsData, 'counts' | 'fetchedAt'>>({
@@ -227,14 +240,21 @@ registerDataStoreReset<BadgeCountsState>('badge-counts', useBadgeCountsStore, in
   lastRequestAt = 0;
 });
 
+/** A count kept on the device. */
+const localCount = (state: Pick<BadgeCountsData, 'unreadNotifications'> & Partial<Pick<BadgeCountsData, 'awaitingResources' | 'recurringCallAlerts'>>, key: LocalBadgeKey): number => {
+  if (key === 'notifications') return state.unreadNotifications;
+
+  return (key === 'awaitingResources' ? state.awaitingResources : state.recurringCallAlerts) ?? 0;
+};
+
 /** The count a badge shows, or null for none (unknown, unsupported server, or zero). Several keys show their sum. */
 export const selectBadgeCount =
   (badge: NavBadge) =>
-  (state: Pick<BadgeCountsData, 'counts' | 'unreadNotifications'> & Partial<Pick<BadgeCountsData, 'awaitingResources'>>): number | null => {
+  (state: Pick<BadgeCountsData, 'counts' | 'unreadNotifications'> & Partial<Pick<BadgeCountsData, 'awaitingResources' | 'recurringCallAlerts'>>): number | null => {
     let total = 0;
 
     for (const key of badgeKeysOf(badge)) {
-      const value = key === 'notifications' ? state.unreadNotifications : key === 'awaitingResources' ? (state.awaitingResources ?? 0) : state.counts[key];
+      const value = isServerBadgeCountKey(key) ? state.counts[key] : localCount(state, key);
 
       if (value && value > 0) total += value;
     }
@@ -268,8 +288,9 @@ export function useBadgeCountLookup(): (badge: NavBadge | null | undefined) => n
   const counts = useBadgeCountsStore((state) => state.counts);
   const unreadNotifications = useBadgeCountsStore((state) => state.unreadNotifications);
   const awaitingResources = useBadgeCountsStore((state) => state.awaitingResources);
+  const recurringCallAlerts = useBadgeCountsStore((state) => state.recurringCallAlerts);
 
-  return useCallback((badge) => (badge ? selectBadgeCount(badge)({ counts, unreadNotifications, awaitingResources }) : null), [counts, unreadNotifications, awaitingResources]);
+  return useCallback((badge) => (badge ? selectBadgeCount(badge)({ counts, unreadNotifications, awaitingResources, recurringCallAlerts }) : null), [counts, unreadNotifications, awaitingResources, recurringCallAlerts]);
 }
 
 /**

@@ -22,6 +22,7 @@ describe('parseEventCode', () => {
     ['ct:abc', 'communicationTest', 'abc', {}],
     ['NWO:88', 'workOrder', '88', {}],
     ['NA:approval-1', 'signInApproval', 'approval-1', {}],
+    ['RCA:9b7c2d10-4e5f-4a6b-8c9d-0123456789ab', 'recurringCallAlert', '9b7c2d10-4e5f-4a6b-8c9d-0123456789ab', {}],
     ['W:9012', 'weatherAlert', '9012', {}],
     ['W15', 'weatherAlert', '15', {}],
   ])('reads %s as %s %s', (eventCode, kind, id, extra) => {
@@ -40,6 +41,9 @@ describe('parseEventCode', () => {
     expect(parseEventCode('CT:1').kind).toBe('communicationTest');
     expect(parseEventCode('NWO:1').kind).toBe('workOrder');
     expect(parseEventCode('NA:1').kind).toBe('signInApproval');
+    // R alone is no kind: a recurring call alert is only its whole prefix.
+    expect(parseEventCode('RCA:1').kind).toBe('recurringCallAlert');
+    expect(parseEventCode('R:1').kind).toBe('unknown');
     expect(parseEventCode('NC:1').target?.closed).toBe(true);
   });
 
@@ -105,6 +109,7 @@ describe('first-letter rule (Core NovuProvider)', () => {
     ['N1', 'notifications', false],
     ['NWO:1', 'notifications', false],
     ['NA:1', 'notifications', false],
+    ['RCA:1', 'notifications', false],
     ['t:1', 'chats', false],
     ['g:1', 'chats', false],
     ['W:1', 'notifications', false],

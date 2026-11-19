@@ -83,6 +83,11 @@ export interface CallFormHookPoints {
    * "Set Active", from unit-status). It gates itself on capabilities and renders nothing where it does not apply.
    */
   CallDetailAction?: React.ComponentType<CallDetailActionProps>;
+  /**
+   * A notice under the call's summary on the detail screen, supplied by a module the calls screens may not import
+   * (recurring-calls: "Created by the recurring call …" with a link to its schedule). It renders nothing where it does not apply.
+   */
+  CallDetailNotice?: React.ComponentType<CallDetailActionProps>;
   /** Plays a call audio recording in the app; without it the recording opens in the platform player. */
   playAudioClip?: (url: string, onFinished: () => void) => Promise<AudioClipHandle>;
   /** Loads the department's call custom fields (EntityType Call = 0). */

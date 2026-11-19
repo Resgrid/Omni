@@ -6,6 +6,11 @@
  */
 export interface KeyedFlight {
   run<T>(key: string, fn: () => Promise<T>, options?: { trailing?: boolean }): Promise<T>;
+  /**
+   * Forgets every key, so the next call starts a fresh run. A trailing run already queued still starts when the run it
+   * waits on settles (its caller holds that promise): callers that must not act after a reset check their own generation
+   * when the run starts (`createSliceRunner` does).
+   */
   clear(): void;
 }
 

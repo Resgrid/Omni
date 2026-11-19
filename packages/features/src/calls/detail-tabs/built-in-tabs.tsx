@@ -10,6 +10,7 @@ import { CallMediaPanel } from '../components/detail/call-media-panel';
 import { CallProtocolsPanel } from '../components/detail/call-protocols-panel';
 import { LocationHistoryPanel } from '../components/detail/location-history-panel';
 import { SiteInfoPanel } from '../components/detail/site-info-panel';
+import { getReleasedPersonnel, getReleasedUnits } from '../lib/call-release';
 import { type CallDetailTabDefinition, getCallDetailTabs, registerCallDetailTab } from './registry';
 
 /** Ids of the shared tabs. Other modules slot in by `order` (e.g. incident command 65, records 85, Dispatch alarm level 25). */
@@ -35,7 +36,16 @@ export const BUILT_IN_CALL_DETAIL_TABS: readonly CallDetailTabDefinition[] = [
     id: CALL_DETAIL_TAB_IDS.dispatched,
     order: 30,
     title: 'call_detail.tabs.dispatched',
-    render: (context) => <CallDispatchedPanel dispatches={context.extraData?.Dispatches ?? []} callId={context.callId} onDispatchMore={context.openDispatchMore} />,
+    render: (context) => (
+      <CallDispatchedPanel
+        dispatches={context.extraData?.Dispatches ?? []}
+        callId={context.callId}
+        onDispatchMore={context.openDispatchMore}
+        call={context.call}
+        releasedUnits={getReleasedUnits(context.extraData)}
+        releasedPersonnel={getReleasedPersonnel(context.extraData)}
+      />
+    ),
   },
   {
     id: CALL_DETAIL_TAB_IDS.activity,

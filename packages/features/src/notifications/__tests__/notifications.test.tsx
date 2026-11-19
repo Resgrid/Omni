@@ -251,9 +251,51 @@ describe('PushNotificationModal', () => {
 
     expect(screen.getByText('Structure Fire', q)).toBeTruthy();
     expect(screen.getByTestId('push-notification-type', q)).toHaveTextContent('push_notifications.types.call');
-    await fireEvent.press(screen.getByTestId('push-notification-view', q));
+    await act(async () => fireEvent.press(screen.getByTestId('push-notification-view', q)));
     expect(mockNavigate).toHaveBeenCalledWith(expect.objectContaining({ kind: 'call', id: '55' }));
     expect(usePushNotificationModalStore.getState().isOpen).toBe(false);
+  });
+
+  it('keeps the push open, and View pressable again, when its screen could not be opened', async () => {
+    mockNavigate.mockResolvedValueOnce(false);
+    await render(<PushNotificationModal />);
+    await act(() => usePushNotificationModalStore.getState().showNotificationModal({ eventCode: 'C55', title: 'Structure Fire', body: '1 Main St' }));
+    await act(async () => fireEvent.press(screen.getByTestId('push-notification-view', q)));
+
+    expect(usePushNotificationModalStore.getState().isOpen).toBe(true);
+    expect(screen.getByText('Structure Fire', q)).toBeTruthy();
+    expect(screen.getByTestId('push-notification-view', q)).not.toBeDisabled();
+  });
+
+  it('keeps a newer push guarded when a dismissed push opens late', async () => {
+    const finishes: ((opened: boolean) => void)[] = [];
+
+    mockNavigate.mockImplementation(
+      () =>
+        new Promise<boolean>((resolve) => {
+          finishes.push(resolve);
+        })
+    );
+
+    try {
+      await render(<PushNotificationModal />);
+      await act(() => usePushNotificationModalStore.getState().showNotificationModal({ eventCode: 'C55', title: 'Structure Fire', body: '1 Main St' }));
+      await act(async () => fireEvent.press(screen.getByTestId('push-notification-view', q)));
+      await act(async () => fireEvent.press(screen.getByTestId('push-notification-dismiss', q)));
+
+      await act(() => usePushNotificationModalStore.getState().showNotificationModal({ eventCode: 'C56', title: 'Grass Fire', body: '2 Oak Rd' }));
+      await act(async () => fireEvent.press(screen.getByTestId('push-notification-view', q)));
+      // The first push opens late: the second's View stays disabled until its own navigation settles.
+      await act(async () => finishes[0]?.(true));
+
+      expect(screen.getByTestId('push-notification-view', q)).toBeDisabled();
+      expect(usePushNotificationModalStore.getState().isOpen).toBe(true);
+
+      await act(async () => finishes[1]?.(true));
+      expect(usePushNotificationModalStore.getState().isOpen).toBe(false);
+    } finally {
+      mockNavigate.mockImplementation(async () => true);
+    }
   });
 
   it('hides "View" for a target the variant has no route for and for unsafe ids', async () => {

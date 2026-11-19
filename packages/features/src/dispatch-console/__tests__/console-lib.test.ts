@@ -75,7 +75,9 @@ describe('console filters', () => {
 
   it('decides who is on the filtered call by dispatch or status destination', () => {
     expect(isUnitOnCall({ UnitId: '2', Name: 'X', CurrentDestinationId: '', ActiveCallId: null }, filter)).toBe(true);
-    expect(isUnitOnCall({ UnitId: '5', Name: 'e2', CurrentDestinationId: '', ActiveCallId: null }, filter)).toBe(true);
+    // By id when both have one (unit 5 is not unit 2, whatever its name); by name only when one has no id.
+    expect(isUnitOnCall({ UnitId: '5', Name: 'e2', CurrentDestinationId: '', ActiveCallId: null }, filter)).toBe(false);
+    expect(isUnitOnCall({ UnitId: '', Name: 'e2', CurrentDestinationId: '', ActiveCallId: null }, filter)).toBe(true);
     expect(isUnitOnCall({ UnitId: '6', Name: 'E6', CurrentDestinationId: '9', ActiveCallId: null }, filter)).toBe(true);
     expect(isUnitOnCall({ UnitId: '7', Name: 'E7', CurrentDestinationId: '', ActiveCallId: null }, null)).toBe(false);
     expect(isPersonOnCall({ UserId: 'b', StatusDestinationId: '' }, filter)).toBe(true);

@@ -2546,7 +2546,7 @@
     "anti-slop/require-readable-spacing": 28
   },
   "packages/features/src/dispatch-console/lib/console-filters.ts": {
-    "anti-slop/require-readable-spacing": 14
+    "anti-slop/require-readable-spacing": 9
   },
   "packages/features/src/dispatch-console/lib/console-layout.ts": {
     "anti-slop/require-readable-spacing": 2

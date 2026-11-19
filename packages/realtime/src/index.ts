@@ -23,6 +23,7 @@ export {
   NAVIGATION_EVENTING_EVENTS,
   type RealtimeFeatures,
   type RealtimeVariantInput,
+  RECURRING_CALL_EVENTING_EVENTS,
   resolveRealtimeFeatures,
   showsNavigationEtas,
   showsUnitStatusAlerts,

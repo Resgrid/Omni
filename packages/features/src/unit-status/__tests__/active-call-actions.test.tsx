@@ -6,7 +6,7 @@ import { NavigationHandoffProvider } from '@resgrid/features/contacts';
 import { ActionBaseTypes, StatusProvider } from '@resgrid/features/status';
 import { CallResultData, type StatusesResultData, UnitResultData, UnitTypeStatusResultData } from '@resgrid/models';
 import { useToastStore } from '@resgrid/ui';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { router } from 'expo-router';
 import React from 'react';
 
@@ -128,6 +128,109 @@ describe('ActiveCallCard', () => {
   it('has no change button where the shell cannot change the active call', async () => {
     await renderCard({ activeCallId: '7' });
     expect(screen.queryByTestId('unit-active-call-change')).toBeNull();
+  });
+});
+
+describe('ActiveCallCard: releasing the crew’s own unit ("we were stood down")', () => {
+  const releaseFromCall = jest.fn(async () => ({ releasedOn: '2026-11-16T10:32:00Z', statusApplied: true }));
+  const fetchCallDispatches = jest.fn(async () => undefined);
+
+  const renderWithUnit = async (dispatches: { Id: string; Type: string; Name: string }[], onClearCall = jest.fn()) => {
+    // SAFETY: dispatch rows with only the fields the card reads.
+    useCallsStore.setState({ callDispatches: { '7': dispatches as never }, fetchCallDispatches });
+
+    const { unmount } = await render(
+      <NavigationHandoffProvider value={{ navigateTo }}>
+        <StatusProvider activeUnitId="u1" activeCallId="7">
+          <ActiveCallCard activeCallId="7" onClearCall={onClearCall} />
+        </StatusProvider>
+      </NavigationHandoffProvider>
+    );
+
+    return { onClearCall, unmount };
+  };
+
+  beforeEach(() => {
+    releaseFromCall.mockClear();
+    fetchCallDispatches.mockClear();
+    useCallDetailStore.setState({ releaseFromCall });
+    useUnitsStore.setState({ fetchUnitInfos: jest.fn(async () => undefined) });
+  });
+
+  it('releases the active unit from its call after confirming, then clears the active call', async () => {
+    const { onClearCall } = await renderWithUnit([{ Id: 'u1', Type: 'Unit', Name: 'Engine 1' }]);
+    // Read now, not from a copy cached before the unit was dispatched.
+    expect(fetchCallDispatches).toHaveBeenCalledWith(['7'], { bypassCache: true });
+
+    await fireEvent.press(screen.getByTestId('unit-active-call-release'));
+    expect(screen.getByText('calls.release.title:Engine 1,C-7', hidden)).toBeTruthy();
+    await act(async () => fireEvent.press(screen.getByTestId('unit-active-call-release-dialog-confirm', hidden)));
+
+    expect(releaseFromCall).toHaveBeenCalledWith({ kind: 'unit', callId: '7', resourceId: 'u1', notify: true });
+    expect(onClearCall).toHaveBeenCalled();
+    expect(useToastStore.getState().toasts.at(-1)).toMatchObject({ type: 'success', message: 'calls.release.unit_success:Engine 1' });
+  });
+
+  it('keeps a call the crew picked while the release was still being read back', async () => {
+    const pendingReads: (() => void)[] = [];
+
+    const slowRead = jest.fn(
+      () =>
+        new Promise<undefined>((resolve) => {
+          pendingReads.push(() => resolve(undefined));
+        })
+    );
+
+    // SAFETY: dispatch rows with only the fields the card reads.
+    useCallsStore.setState({ callDispatches: { '7': [{ Id: 'u1', Type: 'Unit', Name: 'Engine 1' }] as never }, fetchCallDispatches: slowRead });
+    const onClearCall = jest.fn();
+
+    const card = (activeCallId: string) => (
+      <NavigationHandoffProvider value={{ navigateTo }}>
+        <StatusProvider activeUnitId="u1" activeCallId={activeCallId}>
+          <ActiveCallCard activeCallId={activeCallId} onClearCall={onClearCall} />
+        </StatusProvider>
+      </NavigationHandoffProvider>
+    );
+
+    const { rerender } = await render(card('7'));
+
+    await fireEvent.press(screen.getByTestId('unit-active-call-release'));
+    await act(async () => fireEvent.press(screen.getByTestId('unit-active-call-release-dialog-confirm', hidden)));
+    expect(releaseFromCall).toHaveBeenCalled();
+
+    // The crew picks call 8 before the release's read-back settles.
+    await rerender(card('8'));
+    await act(async () => pendingReads.forEach((finish) => finish()));
+
+    expect(onClearCall).not.toHaveBeenCalled();
+  });
+
+  it('reads the newer of the call list’s and the call detail’s dispatches, so an older empty list does not hide Release', async () => {
+    useCallsStore.setState({ callDispatchesFetchedAt: { '7': 100 } });
+    // SAFETY: a detail record with only the dispatches and read time the card reads.
+    useCallDetailStore.setState({ details: { '7': { extraData: { Dispatches: [{ Id: 'u1', Type: 'Unit', Name: 'Engine 1' }] }, fetchedAt: 200 } as never } });
+    const { unmount } = await renderWithUnit([]);
+
+    expect(screen.getByTestId('unit-active-call-release')).toBeTruthy();
+    await unmount();
+
+    // The unit stood down: the newer empty list wins over the older detail.
+    useCallsStore.setState({ callDispatchesFetchedAt: { '7': 300 } });
+    await renderWithUnit([]);
+    expect(screen.queryByTestId('unit-active-call-release')).toBeNull();
+    useCallDetailStore.setState({ details: {} });
+  });
+
+  it('is offered only while the unit is dispatched to the call, and only where the app releases its own unit', async () => {
+    const { unmount } = await renderWithUnit([{ Id: 'u2', Type: 'Unit', Name: 'Engine 2' }]);
+    expect(screen.queryByTestId('unit-active-call-release')).toBeNull();
+    await unmount();
+
+    resetActiveVariantForTests();
+    setActiveVariant(parseVariantManifest(responderManifest));
+    await renderWithUnit([{ Id: 'u1', Type: 'Unit', Name: 'Engine 1' }]);
+    expect(screen.queryByTestId('unit-active-call-release')).toBeNull();
   });
 });
 

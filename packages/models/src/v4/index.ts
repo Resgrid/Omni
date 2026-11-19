@@ -49,6 +49,9 @@ export * from './personnelLocation';
 export * from './personnelStaffing';
 export * from './personnelStatuses';
 export * from './records';
+
+// Recurring call schedules, their calendar and alerts (Core M0319/M0320); the domains stay alphabetical across this break.
+export * from './recurringCalls';
 export * from './roles';
 export * from './routes';
 export * from './routing';

@@ -222,6 +222,100 @@ export interface NewCallInput {
   DepartmentId?: string | null;
 }
 
+/** Input to release (stand down) one person from an open call without closing the call */
+export interface ReleasePersonnelInput {
+  /** Id of the call the person is released from */
+  CallId: string;
+  /** Id of the user to release */
+  UserId: string;
+  /** Optional. When true, the person is sent a cancellation notice for the call. */
+  Notify?: boolean;
+}
+
+/** A person released from a call */
+export interface ReleasePersonnelResultData {
+  /** Id of the call the person was released from */
+  CallId?: string | null;
+  /** Id of the released user */
+  UserId?: string | null;
+  /** When the person was released, ISO 8601 UTC ("Z") */
+  ReleasedOn?: string | null;
+  /** True when the release set the person's status (the department's release status); false when they kept it because they were already available, out of service, or working another open call. */
+  StatusApplied?: boolean;
+}
+
+/** The result of releasing (standing down) a person from an open call; a `not_found` envelope means the call no longer exists */
+export interface ReleasePersonnelResult {
+  Data?: ReleasePersonnelResultData;
+  /** Number of records returned */
+  PageSize?: number;
+  /** The requested page size */
+  Page?: number;
+  /** Timestamp in UTC of the operation */
+  Timestamp?: string;
+  /** API Version that produced the response */
+  Version?: string | null;
+  /** Name of the node the processed the operation */
+  Node?: string | null;
+  /** Name of the environment that the api is running under */
+  Environment?: string | null;
+  /** Trace or Request Id for the operation */
+  RequestId?: string | null;
+  /** Status of the Response */
+  Status?: string | null;
+  /** If pagination values were supplied what is the previous page url (if empty this is the first page) */
+  PreviousPageUrl?: string | null;
+  /** If pagination values were supplied what is the next page url (if empty there is no more records) */
+  NextPageUrl?: string | null;
+}
+
+/** Input to release (stand down) one unit from an open call without closing the call */
+export interface ReleaseUnitInput {
+  /** Id of the call the unit is released from */
+  CallId: string;
+  /** Id of the unit to release */
+  UnitId: string;
+  /** Optional. When true, the unit is sent a cancellation notice for the call (as for a unit taken off an edited call). */
+  Notify?: boolean;
+}
+
+/** A unit released from a call */
+export interface ReleaseUnitResultData {
+  /** Id of the call the unit was released from */
+  CallId?: string | null;
+  /** Id of the released unit */
+  UnitId?: string | null;
+  /** When the unit was released, ISO 8601 UTC ("Z") */
+  ReleasedOn?: string | null;
+  /** True when the release set the unit's status (the department's release status); false when the unit kept its status because it was already available, out of service, or working another open call. */
+  StatusApplied?: boolean;
+}
+
+/** The result of releasing (standing down) a unit from an open call; a `not_found` envelope means the call no longer exists */
+export interface ReleaseUnitResult {
+  Data?: ReleaseUnitResultData;
+  /** Number of records returned */
+  PageSize?: number;
+  /** The requested page size */
+  Page?: number;
+  /** Timestamp in UTC of the operation */
+  Timestamp?: string;
+  /** API Version that produced the response */
+  Version?: string | null;
+  /** Name of the node the processed the operation */
+  Node?: string | null;
+  /** Name of the environment that the api is running under */
+  Environment?: string | null;
+  /** Trace or Request Id for the operation */
+  RequestId?: string | null;
+  /** Status of the Response */
+  Status?: string | null;
+  /** If pagination values were supplied what is the previous page url (if empty this is the first page) */
+  PreviousPageUrl?: string | null;
+  /** If pagination values were supplied what is the next page url (if empty there is no more records) */
+  NextPageUrl?: string | null;
+}
+
 /** Input data needed to update a calls scheduled dispatch time */
 export interface UpdateDispatchTimeInput {
   /** Id of the call to update */

@@ -1,5 +1,6 @@
 import { useTerm } from '@resgrid/auth';
 import { usePersonnelStore } from '@resgrid/data';
+import { isPersonReleasableFromCall } from '@resgrid/features/calls';
 import { useTranslation } from '@resgrid/i18n';
 import type { PersonnelInfoResultData } from '@resgrid/models';
 import { FlatList, Text } from '@resgrid/ui';
@@ -20,6 +21,8 @@ export interface PersonnelPanelProps {
   callFilter: ConsoleCallFilter | null;
   onSelectPersonnel: (userId: string) => void;
   onSetStatusForCall?: (userId: string) => void;
+  /** "−" (release from the call) on a member on the filtered call; undefined where the member may not release. */
+  onReleaseFromCall?: (userId: string) => void;
   /** The row's details button: opens the member's screen. */
   onOpenPersonnel?: (userId: string) => void;
   flex?: number;
@@ -27,7 +30,7 @@ export interface PersonnelPanelProps {
 }
 
 /** The console's personnel (Dispatch baseline): search, "available only", filtered to the call while filtering. */
-export const PersonnelPanel: React.FC<PersonnelPanelProps> = ({ callFilter, onSelectPersonnel, onSetStatusForCall, onOpenPersonnel, flex, maxHeight }) => {
+export const PersonnelPanel: React.FC<PersonnelPanelProps> = ({ callFilter, onSelectPersonnel, onSetStatusForCall, onReleaseFromCall, onOpenPersonnel, flex, maxHeight }) => {
   const { t } = useTranslation();
   const title = useTerm('module.personnel', t('dispatch.personnel'));
   const personnel = usePersonnelStore((state) => state.personnel);
@@ -50,9 +53,10 @@ export const PersonnelPanel: React.FC<PersonnelPanelProps> = ({ callFilter, onSe
         onPress={onSelectPersonnel}
         onOpen={onOpenPersonnel}
         onSetStatusForCall={callFilter ? onSetStatusForCall : undefined}
+        onReleaseFromCall={callFilter && isPersonReleasableFromCall(item, callFilter) ? onReleaseFromCall : undefined}
       />
     ),
-    [callFilter, onOpenPersonnel, onSelectPersonnel, onSetStatusForCall, pendingIds, selectedPersonnelId]
+    [callFilter, onOpenPersonnel, onReleaseFromCall, onSelectPersonnel, onSetStatusForCall, pendingIds, selectedPersonnelId]
   );
 
   return (

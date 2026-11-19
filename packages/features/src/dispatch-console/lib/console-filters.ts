@@ -1,38 +1,36 @@
-import { isScheduledCall, isUnitDispatchType, matchesCallQuery } from '@resgrid/features/calls';
-import type { CallResultData, DispatchedEventResultData, PersonnelInfoResultData, UnitInfoResultData } from '@resgrid/models';
+import {
+  type CallPersonCandidate,
+  type CallResourceLists,
+  type CallUnitCandidate,
+  isPersonOnCall as isPersonOnCallLists,
+  isScheduledCall,
+  isUnitOnCall as isUnitOnCallLists,
+  matchesCallQuery,
+} from '@resgrid/features/calls';
+import type { CallResultData, PersonnelInfoResultData, UnitInfoResultData } from '@resgrid/models';
 
 import { isPersonAvailable, isUnitAvailable } from './console-stats';
 
-/** The selected call's dispatches, when the console is filtered to a call. */
-export interface ConsoleCallFilter {
-  callId: string;
-  dispatches: readonly DispatchedEventResultData[];
-}
+/** The selected call's dispatches and released resources, when the console is filtered to a call. */
+export type ConsoleCallFilter = CallResourceLists;
 
 const lower = (value: string | null | undefined): string => (value ?? '').toLowerCase();
-
-const isPersonDispatchType = (type: string | null | undefined): boolean => {
-  const value = lower(type).trim();
-  return value === 'p' || value.includes('user') || value.includes('personnel');
-};
 
 /** Active calls on the console (scheduled ones wait in their queue), matching the search. */
 export const filterConsoleCalls = (calls: readonly CallResultData[], query: string, now: number): CallResultData[] =>
   calls.filter((call) => call.State === 0 && !isScheduledCall(call, now) && matchesCallQuery(call, query));
 
-/** A unit is on the filtered call when it was dispatched to it (by id, else by name) or its status points at it. */
-export const isUnitOnCall = (unit: Pick<UnitInfoResultData, 'UnitId' | 'Name' | 'CurrentDestinationId' | 'ActiveCallId'>, filter: ConsoleCallFilter | null): boolean => {
-  if (!filter) return false;
-  if (unit.ActiveCallId === filter.callId || unit.CurrentDestinationId === filter.callId) return true;
-  return filter.dispatches.some((dispatch) => isUnitDispatchType(dispatch.Type) && (dispatch.Id === unit.UnitId || lower(dispatch.Name) === lower(unit.Name)));
-};
+/**
+ * A unit is on the filtered call when it was dispatched to it (by id, else by name) or its active call or status points
+ * at it, unless it was released from the call (`isUnitOnCall` in calls).
+ */
+export const isUnitOnCall = (unit: CallUnitCandidate, filter: ConsoleCallFilter | null): boolean => filter !== null && isUnitOnCallLists(unit, filter);
 
-/** A person is on the filtered call when dispatched to it (by id) or their status points at it. */
-export const isPersonOnCall = (person: Pick<PersonnelInfoResultData, 'UserId' | 'StatusDestinationId'>, filter: ConsoleCallFilter | null): boolean => {
-  if (!filter) return false;
-  if (person.StatusDestinationId === filter.callId) return true;
-  return filter.dispatches.some((dispatch) => isPersonDispatchType(dispatch.Type) && dispatch.Id === person.UserId);
-};
+/**
+ * A person is on the filtered call when dispatched to it by name, through their group or a role, riding a unit dispatched
+ * to it, or their status points at it, unless they were released from the call (`isPersonOnCall` in calls).
+ */
+export const isPersonOnCall = (person: CallPersonCandidate, filter: ConsoleCallFilter | null): boolean => filter !== null && isPersonOnCallLists(person, filter);
 
 export interface ResourceFilterOptions {
   query: string;

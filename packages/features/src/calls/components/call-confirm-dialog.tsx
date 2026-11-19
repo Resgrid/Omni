@@ -12,6 +12,10 @@ export interface CallConfirmDialogProps {
   onCancel: () => void;
   destructive?: boolean;
   isBusy?: boolean;
+  /** Keeps confirm disabled for a reason other than a request running (e.g. offline for an online-only action). */
+  isConfirmDisabled?: boolean;
+  /** Choices shown between the message and the buttons (e.g. whether to notify). */
+  children?: React.ReactNode;
   testID?: string;
 }
 
@@ -19,8 +23,22 @@ export interface CallConfirmDialogProps {
  * Asks before an irreversible call action (dispatch now pages people; cancelling or deleting removes the call) in a NativeModal —
  * its own window with a toast host — on native, web and Electron alike (no `window.confirm` / `Alert.alert` forks).
  */
-export const CallConfirmDialog: React.FC<CallConfirmDialogProps> = ({ isOpen, title, message, confirmLabel, cancelLabel, onConfirm, onCancel, destructive = false, isBusy = false, testID = 'call-confirm-dialog' }) => {
+export const CallConfirmDialog: React.FC<CallConfirmDialogProps> = ({
+  isOpen,
+  title,
+  message,
+  confirmLabel,
+  cancelLabel,
+  onConfirm,
+  onCancel,
+  destructive = false,
+  isBusy = false,
+  isConfirmDisabled = false,
+  children,
+  testID = 'call-confirm-dialog',
+}) => {
   const dismiss = isBusy ? () => undefined : onCancel;
+  const confirmDisabled = isBusy || isConfirmDisabled;
 
   return (
     <NativeModal visible={isOpen} transparent animationType="fade" onRequestClose={dismiss} testID={testID}>
@@ -32,11 +50,12 @@ export const CallConfirmDialog: React.FC<CallConfirmDialogProps> = ({ isOpen, ti
               {title}
             </Heading>
             <Text testID={`${testID}-message`}>{message}</Text>
+            {children}
             <HStack space="sm" className="justify-end">
               <Button variant="outline" action="secondary" onPress={onCancel} isDisabled={isBusy} testID={`${testID}-cancel`}>
                 <ButtonText>{cancelLabel}</ButtonText>
               </Button>
-              <Button action={destructive ? 'negative' : 'primary'} onPress={onConfirm} isDisabled={isBusy} testID={`${testID}-confirm`}>
+              <Button action={destructive ? 'negative' : 'primary'} onPress={onConfirm} isDisabled={confirmDisabled} testID={`${testID}-confirm`}>
                 {isBusy ? <ButtonSpinner /> : <ButtonText>{confirmLabel}</ButtonText>}
               </Button>
             </HStack>

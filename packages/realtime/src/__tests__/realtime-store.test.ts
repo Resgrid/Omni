@@ -32,7 +32,15 @@ describe('resolveRealtimeFeatures (per-variant event sets)', () => {
     expect(responder.eventingEvents).toEqual([...COMMON_EVENTING_EVENTS]);
     expect(unit.eventingEvents).toEqual([...COMMON_EVENTING_EVENTS, 'unitStatusAlertUpdated']);
     expect(ic.eventingEvents).toEqual([...COMMON_EVENTING_EVENTS, 'checkInUpdated']);
-    expect(dispatch.eventingEvents).toEqual([...COMMON_EVENTING_EVENTS, 'unitActiveRolesUpdated', 'checkInUpdated', 'outstandingRequirementsUpdated', 'unitStatusAlertUpdated', 'unitNavigationUpdated']);
+    expect(dispatch.eventingEvents).toEqual([
+      ...COMMON_EVENTING_EVENTS,
+      'unitActiveRolesUpdated',
+      'checkInUpdated',
+      'outstandingRequirementsUpdated',
+      'recurringCallAlertsUpdated',
+      'unitStatusAlertUpdated',
+      'unitNavigationUpdated',
+    ]);
     expect(bigboard.eventingEvents).toEqual([...COMMON_EVENTING_EVENTS, 'unitStatusAlertUpdated', 'unitNavigationUpdated']);
     expect(COMMON_EVENTING_EVENTS).toEqual(expect.arrayContaining(['weatherAlertReceived', 'weatherAlertUpdated', 'weatherAlertExpired', 'checklistUpdated', 'departmentUpdated']));
   });

@@ -33,4 +33,9 @@ export class DispatchedEventResultData {
   public ResponseCode?: string | null = null;
   public ResponseCodeName?: string | null = null;
   public ResponseCodeColor?: string | null = null;
+
+  /** `ReleasedUnits` / `ReleasedPersonnel` entries only: when the unit or person was released from the call (ISO 8601 UTC, "Z"). */
+  public ReleasedOn?: string | null = null;
+  /** `ReleasedUnits` / `ReleasedPersonnel` entries only: who released them (display name); null when unknown. */
+  public ReleasedBy?: string | null = null;
 }

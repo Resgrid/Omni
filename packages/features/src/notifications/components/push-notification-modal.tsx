@@ -2,8 +2,8 @@ import { recordPushResponse } from '@resgrid/api';
 import { useTranslation } from '@resgrid/i18n';
 import { getNotificationsDependencies, navigateToNotificationTarget, type NotificationKind, type NotificationTarget, usePushNotificationModalStore } from '@resgrid/notifications';
 import { Button, ButtonText, HStack, Modal, ModalBackdrop, ModalBody, ModalContent, ModalFooter, ModalHeader, Text, useToast, VStack } from '@resgrid/ui';
-import { AlertCircle, Bell, Bot, CloudLightning, KeyRound, Mail, MessageCircle, Phone, RadioTower, Timer, Wrench } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import { AlertCircle, Bell, Bot, CloudLightning, KeyRound, Mail, MessageCircle, Phone, RadioTower, Repeat, Timer, Wrench } from 'lucide-react-native';
+import React, { useEffect, useRef, useState } from 'react';
 
 type ModalKind = NotificationKind | 'unknown';
 
@@ -18,6 +18,7 @@ const ICONS: Record<ModalKind, React.ComponentType<{ size?: number; color?: stri
   signInApproval: KeyRound,
   communicationTest: RadioTower,
   unitStatusTimer: Timer,
+  recurringCallAlert: Repeat,
   unknown: Bell,
 };
 
@@ -32,6 +33,7 @@ const COLORS: Record<ModalKind, string> = {
   signInApproval: '#8B5CF6',
   communicationTest: '#0EA5E9',
   unitStatusTimer: '#D97706',
+  recurringCallAlert: '#EA580C',
   unknown: '#6B7280',
 };
 
@@ -46,6 +48,7 @@ const TYPE_KEYS: Record<ModalKind, string> = {
   signInApproval: 'push_notifications.types.sign_in_approval',
   communicationTest: 'push_notifications.types.communication_test',
   unitStatusTimer: 'unit_status.timer_title',
+  recurringCallAlert: 'push_notifications.types.recurring_call_alert',
   unknown: 'push_notifications.types.notification',
 };
 
@@ -58,6 +61,7 @@ const VIEW_KEYS: Partial<Record<NotificationKind, string>> = {
   workOrder: 'push_notifications.view_work_order',
   signInApproval: 'push_notifications.view_sign_in',
   unitStatusTimer: 'unit_status.timer_update_status',
+  recurringCallAlert: 'push_notifications.view_recurring_call_alerts',
 };
 
 /** Whether this variant has a screen for the target (the variant's deep-link resolver decides; absent routes stay hidden). */
@@ -83,9 +87,17 @@ export const PushNotificationModal: React.FC = () => {
   const notification = usePushNotificationModalStore((state) => state.notification);
   const hide = usePushNotificationModalStore((state) => state.hideNotificationModal);
   const [isConfirming, setIsConfirming] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
+  // The navigation attempt that owns `isNavigating`: closing the modal ends it, so a dismissed push that opens late cannot
+  // clear the guard of a newer one (and let its View be pressed twice).
+  const navigation = useRef(0);
 
   useEffect(() => {
-    if (!isOpen) setIsConfirming(false);
+    if (!isOpen) {
+      navigation.current++;
+      setIsConfirming(false);
+      setIsNavigating(false);
+    }
   }, [isOpen]);
 
   if (!notification) return null;
@@ -95,10 +107,19 @@ export const PushNotificationModal: React.FC = () => {
   const viewKey = target ? VIEW_KEYS[target.kind] : undefined;
   const showView = !!viewKey && canRoute(target);
 
-  const view = () => {
-    if (!target) return;
-    hide();
-    void navigateToNotificationTarget(target);
+  // The push stays here until its screen opens: if navigating gives up, "View" can be pressed again. A newer push that
+  // arrived meanwhile is not closed with it.
+  const view = async () => {
+    if (!target || isNavigating) return;
+    const shown = notification;
+    const attempt = ++navigation.current;
+    setIsNavigating(true);
+    const opened = await navigateToNotificationTarget(target);
+
+    if (attempt !== navigation.current) return;
+    setIsNavigating(false);
+
+    if (opened && usePushNotificationModalStore.getState().notification === shown) hide();
   };
 
   const confirmReceipt = async () => {
@@ -164,7 +185,7 @@ export const PushNotificationModal: React.FC = () => {
               <ButtonText>{t('common.dismiss')}</ButtonText>
             </Button>
             {showView && viewKey ? (
-              <Button className="flex-1" onPress={view} testID="push-notification-view">
+              <Button className="flex-1" onPress={() => void view()} isDisabled={isNavigating} testID="push-notification-view">
                 <ButtonText>{t(viewKey)}</ButtonText>
               </Button>
             ) : null}

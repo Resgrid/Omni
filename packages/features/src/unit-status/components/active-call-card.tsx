@@ -1,12 +1,13 @@
 import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
-import { selectCallById, useCallsStore } from '@resgrid/data';
-import { CallCard, callRoutes, CallSummaryModal, resolvePriority } from '@resgrid/features/calls';
+import { selectCallById, selectUnitById, useCallDetailStore, useCallsStore, useUnitsStore } from '@resgrid/data';
+import { CallCard, callRoutes, CallSummaryModal, isUnitDispatchedToCall, newerDispatches, resolvePriority, useReleaseFromCall } from '@resgrid/features/calls';
 import { useNavigationHandoff } from '@resgrid/features/contacts';
 import { useTranslation } from '@resgrid/i18n';
+import type { DispatchedEventResultData } from '@resgrid/models';
 import { HStack, Pressable, Text, useToast, View, VStack } from '@resgrid/ui';
 import { router } from 'expo-router';
-import { ArrowLeftRight, CircleX, Eye, type LucideIcon, MapPin, Navigation } from 'lucide-react-native';
-import React, { useCallback, useMemo, useState } from 'react';
+import { ArrowLeftRight, CircleMinus, CircleX, Eye, type LucideIcon, MapPin, Navigation } from 'lucide-react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet } from 'react-native';
 
 import { callDestinationTarget, callLocationTarget } from '../lib/call-location';
@@ -33,12 +34,15 @@ interface CallAction {
   onPress: () => void;
 }
 
+const NO_DISPATCHES: readonly DispatchedEventResultData[] = [];
+
 /**
  * The crew's active call on the console (Unit `call-sidebar`): the call card, or "No active call". Tapping the card opens
  * the call summary (nature, notes, images, files, video, protocols, site info, history and audio, with a way on to the
  * full detail); tapping "No active call" opens the call picker. Actions: call details, directions to the call,
- * directions to its destination POI, change the active call and deselect (confirmed). Directions hand off to the crew's
- * navigation app — the app never calls a routing provider.
+ * directions to its destination POI, change the active call, release the unit from the call ("we were stood down":
+ * where the app releases its own unit, while the unit is dispatched to the call; confirmed, and the active call clears)
+ * and deselect (confirmed). Directions hand off to the crew's navigation app — the app never calls a routing provider.
  */
 export const ActiveCallCard: React.FC<ActiveCallCardProps> = ({ activeCallId, onSelectCall, onClearCall, onNavigate, buttonMinHeight = 44, iconSize = 18, testID = 'unit-active-call' }) => {
   const { t } = useTranslation();
@@ -49,6 +53,40 @@ export const ActiveCallCard: React.FC<ActiveCallCardProps> = ({ activeCallId, on
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+
+  // The release reports back once its reads settle; the crew may have picked another call by then, which stays active.
+  const activeCallRef = useRef(activeCallId);
+
+  useEffect(() => {
+    activeCallRef.current = activeCallId;
+  }, [activeCallId]);
+
+  // Releasing the crew's own unit from this call (calls.releaseOwnUnit): offered while the unit is on the call's dispatches.
+  const release = useReleaseFromCall({
+    call,
+    onReleased: (released) => {
+      if (activeCallRef.current === released.callId) onClearCall?.();
+    },
+    testID: `${testID}-release-dialog`,
+  });
+
+  const ownUnitId = release.permissions.ownUnitId;
+  const ownUnitName = useUnitsStore((state) => (ownUnitId ? (selectUnitById(state, ownUnitId)?.Name ?? state.unitInfos.find((info) => info.UnitId === ownUnitId)?.Name) : undefined)) || ownUnitId || '';
+  // The call list's copy is re-read when the call or unit changes and after every release; the detail's copy when the
+  // summary opened. The newer read wins, empty or not: an old empty list never hides Release, an old dispatch never brings it back.
+  const listDispatches = useCallsStore((state) => (activeCallId ? state.callDispatches[activeCallId] : undefined));
+  const listFetchedAt = useCallsStore((state) => (activeCallId ? state.callDispatchesFetchedAt[activeCallId] : undefined));
+  const detailDispatches = useCallDetailStore((state) => (activeCallId ? state.details[activeCallId]?.extraData?.Dispatches : undefined));
+  const detailFetchedAt = useCallDetailStore((state) => (activeCallId ? state.details[activeCallId]?.fetchedAt : undefined));
+  const dispatches = newerDispatches({ dispatches: listDispatches, fetchedAt: listFetchedAt }, { dispatches: detailDispatches, fetchedAt: detailFetchedAt }) ?? NO_DISPATCHES;
+  const canReleaseOwnUnit = !!ownUnitId && isUnitDispatchedToCall({ UnitId: ownUnitId, Name: ownUnitName }, dispatches);
+  const requestRelease = release.requestRelease;
+
+  useEffect(() => {
+    // The call's dispatches decide whether the unit is still on it: read them now, not from a copy cached before the
+    // unit was dispatched (a release re-reads them too).
+    if (activeCallId && ownUnitId) void useCallsStore.getState().fetchCallDispatches([activeCallId], { bypassCache: true });
+  }, [activeCallId, ownUnitId]);
 
   const priority = useMemo(() => (call ? resolvePriority(priorities, call.Priority) : null), [call, priorities]);
   const location = useMemo(() => (call ? callLocationTarget(call) : null), [call]);
@@ -83,10 +121,12 @@ export const ActiveCallCard: React.FC<ActiveCallCardProps> = ({ activeCallId, on
     // The card itself opens the call summary, so changing the call is a button of its own.
     if (onSelectCall) list.push({ id: 'change', labelKey: 'calls.select_active_call', icon: ArrowLeftRight, onPress: () => setIsPickerOpen(true) });
 
+    if (canReleaseOwnUnit && ownUnitId) list.push({ id: 'release', labelKey: 'calls.release.action', icon: CircleMinus, onPress: () => requestRelease({ kind: 'unit', id: ownUnitId, name: ownUnitName }) });
+
     if (onClearCall) list.push({ id: 'deselect', labelKey: 'calls.deselect', icon: CircleX, onPress: () => setIsConfirmOpen(true) });
 
     return list;
-  }, [call, destination, location, navigate, onClearCall, onSelectCall, openDetails]);
+  }, [call, canReleaseOwnUnit, destination, location, navigate, onClearCall, onSelectCall, openDetails, ownUnitId, ownUnitName, requestRelease]);
 
   const onCardPress = call ? () => setIsSummaryOpen(true) : onSelectCall ? () => setIsPickerOpen(true) : undefined;
 
@@ -142,6 +182,7 @@ export const ActiveCallCard: React.FC<ActiveCallCardProps> = ({ activeCallId, on
       ) : null}
       {call ? <CallSummaryModal isOpen={isSummaryOpen} onClose={() => setIsSummaryOpen(false)} callId={call.CallId} onOpenDetails={openDetails} testID={`${testID}-summary`} /> : null}
       {onSelectCall ? <ActiveCallSheet isOpen={isPickerOpen} onClose={() => setIsPickerOpen(false)} activeCallId={activeCallId} onSelect={handleSelect} rowMinHeight={buttonMinHeight + 8} /> : null}
+      {release.dialog}
       <ConfirmDialog
         isOpen={isConfirmOpen}
         title={t('calls.confirm_deselect_title')}

@@ -40,6 +40,8 @@ export interface RealtimeEventMap {
   checkInUpdated: IdEventArgs;
   /** Two hub arguments: the id and the requirements payload. */
   outstandingRequirementsUpdated: [id: string | null, payload: unknown, ...rest: unknown[]];
+  /** The schedule id, then the payload `{ alertId, kind, raised }` (JSON): reload the recurring call alerts. */
+  recurringCallAlertsUpdated: IdEventArgs;
   unitStatusAlertUpdated: IdEventArgs;
   /**
    * Two hub arguments: the unit id and a camel-cased JSON payload `{ unitId, callId, routeInstanceId, state }` (ids and

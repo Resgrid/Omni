@@ -37,6 +37,7 @@ export const KIND_SOUNDS: Readonly<Record<NotificationKind | 'unknown', Notifica
   signInApproval: 'modernnotification',
   communicationTest: 'modernnotification',
   unitStatusTimer: 'modernunitnotice',
+  recurringCallAlert: 'modernnotification',
   unknown: 'modernnotification',
 };
 

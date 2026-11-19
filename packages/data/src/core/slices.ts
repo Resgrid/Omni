@@ -65,10 +65,14 @@ export function createSliceRunner<K extends string, S extends SliceMeta<K>>(stor
 
   return {
     run<T>(key: K, fetcher: () => Promise<T>, apply: (value: T, state: S) => Partial<S>, options: RunOptions = {}): Promise<SliceResult<T>> {
+      // The generation of the call, not of the moment the read starts: a trailing read queued before sign-out (or a reset)
+      // starts after it, and must settle as stale without reading anything for the next session.
+      const startedIn = generation;
+
       return flights.run<SliceResult<T>>(
         options.flightKey ?? key,
         async () => {
-          const startedIn = generation;
+          if (startedIn !== generation) return { ok: false, stale: true };
           const lane = options.raceKey ?? key;
           const sequence = (sequences.get(lane) ?? 0) + 1;
           sequences.set(lane, sequence);

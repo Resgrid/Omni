@@ -96,7 +96,7 @@ describe('useHref', () => {
 
 describe('resolveNotificationRoute (deep links)', () => {
   it('maps push targets to declared routes', () => {
-    const href = createHrefBuilders(defineRoutes(['home', 'callDetail', 'chatChannel', 'chatbot', 'weatherAlertDetail', 'messageDetail', 'workOrderDetail', 'approveSignIn', 'unitConsole']));
+    const href = createHrefBuilders(defineRoutes(['home', 'callDetail', 'chatChannel', 'chatbot', 'weatherAlertDetail', 'messageDetail', 'workOrderDetail', 'approveSignIn', 'unitConsole', 'recurringCallAlerts']));
     expect(resolveNotificationRoute({ kind: 'call', id: '42' }, href)).toBe('/call/42');
     expect(resolveNotificationRoute({ kind: 'call', id: '42', closed: true }, href)).toBe('/call/42');
     expect(resolveNotificationRoute({ kind: 'chat', id: 'abc', chatType: 'direct' }, href)).toBe('/chat/abc');
@@ -107,6 +107,8 @@ describe('resolveNotificationRoute (deep links)', () => {
     expect(resolveNotificationRoute({ kind: 'signInApproval', id: 'req' }, href)).toBe('/approve-sign-in?id=req');
     // The unit's own status timer (a local notification) opens the status console.
     expect(resolveNotificationRoute({ kind: 'unitStatusTimer', id: '12' }, href)).toBe('/console');
+    // A recurring call alert (Dispatch) opens the alerts list with that alert picked out.
+    expect(resolveNotificationRoute({ kind: 'recurringCallAlert', id: 'a-1' }, href)).toBe('/recurring-call-alerts?alertId=a-1');
   });
 
   it('returns null (push modal fallback) when the variant has no screen for the target', () => {
@@ -115,6 +117,7 @@ describe('resolveNotificationRoute (deep links)', () => {
     expect(resolveNotificationRoute({ kind: 'notification', id: '1' }, getHrefBuilders())).toBeNull();
     expect(resolveNotificationRoute({ kind: 'communicationTest', id: 't' }, getHrefBuilders())).toBeNull();
     expect(resolveNotificationRoute({ kind: 'unitStatusTimer', id: '12' }, getHrefBuilders())).toBeNull();
+    expect(resolveNotificationRoute({ kind: 'recurringCallAlert', id: 'a-1' }, getHrefBuilders())).toBeNull();
   });
 });
 
@@ -135,6 +138,8 @@ describe('canonical route gates', () => {
     expect(isRouteAvailableFor('settingsOfflineMaps', manifest('ic'))).toBe(true);
     expect(isRouteAvailableFor('settingsOfflineMaps', manifest('bigboard'))).toBe(false);
     expect(isRouteAvailableFor('callNew', manifest('bigboard'))).toBe(false);
+    expect(isRouteAvailableFor('recurringCallAlerts', manifest('dispatch'))).toBe(true);
+    expect(isRouteAvailableFor('recurringCalls', manifest('ic'))).toBe(false);
     expect(isRouteAvailableFor('home', manifest('bigboard'))).toBe(true);
   });
 

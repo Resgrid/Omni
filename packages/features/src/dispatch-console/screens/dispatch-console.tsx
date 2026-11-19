@@ -1,7 +1,7 @@
 import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
-import { useCallsStore, usePersonnelStore, useUnitsStore, useWeatherAlertsStore } from '@resgrid/data';
+import { personnelFullName, useCallsStore, usePersonnelStore, useUnitsStore, useWeatherAlertsStore } from '@resgrid/data';
 import { callQueuesRoutes } from '@resgrid/features/call-queues';
-import { callDisplayName, callDisplayText, CallNotesModal, callRoutes, CloseCallSheet } from '@resgrid/features/calls';
+import { callDisplayName, callDisplayText, CallNotesModal, type CallRelease, callRoutes, CloseCallSheet, isPersonReleasableFromCall, isUnitDispatchedToCall, useReleaseFromCall } from '@resgrid/features/calls';
 import { personnelRoutes } from '@resgrid/features/personnel';
 import { unitsRoutes } from '@resgrid/features/units';
 import { weatherAlertsRoutes } from '@resgrid/features/weather-alerts';
@@ -64,7 +64,7 @@ type StatusTarget = { kind: 'unit'; unitId: string } | { kind: 'personnel'; user
  * Electron and landscape tablets, two on portrait tablets and one scrolling column on phones. Selecting a call filters
  * every panel to it; units support multi-select for one status change. Units over their status timer are flagged in
  * the stats bar, their rows and the Unit timers tab, and each crossing is logged. Writes in Dispatch's offline scope (statuses on behalf, call
- * notes, check-ins) go through the outbox; dispatching, closing and department notes are online.
+ * notes, check-ins) go through the outbox; dispatching, releasing resources, closing and department notes are online.
  */
 export default function DispatchConsoleScreen({ realtime = true, mapHref = '/map', mapSlot, showClock = true, showViewToggles = true, now = Date.now }: DispatchConsoleScreenProps) {
   const { t } = useTranslation();
@@ -97,6 +97,48 @@ export default function DispatchConsoleScreen({ realtime = true, mapHref = '/map
   const filteredCall = isCallFilterActive ? selectedCall : null;
 
   const log = useConsoleStore((state) => state.addActivity);
+
+  // A confirmation open for a unit or member that has left the filtered call (released elsewhere, another call picked) closes.
+  const isReleasable = useCallback(
+    (target: CallRelease) => {
+      if (!callFilter || callFilter.callId !== target.callId) return false;
+
+      if (target.kind === 'unit') return isUnitDispatchedToCall(units.find((unit) => unit.UnitId === target.id) ?? { UnitId: target.id, Name: target.name }, callFilter.dispatches);
+      const person = personnel.find((entry) => entry.UserId === target.id);
+
+      return person ? isPersonReleasableFromCall(person, callFilter) : false;
+    },
+    [callFilter, personnel, units]
+  );
+
+  // Release (stand down) a unit or member from the filtered call; the call stays open.
+  const release = useReleaseFromCall({
+    call: filteredCall,
+    isReleasable,
+    onReleased: (released) => log({ type: released.kind === 'unit' ? 'unit' : 'personnel', action: t('calls.release.action'), description: released.name, metadata: { callId: released.callId } }),
+    testID: 'console-release-dialog',
+  });
+
+  const { requestRelease } = release;
+  const canRelease = release.permissions.canReleaseAny;
+
+  const releaseUnit = useCallback(
+    (unitId: string) => {
+      const unit = useUnitsStore.getState().unitInfos.find((entry) => entry.UnitId === unitId);
+
+      requestRelease({ kind: 'unit', id: unitId, name: unit?.Name || unitId });
+    },
+    [requestRelease]
+  );
+
+  const releasePersonnel = useCallback(
+    (userId: string) => {
+      const person = usePersonnelStore.getState().personnel.find((entry) => entry.UserId === userId);
+
+      requestRelease({ kind: 'personnel', id: userId, name: (person ? personnelFullName(person) : '') || userId });
+    },
+    [requestRelease]
+  );
 
   const handleSelectCall = useCallback(
     (callId: string) => {
@@ -168,7 +210,14 @@ export default function DispatchConsoleScreen({ realtime = true, mapHref = '/map
   );
 
   const unitsPanel = (sizing: { flex?: number; maxHeight?: number }) => (
-    <UnitsPanel callFilter={callFilter} onSelectUnit={handleSelectUnit} onOpenUnit={handlers.onViewUnit} onSetStatusForCall={(unitId) => setStatusTarget({ kind: 'unit', unitId })} {...sizing} />
+    <UnitsPanel
+      callFilter={callFilter}
+      onSelectUnit={handleSelectUnit}
+      onOpenUnit={handlers.onViewUnit}
+      onSetStatusForCall={(unitId) => setStatusTarget({ kind: 'unit', unitId })}
+      onReleaseFromCall={canRelease ? releaseUnit : undefined}
+      {...sizing}
+    />
   );
 
   const personnelPanel = (sizing: { flex?: number; maxHeight?: number }) => (
@@ -177,6 +226,7 @@ export default function DispatchConsoleScreen({ realtime = true, mapHref = '/map
       onSelectPersonnel={handleSelectPersonnel}
       onOpenPersonnel={handlers.onViewPersonnel}
       onSetStatusForCall={(userId) => setStatusTarget({ kind: 'personnel', userId })}
+      onReleaseFromCall={canRelease ? releasePersonnel : undefined}
       {...sizing}
     />
   );
@@ -190,6 +240,8 @@ export default function DispatchConsoleScreen({ realtime = true, mapHref = '/map
       onOpenPersonnel={handlers.onViewPersonnel}
       onSetUnitStatusForCall={(unitId) => setStatusTarget({ kind: 'unit', unitId })}
       onSetPersonnelStatusForCall={(userId) => setStatusTarget({ kind: 'personnel', userId })}
+      onReleaseUnitFromCall={canRelease ? releaseUnit : undefined}
+      onReleasePersonnelFromCall={canRelease ? releasePersonnel : undefined}
       {...sizing}
     />
   );
@@ -294,6 +346,7 @@ export default function DispatchConsoleScreen({ realtime = true, mapHref = '/map
       <AddResourcesSheet call={addResourcesCall} onClose={() => setAddResourcesCall(null)} />
       {statusTarget?.kind === 'unit' ? <ConsoleUnitStatusSheet isOpen onClose={() => setStatusTarget(null)} unitIds={[statusTarget.unitId]} defaultCallId={selectedCallId} /> : null}
       {statusTarget?.kind === 'personnel' ? <ConsolePersonnelStatusSheet isOpen onClose={() => setStatusTarget(null)} userId={statusTarget.userId} defaultCallId={selectedCallId} /> : null}
+      {release.dialog}
     </View>
   );
 }

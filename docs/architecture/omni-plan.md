@@ -545,7 +545,7 @@ LiveKit store from U (Android routing via InCallAudioModule, room-switch race fi
 | Responder | `member-home` (status/staffing home, nested tabs, due checks), `calendar`, `shifts` (incl. trades), `messages`, `staffing`, `work-orders`, `certifications`, approve-sign-in, web edition, headset PTT                      |
 | Unit      | `unit-status` (status console sidebar, hold-to-confirm, roles), `unit-routes` (9 screens), `inventory` (counts), custom/indoor maps, shared vehicle session, Electron MDT, in-app navigation (MapLibre P4)                  |
 | IC        | `incident-command` (command board, lanes, accountability/PAR, needs, objectives, timers, voice, AI assistant, command map/log, resource map, incidents), offline queue screen (generalized for all), command-app access     |
-| Dispatch  | `dispatch-console` (panels, actions, multi-select, ticker, PTT, 1/2/3-column layouts), `runcards`, `call-queues` (pending/scheduled/archived), `awaiting-resources`, weather admin, IC assist, personal lock                |
+| Dispatch  | `dispatch-console` (panels, actions, multi-select, ticker, PTT, 1/2/3-column layouts), `runcards`, `call-queues` (pending/scheduled/archived), `awaiting-resources`, recurring calls (`calls.recurringCalls`: schedules, occurrence calendar, alerts), weather admin, IC assist, personal lock |
 | BigBoard  | `dashboard` (custom grid on gesture-handler + reanimated, 14 widget types, widget settings stores, configure screen; the draggable-grid packages are unused and dropped), OpenWeather client under `dashboard/integrations` |
 
 ### 7.12 i18n

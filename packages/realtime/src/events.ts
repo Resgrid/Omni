@@ -24,6 +24,12 @@ export const COMMON_EVENTING_EVENTS = [
 /** Dispatch console extras: unit crew changes, check-ins of others, conditional run-card requirements (two args). */
 export const DISPATCH_EVENTING_EVENTS = ['unitActiveRolesUpdated', 'checkInUpdated', 'outstandingRequirementsUpdated'] as const;
 
+/**
+ * Recurring call alerts changed (`calls.recurringCalls`, Core M0320): the schedule id and a small payload
+ * `{ alertId, kind, raised }` — an id-only ping, so consumers reload the alert list.
+ */
+export const RECURRING_CALL_EVENTING_EVENTS = ['recurringCallAlertsUpdated'] as const;
+
 /** Unit status timer acknowledgements (one unit acknowledged, muted or cleared). */
 export const UNIT_STATUS_ALERT_EVENTING_EVENTS = ['unitStatusAlertUpdated'] as const;
 
@@ -45,7 +51,7 @@ export const NAVIGATION_ETA_MODULES: readonly FeatureModuleId[] = ['dispatch-con
 /** Whether an app with these modules shows live ETAs (and so subscribes `unitNavigationUpdated`). */
 export const showsNavigationEtas = (modules: readonly FeatureModuleId[]): boolean => modules.some((module) => NAVIGATION_ETA_MODULES.includes(module));
 
-export const ALL_EVENTING_EVENTS = [...COMMON_EVENTING_EVENTS, ...DISPATCH_EVENTING_EVENTS, ...UNIT_STATUS_ALERT_EVENTING_EVENTS, ...NAVIGATION_EVENTING_EVENTS] as const;
+export const ALL_EVENTING_EVENTS = [...COMMON_EVENTING_EVENTS, ...DISPATCH_EVENTING_EVENTS, ...RECURRING_CALL_EVENTING_EVENTS, ...UNIT_STATUS_ALERT_EVENTING_EVENTS, ...NAVIGATION_EVENTING_EVENTS] as const;
 export type EventingEventName = (typeof ALL_EVENTING_EVENTS)[number];
 
 export const CHAT_EVENTS = [
@@ -106,6 +112,7 @@ export interface RealtimeFeatures {
  * - `unitActiveRolesUpdated` — the dispatch console module;
  * - `checkInUpdated` — apps that watch other people's check-ins (`checkIn.others`: Dispatch, IC);
  * - `outstandingRequirementsUpdated` — conditional run cards (`calls.runCards`);
+ * - `recurringCallAlertsUpdated` — recurring calls (`calls.recurringCalls`);
  * - `unitStatusAlertUpdated` — modules that show unit status timers ({@link UNIT_STATUS_ALERT_MODULES}: BigBoard, Dispatch, Unit);
  * - `unitNavigationUpdated` — modules that show live ETAs ({@link NAVIGATION_ETA_MODULES}: Dispatch, BigBoard);
  * - chat events only with `realtime.chatHub`.
@@ -116,6 +123,8 @@ export function resolveRealtimeFeatures(variant: RealtimeVariantInput): Realtime
   if (modules.includes('dispatch-console')) eventingEvents.push('unitActiveRolesUpdated');
   if (capabilities.checkIn.others) eventingEvents.push('checkInUpdated');
   if (capabilities.calls.runCards) eventingEvents.push('outstandingRequirementsUpdated');
+
+  if (capabilities.calls.recurringCalls) eventingEvents.push('recurringCallAlertsUpdated');
   if (showsUnitStatusAlerts(modules)) eventingEvents.push('unitStatusAlertUpdated');
   if (showsNavigationEtas(modules)) eventingEvents.push('unitNavigationUpdated');
 

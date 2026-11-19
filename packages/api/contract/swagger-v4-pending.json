@@ -3,7 +3,7 @@
     "source": "Core develop f3b2fd24 + 34949e2d (RG-T152, MapLibre plan v1.7 §23); not on the QA API as of 2026-11-02",
     "addedAt": "2026-11-01",
     "checkedAt": "2026-11-02",
-    "note": "Core v4 routes and parameters Omni calls before they reach the QA Swagger snapshot. Counts/GetBadgeCounts: Core develop working tree, 2026-11-07 (Web/Resgrid.Web.Services/Controllers/v4/CountsController.cs). Mapping/GetMapDataAndMarkers fullSizeIcons: Core develop working tree, 2026-11-11 (MappingController.cs, LegacyOmniPinIcons). Mapping/GetNearestDestinations, GetPoiCapabilities, SetPoiAvailability: Core develop working tree, 2026-11-13 (MappingController.cs, destination capabilities M0315). The contract test overlays these on swagger-v4.json and fails once the snapshot has an entry, so remove each entry after refreshing the snapshot. Hand-written from Web/Resgrid.Web.Services/Controllers/v4/{RoutingController,RoutesController,MappingController}.cs."
+    "note": "Core v4 routes and parameters Omni calls before they reach the QA Swagger snapshot. Counts/GetBadgeCounts: Core develop working tree, 2026-11-07 (Web/Resgrid.Web.Services/Controllers/v4/CountsController.cs). Mapping/GetMapDataAndMarkers fullSizeIcons: Core develop working tree, 2026-11-11 (MappingController.cs, LegacyOmniPinIcons). Mapping/GetNearestDestinations, GetPoiCapabilities, SetPoiAvailability: Core develop working tree, 2026-11-13 (MappingController.cs, destination capabilities M0315). The contract test overlays these on swagger-v4.json and fails once the snapshot has an entry, so remove each entry after refreshing the snapshot. Hand-written from Web/Resgrid.Web.Services/Controllers/v4/{RoutingController,RoutesController,MappingController}.cs. Calls/ReleaseUnit and Calls/ReleasePersonnel: Core develop working tree, 2026-11-16 (CallsController.cs, releasing a unit or person from an open call; ReleasePersonnel built in parallel with Omni RO-T152). RecurringCalls/*: Core develop working tree, 2026-11-17 (RecurringCallsController.cs, recurring calls and their dispatcher alerts, M0319/M0320)."
   },
   "paths": {
     "/api/v{VersionId}/Counts/GetBadgeCounts": {
@@ -103,10 +103,117 @@
         "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }]
       }
     },
+    "/api/v{VersionId}/Calls/ReleaseUnit": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReleaseUnitInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/Calls/ReleasePersonnel": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReleasePersonnelInput" } } } }
+      }
+    },
     "/api/v{VersionId}/Mapping/SetPoiAvailability": {
       "post": {
         "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
         "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SetPoiAvailabilityInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/RecurringCalls/GetRecurringCalls": {
+      "get": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }]
+      }
+    },
+    "/api/v{VersionId}/RecurringCalls/GetRecurringCall": {
+      "get": {
+        "parameters": [
+          { "name": "recurringCallId", "in": "query", "schema": { "type": "integer", "format": "int32" } },
+          { "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ]
+      }
+    },
+    "/api/v{VersionId}/RecurringCalls/GetRecurringCallOptions": {
+      "get": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }]
+      }
+    },
+    "/api/v{VersionId}/RecurringCalls/SaveRecurringCall": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RecurringCallInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/RecurringCalls/PauseRecurringCall": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PauseRecurringCallInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/RecurringCalls/ResumeRecurringCall": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RecurringCallIdInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/RecurringCalls/DeleteRecurringCall": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DeleteRecurringCallInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/RecurringCalls/GetScheduledCallsCalendar": {
+      "get": {
+        "parameters": [
+          { "name": "start", "in": "query", "schema": { "type": "string" } },
+          { "name": "end", "in": "query", "schema": { "type": "string" } },
+          { "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ]
+      }
+    },
+    "/api/v{VersionId}/RecurringCalls/SkipOccurrence": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RecurringCallOccurrenceInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/RecurringCalls/RestoreOccurrence": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RecurringCallOccurrenceInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/RecurringCalls/CreateOccurrenceCall": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RecurringCallOccurrenceInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/RecurringCalls/DispatchOccurrenceNow": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RecurringCallOccurrenceInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/RecurringCalls/GetRecurringCallAlerts": {
+      "get": {
+        "parameters": [
+          { "name": "includeClosedHours", "in": "query", "schema": { "type": "integer", "format": "int32" } },
+          { "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ]
+      }
+    },
+    "/api/v{VersionId}/RecurringCalls/AcknowledgeRecurringCallAlert": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RecurringCallAlertInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/RecurringCalls/DismissRecurringCallAlert": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RecurringCallAlertInput" } } } }
       }
     }
   }

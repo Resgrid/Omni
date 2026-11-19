@@ -1,4 +1,5 @@
 import { useCallsStore, usePersonnelStore, useUnitsStore } from '@resgrid/data';
+import { isPersonReleasableFromCall, isUnitDispatchedToCall } from '@resgrid/features/calls';
 import { useUnitAlertsByUnit } from '@resgrid/features/unit-status-alerts';
 import { useTranslation } from '@resgrid/i18n';
 import type { PersonnelInfoResultData, UnitInfoResultData } from '@resgrid/models';
@@ -24,6 +25,9 @@ export interface ResourcesPanelProps {
   onSelectPersonnel: (userId: string) => void;
   onSetUnitStatusForCall?: (unitId: string) => void;
   onSetPersonnelStatusForCall?: (userId: string) => void;
+  /** "−" (release from the call) on a unit dispatched to, or a member on, the filtered call; undefined where the member may not release. */
+  onReleaseUnitFromCall?: (unitId: string) => void;
+  onReleasePersonnelFromCall?: (userId: string) => void;
   /** The rows' details buttons: open the unit's or member's screen. */
   onOpenUnit?: (unitId: string) => void;
   onOpenPersonnel?: (userId: string) => void;
@@ -32,7 +36,19 @@ export interface ResourcesPanelProps {
 }
 
 /** Units and personnel in one list ("Single list" view toggle, Dispatch baseline ResourcesPanel). */
-export const ResourcesPanel: React.FC<ResourcesPanelProps> = ({ callFilter, onSelectUnit, onSelectPersonnel, onSetUnitStatusForCall, onSetPersonnelStatusForCall, onOpenUnit, onOpenPersonnel, flex, maxHeight }) => {
+export const ResourcesPanel: React.FC<ResourcesPanelProps> = ({
+  callFilter,
+  onSelectUnit,
+  onSelectPersonnel,
+  onSetUnitStatusForCall,
+  onSetPersonnelStatusForCall,
+  onReleaseUnitFromCall,
+  onReleasePersonnelFromCall,
+  onOpenUnit,
+  onOpenPersonnel,
+  flex,
+  maxHeight,
+}) => {
   const { t } = useTranslation();
   const units = useUnitsStore((state) => state.unitInfos);
   const personnel = usePersonnelStore((state) => state.personnel);
@@ -95,6 +111,7 @@ export const ResourcesPanel: React.FC<ResourcesPanelProps> = ({ callFilter, onSe
             onLongPress={(unitId) => (useConsoleStore.getState().isSelectionMode ? useConsoleStore.getState().toggleUnitInSelection(unitId) : useConsoleStore.getState().startSelection([unitId]))}
             onOpen={isSelectionMode ? undefined : onOpenUnit}
             onSetStatusForCall={callFilter && !isSelectionMode ? onSetUnitStatusForCall : undefined}
+            onReleaseFromCall={callFilter && !isSelectionMode && isUnitDispatchedToCall(item.unit, callFilter.dispatches) ? onReleaseUnitFromCall : undefined}
             timerLevel={timer?.alert.level}
             timerAcknowledgement={timer?.acknowledgementState}
             timerSeconds={timer?.alert.secondsInStatus}
@@ -112,6 +129,7 @@ export const ResourcesPanel: React.FC<ResourcesPanelProps> = ({ callFilter, onSe
           onPress={onSelectPersonnel}
           onOpen={onOpenPersonnel}
           onSetStatusForCall={callFilter ? onSetPersonnelStatusForCall : undefined}
+          onReleaseFromCall={callFilter && isPersonReleasableFromCall(item.person, callFilter) ? onReleasePersonnelFromCall : undefined}
         />
       );
     },
@@ -122,6 +140,8 @@ export const ResourcesPanel: React.FC<ResourcesPanelProps> = ({ callFilter, onSe
       isSelectionMode,
       onOpenPersonnel,
       onOpenUnit,
+      onReleasePersonnelFromCall,
+      onReleaseUnitFromCall,
       onSelectPersonnel,
       onSetPersonnelStatusForCall,
       onSetUnitStatusForCall,

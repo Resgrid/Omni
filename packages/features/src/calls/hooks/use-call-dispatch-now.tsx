@@ -3,7 +3,7 @@ import { useCallQueueActionsStore, useCallsStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import type { DispatchedEventResultData } from '@resgrid/models';
 import { useToast } from '@resgrid/ui';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 
 import { CallConfirmDialog } from '../components/call-confirm-dialog';
 import { DispatchSelectionModal } from '../components/dispatch-selection';
@@ -79,14 +79,21 @@ export function useCallDispatchNow({ onDispatched, onCancelled }: UseCallDispatc
     [onDispatched, t, toast]
   );
 
+  // The latest Send pressed: a lookup that finishes after another call's Send was pressed opens nothing, so the picker never
+  // swaps to an older call (and confirming never sends the wrong one).
+  const pickerRequest = useRef(0);
+
   const openDispatchPicker = useCallback(async (callId: string, knownDispatches?: readonly DispatchedEventResultData[] | null, location: CallPoint | null = null) => {
+    const request = ++pickerRequest.current;
     let proposed: DispatchSelection | null = knownDispatches ? dispatchesToSelection(knownDispatches) : null;
 
     if (!proposed) {
       setLookupCallId(callId);
       // The picker still works without a preselection; an empty pick then lets the server use the proposed list.
       const extra = await useCallsStore.getState().fetchCallExtraData(callId, { bypassCache: true });
-      setLookupCallId(null);
+      setLookupCallId((current) => (current === callId ? null : current));
+
+      if (request !== pickerRequest.current) return;
       proposed = extra ? dispatchesToSelection(extra.Dispatches) : null;
     }
 
@@ -135,7 +142,12 @@ export function useCallDispatchNow({ onDispatched, onCancelled }: UseCallDispatc
     <>
       <DispatchSelectionModal
         isOpen={picker !== null}
-        onClose={() => setPicker(null)}
+        onClose={() => {
+          // Closing also drops a lookup still out, so it cannot reopen the picker afterwards.
+          pickerRequest.current++;
+          setLookupCallId(null);
+          setPicker(null);
+        }}
         recipients={recipients}
         value={picker?.initialSelection ?? EMPTY_DISPATCH_SELECTION}
         callLocation={picker?.location ?? null}
