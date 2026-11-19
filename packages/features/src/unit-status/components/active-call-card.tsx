@@ -7,7 +7,7 @@ import type { DispatchedEventResultData } from '@resgrid/models';
 import { HStack, Pressable, Text, useToast, View, VStack } from '@resgrid/ui';
 import { router } from 'expo-router';
 import { ArrowLeftRight, CircleMinus, CircleX, Eye, type LucideIcon, MapPin, Navigation } from 'lucide-react-native';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet } from 'react-native';
 
 import { callDestinationTarget, callLocationTarget } from '../lib/call-location';
@@ -54,8 +54,22 @@ export const ActiveCallCard: React.FC<ActiveCallCardProps> = ({ activeCallId, on
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
+  // The release reports back once its reads settle; the crew may have picked another call by then, which stays active.
+  const activeCallRef = useRef(activeCallId);
+
+  useEffect(() => {
+    activeCallRef.current = activeCallId;
+  }, [activeCallId]);
+
   // Releasing the crew's own unit from this call (calls.releaseOwnUnit): offered while the unit is on the call's dispatches.
-  const release = useReleaseFromCall({ call, onReleased: () => onClearCall?.(), testID: `${testID}-release-dialog` });
+  const release = useReleaseFromCall({
+    call,
+    onReleased: (released) => {
+      if (activeCallRef.current === released.callId) onClearCall?.();
+    },
+    testID: `${testID}-release-dialog`,
+  });
+
   const ownUnitId = release.permissions.ownUnitId;
   const ownUnitName = useUnitsStore((state) => (ownUnitId ? (selectUnitById(state, ownUnitId)?.Name ?? state.unitInfos.find((info) => info.UnitId === ownUnitId)?.Name) : undefined)) || ownUnitId || '';
   // The call list's copy is re-read when the call or unit changes and after every release; the detail's copy when the

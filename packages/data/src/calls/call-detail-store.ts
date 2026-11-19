@@ -248,24 +248,28 @@ export const useCallDetailStore = create<CallDetailState>()(
           await runner.run(
             'detail',
             async () => {
+              // Stamped when the read leaves, not when it lands: the call list's dispatches are stamped the same way, so the
+              // newer of the two is the one that saw the server later (a slow answer is not a newer one).
+              const readAt = dataNow();
               const [call, extraData] = await Promise.all([getCall(getDataApiContext(), { callId }), getCallExtraData(getDataApiContext(), { callId })]);
 
-              return { call: unwrapItem(call), extraData: unwrapItem(extraData) };
+              return { call: unwrapItem(call), extraData: unwrapItem(extraData), readAt };
             },
-            (value, state) => patchRecord(state, callId, { ...value, fetchedAt: dataNow() }),
+            (value, state) => patchRecord(state, callId, { call: value.call, extraData: value.extraData, fetchedAt: value.readAt }),
             { flightKey: `detail:${callId}`, trailing: options?.bypassCache === true }
           );
         },
 
         fetchCurrentCall: async (callId) => {
           const generation = runner.generation();
+          const readAt = dataNow();
           const [call, extraData] = await Promise.all([getCall(getDataApiContext(), { callId }), getCallExtraData(getDataApiContext(), { callId })]);
           const current = { call: unwrapItem(call), extraData: unwrapItem(extraData) };
 
           if (!current.call || !current.extraData) return null;
 
           // A response that lands after sign-out is not kept.
-          if (generation === runner.generation()) set((state) => patchRecord(state, callId, { ...current, fetchedAt: dataNow() }));
+          if (generation === runner.generation()) set((state) => patchRecord(state, callId, { ...current, fetchedAt: readAt }));
 
           return { call: current.call, extraData: current.extraData };
         },

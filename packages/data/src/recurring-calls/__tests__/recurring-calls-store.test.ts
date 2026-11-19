@@ -420,6 +420,21 @@ describe('recurring calls store', () => {
     expect(useRecurringCallsStore.getState().schedules.map((item) => item.RecurringCallId)).toEqual([1]);
   });
 
+  it('never restores a deleted schedule from a detail read that left before the delete', async () => {
+    const detail = deferred<RecurringCallResult>();
+
+    jest.mocked(getRecurringCall).mockReturnValueOnce(detail.promise);
+    const reading = useRecurringCallsStore.getState().fetchRecurringCall(4, { bypassCache: true });
+
+    jest.mocked(deleteRecurringCall).mockResolvedValueOnce(actionAnswer({}));
+    expect(await useRecurringCallsStore.getState().deleteRecurringCall(4, false)).toMatchObject({ ok: true });
+    detail.resolve(answer(new RecurringCallResult(), { Data: { RecurringCall: schedule(4), NextDispatches: [], UpcomingCalls: [] } }));
+
+    expect(await reading).toBeNull();
+    expect(useRecurringCallsStore.getState().details['4']).toBeUndefined();
+    expect(useRecurringCallsStore.getState().detailErrors['4']?.code).toBe('not_found');
+  });
+
   it('shows a window asked for again while its first read is still out, and never another window’s entries', async () => {
     const firstA = deferred<ScheduledCallsCalendarResult>();
     const windowA = { start: 'a', end: 'b' };
@@ -537,6 +552,24 @@ describe('recurring call alerts store', () => {
 
     expect(useRecurringCallAlertsStore.getState().busyKeys).toEqual([]);
     expect(getRecurringCallAlerts).not.toHaveBeenCalled();
+  });
+
+  it('reads nothing for a refresh queued before the alerts were turned off', async () => {
+    const first = deferred<RecurringCallAlertsResult>();
+
+    jest.mocked(getRecurringCallAlerts).mockReturnValueOnce(first.promise);
+    const reading = useRecurringCallAlertsStore.getState().fetchAlerts();
+    // A push while the first read is out queues a trailing read behind it.
+    const queued = useRecurringCallAlertsStore.getState().fetchAlerts({ bypassCache: true });
+
+    useRecurringCallAlertsStore.getState().disable();
+    first.resolve(alertsAnswer([alert('a')]));
+    await Promise.all([reading, queued]);
+    await flush();
+
+    expect(getRecurringCallAlerts).toHaveBeenCalledTimes(1);
+    expect(useRecurringCallAlertsStore.getState().alerts).toEqual([]);
+    expect(useBadgeCountsStore.getState().recurringCallAlerts).toBe(0);
   });
 
   it('is cleared when disabled and on sign-out', async () => {

@@ -727,8 +727,15 @@ export default function RecurringCallFormScreen({ mode }: RecurringCallFormScree
 /** `/recurring-calls/new`: a new schedule, whatever the link carries. */
 export const RecurringCallCreateScreen: React.FC = () => <RecurringCallFormScreen mode="create" />;
 
-/** `/recurring-calls/[id]/edit`: the schedule the id names. */
-export const RecurringCallEditScreen: React.FC = () => <RecurringCallFormScreen mode="edit" />;
+/**
+ * `/recurring-calls/[id]/edit`: the schedule the id names. Another schedule is another form: when the router reuses the
+ * screen for a new id, nothing of the last schedule (its values, a read still out for it) carries over.
+ */
+export const RecurringCallEditScreen: React.FC = () => {
+  const { id } = useLocalSearchParams<{ id?: string | string[] }>();
+
+  return <RecurringCallFormScreen key={Array.isArray(id) ? id[0] : id} mode="edit" />;
+};
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },

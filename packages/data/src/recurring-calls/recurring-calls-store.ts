@@ -75,6 +75,9 @@ export interface RecurringOccurrenceOutcome {
 
 export type RecurringOccurrenceAction = 'dispatch' | 'create' | 'skip' | 'restore';
 
+/** The schedule writes, as the logs name them. */
+type ScheduleOperation = 'pause' | 'resume' | 'delete';
+
 interface RecurringCallsData extends SliceMeta<RecurringSlice> {
   /** Every schedule of the department, paused and ended ones included, in the server's order. */
   schedules: RecurringCallResultData[];
@@ -201,7 +204,13 @@ export const useRecurringCallsStore = create<RecurringCallsState>()(
           }
         });
 
-      const runScheduleWrite = (recurringCallId: number, label: string, write: () => Promise<RecurringCallActionResult>, callsChanged: boolean, onSuccess?: () => void): Promise<RecurringCallActionOutcome> =>
+      const runScheduleWrite = (
+        recurringCallId: number,
+        operation: ScheduleOperation,
+        write: () => Promise<RecurringCallActionResult>,
+        callsChanged: boolean,
+        onSuccess?: () => void
+      ): Promise<RecurringCallActionOutcome> =>
         runWrite(recurringScheduleKey(recurringCallId), async (isCurrent) => {
           let outcome: RecurringCallActionOutcome;
 
@@ -210,7 +219,7 @@ export const useRecurringCallsStore = create<RecurringCallsState>()(
             outcome = { ok: result?.Success === true, message: result?.Message ?? null, schedule: result?.Data ?? null, error: null };
           } catch (error) {
             const dataError = toDataError(error);
-            getDataLogger().warn({ message: label, context: { recurringCallId, code: dataError.code, status: dataError.status } });
+            getDataLogger().warn({ message: 'A recurring call schedule write failed', context: { operation, recurringCallId, code: dataError.code, status: dataError.status } });
             outcome = { ok: false, message: null, schedule: null, error: dataError };
           }
 
@@ -241,12 +250,15 @@ export const useRecurringCallsStore = create<RecurringCallsState>()(
           const result = await runner.run(
             'detail',
             async () => unwrapItem(await getRecurringCall(getDataApiContext(), { recurringCallId })),
+            // A read that left before the schedule was deleted here answers as if it were gone: it never restores the copy.
             (detail, state) =>
-              detail
+              detail && !deletedIds.has(recurringCallId)
                 ? { details: { ...state.details, [key]: detail }, detailErrors: withoutKey(state.detailErrors, key) }
                 : { details: withoutKey(state.details, key), detailErrors: { ...state.detailErrors, [key]: NOT_FOUND } },
             { flightKey: `detail:${key}`, raceKey: `detail:${key}`, trailing: options?.bypassCache === true }
           );
+
+          if (deletedIds.has(recurringCallId)) return null;
 
           if (result.ok) return result.value;
           const failure = result.error;
@@ -302,7 +314,7 @@ export const useRecurringCallsStore = create<RecurringCallsState>()(
               return saved;
             } catch (error) {
               const dataError = toDataError(error);
-              getDataLogger().warn({ message: 'Saving a recurring call failed', context: { recurringCallId: input.RecurringCallId, code: dataError.code, status: dataError.status } });
+              getDataLogger().warn({ message: 'Saving a recurring call failed', context: { operation: 'save', recurringCallId: input.RecurringCallId, code: dataError.code, status: dataError.status } });
 
               // It may have been saved: show the lists as the server has them before the dispatcher tries again.
               if (isCurrent() && mayHaveCommitted(dataError)) refreshAfterWrite(input.RecurringCallId > 0 ? input.RecurringCallId : null, true);
@@ -311,20 +323,24 @@ export const useRecurringCallsStore = create<RecurringCallsState>()(
             }
           }),
 
-        pauseRecurringCall: (input) => runScheduleWrite(input.RecurringCallId, 'Pausing a recurring call failed', () => pauseRecurringCall(getDataApiContext(), input), input.DeleteUpcomingCalls),
+        pauseRecurringCall: (input) => runScheduleWrite(input.RecurringCallId, 'pause', () => pauseRecurringCall(getDataApiContext(), input), input.DeleteUpcomingCalls),
 
-        resumeRecurringCall: (recurringCallId) => runScheduleWrite(recurringCallId, 'Resuming a recurring call failed', () => resumeRecurringCall(getDataApiContext(), { RecurringCallId: recurringCallId }), true),
+        resumeRecurringCall: (recurringCallId) => runScheduleWrite(recurringCallId, 'resume', () => resumeRecurringCall(getDataApiContext(), { RecurringCallId: recurringCallId }), true),
 
         deleteRecurringCall: (recurringCallId, deleteUpcomingCalls) =>
           runScheduleWrite(
             recurringCallId,
-            'Deleting a recurring call failed',
+            'delete',
             () => deleteRecurringCall(getDataApiContext(), { RecurringCallId: recurringCallId, DeleteUpcomingCalls: deleteUpcomingCalls }),
             deleteUpcomingCalls,
             () => {
               deletedIds.add(recurringCallId);
               const key = String(recurringCallId);
-              set((state) => ({ schedules: state.schedules.filter((schedule) => schedule.RecurringCallId !== recurringCallId), details: withoutKey(state.details, key) }));
+              set((state) => ({
+                schedules: state.schedules.filter((schedule) => schedule.RecurringCallId !== recurringCallId),
+                details: withoutKey(state.details, key),
+                detailErrors: { ...state.detailErrors, [key]: NOT_FOUND },
+              }));
             }
           ),
 
@@ -338,7 +354,7 @@ export const useRecurringCallsStore = create<RecurringCallsState>()(
               outcome = { ok: result?.Success === true, outcome: data?.Outcome ?? null, callId: data?.CallId ?? null, callNumber: data?.CallNumber ?? null, callState: data?.CallState ?? null, error: null };
             } catch (error) {
               const dataError = toDataError(error);
-              getDataLogger().warn({ message: 'A recurring call occurrence action failed', context: { action, recurringCallId: occurrence.RecurringCallId, code: dataError.code, status: dataError.status } });
+              getDataLogger().warn({ message: 'A recurring call occurrence action failed', context: { operation: action, recurringCallId: occurrence.RecurringCallId, code: dataError.code, status: dataError.status } });
               outcome = failedOccurrence(dataError);
             }
 

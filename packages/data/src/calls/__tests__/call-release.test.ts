@@ -1,8 +1,9 @@
 import { getCall, getCallExtraData, releaseFromCallWith } from '@resgrid/api';
 import { defaultResetRegistry } from '@resgrid/offline';
 
-import { createDataTestRuntime, httpError, notFound, ok } from '../../__tests__/helpers';
+import { createDataTestRuntime, type DataTestRuntime, httpError, notFound, ok } from '../../__tests__/helpers';
 import { useCallDetailStore } from '../call-detail-store';
+import { useCallsStore } from '../calls-store';
 
 jest.mock('@resgrid/api', () => ({
   ...jest.requireActual('@resgrid/api'),
@@ -13,8 +14,11 @@ jest.mock('@resgrid/api', () => ({
 
 const releasedUnit = { Id: '45', Type: 'Unit', Name: 'MUG 1', ReleasedOn: '2026-11-16T10:32:00Z', ReleasedBy: 'Dana Dispatcher' };
 
+let runtime: DataTestRuntime;
+
 beforeEach(async () => {
-  await createDataTestRuntime({ variant: 'dispatch' });
+  runtime = await createDataTestRuntime({ variant: 'dispatch' });
+  await defaultResetRegistry.getStoreResets().get('data.calls')?.('logout');
   await defaultResetRegistry.getStoreResets().get('data.call-detail')?.('logout');
   jest.mocked(releaseFromCallWith).mockReset();
   // SAFETY: GetCall and GetCallExtraData envelopes with only the fields these tests read.
@@ -74,6 +78,31 @@ describe('releasing a resource from a call', () => {
 
     expect(getCallExtraData).not.toHaveBeenCalled();
     expect(useCallDetailStore.getState().details['123']).toBeUndefined();
+  });
+
+  it('stamps each dispatch read when it leaves, so a list read that left before the release stays the older one', async () => {
+    let answerList: (value: never) => void = () => undefined;
+
+    jest.mocked(getCallExtraData).mockReturnValueOnce(
+      new Promise<never>((resolve) => {
+        answerList = resolve;
+      })
+    );
+
+    const listRead = useCallsStore.getState().fetchCallDispatches(['123'], { bypassCache: true });
+    const listLeftAt = runtime.clock.now();
+
+    runtime.clock.advance(5000);
+    // SAFETY: a ReleaseUnit envelope with the fields Core sends.
+    jest.mocked(releaseFromCallWith).mockResolvedValueOnce({ Status: 'updated', Data: { CallId: '123', UnitId: '45', ReleasedOn: '2026-11-16T10:32:00Z', StatusApplied: true } } as never);
+    await useCallDetailStore.getState().releaseFromCall({ kind: 'unit', callId: '123', resourceId: '45', notify: true });
+    runtime.clock.advance(5000);
+    // SAFETY: the list read's GetCallExtraData answer, from before the release (MUG 1 still dispatched).
+    answerList(ok({ Dispatches: [{ Id: '45', Type: 'Unit', Name: 'MUG 1' }] }) as never);
+    await listRead;
+
+    expect(useCallsStore.getState().callDispatchesFetchedAt['123']).toBe(listLeftAt);
+    expect(useCallDetailStore.getState().details['123'].fetchedAt).toBe(listLeftAt + 5000);
   });
 
   it('rethrows a refusal and records it as the last write error', async () => {

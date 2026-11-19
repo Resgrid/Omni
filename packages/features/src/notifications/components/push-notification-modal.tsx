@@ -3,7 +3,7 @@ import { useTranslation } from '@resgrid/i18n';
 import { getNotificationsDependencies, navigateToNotificationTarget, type NotificationKind, type NotificationTarget, usePushNotificationModalStore } from '@resgrid/notifications';
 import { Button, ButtonText, HStack, Modal, ModalBackdrop, ModalBody, ModalContent, ModalFooter, ModalHeader, Text, useToast, VStack } from '@resgrid/ui';
 import { AlertCircle, Bell, Bot, CloudLightning, KeyRound, Mail, MessageCircle, Phone, RadioTower, Repeat, Timer, Wrench } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 type ModalKind = NotificationKind | 'unknown';
 
@@ -88,9 +88,13 @@ export const PushNotificationModal: React.FC = () => {
   const hide = usePushNotificationModalStore((state) => state.hideNotificationModal);
   const [isConfirming, setIsConfirming] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
+  // The navigation attempt that owns `isNavigating`: closing the modal ends it, so a dismissed push that opens late cannot
+  // clear the guard of a newer one (and let its View be pressed twice).
+  const navigation = useRef(0);
 
   useEffect(() => {
     if (!isOpen) {
+      navigation.current++;
       setIsConfirming(false);
       setIsNavigating(false);
     }
@@ -108,8 +112,11 @@ export const PushNotificationModal: React.FC = () => {
   const view = async () => {
     if (!target || isNavigating) return;
     const shown = notification;
+    const attempt = ++navigation.current;
     setIsNavigating(true);
     const opened = await navigateToNotificationTarget(target);
+
+    if (attempt !== navigation.current) return;
     setIsNavigating(false);
 
     if (opened && usePushNotificationModalStore.getState().notification === shown) hide();

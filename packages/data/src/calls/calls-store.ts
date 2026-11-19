@@ -278,22 +278,26 @@ export const useCallsStore = create<CallsState>()(
             async () =>
               Promise.all(
                 due.map(async (callId) => {
+                  // Stamped when the read leaves (as the call detail's are): a read that left before a release and lands after
+                  // the detail's post-release read is the older of the two.
+                  const readAt = dataNow();
+
                   try {
                     const extra = unwrapItem(await getCallExtraData(getDataApiContext(), { callId }));
-                    return { callId, dispatches: uniqueDispatches(extra?.Dispatches ?? []) };
+                    return { callId, dispatches: uniqueDispatches(extra?.Dispatches ?? []), readAt };
                   } catch {
                     // A failed fetch must not be cached as empty: that would hide dispatches for the life of the call (Unit).
-                    return { callId, dispatches: null };
+                    return { callId, dispatches: null, readAt };
                   }
                 })
               ),
             (results, state) => {
               const nextDispatches = { ...state.callDispatches };
               const nextFetchedAt = { ...state.callDispatchesFetchedAt };
-              for (const { callId, dispatches } of results) {
+              for (const { callId, dispatches, readAt } of results) {
                 if (dispatches !== null) {
                   nextDispatches[callId] = dispatches;
-                  nextFetchedAt[callId] = dataNow();
+                  nextFetchedAt[callId] = readAt;
                 }
               }
               return { callDispatches: nextDispatches, callDispatchesFetchedAt: nextFetchedAt };

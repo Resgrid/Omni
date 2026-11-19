@@ -94,7 +94,7 @@ export const useRecurringCallAlertsStore = create<RecurringCallAlertsState>()(
     (set, get) => {
       runner = createSliceRunner<AlertsSlice, RecurringCallAlertsState>('recurring-call-alerts', set);
 
-      const runAlertWrite = (alertId: string, label: string, write: () => Promise<RecurringCallActionResult>): Promise<RecurringCallAlertOutcome> => {
+      const runAlertWrite = (alertId: string, operation: 'acknowledge' | 'dismiss', write: () => Promise<RecurringCallActionResult>): Promise<RecurringCallAlertOutcome> => {
         const key = recurringAlertKey(alertId);
 
         return writes.run(key, async () => {
@@ -109,7 +109,7 @@ export const useRecurringCallAlertsStore = create<RecurringCallAlertsState>()(
             outcome = { ok: result?.Success === true, message: result?.Message ?? null, error: null };
           } catch (error) {
             const dataError = toDataError(error);
-            getDataLogger().warn({ message: label, context: { alertId, code: dataError.code, status: dataError.status } });
+            getDataLogger().warn({ message: 'A recurring call alert action failed', context: { operation, alertId, code: dataError.code, status: dataError.status } });
             outcome = { ok: false, message: null, error: dataError };
           }
 
@@ -151,9 +151,9 @@ export const useRecurringCallAlertsStore = create<RecurringCallAlertsState>()(
           if (!result.ok && !result.stale && result.error?.code === 'not_found') set({ unsupported: true, alerts: [], newAlertIds: [] });
         },
 
-        acknowledgeAlert: (alertId) => runAlertWrite(alertId, 'Acknowledging a recurring call alert failed', () => acknowledgeRecurringCallAlert(getDataApiContext(), { AlertId: alertId })),
+        acknowledgeAlert: (alertId) => runAlertWrite(alertId, 'acknowledge', () => acknowledgeRecurringCallAlert(getDataApiContext(), { AlertId: alertId })),
 
-        dismissAlert: (alertId, note) => runAlertWrite(alertId, 'Dismissing a recurring call alert failed', () => dismissRecurringCallAlert(getDataApiContext(), { AlertId: alertId, Note: note?.trim() || null })),
+        dismissAlert: (alertId, note) => runAlertWrite(alertId, 'dismiss', () => dismissRecurringCallAlert(getDataApiContext(), { AlertId: alertId, Note: note?.trim() || null })),
 
         markAlertsSeen: (alertIds) => {
           const seen = alertIds ? new Set(alertIds) : null;

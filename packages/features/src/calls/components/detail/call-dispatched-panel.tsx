@@ -8,7 +8,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { type ReleaseCall, type ReleaseTarget, useReleaseFromCall } from '../../hooks/use-release-from-call';
 import { dispatchKey, getDispatchTypeStyle, getUniqueDispatches, isUnitDispatchType } from '../../lib/call-dispatch';
-import { releaseKindOf } from '../../lib/call-release';
+import { isReleaseTargetRow, releaseKindOf } from '../../lib/call-release';
 import { ReleasedResourcesList } from './released-resources-list';
 
 export interface CallDispatchedPanelProps {
@@ -39,7 +39,7 @@ export const CallDispatchedPanel: React.FC<CallDispatchedPanelProps> = ({ dispat
   const showEtas = useIsNavigationEtaEnabled() && !!callId;
   useNavigationEtaSync(showEtas);
   // A confirmation open for a unit or person that is no longer listed (released elsewhere) closes with their row.
-  const isReleasable = useCallback((target: ReleaseTarget) => unique.some((dispatch) => dispatch.Id === target.id && releaseKindOf(dispatch.Type) === target.kind), [unique]);
+  const isReleasable = useCallback((target: ReleaseTarget) => unique.some((dispatch) => isReleaseTargetRow(dispatch, target.kind, target.id)), [unique]);
   // A release re-reads the call (the detail store), so the row moves to the released list by itself.
   const release = useReleaseFromCall({ call, isReleasable, testID: 'call-dispatched-release-dialog' });
   const released = <ReleasedResourcesList releasedUnits={releasedUnits} releasedPersonnel={releasedPersonnel} />;

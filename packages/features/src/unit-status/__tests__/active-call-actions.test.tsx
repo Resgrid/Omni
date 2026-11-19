@@ -171,6 +171,41 @@ describe('ActiveCallCard: releasing the crew’s own unit ("we were stood down")
     expect(useToastStore.getState().toasts.at(-1)).toMatchObject({ type: 'success', message: 'calls.release.unit_success:Engine 1' });
   });
 
+  it('keeps a call the crew picked while the release was still being read back', async () => {
+    const pendingReads: (() => void)[] = [];
+
+    const slowRead = jest.fn(
+      () =>
+        new Promise<undefined>((resolve) => {
+          pendingReads.push(() => resolve(undefined));
+        })
+    );
+
+    // SAFETY: dispatch rows with only the fields the card reads.
+    useCallsStore.setState({ callDispatches: { '7': [{ Id: 'u1', Type: 'Unit', Name: 'Engine 1' }] as never }, fetchCallDispatches: slowRead });
+    const onClearCall = jest.fn();
+
+    const card = (activeCallId: string) => (
+      <NavigationHandoffProvider value={{ navigateTo }}>
+        <StatusProvider activeUnitId="u1" activeCallId={activeCallId}>
+          <ActiveCallCard activeCallId={activeCallId} onClearCall={onClearCall} />
+        </StatusProvider>
+      </NavigationHandoffProvider>
+    );
+
+    const { rerender } = await render(card('7'));
+
+    await fireEvent.press(screen.getByTestId('unit-active-call-release'));
+    await act(async () => fireEvent.press(screen.getByTestId('unit-active-call-release-dialog-confirm', hidden)));
+    expect(releaseFromCall).toHaveBeenCalled();
+
+    // The crew picks call 8 before the release's read-back settles.
+    await rerender(card('8'));
+    await act(async () => pendingReads.forEach((finish) => finish()));
+
+    expect(onClearCall).not.toHaveBeenCalled();
+  });
+
   it('reads the newer of the call list’s and the call detail’s dispatches, so an older empty list does not hide Release', async () => {
     useCallsStore.setState({ callDispatchesFetchedAt: { '7': 100 } });
     // SAFETY: a detail record with only the dispatches and read time the card reads.

@@ -13,7 +13,7 @@ import { activateVariant, hidden, setRights } from '../../calls/__tests__/test-u
 import { PoiPickerModal } from '../components/poi-picker-modal';
 import { agendaWindow, departmentDay } from '../lib/calendar-agenda';
 import RecurringCallDetailScreen from '../screens/recurring-call-detail';
-import RecurringCallFormScreen from '../screens/recurring-call-form';
+import RecurringCallFormScreen, { RecurringCallEditScreen } from '../screens/recurring-call-form';
 import RecurringCallsScreen from '../screens/recurring-calls';
 import RecurringCallsCalendarScreen from '../screens/recurring-calls-calendar';
 
@@ -243,6 +243,21 @@ describe('RecurringCallFormScreen', () => {
     expect(actions.fetchOptions).toHaveBeenCalledWith(true);
     expect(actions.fetchRecurringCall).not.toHaveBeenCalled();
     expect(screen.getByTestId('recurring-call-form-lead-time-60')).toHaveProp('accessibilityState', expect.objectContaining({ selected: true }));
+  });
+
+  it('starts over when the edit route is reused for another schedule', async () => {
+    jest.mocked(useLocalSearchParams).mockReturnValue({ id: '4' });
+    actions.fetchRecurringCall.mockResolvedValueOnce(detailOf({ Name: 'Schedule four' }));
+    const { rerender } = await render(<RecurringCallEditScreen />);
+
+    expect(screen.getByTestId('recurring-call-form-name')).toHaveProp('value', 'Schedule four');
+
+    jest.mocked(useLocalSearchParams).mockReturnValue({ id: '5' });
+    actions.fetchRecurringCall.mockResolvedValueOnce({ ...detailOf({ Name: 'Schedule five' }), RecurringCall: schedule(5, { Name: 'Schedule five' }) });
+    await rerender(<RecurringCallEditScreen />);
+
+    expect(actions.fetchRecurringCall).toHaveBeenLastCalledWith(5, { bypassCache: true });
+    expect(screen.getByTestId('recurring-call-form-name')).toHaveProp('value', 'Schedule five');
   });
 
   it('edits nothing for an edit link without a valid schedule id', async () => {

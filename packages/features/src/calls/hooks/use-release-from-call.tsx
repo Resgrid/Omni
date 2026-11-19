@@ -175,7 +175,7 @@ export function useReleaseFromCall({ call, onReleased, isReleasable, testID = 'r
       onReleased?.(target, outcome);
     } catch (error) {
       // The screen's own follow-up failed, not the release.
-      logger.warn({ message: 'A release follow-up failed', context: { kind: target.kind, errorType: error instanceof Error ? error.name : 'unknown' } });
+      logger.warn({ message: 'A release follow-up failed', context: { operation: 'onReleased', kind: target.kind, errorType: error instanceof Error ? error.name : 'unknown' } });
     }
   };
 

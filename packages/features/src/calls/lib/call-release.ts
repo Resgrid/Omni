@@ -86,6 +86,9 @@ export const releaseKindOf = (type: string): ReleaseResourceKind | null => {
   return kind === 'personnel' ? 'personnel' : null;
 };
 
+/** The dispatch row is the unit or person a release names (ids compared as Core sends them: string or number, any case). */
+export const isReleaseTargetRow = (entry: Pick<DispatchedEventResultData, 'Id' | 'Type'>, kind: ReleaseResourceKind, id: IdValue): boolean => releaseKindOf(entry.Type) === kind && sameId(entry.Id, id);
+
 /** The unit is one of the call's unit dispatches (by id, else by name). Only these can be released. */
 export const isUnitDispatchedToCall = (unit: CallUnitCandidate, dispatches: readonly DispatchedEventResultData[]): boolean => dispatches.some((entry) => dispatchKind(entry.Type) === 'unit' && matchesUnit(entry, unit));
 
@@ -158,7 +161,7 @@ export const isPersonReleasableFromCall = (person: CallPersonCandidate, lists: C
 export const crewOnCall = (units: readonly Pick<UnitInfoResultData, 'UnitId' | 'Name' | 'Roles'>[], dispatches: readonly DispatchedEventResultData[]): string[] =>
   units.flatMap((unit) => (isUnitDispatchedToCall(unit, dispatches) ? (unit.Roles ?? []).flatMap((role) => (role?.UserId ? [role.UserId] : [])) : []));
 
-/** One read of a call's dispatches and when it landed (epoch ms). */
+/** One read of a call's dispatches and when it left for the server (epoch ms): a slow answer is not a newer one. */
 export interface DispatchSnapshot {
   /** Missing when that read has not happened (or failed). */
   dispatches: readonly DispatchedEventResultData[] | null | undefined;

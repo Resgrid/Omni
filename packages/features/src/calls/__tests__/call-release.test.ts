@@ -10,6 +10,7 @@ import {
   getReleasedUnits,
   isPersonOnCall,
   isPersonReleasableFromCall,
+  isReleaseTargetRow,
   isUnitDispatchedToCall,
   isUnitOnCall,
   newerDispatches,
@@ -123,6 +124,15 @@ describe('who is on a call once some were released', () => {
     expect(newerDispatches({ ...newerEmpty, fetchedAt: 50 }, older)).toBe(older.dispatches);
     expect(newerDispatches({ dispatches: undefined, fetchedAt: 500 }, older)).toBe(older.dispatches);
     expect(newerDispatches({ dispatches: null, fetchedAt: 0 }, { dispatches: undefined, fetchedAt: 0 })).toBeNull();
+  });
+
+  it('finds a release target among the rows whatever form Core sent its id in', () => {
+    // SAFETY: an older row that carries its unit id as a number.
+    const legacy: Pick<DispatchedEventResultData, 'Id' | 'Type'> = { Id: 45 as never, Type: 'Unit' };
+
+    expect(isReleaseTargetRow(legacy, 'unit', '45')).toBe(true);
+    expect(isReleaseTargetRow(entry('User', 'U-1', 'Pat'), 'personnel', 'u-1')).toBe(true);
+    expect(isReleaseTargetRow(entry('Unit', '45', 'MUG 1'), 'personnel', '45')).toBe(false);
   });
 
   it('releases units and people, never a group or role', () => {
