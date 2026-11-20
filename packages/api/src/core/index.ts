@@ -8,6 +8,7 @@ export {
   isNetworkError,
   isRetryableError,
   NoActiveSessionError,
+  problemDetailOf,
   problemTypeOf,
   ProblemTypes,
   sanitizePath,

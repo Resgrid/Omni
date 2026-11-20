@@ -1,6 +1,6 @@
 import { isFieldRedacted, ProtectedFieldIds } from '@resgrid/auth';
 import { formatUtcInDepartmentTime } from '@resgrid/core/utils/dates';
-import { useCallsStore } from '@resgrid/data';
+import { useCallsStore, useRoutesStore } from '@resgrid/data';
 import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import type { CallResultData } from '@resgrid/models';
@@ -9,7 +9,9 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { callDisplayText, revealedCallText } from '../../lib/call-display';
+import { callFreeDestination } from '../../lib/call-location';
 import { resolvePriority } from '../../lib/call-priority';
+import { callRouteName } from '../../lib/call-route';
 import { isScheduledCall, scheduledDispatchUtc } from '../../lib/call-time';
 import { DetailRow } from './detail-row';
 
@@ -17,17 +19,25 @@ export interface CallInfoPanelProps {
   call: CallResultData;
 }
 
+/** A free destination point as text (five decimals, about a metre). */
+const pointText = (point: { latitude: number; longitude: number }): string => `${Math.round(point.latitude * 1e5) / 1e5}, ${Math.round(point.longitude * 1e5) / 1e5}`;
+
 /**
- * Info tab (Dispatch): priority, alarm level once escalated, type, location, destination and its type, map page, contact,
- * references, times (with the scheduled dispatch time while the call waits for it), the full nature and the call's note (HtmlRenderer).
+ * Info tab (Dispatch): priority, alarm level once escalated, type, location (and the POI it was picked from), destination —
+ * a POI with its type, or (Core M0322) a free address, point or what3words — the route, map page, contact, references,
+ * times (with the scheduled dispatch time while the call waits for it), the full nature and the call's note (HtmlRenderer).
  */
 export const CallInfoPanel: React.FC<CallInfoPanelProps> = ({ call }) => {
   const { t } = useTranslation();
   const timeZone = useDepartmentTimeZone();
   const priorities = useCallsStore((state) => state.callPriorities);
+  const routePlans = useRoutesStore((state) => state.callRoutePlans);
   const priority = resolvePriority(priorities, call.Priority);
   const redacted = (fieldId: string, value: string | null | undefined): boolean => isFieldRedacted(call.RedactedFields, fieldId, value);
-  const destination = [call.DestinationName, call.DestinationAddress].filter((part) => !!part?.trim()).join(' — ');
+  const freeDestination = callFreeDestination(call);
+  // A POI destination shows its name and address; a free one (no POI) its address, with the point and what3words below.
+  const destination = freeDestination ? freeDestination.address : [call.DestinationName, call.DestinationAddress].filter((part) => !!part?.trim()).join(' — ');
+  const locationPoi = (call.LocationPoiId ?? 0) > 0 ? call.LocationPoiName?.trim() || `#${call.LocationPoiId}` : '';
   const coordinates = call.Latitude && call.Longitude ? `${call.Latitude}, ${call.Longitude}` : '';
   const noteProtected = redacted(ProtectedFieldIds.callNotes, call.Note);
   const protectedLabel = t('data_protection.protected_value');
@@ -40,8 +50,12 @@ export const CallInfoPanel: React.FC<CallInfoPanelProps> = ({ call }) => {
       <DetailRow label={t('call_detail.address')} value={call.Address} isProtected={redacted(ProtectedFieldIds.callAddress, call.Address)} testID="call-info-address" />
       <DetailRow label={t('calls.coordinates')} value={coordinates} isProtected={redacted(ProtectedFieldIds.callGeolocation, call.Geolocation)} />
       <DetailRow label={t('calls.what3words')} value={call.What3Words} isProtected={redacted(ProtectedFieldIds.callWhat3Words, call.What3Words)} />
-      <DetailRow label={t('call_detail.destination')} value={destination} />
+      <DetailRow label={t('call_detail.location_poi')} value={locationPoi} testID="call-info-location-poi" />
+      <DetailRow label={t('call_detail.destination')} value={destination} testID="call-info-destination" />
+      <DetailRow label={t('call_detail.destination_coordinates')} value={freeDestination?.point ? pointText(freeDestination.point) : ''} testID="call-info-destination-coordinates" />
+      <DetailRow label={t('call_detail.destination_what3words')} value={freeDestination?.what3words} testID="call-info-destination-w3w" />
       <DetailRow label={t('call_detail.destination_type')} value={call.DestinationTypeName} />
+      <DetailRow label={t('call_detail.route')} value={callRouteName(call, routePlans)} testID="call-info-route" />
       <DetailRow label={t('calls.map_page')} value={call.MapPage} testID="call-info-map-page" />
       <DetailRow label={t('call_detail.contact_name')} value={call.ContactName} isProtected={redacted(ProtectedFieldIds.callContactName, call.ContactName)} />
       <DetailRow label={t('call_detail.contact_info')} value={call.ContactInfo} isProtected={redacted(ProtectedFieldIds.callContactNumber, call.ContactInfo)} />

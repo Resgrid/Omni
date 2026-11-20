@@ -1609,9 +1609,8 @@
     "anti-slop/require-safety-comment-for-type-assertion": 17
   },
   "packages/data/src/routes/routes-store.ts": {
-    "anti-slop/no-conditional-empty-object-spread": 2,
-    "anti-slop/no-known-value-widening": 1,
-    "anti-slop/require-readable-spacing": 31
+    "anti-slop/no-conditional-empty-object-spread": 1,
+    "anti-slop/no-known-value-widening": 1
   },
   "packages/data/src/run-cards/__tests__/run-cards-store.test.ts": {
     "anti-slop/no-unknown-parameters": 2,
@@ -2894,16 +2893,12 @@
     "anti-slop/require-readable-spacing": 3
   },
   "packages/features/src/navigation/__tests__/navigation-screen.test.tsx": {
-    "anti-slop/require-readable-spacing": 4,
     "anti-slop/require-safety-comment-for-type-assertion": 9
   },
   "packages/features/src/navigation/__tests__/test-setup.tsx": {
     "anti-slop/no-shape-in-symbol-names": 1,
     "anti-slop/no-unknown-parameters": 3,
     "anti-slop/require-readable-spacing": 5
-  },
-  "packages/features/src/navigation/components/arrival-panels.tsx": {
-    "anti-slop/require-readable-spacing": 13
   },
   "packages/features/src/navigation/hooks/use-in-app-navigation.ts": {
     "anti-slop/require-readable-spacing": 1
@@ -3387,8 +3382,7 @@
     "anti-slop/require-readable-spacing": 1
   },
   "packages/features/src/status/components/unit-status-sheet.tsx": {
-    "anti-slop/no-conditional-empty-object-spread": 1,
-    "anti-slop/require-readable-spacing": 5
+    "anti-slop/no-conditional-empty-object-spread": 1
   },
   "packages/features/src/status/index.ts": {
     "anti-slop/require-readable-spacing": 18
@@ -3415,23 +3409,15 @@
   "packages/features/src/status/lib/unit-status-set.ts": {
     "anti-slop/require-readable-spacing": 4
   },
-  "packages/features/src/status/status-context.tsx": {
-    "anti-slop/no-conditional-empty-object-spread": 1,
-    "anti-slop/require-readable-spacing": 1
-  },
   "packages/features/src/unit-routes/__tests__/route-lib.test.ts": {
     "anti-slop/no-unsafe-dictionary-type": 1,
     "anti-slop/require-readable-spacing": 1
   },
   "packages/features/src/unit-routes/__tests__/routes-screens.test.tsx": {
-    "anti-slop/require-readable-spacing": 7,
     "anti-slop/require-safety-comment-for-type-assertion": 3
   },
   "packages/features/src/unit-routes/components/deviation-banner.tsx": {
     "anti-slop/require-readable-spacing": 1
-  },
-  "packages/features/src/unit-routes/components/route-plans-list.tsx": {
-    "anti-slop/require-readable-spacing": 5
   },
   "packages/features/src/unit-routes/components/stop-card.tsx": {
     "anti-slop/no-known-value-widening": 1,
@@ -3455,7 +3441,6 @@
   },
   "packages/features/src/unit-routes/lib/route-map.ts": {
     "anti-slop/no-array-filter-map": 3,
-    "anti-slop/require-readable-spacing": 8,
     "anti-slop/require-safety-comment-for-type-assertion": 1
   },
   "packages/features/src/unit-routes/lib/route-status.ts": {
@@ -3469,25 +3454,17 @@
   "packages/features/src/unit-routes/routes.ts": {
     "anti-slop/require-readable-spacing": 2
   },
-  "packages/features/src/unit-routes/screens/route-active.tsx": {
-    "anti-slop/require-readable-spacing": 8
-  },
   "packages/features/src/unit-routes/screens/route-directions.tsx": {
-    "anti-slop/require-readable-spacing": 4,
     "anti-slop/require-safety-comment-for-type-assertion": 2
   },
   "packages/features/src/unit-routes/screens/route-history.tsx": {
     "anti-slop/require-readable-spacing": 2
   },
   "packages/features/src/unit-routes/screens/route-instance.tsx": {
-    "anti-slop/no-unsafe-dictionary-type": 1,
-    "anti-slop/require-readable-spacing": 3
+    "anti-slop/no-unsafe-dictionary-type": 1
   },
   "packages/features/src/unit-routes/screens/route-poi.tsx": {
     "anti-slop/require-readable-spacing": 4
-  },
-  "packages/features/src/unit-routes/screens/route-start.tsx": {
-    "anti-slop/require-readable-spacing": 7
   },
   "packages/features/src/unit-routes/screens/route-stop-contact.tsx": {
     "anti-slop/require-readable-spacing": 4
@@ -4728,19 +4705,16 @@
   },
   "packages/navigation/src/store/navigation-store.ts": {
     "anti-slop/no-known-value-widening": 2,
-    "anti-slop/require-readable-spacing": 54,
-    "anti-slop/require-safety-comment-for-type-assertion": 2
+    "anti-slop/require-safety-comment-for-type-assertion": 1
   },
   "packages/navigation/src/store/progress-reports.ts": {
     "anti-slop/require-readable-spacing": 3
   },
   "packages/navigation/src/store/route-sources.ts": {
-    "anti-slop/no-conditional-empty-object-spread": 1,
-    "anti-slop/require-readable-spacing": 7
+    "anti-slop/no-conditional-empty-object-spread": 1
   },
   "packages/navigation/src/store/services.ts": {
-    "anti-slop/no-unknown-parameters": 1,
-    "anti-slop/require-readable-spacing": 1
+    "anti-slop/no-unknown-parameters": 1
   },
   "packages/notifications/jest.setup.ts": {
     "anti-slop/no-chained-type-assertions": 1,
@@ -5241,7 +5215,7 @@
   "packages/realtime/src/signalr-service.ts": {
     "anti-slop/no-runtime-typeof": 1,
     "anti-slop/no-unknown-returns": 1,
-    "anti-slop/require-readable-spacing": 56
+    "anti-slop/require-readable-spacing": 55
   },
   "packages/realtime/src/watchdog.ts": {
     "anti-slop/require-readable-spacing": 4

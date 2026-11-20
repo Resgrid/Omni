@@ -70,6 +70,13 @@ export const poiCapabilityOptions = (poi: Pick<PoiResultData, 'CapabilityIds' | 
 /** True when the POI offers the capability (by id, or by name on servers that send names only). */
 export const poiOffersCapability = (poi: PoiResultData, capabilityId: string): boolean => poiCapabilityOptions(poi).some((option) => sameId(option.id, capabilityId));
 
+/** The required capabilities the destination does not offer (destination rules). */
+export const requiredCapabilitiesMissing = (poi: PoiResultData | null | undefined, requiredIds: readonly string[]): string[] => (poi ? requiredIds.filter((id) => !poiOffersCapability(poi, id)) : []);
+
+/** The required capabilities the destination offers but reports unavailable right now (Destination Availability). */
+export const requiredCapabilitiesDown = (poi: PoiResultData | null | undefined, requiredIds: readonly string[], now: number = Date.now()): string[] =>
+  poi ? requiredIds.filter((id) => poiOffersCapability(poi, id) && isPoiCapabilityUnavailable(poi, id, now)) : [];
+
 /** Every capability the POIs offer, once, by name. */
 export const collectCapabilityOptions = (pois: readonly PoiResultData[]): PoiCapabilityOption[] => {
   const seen = new Map<string, PoiCapabilityOption>();

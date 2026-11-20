@@ -1,5 +1,5 @@
 import { useCapability } from '@resgrid/config';
-import { selectCallById, useCallDetailStore, useCallsStore } from '@resgrid/data';
+import { selectCallById, useCallDetailStore, useCallsStore, useRoutesStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import type { CallPriorityResultData, CallResultData } from '@resgrid/models';
 import { useRealtimeRefetch } from '@resgrid/realtime';
@@ -11,7 +11,9 @@ import { VideoFeedsTab } from '../../video-feeds';
 import { callHasSiteInfo } from '../detail-tabs/built-in-tabs';
 import { readableColors } from '../lib/call-colors';
 import { callDisplayName, callDisplayText, revealedCallText } from '../lib/call-display';
+import { callDestinationText } from '../lib/call-location';
 import { resolvePriority } from '../lib/call-priority';
+import { callRouteName } from '../lib/call-route';
 import { CallAudioPanel } from './call-audio-modal';
 import { CallFilesPanel, CallImagesPanel } from './call-media-modals';
 import { CallModalFrame } from './call-modal-frame';
@@ -124,6 +126,10 @@ const SummaryBody: React.FC<SummaryBodyProps> = ({ call, priorities, tabs, tabIn
   const priorityLabel = priority ? (priority.isLabelKey ? t(priority.label) : priority.label) : null;
   const nature = revealedCallText(call, 'Nature');
   const address = callDisplayText(call, 'Address', protectedLabel);
+  // Core M0322: where the call goes and the route it runs, under its address.
+  const routePlans = useRoutesStore((state) => state.callRoutePlans);
+  const destination = callDestinationText(call);
+  const route = callRouteName(call, routePlans);
 
   return (
     <View>
@@ -143,6 +149,16 @@ const SummaryBody: React.FC<SummaryBodyProps> = ({ call, priorities, tabs, tabIn
         {address ? (
           <Text className="mt-2 text-typography-700" testID={`${testID}-address`}>
             {address}
+          </Text>
+        ) : null}
+        {destination ? (
+          <Text className="mt-1 text-sm text-typography-600" testID={`${testID}-destination`}>
+            {t('calls.destination_to', { destination })}
+          </Text>
+        ) : null}
+        {route ? (
+          <Text className="mt-1 text-sm text-typography-600" testID={`${testID}-route`}>
+            {t('calls.route_named', { name: route })}
           </Text>
         ) : null}
         <Text className="mt-3 text-xs font-semibold uppercase text-typography-500">{t('call_detail.nature')}</Text>

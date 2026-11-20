@@ -1,5 +1,7 @@
+import { useCapability } from '@resgrid/config';
 import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { useRoutesStore, useUnitsStore } from '@resgrid/data';
+import { routePlansRoutes } from '@resgrid/features/route-plans/routes';
 import { useStatusContext } from '@resgrid/features/status';
 import { useTranslation } from '@resgrid/i18n';
 import type { RoutePlanResultData } from '@resgrid/models';
@@ -11,6 +13,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { progressPercent } from '../lib/route-status';
 import { unitRoutesRoutes } from '../routes';
 import { RouteCard } from './route-card';
+import { RunCallLink } from './run-call-link';
 
 /** Core `RouteStatus.Active`: only active plans are offered (drafts, paused and archived plans are not). */
 export const ACTIVE_ROUTE_PLAN_STATUS = 1;
@@ -22,6 +25,7 @@ export const ACTIVE_ROUTE_PLAN_STATUS = 1;
 export const RoutePlansList: React.FC<{ testID?: string }> = ({ testID = 'route-plans-list' }) => {
   const { t } = useTranslation();
   const { activeUnitId } = useStatusContext();
+  const canPreview = useCapability('routes').preview;
   const routePlans = useRoutesStore((state) => state.routePlans);
   const activeInstance = useRoutesStore((state) => state.activeInstance);
   const instanceStops = useRoutesStore((state) => state.instanceStops);
@@ -33,7 +37,9 @@ export const RoutePlansList: React.FC<{ testID?: string }> = ({ testID = 'route-
 
   useEffect(() => {
     void useRoutesStore.getState().fetchAllRoutePlans();
+
     if (activeUnitId) void useRoutesStore.getState().fetchActiveRoute(activeUnitId);
+
     if (useUnitsStore.getState().units.length === 0) void useUnitsStore.getState().fetchUnits();
   }, [activeUnitId]);
 
@@ -53,7 +59,9 @@ export const RoutePlansList: React.FC<{ testID?: string }> = ({ testID = 'route-
   const visible = useMemo(() => {
     const active = routePlans.filter((plan) => plan.RouteStatus === ACTIVE_ROUTE_PLAN_STATUS);
     const needle = query.trim().toLowerCase();
+
     if (!needle) return active;
+
     return active.filter((plan) => [plan.Name, plan.Description ?? '', unitNameOf(plan)].some((value) => value.toLowerCase().includes(needle)));
   }, [query, routePlans, unitNameOf]);
 
@@ -65,12 +73,16 @@ export const RoutePlansList: React.FC<{ testID?: string }> = ({ testID = 'route-
     [activeInstance]
   );
 
+  // The plan preview (start and end, travel mode) beside the start screen the card opens.
+  const previewPlan = useCallback((plan: RoutePlanResultData) => pushRoutePath(router, routePlansRoutes.preview(plan.RoutePlanId)), []);
+
   const renderItem = useCallback(
     ({ item }: { item: RoutePlanResultData }) => {
       const isMyUnit = !!activeUnitId && item.UnitId !== null && String(item.UnitId) === String(activeUnitId);
-      return <RouteCard route={item} isActive={activeInstance?.RoutePlanId === item.RoutePlanId} isMyUnit={isMyUnit} unitName={unitNameOf(item)} onPress={openPlan} />;
+
+      return <RouteCard route={item} isActive={activeInstance?.RoutePlanId === item.RoutePlanId} isMyUnit={isMyUnit} unitName={unitNameOf(item)} onPress={openPlan} onPreview={canPreview ? previewPlan : null} />;
     },
-    [activeInstance?.RoutePlanId, activeUnitId, openPlan, unitNameOf]
+    [activeInstance?.RoutePlanId, activeUnitId, canPreview, openPlan, previewPlan, unitNameOf]
   );
 
   const banner = activeInstance ? (
@@ -87,6 +99,7 @@ export const RoutePlansList: React.FC<{ testID?: string }> = ({ testID = 'route-
         <Text className="flex-1 text-base font-bold text-success-800">{activeInstance.RoutePlanName || t('routes.active_route')}</Text>
       </HStack>
       <Text className="mt-1 text-sm text-success-700">{t('routes.progress', { percent: progressPercent(instanceStops, activeInstance) })}</Text>
+      <RunCallLink instance={activeInstance} linked={false} testID={`${testID}-active-call`} />
     </Pressable>
   ) : null;
 

@@ -11,6 +11,7 @@ import { notificationsNav } from '@resgrid/features/notifications/nav';
 import { offlineMapsNav } from '@resgrid/features/offline-maps/nav';
 import { operationsNav } from '@resgrid/features/operations/nav';
 import { recordsNav } from '@resgrid/features/records/nav';
+import { routePlansNav } from '@resgrid/features/route-plans/nav';
 import { settingsNavEntries } from '@resgrid/features/settings/nav';
 import { weatherAlertsNav } from '@resgrid/features/weather-alerts/nav';
 
@@ -52,6 +53,7 @@ export const routes = defineRoutes([
   'operationDetail',
   'weatherAlerts',
   'weatherAlertDetail',
+  'routePlanPreview',
   'chat',
   'chatChannel',
   'chatbot',
@@ -80,6 +82,7 @@ export const nav = defineNav([
   ...featureNav(operationsNav, 'sidebar', { order: 32 }),
   ...featureNav(chatNav, { chat: 'sidebar', chatbot: 'hidden' }, { order: 40 }),
   ...featureNav(weatherAlertsNav, { 'weather-alerts': 'sidebar' }, { order: 50 }),
+  ...featureNav(routePlansNav, 'hidden', { order: 51 }),
   // The inbox is the app bar bell (with its unread count); the route stays for the bell and for push taps.
   ...featureNav(notificationsNav, 'hidden', { order: 60 }),
   ...featureNav(settingsNavEntries, variant),

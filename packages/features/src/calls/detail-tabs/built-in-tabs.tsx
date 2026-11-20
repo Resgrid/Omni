@@ -8,14 +8,17 @@ import { CallDispatchedPanel } from '../components/detail/call-dispatched-panel'
 import { CallInfoPanel } from '../components/detail/call-info-panel';
 import { CallMediaPanel } from '../components/detail/call-media-panel';
 import { CallProtocolsPanel } from '../components/detail/call-protocols-panel';
+import { CallRoutePanel } from '../components/detail/call-route-panel';
 import { LocationHistoryPanel } from '../components/detail/location-history-panel';
 import { SiteInfoPanel } from '../components/detail/site-info-panel';
 import { getReleasedPersonnel, getReleasedUnits } from '../lib/call-release';
+import { callHasRoute, callRouteInstancesOf, isCallRouteRunning } from '../lib/call-route';
 import { type CallDetailTabDefinition, getCallDetailTabs, registerCallDetailTab } from './registry';
 
 /** Ids of the shared tabs. Other modules slot in by `order` (e.g. incident command 65, records 85, Dispatch alarm level 25). */
 export const CALL_DETAIL_TAB_IDS = {
   info: 'info',
+  route: 'route',
   protocols: 'protocols',
   dispatched: 'dispatched',
   activity: 'activity',
@@ -31,6 +34,15 @@ export const callHasSiteInfo = (call: Pick<CallResultData, 'Contacts'>): boolean
 
 export const BUILT_IN_CALL_DETAIL_TABS: readonly CallDetailTabDefinition[] = [
   { id: CALL_DETAIL_TAB_IDS.info, order: 10, title: 'call_detail.tabs.info', render: (context) => <CallInfoPanel call={context.call} /> },
+  {
+    // Core M0322: the call's pre-defined route and the runs units started for it.
+    id: CALL_DETAIL_TAB_IDS.route,
+    order: 15,
+    title: 'call_detail.tabs.route',
+    visible: (context) => callHasRoute(context.call) || callRouteInstancesOf(context.extraData).length > 0,
+    render: (context) => <CallRoutePanel call={context.call} extraData={context.extraData} />,
+    badge: (context) => callRouteInstancesOf(context.extraData).filter(isCallRouteRunning).length || undefined,
+  },
   { id: CALL_DETAIL_TAB_IDS.protocols, order: 20, title: 'call_detail.tabs.protocols', render: (context) => <CallProtocolsPanel protocols={context.extraData?.Protocols ?? []} /> },
   {
     id: CALL_DETAIL_TAB_IDS.dispatched,

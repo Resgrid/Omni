@@ -16,7 +16,8 @@ export function routeMapShapes({ stops, line, geofence }: Pick<RouteMapSlotProps
       type: 'Feature',
       id: stop.id,
       geometry: { type: 'Point', coordinates: [stop.longitude, stop.latitude] },
-      properties: { id: stop.id, label: String(stop.order), color: stop.color, current: stop.isCurrent },
+      // A marker's own label (the route start / end of a plan preview), else the stop's number.
+      properties: { id: stop.id, label: stop.label ?? String(stop.order), color: stop.color, current: stop.isCurrent },
     })),
   };
   const lineFeature: GeoJSON.Feature | null = line ? { type: 'Feature', geometry: line, properties: {} } : null;

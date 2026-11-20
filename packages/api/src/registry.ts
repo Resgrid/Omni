@@ -1,4 +1,5 @@
 import { type EndpointDefinition } from './core';
+import { aiDestinationsEndpoints } from './endpoints/ai-destinations/ai-destinations';
 import { authDiscoveryEndpoints } from './endpoints/auth-discovery/auth-discovery';
 import { awaitingResourcesEndpoints } from './endpoints/awaiting-resources/awaiting-resources';
 import { calendarEndpoints } from './endpoints/calendar/calendar';
@@ -47,6 +48,7 @@ import { workOrdersEndpoints } from './endpoints/work-orders/work-orders';
 
 /** Every endpoint definition in the package, grouped by domain. The contract test checks each one against Swagger. */
 export const endpointDomains = {
+  'ai-destinations': aiDestinationsEndpoints,
   'auth-discovery': authDiscoveryEndpoints,
   'awaiting-resources': awaitingResourcesEndpoints,
   calendar: calendarEndpoints,

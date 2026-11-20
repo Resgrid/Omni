@@ -1,3 +1,7 @@
+// Enhanced AI destination advice (AiDestinations, M0323); the rest of the domains follow alphabetically across this break.
+export * from './ai-destinations';
+
+// Sign-in discovery and the domains after it.
 export * from './auth-discovery';
 export * from './awaiting-resources';
 export * from './calendar';

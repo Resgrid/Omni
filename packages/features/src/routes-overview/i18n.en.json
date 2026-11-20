@@ -1,0 +1,10 @@
+{
+  "routes_overview.for_a_call": "Started for a call",
+  "routes_overview.for_call": "Call {{number}}: {{name}}",
+  "routes_overview.next_stop": "Next stop: {{name}}",
+  "routes_overview.no_running": "No routes running",
+  "routes_overview.no_running_description": "Routes your units start show here with their progress.",
+  "routes_overview.plans_tab": "Plans",
+  "routes_overview.running_tab": "Running",
+  "routes_overview.started_at": "Started {{time}}"
+}

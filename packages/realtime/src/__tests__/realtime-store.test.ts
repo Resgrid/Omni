@@ -241,6 +241,20 @@ describe('realtime store', () => {
       expect(state().lastEventName).toBe('unitNavigationUpdated');
     });
 
+    it.each(['responder', 'unit', 'ic', 'dispatch', 'bigboard'] as const)('forwards aiDestinationAdviceUpdated with the call id and payload in %s (every app opens call detail)', async (variant) => {
+      setupRealtime(VARIANTS[variant]);
+      const advice = jest.fn();
+      onRealtimeEvent('aiDestinationAdviceUpdated', advice);
+      await state().connectEventingHub();
+      const connection = fakeSignalR.latest(EVENTING);
+      expect(connection.handlers.has('aiDestinationAdviceUpdated')).toBe(true);
+
+      const payload = '{"adviceId":"a1","state":1,"isChange":true}';
+      connection.serverPush('aiDestinationAdviceUpdated', 12, payload);
+
+      expect(advice).toHaveBeenCalledWith('12', payload);
+    });
+
     it('never registers unitNavigationUpdated where no screen shows ETAs (Unit)', async () => {
       setupRealtime(VARIANTS.unit);
       await state().connectEventingHub();

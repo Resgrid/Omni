@@ -28,8 +28,14 @@ import { getNavigationServices, type NavigationProgressReport, type NavigationRo
  * with the app.
  */
 
+/**
+ * Where a session goes. A route's `startReached` says the run's start was already reached (Core M0322 `StartReachedOn`,
+ * also when only queued on this device): the session then never asks for, or drives to, the leading start leg.
+ */
 export type NavigationDestination =
-  { kind: 'call'; callId: number; name: string | null } | { kind: 'route'; routeInstanceId: string; name: string | null } | { kind: 'point'; latitude: number; longitude: number; name: string | null };
+  | { kind: 'call'; callId: number; name: string | null }
+  | { kind: 'route'; routeInstanceId: string; name: string | null; startReached?: boolean }
+  | { kind: 'point'; latitude: number; longitude: number; name: string | null };
 
 export type NavigationStatus = 'idle' | 'loading' | 'navigating' | 'arrived' | 'error';
 
@@ -37,13 +43,20 @@ export type NavigationStatus = 'idle' | 'loading' | 'navigating' | 'arrived' | '
 /** `no-destination`: the server knows no place to go (the call is gone, hidden from this user or has no usable location). */
 export type NavigationErrorCode = 'no-position' | 'no-destination' | 'no-route' | 'unavailable' | 'failed';
 
-/** A stop at the end of a leg (route navigation). */
+/**
+ * What a leg arrives at (route navigation): a stop (its ids), the run's start (Core M0322: the leading leg to a station
+ * or start point, `isRouteStart`, no stop ids — reached, never checked in at) or the route's end (the last leg, no stop ids).
+ */
 export interface NavigationLegStop {
   routeStopId: string | null;
   routeInstanceStopId: string | null;
   name: string | null;
   etaUtc: string | null;
+  isRouteStart: boolean;
 }
+
+/** The leg arrives at the run's start (Core M0322), not at a stop or the route's end. */
+export const isRouteStartLeg = (leg: NavigationLegStop | null | undefined): boolean => leg?.isRouteStart === true;
 
 export interface NavigationRouteMeta {
   provider: string | null;
@@ -100,12 +113,15 @@ export interface NavigationState {
 const isNavigable = (result: NavigationRouteResult | null): result is NavigationRouteResult => result !== null && result.route !== null && result.navigationAvailable;
 
 const OFF_ROUTE_DEVIATION_MS = 30_000;
+
 /** Traffic-aware routes are refreshed this often while navigating (plan §9.2 ETA). */
 const TRAFFIC_REFRESH_MS = 5 * 60_000;
 
 interface Runtime {
   /** Route instance stops already reached and continued from in this session (a reroute must not lead back to them). */
   completedStops: Set<string>;
+  /** The run's start was reached (before or in this session): routes are asked for without it, and a start leg is skipped. */
+  startReached: boolean;
   spoken: Set<string>;
   fallbackSpoken: Set<number>;
   lastReport: LastEtaReport | null;
@@ -115,10 +131,21 @@ interface Runtime {
   lastFix: NavFix | null;
 }
 
-const runtime: Runtime = { completedStops: new Set(), spoken: new Set(), fallbackSpoken: new Set(), lastReport: null, offRouteSince: null, deviationRecorded: false, generation: 0, lastFix: null };
+const runtime: Runtime = {
+  completedStops: new Set(),
+  startReached: false,
+  spoken: new Set(),
+  fallbackSpoken: new Set(),
+  lastReport: null,
+  offRouteSince: null,
+  deviationRecorded: false,
+  generation: 0,
+  lastFix: null,
+};
 
 const resetRuntime = (): void => {
   runtime.completedStops = new Set();
+  runtime.startReached = false;
   runtime.spoken = new Set();
   runtime.fallbackSpoken = new Set();
   runtime.lastReport = null;
@@ -155,20 +182,39 @@ const IDLE: Omit<NavigationState, 'start' | 'handleFix' | 'reroute' | 'continueT
 export const remainingToLeg = (route: NavRoute, progress: NavProgress, legIndex: number): { seconds: number; meters: number } => {
   const leg = route.legs[Math.max(0, Math.min(legIndex, route.legs.length - 1))];
   const meters = Math.max(0, leg.endDistance - progress.distanceAlong);
+
   if (route.steps.length === 0) {
     return { seconds: route.distance > 0 ? route.duration * (meters / route.distance) : 0, meters };
   }
+
   let seconds = 0;
+
   for (const step of route.steps) {
     if (step.legIndex > leg.index) break;
+
     if (step.endDistance <= progress.distanceAlong) continue;
     seconds += step.startDistance < progress.distanceAlong ? remainingStepDuration(step, progress.distanceAlong) : step.duration;
   }
+
   return { seconds, meters };
 };
 
+/** One entry per leg; a start leg (Core M0322) never carries stop ids, whatever the server sent. */
 const legStopsFrom = (legs: RouteDirectionLegData[] | undefined): NavigationLegStop[] =>
-  (legs ?? []).map((leg) => ({ routeStopId: leg.RouteStopId ?? null, routeInstanceStopId: leg.RouteInstanceStopId ?? null, name: leg.Name ?? null, etaUtc: leg.EtaUtc ?? null }));
+  (legs ?? []).map((leg) =>
+    leg.IsRouteStart === true
+      ? { routeStopId: null, routeInstanceStopId: null, name: leg.Name ?? null, etaUtc: leg.EtaUtc ?? null, isRouteStart: true }
+      : { routeStopId: leg.RouteStopId ?? null, routeInstanceStopId: leg.RouteInstanceStopId ?? null, name: leg.Name ?? null, etaUtc: leg.EtaUtc ?? null, isRouteStart: false }
+  );
+
+/** A leg the new route must not lead to again: a stop already continued from, or the run's start once reached. */
+const isLegDone = (leg: NavigationLegStop | undefined): boolean => {
+  if (!leg) return false;
+
+  if (leg.isRouteStart) return runtime.startReached;
+
+  return leg.routeInstanceStopId !== null && runtime.completedStops.has(leg.routeInstanceStopId);
+};
 
 export const useNavigationStore = create<NavigationState>()((set, get) => {
   const services = () => getNavigationServices();
@@ -181,15 +227,18 @@ export const useNavigationStore = create<NavigationState>()((set, get) => {
   const report = (state: NavigationProgressReport['state']): void => {
     const current = get();
     const { destination, unitId, route, progress, meta } = current;
+
     if (!destination || destination.kind === 'point' || unitId === null || !route || !progress) return;
     const now = services().now();
     const remaining = remainingToLeg(route, progress, current.activeLegIndex);
     const legStop = meta?.legStops[current.activeLegIndex] ?? null;
+    // Core takes a CallId or a RouteInstanceId, never both: route navigation (a call's route included) reports the run. The
+    // leg to the run's start and the leg to the route's end name no stop.
     services().reportProgress({
       unitId,
       callId: destination.kind === 'call' ? destination.callId : null,
       routeInstanceId: destination.kind === 'route' ? destination.routeInstanceId : null,
-      routeInstanceStopId: destination.kind === 'route' ? (legStop?.routeInstanceStopId ?? null) : null,
+      routeInstanceStopId: destination.kind === 'route' && legStop && !legStop.isRouteStart ? legStop.routeInstanceStopId : null,
       state,
       remainingSeconds: Math.round(remaining.seconds),
       remainingMeters: Math.round(remaining.meters),
@@ -203,8 +252,11 @@ export const useNavigationStore = create<NavigationState>()((set, get) => {
   const fetchRoute = async (destination: NavigationDestination, from: NavFix): Promise<NavigationRouteResult | null> => {
     const s = services();
     const unitId = get().unitId;
+
     if (destination.kind === 'call') return s.routes.toCall({ callId: destination.callId, from, unitId });
-    if (destination.kind === 'route') return s.routes.toRouteStops({ routeInstanceId: destination.routeInstanceId, from });
+
+    if (destination.kind === 'route') return s.routes.toRouteStops({ routeInstanceId: destination.routeInstanceId, from, includeStart: !runtime.startReached });
+
     return s.routes.toPoint({ latitude: destination.latitude, longitude: destination.longitude, from, unitId });
   };
 
@@ -213,9 +265,11 @@ export const useNavigationStore = create<NavigationState>()((set, get) => {
     const progress = fix ? computeProgress(route, fix, null) : startProgress(route);
     const legStops = legStopsFrom(result.legs);
     // The new route starts at the leg the crew is driving to now; a stop already reached and continued from (still
-    // listed while it is checked in) is skipped.
+    // listed while it is checked in) is skipped, and so is the run's start once reached (a server that has not seen the
+    // queued ReachRouteStart yet may still lead there).
     let activeLegIndex = 0;
-    while (activeLegIndex < route.legs.length - 1 && legStops[activeLegIndex]?.routeInstanceStopId && runtime.completedStops.has(legStops[activeLegIndex].routeInstanceStopId as string)) activeLegIndex += 1;
+
+    while (activeLegIndex < route.legs.length - 1 && isLegDone(legStops[activeLegIndex])) activeLegIndex += 1;
     const remaining = remainingToLeg(route, progress, activeLegIndex);
     runtime.spoken = new Set();
     runtime.fallbackSpoken = new Set();
@@ -247,13 +301,17 @@ export const useNavigationStore = create<NavigationState>()((set, get) => {
   const speakDue = (route: NavRoute, progress: NavProgress): void => {
     const { speak: next, markSpoken } = dueVoiceInstructions(route, progress, runtime.spoken);
     markSpoken.forEach((id) => runtime.spoken.add(id));
+
     if (next) {
       speak(next.announcement);
+
       return;
     }
+
     // Providers without voice instructions: the next maneuver's text once, close to it.
     if (!route.hasInstructions && progress.distanceToManeuver <= FALLBACK_PROMPT_METERS) {
       const nextStep = route.steps[progress.stepIndex + 1];
+
       if (nextStep?.maneuver.instruction && !runtime.fallbackSpoken.has(nextStep.index)) {
         runtime.fallbackSpoken.add(nextStep.index);
         speak(nextStep.maneuver.instruction);
@@ -268,46 +326,62 @@ export const useNavigationStore = create<NavigationState>()((set, get) => {
     start: async (destination, options = {}) => {
       const s = services();
       resetRuntime();
+      runtime.startReached = destination.kind === 'route' && destination.startReached === true;
       const generation = runtime.generation;
       set({ ...IDLE, status: 'loading', destination, unitId: options.unitId ?? null, simulation: options.simulation === true, muted: s.preferences.isMuted() });
       const from = options.position ?? s.currentFix();
+
       if (!from) {
         set({ status: 'error', error: 'no-position' });
+
         return false;
       }
+
       let result: NavigationRouteResult | null;
+
       try {
         result = await fetchRoute(destination, from);
       } catch (error) {
         s.log('warn', 'Navigation route request failed', error);
         // Core answers a bare HTTP 404 for a call (or route) that is gone, not visible to this user, or has no usable location.
         const code: NavigationErrorCode = isApiError(error) && error.kind === 'http' && error.status === 404 ? 'no-destination' : 'failed';
+
         if (generation === runtime.generation) set({ status: 'error', error: code });
+
         return false;
       }
+
       if (generation !== runtime.generation) return false;
+
       if (!result || result.route === null) {
         set({ status: 'error', error: 'no-route' });
+
         return false;
       }
+
       if (!isNavigable(result)) {
         set({ status: 'error', error: 'unavailable' });
+
         return false;
       }
+
       const now = s.now();
       applyRoute(result, from, now);
       set({ status: 'navigating', startedAt: now, lastRerouteAt: null, rerouteCount: 0, lastFix: from });
       runtime.lastFix = from;
       s.onSessionChange(true, destination.name);
       const { route, progress } = get();
+
       if (route && progress) speakDue(route, progress);
       report(UnitNavigationState.Started);
+
       return true;
     },
 
     handleFix: (fix) => {
       const state = get();
       const { route } = state;
+
       if (!route || (state.status !== 'navigating' && state.status !== 'arrived')) return;
       runtime.lastFix = fix;
       const s = services();
@@ -321,7 +395,10 @@ export const useNavigationStore = create<NavigationState>()((set, get) => {
 
       if (hasArrived(route, progress, fix, s.arrivalRadiusMeters() || DEFAULT_ARRIVAL_RADIUS_METERS, state.activeLegIndex)) {
         set({ status: 'arrived' });
-        report(UnitNavigationState.Arrived);
+
+        // The run's start is on the way, not an arrival the desk should see: the trip to the first stop is reported next.
+        if (!isRouteStartLeg(state.meta?.legStops[state.activeLegIndex])) report(UnitNavigationState.Arrived);
+
         return;
       }
 
@@ -329,21 +406,27 @@ export const useNavigationStore = create<NavigationState>()((set, get) => {
       if (offRoute.offRoute) {
         runtime.offRouteSince = runtime.offRouteSince ?? now;
         const destination = state.destination;
+
         if (destination?.kind === 'route' && !runtime.deviationRecorded && now - runtime.offRouteSince >= OFF_ROUTE_DEVIATION_MS) {
           runtime.deviationRecorded = true;
           s.recordOffRoute({ routeInstanceId: destination.routeInstanceId, latitude: fix.latitude, longitude: fix.longitude, distanceMeters: progress.distanceFromRoute });
         }
+
         if (!state.rerouting && canReroute(now, state.lastRerouteAt, state.rerouteCount)) void get().reroute(fix);
+
         return;
       }
+
       runtime.offRouteSince = null;
       runtime.deviationRecorded = false;
 
       speakDue(route, progress);
 
       const meta = state.meta;
+
       if (meta?.isTrafficAware && !state.rerouting && now - meta.fetchedAt >= TRAFFIC_REFRESH_MS && canReroute(now, state.lastRerouteAt, 0)) {
         void get().reroute(fix);
+
         return;
       }
 
@@ -353,6 +436,7 @@ export const useNavigationStore = create<NavigationState>()((set, get) => {
     reroute: async (fix) => {
       const state = get();
       const from = fix ?? runtime.lastFix ?? services().currentFix();
+
       if (!state.destination || !from || state.rerouting) return false;
       const s = services();
       const generation = runtime.generation;
@@ -360,32 +444,46 @@ export const useNavigationStore = create<NavigationState>()((set, get) => {
       const counted = state.offRoute.offRoute;
       set({ rerouting: true, lastRerouteAt: now, rerouteCount: counted ? state.rerouteCount + 1 : state.rerouteCount });
       let result: NavigationRouteResult | null = null;
+
       try {
         result = await fetchRoute(state.destination, from);
       } catch (error) {
         s.log('warn', 'Navigation reroute failed; following the last route', error);
       }
+
       if (generation !== runtime.generation) return false;
+
       if (!isNavigable(result)) {
         set({ rerouting: false, usingLastRoute: true });
+
         return false;
       }
+
       applyRoute(result, from, s.now());
       set({ rerouting: false });
+
       if (counted) speak(s.text('rerouted'));
       report(UnitNavigationState.Rerouted);
+
       return true;
     },
 
     continueToNextLeg: () => {
       const state = get();
+
       if (!state.route || state.status !== 'arrived') return;
+
       if (state.activeLegIndex + 1 >= state.route.legs.length) {
         get().stop();
+
         return;
       }
-      const reached = state.meta?.legStops[state.activeLegIndex]?.routeInstanceStopId;
-      if (reached) runtime.completedStops.add(reached);
+
+      const reached = state.meta?.legStops[state.activeLegIndex];
+
+      // The start leg marks the start reached (a reroute leaves it out from now on); a stop leg marks its stop done.
+      if (reached?.isRouteStart) runtime.startReached = true;
+      else if (reached?.routeInstanceStopId) runtime.completedStops.add(reached.routeInstanceStopId);
       set({ status: 'navigating', activeLegIndex: state.activeLegIndex + 1 });
       runtime.lastReport = null;
       report(UnitNavigationState.Progress);
@@ -397,17 +495,21 @@ export const useNavigationStore = create<NavigationState>()((set, get) => {
 
     stop: () => {
       const state = get();
+
       if (state.status === 'idle') return;
       const wasActive = state.status === 'navigating' || state.status === 'arrived';
+
       if (wasActive) report(UnitNavigationState.Ended);
       services().voice.stop();
       resetRuntime();
       set({ ...IDLE });
+
       if (wasActive) services().onSessionChange(false);
     },
 
     setMuted: (muted) => {
       services().preferences.setMuted(muted);
+
       if (muted) services().voice.stop();
       set({ muted });
     },

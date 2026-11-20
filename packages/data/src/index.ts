@@ -156,6 +156,18 @@ export {
 } from './units/unit-status-store';
 export { selectUnitById, selectUnitCurrentStatus, type UnitsState, useUnitsStore } from './units/units-store';
 
+// Enhanced AI destination advice per call (call-intake-and-ai-destinations-plan.md §7; online only, never persisted)
+export {
+  AI_DESTINATION_ADVICE_TTL_MS,
+  type AiDestinationAdviceAction,
+  type AiDestinationAdviceActionError,
+  type AiDestinationAdviceActionResult,
+  type AiDestinationAdviceEntry,
+  type AiDestinationAdviceState,
+  type FetchAiDestinationAdviceOptions,
+  useAiDestinationAdviceStore,
+} from './ai-destinations/ai-destination-advice-store';
+
 // Reference and department data
 export { CalendarAttendingType, type CalendarState, useCalendarStore } from './calendar/calendar-store';
 export { type CertificationsState, useCertificationsStore } from './certifications/certifications-store';
@@ -257,12 +269,18 @@ export {
 } from './records/records-store';
 export {
   applyRouteProgress,
+  PLAN_PREVIEWS_MAX,
+  ROUTE_REACH_START_EVENT,
   ROUTE_STOP_CHECK_IN_EVENT,
   ROUTE_STOP_CHECK_OUT_EVENT,
   ROUTE_STOP_SKIP_EVENT,
   RouteInstanceStatus,
+  type RoutePlanPreviewData,
   type RouteProgressCounts,
+  routeReachStartHandler,
+  type RouteReachStartPayload,
   type RoutesState,
+  routeStartOrderKey,
   routeStopCheckInHandler,
   RouteStopCheckInType,
   routeStopCheckOutHandler,
@@ -270,6 +288,7 @@ export {
   routeStopSkipHandler,
   RouteStopStatus,
   type RouteStopWritePayload,
+  type StartCallRouteResult,
   useRoutesStore,
 } from './routes/routes-store';
 

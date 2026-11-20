@@ -1,12 +1,14 @@
+import { useCapability } from '@resgrid/config';
 import { pushRoutePath, replaceRoutePath } from '@resgrid/core/navigation/route-paths';
 import { useRoutesStore, useUnitsStore } from '@resgrid/data';
 import { useDepartmentTimeZone } from '@resgrid/features/department-config';
+import { routePlansRoutes } from '@resgrid/features/route-plans/routes';
 import { useStatusContext } from '@resgrid/features/status';
 import { useTranslation } from '@resgrid/i18n';
 import type { RouteStopResultData } from '@resgrid/models';
 import { Button, ButtonSpinner, ButtonText, Divider, HStack, Loading, Pressable, ScreenHeader, ScrollView, Text, useFormFactor, useToast, View, VStack, ZeroState } from '@resgrid/ui';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Clock, History, Info, MapPin, Navigation, Play, Route, Truck, User } from 'lucide-react-native';
+import { Clock, Eye, History, Info, MapPin, Navigation, Play, Route, Truck, User } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import { StyleSheet } from 'react-native';
 
@@ -42,6 +44,7 @@ export default function RouteStartScreen({ planId: planIdProp, renderMap }: Rout
   const activeInstance = useRoutesStore((state) => state.activeInstance);
   const units = useUnitsStore((state) => state.units);
   const [isStarting, setIsStarting] = useState(false);
+  const canPreview = useCapability('routes').preview;
 
   useEffect(() => {
     if (planId) void useRoutesStore.getState().fetchRoutePlan(planId);
@@ -69,16 +72,22 @@ export default function RouteStartScreen({ planId: planIdProp, renderMap }: Rout
     setIsStarting(true);
     // The unit may have started or paused a route elsewhere since this screen opened.
     await useRoutesStore.getState().fetchActiveRoute(activeUnitId, { bypassCache: true });
+
     if (useRoutesStore.getState().activeInstance) {
       setIsStarting(false);
+
       return;
     }
+
     const ok = await useRoutesStore.getState().startRouteInstance(plan.RoutePlanId, Number(activeUnitId));
     setIsStarting(false);
+
     if (ok) {
       replaceRoutePath(router, unitRoutesRoutes.active(plan.RoutePlanId, useRoutesStore.getState().activeInstance?.RouteInstanceId ?? null));
+
       return;
     }
+
     const error = useRoutesStore.getState().actionError;
     toast.error(t(error?.messageKey ?? 'common.errorOccurred'));
   };
@@ -106,6 +115,7 @@ export default function RouteStartScreen({ planId: planIdProp, renderMap }: Rout
   const renderStop = (stop: RouteStopResultData, index: number) => {
     const arrival = formatRouteTime(stop.PlannedArrivalTime, timeZone);
     const departure = formatRouteTime(stop.PlannedDepartureTime, timeZone);
+
     return (
       <View key={stop.RouteStopId} testID={`route-start-stop-${stop.RouteStopId}`}>
         <HStack space="md" className="items-start py-3">
@@ -156,9 +166,23 @@ export default function RouteStartScreen({ planId: planIdProp, renderMap }: Rout
         title={t('routes.view_route')}
         onBack={back}
         right={
-          <Pressable onPress={() => pushRoutePath(router, unitRoutesRoutes.history(plan.RoutePlanId))} accessibilityRole="button" accessibilityLabel={t('routes.history')} testID="route-start-history" className="p-2">
-            <History size={20} color="#2563eb" />
-          </Pressable>
+          <HStack className="items-center">
+            {/* The plan preview: its resolved start and end and travel mode (Core M0322). */}
+            {canPreview ? (
+              <Pressable
+                onPress={() => pushRoutePath(router, routePlansRoutes.preview(plan.RoutePlanId))}
+                accessibilityRole="button"
+                accessibilityLabel={t('route_plans.preview_action')}
+                testID="route-start-preview"
+                className="p-2"
+              >
+                <Eye size={20} color="#2563eb" />
+              </Pressable>
+            ) : null}
+            <Pressable onPress={() => pushRoutePath(router, unitRoutesRoutes.history(plan.RoutePlanId))} accessibilityRole="button" accessibilityLabel={t('routes.history')} testID="route-start-history" className="p-2">
+              <History size={20} color="#2563eb" />
+            </Pressable>
+          </HStack>
         }
       />
       <ScrollView contentContainerStyle={{ paddingBottom: 24 }}>

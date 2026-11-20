@@ -1,4 +1,5 @@
 import type {
+  DestinationRulesResult,
   GetAllActiveLayersResult,
   GetCustomMapLayerResult,
   GetCustomMapResult,
@@ -21,6 +22,7 @@ import type {
   SetPoiAvailabilityResult,
   SignMapResourceUrlsInput,
   SignMapResourceUrlsResult,
+  SuggestedDestinationsResult,
 } from '@resgrid/models';
 
 import { type ApiContext, cachedRequest, type CachedRequestOptions, defineEndpoints, request, type RequestOptions, type UnknownV4Result } from '../../core';
@@ -32,6 +34,7 @@ export const mappingEndpoints = defineEndpoints('mapping', {
   getCustomMapLayer: { method: 'GET', path: '/Mapping/GetCustomMapLayer/{layerId}' },
   getCustomMapRegionsGeoJSON: { method: 'GET', path: '/Mapping/GetCustomMapRegionsGeoJSON/{layerId}' },
   getCustomMaps: { method: 'GET', path: '/Mapping/GetCustomMaps', query: ['type'], cacheTtlMs: 5 * 60 * 1000 },
+  getDestinationRules: { method: 'GET', path: '/Mapping/GetDestinationRules', cacheTtlMs: 5 * 60 * 1000 },
   getIndoorMap: { method: 'GET', path: '/Mapping/GetIndoorMap/{id}' },
   getIndoorMapFloor: { method: 'GET', path: '/Mapping/GetIndoorMapFloor/{floorId}' },
   getIndoorMaps: { method: 'GET', path: '/Mapping/GetIndoorMaps', cacheTtlMs: 5 * 60 * 1000 },
@@ -46,6 +49,7 @@ export const mappingEndpoints = defineEndpoints('mapping', {
   getPoiCapabilities: { method: 'GET', path: '/Mapping/GetPoiCapabilities', cacheTtlMs: 5 * 60 * 1000 },
   getPois: { method: 'GET', path: '/Mapping/GetPois', query: ['poiTypeId', 'destinationOnly'], cacheTtlMs: 5 * 60 * 1000 },
   getPoiTypes: { method: 'GET', path: '/Mapping/GetPoiTypes', cacheTtlMs: 5 * 60 * 1000 },
+  getSuggestedDestinations: { method: 'GET', path: '/Mapping/GetSuggestedDestinations', query: ['latitude', 'longitude', 'type', 'priority', 'callId', 'unitId', 'take'] },
   searchAllMapFeatures: { method: 'GET', path: '/Mapping/SearchAllMapFeatures', query: ['term', 'type'] },
   searchCustomMapRegions: { method: 'GET', path: '/Mapping/SearchCustomMapRegions', query: ['term', 'layerId'] },
   searchIndoorLocations: { method: 'GET', path: '/Mapping/SearchIndoorLocations', query: ['term', 'mapId'] },
@@ -72,6 +76,12 @@ export const getCustomMapRegionsGeoJSON = (ctx: ApiContext, params: { layerId: s
 /** Gets all custom maps for the department, with optional type filter. `GET /Mapping/GetCustomMaps` (cached) — legacy: IU. */
 export const getCustomMaps = (ctx: ApiContext, params: { type?: number | string } = {}, options?: CachedRequestOptions): Promise<GetCustomMapsResult> =>
   cachedRequest<GetCustomMapsResult>(ctx, E.getCustomMaps, { params }, options);
+
+/**
+ * The department's destination rules (read-only) and its destination suggestions setting, with the names of what each rule
+ * refers to. `GET /Mapping/GetDestinationRules` (cached) — new in Omni (destination rules, M0317).
+ */
+export const getDestinationRules = (ctx: ApiContext, options?: CachedRequestOptions): Promise<DestinationRulesResult> => cachedRequest<DestinationRulesResult>(ctx, E.getDestinationRules, {}, options);
 
 /** Gets a specific indoor map with its floors. `GET /Mapping/GetIndoorMap/{id}` — legacy: IU. */
 export const getIndoorMap = (ctx: ApiContext, params: { id: string }, options?: RequestOptions): Promise<GetIndoorMapResult> => request<GetIndoorMapResult>(ctx, E.getIndoorMap, { params }, options);
@@ -130,6 +140,17 @@ export const getPois = (ctx: ApiContext, params: { poiTypeId?: number | string; 
 
 /** `GET /Mapping/GetPoiTypes` (cached) — legacy: DIRU. */
 export const getPoiTypes = (ctx: ApiContext, options?: CachedRequestOptions): Promise<PoiTypesResult> => cachedRequest<PoiTypesResult>(ctx, E.getPoiTypes, {}, options);
+
+/**
+ * The call's destination requirements (destination rules for its type, priority and the travelling unit) and the
+ * department's destinations ranked for them, with drive times for the nearest. Mode 0 (suggestions off) answers at once
+ * with nothing. `GET /Mapping/GetSuggestedDestinations` — new in Omni (destination rules, M0317).
+ */
+export const getSuggestedDestinations = (
+  ctx: ApiContext,
+  params: { latitude: number; longitude: number; type?: string; priority?: number; callId?: number | string; unitId?: number | string; take?: number },
+  options?: RequestOptions
+): Promise<SuggestedDestinationsResult> => request<SuggestedDestinationsResult>(ctx, E.getSuggestedDestinations, { params }, options);
 
 /** Unified search across indoor zones and custom map regions. `GET /Mapping/SearchAllMapFeatures` — legacy: IU. */
 export const searchAllMapFeatures = (ctx: ApiContext, params: { term?: string; type?: string } = {}, options?: RequestOptions): Promise<SearchAllMapFeaturesResult> =>

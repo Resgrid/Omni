@@ -41,6 +41,16 @@ export interface EditCallInput {
   Address?: string | null;
   /** Optional destination POI id for transfers, transports, and relocations. */
   DestinationPoiId?: number | null;
+  /** Optional (Core M0322). The POI (any type) the call location was picked from. Null keeps the stored POI; 0 clears it. */
+  LocationPoiId?: number | null;
+  /** Optional (Core M0322). Free destination address (no destination POI). Null keeps the stored value; "" clears it. */
+  DestinationAddress?: string | null;
+  /** Optional (Core M0322). Free destination point "lat,lon" (invariant culture). Null keeps the stored value; "" clears it. */
+  DestinationGeolocation?: string | null;
+  /** Optional (Core M0322). Free destination what3words. Null keeps the stored value; "" clears it. */
+  DestinationWhat3Words?: string | null;
+  /** Optional (Core M0322). Pre-defined route (an eligible route plan). Null keeps the stored route; "" clears it. */
+  RoutePlanId?: string | null;
   /** Geolocation data "lat,lon" */
   Geolocation?: string | null;
   /** Type of the call */
@@ -166,6 +176,19 @@ export interface NewCallInput {
   Address?: string | null;
   /** Optional destination POI id for transfers, transports, and relocations. */
   DestinationPoiId?: number | null;
+  /** Optional (Core M0322). The POI (any type) the call location was picked from; the server fills a blank Address / Geolocation from it. */
+  LocationPoiId?: number | null;
+  /** Optional (Core M0322). Free destination address, when the destination is not a POI (a destination POI clears it). */
+  DestinationAddress?: string | null;
+  /** Optional (Core M0322). Free destination point "lat,lon" (invariant culture, the same format as Geolocation). */
+  DestinationGeolocation?: string | null;
+  /** Optional (Core M0322). Free destination what3words. */
+  DestinationWhat3Words?: string | null;
+  /**
+   * Optional (Core M0322). Pre-defined route: an Active route plan with a start and an end (`Routes/GetCallRoutePlans`). The
+   * server fills a blank call location from the route start and a missing destination from the route end.
+   */
+  RoutePlanId?: string | null;
   /** Geolocation data "lat,lon" in decimal format */
   Geolocation?: string | null;
   /** Type of the call */

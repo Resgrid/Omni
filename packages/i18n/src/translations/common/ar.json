@@ -226,7 +226,8 @@
       "site": "معلومات الموقع",
       "timeline": "النشاط",
       "video": "فيديو",
-      "notes": "Notes & files"
+      "notes": "Notes & files",
+      "route": "المسار"
     },
     "timestamp": "الطابع الزمني",
     "title": "تفاصيل المكالمة",
@@ -263,7 +264,16 @@
     "audio_play_error": "Could not play this recording",
     "scheduled_on": "تاريخ ووقت الإرسال المجدول",
     "destination_type": "نوع الوجهة",
-    "keyboard_shortcuts": "Tip: Press 1-9 to switch tabs, Ctrl+E to edit, Escape to go back"
+    "keyboard_shortcuts": "Tip: Press 1-9 to switch tabs, Ctrl+E to edit, Escape to go back",
+    "location_poi": "نقطة اهتمام الموقع",
+    "destination_coordinates": "إحداثيات الوجهة",
+    "destination_what3words": "عنوان what3words للوجهة",
+    "route": "المسار",
+    "route_runs": "مرات تشغيل المسار",
+    "route_no_runs": "لم تبدأ أي وحدة هذا المسار بعد.",
+    "route_run_started": "بدأ {{time}}",
+    "route_run_start_reached": "وصل إلى نقطة البداية {{time}}",
+    "route_run_ended": "انتهى {{time}}"
   },
   "calls": {
     "address": "العنوان",
@@ -572,7 +582,59 @@
     "all_call_dispatch_now_help": "جميع قوائم الإرسال مخفية. فعّل النداء العام لإرسال هذه المكالمة إلى الجميع، أو اتركه متوقفًا لإرسالها إلى المستلمين الذين حُفظت معهم.",
     "additional_contacts": "جهات اتصال إضافية",
     "check_in_timers": "مؤقتات تسجيل الحضور",
-    "part2_consent": "موافقة 42 CFR Part 2"
+    "part2_consent": "موافقة 42 CFR Part 2",
+    "location_poi": "الموقع من نقطة اهتمام",
+    "location_poi_select": "اختر نقطة اهتمام",
+    "location_poi_search": "البحث في نقاط الاهتمام...",
+    "location_poi_none_found": "لا توجد نقاط اهتمام تطابق بحثك",
+    "location_poi_load_error": "تعذر تحميل نقاط الاهتمام.",
+    "location_poi_clear": "مسح نقطة الاهتمام",
+    "location_poi_moved": "نُقل الموقع بعيدًا عن {{name}}، لذا لن يُربط البلاغ به.",
+    "destination_mode_poi": "نقطة اهتمام",
+    "destination_mode_location": "عنوان أو نقطة",
+    "destination_address": "عنوان الوجهة",
+    "destination_address_placeholder": "أدخل عنوان الوجهة",
+    "destination_found": "تم العثور على الوجهة وتحديث موقعها",
+    "destination_pick_on_map": "اختر الوجهة على الخريطة",
+    "destination_location_clear": "مسح الوجهة",
+    "route_section": "المسار",
+    "route": "مسار محدد مسبقًا",
+    "route_hint": "تملأ بداية المسار موقع البلاغ الفارغ، وتملأ نهايته الوجهة غير المحددة.",
+    "route_select": "اختر مسارًا",
+    "route_search": "البحث في المسارات...",
+    "route_none_found": "لا توجد مسارات تطابق بحثك",
+    "route_clear": "مسح المسار",
+    "route_unknown": "المسار لم يعد متاحًا",
+    "route_stops_count": "المحطات: {{count}}",
+    "route_start_end": "{{start}} ← {{end}}",
+    "destination_to": "إلى: {{destination}}",
+    "route_named": "المسار: {{name}}",
+    "intake_source": {
+      "intake": "Intake",
+      "intake_named": "Intake: {{name}}",
+      "voice": "Voice line",
+      "voice_named": "Voice line: {{name}}",
+      "via_sms": "Via text message",
+      "via_sms_named": "Via text message: {{name}}",
+      "via_email": "Via email",
+      "via_email_named": "Via email: {{name}}",
+      "via_whatsapp": "Via WhatsApp",
+      "via_whatsapp_named": "Via WhatsApp: {{name}}",
+      "via_slack": "Via Slack",
+      "via_slack_named": "Via Slack: {{name}}",
+      "via_teams": "Via Teams",
+      "via_teams_named": "Via Teams: {{name}}",
+      "via_telegram": "Via Telegram",
+      "via_telegram_named": "Via Telegram: {{name}}",
+      "via_discord": "Via Discord",
+      "via_discord_named": "Via Discord: {{name}}",
+      "via_google_chat": "Via Google Chat",
+      "via_google_chat_named": "Via Google Chat: {{name}}",
+      "via_webhook": "Via webhook",
+      "via_webhook_named": "Via webhook: {{name}}",
+      "via_voice": "Via voice line",
+      "via_voice_named": "Via voice line: {{name}}"
+    }
   },
   "chat": {
     "ack_pending_count": "لديك {{count}} رسائل عاجلة بحاجة إلى إقرار",
@@ -2424,6 +2486,117 @@
       "saved": "تم حفظ التوفر",
       "save_failed": "تعذر حفظ التوفر",
       "expiry_passed": "انقضى وقت انتهاء البلاغ. اختر مدة سريانه."
+    },
+    "destinations": {
+      "capabilities": {
+        "empty": "لا توجد قدرات",
+        "empty_description": "تُضاف القدرات مثل مختبر القسطرة أو مهبط المروحيات على الويب من الخرائط ← نقاط الاهتمام ← قدرات نقاط الاهتمام.",
+        "intro": "ما تقدمه وجهاتك. اضغط على قدرة لعرض الوجهات التي تقدمها.",
+        "offered_by": "الوجهات التي تقدمها: {{count}}",
+        "show_hint": "يعرض الوجهات التي تقدمها",
+        "unavailable": "غير متاحة في {{count}}"
+      },
+      "counts": "متاح {{open}} · محدود {{limited}} · تحويل {{diversion}} · مغلق {{closed}}",
+      "empty": "لا توجد وجهات",
+      "empty_description": "تظهر هنا أنواع نقاط الاهتمام المعلَّمة كوجهات على الويب (الخرائط ← نقاط الاهتمام).",
+      "filter_all": "الكل ({{count}})",
+      "filter_not_open": "غير متاحة ({{count}})",
+      "loading": "جارٍ تحميل الوجهات...",
+      "no_match": "لا توجد وجهة مطابقة",
+      "rules": {
+        "any_destination": "أي وجهة",
+        "condition_call_type": "نوع البلاغ: {{name}}",
+        "condition_priority": "الأولوية: {{name}}",
+        "condition_unit_type": "نوع الوحدة: {{name}}",
+        "deleted": "(محذوف)",
+        "destination": "الوجهة",
+        "empty": "لا توجد قواعد للوجهات",
+        "empty_description": "بدون قواعد تُقترح أي وجهة، والأقرب المتاحة أولاً.",
+        "every_call": "كل البلاغات",
+        "load_failed": "تعذّر تحميل قواعد الوجهات",
+        "loading": "جارٍ تحميل قواعد الوجهات...",
+        "mode_fill": "الاقتراح والتعبئة",
+        "mode_off": "متوقفة",
+        "mode_suggest": "اقتراح الوجهات",
+        "needs_attention": "تشير إلى عناصر محذوفة ({{count}})؛ صحّحها على الويب.",
+        "nothing": "لا شيء",
+        "prefers": "تفضّل",
+        "read_only": "تُضبط القواعد والاقتراحات على الويب من الخرائط ← نقاط الاهتمام ← قواعد الوجهات.",
+        "requires": "تتطلب",
+        "suggestions": "الاقتراحات",
+        "window": "تتقدم الوجهة ذات القدرات المفضلة الأكثر فقط إذا كانت ضمن {{count}} دقيقة من الأقرب."
+      },
+      "search": "البحث في الوجهات...",
+      "tab_availability": "التوفر",
+      "tab_capabilities": "القدرات",
+      "tab_rules": "القواعد",
+      "title": "الوجهات"
+    },
+    "suggestions": {
+      "failed": "اقتراحات الوجهات غير متاحة حاليًا.",
+      "filled": "تمت التعبئة بالوجهة المقترحة. اختر غيرها عند الحاجة.",
+      "loading": "جارٍ البحث عن الوجهات...",
+      "missing": "ينقصها: {{names}}",
+      "needs": "تتطلب: {{names}}",
+      "none": "لم يتم العثور على وجهة.",
+      "none_meet": "لا توجد وجهة قريبة تقدم كل ما هو مطلوب.",
+      "prefers": "تفضّل: {{names}}",
+      "rules": "القواعد: {{names}}",
+      "selected": "محددة",
+      "set_aside": "مستبعدة: {{names}}",
+      "set_aside_rule": "{{name}} ({{reason}})",
+      "set_aside_type_conflict": "قاعدة أكثر تحديدًا ترسل إلى أنواع وجهات أخرى",
+      "set_aside_types_removed": "أنواع الوجهات الخاصة بها لم تعد موجودة",
+      "suggested": "مقترحة",
+      "title": "الوجهات المقترحة",
+      "types": "الأنواع: {{names}}",
+      "use": "استخدام",
+      "use_label": "استخدام {{name}} كوجهة",
+      "down": "غير متاح الآن: {{names}}"
+    },
+    "ai_advice": {
+      "advised_at": "Advised {{time}}",
+      "apply": "Apply",
+      "apply_label": "Make {{name}} the call's destination",
+      "ask": "Ask Enhanced AI",
+      "asking": "Asking Enhanced AI…",
+      "confidence": "Confidence {{percent}}%",
+      "consider": "Consider {{name}}",
+      "current": "Current destination: {{name}}",
+      "current_free": "Current destination: an address or point (no destination POI)",
+      "current_none": "The call has no destination yet.",
+      "dismiss": "Dismiss",
+      "dismiss_reason": "Why dismiss it? (optional)",
+      "dismiss_reason_placeholder": "e.g. Patient asked for another hospital",
+      "error": {
+        "failed": "Something went wrong. Please try again.",
+        "not_allowed": "You cannot change this call.",
+        "offline": "No connection. Try again when you are back online."
+      },
+      "keep": "Keep the current destination",
+      "low_confidence": "Low confidence: check before applying",
+      "no_suggestion": "No destination suggested",
+      "none": "No destination advice for this call yet.",
+      "outcome": {
+        "applied": "{{name}} is now the call's destination.",
+        "budget_exhausted": "Your department's Enhanced AI allowance is used up for now.",
+        "busy": "Enhanced AI is busy. Try again in a moment.",
+        "call_not_open": "The call is no longer open.",
+        "destination_gone": "The recommended destination is no longer available.",
+        "dismissed": "Advice dismissed.",
+        "invalid_output": "Enhanced AI's answer could not be used. Try again.",
+        "model_unavailable": "Enhanced AI could not answer right now. Try again later.",
+        "no_candidates": "No destination could be considered for this call.",
+        "no_location": "The call needs a location before Enhanced AI can advise.",
+        "not_found": "This advice is no longer available.",
+        "not_open": "This advice was already applied, dismissed or replaced.",
+        "nothing_to_apply": "The advice is to keep the current destination: there is nothing to apply.",
+        "protection_unsupported": "Enhanced AI destination advice is not available while Advanced Data Protection is on.",
+        "unavailable_for_department": "Enhanced AI destination advice is not available for your department.",
+        "unchanged": "Nothing the advice reads has changed: this is still the advice."
+      },
+      "suggests": "Enhanced AI suggests",
+      "title": "Enhanced AI destination advice"
     }
   },
   "protocols": {
@@ -3115,7 +3288,10 @@
     "call_assigned_destination": "وجهة البلاغ: {{name}}",
     "transport_destination_differs": "تختلف عن الوجهة المحددة في البلاغ: {{name}}",
     "transport_reason_required": "تختلف هذه الوجهة عن الوجهة المحددة في البلاغ ({{name}}). اذكر السبب (مطلوب).",
-    "destination_availability": "{{name}}: {{status}}"
+    "destination_availability": "{{name}}: {{status}}",
+    "destination_missing": "{{name}} لا يوفّر المطلوب: {{names}}",
+    "destination_required_down": "{{name}} يُبلغ أنه غير متاح الآن: {{names}}",
+    "finding_suggested_destination": "جارٍ البحث عن الوجهة المقترحة..."
   },
   "tabs": {
     "calendar": "التقويم",
@@ -4428,7 +4604,12 @@
       "waypoint": "Waypoint"
     },
     "stops_done": "{{done}} of {{total}} stops",
-    "stop_eta": "ETA {{time}}"
+    "stop_eta": "ETA {{time}}",
+    "for_a_call": "بدأ من أجل بلاغ",
+    "for_call": "البلاغ: {{call}}",
+    "route_start": "بداية المسار",
+    "route_start_pending": "توجّه أولًا إلى بداية المسار: {{name}}",
+    "route_start_pending_unnamed": "توجّه أولًا إلى بداية المسار"
   },
   "unit_status": {
     "console_title": "Status console",
@@ -4446,7 +4627,19 @@
     "timer_warning": "Status timer warning: {{status}} for {{elapsed}}",
     "timer_notification_body": "{{unit}}: update your status if it has changed.",
     "timer_exact_alarms_allow": "Allow on-time timer alerts",
-    "timer_exact_alarms_hint": "Status timer alerts can arrive late while the app is in the background."
+    "timer_exact_alarms_hint": "Status timer alerts can arrive late while the app is in the background.",
+    "route": {
+      "conflict_cancel": "إلغاؤه وبدء هذا المسار",
+      "conflict_end": "إنهاؤه وبدء هذا المسار",
+      "conflict_keep": "الإبقاء على المسار الحالي",
+      "conflict_message": "تنفّذ هذه الوحدة المسار {{route}}. أنهِه أو ألغِه لبدء مسار هذا البلاغ، أو اتركه قيد التشغيل.",
+      "conflict_message_unnamed": "تنفّذ هذه الوحدة مسارًا آخر. أنهِه أو ألغِه لبدء مسار هذا البلاغ، أو اتركه قيد التشغيل.",
+      "conflict_title": "يوجد مسار آخر قيد التشغيل",
+      "continue": "متابعة المسار",
+      "name": "المسار: {{name}}",
+      "start": "بدء المسار",
+      "unnamed": "مسار البلاغ"
+    }
   },
   "workOrders": {
     "reportNotSent": "Not sent",
@@ -4507,7 +4700,13 @@
       "set_status": "Set {{status}}",
       "stop_fallback": "the stop",
       "stop_title": "Arrived at {{name}}",
-      "title": "You have arrived"
+      "title": "You have arrived",
+      "end_route": "إنهاء المسار",
+      "route_ended": "انتهى المسار",
+      "route_start_at": "بداية المسار: {{name}}",
+      "route_start_auto": "الانتقال إلى المحطة الأولى خلال {{seconds}} ث",
+      "route_start_continue": "اذهب إلى المحطة الأولى",
+      "route_start_title": "لقد وصلت إلى بداية المسار"
     },
     "back": "Back",
     "error": {
@@ -4660,7 +4859,9 @@
       "times_required": "أضف وقتًا واحدًا على الأقل من اليوم.",
       "title": "تعذر حفظ الجدول",
       "too_many_times": "{{max}} مرات في اليوم كحد أقصى.",
-      "unknown": "هناك شيء غير صالح في الجدول."
+      "unknown": "هناك شيء غير صالح في الجدول.",
+      "destination_coordinates_invalid": "نقطة الوجهة ليست موقعًا صالحًا.",
+      "route_plan_invalid": "لم يعد المسار نشطًا، أو ليست له بداية أو نهاية. اختر مسارًا آخر."
     },
     "facility_value": "الاستلام: {{facility}}",
     "field_address": "العنوان",
@@ -4819,6 +5020,49 @@
     "week_fourth": "الرابع",
     "week_last": "الأخير",
     "week_second": "الثاني",
-    "week_third": "الثالث"
+    "week_third": "الثالث",
+    "destination_location_none": "لا توجد نقطة وجهة",
+    "destination_location_set": "الوجهة: {{latitude}}، {{longitude}}",
+    "destination_poi_wins_hint": "تُوجَّه المكالمات إلى نقطة اهتمام الوجهة. اختر «لا شيء» لتحديد عنوان أو نقطة بدلًا من ذلك.",
+    "facility_poi_hint": "يُربط موقع كل مكالمة بنقطة الاهتمام هذه، والتي تملأ أيضًا عنوان المكالمة الفارغ.",
+    "field_destination_address": "عنوان الوجهة",
+    "field_destination_location": "موقع الوجهة",
+    "field_route": "المسار"
+  },
+  "route_plans": {
+    "duration_with_stops": "مع التوقفات",
+    "first_stop": "المحطة الأولى",
+    "last_stop": "المحطة الأخيرة",
+    "map_end_label": "ن",
+    "map_start_label": "ب",
+    "not_found": "المسار غير موجود",
+    "not_found_description": "تعذّر تحميل هذا المسار. ربما تمت إزالته أو أنه غير نشط.",
+    "preview_action": "معاينة المسار",
+    "preview_title": "معاينة المسار",
+    "profile": {
+      "cycling": "ركوب الدراجة",
+      "driving": "القيادة",
+      "driving_traffic": "القيادة (مع حركة المرور)",
+      "truck": "شاحنة",
+      "walking": "المشي"
+    },
+    "profile_label": "وسيلة التنقل",
+    "stale_route": "تغيّرت المحطات بعد حساب هذا المسار، لذا قد يكون الخط قديماً.",
+    "status": {
+      "active": "نشط",
+      "archived": "مؤرشف",
+      "draft": "مسودة",
+      "paused": "متوقف مؤقتاً"
+    }
+  },
+  "routes_overview": {
+    "next_stop": "المحطة التالية: {{name}}",
+    "no_running": "لا توجد مسارات قيد التشغيل",
+    "no_running_description": "تظهر هنا المسارات التي تبدأها وحداتك مع تقدّمها.",
+    "plans_tab": "الخطط",
+    "running_tab": "قيد التشغيل",
+    "started_at": "بدأ {{time}}",
+    "for_a_call": "بدأ من أجل بلاغ",
+    "for_call": "البلاغ {{number}}: {{name}}"
   }
 }

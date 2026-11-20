@@ -128,6 +128,23 @@ describe('schedule form', () => {
     expect(addTime(['08:00'], '08:00')).toEqual(['08:00']);
   });
 
+  it('carries the free destination and the route (Core M0322); a destination POI wins over the free destination', () => {
+    const values = scheduleToFormValues(schedule({ DestinationAddress: '5 Oak Ave', DestinationGeoLocationData: '39.3,-119.3', RoutePlanId: 'rp-1', RoutePlanName: 'Hydrant loop' }));
+
+    expect(values).toMatchObject({ destinationAddress: '5 Oak Ave', destinationGeoLocationData: '39.3,-119.3', routePlanId: 'rp-1' });
+    expect(toRecurringCallInput(values, 4)).toMatchObject({ DestinationPoiId: null, DestinationAddress: '5 Oak Ave', DestinationGeoLocationData: '39.3,-119.3', RoutePlanId: 'rp-1' });
+    expect(toRecurringCallInput({ ...values, destinationPoiId: 9 }, 4)).toMatchObject({ DestinationPoiId: 9, DestinationAddress: null, DestinationGeoLocationData: null });
+    expect(toRecurringCallInput({ ...values, destinationAddress: ' ', destinationGeoLocationData: '', routePlanId: null }, 4)).toMatchObject({
+      DestinationAddress: null,
+      DestinationGeoLocationData: null,
+      RoutePlanId: null,
+    });
+    // Older servers send none of them.
+    expect(scheduleToFormValues(schedule())).toMatchObject({ destinationAddress: '', destinationGeoLocationData: '', routePlanId: null });
+    expect(describeSaveError({ Key: 'ErrorRoutePlanInvalid', Message: 'x' }, t, null)).toBe('recurring_calls.errors.route_plan_invalid:52');
+    expect(describeSaveError({ Key: 'ErrorDestinationCoordinatesInvalid', Message: 'x' }, t, null)).toBe('recurring_calls.errors.destination_coordinates_invalid:52');
+  });
+
   it('words Core’s validation keys, the department’s required fields and unknown keys', () => {
     expect(describeSaveError({ Key: 'ErrorDaysRequired', Message: 'x' }, t, null)).toBe('recurring_calls.errors.days_required:52');
     expect(describeSaveError({ Key: 'ErrorTooManyTimes', Message: null }, t, { MaxTimesPerDay: 12, MaxInterval: 52 })).toBe('recurring_calls.errors.too_many_times:12');

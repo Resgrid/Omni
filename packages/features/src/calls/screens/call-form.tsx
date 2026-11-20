@@ -1,10 +1,12 @@
 import { isApiError } from '@resgrid/api';
 import { REDACTION_VALUE, useFeatureFlag } from '@resgrid/auth';
 import { useCapability } from '@resgrid/config';
-import { useCallDetailStore, useCallsStore, useRunCardsStore } from '@resgrid/data';
+import { useCallDetailStore, useCallsStore, usePoisStore, useRoutesStore, useRunCardsStore } from '@resgrid/data';
 import { ProtectedLabel, ProtectedRevealBar } from '@resgrid/features/data-protection';
+import { AiDestinationAdviceCard } from '@resgrid/features/pois/components/ai-destination-advice-card';
+import type { DestinationFillState } from '@resgrid/features/pois/lib/destination-fill';
 import { useTranslation } from '@resgrid/i18n';
-import { type CallQuickTemplateResultData, type NewCallFieldKey, NewCallFieldKeys, type UdfFieldValueInput } from '@resgrid/models';
+import { type CallQuickTemplateResultData, type CallRoutePlanResultData, type NewCallFieldKey, NewCallFieldKeys, type PoiResultData, type UdfFieldValueInput } from '@resgrid/models';
 import {
   Button,
   ButtonText,
@@ -31,8 +33,11 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { StyleSheet, View } from 'react-native';
 
 import { CallContactPicker } from '../components/call-form/contact-picker';
+import { CallDestinationFields } from '../components/call-form/destination-fields';
 import { destinationPoiLabel, DestinationPoiPicker } from '../components/call-form/destination-poi-picker';
 import { CallTemplatesModal, LinkedCallModal, ProtocolSelectorModal } from '../components/call-form/form-pickers';
+import { LocationPoiPicker } from '../components/call-form/location-poi-picker';
+import { RoutePlanField } from '../components/call-form/route-plan-picker';
 import { UdfFields } from '../components/call-form/udf-fields';
 import { DispatchSelectionModal, summarizeDispatchSelection } from '../components/dispatch-selection';
 import { OfflineCallBanner } from '../components/offline-call-banner';
@@ -47,6 +52,8 @@ import { useIsOnline } from '../hooks/use-connectivity';
 import { useDispatchBoardOverlay } from '../hooks/use-dispatch-board-overlay';
 import {
   applyCallTemplate,
+  applyLocationPoi,
+  applyRoutePlan,
   callDispatchSelection,
   type CallFormEditContext,
   type CallFormErrorKey,
@@ -55,7 +62,11 @@ import {
   callToFormValues,
   coordinateFieldErrors,
   createRequestToFormValues,
+  effectiveLocationPoi,
   emptyCallFormValues,
+  freeDestinationPoint,
+  hasFreeDestination,
+  type LocationPoiRef,
   parseCoordinateFields,
   parseCoordinates,
   parseLatitude,
@@ -63,14 +74,17 @@ import {
   syncWithheldEditFields,
   toCoordinateFields,
   toCreateCallRequest,
+  toDestinationFields,
   toUpdateCallRequest,
   validateCallForm,
+  withDestinationPoi,
   type WithheldEditField,
   withheldEditFields,
   withheldFormFields,
 } from '../lib/call-form';
 import { type GeocodeLookup, isWhat3WordsFormat, lookupAddress, lookupAddressAt, lookupPlusCode, lookupWhat3Words } from '../lib/call-geocoding';
 import { defaultPriorityId, priorityOptions } from '../lib/call-priority';
+import { callHasRoute } from '../lib/call-route';
 import { MIN_DISPATCH_LEAD_MINUTES } from '../lib/call-schedule';
 import { CallState } from '../lib/call-time';
 import { shownDispatchLists } from '../lib/dispatch-selection';
@@ -102,6 +116,9 @@ const QUICK_FIELDS = new Set<NewCallFieldKey>([NewCallFieldKeys.Address, NewCall
 
 /** The errors the latitude and longitude fields show: each value's own, and the department's "location required". */
 const COORDINATE_ERROR_KEYS: readonly CallFormErrorKey[] = ['latitude', 'longitude', NewCallFieldKeys.Geolocation];
+
+/** The errors a destination picked on the map or from a route fixes. */
+const DESTINATION_ERROR_KEYS: readonly CallFormErrorKey[] = ['destinationLatitude', 'destinationLongitude', NewCallFieldKeys.DestinationPoi];
 
 type LookupKind = 'address' | 'what3words' | 'plusCode' | 'reverse';
 
@@ -147,6 +164,12 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
   const callPriorities = useCallsStore((state) => state.callPriorities);
   const callTypes = useCallsStore((state) => state.callTypes);
   const destinationPois = useCallsStore((state) => state.destinationPois);
+  const isDestinationPoi = useCallback((poiId: number) => destinationPois.some((poi) => poi.PoiId === poiId), [destinationPois]);
+  // Core M0322: any of the department's POIs can be the call location; the routes a call may run.
+  const allPois = usePoisStore((state) => state.pois);
+  const allPoisLoading = usePoisStore((state) => state.loading.pois === true);
+  const allPoisFailed = usePoisStore((state) => !!state.errors.pois);
+  const callRoutePlans = useRoutesStore((state) => state.callRoutePlans);
   const fetchCallFormData = useCallsStore((state) => state.fetchCallFormData);
   const createCall = useCallsStore((state) => state.createCall);
   const correctQueuedCall = useCallsStore((state) => state.correctQueuedCall);
@@ -161,9 +184,12 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
   const [values, setValues] = useState<CallFormValues>(() => emptyCallFormValues(defaultPriorityId(callPriorities)));
   const [errors, setErrors] = useState<Partial<Record<CallFormErrorKey, string>>>({});
   const [missingUdf, setMissingUdf] = useState<string[]>([]);
+  // "Suggest and fill" for this form's session: kept here, so a pick or clear by hand outlives the destination field
+  // (switching the destination kind, or the field hidden and shown again, remounts it).
+  const destinationFill = useRef<DestinationFillState | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [lookup, setLookup] = useState<LookupKind | null>(null);
-  const [open, setOpen] = useState<null | 'dispatch' | 'templates' | 'linked' | 'protocols' | 'contact' | 'location' | 'destination'>(null);
+  const [open, setOpen] = useState<null | 'dispatch' | 'templates' | 'linked' | 'protocols' | 'contact' | 'location' | 'destination' | 'locationPoi' | 'destinationMap'>(null);
   // Set once the form holds what it starts from (the call, the refused request, or a blank form).
   const [startedFrom, setStartedFrom] = useState<'blank' | 'source' | null>(() => (!isEdit && !correctLocalId ? 'blank' : null));
   const [initialDispatchOnUtc, setInitialDispatchOnUtc] = useState('');
@@ -189,6 +215,9 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
 
   useEffect(() => {
     void fetchCallFormData();
+    // Cached copies answer at once (both stores persist them); the Location POI and Route pickers show once they have entries.
+    void usePoisStore.getState().fetchPois();
+    void useRoutesStore.getState().fetchCallRoutePlans();
 
     if (isEdit) void readDetail();
   }, [fetchCallFormData, isEdit, readDetail]);
@@ -249,17 +278,20 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
     });
   }, []);
 
-  /** A point the form filled in itself (map, lookup, contact) is a valid one: the coordinate errors no longer apply. */
-  const clearCoordinateErrors = useCallback(() => {
+  /** Drops the errors of fields the form or the dispatcher has just filled in. */
+  const clearErrors = useCallback((keys: readonly CallFormErrorKey[]) => {
     setErrors((current) => {
-      if (!COORDINATE_ERROR_KEYS.some((key) => key in current)) return current;
+      if (!keys.some((key) => key in current)) return current;
       const next = { ...current };
 
-      for (const key of COORDINATE_ERROR_KEYS) delete next[key];
+      for (const key of keys) delete next[key];
 
       return next;
     });
   }, []);
+
+  /** A point the form filled in itself (map, lookup, contact) is a valid one: the coordinate errors no longer apply. */
+  const clearCoordinateErrors = useCallback(() => clearErrors(COORDINATE_ERROR_KEYS), [clearErrors]);
 
   const show = (key: NewCallFieldKey): boolean => policy.isVisible(key) && (isFull || QUICK_FIELDS.has(key) || policy.isRequired(key));
   // A hide-only field (a switch, one recipient list) is never required, so it never gets a marker.
@@ -270,6 +302,18 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
   // create mode: the call must never go up blank, which Core reads as "everyone").
   const dispatchLists = useMemo(() => shownDispatchLists(policy.isVisible), [policy]);
   const allCall = areAllDispatchListsHidden(policy);
+  // Core M0322: the Location POI picker follows the location fields (never while ADP withholds the location) and shows once
+  // the department has POIs or the call has one; `destinationPoi` governs the whole Destination section; the Route picker
+  // has no policy key and shows when the department has a route a call may run (or the call runs one).
+  // An edit keeps the pickers of what the call has, so clearing one is sent even when no list has loaded.
+  const callHadLocationPoi = isEdit && (detailCall?.LocationPoiId ?? 0) > 0;
+  const callHadRoute = isEdit && callHasRoute(detailCall);
+
+  const locationPoiShown =
+    (show(NewCallFieldKeys.Address) || show(NewCallFieldKeys.Geolocation)) && !isWithheld('address') && !isWithheld('latitude') && (allPois.length > 0 || values.locationPoi !== null || callHadLocationPoi);
+
+  const destinationShown = show(NewCallFieldKeys.DestinationPoi);
+  const routeShown = isFull && (callRoutePlans.length > 0 || values.routePlanId !== null || callHadRoute);
 
   const pickers: CallFormPickers = {
     protocols: show(NewCallFieldKeys.Protocols),
@@ -279,6 +323,9 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
     dispatchList: show(NewCallFieldKeys.DispatchList),
     mapPage: show(NewCallFieldKeys.MapPage),
     allCall,
+    locationPoi: locationPoiShown,
+    freeDestination: destinationShown,
+    route: routeShown,
   };
 
   // The point the latitude and longitude fields give (what the save sends).
@@ -296,24 +343,68 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
   // Dispatch's nearest-unit board on the location picker's map (asked for only while the picker is open).
   const boardOverlay = useDispatchBoardOverlay(location, recipients.groups, open === 'location');
 
-  /** Fills a blank address for a point (Dispatch: a typed or picked point never overwrites the address the caller gave). */
+  /**
+   * Fills a blank address for a point (Dispatch: a typed or picked point never overwrites the address the caller gave); the
+   * call's address, or the free destination's.
+   */
   const fillBlankAddress = useCallback(
-    async (point: CallFormLocation) => {
+    async (point: CallFormLocation, key: 'address' | 'destinationAddress' = 'address') => {
       if (!isOnline) return;
-      setLookup('reverse');
+      // "Looking up the address" and the held lookups belong to the call's location; a destination's runs quietly.
+      const isCallAddress = key === 'address';
+
+      if (isCallAddress) setLookup('reverse');
 
       try {
         const address = await lookupAddressAt(point.latitude, point.longitude);
 
-        if (address) setValues((current) => (current.address.trim() ? current : { ...current, address }));
+        if (address) setValues((current) => (current[key].trim() ? current : { ...current, [key]: address }));
       } catch {
         // The point is kept either way; the address stays as typed.
       } finally {
-        setLookup(null);
+        if (isCallAddress) setLookup(null);
       }
     },
     [isOnline]
   );
+
+  /** A spot picked on the map for the free destination: its address only fills a blank one. */
+  const pickDestination = useCallback(
+    (picked: CallFormLocation & { address?: string }) => {
+      setValues((current) => ({ ...current, ...toDestinationFields(picked.latitude, picked.longitude), destinationAddress: current.destinationAddress || picked.address || '' }));
+      clearErrors(DESTINATION_ERROR_KEYS);
+
+      if (!picked.address) void fillBlankAddress(picked, 'destinationAddress');
+    },
+    [clearErrors, fillBlankAddress]
+  );
+
+  /** A POI picked as the call location: its point and address replace the form's, as a lookup's do. */
+  const pickLocationPoi = (poi: PoiResultData) => {
+    setValues((current) => applyLocationPoi(current, poi));
+    clearErrors([...COORDINATE_ERROR_KEYS, NewCallFieldKeys.Address]);
+    setHeldMapPoint(null);
+    setOpen(null);
+  };
+
+  /**
+   * A route picked (or cleared): its start fills a blank call location (the address looked up as for a picked point) and its
+   * end a missing destination, as the server does on save; what the form holds is never replaced, and clearing the route
+   * leaves them.
+   */
+  const pickRoute = (plan: CallRoutePlanResultData | null) => {
+    const applied = applyRoutePlan(values, plan, { location: show(NewCallFieldKeys.Geolocation) && !isWithheld('latitude') && !isWithheld('address'), destination: destinationShown });
+
+    setValues(applied.values);
+
+    if (applied.filledLocation) {
+      clearCoordinateErrors();
+      setHeldMapPoint(null);
+      void fillBlankAddress(applied.filledLocation);
+    }
+
+    if (applied.filledDestination) clearErrors(DESTINATION_ERROR_KEYS);
+  };
 
   /** A spot picked on the map: its address only fills a blank one. */
   const pickLocation = useCallback(
@@ -552,8 +643,16 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
   const runCardsAvailable = calls.runCards && runCardsFlag && !!hookPoints.RunCardRecommendation;
   const selectedDestination = values.destinationPoiId === null ? undefined : destinationPois.find((poi) => poi.PoiId === values.destinationPoiId);
   // A destination no longer on the department's list still shows what the call stores.
-  const destinationError = errors[NewCallFieldKeys.DestinationPoi];
   const destinationLabel = values.destinationPoiId === null ? null : selectedDestination ? destinationPoiLabel(selectedDestination) : detail?.call?.DestinationName || `#${values.destinationPoiId}`;
+  // The location POI the save links (null once the point moved off it), named from the department's list when known.
+  const linkedLocationPoi = effectiveLocationPoi(values);
+
+  const locationPoiName = (poi: LocationPoiRef): string => {
+    const listed = allPois.find((entry) => entry.PoiId === poi.poiId);
+
+    return (listed ? destinationPoiLabel(listed) : '') || poi.name || `#${poi.poiId}`;
+  };
+
   const ContactPicker: React.ComponentType<ContactPickerProps> = hookPoints.ContactPicker ?? CallContactPicker;
   const RunCardRecommendation = hookPoints.RunCardRecommendation;
   const { LocationPicker, StaticLocationMap } = hookPoints;
@@ -751,6 +850,42 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
         {section(
           'calls.call_location',
           <>
+            {locationPoiShown ? (
+              <View style={styles.field} testID="call-form-location-poi-field">
+                <Text size="sm" className="mb-1 text-typography-700">
+                  {t('calls.location_poi')}
+                </Text>
+                <View style={styles.inputRow}>
+                  <Pressable
+                    onPress={() => setOpen('locationPoi')}
+                    accessibilityRole="button"
+                    accessibilityLabel={linkedLocationPoi ? `${t('calls.location_poi')}: ${locationPoiName(linkedLocationPoi)}` : t('calls.location_poi_select')}
+                    testID="call-form-location-poi"
+                    className="flex-1 flex-row items-center rounded border border-outline-300 px-3 py-2"
+                  >
+                    <Text className={linkedLocationPoi ? 'flex-1 text-typography-900' : 'flex-1 text-typography-400'} numberOfLines={1}>
+                      {linkedLocationPoi ? locationPoiName(linkedLocationPoi) : t('calls.location_poi_select')}
+                    </Text>
+                    <View>
+                      <ChevronDown size={16} color={colors.icon} />
+                    </View>
+                  </Pressable>
+                  {values.locationPoi ? (
+                    <Button variant="outline" size="sm" className="ml-2" onPress={() => set('locationPoi', null)} accessibilityLabel={t('calls.location_poi_clear')} testID="call-form-location-poi-clear">
+                      <View>
+                        <X size={16} color={colors.icon} />
+                      </View>
+                    </Button>
+                  ) : null}
+                </View>
+                {values.locationPoi && !linkedLocationPoi ? (
+                  // The point was moved off the POI: the save no longer links the call to it.
+                  <Text size="xs" className="mt-1 text-warning-700" testID="call-form-location-poi-moved">
+                    {t('calls.location_poi_moved', { name: locationPoiName(values.locationPoi) })}
+                  </Text>
+                ) : null}
+              </View>
+            ) : null}
             {show(NewCallFieldKeys.Address)
               ? textField('address', `${t('calls.address')}${req(NewCallFieldKeys.Address)}`, {
                   placeholder: t('calls.address_placeholder'),
@@ -852,42 +987,6 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
                 ) : null}
               </>
             ) : null}
-            {show(NewCallFieldKeys.DestinationPoi) && destinationPois.length > 0 ? (
-              // A department can have hundreds of destinations: a searchable picker, not a row of chips.
-              <View style={styles.field}>
-                <Text size="sm" className="mb-1 text-typography-700">
-                  {`${t('calls.destination_poi')}${req(NewCallFieldKeys.DestinationPoi)}`}
-                </Text>
-                <View style={styles.inputRow}>
-                  <Pressable
-                    onPress={() => setOpen('destination')}
-                    accessibilityRole="button"
-                    accessibilityLabel={destinationLabel ? `${t('calls.destination_poi')}: ${destinationLabel}` : t('calls.destination_poi_select')}
-                    testID="call-form-destination"
-                    className={`flex-1 flex-row items-center rounded border px-3 py-2 ${destinationError ? 'border-error-600' : 'border-outline-300'}`}
-                  >
-                    <Text className={destinationLabel ? 'flex-1 text-typography-900' : 'flex-1 text-typography-400'} numberOfLines={1}>
-                      {destinationLabel ?? t('calls.destination_poi_select')}
-                    </Text>
-                    <View>
-                      <ChevronDown size={16} color={colors.icon} />
-                    </View>
-                  </Pressable>
-                  {values.destinationPoiId === null ? null : (
-                    <Button variant="outline" size="sm" className="ml-2" onPress={() => set('destinationPoiId', null)} accessibilityLabel={t('calls.destination_poi_clear')} testID="call-form-destination-clear">
-                      <View>
-                        <X size={16} color={colors.icon} />
-                      </View>
-                    </Button>
-                  )}
-                </View>
-                {destinationError ? (
-                  <Text size="xs" className="mt-1 text-error-600" testID="call-form-destination-error">
-                    {t(destinationError)}
-                  </Text>
-                ) : null}
-              </View>
-            ) : null}
             {show(NewCallFieldKeys.MapPage) ? textField('mapPage', `${t('calls.map_page')}${req(NewCallFieldKeys.MapPage)}`, { errorKey: NewCallFieldKeys.MapPage, testID: 'call-form-map-page' }) : null}
             {!isOnline ? (
               <Text size="xs" className="text-typography-500">
@@ -897,6 +996,65 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
           </>,
           'call-form-location'
         )}
+
+        {destinationShown
+          ? section(
+              'calls.destination',
+              <>
+                <CallDestinationFields
+                  values={values}
+                  update={(change) => {
+                    setValues(change);
+                    clearErrors([NewCallFieldKeys.DestinationPoi]);
+                  }}
+                  poisAvailable={destinationPois.length > 0}
+                  poiLabel={destinationLabel}
+                  required={policy.isRequired(NewCallFieldKeys.DestinationPoi)}
+                  errors={errors}
+                  clearErrors={clearErrors}
+                  isOnline={isOnline}
+                  onOpenPoiPicker={() => setOpen('destination')}
+                  onOpenMapPicker={LocationPicker ? () => setOpen('destinationMap') : null}
+                  callId={isEdit ? (callId ?? null) : null}
+                  canFillDestination={!isEdit}
+                  isDestinationPoi={isDestinationPoi}
+                  destinationFill={destinationFill}
+                />
+                {isEdit && callId ? (
+                  // Enhanced AI destination advice for the call being edited (as the web's Update Call): Apply sets the call's
+                  // destination on the server and in this form, so saving the form keeps it (a POI replaces a free destination).
+                  <AiDestinationAdviceCard
+                    callId={callId}
+                    canAct={permissions.canEdit}
+                    hasFreeDestination={hasFreeDestination(values)}
+                    selectedPoiId={values.destinationPoiId}
+                    onApplied={(poiId) => {
+                      setValues((current) => withDestinationPoi(current, poiId));
+                      clearErrors(DESTINATION_ERROR_KEYS);
+                    }}
+                    testID="call-form-ai-advice"
+                  />
+                ) : null}
+              </>,
+              'call-form-destination-section'
+            )
+          : null}
+
+        {routeShown
+          ? section(
+              'calls.route_section',
+              <RoutePlanField
+                plans={callRoutePlans}
+                selectedId={values.routePlanId}
+                fallbackName={isEdit ? detail?.call?.RoutePlanName : null}
+                onChange={pickRoute}
+                label={t('calls.route')}
+                hint={t('calls.route_hint')}
+                testID="call-form-route"
+              />,
+              'call-form-route-section'
+            )
+          : null}
 
         {showContactPicker || showContactFields || show(NewCallFieldKeys.ExternalId) || show(NewCallFieldKeys.IncidentId) || show(NewCallFieldKeys.ReferenceId)
           ? section(
@@ -1197,18 +1355,33 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
         origin={location}
         selectedId={values.destinationPoiId}
         onSelect={(poiId) => {
-          set('destinationPoiId', poiId);
+          setValues((current) => withDestinationPoi(current, poiId));
+          clearErrors([NewCallFieldKeys.DestinationPoi]);
           setOpen(null);
         }}
       />
-      {LocationPicker ? (
-        <LocationPicker
-          isOpen={open === 'location'}
+      {locationPoiShown ? (
+        <LocationPoiPicker
+          isOpen={open === 'locationPoi'}
           onClose={() => setOpen(null)}
-          initial={location}
-          overlay={boardOverlay}
+          pois={allPois}
+          selectedId={linkedLocationPoi?.poiId ?? null}
+          onSelect={pickLocationPoi}
+          isLoading={allPoisLoading}
+          loadFailed={allPoisFailed}
+          onRetry={() => void usePoisStore.getState().fetchPois({ bypassCache: true })}
+        />
+      ) : null}
+      {LocationPicker ? (
+        // One map picker: the call location (with Dispatch's nearest-unit board) or the free destination.
+        <LocationPicker
+          isOpen={open === 'location' || open === 'destinationMap'}
+          onClose={() => setOpen(null)}
+          initial={open === 'destinationMap' ? (freeDestinationPoint(values) ?? location) : location}
+          overlay={open === 'destinationMap' ? null : boardOverlay}
           onSelect={(picked) => {
-            pickLocation(picked);
+            if (open === 'destinationMap') pickDestination(picked);
+            else pickLocation(picked);
             setOpen(null);
           }}
         />

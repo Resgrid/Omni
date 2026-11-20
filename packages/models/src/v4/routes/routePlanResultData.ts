@@ -1,4 +1,33 @@
+import { type RouteEndpointData } from './directionsResultData';
+
 /** Route plan results — mirror Core `Models/v4/Routes/RouteResultModels.cs`. */
+
+/** Core `RouteStatus` (a plan's `RouteStatus`; persisted, never renumber). Only Active plans run or go on a call. */
+export const RoutePlanStatus = { Draft: 0, Active: 1, Paused: 2, Archived: 3 } as const;
+
+/**
+ * A route a call may run (Core M0322, `Routes/GetCallRoutePlans`): an Active plan whose start and end both resolve. Start =
+ * the station start (explicit station, else the plan unit's station), else the explicit start point, else the first stop; end
+ * = the station end, else the explicit end point, else the last stop.
+ */
+export interface CallRoutePlanResultData {
+  RoutePlanId: string;
+  Name: string;
+  Description: string | null;
+  RouteColor: string | null;
+  UnitId: number | null;
+  StopsCount: number;
+  EstimatedDistanceMeters: number | null;
+  EstimatedDurationSeconds: number | null;
+  /** `RoutingProfile`. */
+  RoutingProfile: number;
+  Start: RouteEndpointData;
+  End: RouteEndpointData;
+  /** The start is the first stop (no station or explicit start point). */
+  StartIsStop: boolean;
+  /** The end is the last stop (no station or explicit end point). */
+  EndIsStop: boolean;
+}
 
 export interface RoutePlanResultData {
   RoutePlanId: string;

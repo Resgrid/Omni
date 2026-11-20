@@ -3,7 +3,7 @@ import './test-setup';
 import { useNetInfo } from '@react-native-community/netinfo';
 import { ApiError, buildEditCallInput, buildNewCallInput, type CreateCallRequest, type UpdateCallRequest } from '@resgrid/api';
 import { featureFlagsStore } from '@resgrid/auth';
-import { useCallDetailStore, useCallsStore, useContactsStore } from '@resgrid/data';
+import { useCallDetailStore, useCallsStore, useContactsStore, usePoisStore, useRoutesStore } from '@resgrid/data';
 import type { NewCallFieldRuleData } from '@resgrid/models';
 import { useToastStore } from '@resgrid/ui';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
@@ -96,6 +96,9 @@ beforeEach(() => {
     correctQueuedCall: mockCorrectQueuedCall,
   });
   useCallDetailStore.setState({ details: {}, fetchCallDetail: jest.fn(async () => undefined), updateCall: mockUpdateCall });
+  // The Location POI and Route pickers (Core M0322) stay hidden here: call-form-locations.test.tsx covers them.
+  usePoisStore.setState({ pois: [], fetchPois: jest.fn(async () => undefined) });
+  useRoutesStore.setState({ callRoutePlans: [], fetchCallRoutePlans: jest.fn(async () => undefined) });
 });
 
 describe('CallFormScreen: create', () => {

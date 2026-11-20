@@ -135,7 +135,8 @@ export const FIELD_LABEL_KEYS: Record<NewCallFieldKey, string> = {
   geolocation: 'calls.coordinates',
   what3words: 'calls.what3words',
   pluscode: 'calls.plus_code',
-  destinationPoi: 'calls.destination_poi',
+  // Core M0322: the key governs the whole Destination section (a POI or a free location).
+  destinationPoi: 'calls.destination',
   indoorLocation: 'calls.indoor_location',
   mapPage: 'calls.map_page',
   note: 'calls.note',

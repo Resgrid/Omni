@@ -328,6 +328,9 @@ export default function RecurringCallDetailScreen({ recurringCallId: idProp }: R
           <Row label={t('recurring_calls.field_priority')} value={priority ? (priority.isLabelKey ? t(priority.label) : priority.label) : null} />
           <Row label={t('recurring_calls.field_type')} value={schedule.Type} />
           <Row label={t('recurring_calls.field_call_contact')} value={joinParts([schedule.ContactName, schedule.ContactNumber])} />
+          {/* Core M0322: the free destination (no destination POI) and the route each call runs. */}
+          <Row label={t('recurring_calls.field_destination_location')} value={joinParts([schedule.DestinationAddress, schedule.DestinationGeoLocationData])} testID="recurring-call-destination-location" />
+          <Row label={t('recurring_calls.field_route')} value={schedule.RoutePlanName || (schedule.RoutePlanId ? t('calls.route_unknown') : null)} testID="recurring-call-route" />
           <Row label={t('recurring_calls.field_notes')} value={schedule.Notes} />
           <Row label={t('recurring_calls.field_reference')} value={joinParts([schedule.ReferenceNumber, schedule.IncidentNumber, schedule.ExternalIdentifier])} />
         </Section>

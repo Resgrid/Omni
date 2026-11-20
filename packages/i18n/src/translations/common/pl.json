@@ -226,7 +226,8 @@
       "site": "Info o obiekcie",
       "timeline": "Aktywność",
       "video": "Wideo",
-      "notes": "Notes & files"
+      "notes": "Notes & files",
+      "route": "Trasa"
     },
     "timestamp": "Znacznik czasu",
     "title": "Szczegóły zgłoszenia",
@@ -263,7 +264,16 @@
     "audio_play_error": "Could not play this recording",
     "scheduled_on": "Zaplanowana data i godzina wysłania",
     "destination_type": "Typ miejsca docelowego",
-    "keyboard_shortcuts": "Tip: Press 1-9 to switch tabs, Ctrl+E to edit, Escape to go back"
+    "keyboard_shortcuts": "Tip: Press 1-9 to switch tabs, Ctrl+E to edit, Escape to go back",
+    "location_poi": "POI lokalizacji",
+    "destination_coordinates": "Współrzędne miejsca docelowego",
+    "destination_what3words": "what3words miejsca docelowego",
+    "route": "Trasa",
+    "route_runs": "Przejazdy trasy",
+    "route_no_runs": "Żadna jednostka nie rozpoczęła jeszcze tej trasy.",
+    "route_run_started": "Rozpoczęto {{time}}",
+    "route_run_start_reached": "Dotarto do początku {{time}}",
+    "route_run_ended": "Zakończono {{time}}"
   },
   "calls": {
     "address": "Adres",
@@ -572,7 +582,59 @@
     "all_call_dispatch_now_help": "Wszystkie listy dysponowania są ukryte. Włącz alarm ogólny, aby wysłać to zgłoszenie do wszystkich, lub pozostaw go wyłączonym, aby wysłać je do odbiorców zapisanych w zgłoszeniu.",
     "additional_contacts": "Dodatkowe kontakty",
     "check_in_timers": "Timery meldunków",
-    "part2_consent": "Zgoda 42 CFR Part 2"
+    "part2_consent": "Zgoda 42 CFR Part 2",
+    "location_poi": "Lokalizacja z POI",
+    "location_poi_select": "Wybierz punkt zainteresowania",
+    "location_poi_search": "Szukaj punktów zainteresowania...",
+    "location_poi_none_found": "Żaden punkt zainteresowania nie pasuje do wyszukiwania",
+    "location_poi_load_error": "Nie udało się wczytać punktów zainteresowania.",
+    "location_poi_clear": "Wyczyść punkt zainteresowania",
+    "location_poi_moved": "Lokalizacja została przesunięta z dala od {{name}}, więc zgłoszenie nie zostanie z nim powiązane.",
+    "destination_mode_poi": "Punkt zainteresowania",
+    "destination_mode_location": "Adres lub punkt",
+    "destination_address": "Adres miejsca docelowego",
+    "destination_address_placeholder": "Wpisz adres miejsca docelowego",
+    "destination_found": "Znaleziono miejsce docelowe i zaktualizowano jego lokalizację",
+    "destination_pick_on_map": "Wybierz miejsce docelowe na mapie",
+    "destination_location_clear": "Wyczyść miejsce docelowe",
+    "route_section": "Trasa",
+    "route": "Predefiniowana trasa",
+    "route_hint": "Początek trasy uzupełnia pustą lokalizację zgłoszenia, a jej koniec brakujące miejsce docelowe.",
+    "route_select": "Wybierz trasę",
+    "route_search": "Szukaj tras...",
+    "route_none_found": "Żadna trasa nie pasuje do wyszukiwania",
+    "route_clear": "Wyczyść trasę",
+    "route_unknown": "Trasa nie jest już dostępna",
+    "route_stops_count": "Postoje: {{count}}",
+    "route_start_end": "{{start}} → {{end}}",
+    "destination_to": "Do: {{destination}}",
+    "route_named": "Trasa: {{name}}",
+    "intake_source": {
+      "intake": "Intake",
+      "intake_named": "Intake: {{name}}",
+      "voice": "Voice line",
+      "voice_named": "Voice line: {{name}}",
+      "via_sms": "Via text message",
+      "via_sms_named": "Via text message: {{name}}",
+      "via_email": "Via email",
+      "via_email_named": "Via email: {{name}}",
+      "via_whatsapp": "Via WhatsApp",
+      "via_whatsapp_named": "Via WhatsApp: {{name}}",
+      "via_slack": "Via Slack",
+      "via_slack_named": "Via Slack: {{name}}",
+      "via_teams": "Via Teams",
+      "via_teams_named": "Via Teams: {{name}}",
+      "via_telegram": "Via Telegram",
+      "via_telegram_named": "Via Telegram: {{name}}",
+      "via_discord": "Via Discord",
+      "via_discord_named": "Via Discord: {{name}}",
+      "via_google_chat": "Via Google Chat",
+      "via_google_chat_named": "Via Google Chat: {{name}}",
+      "via_webhook": "Via webhook",
+      "via_webhook_named": "Via webhook: {{name}}",
+      "via_voice": "Via voice line",
+      "via_voice_named": "Via voice line: {{name}}"
+    }
   },
   "chat": {
     "ack_pending_count": "Masz {{count}} pilnych wiadomości do potwierdzenia",
@@ -2424,6 +2486,117 @@
       "saved": "Zapisano dostępność",
       "save_failed": "Nie udało się zapisać dostępności",
       "expiry_passed": "Czas zakończenia zgłoszenia już minął. Wybierz, jak długo ma obowiązywać."
+    },
+    "destinations": {
+      "capabilities": {
+        "empty": "Brak możliwości",
+        "empty_description": "Możliwości, takie jak Pracownia hemodynamiki czy Lądowisko, dodaje się w wersji webowej w Mapy → POI → Możliwości POI.",
+        "intro": "Co oferują Twoje miejsca docelowe. Dotknij możliwości, aby zobaczyć miejsca, które ją oferują.",
+        "offered_by": "Miejsca, które ją oferują: {{count}}",
+        "show_hint": "Pokazuje miejsca docelowe, które ją oferują",
+        "unavailable": "Niedostępna w {{count}}"
+      },
+      "counts": "Otwarte {{open}} · Ograniczone {{limited}} · Przekierowanie {{diversion}} · Zamknięte {{closed}}",
+      "empty": "Brak miejsc docelowych",
+      "empty_description": "Tu widać typy POI oznaczone w wersji webowej jako miejsca docelowe (Mapy → POI).",
+      "filter_all": "Wszystkie ({{count}})",
+      "filter_not_open": "Nie otwarte ({{count}})",
+      "loading": "Wczytywanie miejsc docelowych...",
+      "no_match": "Żadne miejsce docelowe nie pasuje",
+      "rules": {
+        "any_destination": "Dowolne miejsce docelowe",
+        "condition_call_type": "Typ zgłoszenia: {{name}}",
+        "condition_priority": "Priorytet: {{name}}",
+        "condition_unit_type": "Typ jednostki: {{name}}",
+        "deleted": "(usunięto)",
+        "destination": "Miejsce docelowe",
+        "empty": "Brak reguł miejsc docelowych",
+        "empty_description": "Bez reguł sugerowane jest każde miejsce docelowe, najpierw najbliższe otwarte.",
+        "every_call": "Każde zgłoszenie",
+        "load_failed": "Nie udało się wczytać reguł miejsc docelowych",
+        "loading": "Wczytywanie reguł miejsc docelowych...",
+        "mode_fill": "Sugeruj i wpisuj",
+        "mode_off": "Wyłączone",
+        "mode_suggest": "Sugeruj miejsca docelowe",
+        "needs_attention": "Odwołuje się do usuniętych elementów ({{count}}); popraw w wersji webowej.",
+        "nothing": "Nic",
+        "prefers": "Preferuje",
+        "read_only": "Reguły i sugestie ustawia się w wersji webowej w Mapy → POI → Reguły miejsc docelowych.",
+        "requires": "Wymaga",
+        "suggestions": "Sugestie",
+        "window": "Miejsce z większą liczbą preferowanych możliwości jest pierwsze tylko w granicach {{count}} min od najbliższego."
+      },
+      "search": "Szukaj miejsc docelowych...",
+      "tab_availability": "Dostępność",
+      "tab_capabilities": "Możliwości",
+      "tab_rules": "Reguły",
+      "title": "Miejsca docelowe"
+    },
+    "suggestions": {
+      "failed": "Sugestie miejsc docelowych są teraz niedostępne.",
+      "filled": "Wpisano sugerowane miejsce docelowe. W razie potrzeby wybierz inne.",
+      "loading": "Wyszukiwanie miejsc docelowych...",
+      "missing": "Brak: {{names}}",
+      "needs": "Wymaga: {{names}}",
+      "none": "Nie znaleziono miejsca docelowego.",
+      "none_meet": "Żadne pobliskie miejsce nie oferuje wszystkiego, co wymagane.",
+      "prefers": "Preferuje: {{names}}",
+      "rules": "Reguły: {{names}}",
+      "selected": "Wybrane",
+      "set_aside": "Pominięte: {{names}}",
+      "set_aside_rule": "{{name}} ({{reason}})",
+      "set_aside_type_conflict": "bardziej szczegółowa reguła kieruje do innych typów miejsc docelowych",
+      "set_aside_types_removed": "jej typy miejsc docelowych już nie istnieją",
+      "suggested": "Sugerowane",
+      "title": "Sugerowane miejsca docelowe",
+      "types": "Typy: {{names}}",
+      "use": "Użyj",
+      "use_label": "Użyj {{name}} jako miejsca docelowego",
+      "down": "Obecnie niedostępne: {{names}}"
+    },
+    "ai_advice": {
+      "advised_at": "Advised {{time}}",
+      "apply": "Apply",
+      "apply_label": "Make {{name}} the call's destination",
+      "ask": "Ask Enhanced AI",
+      "asking": "Asking Enhanced AI…",
+      "confidence": "Confidence {{percent}}%",
+      "consider": "Consider {{name}}",
+      "current": "Current destination: {{name}}",
+      "current_free": "Current destination: an address or point (no destination POI)",
+      "current_none": "The call has no destination yet.",
+      "dismiss": "Dismiss",
+      "dismiss_reason": "Why dismiss it? (optional)",
+      "dismiss_reason_placeholder": "e.g. Patient asked for another hospital",
+      "error": {
+        "failed": "Something went wrong. Please try again.",
+        "not_allowed": "You cannot change this call.",
+        "offline": "No connection. Try again when you are back online."
+      },
+      "keep": "Keep the current destination",
+      "low_confidence": "Low confidence: check before applying",
+      "no_suggestion": "No destination suggested",
+      "none": "No destination advice for this call yet.",
+      "outcome": {
+        "applied": "{{name}} is now the call's destination.",
+        "budget_exhausted": "Your department's Enhanced AI allowance is used up for now.",
+        "busy": "Enhanced AI is busy. Try again in a moment.",
+        "call_not_open": "The call is no longer open.",
+        "destination_gone": "The recommended destination is no longer available.",
+        "dismissed": "Advice dismissed.",
+        "invalid_output": "Enhanced AI's answer could not be used. Try again.",
+        "model_unavailable": "Enhanced AI could not answer right now. Try again later.",
+        "no_candidates": "No destination could be considered for this call.",
+        "no_location": "The call needs a location before Enhanced AI can advise.",
+        "not_found": "This advice is no longer available.",
+        "not_open": "This advice was already applied, dismissed or replaced.",
+        "nothing_to_apply": "The advice is to keep the current destination: there is nothing to apply.",
+        "protection_unsupported": "Enhanced AI destination advice is not available while Advanced Data Protection is on.",
+        "unavailable_for_department": "Enhanced AI destination advice is not available for your department.",
+        "unchanged": "Nothing the advice reads has changed: this is still the advice."
+      },
+      "suggests": "Enhanced AI suggests",
+      "title": "Enhanced AI destination advice"
     }
   },
   "protocols": {
@@ -3115,7 +3288,10 @@
     "call_assigned_destination": "Miejsce docelowe zgłoszenia: {{name}}",
     "transport_destination_differs": "Różni się od miejsca docelowego przypisanego do zgłoszenia: {{name}}",
     "transport_reason_required": "To miejsce docelowe różni się od przypisanego do zgłoszenia ({{name}}). Podaj powód (wymagane).",
-    "destination_availability": "{{name}}: {{status}}"
+    "destination_availability": "{{name}}: {{status}}",
+    "destination_missing": "{{name}} nie zapewnia wymaganych możliwości: {{names}}",
+    "destination_required_down": "{{name}} zgłasza obecnie niedostępne: {{names}}",
+    "finding_suggested_destination": "Wyszukiwanie sugerowanego miejsca docelowego..."
   },
   "tabs": {
     "calendar": "Kalendarz",
@@ -4428,7 +4604,12 @@
       "waypoint": "Waypoint"
     },
     "stops_done": "{{done}} of {{total}} stops",
-    "stop_eta": "ETA {{time}}"
+    "stop_eta": "ETA {{time}}",
+    "for_a_call": "Rozpoczęta dla zgłoszenia",
+    "for_call": "Zgłoszenie: {{call}}",
+    "route_start": "Początek trasy",
+    "route_start_pending": "Najpierw dojedź do początku trasy: {{name}}",
+    "route_start_pending_unnamed": "Najpierw dojedź do początku trasy"
   },
   "unit_status": {
     "console_title": "Status console",
@@ -4446,7 +4627,19 @@
     "timer_warning": "Status timer warning: {{status}} for {{elapsed}}",
     "timer_notification_body": "{{unit}}: update your status if it has changed.",
     "timer_exact_alarms_allow": "Allow on-time timer alerts",
-    "timer_exact_alarms_hint": "Status timer alerts can arrive late while the app is in the background."
+    "timer_exact_alarms_hint": "Status timer alerts can arrive late while the app is in the background.",
+    "route": {
+      "conflict_cancel": "Anuluj ją i rozpocznij tę trasę",
+      "conflict_end": "Zakończ ją i rozpocznij tę trasę",
+      "conflict_keep": "Zachowaj bieżącą trasę",
+      "conflict_message": "Ta jednostka realizuje trasę {{route}}. Zakończ ją lub anuluj, aby rozpocząć trasę tego zgłoszenia, albo pozostaw ją aktywną.",
+      "conflict_message_unnamed": "Ta jednostka realizuje inną trasę. Zakończ ją lub anuluj, aby rozpocząć trasę tego zgłoszenia, albo pozostaw ją aktywną.",
+      "conflict_title": "Trwa inna trasa",
+      "continue": "Kontynuuj trasę",
+      "name": "Trasa: {{name}}",
+      "start": "Rozpocznij trasę",
+      "unnamed": "Trasa zgłoszenia"
+    }
   },
   "workOrders": {
     "reportNotSent": "Not sent",
@@ -4507,7 +4700,13 @@
       "set_status": "Set {{status}}",
       "stop_fallback": "the stop",
       "stop_title": "Arrived at {{name}}",
-      "title": "You have arrived"
+      "title": "You have arrived",
+      "end_route": "Zakończ trasę",
+      "route_ended": "Trasa zakończona",
+      "route_start_at": "Początek trasy: {{name}}",
+      "route_start_auto": "Przejazd do pierwszego postoju za {{seconds}} s",
+      "route_start_continue": "Jedź do pierwszego postoju",
+      "route_start_title": "Dotarto do początku trasy"
     },
     "back": "Back",
     "error": {
@@ -4660,7 +4859,9 @@
       "times_required": "Dodaj co najmniej jedną godzinę.",
       "title": "Nie udało się zapisać harmonogramu",
       "too_many_times": "Najwyżej {{max}} godzin dziennie.",
-      "unknown": "Coś w harmonogramie jest nieprawidłowe."
+      "unknown": "Coś w harmonogramie jest nieprawidłowe.",
+      "destination_coordinates_invalid": "Punkt docelowy nie jest prawidłową lokalizacją.",
+      "route_plan_invalid": "Trasa nie jest już aktywna albo nie ma początku lub końca. Wybierz inną trasę."
     },
     "facility_value": "Odbiór: {{facility}}",
     "field_address": "Adres",
@@ -4819,6 +5020,49 @@
     "week_fourth": "czwarty",
     "week_last": "ostatni",
     "week_second": "drugi",
-    "week_third": "trzeci"
+    "week_third": "trzeci",
+    "destination_location_none": "Brak punktu docelowego",
+    "destination_location_set": "Cel: {{latitude}}, {{longitude}}",
+    "destination_poi_wins_hint": "Zgłoszenia są kierowane do docelowego punktu zainteresowania. Wybierz „Brak”, aby zamiast tego podać adres lub punkt.",
+    "facility_poi_hint": "Lokalizacja każdego zgłoszenia jest powiązana z tym punktem zainteresowania, który uzupełnia też pusty adres zgłoszenia.",
+    "field_destination_address": "Adres miejsca docelowego",
+    "field_destination_location": "Lokalizacja miejsca docelowego",
+    "field_route": "Trasa"
+  },
+  "route_plans": {
+    "duration_with_stops": "Z postojami",
+    "first_stop": "pierwszy postój",
+    "last_stop": "ostatni postój",
+    "map_end_label": "K",
+    "map_start_label": "P",
+    "not_found": "Nie znaleziono trasy",
+    "not_found_description": "Nie można załadować tej trasy. Mogła zostać usunięta lub nie jest aktywna.",
+    "preview_action": "Podgląd trasy",
+    "preview_title": "Podgląd trasy",
+    "profile": {
+      "cycling": "Rower",
+      "driving": "Samochód",
+      "driving_traffic": "Samochód (z ruchem)",
+      "truck": "Ciężarówka",
+      "walking": "Pieszo"
+    },
+    "profile_label": "Sposób podróży",
+    "stale_route": "Postoje zmieniły się po obliczeniu tej trasy, więc linia może być nieaktualna.",
+    "status": {
+      "active": "Aktywna",
+      "archived": "Zarchiwizowana",
+      "draft": "Szkic",
+      "paused": "Wstrzymana"
+    }
+  },
+  "routes_overview": {
+    "next_stop": "Następny postój: {{name}}",
+    "no_running": "Brak tras w toku",
+    "no_running_description": "Trasy uruchomione przez Twoje jednostki pojawiają się tutaj wraz z postępem.",
+    "plans_tab": "Plany",
+    "running_tab": "W toku",
+    "started_at": "Rozpoczęto {{time}}",
+    "for_a_call": "Rozpoczęta dla zgłoszenia",
+    "for_call": "Zgłoszenie {{number}}: {{name}}"
   }
 }

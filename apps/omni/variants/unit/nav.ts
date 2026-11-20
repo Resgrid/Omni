@@ -15,6 +15,7 @@ import { offlineMapsNav } from '@resgrid/features/offline-maps/nav';
 import { operationsNav } from '@resgrid/features/operations/nav';
 import { protocolsNav } from '@resgrid/features/protocols/nav';
 import { recordsNav } from '@resgrid/features/records/nav';
+import { routePlansNav } from '@resgrid/features/route-plans/nav';
 import { settingsNavEntries } from '@resgrid/features/settings/nav';
 import { unitRoutesNav } from '@resgrid/features/unit-routes/nav';
 import { unitStatusNav } from '@resgrid/features/unit-status/nav';
@@ -49,6 +50,7 @@ export const routes = defineRoutes([
   'unitRouteStopContact',
   'unitRouteHistory',
   'unitRouteInstance',
+  'routePlanPreview',
   'navigate',
   'unitConsole',
   'inventory',
@@ -95,6 +97,7 @@ export const nav = defineNav([
   ...featureNav(mapNav, 'tab', { order: 0 }),
   ...featureNav(callsNav, { calls: 'tab', 'call-new': 'hidden' }, { order: 10 }),
   ...featureNav(unitRoutesNav, 'tab', { order: 20 }),
+  ...featureNav(routePlansNav, 'hidden', { order: 21 }),
   ...featureNav(contactsNav, 'tab', { order: 30 }),
   ...featureNav(notesNav, 'tab', { order: 31 }),
   ...featureNav(weatherAlertsNav, { 'weather-alerts': 'tab' }, { order: 32 }),

@@ -174,6 +174,15 @@ export const capabilitiesSchema = z.object({
   }),
   realtime: z.object({ chatHub: z.boolean(), hubWatchdog: z.boolean() }),
   maps: z.object({ layers: z.boolean(), customIndoor: z.boolean(), navigationInApp: z.boolean() }),
+  /**
+   * `preview`: route plans can be looked at before they run (Core M0322; `features/route-plans`): the plan preview
+   * (`/route-plans/[id]` — map with the route line, numbered stops, start and end, the stops, distance, time and profile),
+   * opened from the call form and call detail (a call's pre-defined route), the Unit routes list and the desk's routes
+   * area; and the department's routes with its running routes and their progress (`/route-plans`, `/route-instances/[id]`,
+   * read only). The apps that pick, run or watch routes: Dispatch, Unit and IC. Core lets a member without Route_View read
+   * Active plans (Call_View), so drafts and archived plans show only to those with Route_View.
+   */
+  routes: z.object({ preview: z.boolean() }),
   platform: z.object({ webEdition: z.boolean(), electron: z.boolean(), onboarding: z.boolean(), maintenanceMode: z.boolean() }),
 });
 export type Capabilities = z.infer<typeof capabilitiesSchema>;

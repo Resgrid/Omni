@@ -3,15 +3,19 @@ import { isFieldRedacted, type ProtectedFieldId, ProtectedFieldIds, REDACTION_VA
 import {
   type CallQuickTemplateResultData,
   type CallResultData,
+  type CallRoutePlanResultData,
   type CallTypeResultData,
   type DispatchedEventResultData,
   type NewCallFieldKey,
   NewCallFieldKeys,
+  type PoiResultData,
   type UdfFieldResultData,
   type UdfFieldValueInput,
 } from '@resgrid/models';
 import { richTextForSave, richTextToPlain } from '@resgrid/ui';
 
+import { callFreeDestination, isUsablePoint } from './call-location';
+import { callRoutePlanId } from './call-route';
 import { getScheduledDispatchPrefill, isDispatchTimeTooSoon, toDispatchOnUtc } from './call-schedule';
 import { CallState, scheduledDispatchUtc } from './call-time';
 import { allCallSelection, dispatchesToSelection, type DispatchSelection, EMPTY_DISPATCH_SELECTION, isDispatchSelectionEmpty } from './dispatch-selection';
@@ -24,6 +28,27 @@ export interface LinkedCallRef {
   number: string;
   name: string;
 }
+
+/** A point in decimal degrees. */
+export interface FormPoint {
+  latitude: number;
+  longitude: number;
+}
+
+/** The POI (any type) the call location was picked from (Core M0322 `LocationPoiId`). */
+export interface LocationPoiRef {
+  poiId: number;
+  /** Its name as last known (blank when only the id is known, e.g. a refused queued call). */
+  name: string;
+  /**
+   * The point the POI gave the call: the link holds while the call's point is still this one. Null when it is not known
+   * (an ADP-withheld point): the link then holds until it is cleared.
+   */
+  point: FormPoint | null;
+}
+
+/** Which kind of destination the form edits: a POI, or a free location (address, point, what3words). Never both. */
+export type DestinationKind = 'poi' | 'location';
 
 export interface CallFormValues {
   name: string;
@@ -47,7 +72,23 @@ export interface CallFormValues {
   incidentId: string;
   /** The map book page for the call's location. Edit: blank keeps the stored page (EditCall cannot clear it). */
   mapPage: string;
+  /**
+   * Core M0322: the POI the call location was picked from. It goes up only while the call's point is still the POI's
+   * (`effectiveLocationPoi`): moving the point elsewhere (map, lookup, typing) drops the link; the address alone may change.
+   */
+  locationPoi: LocationPoiRef | null;
   destinationPoiId: number | null;
+  /** The Destination section's mode (UI only: switching it clears the other kind, so the values never hold both). */
+  destinationKind: DestinationKind;
+  /** Core M0322 free destination (no destination POI): its address, point and what3words. */
+  destinationAddress: string;
+  destinationLatitude: string;
+  destinationLongitude: string;
+  destinationWhat3Words: string;
+  /** Locates the destination while it is entered (server lookup) and is never stored. */
+  destinationPlusCode: string;
+  /** Core M0322: the pre-defined route (an eligible plan from `Routes/GetCallRoutePlans`); null when none. */
+  routePlanId: string | null;
   /** Create: the call's link. Edit: a link this edit adds (EditCall keeps the links a call has and cannot remove one). */
   linkedCall: LinkedCallRef | null;
   /** Create: the call's protocols. Edit: protocols this edit adds (EditCall cannot remove the ones attached). */
@@ -64,6 +105,21 @@ export interface CallFormValues {
   runCardOutcomeNodeKey: string;
   unitResponseCodes: string;
 }
+
+type DestinationFormFields = Pick<CallFormValues, 'destinationPoiId' | 'destinationKind' | 'destinationAddress' | 'destinationLatitude' | 'destinationLongitude' | 'destinationWhat3Words' | 'destinationPlusCode'>;
+
+const NO_COORDINATES: Pick<CallFormValues, 'latitude' | 'longitude'> = { latitude: '', longitude: '' };
+
+/** No destination: neither a POI nor a free location. */
+const NO_DESTINATION: DestinationFormFields = {
+  destinationPoiId: null,
+  destinationKind: 'poi',
+  destinationAddress: '',
+  destinationLatitude: '',
+  destinationLongitude: '',
+  destinationWhat3Words: '',
+  destinationPlusCode: '',
+};
 
 export const emptyCallFormValues = (priority: number | null = null): CallFormValues => ({
   name: '',
@@ -83,7 +139,9 @@ export const emptyCallFormValues = (priority: number | null = null): CallFormVal
   referenceId: '',
   incidentId: '',
   mapPage: '',
-  destinationPoiId: null,
+  locationPoi: null,
+  ...NO_DESTINATION,
+  routePlanId: null,
   linkedCall: null,
   protocolIds: [],
   dispatch: EMPTY_DISPATCH_SELECTION,
@@ -198,6 +256,115 @@ export function coordinateFieldErrors(latitude: string, longitude: string): Coor
 /** A point as the latitude and longitude fields hold it. */
 export const toCoordinateFields = (latitude: number, longitude: number): Pick<CallFormValues, 'latitude' | 'longitude'> => ({ latitude: String(latitude), longitude: String(longitude) });
 
+/** Two points this close (about a metre) are the same place. */
+const SAME_PLACE_DEGREES = 0.00001;
+
+const samePlace = (a: FormPoint, b: FormPoint): boolean => Math.abs(a.latitude - b.latitude) < SAME_PLACE_DEGREES && Math.abs(a.longitude - b.longitude) < SAME_PLACE_DEGREES;
+
+/**
+ * Core M0322: the location POI the call keeps — the picked POI while the call's point is still the POI's. Moving the point
+ * elsewhere (the map, a lookup, a contact, typing) drops the link; changing only the address keeps it, and a blank point
+ * keeps it too (the server fills a blank location from the POI). Null when there is none.
+ */
+export function effectiveLocationPoi(values: Pick<CallFormValues, 'locationPoi' | 'latitude' | 'longitude'>): LocationPoiRef | null {
+  const poi = values.locationPoi;
+
+  if (!poi?.point) return poi;
+  const parsed = parseCoordinateFields(values.latitude, values.longitude);
+
+  if (!parsed.ok) return parsed.reason === 'empty' ? poi : null;
+
+  return samePlace(parsed, poi.point) ? poi : null;
+}
+
+/**
+ * A POI picked as the call location: the call goes to the POI's point and address (its name when it has no address), as a
+ * lookup replaces them; the link is kept while the point stays there.
+ */
+export function applyLocationPoi(values: CallFormValues, poi: Pick<PoiResultData, 'PoiId' | 'Name' | 'Address' | 'Latitude' | 'Longitude'>): CallFormValues {
+  const hasPoint = isUsablePoint(poi.Latitude, poi.Longitude);
+  const point = hasPoint ? { latitude: Number(poi.Latitude), longitude: Number(poi.Longitude) } : null;
+  const address = poi.Address?.trim() || poi.Name?.trim() || '';
+
+  return {
+    ...values,
+    ...(point ? toCoordinateFields(point.latitude, point.longitude) : NO_COORDINATES),
+    address: address || values.address,
+    locationPoi: { poiId: poi.PoiId, name: poi.Name?.trim() ?? '', point },
+  };
+}
+
+/** The free destination's point, or null when its fields do not hold one. */
+export const freeDestinationPoint = (values: Pick<CallFormValues, 'destinationLatitude' | 'destinationLongitude'>): FormPoint | null => {
+  const parsed = parseCoordinateFields(values.destinationLatitude, values.destinationLongitude);
+
+  return parsed.ok ? { latitude: parsed.latitude, longitude: parsed.longitude } : null;
+};
+
+/** The form holds a free destination: an address, a point or what3words. */
+export const hasFreeDestination = (values: Pick<CallFormValues, 'destinationAddress' | 'destinationLatitude' | 'destinationLongitude' | 'destinationWhat3Words'>): boolean =>
+  !!values.destinationAddress.trim() || freeDestinationPoint(values) !== null || !!values.destinationWhat3Words.trim();
+
+/** The form has a destination, a POI or a free one (what satisfies a required `destinationPoi`, Core M0322). */
+export const hasFormDestination = (values: Pick<CallFormValues, 'destinationPoiId' | 'destinationAddress' | 'destinationLatitude' | 'destinationLongitude' | 'destinationWhat3Words'>): boolean =>
+  (values.destinationPoiId ?? 0) > 0 || hasFreeDestination(values);
+
+/** No destination at all, with the Destination section showing `kind`. */
+export const clearDestination = (values: CallFormValues, kind: DestinationKind): CallFormValues => ({ ...values, ...NO_DESTINATION, destinationKind: kind });
+
+/** Switches the Destination section between a POI and a free location; the other kind is cleared (one destination). */
+export const withDestinationKind = (values: CallFormValues, kind: DestinationKind): CallFormValues => (kind === values.destinationKind ? values : clearDestination(values, kind));
+
+/** A destination POI picked: it replaces any free destination. */
+export const withDestinationPoi = (values: CallFormValues, poiId: number | null): CallFormValues => ({ ...values, ...NO_DESTINATION, destinationKind: 'poi', destinationPoiId: poiId });
+
+/** The free destination's point as its fields hold it. */
+export const toDestinationFields = (latitude: number, longitude: number): Pick<CallFormValues, 'destinationLatitude' | 'destinationLongitude'> => ({
+  destinationLatitude: String(latitude),
+  destinationLongitude: String(longitude),
+});
+
+/** The call location is blank (Core's route default: no address, no point and no location POI). */
+export const isCallLocationBlank = (values: Pick<CallFormValues, 'address' | 'latitude' | 'longitude' | 'locationPoi'>): boolean =>
+  !values.address.trim() && !values.latitude.trim() && !values.longitude.trim() && values.locationPoi === null;
+
+export interface RoutePlanApplied {
+  values: CallFormValues;
+  /** The route's start became the call's point (the caller may look its address up). */
+  filledLocation: FormPoint | null;
+  filledDestination: boolean;
+}
+
+/**
+ * A route picked for the call (Core M0322): it fills a blank call location from the route's start and a missing destination
+ * from its end (the end's name as the address), as the server does on save, so the dispatcher sees them. What the form
+ * already holds is never replaced; `fill` limits it to the inputs the form shows. Clearing the route later leaves them.
+ */
+export function applyRoutePlan(
+  values: CallFormValues,
+  plan: Pick<CallRoutePlanResultData, 'RoutePlanId' | 'Start' | 'End'> | null,
+  fill: { location: boolean; destination: boolean } = { location: true, destination: true }
+): RoutePlanApplied {
+  let next: CallFormValues = { ...values, routePlanId: plan?.RoutePlanId ?? null };
+  let filledLocation: FormPoint | null = null;
+  let filledDestination = false;
+
+  if (!plan) return { values: next, filledLocation, filledDestination };
+  const { Start: start, End: end } = plan;
+
+  if (fill.location && isCallLocationBlank(values) && start && isUsablePoint(start.Latitude, start.Longitude)) {
+    filledLocation = { latitude: start.Latitude, longitude: start.Longitude };
+    next = { ...next, ...toCoordinateFields(start.Latitude, start.Longitude) };
+  }
+
+  if (fill.destination && !hasFormDestination(values) && end && isUsablePoint(end.Latitude, end.Longitude)) {
+    filledDestination = true;
+    next = { ...next, ...NO_DESTINATION, destinationKind: 'location', destinationAddress: end.Name?.trim() ?? '', ...toDestinationFields(end.Latitude, end.Longitude) };
+  }
+
+  return { values: next, filledLocation, filledDestination };
+}
+
 /** Which optional pickers this form renders: a property the client has no picker for is left out of the request. */
 export interface CallFormPickers {
   protocols: boolean;
@@ -214,9 +381,15 @@ export interface CallFormPickers {
    * sends "0" with it on and DISPATCH_LIST_NOBODY with it off (create: nobody; edit: the call keeps its recipients).
    */
   allCall?: boolean;
+  /** Core M0322: the Location POI picker is shown; its link goes up as LocationPoiId (an edit clears it with 0). */
+  locationPoi?: boolean;
+  /** Core M0322: the Destination section is shown (`destinationPoi` visible); the free destination goes up with the POI. */
+  freeDestination?: boolean;
+  /** Core M0322: the Route picker is shown (the department has eligible plans, or the call runs one). */
+  route?: boolean;
 }
 
-export type CallFormErrorKey = 'name' | 'nature' | 'priority' | 'type' | 'latitude' | 'longitude' | 'dispatchOnUtc' | 'udf' | NewCallFieldKey;
+export type CallFormErrorKey = 'name' | 'nature' | 'priority' | 'type' | 'latitude' | 'longitude' | 'destinationLatitude' | 'destinationLongitude' | 'dispatchOnUtc' | 'udf' | NewCallFieldKey;
 
 export interface CallFormValidation {
   errors: Partial<Record<CallFormErrorKey, string>>;
@@ -264,13 +437,16 @@ const coordinatesAsGeolocation = (values: Pick<CallFormValues, 'latitude' | 'lon
   return parsed.ok ? formatGeolocation(parsed.latitude, parsed.longitude) : '';
 };
 
+/** Core M0322: `destinationPoi` governs the whole Destination section; a POI or a free destination meets its requirement. */
+const destinationPolicyValue = (values: CallFormValues): boolean => hasFormDestination(values);
+
 /** Values keyed by policy field, for `missingRequired`. A location counts as Core counts it (a single zero does; 0,0 does not). */
 export function policyValues(values: CallFormValues): PolicyFieldValues {
   return {
     [NewCallFieldKeys.Address]: values.address,
     [NewCallFieldKeys.Geolocation]: coordinatesAsGeolocation(values),
     [NewCallFieldKeys.What3Words]: values.what3words,
-    [NewCallFieldKeys.DestinationPoi]: values.destinationPoiId,
+    [NewCallFieldKeys.DestinationPoi]: destinationPolicyValue(values),
     [NewCallFieldKeys.MapPage]: values.mapPage,
     [NewCallFieldKeys.Note]: values.note,
     [NewCallFieldKeys.ContactName]: values.contactName,
@@ -320,7 +496,8 @@ export function editPolicyValues(values: CallFormValues, edit: CallFormEditConte
     [NewCallFieldKeys.MapPage]: textOrStored(values.mapPage, call.MapPage),
     // The form starts from the call's primary contact; the picker only replaces it.
     [NewCallFieldKeys.PrimaryContact]: values.contactId,
-    [NewCallFieldKeys.DestinationPoi]: values.destinationPoiId,
+    // The form starts from the call's destination (POI or free) and saves what it holds.
+    [NewCallFieldKeys.DestinationPoi]: destinationPolicyValue(values),
     [NewCallFieldKeys.Protocols]: (edit.storedProtocolCount ?? 0) > 0 || values.protocolIds.length > 0,
     [NewCallFieldKeys.LinkedCall]: !!values.linkedCall,
     [NewCallFieldKeys.DispatchList]: !isDispatchSelectionEmpty(values.dispatch),
@@ -406,6 +583,13 @@ export function validateCallForm(values: CallFormValues, options: CallFormValida
 
   if (coordinateErrors.longitude) errors.longitude = coordinateErrors.longitude;
 
+  // The free destination's point follows the same rules (blank together is no point).
+  const destinationErrors = coordinateFieldErrors(values.destinationLatitude, values.destinationLongitude);
+
+  if (destinationErrors.latitude) errors.destinationLatitude = destinationErrors.latitude;
+
+  if (destinationErrors.longitude) errors.destinationLongitude = destinationErrors.longitude;
+
   const dispatchOn = pickedDispatchOn(values, options.edit);
   const dispatchTooSoon = !!dispatchOn && !Number.isNaN(Date.parse(dispatchOn)) && isDispatchTimeTooSoon(dispatchOn, options.now);
 
@@ -439,6 +623,28 @@ const dispatchRequestFields = (dispatch: DispatchSelection) => ({
   dispatchUnits: dispatch.units,
 });
 
+type CallLocationRequestFields = Pick<CreateCallRequest, 'locationPoiId' | 'destinationAddress' | 'destinationGeolocation' | 'destinationWhat3Words' | 'routePlanId'>;
+
+/**
+ * Core M0322 fields, for the inputs the form shows only (a field left out keeps the stored value on an edit): the location
+ * POI while the point is still its own, the free destination (a destination POI wins in the request builder) and the route.
+ */
+const callLocationRequestFields = (values: CallFormValues, pickers: CallFormPickers): CallLocationRequestFields => {
+  const fields: CallLocationRequestFields = {};
+
+  if (pickers.locationPoi) fields.locationPoiId = effectiveLocationPoi(values)?.poiId ?? null;
+
+  if (pickers.freeDestination) {
+    fields.destinationAddress = values.destinationAddress;
+    fields.destinationGeolocation = freeDestinationPoint(values);
+    fields.destinationWhat3Words = values.destinationWhat3Words;
+  }
+
+  if (pickers.route) fields.routePlanId = values.routePlanId;
+
+  return fields;
+};
+
 const commonRequestFields = (values: CallFormValues, pickers: CallFormPickers) => ({
   name: values.name.trim(),
   nature: values.nature.trim(),
@@ -461,6 +667,7 @@ const commonRequestFields = (values: CallFormValues, pickers: CallFormPickers) =
   // No input, no value: undefined goes up as null, so the server does not enforce a required map page against this form.
   mapPage: pickers.mapPage ? values.mapPage.trim() : undefined,
   destinationPoiId: values.destinationPoiId,
+  ...callLocationRequestFields(values, pickers),
   ...(values.unitResponseCodes ? { unitResponseCodes: values.unitResponseCodes } : {}),
   ...(pickers.udf ? { udfValues: values.udfValues } : {}),
 });
@@ -480,7 +687,9 @@ export function toCreateCallRequest(values: CallFormValues, pickers: CallFormPic
  * field has no input, so what the form holds for it is not the dispatcher's choice:
  * - text fields go up blank, which EditCall reads as "keep the stored value";
  * - no point is posted for a hidden location, so the stored one stays;
- * - the destination is sent as stored (a missing one clears it on servers that do not yet ignore hidden fields);
+ * - the destination is sent as stored (a missing one clears it on servers that do not yet ignore hidden fields), and the
+ *   free destination is left out (Core M0322: kept as stored);
+ * - the location POI is left out when neither the address nor the coordinates are shown (its picker follows them);
  * - protocols, linked call, map page and primary contact are left out, which tells the server this edit does not touch
  *   them;
  * - no dispatch time is sent, which keeps the call's schedule.
@@ -519,7 +728,14 @@ export function keepHiddenEditFieldsUnchanged(request: UpdateCallRequest, isVisi
     next.additionalContactIds = undefined;
   }
 
-  if (!isVisible(NewCallFieldKeys.DestinationPoi)) next.destinationPoiId = call.DestinationPoiId ?? null;
+  if (!isVisible(NewCallFieldKeys.Address) && !isVisible(NewCallFieldKeys.Geolocation)) next.locationPoiId = undefined;
+
+  if (!isVisible(NewCallFieldKeys.DestinationPoi)) {
+    next.destinationPoiId = call.DestinationPoiId ?? null;
+    next.destinationAddress = undefined;
+    next.destinationGeolocation = undefined;
+    next.destinationWhat3Words = undefined;
+  }
 
   if (!isVisible(NewCallFieldKeys.Protocols)) next.protocolIds = undefined;
 
@@ -608,8 +824,6 @@ export function toUpdateCallRequest(callId: string, values: CallFormValues, pick
 /** The call's current dispatch list as a picker selection (edit). */
 export const dispatchSelectionFromDispatches = (dispatches: readonly DispatchedEventResultData[]): DispatchSelection => dispatchesToSelection(dispatches);
 
-const NO_COORDINATES: Pick<CallFormValues, 'latitude' | 'longitude'> = { latitude: '', longitude: '' };
-
 /** The call's stored point as the form's fields, blank when it has none (0,0 is no point). */
 const storedCoordinateFields = (latitude: string | number | null | undefined, longitude: string | number | null | undefined): Pick<CallFormValues, 'latitude' | 'longitude'> => {
   const lat = typeof latitude === 'number' ? latitude : Number(latitude);
@@ -689,17 +903,50 @@ const protectedEditValues = (call: CallResultData): Pick<CallFormValues, Protect
   };
 };
 
+/**
+ * Core M0322: the call's location POI. Its point is the call's point as loaded (the link holds until the dispatcher moves
+ * it); a withheld point is not known, so the link then holds until it is cleared.
+ */
+const storedLocationPoi = (call: CallResultData, point: Pick<CallFormValues, 'latitude' | 'longitude'>): LocationPoiRef | null => {
+  const poiId = call.LocationPoiId ?? 0;
+
+  if (poiId <= 0) return null;
+  const parsed = parseCoordinateFields(point.latitude, point.longitude);
+
+  return { poiId, name: call.LocationPoiName?.trim() ?? '', point: parsed.ok ? { latitude: parsed.latitude, longitude: parsed.longitude } : null };
+};
+
+/**
+ * The call's destination as the form edits it: its POI, else (Core M0322) its free destination — the stored "lat,lon" when
+ * the server sends it (the exact point), else the destination point Core fills from it.
+ */
+const storedDestination = (call: CallResultData): DestinationFormFields => {
+  if ((call.DestinationPoiId ?? 0) > 0) return { ...NO_DESTINATION, destinationPoiId: call.DestinationPoiId };
+  const free = callFreeDestination(call);
+
+  if (!free) return NO_DESTINATION;
+  const stored = parseCoordinates(call.DestinationGeolocation ?? '');
+  const point = stored.ok ? { latitude: stored.latitude, longitude: stored.longitude } : free.point;
+  const pointFields = point ? toDestinationFields(point.latitude, point.longitude) : { destinationLatitude: '', destinationLongitude: '' };
+
+  return { ...NO_DESTINATION, destinationKind: 'location', destinationAddress: free.address, ...pointFields, destinationWhat3Words: free.what3words };
+};
+
 export function callToFormValues(call: CallResultData, dispatches: readonly DispatchedEventResultData[] = [], options: { types?: readonly Pick<CallTypeResultData, 'Id' | 'Name'>[]; now?: number } = {}): CallFormValues {
+  const stored = protectedEditValues(call);
+
   return {
     ...emptyCallFormValues(call.Priority),
-    ...protectedEditValues(call),
+    ...stored,
     type: callTypeName(call, options.types ?? []),
     contactId: call.Contacts?.[0]?.ContactId ?? null,
     externalId: call.ExternalId ?? '',
     referenceId: call.ReferenceId ?? '',
     incidentId: call.IncidentId ?? '',
     mapPage: call.MapPage ?? '',
-    destinationPoiId: call.DestinationPoiId ?? null,
+    locationPoi: storedLocationPoi(call, stored),
+    ...storedDestination(call),
+    routePlanId: callRoutePlanId(call),
     dispatch: dispatchSelectionFromDispatches(dispatches),
     dispatchOnUtc: getScheduledDispatchPrefill(scheduledDispatchUtc(call), options.now),
     udfValues: udfInputs(call.UdfValues),
@@ -741,6 +988,30 @@ export function applyCallTemplate(values: CallFormValues, template: CallQuickTem
   };
 }
 
+/** Core M0322: the location POI, destination and route of a refused request, as the form holds them. */
+const requestLocationValues = (request: CreateCallRequest): Pick<CallFormValues, 'locationPoi' | 'routePlanId'> & DestinationFormFields => {
+  const { latitude, longitude } = request;
+  const point = latitude !== undefined && longitude !== undefined ? { latitude, longitude } : null;
+  const locationPoi = (request.locationPoiId ?? 0) > 0 ? { poiId: request.locationPoiId ?? 0, name: '', point } : null;
+  const freePoint = request.destinationGeolocation ?? null;
+
+  const free = {
+    destinationAddress: request.destinationAddress ?? '',
+    destinationLatitude: freePoint ? String(freePoint.latitude) : '',
+    destinationLongitude: freePoint ? String(freePoint.longitude) : '',
+    destinationWhat3Words: request.destinationWhat3Words ?? '',
+  };
+
+  const destination: DestinationFormFields =
+    (request.destinationPoiId ?? 0) > 0
+      ? { ...NO_DESTINATION, destinationPoiId: request.destinationPoiId ?? null }
+      : hasFreeDestination(free)
+        ? { ...NO_DESTINATION, ...free, destinationKind: 'location' }
+        : NO_DESTINATION;
+
+  return { locationPoi, ...destination, routePlanId: request.routePlanId?.trim() || null };
+};
+
 /** Correction of a rejected queued call: the form starts from the request that was refused. */
 export function createRequestToFormValues(request: CreateCallRequest): CallFormValues {
   return {
@@ -759,7 +1030,7 @@ export function createRequestToFormValues(request: CreateCallRequest): CallFormV
     referenceId: request.referenceId ?? '',
     incidentId: request.incidentId ?? '',
     mapPage: request.mapPage ?? '',
-    destinationPoiId: request.destinationPoiId ?? null,
+    ...requestLocationValues(request),
     protocolIds: request.protocolIds ?? [],
     dispatch: {
       everyone: request.dispatchEveryone ?? false,

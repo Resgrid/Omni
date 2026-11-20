@@ -7,7 +7,16 @@ import { createDataTestRuntime, httpError, ok } from './helpers';
 jest.mock('@resgrid/api', () => {
   const actual = jest.requireActual('@resgrid/api');
 
-  return { ...actual, getPois: jest.fn(), getPoi: jest.fn(), getPoiCapabilities: jest.fn(), setPoiAvailability: jest.fn(), getNearestDestinations: jest.fn() };
+  return {
+    ...actual,
+    getPois: jest.fn(),
+    getPoi: jest.fn(),
+    getPoiCapabilities: jest.fn(),
+    setPoiAvailability: jest.fn(),
+    getNearestDestinations: jest.fn(),
+    getDestinationRules: jest.fn(),
+    getSuggestedDestinations: jest.fn(),
+  };
 });
 
 /** Destination capabilities and availability (Core M0315) in the POI store. */
@@ -19,6 +28,8 @@ beforeEach(async () => {
   jest.mocked(api.getNearestDestinations).mockReset();
   jest.mocked(api.getPois).mockReset();
   jest.mocked(api.getPoi).mockReset();
+  jest.mocked(api.getDestinationRules).mockReset();
+  jest.mocked(api.getSuggestedDestinations).mockReset();
 });
 
 /** A promise the test settles by hand, to land a response at a chosen moment. */
@@ -33,6 +44,37 @@ const deferred = <T>() => {
 const hospital = (AvailabilityStatus: number) => ({ PoiId: 3, Name: 'UZ Gent', IsDestination: true, AvailabilityStatus }) as never;
 
 describe('pois store destinations', () => {
+  it('asks for suggested destinations with only the call fields it has, and answers null when the server cannot', async () => {
+    const suggestion = { Mode: 2, PreferredWithinMinutes: 3, SuggestedPoiId: 3, Requirements: null, Destinations: [] };
+    // SAFETY: the mocked endpoint returns the v4 envelope the store unwraps; the test builds only the fields it checks.
+    jest.mocked(api.getSuggestedDestinations).mockResolvedValue(ok(suggestion) as never);
+
+    const result = await usePoisStore.getState().fetchSuggestedDestinations({ latitude: 50.8, longitude: 3.8, type: '  Burns ', priority: 0, callId: null, unitId: '', take: 10 });
+
+    expect(result).toEqual(suggestion);
+    expect(jest.mocked(api.getSuggestedDestinations).mock.calls[0][1]).toEqual({ latitude: 50.8, longitude: 3.8, type: 'Burns', priority: 0, take: 10 });
+
+    jest.mocked(api.getSuggestedDestinations).mockRejectedValue(httpError(500));
+    expect(await usePoisStore.getState().fetchSuggestedDestinations({ latitude: 50.8, longitude: 3.8 })).toBeNull();
+  });
+
+  it('loads the destination rules once unless bypassCache, and keeps them when a refresh fails', async () => {
+    const rules = { Mode: 2, PreferredWithinMinutes: 3, Rules: [{ DestinationRuleId: 'burns', Name: 'Burns', RequiredCapabilityNames: ['Burn Center'] }] };
+    // SAFETY: the mocked endpoint returns the v4 envelope the store unwraps; the test builds only the fields it checks.
+    jest.mocked(api.getDestinationRules).mockResolvedValue(ok(rules) as never);
+
+    await usePoisStore.getState().fetchDestinationRules();
+    await usePoisStore.getState().fetchDestinationRules();
+
+    expect(usePoisStore.getState().destinationRules).toEqual(rules);
+    expect(api.getDestinationRules).toHaveBeenCalledTimes(1);
+
+    jest.mocked(api.getDestinationRules).mockRejectedValue(httpError(500));
+    await usePoisStore.getState().fetchDestinationRules({ bypassCache: true });
+
+    expect(usePoisStore.getState().destinationRules).toEqual(rules);
+  });
+
   it('loads the department capabilities once unless bypassCache', async () => {
     // SAFETY: the mocked endpoint returns the v4 envelope the store unwraps; the test builds only the fields it checks.
     jest.mocked(api.getPoiCapabilities).mockResolvedValue(ok([{ PoiCapabilityId: 'cath', Name: 'Cath Lab', Sort: 1 }]) as never);

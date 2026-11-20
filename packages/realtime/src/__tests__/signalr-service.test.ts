@@ -10,6 +10,7 @@ import {
   HUB_RECONNECTED_EVENT,
   HUB_RECONNECTING_EVENT,
   type HubConnectConfig,
+  isHubAuthRejection,
   type RealtimeAuth,
   SignalRService,
 } from '../signalr-service';
@@ -31,6 +32,7 @@ interface MutableAuth extends RealtimeAuth {
   token: string | null;
   refreshed: string | null;
   refreshCalls: number;
+  expired: boolean;
 }
 
 const createAuth = (token: string | null = 'token-1'): MutableAuth => {
@@ -38,14 +40,20 @@ const createAuth = (token: string | null = 'token-1'): MutableAuth => {
     token,
     refreshed: token,
     refreshCalls: 0,
+    expired: false,
     getAccessToken: () => auth.token,
     refreshAccessToken: async () => {
       auth.refreshCalls += 1;
       auth.token = auth.refreshed;
+      auth.expired = false;
     },
+    isAccessTokenExpired: () => auth.expired,
   };
   return auth;
 };
+
+/** How SignalR reports a 401: a failed negotiation wrapping the HttpError's status in its message. */
+const unauthorized = (): Error => new Error("Failed to complete negotiation with the server: Error: Unauthorized: Status code '401'");
 
 /** Fails every `start()` from now on (until reset). */
 const failAllStarts = (count = 50) => {
@@ -165,11 +173,11 @@ describe('SignalRService', () => {
       expect(connection.tokensSeen).toEqual(['token-1', 'token-2']);
     });
 
-    it('refreshes the token before rebuilding a closed hub and connects with the refreshed token', async () => {
+    it('refreshes the token before rebuilding a hub that closed on a 401, and connects with the refreshed token', async () => {
       await service.connectToHubWithEventingUrl(config(GEO));
       auth.refreshed = 'token-3';
 
-      fakeSignalR.latest(GEO).simulateClose(new Error('token expired'));
+      fakeSignalR.latest(GEO).simulateClose(unauthorized());
       await jest.advanceTimersByTimeAsync(reconnectDelayForAttempt(1));
 
       expect(auth.refreshCalls).toBe(1);
@@ -180,12 +188,82 @@ describe('SignalRService', () => {
     });
   });
 
+  describe('token refresh on rebuild', () => {
+    // Every refresh rotates the refresh token (OpenIddict rolling tokens, 30 s reuse leeway). Refreshing before each
+    // rebuild of a hub that stayed down rotated it every few seconds, and one rotation whose answer was lost (a reload, a
+    // timeout) left a redeemed token behind: the next refresh was refused (ID2012) and the session ended.
+    it('rebuilds a dropped hub with the token it has, without rotating the refresh token', async () => {
+      await service.connectToHubWithEventingUrl(config(EVENTING));
+
+      fakeSignalR.latest(EVENTING).simulateClose(new Error('transport lost'));
+      await jest.advanceTimersByTimeAsync(reconnectDelayForAttempt(1));
+
+      expect(auth.refreshCalls).toBe(0);
+      expect(fakeSignalR.latest(EVENTING).tokensSeen).toEqual(['token-1']);
+      expect(service.isHubConnected(EVENTING)).toBe(true);
+    });
+
+    it('never refreshes while the eventing server keeps failing (negotiate 500), however many attempts it takes', async () => {
+      await service.connectToHubWithEventingUrl(config(EVENTING));
+
+      for (let i = 0; i < 20; i += 1) fakeSignalR.startBehaviors.push(new Error("Failed to complete negotiation with the server: Error: Internal Server Error: Status code '500'"));
+
+      fakeSignalR.latest(EVENTING).simulateClose();
+      await jest.advanceTimersByTimeAsync(30 * 60 * 1000);
+
+      expect(fakeSignalR.forHub(EVENTING).length).toBeGreaterThan(SIGNALR_MAX_RECONNECT_ATTEMPTS);
+      expect(auth.refreshCalls).toBe(0);
+    });
+
+    it('refreshes before the next attempt once the hub answers a rebuild with 401', async () => {
+      await service.connectToHubWithEventingUrl(config(EVENTING));
+      fakeSignalR.startBehaviors.push(unauthorized());
+      auth.refreshed = 'token-2';
+
+      fakeSignalR.latest(EVENTING).simulateClose(new Error('transport lost'));
+      await jest.advanceTimersByTimeAsync(reconnectDelayForAttempt(1));
+      expect(auth.refreshCalls).toBe(0);
+      expect(service.isHubConnected(EVENTING)).toBe(false);
+
+      await jest.advanceTimersByTimeAsync(reconnectDelayForAttempt(2));
+      expect(auth.refreshCalls).toBe(1);
+      expect(fakeSignalR.latest(EVENTING).tokensSeen).toEqual(['token-2']);
+      expect(service.isHubConnected(EVENTING)).toBe(true);
+
+      // Connected again: a later drop goes back to rebuilding without a refresh.
+      fakeSignalR.latest(EVENTING).simulateClose(new Error('transport lost'));
+      await jest.advanceTimersByTimeAsync(reconnectDelayForAttempt(1));
+      expect(auth.refreshCalls).toBe(1);
+    });
+
+    it('refreshes first when the access token is known to have expired', async () => {
+      await service.connectToHubWithEventingUrl(config(GEO));
+      auth.expired = true;
+      auth.refreshed = 'token-4';
+
+      fakeSignalR.latest(GEO).simulateClose(new Error('transport lost'));
+      await jest.advanceTimersByTimeAsync(reconnectDelayForAttempt(1));
+
+      expect(auth.refreshCalls).toBe(1);
+      expect(fakeSignalR.latest(GEO).tokensSeen).toEqual(['token-4']);
+    });
+
+    it('recognises a 401 from the status code, the negotiation message or any transport attempt, and nothing else', () => {
+      expect(isHubAuthRejection(Object.assign(new Error('Unauthorized'), { statusCode: 401 }))).toBe(true);
+      expect(isHubAuthRejection(unauthorized())).toBe(true);
+      expect(isHubAuthRejection(Object.assign(new Error('Unable to connect to the server with any of the available transports.'), { innerErrors: [new Error('x'), unauthorized()] }))).toBe(true);
+      expect(isHubAuthRejection(new Error("Failed to complete negotiation with the server: Error: Internal Server Error: Status code '500'"))).toBe(false);
+      expect(isHubAuthRejection(Object.assign(new Error('Forbidden'), { statusCode: 403 }))).toBe(false);
+      expect(isHubAuthRejection(undefined)).toBe(false);
+    });
+  });
+
   describe('rebuild loop', () => {
     it('stops retrying when the token refresh comes back empty (Unit)', async () => {
       await service.connectToHubWithEventingUrl(config(EVENTING));
       auth.refreshed = null;
 
-      fakeSignalR.latest(EVENTING).simulateClose();
+      fakeSignalR.latest(EVENTING).simulateClose(unauthorized());
       await jest.advanceTimersByTimeAsync(reconnectDelayForAttempt(1));
 
       expect(auth.refreshCalls).toBe(1);
@@ -216,7 +294,8 @@ describe('SignalRService', () => {
         expect(fakeSignalR.forHub(EVENTING)).toHaveLength(builtBefore + 1);
       }
 
-      expect(auth.refreshCalls).toBe(SIGNALR_MAX_RECONNECT_ATTEMPTS);
+      // A network failure says nothing about the token: no attempt refreshed it.
+      expect(auth.refreshCalls).toBe(0);
       expect(exhausted).toHaveBeenCalledWith(EVENTING);
       expect(service.isHubReconnectExhausted(EVENTING)).toBe(true);
       expect(service.isHubAvailable(EVENTING)).toBe(false);
@@ -332,7 +411,7 @@ describe('SignalRService', () => {
           releaseRefresh = resolve;
         });
 
-      fakeSignalR.latest(EVENTING).simulateClose();
+      fakeSignalR.latest(EVENTING).simulateClose(unauthorized());
       await jest.advanceTimersByTimeAsync(reconnectDelayForAttempt(1));
       await service.disconnectFromHub(EVENTING);
       releaseRefresh();

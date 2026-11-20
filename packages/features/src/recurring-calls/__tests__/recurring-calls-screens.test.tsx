@@ -1,15 +1,18 @@
 import '../../calls/__tests__/test-setup';
 
 import { ApiError } from '@resgrid/api';
-import { type RecurringOccurrenceOutcome, usePoisStore, useRecurringCallsStore } from '@resgrid/data';
+import { type RecurringOccurrenceOutcome, usePoisStore, useRecurringCallsStore, useRoutesStore } from '@resgrid/data';
+import { setDepartmentConfig } from '@resgrid/features/department-config';
 import { RecurringCallCreationMode, type RecurringCallDetailResultData, RecurringCallFrequency, type RecurringCallResultData } from '@resgrid/models';
 import { emitRealtimeEvent } from '@resgrid/realtime';
 import { useToastStore } from '@resgrid/ui';
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import React from 'react';
+import { Text } from 'react-native';
 
 import { activateVariant, hidden, setRights } from '../../calls/__tests__/test-utils';
+import { registerCallFormHookPoints, resetCallFormHookPointsForTests } from '../../calls/hook-points';
 import { PoiPickerModal } from '../components/poi-picker-modal';
 import { agendaWindow, departmentDay } from '../lib/calendar-agenda';
 import RecurringCallDetailScreen from '../screens/recurring-call-detail';
@@ -117,6 +120,9 @@ const actions = {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  resetCallFormHookPointsForTests();
+  useRoutesStore.setState({ callRoutePlans: [], fetchCallRoutePlans: jest.fn(async () => undefined) });
+  usePoisStore.setState({ destinationPois: [] });
   activateVariant('dispatch');
   setRights({});
   useToastStore.setState({ toasts: [] });
@@ -372,6 +378,62 @@ describe('RecurringCallFormScreen', () => {
     expect(router.back).toHaveBeenCalled();
   });
 
+  it('takes a free destination (address, point on the map) and a route; a destination POI replaces the free destination', async () => {
+    jest.mocked(useLocalSearchParams).mockReturnValue({ id: '4' });
+    registerCallFormHookPoints({
+      LocationPicker: ({ isOpen, onSelect }) => (isOpen ? <Text testID="map-picker" onPress={() => onSelect({ latitude: 39.35, longitude: -119.35 })} /> : null),
+    });
+    useRoutesStore.setState({
+      callRoutePlans: [
+        {
+          RoutePlanId: 'rp-1',
+          Name: 'Hydrant loop',
+          Description: null,
+          RouteColor: null,
+          UnitId: null,
+          StopsCount: 5,
+          EstimatedDistanceMeters: null,
+          EstimatedDurationSeconds: null,
+          RoutingProfile: 0,
+          Start: { Latitude: 39.1, Longitude: -119.1, DepartmentGroupId: null, Name: 'Station 1' },
+          End: { Latitude: 39.2, Longitude: -119.2, DepartmentGroupId: null, Name: 'Dump site' },
+          StartIsStop: false,
+          EndIsStop: false,
+        },
+      ],
+      fetchCallRoutePlans: jest.fn(async () => undefined),
+    });
+    // SAFETY: destinations with only the fields the picker and the form read.
+    usePoisStore.setState({ destinationPois: [{ PoiId: 3, Name: 'Mercy Hospital', Address: null, PoiTypeName: null }] as never, fetchDestinationPois: jest.fn(async () => undefined) });
+    const stored = detailOf({ DestinationAddress: '5 Oak Ave', DestinationGeoLocationData: '39.3,-119.3', RoutePlanId: 'rp-9', RoutePlanName: 'Old route' });
+
+    useRecurringCallsStore.setState({ details: { '4': stored } });
+    actions.fetchRecurringCall.mockResolvedValueOnce(stored);
+    await render(<RecurringCallFormScreen mode="edit" />);
+
+    expect(screen.getByTestId('recurring-call-form-destination-address')).toHaveProp('value', '5 Oak Ave');
+    expect(screen.getByTestId('recurring-call-form-destination-location')).toHaveTextContent('recurring_calls.destination_location_set:39.30000,-119.30000');
+    expect(screen.getByTestId('recurring-call-form-route')).toHaveTextContent('Old route');
+    expect(screen.getByTestId('recurring-call-form-facility-poi-hint')).toHaveTextContent('recurring_calls.facility_poi_hint');
+
+    await fireEvent.press(screen.getByTestId('recurring-call-form-pick-destination-location'));
+    await fireEvent.press(screen.getByTestId('map-picker'));
+    await fireEvent.press(screen.getByTestId('recurring-call-form-route'));
+    await fireEvent.press(screen.getByTestId('call-route-plan-rp-1', hidden));
+    await act(async () => fireEvent.press(screen.getByTestId('recurring-call-form-submit')));
+    expect(actions.saveRecurringCall).toHaveBeenLastCalledWith(
+      expect.objectContaining({ DestinationPoiId: null, DestinationAddress: '5 Oak Ave', DestinationGeoLocationData: '39.350000,-119.350000', RoutePlanId: 'rp-1' })
+    );
+
+    await fireEvent.press(screen.getByTestId('recurring-call-form-destination-poi'));
+    await fireEvent.press(screen.getByTestId('recurring-call-destination-picker-poi-3', hidden));
+    expect(screen.queryByTestId('recurring-call-form-destination-address')).toBeNull();
+    expect(screen.getByTestId('recurring-call-form-destination-poi-wins')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('recurring-call-form-route-clear'));
+    await act(async () => fireEvent.press(screen.getByTestId('recurring-call-form-submit')));
+    expect(actions.saveRecurringCall).toHaveBeenLastCalledWith(expect.objectContaining({ DestinationPoiId: 3, DestinationAddress: null, DestinationGeoLocationData: null, RoutePlanId: null }));
+  });
+
   it('refuses a schedule the person may not change', async () => {
     jest.mocked(useLocalSearchParams).mockReturnValue({ id: '4' });
     useRecurringCallsStore.setState({ details: { '4': detailOf({ CanManage: false }) } });
@@ -408,6 +470,14 @@ describe('RecurringCallDetailScreen', () => {
 
     await fireEvent.press(screen.getByTestId('recurring-call-upcoming-55'));
     expect(router.push).toHaveBeenCalledWith('/call/55');
+  });
+
+  it('shows the free destination and the route each call runs (Core M0322)', async () => {
+    showDetail({ DestinationAddress: '5 Oak Ave', DestinationGeoLocationData: '39.3,-119.3', RoutePlanId: 'rp-1', RoutePlanName: 'Hydrant loop' });
+    await render(<RecurringCallDetailScreen />);
+
+    expect(screen.getByTestId('recurring-call-destination-location')).toHaveTextContent(/5 Oak Ave · 39\.3,-119\.3/);
+    expect(screen.getByTestId('recurring-call-route')).toHaveTextContent(/Hydrant loop/);
   });
 
   it('pauses with a reason, keeping the waiting calls unless asked', async () => {
@@ -530,5 +600,68 @@ describe('RecurringCallsCalendarScreen', () => {
     expect(screen.getByTestId('recurring-calls-calendar-empty')).toBeTruthy();
     await fireEvent.press(screen.getByTestId('calendar-filter-clear'));
     expect(screen.getByTestId('calendar-day-2026-11-18')).toBeTruthy();
+  });
+});
+
+describe('RecurringCallFormScreen: suggested destinations (destination rules, Core M0317)', () => {
+  // SAFETY: a destination with only the fields the panel and the form read.
+  const hospital = (PoiId: number, Name: string) => ({ PoiId, Name, Address: '', PoiTypeName: 'Hospitals', Latitude: 39.2, Longitude: -119.8, IsDestination: true, CapabilityIds: [], Capabilities: [] }) as never;
+
+  const suggestion = {
+    Mode: 2,
+    PreferredWithinMinutes: 3,
+    SuggestedPoiId: 8,
+    Requirements: { PoiTypeIds: [], RequiredCapabilityIds: [], PreferredCapabilityIds: [], Rules: [{ DestinationRuleId: 'r', Name: 'Dialysis', Reason: null }], SetAsideRules: [] },
+    Destinations: [
+      {
+        Poi: hospital(8, 'Renal Center'),
+        DistanceMeters: 4000,
+        TravelSeconds: 600,
+        TravelDistanceMeters: 5000,
+        CanProvide: true,
+        Status: 0,
+        MeetsRequirements: true,
+        MissingCapabilityIds: [],
+        PreferredCapabilityIds: [],
+        Tier: 0,
+      },
+    ],
+  };
+
+  afterEach(() => setDepartmentConfig(null));
+
+  it('suggests destinations from the schedule’s location, type and priority, never fills one, and a pick replaces the free destination', async () => {
+    // SAFETY: the config field the panel reads.
+    setDepartmentConfig({ DestinationSuggestionMode: 2 } as never);
+    const fetchSuggestedDestinations = jest.fn(async () => suggestion);
+
+    // SAFETY: the mock answers with the suggestion fields the panel reads (its POI is a partial destination row).
+    usePoisStore.setState({ destinationPois: [], fetchSuggestedDestinations: fetchSuggestedDestinations as never, fetchPoiCapabilities: jest.fn(async () => undefined), poiCapabilities: [] });
+    jest.mocked(useLocalSearchParams).mockReturnValue({ id: '4' });
+
+    const stored: RecurringCallDetailResultData = {
+      RecurringCall: schedule(4, { GeoLocationData: '39.14,-119.75', Type: 'Dialysis', Priority: 2, DestinationAddress: '5 Oak Ave', DestinationName: '' }),
+      NextDispatches: [],
+      UpcomingCalls: [],
+    };
+
+    useRecurringCallsStore.setState({ details: { '4': stored } });
+    actions.fetchRecurringCall.mockResolvedValueOnce(stored);
+    await render(<RecurringCallFormScreen mode="edit" />);
+
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 500)));
+    expect(fetchSuggestedDestinations).toHaveBeenCalledWith(expect.objectContaining({ latitude: 39.14, longitude: -119.75, type: 'Dialysis', priority: 2, callId: null, unitId: null }), expect.anything());
+    expect(screen.getByTestId('recurring-call-form-destination-suggestions-row-8')).toBeTruthy();
+    // "Suggest and fill" never fills a schedule: each call is made from it later.
+    expect(screen.getByTestId('recurring-call-form-destination-poi')).toHaveTextContent('recurring_calls.poi_none');
+    expect(screen.getByTestId('recurring-call-form-destination-address')).toHaveProp('value', '5 Oak Ave');
+
+    await fireEvent.press(screen.getByTestId('recurring-call-form-destination-suggestions-row-8-use'));
+    expect(screen.getByTestId('recurring-call-form-destination-poi')).toHaveTextContent('Renal Center');
+    expect(screen.queryByTestId('recurring-call-form-destination-address')).toBeNull();
+    expect(screen.getByTestId('recurring-call-form-destination-name')).toHaveProp('value', 'Renal Center');
+
+    await act(async () => fireEvent.press(screen.getByTestId('recurring-call-form-submit')));
+    expect(actions.saveRecurringCall).toHaveBeenLastCalledWith(expect.objectContaining({ DestinationPoiId: 8, DestinationAddress: null, DestinationName: 'Renal Center' }));
   });
 });

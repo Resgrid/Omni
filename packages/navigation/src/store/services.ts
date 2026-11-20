@@ -25,7 +25,11 @@ export interface NavigationRouteResult {
 
 export interface NavigationRouteSource {
   toCall(input: { callId: number; from: NavFix; unitId: number | null }): Promise<NavigationRouteResult | null>;
-  toRouteStops(input: { routeInstanceId: string; from: NavFix }): Promise<NavigationRouteResult | null>;
+  /**
+   * A route instance's remaining stops. `includeStart` (Core M0322) asks the server to lead a call-linked run to its start
+   * first (a leading leg with `IsRouteStart`) while the start is not reached; false once the session reached it.
+   */
+  toRouteStops(input: { routeInstanceId: string; from: NavFix; includeStart: boolean }): Promise<NavigationRouteResult | null>;
   toPoint(input: { latitude: number; longitude: number; from: NavFix; unitId: number | null }): Promise<NavigationRouteResult | null>;
 }
 
@@ -80,6 +84,7 @@ export interface NavigationServices {
 const memoryPreferences = (): NavigationPreferences => {
   let muted = false;
   let acknowledged = false;
+
   return {
     isMuted: () => muted,
     setMuted: (value) => {

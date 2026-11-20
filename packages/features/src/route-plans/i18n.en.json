@@ -1,0 +1,22 @@
+{
+  "route_plans.duration_with_stops": "With stops",
+  "route_plans.first_stop": "first stop",
+  "route_plans.last_stop": "last stop",
+  "route_plans.map_end_label": "E",
+  "route_plans.map_start_label": "S",
+  "route_plans.not_found": "Route not found",
+  "route_plans.not_found_description": "This route could not be loaded. It may have been removed, or it is not active.",
+  "route_plans.preview_action": "Preview route",
+  "route_plans.preview_title": "Route Preview",
+  "route_plans.profile.cycling": "Cycling",
+  "route_plans.profile.driving": "Driving",
+  "route_plans.profile.driving_traffic": "Driving (traffic)",
+  "route_plans.profile.truck": "Truck",
+  "route_plans.profile.walking": "Walking",
+  "route_plans.profile_label": "Travel mode",
+  "route_plans.stale_route": "The stops changed after this route was calculated, so the line may be out of date.",
+  "route_plans.status.active": "Active",
+  "route_plans.status.archived": "Archived",
+  "route_plans.status.draft": "Draft",
+  "route_plans.status.paused": "Paused"
+}

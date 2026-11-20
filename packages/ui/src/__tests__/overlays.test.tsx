@@ -2,11 +2,11 @@ import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import fs from 'fs';
 import path from 'path';
 import React from 'react';
-import { Animated, StyleSheet, Text } from 'react-native';
+import { Animated, Platform, StyleSheet, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BOTTOM_SHEET_BACKDROP_ARM_DELAY_MS, CustomBottomSheet, getBottomSheetHeight } from '../bottom-sheet';
-import { ALL_ORIENTATIONS, NativeModal, NativeModalScreen } from '../native-modal';
+import { ALL_ORIENTATIONS, modalScreenInsets, NativeModal, NativeModalScreen } from '../native-modal';
 import { SIDE_DRAWER_BACKDROP_ARM_DELAY_MS, SideDrawer } from '../side-drawer';
 import { useToastStore } from '../toast/store';
 
@@ -81,6 +81,23 @@ describe('NativeModal (Unit)', () => {
 
     expect(StyleSheet.flatten(screen.getByTestId('sheet-screen', query).props.style)).toEqual({ flex: 1, paddingTop: 32, paddingBottom: 24, paddingLeft: 8, paddingRight: 4, backgroundColor: '#000000' });
     jest.mocked(useSafeAreaInsets).mockReturnValue({ top: 0, bottom: 0, left: 0, right: 0 });
+  });
+
+  // On the web the modal's SafeAreaProvider measured mid slide-in and reported a window-tall bottom inset, which squeezed
+  // every page sheet's content to nothing (the call form's route and destination pickers opened empty).
+  it('keeps no system-bar padding on the web', () => {
+    const insets = { top: 0, bottom: 1024, left: 0, right: 0 };
+
+    expect(modalScreenInsets(insets)).toBe(insets);
+    const original = Platform.OS;
+
+    Object.defineProperty(Platform, 'OS', { configurable: true, get: () => 'web' });
+
+    try {
+      expect(modalScreenInsets(insets)).toEqual({ top: 0, bottom: 0, left: 0, right: 0 });
+    } finally {
+      Object.defineProperty(Platform, 'OS', { configurable: true, get: () => original });
+    }
   });
 });
 

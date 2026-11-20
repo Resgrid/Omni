@@ -480,10 +480,21 @@ export const selectCallById = (state: Pick<CallsState, 'calls'>, callId: string)
 
 export const selectPriorityById = (state: Pick<CallsState, 'callPriorities'>, priorityId: number): CallPriorityResultData | undefined => state.callPriorities.find((priority) => priority.Id === priorityId);
 
+/** A "lat,lon" wire value as numbers; nulls when it is blank or not two finite numbers. */
+const pointOfGeolocation = (value: string | null | undefined): { latitude: number | null; longitude: number | null } => {
+  const parts = (value ?? '').split(',');
+  const latitude = parts.length === 2 && parts[0].trim() !== '' ? Number(parts[0]) : Number.NaN;
+  const longitude = parts.length === 2 && parts[1].trim() !== '' ? Number(parts[1]) : Number.NaN;
+
+  return Number.isFinite(latitude) && Number.isFinite(longitude) ? { latitude, longitude } : { latitude: null, longitude: null };
+};
+
 /** A queued call as a list row: no number, the GUID as id, and the `queued` marker the UI renders as "Queued — not dispatched yet". */
 export const queuedCallToListItem = (queued: QueuedCall): CallListItem => {
   const [latitude, longitude] = (queued.input.Geolocation ?? '').split(',');
   const loggedOnUtc = new Date(queued.createdAt).toISOString();
+  // The free destination (Core M0322) shows the way the server returns it: in the destination address and point.
+  const destination = pointOfGeolocation(queued.input.DestinationGeolocation);
   return {
     CallId: queued.localId,
     Priority: queued.input.Priority,
@@ -491,13 +502,19 @@ export const queuedCallToListItem = (queued: QueuedCall): CallListItem => {
     Nature: queued.input.Nature,
     Note: queued.input.Note ?? '',
     Address: queued.input.Address ?? '',
+    LocationPoiId: queued.input.LocationPoiId ?? null,
+    LocationPoiName: null,
     DestinationPoiId: queued.input.DestinationPoiId ?? null,
     DestinationName: '',
-    DestinationAddress: '',
+    DestinationAddress: queued.input.DestinationAddress ?? '',
     DestinationTypeName: '',
     DestinationPoiTypeId: null,
-    DestinationLatitude: null,
-    DestinationLongitude: null,
+    DestinationLatitude: destination.latitude,
+    DestinationLongitude: destination.longitude,
+    DestinationGeolocation: queued.input.DestinationGeolocation ?? null,
+    DestinationWhat3Words: queued.input.DestinationWhat3Words ?? null,
+    RoutePlanId: queued.input.RoutePlanId ?? null,
+    RoutePlanName: null,
     Geolocation: queued.input.Geolocation ?? '',
     LoggedOn: loggedOnUtc,
     State: 0,

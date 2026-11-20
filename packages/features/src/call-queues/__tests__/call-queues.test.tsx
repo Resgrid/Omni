@@ -119,6 +119,22 @@ describe('PendingCallsScreen', () => {
     expect(router.push).toHaveBeenCalledWith('/call/p2');
   });
 
+  it('shows where a pending call goes and the route it runs under its address (Core M0322)', async () => {
+    useCallsStore.setState({
+      pendingCalls: [
+        makeCall('p1', { Name: 'Transfer', State: 8, DestinationAddress: '5 Oak Ave', DestinationLatitude: 39.3, DestinationLongitude: -119.3, RoutePlanId: 'rp-1', RoutePlanName: 'Hydrant loop' }),
+        makeCall('p2', { Name: 'Alarm', State: 8, DestinationPoiId: 3, DestinationName: 'Mercy Hospital' }),
+        makeCall('p3', { Name: 'Plain', State: 8 }),
+      ],
+    });
+    await render(<PendingCallsScreen realtime={false} />);
+    expect(screen.getByTestId('queue-call-destination-p1')).toHaveTextContent('calls.destination_to:5 Oak Ave');
+    expect(screen.getByTestId('queue-call-route-p1')).toHaveTextContent('calls.route_named:Hydrant loop');
+    expect(screen.getByTestId('queue-call-destination-p2')).toHaveTextContent('calls.destination_to:Mercy Hospital');
+    expect(screen.queryByTestId('queue-call-destination-p3')).toBeNull();
+    expect(screen.queryByTestId('queue-call-route-p3')).toBeNull();
+  });
+
   it('dispatches with the proposed recipients preselected', async () => {
     await render(<PendingCallsScreen realtime={false} />);
     await act(async () => fireEvent.press(screen.getByTestId('pending-call-dispatch-p1')));
@@ -290,5 +306,22 @@ describe('ArchivedCallsScreen', () => {
     expect(load).not.toHaveBeenCalled();
     await fireEvent.changeText(screen.getByTestId('archived-calls-search'), 'nothing like this');
     expect(screen.getByText('archived_calls.no_matches')).toBeTruthy();
+  });
+});
+
+describe('PendingCallsScreen: calls from external intake (Core M0323)', () => {
+  it('says which intake channel a pending call came through, and nothing for one a person logged', async () => {
+    useCallsStore.setState({
+      pendingCalls: [
+        makeCall('p3', { Name: 'Transfer request', State: 8, CallSource: 6, IntakeChannelType: 1, IntakeChannelName: 'Hospital transfer line' }),
+        makeCall('p4', { Name: 'Voicemail', State: 8, CallSource: 7, IntakeChannelType: null, IntakeChannelName: null }),
+        makeCall('p5', { Name: 'Logged by hand', State: 8, CallSource: 1 }),
+      ],
+    });
+    await render(<PendingCallsScreen realtime={false} />);
+
+    expect(screen.getByTestId('pending-call-intake-source-p3')).toHaveTextContent('calls.intake_source.via_sms_named:Hospital transfer line');
+    expect(screen.getByTestId('pending-call-intake-source-p4')).toHaveTextContent('calls.intake_source.voice');
+    expect(screen.queryByTestId('pending-call-intake-source-p5')).toBeNull();
   });
 });

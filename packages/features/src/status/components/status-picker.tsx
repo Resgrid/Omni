@@ -1,6 +1,13 @@
-import { availabilityLabelKey, type DestinationOrigin, poiAvailabilityStatus } from '@resgrid/features/pois/lib/poi-availability';
+import { callFreeDestination } from '@resgrid/features/calls/lib/call-location';
+import { useDepartmentConfig } from '@resgrid/features/department-config';
+import { useAiDestinationAdvice } from '@resgrid/features/pois/hooks/use-ai-destination-advice';
+import { useCapabilityNames } from '@resgrid/features/pois/hooks/use-capability-names';
+import { useSuggestedDestinations } from '@resgrid/features/pois/hooks/use-suggested-destinations';
+import { adviceRecommendedPoiId } from '@resgrid/features/pois/lib/ai-destination-advice';
+import { configuredDestinationSuggestionMode } from '@resgrid/features/pois/lib/destination-suggestion-mode';
+import { availabilityLabelKey, type DestinationOrigin, poiAvailabilityStatus, requiredCapabilitiesDown, requiredCapabilitiesMissing, toDestinationOrigin } from '@resgrid/features/pois/lib/poi-availability';
 import { useTranslation } from '@resgrid/i18n';
-import { type CallResultData, PoiAvailabilityStatuses } from '@resgrid/models';
+import { type CallResultData, CustomStateDetailTypes, DestinationSuggestionModes, PoiAvailabilityStatuses } from '@resgrid/models';
 import { Button, ButtonText, CustomBottomSheet, getBottomSheetHeight, HStack, Pressable, ScrollView, Spinner, Text, Textarea, TextareaInput, useThemeColors, useToast, VStack } from '@resgrid/ui';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, useWindowDimensions } from 'react-native';
@@ -103,9 +110,18 @@ export interface StatusPickerProps {
    * destination, and going there again needs no new reason.
    */
   currentTransportPoiId?: number | string | null;
-  /** The unit's last position: POI destinations are ranked nearest first from it (drive times for the closest). */
+  /**
+   * The unit's last position: POI destinations are ranked nearest first from it (drive times for the closest). With the
+   * department's destination suggestions on, a unit's POI destinations are ranked by the destination rules for the default
+   * call and the unit's type (from here, else from the call's location); "Suggest and fill" also pre-selects the suggested
+   * destination after the one the unit already reported and the call's assigned one, for a transport status or one whose
+   * Detail is POIs only. Rules are asked only once the POIs are shown.
+   */
   destinationOrigin?: DestinationOrigin | null;
-  /** The unit whose travel mode and vehicle limits apply to the drive times. */
+  /**
+   * The unit whose travel mode and vehicle limits apply to the drive times, and whose type the destination rules read. Null
+   * (a multi-unit selection) asks no rules: the POIs keep the plain list.
+   */
   destinationUnitId?: string | number | null;
   onSubmitStatus: (selection: StatusSelection) => Promise<StatusSubmitOutcome>;
   onSubmitStaffing?: (selection: StaffingSelection) => Promise<StatusSubmitOutcome>;
@@ -114,6 +130,9 @@ export interface StatusPickerProps {
 
 const EMPTY_LISTS: DestinationLists = { calls: [], stations: [], pois: [] };
 const SHEET_SNAP_POINT = 80;
+
+/** How long the destination step waits for the destination rules' suggestion ("Suggest and fill") before it moves on without. */
+export const SUGGESTION_WAIT_MS = 8000;
 
 /** Room the list leaves in the sheet for the title, tabs, summary, hint and buttons (a two-line title included). */
 const SHEET_CHROME_HEIGHT = 300;
@@ -174,6 +193,10 @@ export const StatusPicker: React.FC<StatusPickerProps> = ({
   const [selectedStaffingId, setSelectedStaffingId] = useState<string | null>(null);
   const [selection, setSelection] = useState<StatusDestination>(NO_DESTINATION);
   const [hasExplicitChoice, setHasExplicitChoice] = useState(false);
+  // The POI destinations were shown for the selected status: only then are destination rules asked, and their suggestion
+  // a default (a hold that saves without the list never goes to a destination the crew did not see).
+  const [hasShownPois, setHasShownPois] = useState(false);
+  const [suggestionWaitExpired, setSuggestionWaitExpired] = useState(false);
   const [destinationTab, setDestinationTab] = useState<DestinationTab>('call');
   const [note, setNote] = useState('');
   const [showAll, setShowAll] = useState(false);
@@ -194,6 +217,8 @@ export const StatusPicker: React.FC<StatusPickerProps> = ({
     setSelectedStaffingId(null);
     setSelection(NO_DESTINATION);
     setHasExplicitChoice(false);
+    setHasShownPois(false);
+    setSuggestionWaitExpired(false);
     setNote('');
     setShowAll(false);
     setHoldPending(isOpen && initialStatusId != null && initialHoldConfirmed);
@@ -225,19 +250,80 @@ export const StatusPicker: React.FC<StatusPickerProps> = ({
   const assignedPoi = useMemo(() => (isTransportStatus ? resolveAssignedDestinationPoi(defaultCall, destinations.pois) : null), [defaultCall, destinations.pois, isTransportStatus]);
   // The hospital the unit already reported going to wins over the call's (a crew that changed hospital keeps it).
   const currentTransportPoi = useMemo(() => (isTransportStatus ? findPoiById(destinations.pois, currentTransportPoiId) : null), [currentTransportPoiId, destinations.pois, isTransportStatus]);
-  const defaultPoi = currentTransportPoi ?? assignedPoi;
-  const hasDefaultPoi = !!defaultPoi && destinationTabs.includes('poi');
+  const offersPois = destinationTabs.includes('poi');
+
+  // Destination rules (Core M0317, setting 127): a unit's POI destinations ranked for the default call and the unit's type,
+  // asked once the POIs are in front of the crew (each answer looks up drive times).
+  const config = useDepartmentConfig();
+  // A config that could not be loaded reads as off here: Set Status never waits on a setting it cannot read.
+  const suggestionMode = configuredDestinationSuggestionMode(config) ?? DestinationSuggestionModes.Off;
+  const suggestionsOn = suggestionMode === DestinationSuggestionModes.Suggest || suggestionMode === DestinationSuggestionModes.SuggestAndFill;
+  // "Suggest and fill" pre-selects the suggestion for a transport status or one whose own Detail is POIs only, never for
+  // a status that offers POIs only by the lenient rule (a unit returning to quarters is not sent to a hospital).
+  const mayPreselectSuggestion = suggestionMode === DestinationSuggestionModes.SuggestAndFill && (isTransportStatus || (detail === CustomStateDetailTypes.Pois && subject === 'unit' && !fixedCall));
+  const callOrigin = useMemo(() => toDestinationOrigin(defaultCall?.Latitude, defaultCall?.Longitude), [defaultCall?.Latitude, defaultCall?.Longitude]);
+  const suggestionOrigin = destinationOrigin ?? callOrigin;
+
+  // One unit travels: the rules for its type apply. A multi-unit selection (the console's bulk status) keeps the plain list —
+  // its units' types can differ, so no one unit's rules rank or fill the destination for all of them.
+  const travellingUnitId = destinationUnitId === null || destinationUnitId === undefined || String(destinationUnitId).trim() === '' ? null : destinationUnitId;
+  const rulesApply = isOpen && suggestionsOn && subject === 'unit' && !isStaffingTab && !fixedCall && offersPois && travellingUnitId !== null;
+
+  // Enhanced AI destination advice open for the call (call intake plan §7): its POI is marked on the list, never pre-selected.
+  const { advice: aiAdvice } = useAiDestinationAdvice(defaultCall?.CallId ?? null, isOpen && subject === 'unit' && !isStaffingTab && !fixedCall && offersPois);
+  const aiSuggestedPoiId = adviceRecommendedPoiId(aiAdvice);
+
+  const {
+    data: suggestion,
+    failed: suggestionFailed,
+    isOff: suggestionOff,
+    retry: retrySuggestion,
+  } = useSuggestedDestinations({
+    origin: suggestionOrigin,
+    callId: defaultCall?.CallId ?? null,
+    unitId: destinationUnitId,
+    configMode: suggestionMode,
+    enabled: rulesApply && hasShownPois,
+    debounceMs: 0,
+  });
+
+  // While the rules' answer is on its way the list does not also ask for the plain nearest ranking (both route); it does
+  // when the rules could not answer.
+  const awaitingSuggestion = rulesApply && !!suggestionOrigin && !suggestion && !suggestionFailed && !suggestionOff;
+
+  const suggestedPoi = useMemo(() => findPoiById(destinations.pois, suggestion?.SuggestedPoiId ?? null), [destinations.pois, suggestion?.SuggestedPoiId]);
+
+  const reportedOrAssignedPoi = currentTransportPoi ?? assignedPoi;
+  // The rules' suggestion comes after the hospital the unit reported and the call's assigned one, until the crew picks one.
+  const suggestedDefaultPoi = mayPreselectSuggestion && hasShownPois && !hasExplicitChoice ? suggestedPoi : null;
+  const defaultPoi = reportedOrAssignedPoi ?? suggestedDefaultPoi;
+  // A hold saves without showing the list only for a POI the crew already knows (reported or assigned), never a suggestion.
+  const hasDefaultPoi = !!reportedOrAssignedPoi && offersPois;
 
   const effectiveDestination = useMemo(
     () => (selectedStatus ? resolveEffectiveDestination({ detail, lenient: lenientDestinations, selection, hasExplicitChoice, defaultCall, defaultPoi }) : NO_DESTINATION),
     [defaultCall, defaultPoi, detail, hasExplicitChoice, lenientDestinations, selectedStatus, selection]
   );
 
+  // A chosen POI lacking a capability the call or the unit requires (or reporting it down) is said plainly, not refused.
+  const capabilityName = useCapabilityNames(!!suggestion);
+  const chosenPoi = suggestion && effectiveDestination.type === 'poi' ? effectiveDestination.poi : null;
+  const requiredIds = suggestion?.Requirements?.RequiredCapabilityIds ?? [];
+  const chosenMissing = chosenPoi ? requiredCapabilitiesMissing(chosenPoi, requiredIds).map((id) => capabilityName(id, chosenPoi)) : [];
+  const chosenDown = chosenPoi ? requiredCapabilitiesDown(chosenPoi, requiredIds).map((id) => capabilityName(id, chosenPoi)) : [];
+
   const isDeviation = isTransportStatus && isTransportDestinationDeviation(selectedStatus?.BaseType, effectiveDestination, assignedPoi);
   const reasonRequired = isTransportReasonRequired(transportDestinationChecks, isDeviation, effectiveDestination, currentTransportPoi);
   // A hospital on diversion or closed is said plainly before the crew heads there (it is not refused: they may have no alternative).
   const chosenAvailability = effectiveDestination.type === 'poi' ? poiAvailabilityStatus(effectiveDestination.poi) : PoiAvailabilityStatuses.Open;
   const assignedPoiLabel = assignedPoi ? destinationLabel({ type: 'poi', poi: assignedPoi }, t('data_protection.protected_value')) : '';
+
+  // Core M0322: a call whose destination is a free location (an address or point, no POI). A transport status stays on the
+  // call (nothing is pre-selected, nothing is a deviation) and the sheet shows that location as where the crew is going.
+  const freeDestination = useMemo(
+    () => (subject === 'unit' && !isStaffingTab && isTransportBaseType(selectedStatus?.BaseType) && effectiveDestination.type === 'call' ? callFreeDestination(effectiveDestination.call) : null),
+    [effectiveDestination, isStaffingTab, selectedStatus?.BaseType, subject]
+  );
 
   // Before a status is picked, a fixed call is what the sheet is for.
   const summaryDestination = useMemo<StatusDestination>(() => (selectedStatus || !fixedCall ? effectiveDestination : { type: 'call', call: fixedCall }), [effectiveDestination, fixedCall, selectedStatus]);
@@ -260,6 +346,27 @@ export const StatusPicker: React.FC<StatusPickerProps> = ({
   const stepIndex = steps.indexOf(currentStep);
   const isFirstStep = stepIndex === 0;
   const isLastStep = stepIndex === steps.length - 1;
+
+  // The POIs count as shown on the POI tab, or on the destination step of a status the suggestion may pre-select. A preset
+  // status held to save opens on its destination step only on the way to saving: that is not the list shown.
+  useEffect(() => {
+    if (isOpen && currentStep === 'destination' && selectedStatus && !holdPending && !isSubmitting && (destinationTab === 'poi' || mayPreselectSuggestion)) setHasShownPois(true);
+  }, [currentStep, destinationTab, holdPending, isOpen, isSubmitting, mayPreselectSuggestion, selectedStatus]);
+
+  // "Suggest and fill": the destination step waits for the rules' suggestion before it moves on (at most
+  // SUGGESTION_WAIT_MS), so a quick tap does not save the call a moment before the suggested destination would be chosen.
+  // A destination the crew picks, or one reported or assigned, needs no wait.
+  const waitsForSuggestion = mayPreselectSuggestion && currentStep === 'destination' && !reportedOrAssignedPoi && !hasExplicitChoice && awaitingSuggestion && !holdPending && !isSubmitting;
+
+  useEffect(() => {
+    if (!waitsForSuggestion) return;
+
+    const timer = setTimeout(() => setSuggestionWaitExpired(true), SUGGESTION_WAIT_MS);
+
+    return () => clearTimeout(timer);
+  }, [waitsForSuggestion]);
+
+  const isHoldingForSuggestion = waitsForSuggestion && !suggestionWaitExpired;
 
   // The destination tab follows the selected status: the tab holding the default/selected destination, else the first.
   useEffect(() => {
@@ -346,6 +453,8 @@ export const StatusPicker: React.FC<StatusPickerProps> = ({
     setSelectedId(toOptionId(option.Id));
     setSelection(NO_DESTINATION);
     setHasExplicitChoice(false);
+    setHasShownPois(false);
+    setSuggestionWaitExpired(false);
     setError(null);
   }, []);
 
@@ -376,7 +485,7 @@ export const StatusPicker: React.FC<StatusPickerProps> = ({
   }, [onClose]);
 
   const hasSelection = isStaffingTab ? !!selectedStaffing : !!selectedStatus;
-  const canProceed = hasSelection && !isSubmitting && (currentStep !== 'note' || !noteRequired || note.trim().length > 0) && (isStaffingTab || !isLastStep || !isAwaitingDestinations);
+  const canProceed = hasSelection && !isSubmitting && (currentStep !== 'note' || !noteRequired || note.trim().length > 0) && (isStaffingTab || !isLastStep || !isAwaitingDestinations) && !isHoldingForSuggestion;
 
   const handleNext = useCallback(() => {
     if (!canProceed) return;
@@ -500,8 +609,13 @@ export const StatusPicker: React.FC<StatusPickerProps> = ({
               isLoading={isLoadingDestinations}
               onSelect={handleSelectDestination}
               assignedPoiId={assignedPoi?.PoiId ?? null}
-              origin={destinationOrigin}
+              origin={suggestion ? suggestionOrigin : destinationOrigin}
               unitId={destinationUnitId}
+              suggestion={suggestion}
+              awaitingSuggestion={awaitingSuggestion}
+              suggestionFailed={suggestionFailed}
+              onRetrySuggestion={retrySuggestion}
+              aiSuggestedPoiId={aiSuggestedPoiId}
             />
           ) : null}
 
@@ -522,9 +636,30 @@ export const StatusPicker: React.FC<StatusPickerProps> = ({
           <VStack className="rounded-lg bg-background-50 p-3" testID={`${testID}-summary`}>
             {selectedStatus ? <Text className="text-sm text-typography-700">{`${t('status.selected_status')}: ${selectedStatus.Text}`}</Text> : null}
             <Text className="text-sm text-typography-700">{`${t('status.selected_destination')}: ${summaryDestination.type === 'none' ? t('status.no_destination') : destinationLabel(summaryDestination, t('data_protection.protected_value'))}`}</Text>
+            {isHoldingForSuggestion ? (
+              <HStack space="xs" className="mt-1 items-center" testID={`${testID}-awaiting-suggestion`} accessibilityLiveRegion="polite">
+                <Spinner size="small" />
+                <Text className="text-sm text-typography-600">{t('status.finding_suggested_destination')}</Text>
+              </HStack>
+            ) : null}
             {chosenAvailability !== PoiAvailabilityStatuses.Open && effectiveDestination.type === 'poi' ? (
               <Text className="mt-1 text-sm font-semibold text-error-700" testID={`${testID}-destination-availability`}>
                 {t('status.destination_availability', { name: destinationLabel(effectiveDestination, t('data_protection.protected_value')), status: t(availabilityLabelKey(chosenAvailability)) })}
+              </Text>
+            ) : null}
+            {chosenPoi && chosenMissing.length > 0 ? (
+              <Text className="mt-1 text-sm font-semibold text-error-700" testID={`${testID}-destination-missing`}>
+                {t('status.destination_missing', { name: destinationLabel({ type: 'poi', poi: chosenPoi }, ''), names: chosenMissing.join(', ') })}
+              </Text>
+            ) : null}
+            {chosenPoi && chosenDown.length > 0 ? (
+              <Text className="mt-1 text-sm font-semibold text-error-700" testID={`${testID}-destination-required-down`}>
+                {t('status.destination_required_down', { name: destinationLabel({ type: 'poi', poi: chosenPoi }, ''), names: chosenDown.join(', ') })}
+              </Text>
+            ) : null}
+            {freeDestination ? (
+              <Text className="mt-1 text-sm text-typography-700" testID={`${testID}-call-destination`}>
+                {t('status.call_assigned_destination', { name: freeDestination.label })}
               </Text>
             ) : null}
             {isDeviation ? (

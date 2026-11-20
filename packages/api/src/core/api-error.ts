@@ -8,6 +8,8 @@ export const ProblemTypes = {
   GrantExpired: 'grant_expired',
   UpgradeRequired: 'upgrade_required',
   ProtectedAccessDenied: 'protected_access_denied',
+  /** 409 from `Routes/StartRoute` / `Routes/StartCallRoute` (Core M0322): the unit runs or has paused another route; `detail` = its instance id. */
+  RouteInProgress: 'route_in_progress',
 } as const;
 
 /** OAuth-style `error` codes the API puts in 4xx bodies that the client reacts to. */
@@ -128,6 +130,9 @@ const bodyString = (data: unknown, key: string): string | undefined => {
 
 /** The RFC 7807 problem `type` of a response body, when it has one. */
 export const problemTypeOf = (data: unknown): string | undefined => bodyString(data, 'type');
+
+/** The RFC 7807 problem `detail` of a failed request's response body (e.g. the running instance id of `route_in_progress`). */
+export const problemDetailOf = (error: ApiError): string | undefined => bodyString(error.data, 'detail');
 
 /** A machine reason code (`certifications_file_too_large`); anything else in the header is ignored. */
 const REASON_CODE = /^[a-z][a-z0-9_]{0,79}$/;

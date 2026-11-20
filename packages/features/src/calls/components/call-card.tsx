@@ -9,8 +9,10 @@ import { StyleSheet, View } from 'react-native';
 import { readableColors } from '../lib/call-colors';
 import { type CallAssignmentContext, isCurrentUserOnCall } from '../lib/call-dispatch';
 import { callDisplayName, revealedCallText } from '../lib/call-display';
+import { callIntakeSource, intakeSourceLabel } from '../lib/call-source';
 import { TIME_AGO_KEYS, timeAgo } from '../lib/call-time';
 import { DispatchTicker } from './dispatch-ticker';
+import { IntakeSourceBadge } from './intake-source-badge';
 import { QUEUED_CALL_COLORS, QueuedCallBadge } from './queued-call-badge';
 
 /** compact: dense list/console rows · comfortable: the phone card (Responder) · wall: BigBoard widgets, readable across a room. */
@@ -77,8 +79,12 @@ export const CallCard: React.FC<CallCardProps> = React.memo(function CallCard({
   // A queued call has no number yet: it does not exist on the server.
   const numberLabel = queued ? null : call.Number ? `#${call.Number}` : null;
   const timersLabel = timerState && (timerState.overdue > 0 || timerState.warning > 0) ? t('calls.card.timers_attention', { overdue: timerState.overdue, warning: timerState.warning }) : null;
+  // A call an external intake created (Core M0323): the channel it came through.
+  const intake = queued ? null : callIntakeSource(call);
+  const intakeLabel = intake ? intakeSourceLabel(intake) : null;
+  const intakeText = intakeLabel ? t(intakeLabel.key, intakeLabel.name ? { name: intakeLabel.name } : undefined) : null;
 
-  const a11yLabel = [numberLabel, name, address, queued ? (queued.state === 'rejected' ? t('calls.queued.rejected_badge') : t('calls.queued.badge')) : null, priorityLabel, elapsedLabel]
+  const a11yLabel = [numberLabel, name, address, queued ? (queued.state === 'rejected' ? t('calls.queued.rejected_badge') : t('calls.queued.badge')) : null, intakeText, priorityLabel, elapsedLabel]
     .filter((part): part is string => !!part)
     .join(', ');
 
@@ -124,6 +130,12 @@ export const CallCard: React.FC<CallCardProps> = React.memo(function CallCard({
       {queued ? (
         <View style={styles.badgeRow}>
           <QueuedCallBadge marker={queued} testID={`${rowTestId}-queued`} />
+        </View>
+      ) : null}
+
+      {intake ? (
+        <View style={styles.badgeRow}>
+          <IntakeSourceBadge call={call} testID={`${rowTestId}-intake-source`} />
         </View>
       ) : null}
 

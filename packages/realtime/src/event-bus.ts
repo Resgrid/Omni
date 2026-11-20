@@ -35,6 +35,11 @@ export interface RealtimeEventMap {
   weatherAlertReceived: IdEventArgs;
   weatherAlertUpdated: IdEventArgs;
   weatherAlertExpired: IdEventArgs;
+  /**
+   * The call id, then a JSON payload `{ adviceId, state, isChange }` (no recommendation or reasoning): reload the call's
+   * advice through `AiDestinations/GetAdvice`, which applies the viewer's call visibility.
+   */
+  aiDestinationAdviceUpdated: IdEventArgs;
   /** Unit id, or "0" for department-wide changes. */
   unitActiveRolesUpdated: IdEventArgs;
   checkInUpdated: IdEventArgs;

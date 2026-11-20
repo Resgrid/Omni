@@ -1,5 +1,35 @@
 import { type CallContactResultData } from './callSiteInfoResult';
 
+/** Where a call came from (Core `CallSources`, `CallResultData.CallSource`; persisted, never renumbered). */
+export enum CallSources {
+  /** A person in a call form. */
+  User = 1,
+  EmailImport = 2,
+  AudioImport = 3,
+  Chatbot = 4,
+  Imported = 5,
+  /** An SMS, email, chat or webhook intake channel (saved pending; M0323). */
+  Intake = 6,
+  /** Enhanced AI voice intake on the department's dedicated number (saved pending; M0323). */
+  VoiceIntake = 7,
+}
+
+/** Where an intake message arrived (Core `IntakeChannelTypes`, `CallResultData.IntakeChannelType`; persisted, never renumbered). */
+export enum IntakeChannelTypes {
+  Sms = 1,
+  Email = 2,
+  WhatsApp = 3,
+  Slack = 4,
+  Teams = 5,
+  Telegram = 6,
+  Discord = 7,
+  GoogleChat = 8,
+  /** A signed HTTPS webhook (CAD bridges, alarm panels, other systems). */
+  Webhook = 9,
+  /** A phone call to the department's dedicated number (Enhanced AI voice intake). */
+  Voice = 10,
+}
+
 export class CallResultData {
   public CallId: string = '';
   public Priority: number = 0;
@@ -7,13 +37,30 @@ export class CallResultData {
   public Nature: string = '';
   public Note: string = '';
   public Address: string = '';
+  /** The POI (any type) the call location was picked from (Core M0322); null when none, undefined from older servers. */
+  public LocationPoiId?: number | null;
+  /** That POI's name; null when none, undefined from older servers. */
+  public LocationPoiName?: string | null;
   public DestinationPoiId: number | null = null;
   public DestinationName: string = '';
+  /**
+   * The destination POI's address, or (Core M0322) the free destination's address when the call has no destination POI
+   * (`DestinationPoiId` and `DestinationName` null).
+   */
   public DestinationAddress: string = '';
   public DestinationTypeName: string = '';
   public DestinationPoiTypeId: number | null = null;
+  /** The destination POI's position, or (Core M0322) the free destination's point when the call has no destination POI. */
   public DestinationLatitude: number | null = null;
   public DestinationLongitude: number | null = null;
+  /** The free destination point, "lat,lon" (no destination POI); null when none, undefined from older servers. */
+  public DestinationGeolocation?: string | null;
+  /** The free destination's what3words; null when none, undefined from older servers. */
+  public DestinationWhat3Words?: string | null;
+  /** The pre-defined route (an Active route plan with a start and an end) the call runs; null when none, undefined from older servers. */
+  public RoutePlanId?: string | null;
+  /** That route's name: filled by GetCall and GetActiveCalls, may be null from other lists. */
+  public RoutePlanName?: string | null;
   public Geolocation: string = '';
   public LoggedOn: string = '';
   /**
@@ -51,6 +98,15 @@ export class CallResultData {
   public ActiveRunCardId: number | null = null;
   /** The recurring call schedule that created this call; null for other calls, undefined from older servers. */
   public RecurringCallId?: number | null;
+  /** Where the call came from (`CallSources`); undefined from older servers. */
+  public CallSource?: number;
+  /**
+   * The intake channel's name for calls with CallSource Intake or VoiceIntake (GetCall, GetActiveCalls, GetPendingCalls, GetCalls);
+   * null when the channel has no name, was deleted or for other calls; undefined from older servers.
+   */
+  public IntakeChannelName?: string | null;
+  /** The intake channel's type (`IntakeChannelTypes`) for calls with CallSource Intake or VoiceIntake; null otherwise, undefined from older servers. */
+  public IntakeChannelType?: number | null;
   public LoggedOnUtc: string = '';
   /**
    * The user who logged the call; null when none did (an email or API import), undefined from older servers. Core lets a

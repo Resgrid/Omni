@@ -3,14 +3,19 @@
 //   registerSidebarContent('unit-status', (props) => <UnitStatusSidebar {...props} onClearActiveCall={clearActiveCall} />);
 // Route file for /console: export { default } from '@resgrid/features/unit-status/screens/unit-console';
 //
-// The status timer pieces are re-exported through one statement: Oxlint's readable spacing wants a blank line between
-// top-level statements, which the export sorter removes.
+// The status timer and call route pieces are re-exported through one statement: Oxlint's readable spacing wants a blank
+// line between top-level statements, which the export sorter removes.
+import { callRouteActionKey, CallRouteDetailAction, CallRouteStrip, type CallRouteStripProps } from './components/call-route-actions';
+import { CallRouteLauncher } from './components/call-route-launcher';
+import { type RouteConflictChoice, RouteConflictDialog, type RouteConflictDialogProps } from './components/route-conflict-dialog';
 import { SetActiveCallButton } from './components/set-active-call-button';
 import { StatusTimerBanner, type StatusTimerBannerProps } from './components/status-timer-banner';
 import { StatusTimerCard, type StatusTimerCardProps } from './components/status-timer-card';
 import { StatusTimerNotifications } from './components/status-timer-notifications';
+import { type CallRouteRun, type CallRouteState, useCallRoute } from './hooks/use-call-route';
+import { type CallRouteConflict, isRunGoing, onCallRouteLaunchRequested, requestCallRouteLaunch, resetCallRouteLaunchForTests, runOfCall, runScreenPath, useCallRouteLaunchStore } from './lib/call-route-launch';
 import { timerToneColors, unitTimerNotifications, type UnitTimerText, unitTimerText, type UnitTimerTone } from './lib/status-timer-text';
-import { registerUnitStatusCallDetailAction } from './register';
+import { registerUnitStatusCallDetailAction, UnitCallDetailActions } from './register';
 
 // Screens
 export { default as UnitConsoleScreen, type UnitConsoleScreenProps } from './screens/unit-console';
@@ -38,10 +43,27 @@ export { resolveUnitStatusDisplay, STATE_STYLE_COLORS, statusStyleColor, type Un
 export { type FeatureNavEntry, unitStatusNav } from './nav';
 export { UNIT_STATUS_ROUTE_PATTERNS, unitStatusRoutes } from './routes';
 
-// Status timer (the console card, the shell banner and the notifications while the app is in the background), and
-// "Set Active" on a call's detail
+// Status timer (the console card, the shell banner and the notifications while the app is in the background), "Set Active"
+// on a call's detail, and a call's pre-defined route (Core M0322: the launcher overlay, the card strip, the detail action)
 export {
+  callRouteActionKey,
+  type CallRouteConflict,
+  CallRouteDetailAction,
+  CallRouteLauncher,
+  type CallRouteRun,
+  type CallRouteState,
+  CallRouteStrip,
+  type CallRouteStripProps,
+  isRunGoing,
+  onCallRouteLaunchRequested,
   registerUnitStatusCallDetailAction,
+  requestCallRouteLaunch,
+  resetCallRouteLaunchForTests,
+  type RouteConflictChoice,
+  RouteConflictDialog,
+  type RouteConflictDialogProps,
+  runOfCall,
+  runScreenPath,
   SetActiveCallButton,
   StatusTimerBanner,
   type StatusTimerBannerProps,
@@ -49,8 +71,11 @@ export {
   type StatusTimerCardProps,
   StatusTimerNotifications,
   timerToneColors,
+  UnitCallDetailActions,
   unitTimerNotifications,
   type UnitTimerText,
   unitTimerText,
   type UnitTimerTone,
+  useCallRoute,
+  useCallRouteLaunchStore,
 };

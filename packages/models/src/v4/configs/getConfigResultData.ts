@@ -84,6 +84,11 @@ export class GetConfigResultData {
    * that predate it.
    */
   public TransportDestinationChecks?: boolean = false;
+  /**
+   * Destination suggestions (Mapping -> Destination Rules, setting 127): 0 off, 1 suggest destinations beside the
+   * destination field, 2 also fill a new call's empty destination. Missing on servers that predate it.
+   */
+  public DestinationSuggestionMode?: number = 0;
   /** Map provider/style overrides (Core GetConfigResultData); absent from older servers. */
   public NavigationMapKey?: string;
   public MapProvider?: string;

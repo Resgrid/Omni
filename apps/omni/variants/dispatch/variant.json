@@ -106,6 +106,9 @@
       "customIndoor": true,
       "navigationInApp": false
     },
+    "routes": {
+      "preview": true
+    },
     "platform": {
       "webEdition": true,
       "electron": true,

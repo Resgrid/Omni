@@ -3,6 +3,7 @@ import './test-setup';
 import { parseVariantManifest, resetActiveVariantForTests, setActiveVariant } from '@resgrid/config';
 import { useCallDetailStore, useCallsStore, useUnitRolesStore, useUnitsStore, useUnitStatusStore } from '@resgrid/data';
 import { NavigationHandoffProvider } from '@resgrid/features/contacts';
+import { navigateInAppTo, takePointNavigationRequest } from '@resgrid/features/navigation/routes';
 import { ActionBaseTypes, StatusProvider } from '@resgrid/features/status';
 import { CallResultData, type StatusesResultData, UnitResultData, UnitTypeStatusResultData } from '@resgrid/models';
 import { useToastStore } from '@resgrid/ui';
@@ -283,5 +284,43 @@ describe('SetActiveCallButton', () => {
     await renderButton(makeCall('8'));
     expect(screen.queryByTestId('call-detail-set-active')).toBeNull();
     expect(screen.queryByTestId('unit-status-sheet', hidden)).toBeNull();
+  });
+});
+
+describe('ActiveCallCard: directions to a free destination (Core M0322)', () => {
+  it('hands the call’s free destination point to the navigation hand-off, in-app as a point', async () => {
+    navigateTo.mockClear();
+    useCallsStore.setState({
+      calls: [makeCall('7', { DestinationPoiId: null, DestinationName: '', DestinationAddress: '12 Harbour Rd', DestinationLatitude: 51.05, DestinationLongitude: 3.72, DestinationGeolocation: '51.05,3.72' })],
+    });
+    await render(
+      <NavigationHandoffProvider value={{ navigateTo }}>
+        <ActiveCallCard activeCallId="7" />
+      </NavigationHandoffProvider>
+    );
+
+    await fireEvent.press(screen.getByTestId('unit-active-call-destination'));
+    await waitFor(() => expect(navigateTo).toHaveBeenCalledWith({ latitude: 51.05, longitude: 3.72, label: '12 Harbour Rd' }));
+
+    // The shell's in-app hand-off routes a target without a call id to the point (`/navigate`, handed over in memory).
+    const navigator = { push: jest.fn() };
+    navigateInAppTo(navigator, { latitude: 51.05, longitude: 3.72, label: '12 Harbour Rd' });
+    expect(navigator.push).toHaveBeenCalledWith('/navigate');
+    expect(takePointNavigationRequest()).toEqual({ latitude: 51.05, longitude: 3.72, name: '12 Harbour Rd' });
+  });
+
+  it('reads the free destination’s "lat,lon" when the point fields are empty', async () => {
+    navigateTo.mockClear();
+    useCallsStore.setState({
+      calls: [makeCall('7', { DestinationPoiId: null, DestinationName: '', DestinationAddress: '', DestinationLatitude: null, DestinationLongitude: null, DestinationGeolocation: '51.05,3.72' })],
+    });
+    await render(
+      <NavigationHandoffProvider value={{ navigateTo }}>
+        <ActiveCallCard activeCallId="7" />
+      </NavigationHandoffProvider>
+    );
+
+    await fireEvent.press(screen.getByTestId('unit-active-call-destination'));
+    await waitFor(() => expect(navigateTo).toHaveBeenCalledWith(expect.objectContaining({ latitude: 51.05, longitude: 3.72 })));
   });
 });

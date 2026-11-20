@@ -8,7 +8,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { useCallFormHookPoints } from '../../hook-points';
 import { revealedCallText } from '../../lib/call-display';
-import { isUsablePoint } from '../../lib/call-location';
+import { callDestinationTarget, isUsablePoint } from '../../lib/call-location';
 
 export interface CallMapSectionProps {
   call: CallResultData;
@@ -23,8 +23,9 @@ const callPoint = (call: CallResultData): { latitude: number; longitude: number 
 
 /**
  * The call's map (Dispatch call detail; the map itself comes from the app's `StaticLocationMap` hook point): the call
- * location, toggling to the destination POI when the call has one. A withheld address never reaches the map's overlay
- * or accessibility label; a withheld location is not drawn at all.
+ * location, toggling to the destination when the call has one with a point — a destination POI, or (Core M0322) a free
+ * destination, which Core returns in the destination point (`DestinationGeolocation` when that is missing). A withheld
+ * address never reaches the map's overlay or accessibility label; a withheld location is not drawn at all.
  */
 export const CallMapSection: React.FC<CallMapSectionProps> = ({ call }) => {
   const { t } = useTranslation();
@@ -33,11 +34,13 @@ export const CallMapSection: React.FC<CallMapSectionProps> = ({ call }) => {
   const [view, setView] = useState<'call' | 'destination'>('call');
   const locationWithheld = isFieldRedacted(call.RedactedFields, ProtectedFieldIds.callGeolocation, call.Geolocation);
   const point = locationWithheld ? null : callPoint(call);
-  const hasDestination = isUsablePoint(call.DestinationLatitude, call.DestinationLongitude);
+  const destinationTarget = callDestinationTarget(call);
+  const destination = destinationTarget && 'latitude' in destinationTarget ? destinationTarget : null;
+  const hasDestination = destination !== null;
   // Without a usable call point the destination is all there is to show.
   const showDestination = hasDestination && (view === 'destination' || !point);
-  const latitude = showDestination ? Number(call.DestinationLatitude) : point?.latitude;
-  const longitude = showDestination ? Number(call.DestinationLongitude) : point?.longitude;
+  const latitude = showDestination ? destination?.latitude : point?.latitude;
+  const longitude = showDestination ? destination?.longitude : point?.longitude;
   const address = showDestination ? call.DestinationAddress || call.DestinationName : (revealedCallText(call, 'Address') ?? undefined);
 
   if (!StaticLocationMap || (!point && !hasDestination)) return null;

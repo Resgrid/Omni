@@ -4,6 +4,7 @@ import {
   type DestinationLists,
   getCurrentTransportPoiId,
   locationForStatus,
+  resolveUnitWorkingCall,
   StatusPicker,
   type StatusSelection,
   StatusSubmitError,
@@ -44,7 +45,7 @@ export interface ConsoleUnitStatusSheetProps {
   onClose: () => void;
   /** One unit ("+" set status for the filtered call) or a multi-unit selection. */
   unitIds: readonly string[];
-  /** The call the status defaults to (the console's filtered call). */
+  /** The call the status defaults to (the console's filtered call); without one, a single unit defaults to the call it is working. */
   defaultCallId?: string | null;
   /** A submit saved (sent or queued) these units; on a partial failure, only the ones it saved. */
   onSubmitted?: (outcome: StatusSubmitOutcome, savedUnitIds: readonly string[]) => void;
@@ -63,6 +64,7 @@ export const ConsoleUnitStatusSheet: React.FC<ConsoleUnitStatusSheetProps> = ({ 
   const unitInfos = useUnitsStore((state) => state.unitInfos);
   const statusSets = useUnitsStore((state) => state.unitTypeStatuses);
   const { lists, isLoading } = useDestinationLists(isOpen);
+  const callDispatches = useCallsStore((state) => state.callDispatches);
   // The units a partly refused submit saved, by what it sent (status, destination, note): they are not sent it twice.
   const savedRef = useRef<{ key: string; unitIds: ReadonlySet<string> } | null>(null);
   const unitIdsKey = unitIds.join(',');
@@ -70,7 +72,18 @@ export const ConsoleUnitStatusSheet: React.FC<ConsoleUnitStatusSheetProps> = ({ 
   const units = useMemo(() => unitIds.map((id) => unitInfos.find((unit) => unit.UnitId === id)).filter((unit): unit is NonNullable<typeof unit> => !!unit), [unitIds, unitInfos]);
   const options = useMemo(() => resolveCommonUnitStatusOptions(units, statusSets), [statusSets, units]);
   const statuses = useMemo(() => options.map((option) => option.status), [options]);
-  const defaultCall = useMemo(() => (defaultCallId ? (lists.calls.find((call) => call.CallId === defaultCallId) ?? null) : null), [defaultCallId, lists.calls]);
+
+  // The filtered call; else, for one unit, the call it is working (its ActiveCallId, its status's call, else its one open
+  // dispatch), so a transport status pre-selects that call's destination for the dispatcher as it does for the crew.
+  const defaultCall = useMemo(() => {
+    if (defaultCallId) return lists.calls.find((call) => call.CallId === defaultCallId) ?? null;
+
+    if (units.length !== 1) return null;
+    const [unit] = units;
+
+    return resolveUnitWorkingCall(lists.calls, unit, { DestinationId: unit.CurrentDestinationId, DestinationType: unit.CurrentDestinationType }, callDispatches);
+  }, [callDispatches, defaultCallId, lists.calls, units]);
+
   const subjectName = units.length === 1 ? units[0].Name : t('dispatch.bulk_unit_actions.selected_count', { count: units.length });
 
   // One unit: the hospital it already reported going to (a group has no single one).

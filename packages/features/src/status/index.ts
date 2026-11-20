@@ -1,4 +1,9 @@
 // @resgrid/features/status — the one StatusPicker (unit | personnel, self | on behalf, staffing) and its bindings.
+// The active call announcements and `locationForStatus` are re-exported through one statement: Oxlint's readable spacing
+// wants a blank line between top-level statements, which the export sorter removes.
+import { announceActiveCallChange, deferActiveCallEvents, onActiveCallChanged, resetActiveCallEventsForTests } from './lib/active-call-events';
+import { locationForStatus } from './lib/location-for-status';
+
 export { type AvailabilityFilter, AvailabilityFilterChips, type AvailabilityFilterChipsProps } from './components/availability-filter-chips';
 export { availabilityOf, CurrentStatusBadge, type CurrentStatusBadgeProps } from './components/current-status-badge';
 export { HOLD_TAP_THRESHOLD_MS, HoldToConfirmButton, type HoldToConfirmButtonProps, STATUS_HOLD_DURATION_MS } from './components/hold-to-confirm-button';
@@ -9,7 +14,6 @@ export { type StaffingSelection, StatusPicker, type StatusPickerProps, type Stat
 export { StatusSheet, type StatusSheetProps } from './components/status-sheet';
 export { UnitStatusSheet, type UnitStatusSheetProps } from './components/unit-status-sheet';
 export * from './lib/base-types';
-export { locationForStatus } from './lib/location-for-status';
 export { type ReadableColors, readableColors, readableTextColor } from './lib/readable-colors';
 export * from './lib/status-destination';
 export * from './lib/status-flow';
@@ -18,3 +22,4 @@ export * from './lib/unit-status-set';
 export { statusNav } from './nav';
 export { STATUS_ROUTE_PATTERNS, statusRoutes } from './routes';
 export { type StatusContextValue, StatusProvider, type StatusProviderProps, useStatusContext } from './status-context';
+export { announceActiveCallChange, deferActiveCallEvents, locationForStatus, onActiveCallChanged, resetActiveCallEventsForTests };

@@ -143,6 +143,7 @@ describe('navigation routes', () => {
         ],
       },
     ] as never;
+
     expect(findOnSceneStatus(sets, { Type: 'Engine', CustomStatusSetId: 9 })?.Id).toBe(41);
     expect(findOnSceneStatus(sets, { Type: 'Tanker', CustomStatusSetId: 0 })?.Id).toBe(3);
   });
@@ -224,6 +225,7 @@ describe('NavigationScreen', () => {
 
   it('checks in by itself after standing still at a route stop, unless cancelled, then drives on', async () => {
     jest.useFakeTimers();
+
     try {
       const geofence = jest.fn(async () => true);
       const checkOut = jest.fn(async () => ({ outcome: 'sent' as const, id: 'w1' }));
@@ -264,6 +266,7 @@ describe('NavigationScreen', () => {
 
   it('does not check in by itself once the crew cancels', async () => {
     jest.useFakeTimers();
+
     try {
       const geofence = jest.fn(async () => true);
       useRoutesStore.setState({ performGeofenceCheckIn: geofence, instanceStops: [{ RouteInstanceStopId: 'is1', Status: 0 }] as never });
@@ -285,6 +288,7 @@ describe('NavigationScreen', () => {
 
   it('treats the live route’s last leg to the route end (no stop) as the end: no check-in, only ending the guidance', async () => {
     jest.useFakeTimers();
+
     try {
       const geofence = jest.fn(async () => true);
       useRoutesStore.setState({ performGeofenceCheckIn: geofence, instanceStops: [] as never });
@@ -302,5 +306,133 @@ describe('NavigationScreen', () => {
     } finally {
       jest.useRealTimers();
     }
+  });
+});
+
+describe('NavigationScreen: a call’s route (Core M0322)', () => {
+  const START_LEG = { RouteStopId: null, RouteInstanceStopId: null, Name: 'Station 1', DistanceMeters: 200, DurationSeconds: 30, OffsetSeconds: 30, EtaUtc: null, IsRouteStart: true };
+  const STOP_LEG = { RouteStopId: 's1', RouteInstanceStopId: 'is1', Name: 'Stop 1', DistanceMeters: 300, DurationSeconds: 30, OffsetSeconds: 60, EtaUtc: null };
+
+  const startThenStop = () =>
+    result({
+      route: parseNavRoute(
+        routeObject([
+          { stopId: 'start', points: EAST.slice(0, 3) },
+          { stopId: 's1', points: EAST.slice(2) },
+        ])
+      ),
+      legs: [START_LEG, STOP_LEG],
+    });
+
+  it('reaches the route start without a check-in, then guides to the first stop', async () => {
+    jest.useFakeTimers();
+
+    try {
+      const reachRouteStart = jest.fn(async () => ({ outcome: 'queued' as const, id: 'w1' }));
+      const geofence = jest.fn(async () => true);
+      // SAFETY: store rows and errors with only the fields the navigation screen reads.
+      useRoutesStore.setState({ reachRouteStart, performGeofenceCheckIn: geofence, activeInstance: { RouteInstanceId: 'ri-1', RoutePlanName: 'Transfer', CallId: 77, StartReachedOn: null } as never });
+      toRouteStops.mockResolvedValue(startThenStop());
+      jest.mocked(useLocalSearchParams).mockReturnValue({ instanceId: 'ri-1' });
+      await wrap();
+      await waitFor(() => expect(screen.getByTestId('navigation-session')).toBeTruthy());
+      expect(toRouteStops).toHaveBeenCalledWith(expect.objectContaining({ routeInstanceId: 'ri-1', includeStart: true }));
+      expect(useNavigationStore.getState().destination).toMatchObject({ kind: 'route', name: 'Transfer', startReached: false });
+
+      await act(async () => useNavigationStore.getState().handleFix(position(EAST[2], 0)));
+      expect(screen.getByTestId('navigation-arrival-route-start')).toHaveTextContent(/navigation.arrival.route_start_at:Station 1/);
+      expect(screen.queryByTestId('navigation-arrival-check-in')).toBeNull();
+      expect(screen.queryByTestId('navigation-arrival-auto-check-in')).toBeNull();
+
+      await fireEvent.press(screen.getByTestId('navigation-arrival-route-start-continue'));
+      expect(reachRouteStart).toHaveBeenCalledWith('ri-1', { latitude: EAST[2][1], longitude: EAST[2][0] });
+      expect(useNavigationStore.getState()).toMatchObject({ status: 'navigating', activeLegIndex: 1 });
+      await act(async () => {
+        jest.advanceTimersByTime(15_000);
+      });
+      expect(geofence).not.toHaveBeenCalled();
+      expect(reachRouteStart).toHaveBeenCalledTimes(1);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('goes on to the first stop by itself after a short pause, unless the crew is not there yet', async () => {
+    jest.useFakeTimers();
+
+    try {
+      const reachRouteStart = jest.fn(async () => ({ outcome: 'sent' as const, id: 'w1' }));
+      useRoutesStore.setState({ reachRouteStart, activeInstance: null });
+      toRouteStops.mockResolvedValue(startThenStop());
+      jest.mocked(useLocalSearchParams).mockReturnValue({ instanceId: 'ri-1' });
+      await wrap();
+      await waitFor(() => expect(screen.getByTestId('navigation-session')).toBeTruthy());
+
+      await act(async () => useNavigationStore.getState().handleFix(position(EAST[2], 0)));
+      await fireEvent.press(screen.getByTestId('navigation-arrival-route-start-not-yet'));
+      await act(async () => {
+        jest.advanceTimersByTime(10_000);
+      });
+      expect(reachRouteStart).not.toHaveBeenCalled();
+      expect(useNavigationStore.getState().activeLegIndex).toBe(0);
+
+      await act(async () => useNavigationStore.getState().handleFix(position(EAST[2], 0)));
+      expect(screen.getByTestId('navigation-arrival-route-start-auto')).toHaveTextContent('navigation.arrival.route_start_auto:5');
+      await act(async () => {
+        jest.advanceTimersByTime(5_000);
+      });
+      expect(reachRouteStart).toHaveBeenCalledTimes(1);
+      expect(useNavigationStore.getState()).toMatchObject({ status: 'navigating', activeLegIndex: 1 });
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('never asks for the start of a run that already reached it', async () => {
+    // SAFETY: store rows and errors with only the fields the navigation screen reads.
+    useRoutesStore.setState({ activeInstance: { RouteInstanceId: 'ri-1', RoutePlanName: 'Transfer', CallId: 77, StartReachedOn: '2026-11-19T10:00:00Z' } as never });
+    toRouteStops.mockResolvedValue(result({ legs: [STOP_LEG] }));
+    jest.mocked(useLocalSearchParams).mockReturnValue({ instanceId: 'ri-1' });
+    await wrap();
+    await waitFor(() => expect(screen.getByTestId('navigation-session')).toBeTruthy());
+    expect(toRouteStops).toHaveBeenCalledWith(expect.objectContaining({ includeStart: false }));
+  });
+
+  it('ends the run at the route’s end: EndRoute, then the guidance and the screen', async () => {
+    const endRouteInstance = jest.fn(async () => true);
+    // SAFETY: store rows and errors with only the fields the navigation screen reads.
+    useRoutesStore.setState({ endRouteInstance, instanceStops: [] as never });
+    toRouteStops.mockResolvedValue(result({ legs: [{ RouteStopId: null, RouteInstanceStopId: null, Name: 'Station 1', DistanceMeters: 500, DurationSeconds: 60, OffsetSeconds: 60, EtaUtc: null }] }));
+    jest.mocked(useLocalSearchParams).mockReturnValue({ instanceId: 'ri-1' });
+    await wrap();
+    await waitFor(() => expect(screen.getByTestId('navigation-session')).toBeTruthy());
+    await act(async () => useNavigationStore.getState().handleFix(position(END, 0)));
+
+    await fireEvent.press(screen.getByTestId('navigation-arrival-end-route'));
+    await waitFor(() => expect(endRouteInstance).toHaveBeenCalledWith('ri-1'));
+    await waitFor(() => expect(useNavigationStore.getState().status).toBe('idle'));
+    expect(router.back).toHaveBeenCalled();
+  });
+
+  it('keeps the guidance when the server refuses to end the run', async () => {
+    const endRouteInstance = jest.fn(async () => {
+      // SAFETY: store rows and errors with only the fields the navigation screen reads.
+      useRoutesStore.setState({ actionError: { messageKey: 'errors.data.network' } as never });
+
+      return false;
+    });
+
+    // SAFETY: store rows and errors with only the fields the navigation screen reads.
+    useRoutesStore.setState({ endRouteInstance, instanceStops: [] as never });
+    toRouteStops.mockResolvedValue(result({ legs: [{ RouteStopId: null, RouteInstanceStopId: null, Name: null, DistanceMeters: 500, DurationSeconds: 60, OffsetSeconds: 60, EtaUtc: null }] }));
+    jest.mocked(useLocalSearchParams).mockReturnValue({ instanceId: 'ri-1' });
+    await wrap();
+    await waitFor(() => expect(screen.getByTestId('navigation-session')).toBeTruthy());
+    await act(async () => useNavigationStore.getState().handleFix(position(END, 0)));
+
+    await fireEvent.press(screen.getByTestId('navigation-arrival-end-route'));
+    await waitFor(() => expect(endRouteInstance).toHaveBeenCalled());
+    expect(useNavigationStore.getState().status).toBe('arrived');
+    expect(screen.getByTestId('navigation-arrival-route-end')).toBeTruthy();
   });
 });

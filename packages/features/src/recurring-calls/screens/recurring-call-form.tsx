@@ -1,6 +1,6 @@
 import { isApiError } from '@resgrid/api';
 import { replaceRoutePath } from '@resgrid/core/navigation/route-paths';
-import { type DataError, personnelFullName, recurringScheduleKey, useCallsStore, usePoisStore, useRecurringCallsStore } from '@resgrid/data';
+import { type DataError, personnelFullName, recurringScheduleKey, useCallsStore, usePoisStore, useRecurringCallsStore, useRoutesStore } from '@resgrid/data';
 import {
   type ChipOption,
   defaultPriorityId,
@@ -10,9 +10,11 @@ import {
   priorityOptions,
   RecipientPickerModal,
   type RecipientPickerSection,
+  RoutePlanField,
   useCallFormHookPoints,
   useDispatchRecipients,
 } from '@resgrid/features/calls';
+import { SuggestedDestinationsPanel } from '@resgrid/features/pois/components/suggested-destinations-panel';
 import { useTranslation } from '@resgrid/i18n';
 import { type PoiResultData, RecurringCallCreationMode, type RecurringCallErrorData, RecurringCallFrequency } from '@resgrid/models';
 import { Button, ButtonSpinner, ButtonText, DateTimeField, KeyboardAwareScrollView, Loading, Pressable, ScreenHeader, Text, useThemeColors, useToast, ZeroState } from '@resgrid/ui';
@@ -48,7 +50,7 @@ const FALLBACK_ALERT_CHOICES: readonly number[] = [0, 5, 10, 15, 30, 60, 120, 24
 
 type AlertSection = 'users' | 'groups' | 'roles';
 
-type OpenPicker = null | 'dispatch' | 'alerts' | 'facility' | 'destination' | 'location';
+type OpenPicker = null | 'dispatch' | 'alerts' | 'facility' | 'destination' | 'location' | 'destinationLocation';
 
 const parseScheduleId = (value: string | string[] | undefined): number | null => {
   const raw = Array.isArray(value) ? value[0] : value;
@@ -107,6 +109,8 @@ export default function RecurringCallFormScreen({ mode }: RecurringCallFormScree
   const poisFailed = usePoisStore((state) => !!state.errors.pois);
   const destinationPoisLoading = usePoisStore((state) => state.loading.destinationPois === true);
   const destinationPoisFailed = usePoisStore((state) => !!state.errors.destinationPois);
+  // Core M0322: the routes a call may run (the Route picker shows once there is one).
+  const callRoutePlans = useRoutesStore((state) => state.callRoutePlans);
   const { recipients, isLoading: recipientsLoading } = useDispatchRecipients(isEnabled);
   const { LocationPicker } = useCallFormHookPoints();
   const [values, setValues] = useState<RecurringCallFormValues | null>(null);
@@ -115,6 +119,8 @@ export default function RecurringCallFormScreen({ mode }: RecurringCallFormScree
   const [errors, setErrors] = useState<RecurringCallErrorData[]>([]);
   const [open, setOpen] = useState<OpenPicker>(null);
   const [newTime, setNewTime] = useState('');
+  // A destination picked from the suggestions, so the form can name it before the destination list has loaded.
+  const [suggestedPoi, setSuggestedPoi] = useState<PoiResultData | null>(null);
   const locale = i18n?.language ?? 'en';
 
   // An edit starts from the schedule as the server has it now, never from a cached copy: another dispatcher may have
@@ -143,6 +149,7 @@ export default function RecurringCallFormScreen({ mode }: RecurringCallFormScree
       });
     void useCallsStore.getState().fetchCallPriorities();
     void useCallsStore.getState().fetchCallTypes();
+    void useRoutesStore.getState().fetchCallRoutePlans();
 
     if (isEdit) void loadSchedule();
 
@@ -236,8 +243,26 @@ export default function RecurringCallFormScreen({ mode }: RecurringCallFormScree
   const dispatcher = values.creationMode === RecurringCallCreationMode.Dispatcher;
   const location = parseCoordinates(values.geoLocationData);
   const point = location.ok ? { latitude: location.latitude, longitude: location.longitude } : null;
+  const destinationLocation = parseCoordinates(values.destinationGeoLocationData);
+  const destinationPoint = destinationLocation.ok ? { latitude: destinationLocation.latitude, longitude: destinationLocation.longitude } : null;
+  const routeShown = callRoutePlans.length > 0 || values.routePlanId !== null;
   const facilityPoi = values.facilityPoiId === null ? null : (pois.find((poi) => poi.PoiId === values.facilityPoiId) ?? null);
-  const destinationPoi = values.destinationPoiId === null ? null : (destinationPois.find((poi) => poi.PoiId === values.destinationPoiId) ?? null);
+  const destinationPoi = values.destinationPoiId === null ? null : (destinationPois.find((poi) => poi.PoiId === values.destinationPoiId) ?? (suggestedPoi?.PoiId === values.destinationPoiId ? suggestedPoi : null));
+
+  /** One destination: a POI replaces the free one (Core M0322 clears it too); a name the form filled in follows the POI. */
+  const setDestinationPoi = (poi: PoiResultData | null) =>
+    setValues((current) =>
+      current
+        ? {
+            ...current,
+            destinationPoiId: poi?.PoiId ?? null,
+            destinationName: nameForPoi(current.destinationName, destinationPoi, poi),
+            destinationAddress: poi ? '' : current.destinationAddress,
+            destinationGeoLocationData: poi ? '' : current.destinationGeoLocationData,
+          }
+        : current
+    );
+
   const leadChoices = withCurrent(options?.LeadTimeChoices?.length ? options.LeadTimeChoices : FALLBACK_LEAD_CHOICES, values.leadTimeMinutes);
   const alertChoices = withCurrent(options?.ManualAlertChoices?.length ? options.ManualAlertChoices : FALLBACK_ALERT_CHOICES, values.manualAlertMinutes);
   const runCardsEnabled = options?.RunCardsEnabled === true;
@@ -559,6 +584,66 @@ export default function RecurringCallFormScreen({ mode }: RecurringCallFormScree
               {values.destinationPoiId === null ? t('recurring_calls.poi_none') : (destinationPoi?.Name ?? `#${values.destinationPoiId}`)}
             </Text>
           </Pressable>
+          {/*
+            Destination rules (Core M0317): the best destinations for the schedule's location, type and priority. Suggest
+            only — each call is created later from the schedule, so nothing is filled in; a pick replaces a free destination.
+          */}
+          <SuggestedDestinationsPanel
+            origin={point}
+            callType={values.type}
+            priority={values.priority}
+            selectedPoiId={values.destinationPoiId}
+            canFill={false}
+            onSelect={(poiId, poi) => {
+              if (poiId === null) return;
+
+              const picked = poi ?? destinationPois.find((entry) => entry.PoiId === poiId) ?? null;
+
+              setSuggestedPoi(picked);
+              setDestinationPoi(picked);
+            }}
+            testID="recurring-call-form-destination-suggestions"
+          />
+          {values.destinationPoiId === null ? (
+            // Core M0322: without a destination POI, each call can go to a free destination (an address and/or a point).
+            <>
+              <FormTextField
+                label={t('recurring_calls.field_destination_address')}
+                value={values.destinationAddress}
+                onChange={(text) => update('destinationAddress', text)}
+                maxLength={500}
+                testID="recurring-call-form-destination-address"
+              />
+              <View style={styles.inlineRow}>
+                <Text size="sm" className="flex-1 text-typography-600" testID="recurring-call-form-destination-location">
+                  {destinationPoint
+                    ? t('recurring_calls.destination_location_set', { latitude: destinationPoint.latitude.toFixed(5), longitude: destinationPoint.longitude.toFixed(5) })
+                    : t('recurring_calls.destination_location_none')}
+                </Text>
+                {LocationPicker ? (
+                  <ActionButton label={t('recurring_calls.pick_on_map')} icon={MapPin} tone="secondary" onPress={() => setOpen('destinationLocation')} testID="recurring-call-form-pick-destination-location" />
+                ) : null}
+                {destinationPoint ? (
+                  <ActionButton label={t('recurring_calls.clear')} icon={X} tone="secondary" onPress={() => update('destinationGeoLocationData', '')} testID="recurring-call-form-clear-destination-location" />
+                ) : null}
+              </View>
+            </>
+          ) : (
+            <Text size="xs" className="mb-3 text-typography-500" testID="recurring-call-form-destination-poi-wins">
+              {t('recurring_calls.destination_poi_wins_hint')}
+            </Text>
+          )}
+          {routeShown ? (
+            <RoutePlanField
+              plans={callRoutePlans}
+              selectedId={values.routePlanId}
+              fallbackName={schedule?.RoutePlanName}
+              onChange={(plan) => update('routePlanId', plan?.RoutePlanId ?? null)}
+              label={t('recurring_calls.field_route')}
+              hint={t('calls.route_hint')}
+              testID="recurring-call-form-route"
+            />
+          ) : null}
           <FormTextField label={t('recurring_calls.field_reference_number')} value={values.referenceNumber} onChange={(text) => update('referenceNumber', text)} testID="recurring-call-form-reference" />
           <FormTextField label={t('recurring_calls.field_incident_number')} value={values.incidentNumber} onChange={(text) => update('incidentNumber', text)} testID="recurring-call-form-incident" />
           <FormTextField label={t('recurring_calls.field_external_identifier')} value={values.externalIdentifier} onChange={(text) => update('externalIdentifier', text)} testID="recurring-call-form-external" />
@@ -603,11 +688,14 @@ export default function RecurringCallFormScreen({ mode }: RecurringCallFormScree
             testID="recurring-call-form-facility-details"
           />
           {fieldLabel(t('recurring_calls.field_facility_poi'))}
-          <Pressable onPress={() => setOpen('facility')} accessibilityRole="button" style={styles.pickerRow} className="mb-3 border-outline-200" testID="recurring-call-form-facility-poi">
+          <Pressable onPress={() => setOpen('facility')} accessibilityRole="button" style={styles.pickerRow} className="border-outline-200" testID="recurring-call-form-facility-poi">
             <Text className="flex-1 text-typography-800" numberOfLines={1}>
               {values.facilityPoiId === null ? t('recurring_calls.poi_none') : (facilityPoi?.Name ?? `#${values.facilityPoiId}`)}
             </Text>
           </Pressable>
+          <Text size="xs" className="mb-3 mt-1 text-typography-500" testID="recurring-call-form-facility-poi-hint">
+            {t('recurring_calls.facility_poi_hint')}
+          </Text>
           <FormTextField
             label={t('recurring_calls.field_destination_name')}
             value={values.destinationName}
@@ -699,7 +787,7 @@ export default function RecurringCallFormScreen({ mode }: RecurringCallFormScree
         pois={destinationPois}
         selectedId={values.destinationPoiId}
         onSelect={(poi) => {
-          setValues((current) => (current ? { ...current, destinationPoiId: poi?.PoiId ?? null, destinationName: nameForPoi(current.destinationName, destinationPoi, poi) } : current));
+          setDestinationPoi(poi);
           setOpen(null);
         }}
         isLoading={destinationPoisLoading}
@@ -708,14 +796,21 @@ export default function RecurringCallFormScreen({ mode }: RecurringCallFormScree
         testID="recurring-call-destination-picker"
       />
       {LocationPicker ? (
+        // One map picker: the call's location, or (Core M0322) its free destination.
         <LocationPicker
-          isOpen={open === 'location'}
+          isOpen={open === 'location' || open === 'destinationLocation'}
           onClose={() => setOpen(null)}
-          initial={point}
+          initial={open === 'destinationLocation' ? (destinationPoint ?? point) : point}
           onSelect={(picked) => {
-            setValues((current) =>
-              current ? { ...current, geoLocationData: `${picked.latitude.toFixed(6)},${picked.longitude.toFixed(6)}`, address: current.address.trim() ? current.address : (picked.address ?? current.address) } : current
-            );
+            const geo = `${picked.latitude.toFixed(6)},${picked.longitude.toFixed(6)}`;
+
+            setValues((current) => {
+              if (!current) return current;
+
+              return open === 'destinationLocation'
+                ? { ...current, destinationGeoLocationData: geo, destinationAddress: current.destinationAddress.trim() ? current.destinationAddress : (picked.address ?? current.destinationAddress) }
+                : { ...current, geoLocationData: geo, address: current.address.trim() ? current.address : (picked.address ?? current.address) };
+            });
             setOpen(null);
           }}
         />

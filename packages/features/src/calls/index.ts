@@ -9,13 +9,14 @@
 import { AddResourcesSheet, type AddResourcesSheetProps } from './components/add-resources-sheet';
 import { CallConfirmDialog, type CallConfirmDialogProps } from './components/call-confirm-dialog';
 import { destinationPoiLabel, filterDestinationPois } from './components/call-form/destination-poi-picker';
+import { RoutePlanField, type RoutePlanFieldProps, RoutePlanPicker, type RoutePlanPickerProps } from './components/call-form/route-plan-picker';
 import { CallModalFrame, type CallModalFrameProps } from './components/call-modal-frame';
 import { CallSummaryModal, type CallSummaryModalProps } from './components/call-summary-modal';
 import { type CallDispatchNowControls, useCallDispatchNow, type UseCallDispatchNowOptions } from './hooks/use-call-dispatch-now';
 import { useCallPermissions, useCallPermissionsResolver, useCallRights } from './hooks/use-call-permissions';
 import { type CallRelease, type ReleaseCall, type ReleaseFromCall, type ReleaseTarget, useReleaseFromCall, type UseReleaseFromCallOptions } from './hooks/use-release-from-call';
 import { callDisplayName, callDisplayText, type CallTextField, type CallTextFields, revealedCallText } from './lib/call-display';
-import { callDestinationTarget, callLocationTarget, callPoint, isUsablePoint } from './lib/call-location';
+import { callDestinationTarget, callDestinationText, type CallFreeDestination, callFreeDestination, callHasDestination, callLocationTarget, callPoint, isUsablePoint } from './lib/call-location';
 import { type CallPermissionInput, type CallPermissions, type CallRights, type CallsCapability, isCallReporter, mayChangeCall, resolveCallPermissions } from './lib/call-permissions';
 import {
   type CallPersonCandidate,
@@ -38,6 +39,18 @@ import {
   type ReleasePermissions,
   resolveReleasePermissions,
 } from './lib/call-release';
+import {
+  callHasRoute,
+  callRouteInstanceForUnit,
+  callRouteInstancesOf,
+  callRouteName,
+  callRoutePlanEndpoints,
+  callRoutePlanId,
+  callRoutePlanSummary,
+  filterCallRoutePlans,
+  isCallRouteRunning,
+  routeEndpointText,
+} from './lib/call-route';
 import { getScheduledDispatchPrefill, isDispatchTimeTooSoon, MIN_DISPATCH_LEAD_MINUTES, toDispatchOnUtc } from './lib/call-schedule';
 import {
   type BoardRank,
@@ -156,9 +169,14 @@ export {
   CallConfirmDialog,
   type CallConfirmDialogProps,
   callDestinationTarget,
+  callDestinationText,
   type CallDispatchNowControls,
   callDisplayName,
   callDisplayText,
+  type CallFreeDestination,
+  callFreeDestination,
+  callHasDestination,
+  callHasRoute,
   callLocationOf,
   callLocationTarget,
   CallModalFrame,
@@ -170,6 +188,12 @@ export {
   type CallRelease,
   type CallResourceLists,
   type CallRights,
+  callRouteInstanceForUnit,
+  callRouteInstancesOf,
+  callRouteName,
+  callRoutePlanEndpoints,
+  callRoutePlanId,
+  callRoutePlanSummary,
   type CallsCapability,
   CallSummaryModal,
   type CallSummaryModalProps,
@@ -182,6 +206,7 @@ export {
   dispatchesToSelection,
   type DispatchMapOverlay,
   type DispatchSnapshot,
+  filterCallRoutePlans,
   filterDestinationPois,
   formatDistance,
   formatDistanceEta,
@@ -192,6 +217,7 @@ export {
   getReleasedUnits,
   getScheduledDispatchPrefill,
   isCallReporter,
+  isCallRouteRunning,
   isDispatchSelectionEmpty,
   isDispatchTimeTooSoon,
   isPersonDispatchedToCall,
@@ -219,6 +245,11 @@ export {
   resolveCallPermissions,
   resolveReleasePermissions,
   revealedCallText,
+  routeEndpointText,
+  RoutePlanField,
+  type RoutePlanFieldProps,
+  RoutePlanPicker,
+  type RoutePlanPickerProps,
   selectionSize,
   toDispatchOnUtc,
   useCallDispatchNow,

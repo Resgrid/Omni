@@ -5,6 +5,7 @@ import type {
   EndRouteInput,
   GeofenceCheckInInput,
   GetActiveRouteInstancesResult,
+  GetCallRoutePlansResult,
   GetRouteContactsResult,
   GetRouteDeviationsResult,
   GetRouteDirectionsResult,
@@ -17,10 +18,12 @@ import type {
   GetScheduledRoutesResult,
   GetStopContactResult,
   PauseRouteInput,
+  ReachRouteStartInput,
   RecordRouteDeviationInput,
   ResumeRouteInput,
   SaveRoutePlanResult,
   SkipStopInput,
+  StartCallRouteInput,
   StartRouteInput,
   UpdateStopNotesInput,
 } from '@resgrid/models';
@@ -38,8 +41,9 @@ export const routesEndpoints = defineEndpoints('routes', {
   getActiveRouteForUnit: { method: 'GET', path: '/Routes/GetActiveRouteForUnit/{unitId}', query: ['includePaused'] },
   getActiveRouteInstances: { method: 'GET', path: '/Routes/GetActiveRouteInstances' },
   getActiveRoutes: { method: 'GET', path: '/Routes/GetActiveRoutes' },
+  getCallRoutePlans: { method: 'GET', path: '/Routes/GetCallRoutePlans', cacheTtlMs: 60 * 1000 },
   getDirections: { method: 'GET', path: '/Routes/GetDirections/{routePlanId}' },
-  getInstanceDirections: { method: 'GET', path: '/Routes/GetInstanceDirections/{instanceId}', query: ['latitude', 'longitude', 'heading', 'navigation', 'language', 'metric'] },
+  getInstanceDirections: { method: 'GET', path: '/Routes/GetInstanceDirections/{instanceId}', query: ['latitude', 'longitude', 'heading', 'navigation', 'language', 'metric', 'includeStart'] },
   getRouteContacts: { method: 'GET', path: '/Routes/GetRouteContacts/{routePlanId}' },
   getRouteHistory: { method: 'GET', path: '/Routes/GetRouteHistory/{routePlanId}' },
   getRoutePlan: { method: 'GET', path: '/Routes/GetRoutePlan/{id}' },
@@ -51,9 +55,11 @@ export const routesEndpoints = defineEndpoints('routes', {
   getStopsForInstance: { method: 'GET', path: '/Routes/GetStopsForInstance/{instanceId}' },
   getUnacknowledgedDeviations: { method: 'GET', path: '/Routes/GetUnacknowledgedDeviations' },
   pauseRoute: { method: 'POST', path: '/Routes/PauseRoute', body: 'json' },
+  reachRouteStart: { method: 'POST', path: '/Routes/ReachRouteStart', body: 'json' },
   recordDeviation: { method: 'POST', path: '/Routes/RecordDeviation', body: 'json' },
   resumeRoute: { method: 'POST', path: '/Routes/ResumeRoute', body: 'json' },
   skipStop: { method: 'POST', path: '/Routes/SkipStop', body: 'json' },
+  startCallRoute: { method: 'POST', path: '/Routes/StartCallRoute', body: 'json' },
   startRoute: { method: 'POST', path: '/Routes/StartRoute', body: 'json' },
   updateStopNotes: { method: 'POST', path: '/Routes/UpdateStopNotes', body: 'json' },
 });
@@ -91,6 +97,12 @@ export const getActiveRouteInstances = (ctx: ApiContext, options?: RequestOption
 /** Gets all active route instances for the department. `GET /Routes/GetActiveRoutes` — legacy: U. */
 export const getActiveRoutes = (ctx: ApiContext, options?: RequestOptions): Promise<GetRouteInstancesResult> => request<GetRouteInstancesResult>(ctx, E.getActiveRoutes, {}, options);
 
+/**
+ * The routes a call may run (Core M0322, policy Call_View): Active plans whose start and end both resolve, with the resolved
+ * start and end. The call form shows its Route picker only when this returns a plan. `GET /Routes/GetCallRoutePlans` (cached).
+ */
+export const getCallRoutePlans = (ctx: ApiContext, options?: CachedRequestOptions): Promise<GetCallRoutePlansResult> => cachedRequest<GetCallRoutePlansResult>(ctx, E.getCallRoutePlans, {}, options);
+
 /** Gets the stored route geometry and waypoints for a route plan. `GET /Routes/GetDirections/{routePlanId}` — legacy: U. */
 export const getDirections = (ctx: ApiContext, params: { routePlanId: string }, options?: RequestOptions): Promise<GetRouteDirectionsResult> =>
   request<GetRouteDirectionsResult>(ctx, E.getDirections, { params }, options);
@@ -98,11 +110,13 @@ export const getDirections = (ctx: ApiContext, params: { routePlanId: string }, 
 /**
  * Gets the route geometry and remaining waypoints for an active route instance. With `latitude`/`longitude` the server
  * routes live from that position through the remaining stops (legs, steps, per-stop ETAs); `navigation` adds voice and
- * banner instructions. `GET /Routes/GetInstanceDirections/{instanceId}` — legacy: U.
+ * banner instructions. `includeStart` (Core M0322; needs the position) routes a call-linked instance to its station or
+ * explicit start first while the start is not reached and no stop is done: `Waypoints[0]` and `Legs[0]` then carry
+ * `IsRouteStart`. Left out, the answer is the one legacy apps get. `GET /Routes/GetInstanceDirections/{instanceId}` — legacy: U.
  */
 export const getInstanceDirections = (
   ctx: ApiContext,
-  params: { instanceId: string; latitude?: number | string; longitude?: number | string; heading?: number; navigation?: boolean; language?: string; metric?: boolean },
+  params: { instanceId: string; latitude?: number | string; longitude?: number | string; heading?: number; navigation?: boolean; language?: string; metric?: boolean; includeStart?: boolean },
   options?: RequestOptions
 ): Promise<GetRouteDirectionsResult> => request<GetRouteDirectionsResult>(ctx, E.getInstanceDirections, { params }, options);
 
@@ -144,6 +158,12 @@ export const getUnacknowledgedDeviations = (ctx: ApiContext, options?: RequestOp
 /** Pauses a route instance. `POST /Routes/PauseRoute` — legacy: U. */
 export const pauseRoute = (ctx: ApiContext, body: PauseRouteInput, options?: RequestOptions): Promise<GetRouteInstanceResult> => request<GetRouteInstanceResult>(ctx, E.pauseRoute, { body }, options);
 
+/**
+ * Marks that the unit reached a call-linked route's start (Core M0322; `StartReachedOn`, a no-op when already set): sent when
+ * the unit arrives at the leading `IsRouteStart` leg. `POST /Routes/ReachRouteStart` — new in Omni.
+ */
+export const reachRouteStart = (ctx: ApiContext, body: ReachRouteStartInput, options?: RequestOptions): Promise<GetRouteInstanceResult> => request<GetRouteInstanceResult>(ctx, E.reachRouteStart, { body }, options);
+
 /** Records a deviation seen by the app (OffRoute with the distance from the line). `POST /Routes/RecordDeviation` — new in Omni. */
 export const recordDeviation = (ctx: ApiContext, body: RecordRouteDeviationInput, options?: RequestOptions): Promise<UnknownV4Result> => request<UnknownV4Result>(ctx, E.recordDeviation, { body }, options);
 
@@ -153,7 +173,15 @@ export const resumeRoute = (ctx: ApiContext, body: ResumeRouteInput, options?: R
 /** Skip a stop with reason. `POST /Routes/SkipStop` — legacy: U. */
 export const skipStop = (ctx: ApiContext, body: SkipStopInput, options?: RequestOptions): Promise<SaveRoutePlanResult> => request<SaveRoutePlanResult>(ctx, E.skipStop, { body }, options);
 
-/** Starts a route instance. `POST /Routes/StartRoute` — legacy: U. */
+/**
+ * Starts the call's route for a unit, linked to the call (Core M0322, policy Call_View: Route_Update or crew who can view the
+ * call and the unit). Returns the unit's running or paused instance for this call unchanged when there is one; 400 when the
+ * call has no route or it is no longer eligible; 409 `route_in_progress` (ProblemDetails `detail` = that instance id) when the
+ * unit runs another route. `POST /Routes/StartCallRoute` — new in Omni.
+ */
+export const startCallRoute = (ctx: ApiContext, body: StartCallRouteInput, options?: RequestOptions): Promise<GetRouteInstanceResult> => request<GetRouteInstanceResult>(ctx, E.startCallRoute, { body }, options);
+
+/** Starts a route instance (409 `route_in_progress` while the unit runs or has paused another). `POST /Routes/StartRoute` — legacy: U. */
 export const startRoute = (ctx: ApiContext, body: StartRouteInput, options?: RequestOptions): Promise<GetRouteInstanceResult> => request<GetRouteInstanceResult>(ctx, E.startRoute, { body }, options);
 
 /** Updates notes on an active route instance stop. `POST /Routes/UpdateStopNotes` — legacy: U. */
