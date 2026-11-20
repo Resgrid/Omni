@@ -5,7 +5,10 @@ import type { Capabilities, FeatureModuleId } from '@resgrid/config';
  * per-variant sets this package subscribes (omni-plan §7.5). Events are id-only pings: consumers refetch.
  */
 
-/** Every app: status, staffing, calls, incident command, department, checklists and weather alerts (Core §8.6 item 6). */
+/**
+ * Every app: status, staffing, calls, incident command, department, checklists and weather alerts (Core §8.6 item 6), and a
+ * call's Enhanced AI destination advice (every app opens call detail; Core EventingTypes 18, M0323).
+ */
 export const COMMON_EVENTING_EVENTS = [
   'personnelStatusUpdated',
   'personnelStaffingUpdated',
@@ -19,6 +22,7 @@ export const COMMON_EVENTING_EVENTS = [
   'weatherAlertReceived',
   'weatherAlertUpdated',
   'weatherAlertExpired',
+  'aiDestinationAdviceUpdated',
 ] as const;
 
 /** Dispatch console extras: unit crew changes, check-ins of others, conditional run-card requirements (two args). */

@@ -10,6 +10,8 @@ const calls = indexCallsById([
   { CallId: '40', DestinationPoiId: 900, DestinationName: 'AZ Sint-Elisabeth Zottegem', DestinationAddress: 'Godveerdegemstraat 69' },
   { CallId: '41', DestinationPoiId: null, DestinationName: '', DestinationAddress: '' },
   { CallId: '42', DestinationPoiId: 900, DestinationName: '', DestinationAddress: 'Godveerdegemstraat 69' },
+  // Core M0322: a free destination (no POI) fills the address and point; a transport status stays on the call.
+  { CallId: '43', DestinationPoiId: null, DestinationName: '', DestinationAddress: '12 Harbour Rd', DestinationLatitude: 51.05, DestinationLongitude: 3.72 },
 ] as CallResultData[]);
 
 const unit = (extra: Partial<UnitInfoResultData>): UnitInfoResultData =>
@@ -32,5 +34,7 @@ describe('unitTransportDestinationMismatch', () => {
     expect(unitTransportDestinationMismatch(unit({ ActiveCallId: null }), calls)).toBeNull();
     expect(unitTransportDestinationMismatch(unit({ ActiveCallId: '77' }), calls)).toBeNull();
     expect(unitTransportDestinationMismatch(unit({ CurrentDestinationId: '' }), calls)).toBeNull();
+    // A free destination is no assigned POI: a hospital the unit reports is never flagged against it.
+    expect(unitTransportDestinationMismatch(unit({ ActiveCallId: '43' }), calls)).toBeNull();
   });
 });

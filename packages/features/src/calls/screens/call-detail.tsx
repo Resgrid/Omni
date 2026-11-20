@@ -4,6 +4,7 @@ import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { isSafeRouteId } from '@resgrid/core/utils/route-ids';
 import { type QueuedCall, useCallDetailStore, useCallsStore, useCheckInTimersStore } from '@resgrid/data';
 import { useNavigationHandoff } from '@resgrid/features/contacts';
+import { AiDestinationAdviceCard } from '@resgrid/features/pois/components/ai-destination-advice-card';
 import { useTranslation } from '@resgrid/i18n';
 import type { CallResultData } from '@resgrid/models';
 import { useRealtimeRefetch } from '@resgrid/realtime';
@@ -39,6 +40,7 @@ import { CloseCallSheet } from '../components/close-call-sheet';
 import { CallMapSection } from '../components/detail/call-map-section';
 import { CallQueueBanner } from '../components/detail/call-queue-banner';
 import { ProtectedRevealBar } from '../components/detail/protected-reveal-bar';
+import { IntakeSourceBadge } from '../components/intake-source-badge';
 import { QueuedCallBadge } from '../components/queued-call-badge';
 import { RescheduleCallSheet } from '../components/reschedule-call-sheet';
 import { registerBuiltInCallDetailTabs } from '../detail-tabs/built-in-tabs';
@@ -49,8 +51,9 @@ import { useCallPermissions } from '../hooks/use-call-permissions';
 import { CALL_SHORTCUTS_AVAILABLE, useCallShortcuts } from '../hooks/use-call-shortcuts';
 import { readableColors } from '../lib/call-colors';
 import { callDisplayName, revealedCallText } from '../lib/call-display';
-import { callLocationTarget, callPoint } from '../lib/call-location';
+import { callFreeDestination, callLocationTarget, callPoint } from '../lib/call-location';
 import { resolvePriority } from '../lib/call-priority';
+import { callIntakeSource } from '../lib/call-source';
 import { isPendingCall, isScheduledCall, scheduledDispatchUtc } from '../lib/call-time';
 import { callCorrect, callEdit } from '../routes';
 
@@ -287,6 +290,12 @@ function ServerCallDetail({ callId, mapSlot, menuItems, onMenuAction, onClosed, 
             </Text>
           </View>
         ) : null}
+        {/* A call an external intake created (Core M0323): which channel it came through. */}
+        {callIntakeSource(call) ? (
+          <View style={styles.source}>
+            <IntakeSourceBadge call={call} testID="call-detail-intake-source" />
+          </View>
+        ) : null}
         {nature === null ? (
           <Text className="mt-2 italic text-typography-500">{protectedLabel}</Text>
         ) : nature ? (
@@ -302,6 +311,8 @@ function ServerCallDetail({ callId, mapSlot, menuItems, onMenuAction, onClosed, 
         />
       ) : null}
       {CallDetailNotice ? <CallDetailNotice call={call} /> : null}
+      {/* Enhanced AI destination advice (call intake plan §7, D4): shown when the department may use it; applying it is the member's action. */}
+      <AiDestinationAdviceCard callId={callId} canAct={canEdit} hasFreeDestination={!!callFreeDestination(call)} onApplied={() => void refresh()} testID="call-detail-ai-advice" />
       {mapSlot ? (
         <View style={styles.map} testID="call-detail-map-slot">
           {mapSlot(call)}
@@ -421,6 +432,7 @@ const styles = StyleSheet.create({
   card: { borderRadius: 12, padding: 12, marginBottom: 12 },
   titleRow: { flexDirection: 'row', alignItems: 'center' },
   priority: { alignSelf: 'flex-start', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 2, marginTop: 6 },
+  source: { marginTop: 6 },
   nature: { height: 132, marginTop: 8 },
   map: { height: 200, borderRadius: 12, overflow: 'hidden', marginBottom: 12 },
   actions: { flexDirection: 'row', flexWrap: 'wrap', borderRadius: 12, padding: 8, marginBottom: 12 },

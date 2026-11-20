@@ -4,7 +4,17 @@
  * to a call only through its destination, so the summary line and the submit both read `resolveEffectiveDestination`.
  */
 import { callDisplayName } from '@resgrid/features/calls/lib/call-display';
-import { type CallResultData, DestinationEntityTypes, type GroupResultData, type PoiResultData, statusDetailAllowsCalls, statusDetailAllowsPois, statusDetailAllowsStations } from '@resgrid/models';
+import { type CallUnitCandidate, isUnitDispatchedToCall } from '@resgrid/features/calls/lib/call-release';
+import {
+  type CallResultData,
+  DestinationEntityTypes,
+  type DispatchedEventResultData,
+  type GroupResultData,
+  type PoiResultData,
+  statusDetailAllowsCalls,
+  statusDetailAllowsPois,
+  statusDetailAllowsStations,
+} from '@resgrid/models';
 
 import { ActionBaseTypes } from './base-types';
 
@@ -70,6 +80,30 @@ export const resolveDefaultStatusCall = (calls: readonly CallResultData[], activ
   const currentCallId = getCurrentStatusCallId(current);
 
   return currentCallId ? (calls.find((call) => String(call.CallId) === currentCallId) ?? null) : null;
+};
+
+/**
+ * The open call a unit is working, for a status set on its behalf (Dispatch, the unit detail): the server's `ActiveCallId`
+ * (the call its latest status points at unless that status cleared it, else its one open dispatch), else the open call its
+ * current status points at, else the one open call it is dispatched to in the loaded dispatches (servers that send no
+ * `ActiveCallId`). Null when none is open, when it is dispatched to several and nothing says which it works, or while any
+ * open call's dispatches are not loaded (not read yet, or the read failed): that call may be another one it works.
+ */
+export const resolveUnitWorkingCall = (
+  calls: readonly CallResultData[],
+  unit: CallUnitCandidate | null | undefined,
+  current: CurrentDestinationRef | null | undefined,
+  dispatchesByCallId: Readonly<Record<string, readonly DispatchedEventResultData[] | undefined>> = {}
+): CallResultData | null => {
+  const fromServer = resolveDefaultStatusCall(calls, unit?.ActiveCallId ?? null, current);
+
+  if (fromServer || !unit) return fromServer;
+
+  // A missing entry is "not loaded", never "not dispatched": one unknown call is enough to make a single match a guess.
+  if (calls.some((call) => dispatchesByCallId[call.CallId] === undefined)) return null;
+  const dispatched = calls.filter((call) => isUnitDispatchedToCall(unit, dispatchesByCallId[call.CallId] ?? []));
+
+  return dispatched.length === 1 ? dispatched[0] : null;
 };
 
 /** Transporting and At Hospital: the status meanings that go to a call's assigned destination. */

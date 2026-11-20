@@ -1,5 +1,5 @@
-import { getNearestDestinations, getPoi, getPoiCapabilities, getPois, getPoiTypes, setPoiAvailability } from '@resgrid/api';
-import type { NearestDestinationResultData, PoiCapabilityResultData, PoiResultData, PoiTypeResultData, SetPoiAvailabilityInput } from '@resgrid/models';
+import { getDestinationRules, getNearestDestinations, getPoi, getPoiCapabilities, getPois, getPoiTypes, getSuggestedDestinations, setPoiAvailability } from '@resgrid/api';
+import type { DestinationRulesResultData, NearestDestinationResultData, PoiCapabilityResultData, PoiResultData, PoiTypeResultData, SetPoiAvailabilityInput, SuggestedDestinationsResultData } from '@resgrid/models';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
@@ -10,7 +10,7 @@ import { registerDataStoreReset } from '../core/reset';
 import { getDataApiContext, getDataLogger } from '../core/runtime';
 import { cacheOptions, createSliceRunner, emptySliceMeta, type FetchOptions, type SliceMeta, type SliceRunner } from '../core/slices';
 
-type PoisSlice = 'pois' | 'destinationPois' | 'poiTypes' | 'detail' | 'capabilities';
+type PoisSlice = 'pois' | 'destinationPois' | 'poiTypes' | 'detail' | 'capabilities' | 'destinationRules';
 
 interface PoisData extends SliceMeta<PoisSlice> {
   pois: PoiResultData[];
@@ -21,6 +21,8 @@ interface PoisData extends SliceMeta<PoisSlice> {
   poiDetailsById: Record<number, PoiResultData>;
   /** The department's POI capabilities ("Cath Lab"), in its order (Core M0315; empty on older servers). */
   poiCapabilities: PoiCapabilityResultData[];
+  /** The department's destination rules and suggestions setting, read-only (Core M0317; null until read or on older servers). */
+  destinationRules: DestinationRulesResultData | null;
 }
 
 /** What a destination availability change returned: the destination after it, or why it failed. */
@@ -35,6 +37,21 @@ export interface NearestDestinationsQuery {
   take?: number;
 }
 
+/** Parameters of a destination suggestion (`GET /Mapping/GetSuggestedDestinations`): the origin and what the call is. */
+export interface SuggestedDestinationsQuery {
+  latitude: number;
+  longitude: number;
+  /** The call type's name (the form's type); blank for none. */
+  type?: string | null;
+  /** The call priority (the call's Priority value). */
+  priority?: number | null;
+  /** An existing call: supplies its type and priority when not given. */
+  callId?: number | string | null;
+  /** The travelling unit: its type's rules and travel mode apply. */
+  unitId?: number | string | null;
+  take?: number;
+}
+
 export interface PoisState extends PoisData {
   /** Skips when already loaded unless `bypassCache` (Dispatch). */
   fetchPois: (options?: FetchOptions) => Promise<void>;
@@ -42,6 +59,8 @@ export interface PoisState extends PoisData {
   fetchPoiTypes: (options?: FetchOptions) => Promise<void>;
   fetchPoi: (poiId: number, options?: FetchOptions) => Promise<PoiResultData | null>;
   fetchPoiCapabilities: (options?: FetchOptions) => Promise<void>;
+  /** Skips when already loaded unless `bypassCache`; keeps the last copy when the server cannot answer. */
+  fetchDestinationRules: (options?: FetchOptions) => Promise<void>;
   /**
    * Sets a destination's availability online (dispatchers; Core refuses others). The loaded copies of the POI are replaced
    * with what the server returned. Not queued offline: an availability report is only true now.
@@ -49,6 +68,11 @@ export interface PoisState extends PoisData {
   setPoiAvailability: (input: SetPoiAvailabilityInput) => Promise<SetPoiAvailabilityOutcome>;
   /** Ranks destinations from a point; null when the server could not answer (callers keep their own order). Not stored. */
   fetchNearestDestinations: (query: NearestDestinationsQuery, signal?: AbortSignal) => Promise<NearestDestinationResultData[] | null>;
+  /**
+   * The destination rules' requirements for a call (and unit) and the destinations ranked for them; null when the server
+   * could not answer (aborted, offline, older server). Not stored: it depends on the origin and the form.
+   */
+  fetchSuggestedDestinations: (query: SuggestedDestinationsQuery, signal?: AbortSignal) => Promise<SuggestedDestinationsResultData | null>;
 }
 
 const replacePoi = (list: PoiResultData[], poi: PoiResultData): PoiResultData[] => (list.some((item) => item.PoiId === poi.PoiId) ? list.map((item) => (item.PoiId === poi.PoiId ? poi : item)) : list);
@@ -79,7 +103,7 @@ const laterSaveOf = (poi: PoiResultData, readStartedAt: number): PoiResultData =
   return saved && saved.write > readStartedAt ? saved.poi : poi;
 };
 
-const initialData = (): PoisData => ({ ...emptySliceMeta<PoisSlice>(), pois: [], destinationPois: [], poiTypes: [], poiDetailsById: {}, poiCapabilities: [] });
+const initialData = (): PoisData => ({ ...emptySliceMeta<PoisSlice>(), pois: [], destinationPois: [], poiTypes: [], poiDetailsById: {}, poiCapabilities: [], destinationRules: null });
 
 let runner: SliceRunner<PoisSlice, PoisState>;
 
@@ -148,6 +172,15 @@ export const usePoisStore = create<PoisState>()(
           );
         },
 
+        fetchDestinationRules: async (options) => {
+          if (!options?.bypassCache && get().destinationRules) return;
+          await runner.run(
+            'destinationRules',
+            async () => unwrapItem(await getDestinationRules(getDataApiContext(), cacheOptions(options))),
+            (destinationRules, state) => (destinationRules ? { destinationRules } : { destinationRules: state.destinationRules })
+          );
+        },
+
         setPoiAvailability: async (input) => {
           // A sign-out or department switch while the request is out: its answer belongs to the old session.
           const startedIn = runner.generation();
@@ -199,6 +232,31 @@ export const usePoisStore = create<PoisState>()(
             return null;
           }
         },
+
+        fetchSuggestedDestinations: async (query, signal) => {
+          try {
+            const params: Parameters<typeof getSuggestedDestinations>[1] = { latitude: query.latitude, longitude: query.longitude };
+
+            if (query.type && query.type.trim()) params.type = query.type.trim();
+
+            if (query.priority !== null && query.priority !== undefined) params.priority = query.priority;
+
+            if (query.callId !== null && query.callId !== undefined && query.callId !== '') params.callId = query.callId;
+
+            if (query.unitId !== null && query.unitId !== undefined && query.unitId !== '') params.unitId = query.unitId;
+
+            if (query.take) params.take = query.take;
+
+            return unwrapItem(await getSuggestedDestinations(getDataApiContext(), params, signal ? { signal } : undefined));
+          } catch (error) {
+            if (signal?.aborted) return null;
+            const dataError = toDataError(error);
+            getDataLogger().warn({ message: 'Suggested destinations failed', context: { code: dataError.code, status: dataError.status } });
+
+            // Suggestions never block a call: the form keeps its own destination.
+            return null;
+          }
+        },
       };
     },
     dataPersistOptions<PoisState, Omit<PoisData, 'loading' | 'errors'>>({
@@ -209,6 +267,7 @@ export const usePoisStore = create<PoisState>()(
         poiTypes: state.poiTypes,
         poiDetailsById: state.poiDetailsById,
         poiCapabilities: state.poiCapabilities,
+        destinationRules: state.destinationRules,
         fetchedAt: state.fetchedAt,
       }),
     })

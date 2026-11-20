@@ -23,7 +23,7 @@ import { usePersonnelStore } from '../personnel/personnel-store';
 import { usePoisStore } from '../pois/pois-store';
 import { useProtocolsStore } from '../protocols/protocols-store';
 import { recordCommandHandler, recordDraftSaveHandler } from '../records/records-store';
-import { routeStopCheckInHandler, routeStopCheckOutHandler, routeStopSkipHandler, useRoutesStore } from '../routes/routes-store';
+import { routeReachStartHandler, routeStopCheckInHandler, routeStopCheckOutHandler, routeStopSkipHandler, useRoutesStore } from '../routes/routes-store';
 import { useShiftsStore } from '../shifts/shifts-store';
 import { useUnitRolesStore } from '../units/unit-roles-store';
 import { unitStatusSetHandler } from '../units/unit-status-store';
@@ -43,7 +43,7 @@ const HANDLERS: Record<DataOutboxType, OutboxHandler[]> = {
   'personnel.staffing.set': [personnelStaffingSetHandler as unknown as OutboxHandler],
   'chat.message.send': [chatMessageSendHandler as unknown as OutboxHandler],
   'messages.send': [messageSendHandler as unknown as OutboxHandler],
-  'routes.stop': [routeStopCheckInHandler, routeStopCheckOutHandler, routeStopSkipHandler] as unknown as OutboxHandler[],
+  'routes.stop': [routeStopCheckInHandler, routeStopCheckOutHandler, routeStopSkipHandler, routeReachStartHandler] as unknown as OutboxHandler[],
   'inventory.count.save': [inventoryCountSaveHandler as unknown as OutboxHandler],
   'operations.timeEntries.save': [timeEntriesSaveHandler as unknown as OutboxHandler],
   'operations.expense.save': [expenseSaveHandler as unknown as OutboxHandler],

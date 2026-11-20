@@ -226,7 +226,8 @@
       "site": "Про об'єкт",
       "timeline": "Активність",
       "video": "Відео",
-      "notes": "Notes & files"
+      "notes": "Notes & files",
+      "route": "Маршрут"
     },
     "timestamp": "Мітка часу",
     "title": "Деталі виклику",
@@ -263,7 +264,16 @@
     "audio_play_error": "Could not play this recording",
     "scheduled_on": "Заплановані дата й час диспетчеризації",
     "destination_type": "Тип місця призначення",
-    "keyboard_shortcuts": "Tip: Press 1-9 to switch tabs, Ctrl+E to edit, Escape to go back"
+    "keyboard_shortcuts": "Tip: Press 1-9 to switch tabs, Ctrl+E to edit, Escape to go back",
+    "location_poi": "POI розташування",
+    "destination_coordinates": "Координати пункту призначення",
+    "destination_what3words": "what3words пункту призначення",
+    "route": "Маршрут",
+    "route_runs": "Проходження маршруту",
+    "route_no_runs": "Жоден підрозділ ще не розпочав цей маршрут.",
+    "route_run_started": "Розпочато {{time}}",
+    "route_run_start_reached": "Досягнуто початку {{time}}",
+    "route_run_ended": "Завершено {{time}}"
   },
   "calls": {
     "address": "Адреса",
@@ -535,6 +545,7 @@
     "longitude_placeholder": "напр. -119.758773",
     "latitude_invalid": "Введіть широту в десяткових градусах, від -90 до 90",
     "longitude_invalid": "Введіть довготу в десяткових градусах, від -180 до 180",
+    "destination_point_unusable": "0, 0 не є придатною точкою призначення. Введіть широту й довготу місця призначення",
     "coordinates_incomplete": "Введіть широту й довготу",
     "place_on_map": "Place on map",
     "destination_poi_select": "Select a destination",
@@ -572,7 +583,59 @@
     "all_call_dispatch_now_help": "Усі списки висилання приховано. Увімкніть загальний виклик, щоб надіслати цей виклик усім, або залиште вимкненим, щоб надіслати його отримувачам, збереженим разом із ним.",
     "additional_contacts": "Додаткові контакти",
     "check_in_timers": "Таймери реєстрації",
-    "part2_consent": "Згода 42 CFR Part 2"
+    "part2_consent": "Згода 42 CFR Part 2",
+    "location_poi": "Розташування з POI",
+    "location_poi_select": "Виберіть точку інтересу",
+    "location_poi_search": "Пошук точок інтересу...",
+    "location_poi_none_found": "Жодна точка інтересу не відповідає пошуку",
+    "location_poi_load_error": "Не вдалося завантажити точки інтересу.",
+    "location_poi_clear": "Очистити точку інтересу",
+    "location_poi_moved": "Розташування перемістили від точки «{{name}}», тому виклик не буде з нею пов'язано.",
+    "destination_mode_poi": "Точка інтересу",
+    "destination_mode_location": "Адреса або точка",
+    "destination_address": "Адреса пункту призначення",
+    "destination_address_placeholder": "Введіть адресу пункту призначення",
+    "destination_found": "Пункт призначення знайдено та його розташування оновлено",
+    "destination_pick_on_map": "Вибрати пункт призначення на карті",
+    "destination_location_clear": "Очистити пункт призначення",
+    "route_section": "Маршрут",
+    "route": "Заздалегідь визначений маршрут",
+    "route_hint": "Початок маршруту заповнює порожнє розташування виклику, а його кінець — відсутній пункт призначення.",
+    "route_select": "Виберіть маршрут",
+    "route_search": "Пошук маршрутів...",
+    "route_none_found": "Жоден маршрут не відповідає пошуку",
+    "route_clear": "Очистити маршрут",
+    "route_unknown": "Маршрут більше недоступний",
+    "route_stops_count": "Зупинки: {{count}}",
+    "route_start_end": "{{start}} → {{end}}",
+    "destination_to": "До: {{destination}}",
+    "route_named": "Маршрут: {{name}}",
+    "intake_source": {
+      "intake": "Intake",
+      "intake_named": "Intake: {{name}}",
+      "voice": "Voice line",
+      "voice_named": "Voice line: {{name}}",
+      "via_sms": "Via text message",
+      "via_sms_named": "Via text message: {{name}}",
+      "via_email": "Via email",
+      "via_email_named": "Via email: {{name}}",
+      "via_whatsapp": "Via WhatsApp",
+      "via_whatsapp_named": "Via WhatsApp: {{name}}",
+      "via_slack": "Via Slack",
+      "via_slack_named": "Via Slack: {{name}}",
+      "via_teams": "Via Teams",
+      "via_teams_named": "Via Teams: {{name}}",
+      "via_telegram": "Via Telegram",
+      "via_telegram_named": "Via Telegram: {{name}}",
+      "via_discord": "Via Discord",
+      "via_discord_named": "Via Discord: {{name}}",
+      "via_google_chat": "Via Google Chat",
+      "via_google_chat_named": "Via Google Chat: {{name}}",
+      "via_webhook": "Via webhook",
+      "via_webhook_named": "Via webhook: {{name}}",
+      "via_voice": "Via voice line",
+      "via_voice_named": "Via voice line: {{name}}"
+    }
   },
   "chat": {
     "ack_pending_count": "У вас {{count}} термінових повідомлень для підтвердження",
@@ -2424,6 +2487,117 @@
       "saved": "Доступність збережено",
       "save_failed": "Не вдалося зберегти доступність",
       "expiry_passed": "Час завершення повідомлення вже минув. Виберіть, як довго воно діє."
+    },
+    "destinations": {
+      "capabilities": {
+        "empty": "Немає можливостей",
+        "empty_description": "Можливості, як-от Катетеризаційна лабораторія чи Гелікоптерний майданчик, додають у веб-версії: Карти → POI → Можливості POI.",
+        "intro": "Що пропонують ваші місця призначення. Натисніть можливість, щоб побачити місця, які її пропонують.",
+        "offered_by": "Місць, що її пропонують: {{count}}",
+        "show_hint": "Показує місця призначення, що її пропонують",
+        "unavailable": "Недоступна в {{count}}"
+      },
+      "counts": "Відкрито {{open}} · Обмежено {{limited}} · Перенаправлення {{diversion}} · Закрито {{closed}}",
+      "empty": "Немає місць призначення",
+      "empty_description": "Тут показано типи POI, позначені як місця призначення у веб-версії (Карти → POI).",
+      "filter_all": "Усі ({{count}})",
+      "filter_not_open": "Не відкриті ({{count}})",
+      "loading": "Завантаження місць призначення...",
+      "no_match": "Жодне місце призначення не підходить",
+      "rules": {
+        "any_destination": "Будь-яке місце призначення",
+        "condition_call_type": "Тип виклику: {{name}}",
+        "condition_priority": "Пріоритет: {{name}}",
+        "condition_unit_type": "Тип підрозділу: {{name}}",
+        "deleted": "(видалено)",
+        "destination": "Місце призначення",
+        "empty": "Немає правил місць призначення",
+        "empty_description": "Без правил пропонується будь-яке місце призначення, спершу найближче відкрите.",
+        "every_call": "Кожен виклик",
+        "load_failed": "Не вдалося завантажити правила місць призначення",
+        "loading": "Завантаження правил місць призначення...",
+        "mode_fill": "Пропонувати й заповнювати",
+        "mode_off": "Вимкнено",
+        "mode_suggest": "Пропонувати місця призначення",
+        "needs_attention": "Посилається на видалені елементи ({{count}}); виправте у веб-версії.",
+        "nothing": "Нічого",
+        "prefers": "Бажано",
+        "read_only": "Правила й пропозиції налаштовують у веб-версії: Карти → POI → Правила місць призначення.",
+        "requires": "Потребує",
+        "suggestions": "Пропозиції",
+        "window": "Місце з більшою кількістю бажаних можливостей іде першим лише в межах {{count}} хв від найближчого."
+      },
+      "search": "Пошук місць призначення...",
+      "tab_availability": "Доступність",
+      "tab_capabilities": "Можливості",
+      "tab_rules": "Правила",
+      "title": "Місця призначення"
+    },
+    "suggestions": {
+      "failed": "Пропозиції місць призначення зараз недоступні.",
+      "filled": "Заповнено запропонованим місцем призначення. За потреби виберіть інше.",
+      "loading": "Пошук місць призначення...",
+      "missing": "Бракує: {{names}}",
+      "needs": "Потребує: {{names}}",
+      "none": "Місце призначення не знайдено.",
+      "none_meet": "Жодне місце поблизу не пропонує всього потрібного.",
+      "prefers": "Бажано: {{names}}",
+      "rules": "Правила: {{names}}",
+      "selected": "Вибрано",
+      "set_aside": "Відкладено: {{names}}",
+      "set_aside_rule": "{{name}} ({{reason}})",
+      "set_aside_type_conflict": "конкретніше правило спрямовує до інших типів місць призначення",
+      "set_aside_types_removed": "його типів місць призначення більше не існує",
+      "suggested": "Запропоновано",
+      "title": "Запропоновані місця призначення",
+      "types": "Типи: {{names}}",
+      "use": "Вибрати",
+      "use_label": "Вибрати {{name}} як місце призначення",
+      "down": "Зараз недоступно: {{names}}"
+    },
+    "ai_advice": {
+      "advised_at": "Advised {{time}}",
+      "apply": "Apply",
+      "apply_label": "Make {{name}} the call's destination",
+      "ask": "Ask Enhanced AI",
+      "asking": "Asking Enhanced AI…",
+      "confidence": "Confidence {{percent}}%",
+      "consider": "Consider {{name}}",
+      "current": "Current destination: {{name}}",
+      "current_free": "Current destination: an address or point (no destination POI)",
+      "current_none": "The call has no destination yet.",
+      "dismiss": "Dismiss",
+      "dismiss_reason": "Why dismiss it? (optional)",
+      "dismiss_reason_placeholder": "e.g. Patient asked for another hospital",
+      "error": {
+        "failed": "Something went wrong. Please try again.",
+        "not_allowed": "You cannot change this call.",
+        "offline": "No connection. Try again when you are back online."
+      },
+      "keep": "Keep the current destination",
+      "low_confidence": "Low confidence: check before applying",
+      "no_suggestion": "No destination suggested",
+      "none": "No destination advice for this call yet.",
+      "outcome": {
+        "applied": "{{name}} is now the call's destination.",
+        "budget_exhausted": "Your department's Enhanced AI allowance is used up for now.",
+        "busy": "Enhanced AI is busy. Try again in a moment.",
+        "call_not_open": "The call is no longer open.",
+        "destination_gone": "The recommended destination is no longer available.",
+        "dismissed": "Advice dismissed.",
+        "invalid_output": "Enhanced AI's answer could not be used. Try again.",
+        "model_unavailable": "Enhanced AI could not answer right now. Try again later.",
+        "no_candidates": "No destination could be considered for this call.",
+        "no_location": "The call needs a location before Enhanced AI can advise.",
+        "not_found": "This advice is no longer available.",
+        "not_open": "This advice was already applied, dismissed or replaced.",
+        "nothing_to_apply": "The advice is to keep the current destination: there is nothing to apply.",
+        "protection_unsupported": "Enhanced AI destination advice is not available while Advanced Data Protection is on.",
+        "unavailable_for_department": "Enhanced AI destination advice is not available for your department.",
+        "unchanged": "Nothing the advice reads has changed: this is still the advice."
+      },
+      "suggests": "Enhanced AI suggests",
+      "title": "Enhanced AI destination advice"
     }
   },
   "protocols": {
@@ -3115,7 +3289,10 @@
     "call_assigned_destination": "Пункт призначення виклику: {{name}}",
     "transport_destination_differs": "Відрізняється від призначеного пункту призначення виклику: {{name}}",
     "transport_reason_required": "Цей пункт призначення відрізняється від призначеного у виклику ({{name}}). Вкажіть причину (обов'язково).",
-    "destination_availability": "{{name}}: {{status}}"
+    "destination_availability": "{{name}}: {{status}}",
+    "destination_missing": "{{name}} не надає необхідного: {{names}}",
+    "destination_required_down": "{{name}} повідомляє, що зараз недоступно: {{names}}",
+    "finding_suggested_destination": "Пошук запропонованого пункту призначення..."
   },
   "tabs": {
     "calendar": "Календар",
@@ -4428,7 +4605,12 @@
       "waypoint": "Waypoint"
     },
     "stops_done": "{{done}} of {{total}} stops",
-    "stop_eta": "ETA {{time}}"
+    "stop_eta": "ETA {{time}}",
+    "for_a_call": "Розпочато для виклику",
+    "for_call": "Виклик: {{call}}",
+    "route_start": "Початок маршруту",
+    "route_start_pending": "Спершу їдьте до початку маршруту: {{name}}",
+    "route_start_pending_unnamed": "Спершу їдьте до початку маршруту"
   },
   "unit_status": {
     "console_title": "Status console",
@@ -4446,7 +4628,19 @@
     "timer_warning": "Status timer warning: {{status}} for {{elapsed}}",
     "timer_notification_body": "{{unit}}: update your status if it has changed.",
     "timer_exact_alarms_allow": "Allow on-time timer alerts",
-    "timer_exact_alarms_hint": "Status timer alerts can arrive late while the app is in the background."
+    "timer_exact_alarms_hint": "Status timer alerts can arrive late while the app is in the background.",
+    "route": {
+      "conflict_cancel": "Скасувати його й почати цей маршрут",
+      "conflict_end": "Завершити його й почати цей маршрут",
+      "conflict_keep": "Залишити поточний маршрут",
+      "conflict_message": "Цей підрозділ виконує маршрут {{route}}. Завершіть або скасуйте його, щоб почати маршрут цього виклику, або залиште його активним.",
+      "conflict_message_unnamed": "Цей підрозділ виконує інший маршрут. Завершіть або скасуйте його, щоб почати маршрут цього виклику, або залиште його активним.",
+      "conflict_title": "Виконується інший маршрут",
+      "continue": "Продовжити маршрут",
+      "name": "Маршрут: {{name}}",
+      "start": "Почати маршрут",
+      "unnamed": "Маршрут виклику"
+    }
   },
   "workOrders": {
     "reportNotSent": "Not sent",
@@ -4507,7 +4701,13 @@
       "set_status": "Set {{status}}",
       "stop_fallback": "the stop",
       "stop_title": "Arrived at {{name}}",
-      "title": "You have arrived"
+      "title": "You have arrived",
+      "end_route": "Завершити маршрут",
+      "route_ended": "Маршрут завершено",
+      "route_start_at": "Початок маршруту: {{name}}",
+      "route_start_auto": "Перехід до першої зупинки через {{seconds}} с",
+      "route_start_continue": "Їхати до першої зупинки",
+      "route_start_title": "Ви досягли початку маршруту"
     },
     "back": "Back",
     "error": {
@@ -4660,7 +4860,9 @@
       "times_required": "Додайте принаймні один час дня.",
       "title": "Не вдалося зберегти розклад",
       "too_many_times": "Не більше {{max}} разів на день.",
-      "unknown": "Щось у розкладі недійсне."
+      "unknown": "Щось у розкладі недійсне.",
+      "destination_coordinates_invalid": "Точка призначення не є дійсним розташуванням.",
+      "route_plan_invalid": "Маршрут більше не активний або не має початку чи кінця. Виберіть інший маршрут."
     },
     "facility_value": "Забір: {{facility}}",
     "field_address": "Адреса",
@@ -4819,6 +5021,49 @@
     "week_fourth": "четвертий",
     "week_last": "останній",
     "week_second": "другий",
-    "week_third": "третій"
+    "week_third": "третій",
+    "destination_location_none": "Немає точки призначення",
+    "destination_location_set": "Пункт призначення: {{latitude}}, {{longitude}}",
+    "destination_poi_wins_hint": "Виклики спрямовуються до точки інтересу пункту призначення. Виберіть «Немає», щоб натомість указати адресу або точку.",
+    "facility_poi_hint": "Розташування кожного виклику пов'язується з цією точкою інтересу, яка також заповнює порожню адресу виклику.",
+    "field_destination_address": "Адреса пункту призначення",
+    "field_destination_location": "Розташування пункту призначення",
+    "field_route": "Маршрут"
+  },
+  "route_plans": {
+    "duration_with_stops": "З зупинками",
+    "first_stop": "перша зупинка",
+    "last_stop": "остання зупинка",
+    "map_end_label": "К",
+    "map_start_label": "П",
+    "not_found": "Маршрут не знайдено",
+    "not_found_description": "Не вдалося завантажити цей маршрут. Можливо, його видалено або він неактивний.",
+    "preview_action": "Попередній перегляд маршруту",
+    "preview_title": "Попередній перегляд маршруту",
+    "profile": {
+      "cycling": "Велосипед",
+      "driving": "Автомобіль",
+      "driving_traffic": "Автомобіль (з урахуванням трафіку)",
+      "truck": "Вантажівка",
+      "walking": "Пішки"
+    },
+    "profile_label": "Спосіб пересування",
+    "stale_route": "Зупинки змінилися після розрахунку цього маршруту, тому лінія може бути застарілою.",
+    "status": {
+      "active": "Активний",
+      "archived": "Архівований",
+      "draft": "Чернетка",
+      "paused": "Призупинено"
+    }
+  },
+  "routes_overview": {
+    "next_stop": "Наступна зупинка: {{name}}",
+    "no_running": "Немає активних маршрутів",
+    "no_running_description": "Маршрути, які запускають ваші підрозділи, з'являються тут разом із прогресом.",
+    "plans_tab": "Плани",
+    "running_tab": "Виконуються",
+    "started_at": "Розпочато {{time}}",
+    "for_a_call": "Розпочато для виклику",
+    "for_call": "Виклик {{number}}: {{name}}"
   }
 }

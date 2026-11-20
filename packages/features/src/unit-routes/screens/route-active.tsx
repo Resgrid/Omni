@@ -1,21 +1,26 @@
+import { useCapability } from '@resgrid/config';
 import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { getDataLocationFix, RouteInstanceStatus, useRoutesStore } from '@resgrid/data';
 import { useInAppNavigationAvailable } from '@resgrid/features/navigation/hooks/use-in-app-navigation';
 import { navigationRoutes } from '@resgrid/features/navigation/routes';
+import { ROUTE_START_COLOR } from '@resgrid/features/route-plans/lib/route-plan-preview';
+import { routePlansRoutes } from '@resgrid/features/route-plans/routes';
 import { useStatusContext } from '@resgrid/features/status';
 import { useTranslation } from '@resgrid/i18n';
 import type { RouteStopWithDetailsResultData } from '@resgrid/models';
 import { Button, ButtonText, HStack, Loading, Pressable, ScreenHeader, ScrollView, Text, useFormFactor, useThemeColors, useToast, View, VStack, ZeroState } from '@resgrid/ui';
 import { router, useLocalSearchParams } from 'expo-router';
-import { LogOut, Navigation, Pause, Play, Route } from 'lucide-react-native';
+import { Eye, Flag, LogOut, Navigation, Pause, Play, Route } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { AppState, StyleSheet } from 'react-native';
 
 import { ConfirmDialog } from '../components/confirm-dialog';
 import { DeviationBanner } from '../components/deviation-banner';
+import { RunCallLink } from '../components/run-call-link';
 import { SkipStopDialog } from '../components/skip-stop-dialog';
 import { StopCard } from '../components/stop-card';
 import { useStopActions } from '../hooks/use-stop-actions';
+import { isRouteStartPending, isStopMarker, routeStartMapStop, routeStartWaypoint } from '../lib/call-run';
 import { parseRouteGeometry } from '../lib/route-geo';
 import { instanceMapStops, mapBounds, routeColor, stopGeofence } from '../lib/route-map';
 import { currentStop, instanceDeviations, progressPercent, sortStops, type StopActionKind } from '../lib/route-status';
@@ -60,6 +65,9 @@ export default function RouteActiveScreen({ instanceId: instanceIdProp, renderMa
   const [skipTarget, setSkipTarget] = useState<RouteStopWithDetailsResultData | null>(null);
   const [confirm, setConfirm] = useState<ConfirmKind>(null);
   const [isBusy, setIsBusy] = useState(false);
+  const canPreview = useCapability('routes').preview;
+  // A call's run that has not reached its start yet (Core M0322): the live route leads to the start first.
+  const startPending = isRouteStartPending(instance);
 
   const refresh = useCallback(
     (bypassCache: boolean) => {
@@ -75,15 +83,21 @@ export default function RouteActiveScreen({ instanceId: instanceIdProp, renderMa
   useEffect(() => {
     if (!instanceId) return;
     refresh(false);
-    void useRoutesStore.getState().fetchDirections(instanceId);
   }, [instanceId, refresh]);
+
+  // Read again once the start is reached: the line then runs from the unit through the stops only.
+  useEffect(() => {
+    if (instanceId) void useRoutesStore.getState().fetchDirections(instanceId, null, { includeStart: startPending });
+  }, [instanceId, startPending]);
 
   useEffect(() => {
     if (!instanceId || pollMs <= 0) return undefined;
+
     const handle = setInterval(() => {
       // Android keeps JS timers alive in the background: never poll for a screen nobody is looking at.
       if (AppState.currentState === 'active') refresh(true);
     }, pollMs);
+
     return () => clearInterval(handle);
   }, [instanceId, pollMs, refresh]);
 
@@ -93,8 +107,23 @@ export default function RouteActiveScreen({ instanceId: instanceIdProp, renderMa
   const plan = plans.find((candidate) => candidate.RoutePlanId === instance?.RoutePlanId) ?? null;
   const planDetail = activePlan && activePlan.RoutePlanId === instance?.RoutePlanId ? activePlan : null;
   const color = routeColor(plan?.RouteColor ?? planDetail?.RouteColor);
-  const line = useMemo(() => parseRouteGeometry(directions?.RouteInstanceId === instanceId ? directions?.Geometry : planDetail?.MapboxRouteGeometry), [directions, instanceId, planDetail?.MapboxRouteGeometry]);
-  const mapStops = useMemo(() => instanceMapStops(stops, currentId), [currentId, stops]);
+
+  // The live directions' line, else the plan's stored line (also when the live geometry is empty or unreadable).
+  const line = useMemo(
+    () => parseRouteGeometry(directions?.RouteInstanceId === instanceId ? directions?.Geometry : null) ?? parseRouteGeometry(planDetail?.MapboxRouteGeometry),
+    [directions, instanceId, planDetail?.MapboxRouteGeometry]
+  );
+
+  // The start leg's waypoint, while the live directions still lead there.
+  const startWaypoint = useMemo(() => (startPending && directions?.RouteInstanceId === instanceId ? routeStartWaypoint(directions?.Waypoints) : null), [directions, instanceId, startPending]);
+  const startMarker = useMemo(() => routeStartMapStop(startWaypoint, t('route_plans.map_start_label'), ROUTE_START_COLOR), [startWaypoint, t]);
+
+  const mapStops = useMemo(() => {
+    const markers = instanceMapStops(stops, startMarker ? null : currentId);
+
+    return startMarker ? [startMarker, ...markers] : markers;
+  }, [currentId, startMarker, stops]);
+
   const geofence = useMemo(() => stopGeofence(current, planDetail?.GeofenceRadiusMeters), [current, planDetail?.GeofenceRadiusMeters]);
   const ownDeviations = useMemo(() => instanceDeviations(deviations, instanceId), [deviations, instanceId]);
   const percent = progressPercent(stops.length > 0 ? stops : instanceStops, instance);
@@ -104,7 +133,9 @@ export default function RouteActiveScreen({ instanceId: instanceIdProp, renderMa
   const onAction = useCallback(
     (kind: StopActionKind, stop: RouteStopWithDetailsResultData) => {
       const id = stop.RouteInstanceStopId;
+
       if (!id) return;
+
       if (kind === 'checkIn') void checkIn(id);
       else if (kind === 'checkOut') void checkOut(id);
       else setSkipTarget(stop);
@@ -116,12 +147,19 @@ export default function RouteActiveScreen({ instanceId: instanceIdProp, renderMa
     setIsBusy(true);
     const ok = await work();
     setIsBusy(false);
+
     if (ok) after?.();
     else toast.error(t(useRoutesStore.getState().actionError?.messageKey ?? 'common.errorOccurred'));
+
     return ok;
   };
 
   const back = () => (router.canGoBack() ? router.back() : router.replace(unitRoutesRoutes.list()));
+
+  // The route start marker is not a stop: it has no details to open.
+  const openStop = (stopId: string) => {
+    if (isStopMarker(stopId)) pushRoutePath(router, unitRoutesRoutes.stop(stopId));
+  };
 
   if (!instance) {
     return (
@@ -174,7 +212,7 @@ export default function RouteActiveScreen({ instanceId: instanceIdProp, renderMa
           color={color}
           bounds={mapBounds(mapStops, line, getDataLocationFix())}
           showUserLocation
-          onStopPress={(stopId) => pushRoutePath(router, unitRoutesRoutes.stop(stopId))}
+          onStopPress={openStop}
         />
         <HStack space="sm" className="items-center px-4 pt-3">
           <View className="flex-1 overflow-hidden rounded-full bg-background-200" style={styles.track}>
@@ -184,6 +222,27 @@ export default function RouteActiveScreen({ instanceId: instanceIdProp, renderMa
             {t('routes.progress', { percent })}
           </Text>
         </HStack>
+        <VStack className="px-4 pt-2">
+          <RunCallLink instance={instance} testID="route-active-call" />
+          {startWaypoint ? (
+            <HStack space="xs" className="items-center py-1" testID="route-active-start-pending">
+              <View>
+                <Flag size={14} color={ROUTE_START_COLOR} />
+              </View>
+              <Text className="flex-1 text-sm text-typography-700">{startWaypoint.Name ? t('unit_routes.route_start_pending', { name: startWaypoint.Name }) : t('unit_routes.route_start_pending_unnamed')}</Text>
+            </HStack>
+          ) : null}
+          {canPreview ? (
+            <Pressable onPress={() => pushRoutePath(router, routePlansRoutes.preview(instance.RoutePlanId))} accessibilityRole="link" testID="route-active-preview" className="py-1">
+              <HStack space="xs" className="items-center">
+                <View>
+                  <Eye size={14} color="#2563eb" />
+                </View>
+                <Text className="text-sm font-medium text-primary-600">{t('route_plans.preview_action')}</Text>
+              </HStack>
+            </Pressable>
+          ) : null}
+        </VStack>
         {isPaused ? (
           <HStack space="sm" className="mx-4 mt-3 items-center rounded-lg bg-warning-50 p-3" testID="route-active-paused">
             <Text className="flex-1 text-sm font-semibold text-warning-800">{t('routes.paused')}</Text>
@@ -261,6 +320,7 @@ export default function RouteActiveScreen({ instanceId: instanceIdProp, renderMa
           <Text className="mb-2 text-xs font-semibold uppercase text-typography-500">{t('routes.stops')}</Text>
           {stops.map((stop) => {
             const id = stop.RouteInstanceStopId ?? stop.RouteStopId;
+
             return <StopCard key={id} stop={stop} onPress={(row) => (row.RouteInstanceStopId ? pushRoutePath(router, unitRoutesRoutes.stop(row.RouteInstanceStopId)) : undefined)} testID={`route-active-stop-${id}`} />;
           })}
         </VStack>
@@ -283,6 +343,7 @@ export default function RouteActiveScreen({ instanceId: instanceIdProp, renderMa
         onConfirm={(reason) => {
           const id = skipTarget?.RouteInstanceStopId;
           setSkipTarget(null);
+
           if (id) void skip(id, reason);
         }}
       />

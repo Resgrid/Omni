@@ -97,6 +97,14 @@ export interface RecurringCallResultData {
   IncidentNumber: string | null;
   MapPage: string | null;
   DestinationPoiId: number | null;
+  /** Core M0322: free destination address (no destination POI); undefined from older servers. */
+  DestinationAddress?: string | null;
+  /** Core M0322: free destination point, "lat,lon"; undefined from older servers. */
+  DestinationGeoLocationData?: string | null;
+  /** Core M0322: the route each call runs (copied only while the plan is still eligible); undefined from older servers. */
+  RoutePlanId?: string | null;
+  /** That route's name; undefined from older servers. */
+  RoutePlanName?: string | null;
   CheckInTimersEnabled: boolean;
 
   // About the schedule
@@ -105,6 +113,7 @@ export interface RecurringCallResultData {
   ScheduleContactEmail: string | null;
   FacilityName: string | null;
   FacilityDetails: string | null;
+  /** The pickup facility; each call's `LocationPoiId` (Core M0322) when it is a valid POI. */
   FacilityPoiId: number | null;
   DestinationName: string | null;
   DestinationDetails: string | null;
@@ -228,7 +237,14 @@ export interface RecurringCallInput {
   ReferenceNumber?: string | null;
   IncidentNumber?: string | null;
   MapPage?: string | null;
+  /** A destination POI wins: when it is set (> 0) the server clears the free destination below. */
   DestinationPoiId?: number | null;
+  /** Core M0322: free destination address (no destination POI). */
+  DestinationAddress?: string | null;
+  /** Core M0322: free destination point, "lat,lon" (invariant culture). */
+  DestinationGeoLocationData?: string | null;
+  /** Core M0322: the route each call runs (an eligible plan from `Routes/GetCallRoutePlans`). */
+  RoutePlanId?: string | null;
   CheckInTimersEnabled: boolean;
 
   ScheduleContactName?: string | null;

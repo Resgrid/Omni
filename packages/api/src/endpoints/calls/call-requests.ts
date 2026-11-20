@@ -58,6 +58,12 @@ export const formatGeolocation = (latitude?: number | null, longitude?: number |
   return `${latitude},${longitude}`;
 };
 
+/** A point picked on the form (the free destination), sent like `Geolocation`. */
+export interface CallRequestPoint {
+  latitude: number;
+  longitude: number;
+}
+
 interface CallRequestBase {
   name: string;
   nature: string;
@@ -103,6 +109,27 @@ interface CallRequestBase {
   /** Dispatch time as an ISO-8601 UTC instant (`DispatchOnUtc`); blank dispatches now (create) or keeps the schedule (edit). */
   dispatchOnUtc?: string;
   destinationPoiId?: number | null;
+  /**
+   * The POI (any type) the call location was picked from (Core M0322; the server fills a blank address / geolocation from it).
+   * Undefined leaves the property out: the form has no Location POI picker, and an edit keeps the stored POI. Null (the picker
+   * is shown, nothing picked) is left out of a new call and clears the POI on an edit (sent as 0).
+   */
+  locationPoiId?: number | null;
+  /**
+   * The free destination (Core M0322), for a destination that is not a POI. A destination POI (`destinationPoiId` > 0) wins:
+   * the server clears the free destination then, so a new call leaves it out and an edit sends it cleared. Undefined leaves a
+   * property out (the form has no input for it; an edit keeps the stored value); null or blank is left out of a new call and
+   * clears the value on an edit (""). A plus code is only a lookup (`Geocoding/PlusCodeLookup`), never sent.
+   */
+  destinationAddress?: string | null;
+  /** The free destination point, sent as `"lat,lon"` like `Geolocation` (an unusable point counts as blank). */
+  destinationGeolocation?: CallRequestPoint | null;
+  destinationWhat3Words?: string | null;
+  /**
+   * The pre-defined route (Core M0322): an eligible plan id from `Routes/GetCallRoutePlans`. Undefined leaves it out (no Route
+   * picker; an edit keeps the stored route); null or blank is left out of a new call and clears the route on an edit ("").
+   */
+  routePlanId?: string | null;
   /** Conditional run cards: "unitId:codeId" joined by "|"; sent only when set. */
   unitResponseCodes?: string;
   /** Custom field values; undefined omits them (the server then does not check required fields). */
@@ -165,8 +192,52 @@ const commonFields = (request: CallRequestBase) => ({
   ...(Array.isArray(request.udfValues) ? { UdfValues: request.udfValues.map((value) => ({ UdfFieldId: value.UdfFieldId, Value: value.Value })) } : {}),
 });
 
+type CallLocationInput = Pick<NewCallInput, 'LocationPoiId' | 'DestinationAddress' | 'DestinationGeolocation' | 'DestinationWhat3Words' | 'RoutePlanId'>;
+
+/** A value the form shows: trimmed; blank is left out of a new call (undefined) and clears the stored value on an edit (""). */
+const shownText = (value: string | null | undefined, isEdit: boolean): string | undefined => {
+  const text = value?.trim() ?? '';
+
+  return text !== '' || isEdit ? text : undefined;
+};
+
+/**
+ * Core M0322 location fields. Only what the form shows goes up (`undefined` request fields are left out, so legacy-style
+ * edits never change them); an edit clears with 0 / "" (null keeps the stored value on the server).
+ */
+const callLocationFields = (request: CallRequestBase, isEdit: boolean): CallLocationInput => {
+  const fields: CallLocationInput = {};
+  const destinationIsPoi = (request.destinationPoiId ?? 0) > 0;
+
+  if (request.locationPoiId !== undefined) {
+    const poiId = request.locationPoiId !== null && request.locationPoiId > 0 ? request.locationPoiId : 0;
+
+    if (poiId > 0 || isEdit) fields.LocationPoiId = poiId;
+  }
+
+  const address = request.destinationAddress === undefined ? undefined : shownText(destinationIsPoi ? null : request.destinationAddress, isEdit);
+
+  if (address !== undefined) fields.DestinationAddress = address;
+
+  const point = request.destinationGeolocation;
+  const geolocation = point === undefined ? undefined : shownText(destinationIsPoi || point === null ? null : formatGeolocation(point.latitude, point.longitude), isEdit);
+
+  if (geolocation !== undefined) fields.DestinationGeolocation = geolocation;
+
+  const what3words = request.destinationWhat3Words === undefined ? undefined : shownText(destinationIsPoi ? null : request.destinationWhat3Words, isEdit);
+
+  if (what3words !== undefined) fields.DestinationWhat3Words = what3words;
+
+  const routePlanId = request.routePlanId === undefined ? undefined : shownText(request.routePlanId, isEdit);
+
+  if (routePlanId !== undefined) fields.RoutePlanId = routePlanId;
+
+  return fields;
+};
+
 export const buildNewCallInput = (request: CreateCallRequest): NewCallInput => ({
   ...commonFields(request),
+  ...callLocationFields(request, false),
   // Only when a time was picked; a pending call has no dispatch time.
   ...(!request.isPending && request.dispatchOnUtc ? { DispatchOnUtc: request.dispatchOnUtc } : {}),
   IsPending: request.isPending === true,
@@ -176,6 +247,7 @@ export const buildNewCallInput = (request: CreateCallRequest): NewCallInput => (
 export const buildEditCallInput = (request: UpdateCallRequest): EditCallInput => ({
   Id: request.callId,
   ...commonFields(request),
+  ...callLocationFields(request, true),
   // Only when a new time was picked: leaving it out keeps the schedule.
   ...(request.dispatchOnUtc ? { DispatchOnUtc: request.dispatchOnUtc } : {}),
   RebroadcastCall: request.rebroadcastCall ?? false,

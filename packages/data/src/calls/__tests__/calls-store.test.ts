@@ -233,6 +233,27 @@ describe('offline call creation', () => {
     expect(selectUnacknowledgedSyncedCalls(useCallsStore.getState())).toEqual([]);
   });
 
+  it('offline: a queued call shows its location POI, free destination and route as the server would return them (Core M0322)', async () => {
+    runtime.connectivity.setOnline(false);
+
+    const result = await useCallsStore
+      .getState()
+      .createCall({ ...request, locationPoiId: 7, destinationAddress: '12 Main St', destinationGeolocation: { latitude: 39.5, longitude: -119.8 }, destinationWhat3Words: 'a.b.c', routePlanId: 'rp-1' });
+
+    const queued = selectCallListWithQueued(useCallsStore.getState()).find((item) => item.CallId === result.id);
+
+    expect(queued).toMatchObject({
+      LocationPoiId: 7,
+      DestinationPoiId: null,
+      DestinationAddress: '12 Main St',
+      DestinationLatitude: 39.5,
+      DestinationLongitude: -119.8,
+      DestinationGeolocation: '39.5,-119.8',
+      DestinationWhat3Words: 'a.b.c',
+      RoutePlanId: 'rp-1',
+    });
+  });
+
   it('network failure while online keeps the call queued (not rejected)', async () => {
     jest.mocked(saveCall).mockRejectedValue(networkError());
     const result = await useCallsStore.getState().createCall(request);

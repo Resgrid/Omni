@@ -6,6 +6,9 @@ import {
   endRoute,
   geofenceCheckIn,
   getActiveRouteForUnit,
+  getActiveRouteInstances,
+  getCallRoutePlans,
+  getDirections,
   getInstanceDirections,
   getRouteHistory,
   getRoutePlan,
@@ -17,12 +20,21 @@ import {
   getUnacknowledgedDeviations,
   isApiError,
   pauseRoute,
+  problemDetailOf,
+  ProblemTypes,
+  reachRouteStart,
   resumeRoute,
   skipStop,
+  startCallRoute,
   startRoute,
   updateStopNotes,
+  V4FailureError,
 } from '@resgrid/api';
 import type {
+  ActiveRouteInstanceResultData,
+  CallRoutePlanResultData,
+  GetRouteInstanceResult,
+  ReachRouteStartInput,
   RouteDeviationResultData,
   RouteDirectionsResultData,
   RouteInstanceResultData,
@@ -47,8 +59,10 @@ import { cacheOptions, createSliceRunner, emptySliceMeta, type FetchOptions, typ
 
 /** Core `RouteInstanceStatus`. RD11: Unit sent 2 (Completed) for pause; paused is 5. */
 export const RouteInstanceStatus = { Scheduled: 0, InProgress: 1, Completed: 2, Cancelled: 3, Abandoned: 4, Paused: 5 } as const;
+
 /** Core instance-stop status (`RouteService`): 0 pending, 1 checked in, 2 checked out, 3 skipped. */
 export const RouteStopStatus = { Pending: 0, CheckedIn: 1, CheckedOut: 2, Skipped: 3 } as const;
+
 /** Core `RouteStopCheckInType`. */
 export const RouteStopCheckInType = { Manual: 0, Geofence: 1, QrCode: 2 } as const;
 
@@ -56,8 +70,14 @@ export const ROUTE_STOP_CHECK_IN_EVENT = 'routes.stop.checkIn';
 export const ROUTE_STOP_CHECK_OUT_EVENT = 'routes.stop.checkOut';
 export const ROUTE_STOP_SKIP_EVENT = 'routes.stop.skip';
 
+/** Core M0322: the unit reached a call-linked route's start (`Routes/ReachRouteStart`). Queued with the stop writes. */
+export const ROUTE_REACH_START_EVENT = 'routes.start.reach';
+
 /** Check-in, check-out and skip of one stop replay in order. */
 export const routeStopOrderKey = (routeInstanceStopId: string): string => `route-stop:${routeInstanceStopId}`;
+
+/** Reaching a route's start replays in order with the other writes to the same instance's start. */
+export const routeStartOrderKey = (routeInstanceId: string): string => `route-start:${routeInstanceId}`;
 
 export interface RouteProgressCounts {
   total: number;
@@ -77,13 +97,42 @@ export interface RouteStopWritePayload {
   at: number;
 }
 
+/** `Routes/ReachRouteStart` queued on the device (Core M0322). */
+export interface RouteReachStartPayload {
+  routeInstanceId: string;
+  latitude: number | null;
+  longitude: number | null;
+  /** `StartReachedOn` before the optimistic update, restored if the server refuses. */
+  previousStartReachedOn: string | null;
+  at: number;
+}
+
+/**
+ * A route plan preview (any variant): the plan with its stops and stored geometry, plus its stored directions for the
+ * resolved start and end (a station or a point). Read into its own slot, so a preview never replaces the live route's plan.
+ */
+export interface RoutePlanPreviewData {
+  plan: RoutePlanDetailResultData;
+  /** `GetDirections/{routePlanId}`: resolved `Start` / `End` and legs; null when the server has none for the plan. */
+  directions: RouteDirectionsResultData | null;
+}
+
+/**
+ * What `startCallRoute` did (Core M0322):
+ * - `started`: the unit runs the call's route (a new run, or the one it already runs or paused for this call);
+ * - `route_in_progress`: the unit runs another route (409); `existingInstanceId` is that run, for "End that route and
+ *   start this one" (`endRouteInstance` / `cancelRouteInstance`, then retry);
+ * - `failed`: anything else (no route on the call, not eligible any more, offline…), as a translatable error.
+ */
+export type StartCallRouteResult = { status: 'started'; instance: RouteInstanceResultData } | { status: 'route_in_progress'; existingInstanceId: string | null; error: DataError } | { status: 'failed'; error: DataError };
+
 /** A past (or another unit's) route instance, read for the history screens without touching the live route. */
 export interface RouteInstanceDetail {
   progress: RouteProgressResultData | null;
   stops: RouteStopWithDetailsResultData[];
 }
 
-type RoutesSlice = 'plans' | 'plan' | 'active' | 'progress' | 'stops' | 'directions' | 'deviations' | 'history' | 'stopContact' | 'instanceDetail';
+type RoutesSlice = 'plans' | 'plan' | 'active' | 'progress' | 'stops' | 'directions' | 'deviations' | 'history' | 'stopContact' | 'instanceDetail' | 'callPlans' | 'planPreview' | 'activeInstances';
 
 interface RoutesData extends SliceMeta<RoutesSlice> {
   routePlans: RoutePlanResultData[];
@@ -101,6 +150,12 @@ interface RoutesData extends SliceMeta<RoutesSlice> {
   stopContactsById: Record<string, RouteStopContactResultData>;
   /** History instance details by instance id (online reads; never persisted). */
   instanceDetailsById: Record<string, RouteInstanceDetail>;
+  /** Core M0322: the routes a call may run (`GetCallRoutePlans`), for the call form's Route picker. Persisted. */
+  callRoutePlans: CallRoutePlanResultData[];
+  /** Plan previews by plan id (online reads, newest `PLAN_PREVIEWS_MAX`; never persisted, they carry route geometry). */
+  planPreviewsById: Record<string, RoutePlanPreviewData>;
+  /** The department's running route instances with progress (`GetActiveRouteInstances`), for the dispatch desk. */
+  activeRouteInstances: ActiveRouteInstanceResultData[];
   isTracking: boolean;
   actionError: DataError | null;
 }
@@ -118,8 +173,11 @@ export interface RoutesState extends RoutesData {
   /** RD11: applies `Data.Instance` and the stops; never replaces the instance with the progress object. */
   fetchRouteProgress: (instanceId: string, options?: FetchOptions) => Promise<void>;
   fetchStopsForInstance: (instanceId: string, options?: FetchOptions) => Promise<void>;
-  /** RD11: routes from the unit's position (passed, else the last known fix), not from the first remaining stop. */
-  fetchDirections: (instanceId: string, position?: { latitude: number; longitude: number } | null) => Promise<void>;
+  /**
+   * RD11: routes from the unit's position (passed, else the last known fix), not from the first remaining stop.
+   * `includeStart` (Core M0322; sent only with a position) leads a call-linked route to its start first (`IsRouteStart`).
+   */
+  fetchDirections: (instanceId: string, position?: { latitude: number; longitude: number } | null, options?: { includeStart?: boolean }) => Promise<void>;
   /** Offline-capable stop check-in with the crew's coordinates. */
   checkIn: (routeInstanceStopId: string, location?: DataLocationFix | null) => Promise<WriteResult>;
   /** Offline-capable stop check-out; RD10: coordinates are always sent (Unit stored 0,0). */
@@ -135,6 +193,22 @@ export interface RoutesState extends RoutesData {
   fetchStopContact: (routeStopId: string, options?: FetchOptions) => Promise<RouteStopContactResultData | null>;
   /** A history instance (progress + stops) without replacing the live route's state. */
   fetchInstanceDetail: (instanceId: string, options?: FetchOptions) => Promise<RouteInstanceDetail | null>;
+  /** Core M0322: the routes a call may run (Route picker, recurring call form). Cached by the endpoint; persisted for offline. */
+  fetchCallRoutePlans: (options?: FetchOptions) => Promise<void>;
+  /** A plan with its stops and resolved start/end for a preview (`GetRoutePlan/{id}` + `GetDirections/{id}`); cached copy offline. */
+  fetchRoutePlanPreview: (routePlanId: string, options?: FetchOptions) => Promise<RoutePlanPreviewData | null>;
+  /** The department's running route instances with progress (`GetActiveRouteInstances`), for the dispatch desk. */
+  fetchActiveRouteInstances: (options?: FetchOptions) => Promise<void>;
+  /**
+   * Core M0322: starts the call's route for a unit (`StartCallRoute`, online). On success the instance becomes the active
+   * route (a paused one stays paused: resume it with `resumeRouteInstance`); a 409 names the route the unit runs instead.
+   */
+  startCallRoute: (callId: number | string, unitId: number | string) => Promise<StartCallRouteResult>;
+  /**
+   * Core M0322: the unit reached the route start (the leading `IsRouteStart` leg). Offline-capable like a stop check-in, in
+   * the variants that run routes (the `routes.stop` outbox scope); the position is sent when known.
+   */
+  reachRouteStart: (routeInstanceId: string, location?: DataLocationFix | null) => Promise<WriteResult>;
   clearActiveRoute: () => void;
   applyStopStatus: (routeInstanceStopId: string, status: number, at: number | null, patch?: Partial<RouteInstanceStopResultData>) => void;
 }
@@ -152,6 +226,9 @@ const initialData = (): RoutesData => ({
   routeHistory: [],
   stopContactsById: {},
   instanceDetailsById: {},
+  callRoutePlans: [],
+  planPreviewsById: {},
+  activeRouteInstances: [],
   isTracking: false,
   actionError: null,
 });
@@ -169,6 +246,7 @@ const clearedRoute = (): Pick<RoutesData, 'activeInstance' | 'progress' | 'insta
 /** Applies a GetRouteProgress / GetActiveRouteForUnit payload (RD11 fix). */
 export const applyRouteProgress = (data: RouteProgressResultData | null): Partial<RoutesData> => {
   if (!data?.Instance) return clearedRoute();
+
   return {
     activeInstance: data.Instance,
     instanceStops: Array.isArray(data.Stops) ? data.Stops : [],
@@ -179,6 +257,7 @@ export const applyRouteProgress = (data: RouteProgressResultData | null): Partia
 
 const positionOrFix = (location?: DataLocationFix | null): { latitude: number; longitude: number } | null => {
   const fix = location ?? getDataLocationFix();
+
   return fix && Number.isFinite(fix.latitude) && Number.isFinite(fix.longitude) ? { latitude: fix.latitude, longitude: fix.longitude } : null;
 };
 
@@ -187,21 +266,44 @@ const stopStatusOf = (state: RoutesData, routeInstanceStopId: string): number =>
 
 /** Retention for cached stop contacts (plan §8.2a): the newest this many, oldest dropped first. */
 export const STOP_CONTACTS_MAX = 200;
+
 /** History instance details kept in memory (not persisted). */
 export const INSTANCE_DETAILS_MAX = 20;
+
+/** Plan previews kept in memory (not persisted). */
+export const PLAN_PREVIEWS_MAX = 10;
 
 const withoutKey = <T>(record: Record<string, T>, key: string): Record<string, T> => {
   if (!(key in record)) return record;
   const copy = { ...record };
   delete copy[key];
+
   return copy;
 };
 
 /** Keeps the last `max` entries in insertion order (newest last). */
 const keepNewest = <T>(record: Record<string, T>, max: number): Record<string, T> => {
   const keys = Object.keys(record);
+
   if (keys.length <= max) return record;
+
   return Object.fromEntries(keys.slice(keys.length - max).map((key) => [key, record[key]]));
+};
+
+/** `GetInstanceDirections` parameters: from the position when known; the start leg (Core M0322) only with a position. */
+const directionsQuery = (instanceId: string, from: { latitude: number; longitude: number } | null, includeStart: boolean): Parameters<typeof getInstanceDirections>[1] => {
+  if (!from) return { instanceId };
+
+  return includeStart ? { instanceId, latitude: from.latitude, longitude: from.longitude, includeStart: true } : { instanceId, latitude: from.latitude, longitude: from.longitude };
+};
+
+/** A plan's stored directions for a preview; null when the server has none (or refuses them: the plan still previews). */
+const readPlanDirections = async (routePlanId: string): Promise<RouteDirectionsResultData | null> => {
+  try {
+    return unwrapItem(await getDirections(getDataApiContext(), { routePlanId }));
+  } catch {
+    return null;
+  }
 };
 
 class MissingPositionError extends Error {
@@ -218,22 +320,41 @@ export const useRoutesStore = create<RoutesState>()(
     (set, get) => {
       runner = createSliceRunner<RoutesSlice, RoutesState>('routes', set);
       const ctx = () => getDataApiContext();
+
       const act = async (fn: () => Promise<void>): Promise<boolean> => {
         set({ actionError: null });
+
         try {
           await fn();
+
           return true;
         } catch (error) {
           set({ actionError: toDataError(error) });
+
           return false;
         }
       };
+
+      /**
+       * Makes a started run the active route. Another run's stops, progress and directions are dropped in the same update,
+       * so nothing reports the new run with the previous run's counts before its own progress read lands.
+       */
+      const activateInstance = (instance: RouteInstanceResultData, isTracking: boolean) =>
+        set((state) =>
+          state.activeInstance?.RouteInstanceId === instance.RouteInstanceId
+            ? { activeInstance: instance, isTracking }
+            : { activeInstance: instance, isTracking, progress: null, instanceStops: [], stopDetails: [], directions: null }
+        );
+
       const setInstanceStatus = (instanceId: string, status: number) =>
         set((state) => (state.activeInstance?.RouteInstanceId === instanceId ? { activeInstance: { ...state.activeInstance, Status: status }, isTracking: status === RouteInstanceStatus.InProgress } : {}));
+
       const queueStopWrite = (type: string, routeInstanceStopId: string, location: DataLocationFix | null | undefined, reason?: string): Promise<WriteResult> => {
         const state = get();
         const position = positionOrFix(location);
+
         if (!position && type !== ROUTE_STOP_SKIP_EVENT) throw new MissingPositionError();
+
         const payload: RouteStopWritePayload = {
           routeInstanceId: state.activeInstance?.RouteInstanceId ?? '',
           routeInstanceStopId,
@@ -243,6 +364,7 @@ export const useRoutesStore = create<RoutesState>()(
           previousStatus: stopStatusOf(state, routeInstanceStopId),
           at: dataNow(),
         };
+
         return submitWrite<RouteStopWritePayload>({ type, payload, orderKey: routeStopOrderKey(routeInstanceStopId) });
       };
 
@@ -277,7 +399,10 @@ export const useRoutesStore = create<RoutesState>()(
         startRouteInstance: (routePlanId, unitId) =>
           act(async () => {
             const instance = unwrapItem(assertV4Success(await startRoute(ctx(), { RoutePlanId: routePlanId, UnitId: unitId })));
-            set({ activeInstance: instance, isTracking: instance !== null });
+
+            if (instance) activateInstance(instance, true);
+            else set({ activeInstance: null, isTracking: false });
+
             if (instance) await Promise.all([get().fetchRouteProgress(instance.RouteInstanceId), get().fetchStopsForInstance(instance.RouteInstanceId)]);
           }),
         endRouteInstance: (instanceId) =>
@@ -286,10 +411,12 @@ export const useRoutesStore = create<RoutesState>()(
             // failed end does not leave it running. If that pause fails too, the store shows it running, as Core has it.
             const current = get().activeInstance;
             const wasPaused = current?.RouteInstanceId === instanceId && current.Status === RouteInstanceStatus.Paused;
+
             if (wasPaused) {
               assertV4Success(await resumeRoute(ctx(), { RouteInstanceId: instanceId }));
               setInstanceStatus(instanceId, RouteInstanceStatus.InProgress);
             }
+
             try {
               assertV4Success(await endRoute(ctx(), { RouteInstanceId: instanceId }));
             } catch (error) {
@@ -301,8 +428,10 @@ export const useRoutesStore = create<RoutesState>()(
                   // The end error is the one the crew sees.
                 }
               }
+
               throw error;
             }
+
             set(clearedRoute());
           }),
         pauseRouteInstance: (instanceId) =>
@@ -357,13 +486,16 @@ export const useRoutesStore = create<RoutesState>()(
             { flightKey: `stops:${instanceId}`, trailing: options?.bypassCache === true }
           );
         },
-        fetchDirections: async (instanceId, position) => {
+        fetchDirections: async (instanceId, position, options) => {
           const from = position ?? positionOrFix();
+          const includeStart = options?.includeStart === true;
+          // One flight per variant: a call for the other `includeStart` must not share (and commit) the in-flight answer. The
+          // slice's race guard then keeps the newest request's answer, so the start leg follows the latest ask.
           await runner.run(
             'directions',
-            async () => unwrapItem(await getInstanceDirections(ctx(), { instanceId, ...(from ? { latitude: from.latitude, longitude: from.longitude } : {}) })),
+            async () => unwrapItem(await getInstanceDirections(ctx(), directionsQuery(instanceId, from, includeStart))),
             (directions) => ({ directions }),
-            { flightKey: `directions:${instanceId}` }
+            { flightKey: `directions:${instanceId}:${includeStart ? 'start' : 'plain'}` }
           );
         },
 
@@ -375,6 +507,7 @@ export const useRoutesStore = create<RoutesState>()(
           act(async () => {
             assertV4Success(await geofenceCheckIn(ctx(), { UnitId: unitId, Latitude: latitude, Longitude: longitude }));
             const instanceId = get().activeInstance?.RouteInstanceId;
+
             if (instanceId) await get().fetchRouteProgress(instanceId, { bypassCache: true });
           }),
         updateNotes: (routeInstanceStopId, notes) =>
@@ -405,13 +538,16 @@ export const useRoutesStore = create<RoutesState>()(
         },
         fetchStopContact: async (routeStopId, options) => {
           const cached = get().stopContactsById[routeStopId];
+
           if (cached && !options?.bypassCache) return cached;
+
           const result = await runner.run(
             'stopContact',
             async () => unwrapItem(await getStopContact(ctx(), { routeStopId })),
             (contact, state) => (contact ? { stopContactsById: keepNewest({ ...withoutKey(state.stopContactsById, routeStopId), [routeStopId]: contact }, STOP_CONTACTS_MAX) } : {}),
             { flightKey: `stopContact:${routeStopId}` }
           );
+
           return result.ok ? (result.value ?? cached ?? null) : (cached ?? null);
         },
         fetchInstanceDetail: async (instanceId, options) => {
@@ -419,12 +555,93 @@ export const useRoutesStore = create<RoutesState>()(
             'instanceDetail',
             async (): Promise<RouteInstanceDetail> => {
               const [progressResult, stopsResult] = await Promise.all([getRouteProgress(ctx(), { instanceId }), getStopsForInstance(ctx(), { instanceId })]);
+
               return { progress: unwrapItem(progressResult), stops: unwrapList(stopsResult) };
             },
             (detail, state) => ({ instanceDetailsById: keepNewest({ ...withoutKey(state.instanceDetailsById, instanceId), [instanceId]: detail }, INSTANCE_DETAILS_MAX) }),
             { flightKey: `instanceDetail:${instanceId}`, trailing: options?.bypassCache === true }
           );
+
           return result.ok ? result.value : (get().instanceDetailsById[instanceId] ?? null);
+        },
+
+        fetchCallRoutePlans: async (options) => {
+          await runner.run(
+            'callPlans',
+            async () => unwrapList(await getCallRoutePlans(ctx(), cacheOptions(options))),
+            (callRoutePlans) => ({ callRoutePlans }),
+            { trailing: options?.bypassCache === true }
+          );
+        },
+        fetchRoutePlanPreview: async (routePlanId, options) => {
+          const result = await runner.run(
+            'planPreview',
+            async (): Promise<RoutePlanPreviewData | null> => {
+              // The stored directions only add the resolved start and end: a plan without them still previews.
+              const [planResult, directions] = await Promise.all([getRoutePlan(ctx(), { id: routePlanId }), readPlanDirections(routePlanId)]);
+              const plan = unwrapItem(planResult);
+
+              return plan ? { plan, directions } : null;
+            },
+            (preview, state) => (preview ? { planPreviewsById: keepNewest({ ...withoutKey(state.planPreviewsById, routePlanId), [routePlanId]: preview }, PLAN_PREVIEWS_MAX) } : {}),
+            { flightKey: `planPreview:${routePlanId}`, raceKey: `planPreview:${routePlanId}`, trailing: options?.bypassCache === true }
+          );
+
+          const state = get();
+          const cached = state.planPreviewsById[routePlanId] ?? (state.activePlan?.RoutePlanId === routePlanId ? { plan: state.activePlan, directions: null } : null);
+
+          return result.ok ? (result.value ?? null) : cached;
+        },
+        fetchActiveRouteInstances: async (options) => {
+          await runner.run(
+            'activeInstances',
+            async () => unwrapList(await getActiveRouteInstances(ctx())),
+            (activeRouteInstances) => ({ activeRouteInstances }),
+            { trailing: options?.bypassCache === true }
+          );
+        },
+        startCallRoute: async (callId, unitId) => {
+          set({ actionError: null });
+
+          try {
+            const instance = unwrapItem(assertV4Success(await startCallRoute(ctx(), { CallId: Number(callId), UnitId: Number(unitId) })));
+
+            if (!instance) {
+              const error = toDataError(new V4FailureError({ Status: 'failure' }));
+
+              set({ actionError: error });
+
+              return { status: 'failed', error };
+            }
+
+            activateInstance(instance, instance.Status === RouteInstanceStatus.InProgress);
+            await Promise.all([get().fetchRouteProgress(instance.RouteInstanceId, { bypassCache: true }), get().fetchStopsForInstance(instance.RouteInstanceId, { bypassCache: true })]);
+
+            return { status: 'started', instance };
+          } catch (caught) {
+            const error = toDataError(caught);
+
+            set({ actionError: error });
+
+            // 409 `route_in_progress`: the unit runs another route, named by the ProblemDetails `detail`.
+            if (isApiError(caught) && caught.status === 409 && caught.problemType === ProblemTypes.RouteInProgress) return { status: 'route_in_progress', existingInstanceId: problemDetailOf(caught) ?? null, error };
+
+            return { status: 'failed', error };
+          }
+        },
+        reachRouteStart: (routeInstanceId, location) => {
+          const position = positionOrFix(location);
+          const current = get().activeInstance;
+
+          const payload: RouteReachStartPayload = {
+            routeInstanceId,
+            latitude: position?.latitude ?? null,
+            longitude: position?.longitude ?? null,
+            previousStartReachedOn: current?.RouteInstanceId === routeInstanceId ? (current.StartReachedOn ?? null) : null,
+            at: dataNow(),
+          };
+
+          return submitWrite<RouteReachStartPayload>({ type: ROUTE_REACH_START_EVENT, payload, orderKey: routeStartOrderKey(routeInstanceId) });
         },
 
         clearActiveRoute: () => set(clearedRoute()),
@@ -432,10 +649,12 @@ export const useRoutesStore = create<RoutesState>()(
         applyStopStatus: (routeInstanceStopId, status, at, patch) =>
           set((state) => {
             const iso = at === null ? null : new Date(at).toISOString();
+
             const timestamps = (s: { CheckInOn: string | null; CheckOutOn: string | null }) => ({
               CheckInOn: status === RouteStopStatus.CheckedIn && iso ? iso : s.CheckInOn,
               CheckOutOn: status === RouteStopStatus.CheckedOut && iso ? iso : s.CheckOutOn,
             });
+
             return {
               instanceStops: state.instanceStops.map((stop) => (stop.RouteInstanceStopId === routeInstanceStopId ? { ...stop, ...timestamps(stop), ...patch, Status: status } : stop)),
               stopDetails: state.stopDetails.map((stop) =>
@@ -445,7 +664,7 @@ export const useRoutesStore = create<RoutesState>()(
           }),
       };
     },
-    dataPersistOptions<RoutesState, Pick<RoutesData, 'routePlans' | 'activePlan' | 'activeInstance' | 'progress' | 'instanceStops' | 'stopDetails' | 'stopContactsById' | 'isTracking' | 'fetchedAt'>>({
+    dataPersistOptions<RoutesState, Pick<RoutesData, 'routePlans' | 'activePlan' | 'activeInstance' | 'progress' | 'instanceStops' | 'stopDetails' | 'stopContactsById' | 'callRoutePlans' | 'isTracking' | 'fetchedAt'>>({
       // Unit offline scope: routes + the active instance + its stop contacts (plan §8.5).
       name: 'omni-routes-storage',
       partialize: (state) => ({
@@ -456,6 +675,7 @@ export const useRoutesStore = create<RoutesState>()(
         instanceStops: state.instanceStops,
         stopDetails: state.stopDetails,
         stopContactsById: state.stopContactsById,
+        callRoutePlans: state.callRoutePlans,
         isTracking: state.isTracking,
         fetchedAt: state.fetchedAt,
       }),
@@ -464,6 +684,7 @@ export const useRoutesStore = create<RoutesState>()(
 );
 
 registerPersistedStore('omni-routes-storage', useRoutesStore);
+
 registerDataStoreReset<RoutesState>('routes', useRoutesStore, initialData, () => runner.invalidate());
 
 const refreshStopProgress = async (payload: RouteStopWritePayload): Promise<void> => {
@@ -503,4 +724,22 @@ export const routeStopSkipHandler = defineDataHandler<RouteStopWritePayload, Sav
   send: async (event) => assertV4Success(await skipStop(getDataApiContext(), { RouteInstanceStopId: event.payload.routeInstanceStopId, Reason: event.payload.reason ?? null })),
   refresh: (event) => refreshStopProgress(event.payload),
   rollback: (event) => revertStop(event.payload),
+});
+
+/** Sets a running instance's `StartReachedOn` (optimistic apply and rollback of a queued ReachRouteStart). */
+const applyStartReached = (routeInstanceId: string, startReachedOn: string | null): void => {
+  useRoutesStore.setState((state) => (state.activeInstance?.RouteInstanceId === routeInstanceId ? { activeInstance: { ...state.activeInstance, StartReachedOn: startReachedOn } } : {}));
+};
+
+const reachStartInput = (payload: RouteReachStartPayload): ReachRouteStartInput =>
+  payload.latitude !== null && payload.longitude !== null ? { RouteInstanceId: payload.routeInstanceId, Latitude: payload.latitude, Longitude: payload.longitude } : { RouteInstanceId: payload.routeInstanceId };
+
+export const routeReachStartHandler = defineDataHandler<RouteReachStartPayload, GetRouteInstanceResult>({
+  type: ROUTE_REACH_START_EVENT,
+  optimisticApply: (event) => applyStartReached(event.payload.routeInstanceId, new Date(event.payload.at).toISOString()),
+  send: async (event) => assertV4Success(await reachRouteStart(getDataApiContext(), reachStartInput(event.payload))),
+  refresh: async (event) => {
+    if (useRoutesStore.getState().activeInstance?.RouteInstanceId === event.payload.routeInstanceId) await useRoutesStore.getState().fetchRouteProgress(event.payload.routeInstanceId, { bypassCache: true });
+  },
+  rollback: (event) => applyStartReached(event.payload.routeInstanceId, event.payload.previousStartReachedOn),
 });

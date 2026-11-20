@@ -16,6 +16,10 @@ export interface RouteInstanceResultData {
   TotalDurationSeconds: number | null;
   Notes: string | null;
   AddedOn: string;
+  /** Core M0322: the call this run was started for (`Routes/StartCallRoute`); null for other runs, undefined from older servers. */
+  CallId?: number | null;
+  /** Core M0322: when the unit reached the route start (ISO-8601 UTC); null until then, undefined from older servers. */
+  StartReachedOn?: string | null;
 }
 
 export interface ActiveRouteInstanceResultData {
@@ -30,6 +34,8 @@ export interface ActiveRouteInstanceResultData {
   ProgressPercent: number;
   CurrentStopIndex: number;
   CurrentStopName: string | null;
+  /** Core M0322: the call this run was started for (`Routes/StartCallRoute`); null for other runs, undefined from older servers. */
+  CallId?: number | null;
 }
 
 /** `GetRouteProgress/{instanceId}` and `GetActiveRouteForUnit/{unitId}` (the latter answers HTTP 404 when the unit has no running or paused route). */

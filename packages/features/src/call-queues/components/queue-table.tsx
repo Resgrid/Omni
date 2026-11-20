@@ -1,5 +1,5 @@
-import { useCallsStore } from '@resgrid/data';
-import { callDisplayName, callDisplayText, resolvePriority } from '@resgrid/features/calls';
+import { useCallsStore, useRoutesStore } from '@resgrid/data';
+import { callDestinationText, callDisplayName, callDisplayText, callRouteName, resolvePriority } from '@resgrid/features/calls';
 import { useTranslation } from '@resgrid/i18n';
 import type { CallResultData } from '@resgrid/models';
 import { FlatList, HStack, Pressable, RefreshControl, Text, TypeIcon, useFormFactor, VStack } from '@resgrid/ui';
@@ -60,11 +60,31 @@ export const TextCell: React.FC<{ value: string | null | undefined; tone?: 'defa
   </Text>
 );
 
-/** The call's address; a withheld one shows the protected label, never the wire sentinel. */
+/**
+ * The call's address (a withheld one shows the protected label, never the wire sentinel), then where it goes — its
+ * destination POI or free destination — and the route it runs (Core M0322), when it has them.
+ */
 export const AddressCell: React.FC<{ call: CallResultData }> = ({ call }) => {
   const { t } = useTranslation();
+  const routePlans = useRoutesStore((state) => state.callRoutePlans);
+  const destination = callDestinationText(call);
+  const route = callRouteName(call, routePlans);
 
-  return <TextCell value={callDisplayText(call, 'Address', t('data_protection.protected_value'))} />;
+  return (
+    <VStack>
+      <TextCell value={callDisplayText(call, 'Address', t('data_protection.protected_value'))} />
+      {destination ? (
+        <Text className="text-xs text-typography-500" numberOfLines={1} testID={`queue-call-destination-${call.CallId}`}>
+          {t('calls.destination_to', { destination })}
+        </Text>
+      ) : null}
+      {route ? (
+        <Text className="text-xs text-typography-500" numberOfLines={1} testID={`queue-call-route-${call.CallId}`}>
+          {t('calls.route_named', { name: route })}
+        </Text>
+      ) : null}
+    </VStack>
+  );
 };
 
 /**

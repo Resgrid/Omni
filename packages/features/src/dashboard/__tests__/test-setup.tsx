@@ -86,6 +86,9 @@ jest.mock('@resgrid/maps', () => {
     MapView: ({ children, testID }: { children: unknown; testID?: string }) => mockReact.createElement(View, { testID }, children),
     Camera: mockReact.forwardRef(() => null),
     MapPins: ({ pins }: { pins: { Id: string }[] }) => mockReact.createElement(Text, { testID: 'mock-map-pins' }, pins.map((pin) => pin.Id).join(',')),
+    GeoJsonMapLayer: ({ id, showLabels }: { id: string; showLabels?: boolean }) => mockReact.createElement(Text, { testID: `mock-${id}` }, showLabels ? 'labels' : 'no-labels'),
+    OfflineDepartmentLayers: ({ idPrefix }: { idPrefix?: string }) => mockReact.createElement(View, { testID: `mock-${idPrefix}` }),
+    useMapCapabilities: () => ({ layers: true, customIndoor: false, navigationInApp: false }),
     useFitBounds: () => () => true,
   };
 });

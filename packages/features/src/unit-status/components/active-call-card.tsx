@@ -6,12 +6,15 @@ import { useTranslation } from '@resgrid/i18n';
 import type { DispatchedEventResultData } from '@resgrid/models';
 import { HStack, Pressable, Text, useToast, View, VStack } from '@resgrid/ui';
 import { router } from 'expo-router';
-import { ArrowLeftRight, CircleMinus, CircleX, Eye, type LucideIcon, MapPin, Navigation } from 'lucide-react-native';
+import { ArrowLeftRight, CircleMinus, CircleX, Eye, type LucideIcon, MapPin, Navigation, Route } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet } from 'react-native';
 
+import { useCallRoute } from '../hooks/use-call-route';
 import { callDestinationTarget, callLocationTarget } from '../lib/call-location';
+import { requestCallRouteLaunch } from '../lib/call-route-launch';
 import { ActiveCallSheet } from './active-call-sheet';
+import { callRouteActionKey, CallRouteStrip } from './call-route-actions';
 import { ConfirmDialog } from './confirm-dialog';
 
 export interface ActiveCallCardProps {
@@ -40,7 +43,9 @@ const NO_DISPATCHES: readonly DispatchedEventResultData[] = [];
  * The crew's active call on the console (Unit `call-sidebar`): the call card, or "No active call". Tapping the card opens
  * the call summary (nature, notes, images, files, video, protocols, site info, history and audio, with a way on to the
  * full detail); tapping "No active call" opens the call picker. Actions: call details, directions to the call,
- * directions to its destination POI, change the active call, release the unit from the call ("we were stood down":
+ * directions to its destination (a POI or, Core M0322, a free location), the call's pre-defined route (start or continue
+ * the unit's run of it — in-app navigation through its stops — with its progress and preview under the card), change the
+ * active call, release the unit from the call ("we were stood down":
  * where the app releases its own unit, while the unit is dispatched to the call; confirmed, and the active call clears)
  * and deselect (confirmed). Directions hand off to the crew's navigation app — the app never calls a routing provider.
  */
@@ -91,6 +96,7 @@ export const ActiveCallCard: React.FC<ActiveCallCardProps> = ({ activeCallId, on
   const priority = useMemo(() => (call ? resolvePriority(priorities, call.Priority) : null), [call, priorities]);
   const location = useMemo(() => (call ? callLocationTarget(call) : null), [call]);
   const destination = useMemo(() => (call ? callDestinationTarget(call) : null), [call]);
+  const route = useCallRoute(call);
 
   const navigate = useCallback(
     async (target: typeof location) => {
@@ -118,6 +124,8 @@ export const ActiveCallCard: React.FC<ActiveCallCardProps> = ({ activeCallId, on
 
     if (destination) list.push({ id: 'destination', labelKey: 'calls.directions_to_destination', icon: Navigation, onPress: () => void navigate(destination) });
 
+    if (route.canRun) list.push({ id: 'route', labelKey: callRouteActionKey(route), icon: Route, onPress: () => requestCallRouteLaunch(call.CallId) });
+
     // The card itself opens the call summary, so changing the call is a button of its own.
     if (onSelectCall) list.push({ id: 'change', labelKey: 'calls.select_active_call', icon: ArrowLeftRight, onPress: () => setIsPickerOpen(true) });
 
@@ -126,7 +134,7 @@ export const ActiveCallCard: React.FC<ActiveCallCardProps> = ({ activeCallId, on
     if (onClearCall) list.push({ id: 'deselect', labelKey: 'calls.deselect', icon: CircleX, onPress: () => setIsConfirmOpen(true) });
 
     return list;
-  }, [call, canReleaseOwnUnit, destination, location, navigate, onClearCall, onSelectCall, openDetails, ownUnitId, ownUnitName, requestRelease]);
+  }, [call, canReleaseOwnUnit, destination, location, navigate, onClearCall, onSelectCall, openDetails, ownUnitId, ownUnitName, requestRelease, route]);
 
   const onCardPress = call ? () => setIsSummaryOpen(true) : onSelectCall ? () => setIsPickerOpen(true) : undefined;
 
@@ -157,6 +165,7 @@ export const ActiveCallCard: React.FC<ActiveCallCardProps> = ({ activeCallId, on
           </VStack>
         )}
       </Pressable>
+      {call ? <CallRouteStrip call={call} testID={`${testID}-route-strip`} /> : null}
       {actions.length > 0 ? (
         <HStack className="w-full">
           {actions.map((action) => {

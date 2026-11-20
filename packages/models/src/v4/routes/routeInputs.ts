@@ -5,6 +5,22 @@ export interface StartRouteInput {
   UnitId: number;
 }
 
+/**
+ * Body of `POST Routes/StartCallRoute` (Core M0322): starts the call's route (`Call.RoutePlanId`) for a unit, linked to the
+ * call. Idempotent for the same call; 409 `route_in_progress` (detail = the running instance id) when the unit runs another.
+ */
+export interface StartCallRouteInput {
+  CallId: number;
+  UnitId: number;
+}
+
+/** Body of `POST Routes/ReachRouteStart` (Core M0322): marks `StartReachedOn` on a call-linked instance (no-op when already set). */
+export interface ReachRouteStartInput {
+  RouteInstanceId: string;
+  Latitude?: number | null;
+  Longitude?: number | null;
+}
+
 export interface EndRouteInput {
   RouteInstanceId: string;
 }

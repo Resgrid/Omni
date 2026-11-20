@@ -45,7 +45,7 @@ describe('call detail tab registry', () => {
 
   it('registers the shared tabs in order', () => {
     expect(getCallDetailTabs().map((tab) => tab.id)).toEqual(expect.arrayContaining(BUILT_IN_CALL_DETAIL_TABS.map((tab) => tab.id)));
-    expect(BUILT_IN_CALL_DETAIL_TABS.map((tab) => tab.id)).toEqual(['info', 'protocols', 'dispatched', 'activity', 'notes', 'check-in', 'video-feeds', 'site-info', 'location-history']);
+    expect(BUILT_IN_CALL_DETAIL_TABS.map((tab) => tab.id)).toEqual(['info', 'route', 'protocols', 'dispatched', 'activity', 'notes', 'check-in', 'video-feeds', 'site-info', 'location-history']);
   });
 
   it('shows check-in only when timers run on the call or for checkIn.others, and video feeds unless videoFeeds is none', () => {

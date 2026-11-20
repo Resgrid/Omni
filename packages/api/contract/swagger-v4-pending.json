@@ -3,7 +3,7 @@
     "source": "Core develop f3b2fd24 + 34949e2d (RG-T152, MapLibre plan v1.7 §23); not on the QA API as of 2026-11-02",
     "addedAt": "2026-11-01",
     "checkedAt": "2026-11-02",
-    "note": "Core v4 routes and parameters Omni calls before they reach the QA Swagger snapshot. Counts/GetBadgeCounts: Core develop working tree, 2026-11-07 (Web/Resgrid.Web.Services/Controllers/v4/CountsController.cs). Mapping/GetMapDataAndMarkers fullSizeIcons: Core develop working tree, 2026-11-11 (MappingController.cs, LegacyOmniPinIcons). Mapping/GetNearestDestinations, GetPoiCapabilities, SetPoiAvailability: Core develop working tree, 2026-11-13 (MappingController.cs, destination capabilities M0315). The contract test overlays these on swagger-v4.json and fails once the snapshot has an entry, so remove each entry after refreshing the snapshot. Hand-written from Web/Resgrid.Web.Services/Controllers/v4/{RoutingController,RoutesController,MappingController}.cs. Calls/ReleaseUnit and Calls/ReleasePersonnel: Core develop working tree, 2026-11-16 (CallsController.cs, releasing a unit or person from an open call; ReleasePersonnel built in parallel with Omni RO-T152). RecurringCalls/*: Core develop working tree, 2026-11-17 (RecurringCallsController.cs, recurring calls and their dispatcher alerts, M0319/M0320)."
+    "note": "Core v4 routes and parameters Omni calls before they reach the QA Swagger snapshot. Counts/GetBadgeCounts: Core develop working tree, 2026-11-07 (Web/Resgrid.Web.Services/Controllers/v4/CountsController.cs). Mapping/GetMapDataAndMarkers fullSizeIcons: Core develop working tree, 2026-11-11 (MappingController.cs, LegacyOmniPinIcons). Mapping/GetNearestDestinations, GetPoiCapabilities, SetPoiAvailability: Core develop working tree, 2026-11-13 (MappingController.cs, destination capabilities M0315). Mapping/GetDestinationRules, GetSuggestedDestinations: Core develop working tree, 2026-11-19 (MappingController.cs, destination rules M0317). The contract test overlays these on swagger-v4.json and fails once the snapshot has an entry, so remove each entry after refreshing the snapshot. Hand-written from Web/Resgrid.Web.Services/Controllers/v4/{RoutingController,RoutesController,MappingController}.cs. Calls/ReleaseUnit and Calls/ReleasePersonnel: Core develop working tree, 2026-11-16 (CallsController.cs, releasing a unit or person from an open call; ReleasePersonnel built in parallel with Omni RO-T152). RecurringCalls/*: Core develop working tree, 2026-11-17 (RecurringCallsController.cs, recurring calls and their dispatcher alerts, M0319/M0320). Routes/GetCallRoutePlans, StartCallRoute, ReachRouteStart and GetInstanceDirections includeStart: Core develop working tree, 2026-11-19 (RoutesController.cs, call start/destination locations and call routes, M0322; coded against the contract before Core landed). AiDestinations/GetAdvice, RequestAdvice, ApplyAdvice, DismissAdvice: Core develop working tree, 2026-11-19 (AiDestinationsController.cs, Enhanced AI destination advice, M0323; call-intake-and-ai-destinations-plan.md §7). CallResultData CallSource, IntakeChannelName and IntakeChannelType (components below; GetCall, GetActiveCalls, GetPendingCalls, GetCalls): Core develop working tree, 2026-11-19 (Models/v4/Calls/CallResult.cs, M0323). The contract test reads only paths; the components entry records the response fields Omni reads, for the next snapshot refresh to confirm."
   },
   "paths": {
     "/api/v{VersionId}/Counts/GetBadgeCounts": {
@@ -36,8 +36,26 @@
           { "name": "heading", "in": "query", "schema": { "type": "number", "format": "double" } },
           { "name": "navigation", "in": "query", "schema": { "type": "boolean" } },
           { "name": "language", "in": "query", "schema": { "type": "string" } },
-          { "name": "metric", "in": "query", "schema": { "type": "boolean" } }
+          { "name": "metric", "in": "query", "schema": { "type": "boolean" } },
+          { "name": "includeStart", "in": "query", "schema": { "type": "boolean" } }
         ]
+      }
+    },
+    "/api/v{VersionId}/Routes/GetCallRoutePlans": {
+      "get": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }]
+      }
+    },
+    "/api/v{VersionId}/Routes/StartCallRoute": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/StartCallRouteInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/Routes/ReachRouteStart": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReachRouteStartInput" } } } }
       }
     },
     "/api/v{VersionId}/Routes/RecordDeviation": {
@@ -101,6 +119,25 @@
     "/api/v{VersionId}/Mapping/GetPoiCapabilities": {
       "get": {
         "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }]
+      }
+    },
+    "/api/v{VersionId}/Mapping/GetDestinationRules": {
+      "get": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }]
+      }
+    },
+    "/api/v{VersionId}/Mapping/GetSuggestedDestinations": {
+      "get": {
+        "parameters": [
+          { "name": "latitude", "in": "query", "required": true, "schema": { "type": "number", "format": "double" } },
+          { "name": "longitude", "in": "query", "required": true, "schema": { "type": "number", "format": "double" } },
+          { "name": "type", "in": "query", "schema": { "type": "string" } },
+          { "name": "priority", "in": "query", "schema": { "type": "integer", "format": "int32" } },
+          { "name": "callId", "in": "query", "schema": { "type": "integer", "format": "int32" } },
+          { "name": "unitId", "in": "query", "schema": { "type": "integer", "format": "int32" } },
+          { "name": "take", "in": "query", "schema": { "type": "integer", "format": "int32" } },
+          { "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ]
       }
     },
     "/api/v{VersionId}/Calls/ReleaseUnit": {
@@ -214,6 +251,43 @@
       "post": {
         "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
         "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RecurringCallAlertInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/AiDestinations/GetAdvice": {
+      "get": {
+        "parameters": [
+          { "name": "callId", "in": "query", "schema": { "type": "integer", "format": "int32" } },
+          { "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ]
+      }
+    },
+    "/api/v{VersionId}/AiDestinations/RequestAdvice": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RequestAiDestinationAdviceInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/AiDestinations/ApplyAdvice": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApplyAiDestinationAdviceInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/AiDestinations/DismissAdvice": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DismissAiDestinationAdviceInput" } } } }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CallResultData": {
+        "properties": {
+          "CallSource": { "type": "integer", "format": "int32" },
+          "IntakeChannelName": { "type": "string", "nullable": true },
+          "IntakeChannelType": { "type": "integer", "format": "int32", "nullable": true }
+        }
       }
     }
   }

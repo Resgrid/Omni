@@ -2,11 +2,12 @@ import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { formatUtcInDepartmentTime } from '@resgrid/core/utils/dates';
 import { useCallsStore } from '@resgrid/data';
 import { CALL_LIST_REFRESH_EVENTS, callPoint, callRoutes, useCallPermissionsResolver, useCallRights } from '@resgrid/features/calls';
+import { IntakeSourceBadge } from '@resgrid/features/calls/components/intake-source-badge';
 import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import type { CallResultData } from '@resgrid/models';
 import { useRealtimeRefetch } from '@resgrid/realtime';
-import { Loading, Text, ZeroState } from '@resgrid/ui';
+import { Loading, Text, VStack, ZeroState } from '@resgrid/ui';
 import { useRouter } from 'expo-router';
 import { Hourglass, Send, XCircle } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -62,7 +63,18 @@ export default function PendingCallsScreen({ showHeader = true, realtime = true 
       { key: 'type', titleKey: 'scheduled_calls.table_type', flex: 1, render: (call) => <TypeCell call={call} /> },
       { key: 'priority', titleKey: 'scheduled_calls.table_priority', flex: 1, render: (call) => <PriorityCell priorityId={call.Priority} /> },
       { key: 'address', titleKey: 'scheduled_calls.table_address', flex: 2, render: (call) => <AddressCell call={call} /> },
-      { key: 'received', titleKey: 'pending_calls.table_received', flex: 1.5, render: (call) => <TextCell value={formatUtcInDepartmentTime(call.LoggedOnUtc, timeZone)} /> },
+      {
+        key: 'received',
+        titleKey: 'pending_calls.table_received',
+        flex: 1.5,
+        // When, and — for a call an external intake created (Core M0323) — which channel it came through.
+        render: (call) => (
+          <VStack space="xs">
+            <TextCell value={formatUtcInDepartmentTime(call.LoggedOnUtc, timeZone)} />
+            <IntakeSourceBadge call={call} testID={`pending-call-intake-source-${call.CallId}`} />
+          </VStack>
+        ),
+      },
     ],
     [timeZone]
   );

@@ -4,6 +4,7 @@ import { useNavigationHandoff } from '@resgrid/features/contacts';
 import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useInAppNavigationAvailable } from '@resgrid/features/navigation/hooks/use-in-app-navigation';
 import { navigationRoutes } from '@resgrid/features/navigation/routes';
+import { ROUTE_START_COLOR } from '@resgrid/features/route-plans/lib/route-plan-preview';
 import { useTranslation } from '@resgrid/i18n';
 import type { RouteDirectionWaypointData } from '@resgrid/models';
 import { Button, ButtonText, HStack, Loading, Pressable, ScreenHeader, ScrollView, Text, useToast, View, VStack, ZeroState } from '@resgrid/ui';
@@ -13,6 +14,7 @@ import React, { useCallback, useEffect, useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 
 import { RouteStats } from '../components/route-stats';
+import { isRouteStartPending } from '../lib/call-run';
 import { formatArrivalTime, formatDistance, formatDuration, formatRouteTime } from '../lib/route-format';
 import { isMappable, parseRouteGeometry } from '../lib/route-geo';
 import { mapBounds, routeColor, waypointMapStops } from '../lib/route-map';
@@ -43,27 +45,33 @@ export default function RouteDirectionsScreen({ instanceId: instanceIdProp, rend
   const isLoading = useRoutesStore((state) => state.loading.directions === true);
   const error = useRoutesStore((state) => state.errors.directions ?? null);
   const plans = useRoutesStore((state) => state.routePlans);
+  // A call's run that has not reached its start (Core M0322) is led there first.
+  const startPending = useRoutesStore((state) => state.activeInstance?.RouteInstanceId === instanceId && isRouteStartPending(state.activeInstance));
 
   useEffect(() => {
-    if (instanceId) void useRoutesStore.getState().fetchDirections(instanceId);
-  }, [instanceId]);
+    if (instanceId) void useRoutesStore.getState().fetchDirections(instanceId, null, { includeStart: startPending });
+  }, [instanceId, startPending]);
 
   const waypoints = useMemo(() => sortStops(directions?.Waypoints ?? []), [directions?.Waypoints]);
   const next = useMemo(() => waypoints.find((waypoint) => !isStopDone(waypoint.Status)) ?? null, [waypoints]);
   const nextId = next ? (next.RouteInstanceStopId ?? next.RouteStopId) : null;
   const line = useMemo(() => parseRouteGeometry(directions?.Geometry), [directions?.Geometry]);
-  const mapStops = useMemo(() => waypointMapStops(waypoints, nextId), [nextId, waypoints]);
+  const startLabel = t('route_plans.map_start_label');
+  const mapStops = useMemo(() => waypointMapStops(waypoints, nextId, { label: startLabel, color: ROUTE_START_COLOR }), [nextId, startLabel, waypoints]);
   const origin = directions && isMappable(directions.OriginLatitude, directions.OriginLongitude) ? { latitude: directions.OriginLatitude as number, longitude: directions.OriginLongitude as number } : null;
   const color = routeColor(plans.find((plan) => plan.RoutePlanId === (directions?.RoutePlanId ?? activeInstance?.RoutePlanId))?.RouteColor);
 
   const inAppNavigation = useInAppNavigationAvailable();
+
   const navigateTo = useCallback(
     async (waypoint: RouteDirectionWaypointData) => {
       const label = waypoint.Name || t('routes.destination');
       const target = isMappable(waypoint.Latitude, waypoint.Longitude) ? { latitude: waypoint.Latitude, longitude: waypoint.Longitude, label } : waypoint.Address ? { address: waypoint.Address, label } : null;
+
       if (!target) return;
       // In-app guidance follows the whole route (the Navigate button); a single stop always opens the crew's app.
       const opened = await (handoff.openExternal ?? handoff.navigateTo)(target);
+
       if (!opened) toast.error(t('map.failed_to_open_maps'));
     },
     [handoff, t, toast]
@@ -83,7 +91,7 @@ export default function RouteDirectionsScreen({ instanceId: instanceIdProp, rend
             isError={!!error}
             heading={t('routes.no_directions')}
             description={error ? t(error.messageKey) : undefined}
-            onRetry={instanceId ? () => useRoutesStore.getState().fetchDirections(instanceId) : undefined}
+            onRetry={instanceId ? () => useRoutesStore.getState().fetchDirections(instanceId, null, { includeStart: startPending }) : undefined}
             testID="route-directions-none"
           />
         )}
@@ -129,11 +137,12 @@ export default function RouteDirectionsScreen({ instanceId: instanceIdProp, rend
             {waypoints.length === 0 ? <Text className="py-2 text-typography-500">{t('routes.no_stops')}</Text> : null}
             {waypoints.map((waypoint, index) => {
               const id = waypoint.RouteInstanceStopId ?? waypoint.RouteStopId ?? `waypoint-${index}`;
-              const look = stopStatusLook(waypoint.Status);
+              const look = waypoint.IsRouteStart === true ? { labelKey: 'unit_routes.route_start', color: ROUTE_START_COLOR } : stopStatusLook(waypoint.Status);
+
               return (
                 <HStack key={id} space="md" className="items-center border-b border-outline-100 py-3" testID={`route-directions-waypoint-${id}`}>
                   <View style={StyleSheet.flatten([styles.order, { backgroundColor: look.color }])}>
-                    <Text className="text-xs font-bold text-typography-0">{String(waypoint.StopOrder)}</Text>
+                    <Text className="text-xs font-bold text-typography-0">{waypoint.IsRouteStart === true ? startLabel : String(waypoint.StopOrder)}</Text>
                   </View>
                   <VStack className="flex-1">
                     <Text className={`font-semibold ${isStopDone(waypoint.Status) ? 'text-typography-400' : 'text-typography-900'}`}>{waypoint.Name || t('routes.destination')}</Text>

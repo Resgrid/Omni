@@ -29,13 +29,68 @@ export enum HttpTransportType {
   LongPolling = 4,
 }
 
+/** The real error shape: the status is appended to the message and kept on `statusCode`. */
+export class HttpError extends Error {
+  constructor(
+    errorMessage: string,
+    public readonly statusCode: number
+  ) {
+    super(`${errorMessage}: Status code '${statusCode}'`);
+  }
+}
+
+export interface HttpRequest {
+  method?: string;
+  url?: string;
+  headers?: Record<string, string>;
+}
+
+export class HttpResponse {
+  constructor(
+    public readonly statusCode: number,
+    public readonly statusText = ''
+  ) {}
+}
+
+export abstract class HttpClient {
+  abstract send(request: HttpRequest): Promise<HttpResponse>;
+
+  getCookieString(_url: string): string {
+    return '';
+  }
+}
+
+export class NullLogger {
+  static readonly instance = new NullLogger();
+
+  log(): void {}
+}
+
+/** Answers each negotiate from `fakeSignalR.negotiateBehaviors` (an error is thrown, as fetch's client does); empty = 200. */
+export class DefaultHttpClient extends HttpClient {
+  constructor(_logger?: NullLogger) {
+    super();
+  }
+
+  async send(): Promise<HttpResponse> {
+    const failure = fakeSignalR.negotiateBehaviors.shift();
+
+    if (failure) throw failure;
+
+    return new HttpResponse(200, 'OK');
+  }
+}
+
 export interface FakeConnectionOptions {
   accessTokenFactory?: () => string | Promise<string>;
+  httpClient?: HttpClient;
   transport?: HttpTransportType;
 }
 
 type Callback = (...args: unknown[]) => void;
+
 type StartBehavior = 'ok' | Error | (() => Promise<void>);
+
 type InvokeImpl = (method: string, args: unknown[], connection: FakeHubConnection) => unknown;
 
 export class FakeHubConnection {
@@ -66,8 +121,10 @@ export class FakeHubConnection {
   off(method: string, handler?: Callback): void {
     if (!handler) {
       this.handlers.delete(method);
+
       return;
     }
+
     this.handlers.get(method)?.delete(handler);
   }
 
@@ -85,21 +142,26 @@ export class FakeHubConnection {
 
   async start(): Promise<void> {
     this.state = HubConnectionState.Connecting;
-    await this.readToken();
-    const behavior = fakeSignalR.startBehaviors.shift() ?? 'ok';
+
     try {
+      await this.negotiate();
+      const behavior = fakeSignalR.startBehaviors.shift() ?? 'ok';
+
       if (behavior instanceof Error) throw behavior;
+
       if (typeof behavior === 'function') await behavior();
     } catch (error) {
       this.state = HubConnectionState.Disconnected;
       throw error;
     }
+
     this.state = HubConnectionState.Connected;
     this.connectionId = `conn-${fakeSignalR.connections.indexOf(this)}`;
   }
 
   async stop(): Promise<void> {
     this.stopCalls += 1;
+
     if (this.state === HubConnectionState.Disconnected) return;
     this.state = HubConnectionState.Disconnected;
     this.closeCallbacks.forEach((callback) => callback(undefined));
@@ -107,18 +169,51 @@ export class FakeHubConnection {
 
   async invoke<T = unknown>(method: string, ...args: unknown[]): Promise<T> {
     this.invocations.push({ method, args });
+
     if (this.state !== HubConnectionState.Connected) {
       throw new Error(`Cannot send data if the connection is not in the 'Connected' State.`);
     }
+
     return (await fakeSignalR.invokeImpl(method, args, this)) as T;
   }
 
+  /**
+   * A negotiate as the real client sends it: the token from the factory as `Authorization`, through `options.httpClient`
+   * (the library's default client when none is given); a failure comes back wrapped the way the client wraps it.
+   */
+  private async negotiate(): Promise<void> {
+    const token = await this.readToken();
+    const client = this.options.httpClient ?? new DefaultHttpClient();
+
+    try {
+      await client.send({ method: 'POST', url: `${this.url}/negotiate?negotiateVersion=1`, headers: token ? { Authorization: `Bearer ${token}` } : {} });
+    } catch (error) {
+      throw new Error(`Failed to complete negotiation with the server: ${String(error)}`);
+    }
+  }
+
   // ---- test controls ----
+
+  /** One automatic-reconnect try: the client negotiates again (reading the token again). Resolves whether it reconnected. */
+  async simulateReconnectAttempt(): Promise<boolean> {
+    try {
+      await this.negotiate();
+    } catch {
+      return false;
+    }
+
+    this.state = HubConnectionState.Connected;
+    this.connectionId = `${this.connectionId ?? 'conn'}-r`;
+    this.reconnectedCallbacks.forEach((callback) => callback(this.connectionId));
+
+    return true;
+  }
 
   /** What the transport would send as the bearer token right now (the client calls the factory per transport connect). */
   async readToken(): Promise<string> {
     const token = this.options.accessTokenFactory ? await this.options.accessTokenFactory() : '';
     this.tokensSeen.push(token);
+
     return token;
   }
 
@@ -164,41 +259,51 @@ export class HubConnectionBuilder {
   withUrl(url: string, options?: FakeConnectionOptions): this {
     this.url = url;
     this.options = options ?? {};
+
     return this;
   }
 
   withAutomaticReconnect(delays?: readonly number[]): this {
     this.reconnect = delays ?? [0, 2000, 10000, 30000];
+
     return this;
   }
 
   withServerTimeout(ms: number): this {
     this.serverTimeout = ms;
+
     return this;
   }
 
   configureLogging(level: LogLevel): this {
     this.logLevel = level;
+
     return this;
   }
 
   build(): FakeHubConnection {
     const connection = new FakeHubConnection(this.url, this.options, this.reconnect, this.serverTimeout, this.logLevel);
     fakeSignalR.connections.push(connection);
+
     return connection;
   }
 }
 
 const defaultInvoke: InvokeImpl = () => undefined;
 
+const negotiateBehaviors: Error[] = [];
+
 export const fakeSignalR = {
   connections: [] as FakeHubConnection[],
   /** Consumed one per `start()`; empty means success. */
   startBehaviors: [] as StartBehavior[],
+  /** Consumed one per negotiate (`start()` and each automatic-reconnect try); empty means 200. */
+  negotiateBehaviors,
   invokeImpl: defaultInvoke,
   reset(): void {
     this.connections.length = 0;
     this.startBehaviors.length = 0;
+    this.negotiateBehaviors.length = 0;
     this.invokeImpl = defaultInvoke;
   },
   /** Connections built for a hub path (`.../eventingHub`). */
@@ -208,7 +313,9 @@ export const fakeSignalR = {
   latest(hubName: string): FakeHubConnection {
     const list = this.forHub(hubName);
     const connection = list[list.length - 1];
+
     if (!connection) throw new Error(`No connection built for ${hubName}`);
+
     return connection;
   },
 };

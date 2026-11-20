@@ -13,20 +13,35 @@ const TONE: Record<PoiAvailabilityStatuses, string> = {
   [PoiAvailabilityStatuses.Closed]: 'bg-error-600 text-typography-0',
 };
 
+/** An availability status as a pill (a destination known only by its reported status, e.g. Enhanced AI advice); nothing for Open. */
+export const AvailabilityStatusPill: React.FC<{ status: PoiAvailabilityStatuses; testID?: string }> = ({ status, testID }) => {
+  const { t } = useTranslation();
+
+  if (status === PoiAvailabilityStatuses.Open) return null;
+
+  return (
+    <Text className={`rounded-full px-2 py-0.5 text-xs font-semibold ${TONE[status]}`} testID={testID}>
+      {t(availabilityLabelKey(status))}
+    </Text>
+  );
+};
+
 export interface PoiAvailabilityBadgeProps {
   poi: PoiResultData;
   /** With a capability chosen, also says when this destination reports it unavailable. */
   capabilityId?: string | null;
   /** Shows "Open" too (POI detail); lists show nothing for an open destination. */
   showOpen?: boolean;
+  /** The time availability is judged at (a screen's availability clock); now when not given. */
+  now?: number;
   testID?: string;
 }
 
 /** A destination's availability (Limited / Diversion / Closed) as a pill, and a chosen capability that is down. */
-export const PoiAvailabilityBadge: React.FC<PoiAvailabilityBadgeProps> = ({ poi, capabilityId = null, showOpen = false, testID }) => {
+export const PoiAvailabilityBadge: React.FC<PoiAvailabilityBadgeProps> = ({ poi, capabilityId = null, showOpen = false, now, testID }) => {
   const { t } = useTranslation();
-  const status = poiAvailabilityStatus(poi);
-  const capabilityDown = isPoiCapabilityUnavailable(poi, capabilityId);
+  const status = poiAvailabilityStatus(poi, now);
+  const capabilityDown = isPoiCapabilityUnavailable(poi, capabilityId, now);
 
   if (status === PoiAvailabilityStatuses.Open && !showOpen) return null;
 
@@ -46,7 +61,8 @@ export interface CapabilityFilterChipsProps {
   testID?: string;
 }
 
-const Chip: React.FC<{ label: string; selected: boolean; onPress: () => void; testID: string }> = ({ label, selected, onPress, testID }) => (
+/** A filter chip of the destination lists (capability, status, type). */
+export const DestinationFilterChip: React.FC<{ label: string; selected: boolean; onPress: () => void; testID: string }> = ({ label, selected, onPress, testID }) => (
   <Pressable testID={testID} onPress={onPress} accessibilityRole="button" accessibilityState={{ selected }} className={`rounded-full px-3 py-1.5 ${selected ? 'bg-primary-500' : 'bg-background-100'}`}>
     <Text className={`text-sm ${selected ? 'text-typography-0' : 'text-typography-700'}`}>{label}</Text>
   </Pressable>
@@ -61,9 +77,9 @@ export const CapabilityFilterChips: React.FC<CapabilityFilterChipsProps> = ({ op
   return (
     <ScrollRow className="mb-2" testID={testID}>
       <HStack space="sm">
-        <Chip label={t('pois.all_capabilities')} selected={selectedId === null} onPress={() => onChange(null)} testID={`${testID}-all`} />
+        <DestinationFilterChip label={t('pois.all_capabilities')} selected={selectedId === null} onPress={() => onChange(null)} testID={`${testID}-all`} />
         {options.map((option) => (
-          <Chip key={option.id} label={option.name} selected={selectedId === option.id} onPress={() => onChange(selectedId === option.id ? null : option.id)} testID={`${testID}-${option.id}`} />
+          <DestinationFilterChip key={option.id} label={option.name} selected={selectedId === option.id} onPress={() => onChange(selectedId === option.id ? null : option.id)} testID={`${testID}-${option.id}`} />
         ))}
       </HStack>
     </ScrollRow>

@@ -100,7 +100,7 @@ export function configureNavigation(options: ConfigureNavigationOptions): () => 
     },
     text: (key, values) => translate(`navigation.voice.${key}`, values),
     // Positions and destinations never go to the log.
-    log: (level, message, error) => logger[level]({ message, context: { reason: error instanceof Error ? error.name : typeof error } }),
+    log: (level, message, error, context) => logger[level]({ message, context: { ...context, reason: error instanceof Error ? error.name : typeof error } }),
     now: () => Date.now(),
   });
 

@@ -6,6 +6,7 @@ import {
   getActiveDepartmentId,
   getBaseApiUrl,
   initAuth,
+  isAccessTokenExpired,
   isFeatureEnabled,
   loadSessionGates,
   registerSharedSessionRealtimeControls,
@@ -270,6 +271,7 @@ export function createStartupSteps(config: AppShellConfig): InitStep[] {
         configureRealtime({
           getAccessToken: () => useAuthStore.getState().accessToken,
           refreshAccessToken: () => useAuthStore.getState().refreshAccessToken(),
+          isAccessTokenExpired: () => isAccessTokenExpired(),
           getEventingUrl: () => getShellState().departmentConfig?.EventingUrl || null,
           getDepartmentId: () => getActiveDepartmentId(),
           connectivity: offline.connectivity,

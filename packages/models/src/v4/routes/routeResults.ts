@@ -3,10 +3,15 @@ import { type RouteDirectionsResultData } from './directionsResultData';
 import { type RouteDeviationResultData } from './routeDeviationResultData';
 import { type ActiveRouteInstanceResultData, type RouteInstanceResultData, type RouteProgressResultData } from './routeInstanceResultData';
 import { type RouteStopWithDetailsResultData } from './routeInstanceStopResultData';
-import { type RoutePlanDetailResultData, type RoutePlanResultData, type RouteStopContactResultData, type ScheduledRouteResultData } from './routePlanResultData';
+import { type CallRoutePlanResultData, type RoutePlanDetailResultData, type RoutePlanResultData, type RouteStopContactResultData, type ScheduledRouteResultData } from './routePlanResultData';
 
 export class GetRoutePlansResult extends BaseV4Request {
   public Data: RoutePlanResultData[] = [];
+}
+
+/** `GET Routes/GetCallRoutePlans` (Core M0322): the routes a call may run. */
+export class GetCallRoutePlansResult extends BaseV4Request {
+  public Data: CallRoutePlanResultData[] = [];
 }
 
 export class GetRoutePlanResult extends BaseV4Request {

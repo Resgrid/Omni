@@ -1,6 +1,6 @@
 import React from 'react';
 // eslint-disable-next-line no-restricted-imports -- this is the one sanctioned wrapper around React Native's Modal.
-import { Modal, type ModalProps, StyleSheet, View, type ViewProps } from 'react-native';
+import { Modal, type ModalProps, Platform, StyleSheet, View, type ViewProps } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ModalToastHost } from '../toast/toast-container';
@@ -41,7 +41,7 @@ export interface NativeModalScreenProps extends ViewProps {
  * button are never drawn — or tapped — under the system bars. Give it the sheet's background.
  */
 export const NativeModalScreen: React.FC<NativeModalScreenProps> = ({ children, style, ...props }) => {
-  const insets = useSafeAreaInsets();
+  const insets = modalScreenInsets(useSafeAreaInsets());
 
   return (
     <View style={StyleSheet.flatten([styles.screen, { paddingTop: insets.top, paddingBottom: insets.bottom, paddingLeft: insets.left, paddingRight: insets.right }, style])} {...props}>
@@ -49,6 +49,15 @@ export const NativeModalScreen: React.FC<NativeModalScreenProps> = ({ children, 
     </View>
   );
 };
+
+const NO_INSETS = { top: 0, bottom: 0, left: 0, right: 0 };
+
+/**
+ * The padding a modal screen keeps clear of the system bars. On the web there are none, and the modal's own
+ * SafeAreaProvider measures while the sheet is still sliding in from below the window, so it reports a bottom
+ * inset as tall as the window: padded by that, the sheet's content collapsed to nothing (pickers opened empty).
+ */
+export const modalScreenInsets = (insets: { top: number; bottom: number; left: number; right: number }) => (Platform.OS === 'web' ? NO_INSETS : insets);
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },

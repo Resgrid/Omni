@@ -38,6 +38,11 @@ export const FeatureFlagKeys = {
   WorkforceInternalCosting: 'Workforce.InternalCosting',
   NavigationInApp: 'Navigation.InApp',
   MapsOffline: 'Maps.Offline',
+  /**
+   * Enhanced AI destination advice (M0323; prerequisite Ai.Enhanced). Necessary, not sufficient: the server's `Available` also
+   * needs the add-on, the operator's model and a department outside Advanced Data Protection.
+   */
+  AiDestinationAdvice: 'Ai.DestinationAdvice',
 } as const;
 
 export type FeatureFlagKey = (typeof FeatureFlagKeys)[keyof typeof FeatureFlagKeys];

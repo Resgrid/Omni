@@ -16,9 +16,11 @@ export interface RouteMapStop {
   isCurrent: boolean;
   /** Marker colour for the status. */
   color: string;
+  /** Text on the marker instead of the stop number (a route's start and end markers in a plan preview). */
+  label?: string;
 }
 
-export type RouteMapKind = 'plan' | 'active' | 'directions' | 'stop' | 'contact' | 'poi' | 'instance';
+export type RouteMapKind = 'plan' | 'active' | 'directions' | 'stop' | 'contact' | 'poi' | 'instance' | 'preview';
 
 /** What a route map draws. Everything comes from the Resgrid server; the renderer must not call a routing provider. */
 export interface RouteMapSlotProps {

@@ -226,7 +226,8 @@
       "site": "Infos site",
       "timeline": "Activité",
       "video": "Vidéo",
-      "notes": "Notes & files"
+      "notes": "Notes & files",
+      "route": "Itinéraire"
     },
     "timestamp": "Horodatage",
     "title": "Détails de l'appel",
@@ -263,7 +264,16 @@
     "audio_play_error": "Could not play this recording",
     "scheduled_on": "Date et heure prévues de répartition",
     "destination_type": "Type de destination",
-    "keyboard_shortcuts": "Tip: Press 1-9 to switch tabs, Ctrl+E to edit, Escape to go back"
+    "keyboard_shortcuts": "Tip: Press 1-9 to switch tabs, Ctrl+E to edit, Escape to go back",
+    "location_poi": "POI du lieu",
+    "destination_coordinates": "Coordonnées de la destination",
+    "destination_what3words": "what3words de la destination",
+    "route": "Itinéraire",
+    "route_runs": "Parcours de l'itinéraire",
+    "route_no_runs": "Aucune unité n'a encore démarré cet itinéraire.",
+    "route_run_started": "Démarré {{time}}",
+    "route_run_start_reached": "Départ atteint {{time}}",
+    "route_run_ended": "Terminé {{time}}"
   },
   "calls": {
     "address": "Adresse",
@@ -535,6 +545,7 @@
     "longitude_placeholder": "ex. -119.758773",
     "latitude_invalid": "Saisissez une latitude en degrés décimaux, entre -90 et 90",
     "longitude_invalid": "Saisissez une longitude en degrés décimaux, entre -180 et 180",
+    "destination_point_unusable": "0, 0 n’est pas un point de destination utilisable. Saisissez la latitude et la longitude de la destination",
     "coordinates_incomplete": "Saisissez la latitude et la longitude",
     "place_on_map": "Place on map",
     "destination_poi_select": "Select a destination",
@@ -572,7 +583,59 @@
     "all_call_dispatch_now_help": "Toutes les listes d'envoi sont masquées. Activez l'appel général pour envoyer cet appel à tout le monde, ou laissez-le désactivé pour l'envoyer aux destinataires enregistrés avec lui.",
     "additional_contacts": "Contacts supplémentaires",
     "check_in_timers": "Minuteries de pointage",
-    "part2_consent": "Consentement 42 CFR Part 2"
+    "part2_consent": "Consentement 42 CFR Part 2",
+    "location_poi": "Lieu à partir d'un POI",
+    "location_poi_select": "Choisir un point d'intérêt",
+    "location_poi_search": "Rechercher des points d'intérêt...",
+    "location_poi_none_found": "Aucun point d'intérêt ne correspond à votre recherche",
+    "location_poi_load_error": "Impossible de charger les points d'intérêt.",
+    "location_poi_clear": "Effacer le point d'intérêt",
+    "location_poi_moved": "Le lieu a été éloigné de {{name}} : l'appel ne lui sera donc pas lié.",
+    "destination_mode_poi": "Point d'intérêt",
+    "destination_mode_location": "Adresse ou point",
+    "destination_address": "Adresse de destination",
+    "destination_address_placeholder": "Saisir l'adresse de destination",
+    "destination_found": "Destination trouvée et localisation mise à jour",
+    "destination_pick_on_map": "Choisir la destination sur la carte",
+    "destination_location_clear": "Effacer la destination",
+    "route_section": "Itinéraire",
+    "route": "Itinéraire prédéfini",
+    "route_hint": "Le départ de l'itinéraire remplit un lieu d'appel vide et son arrivée une destination manquante.",
+    "route_select": "Choisir un itinéraire",
+    "route_search": "Rechercher des itinéraires...",
+    "route_none_found": "Aucun itinéraire ne correspond à votre recherche",
+    "route_clear": "Effacer l'itinéraire",
+    "route_unknown": "Itinéraire qui n'est plus disponible",
+    "route_stops_count": "Arrêts : {{count}}",
+    "route_start_end": "{{start}} → {{end}}",
+    "destination_to": "Vers : {{destination}}",
+    "route_named": "Itinéraire : {{name}}",
+    "intake_source": {
+      "intake": "Intake",
+      "intake_named": "Intake: {{name}}",
+      "voice": "Voice line",
+      "voice_named": "Voice line: {{name}}",
+      "via_sms": "Via text message",
+      "via_sms_named": "Via text message: {{name}}",
+      "via_email": "Via email",
+      "via_email_named": "Via email: {{name}}",
+      "via_whatsapp": "Via WhatsApp",
+      "via_whatsapp_named": "Via WhatsApp: {{name}}",
+      "via_slack": "Via Slack",
+      "via_slack_named": "Via Slack: {{name}}",
+      "via_teams": "Via Teams",
+      "via_teams_named": "Via Teams: {{name}}",
+      "via_telegram": "Via Telegram",
+      "via_telegram_named": "Via Telegram: {{name}}",
+      "via_discord": "Via Discord",
+      "via_discord_named": "Via Discord: {{name}}",
+      "via_google_chat": "Via Google Chat",
+      "via_google_chat_named": "Via Google Chat: {{name}}",
+      "via_webhook": "Via webhook",
+      "via_webhook_named": "Via webhook: {{name}}",
+      "via_voice": "Via voice line",
+      "via_voice_named": "Via voice line: {{name}}"
+    }
   },
   "chat": {
     "ack_pending_count": "Vous avez {{count}} messages urgents à accuser réception",
@@ -2424,6 +2487,117 @@
       "saved": "Disponibilité enregistrée",
       "save_failed": "La disponibilité n'a pas pu être enregistrée",
       "expiry_passed": "L'heure de fin du signalement est passée. Choisissez sa durée."
+    },
+    "destinations": {
+      "capabilities": {
+        "empty": "Aucune capacité",
+        "empty_description": "Les capacités comme Salle de cathétérisme ou Héliport s'ajoutent sur le web dans Cartographie → POI → Capacités des POI.",
+        "intro": "Ce que proposent vos destinations. Appuyez sur une capacité pour voir les destinations qui la proposent.",
+        "offered_by": "Destinations qui la proposent : {{count}}",
+        "show_hint": "Affiche les destinations qui la proposent",
+        "unavailable": "Indisponible dans {{count}}"
+      },
+      "counts": "Ouvertes {{open}} · Limitées {{limited}} · Délestage {{diversion}} · Fermées {{closed}}",
+      "empty": "Aucune destination",
+      "empty_description": "Les types de POI marqués comme destinations sur le web (Cartographie → POI) apparaissent ici.",
+      "filter_all": "Toutes ({{count}})",
+      "filter_not_open": "Non ouvertes ({{count}})",
+      "loading": "Chargement des destinations...",
+      "no_match": "Aucune destination ne correspond",
+      "rules": {
+        "any_destination": "N'importe quelle destination",
+        "condition_call_type": "Type d'appel : {{name}}",
+        "condition_priority": "Priorité : {{name}}",
+        "condition_unit_type": "Type d'unité : {{name}}",
+        "deleted": "(supprimé)",
+        "destination": "Destination",
+        "empty": "Aucune règle de destination",
+        "empty_description": "Sans règles, toute destination est suggérée, la plus proche ouverte d'abord.",
+        "every_call": "Tous les appels",
+        "load_failed": "Les règles de destination n'ont pas pu être chargées",
+        "loading": "Chargement des règles de destination...",
+        "mode_fill": "Suggérer et remplir",
+        "mode_off": "Désactivées",
+        "mode_suggest": "Suggérer des destinations",
+        "needs_attention": "Fait référence à des éléments supprimés ({{count}}) ; à corriger sur le web.",
+        "nothing": "Rien",
+        "prefers": "Préfère",
+        "read_only": "Les règles et les suggestions se règlent sur le web dans Cartographie → POI → Règles de destination.",
+        "requires": "Exige",
+        "suggestions": "Suggestions",
+        "window": "Une destination offrant plus de capacités préférées passe en premier seulement à {{count}} min ou moins de la plus proche."
+      },
+      "search": "Rechercher des destinations...",
+      "tab_availability": "Disponibilité",
+      "tab_capabilities": "Capacités",
+      "tab_rules": "Règles",
+      "title": "Destinations"
+    },
+    "suggestions": {
+      "failed": "Les suggestions de destination ne sont pas disponibles pour le moment.",
+      "filled": "Rempli avec la destination suggérée. Choisissez-en une autre si besoin.",
+      "loading": "Recherche des destinations...",
+      "missing": "Manque : {{names}}",
+      "needs": "Exige : {{names}}",
+      "none": "Aucune destination trouvée.",
+      "none_meet": "Aucune destination proche ne propose tout ce qui est requis.",
+      "prefers": "Préfère : {{names}}",
+      "rules": "Règles : {{names}}",
+      "selected": "Sélectionnée",
+      "set_aside": "Écartées : {{names}}",
+      "set_aside_rule": "{{name}} ({{reason}})",
+      "set_aside_type_conflict": "une règle plus précise envoie vers d’autres types de destination",
+      "set_aside_types_removed": "ses types de destination n’existent plus",
+      "suggested": "Suggérée",
+      "title": "Destinations suggérées",
+      "types": "Types : {{names}}",
+      "use": "Utiliser",
+      "use_label": "Utiliser {{name}} comme destination",
+      "down": "Indisponible actuellement : {{names}}"
+    },
+    "ai_advice": {
+      "advised_at": "Advised {{time}}",
+      "apply": "Apply",
+      "apply_label": "Make {{name}} the call's destination",
+      "ask": "Ask Enhanced AI",
+      "asking": "Asking Enhanced AI…",
+      "confidence": "Confidence {{percent}}%",
+      "consider": "Consider {{name}}",
+      "current": "Current destination: {{name}}",
+      "current_free": "Current destination: an address or point (no destination POI)",
+      "current_none": "The call has no destination yet.",
+      "dismiss": "Dismiss",
+      "dismiss_reason": "Why dismiss it? (optional)",
+      "dismiss_reason_placeholder": "e.g. Patient asked for another hospital",
+      "error": {
+        "failed": "Something went wrong. Please try again.",
+        "not_allowed": "You cannot change this call.",
+        "offline": "No connection. Try again when you are back online."
+      },
+      "keep": "Keep the current destination",
+      "low_confidence": "Low confidence: check before applying",
+      "no_suggestion": "No destination suggested",
+      "none": "No destination advice for this call yet.",
+      "outcome": {
+        "applied": "{{name}} is now the call's destination.",
+        "budget_exhausted": "Your department's Enhanced AI allowance is used up for now.",
+        "busy": "Enhanced AI is busy. Try again in a moment.",
+        "call_not_open": "The call is no longer open.",
+        "destination_gone": "The recommended destination is no longer available.",
+        "dismissed": "Advice dismissed.",
+        "invalid_output": "Enhanced AI's answer could not be used. Try again.",
+        "model_unavailable": "Enhanced AI could not answer right now. Try again later.",
+        "no_candidates": "No destination could be considered for this call.",
+        "no_location": "The call needs a location before Enhanced AI can advise.",
+        "not_found": "This advice is no longer available.",
+        "not_open": "This advice was already applied, dismissed or replaced.",
+        "nothing_to_apply": "The advice is to keep the current destination: there is nothing to apply.",
+        "protection_unsupported": "Enhanced AI destination advice is not available while Advanced Data Protection is on.",
+        "unavailable_for_department": "Enhanced AI destination advice is not available for your department.",
+        "unchanged": "Nothing the advice reads has changed: this is still the advice."
+      },
+      "suggests": "Enhanced AI suggests",
+      "title": "Enhanced AI destination advice"
     }
   },
   "protocols": {
@@ -3115,7 +3289,10 @@
     "call_assigned_destination": "Destination de l'appel : {{name}}",
     "transport_destination_differs": "Diffère de la destination attribuée à l'appel : {{name}}",
     "transport_reason_required": "Cette destination diffère de celle attribuée à l'appel ({{name}}). Indiquez un motif (obligatoire).",
-    "destination_availability": "{{name}} : {{status}}"
+    "destination_availability": "{{name}} : {{status}}",
+    "destination_missing": "{{name}} ne propose pas ce qui est requis : {{names}}",
+    "destination_required_down": "{{name}} signale indisponible actuellement : {{names}}",
+    "finding_suggested_destination": "Recherche de la destination suggérée..."
   },
   "tabs": {
     "calendar": "Calendrier",
@@ -4428,7 +4605,12 @@
       "waypoint": "Waypoint"
     },
     "stops_done": "{{done}} of {{total}} stops",
-    "stop_eta": "ETA {{time}}"
+    "stop_eta": "ETA {{time}}",
+    "for_a_call": "Démarré pour un appel",
+    "for_call": "Appel : {{call}}",
+    "route_start": "Départ de l'itinéraire",
+    "route_start_pending": "Rendez-vous d'abord au départ de l'itinéraire : {{name}}",
+    "route_start_pending_unnamed": "Rendez-vous d'abord au départ de l'itinéraire"
   },
   "unit_status": {
     "console_title": "Status console",
@@ -4446,7 +4628,19 @@
     "timer_warning": "Status timer warning: {{status}} for {{elapsed}}",
     "timer_notification_body": "{{unit}}: update your status if it has changed.",
     "timer_exact_alarms_allow": "Allow on-time timer alerts",
-    "timer_exact_alarms_hint": "Status timer alerts can arrive late while the app is in the background."
+    "timer_exact_alarms_hint": "Status timer alerts can arrive late while the app is in the background.",
+    "route": {
+      "conflict_cancel": "L'annuler et démarrer cet itinéraire",
+      "conflict_end": "Le terminer et démarrer cet itinéraire",
+      "conflict_keep": "Conserver l'itinéraire en cours",
+      "conflict_message": "Cette unité suit actuellement {{route}}. Terminez-le ou annulez-le pour démarrer l'itinéraire de cet appel, ou laissez-le se poursuivre.",
+      "conflict_message_unnamed": "Cette unité suit actuellement un autre itinéraire. Terminez-le ou annulez-le pour démarrer l'itinéraire de cet appel, ou laissez-le se poursuivre.",
+      "conflict_title": "Un autre itinéraire est en cours",
+      "continue": "Poursuivre l'itinéraire",
+      "name": "Itinéraire : {{name}}",
+      "start": "Démarrer l'itinéraire",
+      "unnamed": "Itinéraire de l'appel"
+    }
   },
   "workOrders": {
     "reportNotSent": "Not sent",
@@ -4507,7 +4701,13 @@
       "set_status": "Set {{status}}",
       "stop_fallback": "the stop",
       "stop_title": "Arrived at {{name}}",
-      "title": "You have arrived"
+      "title": "You have arrived",
+      "end_route": "Terminer l'itinéraire",
+      "route_ended": "Itinéraire terminé",
+      "route_start_at": "Départ de l'itinéraire : {{name}}",
+      "route_start_auto": "Départ vers le premier arrêt dans {{seconds}} s",
+      "route_start_continue": "Aller au premier arrêt",
+      "route_start_title": "Vous avez atteint le départ de l'itinéraire"
     },
     "back": "Back",
     "error": {
@@ -4660,7 +4860,9 @@
       "times_required": "Ajoutez au moins une heure de la journée.",
       "title": "La planification n'a pas pu être enregistrée",
       "too_many_times": "Au plus {{max}} heures par jour.",
-      "unknown": "Un élément de la planification n'est pas valide."
+      "unknown": "Un élément de la planification n'est pas valide.",
+      "destination_coordinates_invalid": "Le point de destination n'est pas un emplacement valide.",
+      "route_plan_invalid": "L'itinéraire n'est plus actif ou n'a pas de départ ou d'arrivée. Choisissez un autre itinéraire."
     },
     "facility_value": "Prise en charge : {{facility}}",
     "field_address": "Adresse",
@@ -4819,6 +5021,49 @@
     "week_fourth": "quatrième",
     "week_last": "dernier",
     "week_second": "deuxième",
-    "week_third": "troisième"
+    "week_third": "troisième",
+    "destination_location_none": "Aucun point de destination",
+    "destination_location_set": "Destination : {{latitude}}, {{longitude}}",
+    "destination_poi_wins_hint": "Les interventions sont dirigées vers le point d'intérêt de destination. Choisissez « Aucun » pour indiquer plutôt une adresse ou un point.",
+    "facility_poi_hint": "L'emplacement de chaque intervention est lié à ce point d'intérêt, qui complète aussi une adresse d'intervention vide.",
+    "field_destination_address": "Adresse de destination",
+    "field_destination_location": "Emplacement de destination",
+    "field_route": "Itinéraire"
+  },
+  "route_plans": {
+    "duration_with_stops": "Avec arrêts",
+    "first_stop": "premier arrêt",
+    "last_stop": "dernier arrêt",
+    "map_end_label": "A",
+    "map_start_label": "D",
+    "not_found": "Itinéraire introuvable",
+    "not_found_description": "Impossible de charger cet itinéraire. Il a peut-être été supprimé ou n'est pas actif.",
+    "preview_action": "Aperçu de l'itinéraire",
+    "preview_title": "Aperçu de l'itinéraire",
+    "profile": {
+      "cycling": "Vélo",
+      "driving": "Voiture",
+      "driving_traffic": "Voiture (avec trafic)",
+      "truck": "Camion",
+      "walking": "À pied"
+    },
+    "profile_label": "Mode de déplacement",
+    "stale_route": "Les arrêts ont changé après le calcul de cet itinéraire : le tracé n'est peut-être plus à jour.",
+    "status": {
+      "active": "Actif",
+      "archived": "Archivé",
+      "draft": "Brouillon",
+      "paused": "En pause"
+    }
+  },
+  "routes_overview": {
+    "next_stop": "Prochain arrêt : {{name}}",
+    "no_running": "Aucun itinéraire en cours",
+    "no_running_description": "Les itinéraires démarrés par vos unités apparaissent ici avec leur progression.",
+    "plans_tab": "Plans",
+    "running_tab": "En cours",
+    "started_at": "Démarré {{time}}",
+    "for_a_call": "Démarré pour un appel",
+    "for_call": "Appel {{number}} : {{name}}"
   }
 }

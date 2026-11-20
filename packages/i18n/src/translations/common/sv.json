@@ -226,7 +226,8 @@
       "site": "Objektinfo",
       "timeline": "Aktivitet",
       "video": "Video",
-      "notes": "Notes & files"
+      "notes": "Notes & files",
+      "route": "Rutt"
     },
     "timestamp": "Tidsstämpel",
     "title": "Samtalsdetaljer",
@@ -263,7 +264,16 @@
     "audio_play_error": "Could not play this recording",
     "scheduled_on": "Schemalagt datum och tid för utlarmning",
     "destination_type": "Destinationstyp",
-    "keyboard_shortcuts": "Tip: Press 1-9 to switch tabs, Ctrl+E to edit, Escape to go back"
+    "keyboard_shortcuts": "Tip: Press 1-9 to switch tabs, Ctrl+E to edit, Escape to go back",
+    "location_poi": "Plats-POI",
+    "destination_coordinates": "Destinationens koordinater",
+    "destination_what3words": "Destinationens what3words",
+    "route": "Rutt",
+    "route_runs": "Ruttkörningar",
+    "route_no_runs": "Ingen enhet har startat den här rutten än.",
+    "route_run_started": "Startade {{time}}",
+    "route_run_start_reached": "Nådde starten {{time}}",
+    "route_run_ended": "Avslutades {{time}}"
   },
   "calls": {
     "address": "Adress",
@@ -535,6 +545,7 @@
     "longitude_placeholder": "t.ex. -119.758773",
     "latitude_invalid": "Ange en latitud i decimalgrader, mellan -90 och 90",
     "longitude_invalid": "Ange en longitud i decimalgrader, mellan -180 och 180",
+    "destination_point_unusable": "0, 0 är ingen användbar destinationspunkt. Ange destinationens latitud och longitud",
     "coordinates_incomplete": "Ange både latitud och longitud",
     "place_on_map": "Place on map",
     "destination_poi_select": "Select a destination",
@@ -572,7 +583,59 @@
     "all_call_dispatch_now_help": "Alla larmlistor är dolda. Slå på allmänt larm för att skicka samtalet till alla, eller låt det vara av för att skicka det till de mottagare det sparades med.",
     "additional_contacts": "Ytterligare kontakter",
     "check_in_timers": "Incheckningstimer",
-    "part2_consent": "Samtycke enligt 42 CFR Part 2"
+    "part2_consent": "Samtycke enligt 42 CFR Part 2",
+    "location_poi": "Plats från POI",
+    "location_poi_select": "Välj en intressepunkt",
+    "location_poi_search": "Sök intressepunkter...",
+    "location_poi_none_found": "Inga intressepunkter matchar sökningen",
+    "location_poi_load_error": "Intressepunkterna kunde inte läsas in.",
+    "location_poi_clear": "Rensa intressepunkt",
+    "location_poi_moved": "Platsen flyttades bort från {{name}}, så larmet kopplas inte till den.",
+    "destination_mode_poi": "Intressepunkt",
+    "destination_mode_location": "Adress eller punkt",
+    "destination_address": "Destinationsadress",
+    "destination_address_placeholder": "Ange destinationsadressen",
+    "destination_found": "Destinationen hittades och dess plats uppdaterades",
+    "destination_pick_on_map": "Välj destination på kartan",
+    "destination_location_clear": "Rensa destination",
+    "route_section": "Rutt",
+    "route": "Fördefinierad rutt",
+    "route_hint": "Ruttens start fyller i en tom larmplats och dess slut en saknad destination.",
+    "route_select": "Välj en rutt",
+    "route_search": "Sök rutter...",
+    "route_none_found": "Inga rutter matchar sökningen",
+    "route_clear": "Rensa rutt",
+    "route_unknown": "Rutten är inte längre tillgänglig",
+    "route_stops_count": "Stopp: {{count}}",
+    "route_start_end": "{{start}} → {{end}}",
+    "destination_to": "Till: {{destination}}",
+    "route_named": "Rutt: {{name}}",
+    "intake_source": {
+      "intake": "Intake",
+      "intake_named": "Intake: {{name}}",
+      "voice": "Voice line",
+      "voice_named": "Voice line: {{name}}",
+      "via_sms": "Via text message",
+      "via_sms_named": "Via text message: {{name}}",
+      "via_email": "Via email",
+      "via_email_named": "Via email: {{name}}",
+      "via_whatsapp": "Via WhatsApp",
+      "via_whatsapp_named": "Via WhatsApp: {{name}}",
+      "via_slack": "Via Slack",
+      "via_slack_named": "Via Slack: {{name}}",
+      "via_teams": "Via Teams",
+      "via_teams_named": "Via Teams: {{name}}",
+      "via_telegram": "Via Telegram",
+      "via_telegram_named": "Via Telegram: {{name}}",
+      "via_discord": "Via Discord",
+      "via_discord_named": "Via Discord: {{name}}",
+      "via_google_chat": "Via Google Chat",
+      "via_google_chat_named": "Via Google Chat: {{name}}",
+      "via_webhook": "Via webhook",
+      "via_webhook_named": "Via webhook: {{name}}",
+      "via_voice": "Via voice line",
+      "via_voice_named": "Via voice line: {{name}}"
+    }
   },
   "chat": {
     "ack_pending_count": "Du har {{count}} brådskande meddelanden att bekräfta",
@@ -2424,6 +2487,117 @@
       "saved": "Tillgängligheten sparades",
       "save_failed": "Tillgängligheten kunde inte sparas",
       "expiry_passed": "Rapportens sluttid har passerat. Välj hur länge den gäller."
+    },
+    "destinations": {
+      "capabilities": {
+        "empty": "Inga förmågor",
+        "empty_description": "Förmågor som PCI-lab eller Helikopterplatta läggs till på webben under Kartor → POI:er → POI-förmågor.",
+        "intro": "Vad dina destinationer erbjuder. Tryck på en förmåga för att se destinationerna som erbjuder den.",
+        "offered_by": "Destinationer som erbjuder den: {{count}}",
+        "show_hint": "Visar destinationerna som erbjuder den",
+        "unavailable": "Inte tillgänglig på {{count}}"
+      },
+      "counts": "Öppna {{open}} · Begränsade {{limited}} · Omdirigering {{diversion}} · Stängda {{closed}}",
+      "empty": "Inga destinationer",
+      "empty_description": "POI-typer som är markerade som destinationer på webben (Kartor → POI:er) visas här.",
+      "filter_all": "Alla ({{count}})",
+      "filter_not_open": "Inte öppna ({{count}})",
+      "loading": "Läser in destinationer...",
+      "no_match": "Ingen destination matchar",
+      "rules": {
+        "any_destination": "Valfri destination",
+        "condition_call_type": "Larmtyp: {{name}}",
+        "condition_priority": "Prioritet: {{name}}",
+        "condition_unit_type": "Enhetstyp: {{name}}",
+        "deleted": "(borttagen)",
+        "destination": "Destination",
+        "empty": "Inga destinationsregler",
+        "empty_description": "Utan regler föreslås alla destinationer, närmaste öppna först.",
+        "every_call": "Varje larm",
+        "load_failed": "Destinationsreglerna kunde inte läsas in",
+        "loading": "Läser in destinationsregler...",
+        "mode_fill": "Föreslå och fyll i",
+        "mode_off": "Av",
+        "mode_suggest": "Föreslå destinationer",
+        "needs_attention": "Hänvisar till borttagna poster ({{count}}); rätta det på webben.",
+        "nothing": "Inget",
+        "prefers": "Föredrar",
+        "read_only": "Regler och förslag ställs in på webben under Kartor → POI:er → Destinationsregler.",
+        "requires": "Kräver",
+        "suggestions": "Förslag",
+        "window": "En destination med fler föredragna förmågor kommer först bara inom {{count}} min från den närmaste."
+      },
+      "search": "Sök destinationer...",
+      "tab_availability": "Tillgänglighet",
+      "tab_capabilities": "Förmågor",
+      "tab_rules": "Regler",
+      "title": "Destinationer"
+    },
+    "suggestions": {
+      "failed": "Destinationsförslag är inte tillgängliga just nu.",
+      "filled": "Ifylld med den föreslagna destinationen. Välj en annan vid behov.",
+      "loading": "Söker destinationer...",
+      "missing": "Saknar: {{names}}",
+      "needs": "Kräver: {{names}}",
+      "none": "Ingen destination hittades.",
+      "none_meet": "Ingen destination i närheten erbjuder allt som krävs.",
+      "prefers": "Föredrar: {{names}}",
+      "rules": "Regler: {{names}}",
+      "selected": "Vald",
+      "set_aside": "Åsidosatta: {{names}}",
+      "set_aside_rule": "{{name}} ({{reason}})",
+      "set_aside_type_conflict": "en mer specifik regel skickar till andra destinationstyper",
+      "set_aside_types_removed": "dess destinationstyper finns inte längre",
+      "suggested": "Föreslagen",
+      "title": "Föreslagna destinationer",
+      "types": "Typer: {{names}}",
+      "use": "Använd",
+      "use_label": "Använd {{name}} som destination",
+      "down": "Inte tillgänglig nu: {{names}}"
+    },
+    "ai_advice": {
+      "advised_at": "Advised {{time}}",
+      "apply": "Apply",
+      "apply_label": "Make {{name}} the call's destination",
+      "ask": "Ask Enhanced AI",
+      "asking": "Asking Enhanced AI…",
+      "confidence": "Confidence {{percent}}%",
+      "consider": "Consider {{name}}",
+      "current": "Current destination: {{name}}",
+      "current_free": "Current destination: an address or point (no destination POI)",
+      "current_none": "The call has no destination yet.",
+      "dismiss": "Dismiss",
+      "dismiss_reason": "Why dismiss it? (optional)",
+      "dismiss_reason_placeholder": "e.g. Patient asked for another hospital",
+      "error": {
+        "failed": "Something went wrong. Please try again.",
+        "not_allowed": "You cannot change this call.",
+        "offline": "No connection. Try again when you are back online."
+      },
+      "keep": "Keep the current destination",
+      "low_confidence": "Low confidence: check before applying",
+      "no_suggestion": "No destination suggested",
+      "none": "No destination advice for this call yet.",
+      "outcome": {
+        "applied": "{{name}} is now the call's destination.",
+        "budget_exhausted": "Your department's Enhanced AI allowance is used up for now.",
+        "busy": "Enhanced AI is busy. Try again in a moment.",
+        "call_not_open": "The call is no longer open.",
+        "destination_gone": "The recommended destination is no longer available.",
+        "dismissed": "Advice dismissed.",
+        "invalid_output": "Enhanced AI's answer could not be used. Try again.",
+        "model_unavailable": "Enhanced AI could not answer right now. Try again later.",
+        "no_candidates": "No destination could be considered for this call.",
+        "no_location": "The call needs a location before Enhanced AI can advise.",
+        "not_found": "This advice is no longer available.",
+        "not_open": "This advice was already applied, dismissed or replaced.",
+        "nothing_to_apply": "The advice is to keep the current destination: there is nothing to apply.",
+        "protection_unsupported": "Enhanced AI destination advice is not available while Advanced Data Protection is on.",
+        "unavailable_for_department": "Enhanced AI destination advice is not available for your department.",
+        "unchanged": "Nothing the advice reads has changed: this is still the advice."
+      },
+      "suggests": "Enhanced AI suggests",
+      "title": "Enhanced AI destination advice"
     }
   },
   "protocols": {
@@ -3115,7 +3289,10 @@
     "call_assigned_destination": "Larmets destination: {{name}}",
     "transport_destination_differs": "Skiljer sig från larmets tilldelade destination: {{name}}",
     "transport_reason_required": "Den här destinationen skiljer sig från larmets tilldelade destination ({{name}}). Ange en anledning (krävs).",
-    "destination_availability": "{{name}}: {{status}}"
+    "destination_availability": "{{name}}: {{status}}",
+    "destination_missing": "{{name}} erbjuder inte det som krävs: {{names}}",
+    "destination_required_down": "{{name}} rapporterar inte tillgängligt nu: {{names}}",
+    "finding_suggested_destination": "Söker föreslagen destination..."
   },
   "tabs": {
     "calendar": "Kalender",
@@ -4428,7 +4605,12 @@
       "waypoint": "Waypoint"
     },
     "stops_done": "{{done}} of {{total}} stops",
-    "stop_eta": "ETA {{time}}"
+    "stop_eta": "ETA {{time}}",
+    "for_a_call": "Startad för ett larm",
+    "for_call": "Larm: {{call}}",
+    "route_start": "Ruttstart",
+    "route_start_pending": "Kör först till ruttstarten: {{name}}",
+    "route_start_pending_unnamed": "Kör först till ruttstarten"
   },
   "unit_status": {
     "console_title": "Status console",
@@ -4446,7 +4628,19 @@
     "timer_warning": "Status timer warning: {{status}} for {{elapsed}}",
     "timer_notification_body": "{{unit}}: update your status if it has changed.",
     "timer_exact_alarms_allow": "Allow on-time timer alerts",
-    "timer_exact_alarms_hint": "Status timer alerts can arrive late while the app is in the background."
+    "timer_exact_alarms_hint": "Status timer alerts can arrive late while the app is in the background.",
+    "route": {
+      "conflict_cancel": "Avbryt den och starta den här rutten",
+      "conflict_end": "Avsluta den och starta den här rutten",
+      "conflict_keep": "Behåll den aktuella rutten",
+      "conflict_message": "Den här enheten kör {{route}}. Avsluta eller avbryt den för att starta larmets rutt, eller låt den fortsätta.",
+      "conflict_message_unnamed": "Den här enheten kör en annan rutt. Avsluta eller avbryt den för att starta larmets rutt, eller låt den fortsätta.",
+      "conflict_title": "En annan rutt pågår",
+      "continue": "Fortsätt rutt",
+      "name": "Rutt: {{name}}",
+      "start": "Starta rutt",
+      "unnamed": "Larmets rutt"
+    }
   },
   "workOrders": {
     "reportNotSent": "Not sent",
@@ -4507,7 +4701,13 @@
       "set_status": "Set {{status}}",
       "stop_fallback": "the stop",
       "stop_title": "Arrived at {{name}}",
-      "title": "You have arrived"
+      "title": "You have arrived",
+      "end_route": "Avsluta rutt",
+      "route_ended": "Rutten har avslutats",
+      "route_start_at": "Ruttstart: {{name}}",
+      "route_start_auto": "Fortsätter till första stoppet om {{seconds}} s",
+      "route_start_continue": "Kör till första stoppet",
+      "route_start_title": "Du har nått ruttstarten"
     },
     "back": "Back",
     "error": {
@@ -4660,7 +4860,9 @@
       "times_required": "Lägg till minst en tid.",
       "title": "Schemat kunde inte sparas",
       "too_many_times": "Högst {{max}} tider per dag.",
-      "unknown": "Något i schemat är ogiltigt."
+      "unknown": "Något i schemat är ogiltigt.",
+      "destination_coordinates_invalid": "Destinationspunkten är inte en giltig plats.",
+      "route_plan_invalid": "Rutten är inte längre aktiv eller saknar start eller slut. Välj en annan rutt."
     },
     "facility_value": "Upphämtning: {{facility}}",
     "field_address": "Adress",
@@ -4819,6 +5021,49 @@
     "week_fourth": "fjärde",
     "week_last": "sista",
     "week_second": "andra",
-    "week_third": "tredje"
+    "week_third": "tredje",
+    "destination_location_none": "Ingen destinationspunkt",
+    "destination_location_set": "Destination: {{latitude}}, {{longitude}}",
+    "destination_poi_wins_hint": "Larmen går till destinationens intressepunkt. Välj ”Ingen” för att ange en adress eller en punkt i stället.",
+    "facility_poi_hint": "Varje larms plats kopplas till den här intressepunkten, som också fyller i en tom larmadress.",
+    "field_destination_address": "Destinationsadress",
+    "field_destination_location": "Destinationsplats",
+    "field_route": "Rutt"
+  },
+  "route_plans": {
+    "duration_with_stops": "Med stopp",
+    "first_stop": "första stoppet",
+    "last_stop": "sista stoppet",
+    "map_end_label": "M",
+    "map_start_label": "S",
+    "not_found": "Rutten hittades inte",
+    "not_found_description": "Rutten kunde inte läsas in. Den kan ha tagits bort eller är inte aktiv.",
+    "preview_action": "Förhandsgranska rutt",
+    "preview_title": "Förhandsgranskning av rutt",
+    "profile": {
+      "cycling": "Cykel",
+      "driving": "Bil",
+      "driving_traffic": "Bil (med trafik)",
+      "truck": "Lastbil",
+      "walking": "Till fots"
+    },
+    "profile_label": "Färdsätt",
+    "stale_route": "Stoppen ändrades efter att rutten beräknades, så linjen kan vara inaktuell.",
+    "status": {
+      "active": "Aktiv",
+      "archived": "Arkiverad",
+      "draft": "Utkast",
+      "paused": "Pausad"
+    }
+  },
+  "routes_overview": {
+    "next_stop": "Nästa stopp: {{name}}",
+    "no_running": "Inga pågående rutter",
+    "no_running_description": "Rutter som dina enheter startar visas här med sina framsteg.",
+    "plans_tab": "Planer",
+    "running_tab": "Pågående",
+    "started_at": "Startade {{time}}",
+    "for_a_call": "Startad för ett larm",
+    "for_call": "Larm {{number}}: {{name}}"
   }
 }

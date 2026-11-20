@@ -15,6 +15,12 @@ export interface RouteDirectionWaypointData {
   PlannedOffsetSeconds?: number | null;
   /** Live ETA (instance directions from a position) or a running instance's planned arrival. */
   EtaUtc?: string | null;
+  /**
+   * Core M0322: the leading "route start" waypoint (`includeStart=true` on a call-linked instance whose start is a station or
+   * an explicit point and not reached yet): `RouteStopId` and `RouteInstanceStopId` null, `StopOrder` 0. Never a stop to
+   * check in at; reaching it is `Routes/ReachRouteStart`. False (or absent from older servers) for every other waypoint.
+   */
+  IsRouteStart?: boolean;
 }
 
 /** The resolved route start or end (a station or an explicit point). */
@@ -36,6 +42,8 @@ export interface RouteDirectionLegData {
   /** Seconds from the route start (or from now, for live directions) to arrival, including dwell before it. */
   OffsetSeconds: number;
   EtaUtc: string | null;
+  /** Core M0322: the leg to the route start (`Legs[0]` with `includeStart=true`, `RouteInstanceStopId` null); false or absent otherwise. */
+  IsRouteStart?: boolean;
 }
 
 export interface RouteDirectionsResultData {

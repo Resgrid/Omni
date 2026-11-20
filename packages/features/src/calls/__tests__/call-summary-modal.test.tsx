@@ -64,6 +64,15 @@ describe('CallSummaryModal', () => {
     expect(useCallDetailStore.getState().fetchCallDetail).toHaveBeenCalledWith('10');
   });
 
+  it('shows where the call goes and the route it runs under its address (Core M0322)', async () => {
+    activateVariant('unit');
+    setDetail(makeCall('10', { Address: '1 Main St', DestinationAddress: '5 Oak Ave', DestinationLatitude: 39.3, DestinationLongitude: -119.3, RoutePlanId: 'rp-1', RoutePlanName: 'Hydrant loop' }));
+    await renderModal();
+
+    expect(screen.getByTestId('call-summary-modal-destination', hidden)).toHaveTextContent('calls.destination_to:5 Oak Ave');
+    expect(screen.getByTestId('call-summary-modal-route', hidden)).toHaveTextContent('calls.route_named:Hydrant loop');
+  });
+
   it('shows the open-calls row until the detail has loaded', async () => {
     activateVariant('unit');
     useCallsStore.setState({ calls: [makeCall('10', { Name: 'Medical aid' })] });

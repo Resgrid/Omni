@@ -11,6 +11,8 @@
   "unit_routes.contact_website": "Website",
   "unit_routes.duration_hours_minutes": "{{hours}} h {{minutes}} min",
   "unit_routes.duration_minutes": "{{minutes}} min",
+  "unit_routes.for_a_call": "Started for a call",
+  "unit_routes.for_call": "Call: {{call}}",
   "unit_routes.instance_status.abandoned": "Abandoned",
   "unit_routes.instance_status.cancelled": "Cancelled",
   "unit_routes.instance_status.scheduled": "Scheduled",
@@ -22,12 +24,15 @@
   "unit_routes.position_required": "Your position is not known yet. Wait for a GPS fix and try again.",
   "unit_routes.priority_optional": "Optional",
   "unit_routes.queued_offline": "Saved on this device. It will be sent when you are back online.",
+  "unit_routes.route_start": "Route start",
+  "unit_routes.route_start_pending": "Drive to the route start first: {{name}}",
+  "unit_routes.route_start_pending_unnamed": "Drive to the route start first",
+  "unit_routes.stop_eta": "ETA {{time}}",
   "unit_routes.stop_not_on_route": "This stop is not on the unit's active route.",
   "unit_routes.stop_skipped": "Stop skipped",
   "unit_routes.stop_type.manual": "Stop",
   "unit_routes.stop_type.scheduled_call": "Scheduled call",
   "unit_routes.stop_type.station": "Station",
   "unit_routes.stop_type.waypoint": "Waypoint",
-  "unit_routes.stops_done": "{{done}} of {{total}} stops",
-  "unit_routes.stop_eta": "ETA {{time}}"
+  "unit_routes.stops_done": "{{done}} of {{total}} stops"
 }

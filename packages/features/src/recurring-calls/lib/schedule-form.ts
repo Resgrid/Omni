@@ -53,6 +53,12 @@ export interface RecurringCallFormValues {
   incidentNumber: string;
   mapPage: string;
   destinationPoiId: number | null;
+  /** Core M0322: free destination address (no destination POI: a POI wins and clears it). */
+  destinationAddress: string;
+  /** Core M0322: free destination point, "lat,lon", or blank. */
+  destinationGeoLocationData: string;
+  /** Core M0322: the route each call runs (an eligible plan from `Routes/GetCallRoutePlans`); null when none. */
+  routePlanId: string | null;
   checkInTimersEnabled: boolean;
   scheduleContactName: string;
   scheduleContactNumber: string;
@@ -106,6 +112,9 @@ export function emptyRecurringCallForm(options: Pick<RecurringCallOptionsResultD
     incidentNumber: '',
     mapPage: '',
     destinationPoiId: null,
+    destinationAddress: '',
+    destinationGeoLocationData: '',
+    routePlanId: null,
     checkInTimersEnabled: false,
     scheduleContactName: '',
     scheduleContactNumber: '',
@@ -163,6 +172,9 @@ export function scheduleToFormValues(schedule: RecurringCallResultData): Recurri
     incidentNumber: text(schedule.IncidentNumber),
     mapPage: text(schedule.MapPage),
     destinationPoiId: schedule.DestinationPoiId ?? null,
+    destinationAddress: text(schedule.DestinationAddress),
+    destinationGeoLocationData: text(schedule.DestinationGeoLocationData),
+    routePlanId: schedule.RoutePlanId?.trim() || null,
     checkInTimersEnabled: schedule.CheckInTimersEnabled,
     scheduleContactName: text(schedule.ScheduleContactName),
     scheduleContactNumber: text(schedule.ScheduleContactNumber),
@@ -184,9 +196,13 @@ const numericIds = (values: readonly string[]): number[] => values.flatMap((valu
 
 const optional = (value: string): string | null => (value.trim() ? value.trim() : null);
 
-/** The form as Core's `RecurringCallInput` (0 for a new schedule). Fields the pattern does not use are sent as zero. */
+/**
+ * The form as Core's `RecurringCallInput` (0 for a new schedule). Fields the pattern does not use are sent as zero. A
+ * destination POI wins over a free destination (Core M0322 clears it too), so only one goes up.
+ */
 export function toRecurringCallInput(values: RecurringCallFormValues, recurringCallId: number): RecurringCallInput {
   const isNew = recurringCallId <= 0;
+  const destinationIsPoi = values.destinationPoiId !== null && values.destinationPoiId > 0;
   const monthly = values.frequency === RecurringCallFrequency.Monthly;
   const byWeekday = monthly && values.monthlyMode === 'weekday';
   const dispatcher = values.creationMode === RecurringCallCreationMode.Dispatcher;
@@ -222,6 +238,9 @@ export function toRecurringCallInput(values: RecurringCallFormValues, recurringC
     IncidentNumber: optional(values.incidentNumber),
     MapPage: optional(values.mapPage),
     DestinationPoiId: values.destinationPoiId,
+    DestinationAddress: destinationIsPoi ? null : optional(values.destinationAddress),
+    DestinationGeoLocationData: destinationIsPoi ? null : optional(values.destinationGeoLocationData),
+    RoutePlanId: values.routePlanId?.trim() || null,
     CheckInTimersEnabled: values.checkInTimersEnabled,
     ScheduleContactName: optional(values.scheduleContactName),
     ScheduleContactNumber: optional(values.scheduleContactNumber),
@@ -304,6 +323,8 @@ const ERROR_LABEL_KEYS = new Map<string, string>([
   ['ErrorCoordinatesInvalid', 'recurring_calls.errors.coordinates_invalid'],
   ['ErrorDestinationPoiInvalid', 'recurring_calls.errors.destination_poi_invalid'],
   ['ErrorFacilityPoiInvalid', 'recurring_calls.errors.facility_poi_invalid'],
+  ['ErrorDestinationCoordinatesInvalid', 'recurring_calls.errors.destination_coordinates_invalid'],
+  ['ErrorRoutePlanInvalid', 'recurring_calls.errors.route_plan_invalid'],
   ['ErrorResumeOnInvalid', 'recurring_calls.errors.resume_on_invalid'],
 ]);
 

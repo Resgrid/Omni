@@ -10,10 +10,12 @@ export * from './engine';
 export { configureNavigation, type ConfigureNavigationOptions, NAVIGATION_SAFETY_NOTICE_KEY, NAVIGATION_VOICE_MUTED_KEY } from './configure';
 export { type AudioDucking, createDuckingVoice, type SpeechEngine } from './store/ducking-voice';
 export {
+  isRouteStartLeg,
   type NavigationDestination,
   type NavigationErrorCode,
   type NavigationLegStop,
   type NavigationRouteMeta,
+  navigationSession,
   type NavigationState,
   type NavigationStatus,
   remainingToLeg,

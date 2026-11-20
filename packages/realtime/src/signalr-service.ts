@@ -1,4 +1,17 @@
-import { HttpTransportType, type HubConnection, HubConnectionBuilder, HubConnectionState, type IHttpConnectionOptions, LogLevel } from '@microsoft/signalr';
+import {
+  DefaultHttpClient,
+  HttpClient,
+  HttpError,
+  type HttpRequest,
+  type HttpResponse,
+  HttpTransportType,
+  type HubConnection,
+  HubConnectionBuilder,
+  HubConnectionState,
+  type IHttpConnectionOptions,
+  LogLevel,
+  NullLogger,
+} from '@microsoft/signalr';
 import { isDevProxyActive, toDevProxyUrl } from '@resgrid/core/env/dev-proxy';
 import { logger } from '@resgrid/core/logging/logger';
 import { isElectron, isWeb } from '@resgrid/core/platform/platform';
@@ -10,7 +23,8 @@ import { reconnectDelayForAttempt, SIGNALR_AUTOMATIC_RECONNECT_DELAYS_MS, SIGNAL
  * SignalR service (omni-plan §7.5). Dispatch's service is the base — Electron skips visibility handling, 60 s server
  * timeout, abort controllers for pending connects, `connection.off` cleanup, connected check in `invoke`, hub-scoped
  * lifecycle events — with:
- * - the token read at call time in `accessTokenFactory` (Dispatch replayed the connect-time token on reconnect);
+ * - the token read at call time in `accessTokenFactory` (Dispatch replayed the connect-time token on reconnect), and
+ *   refreshed there first when it expired or the hub refused it (401), so an automatic reconnect recovers on its next try;
  * - no access token in the URL for any hub: the client itself adds a fresh `access_token` to browser WebSocket URLs
  *   (Core's Eventing accepts it for /geolocationHub and /chatHub) and sends `Authorization` on React Native;
  * - Responder's recovery of hubs that exhausted their retries when connectivity returns, intentional-disconnect
@@ -25,6 +39,8 @@ export interface RealtimeAuth {
   getAccessToken(): string | null | undefined;
   /** Refreshes the access token. An empty token afterwards means the session is gone. */
   refreshAccessToken(): Promise<unknown>;
+  /** Whether the access token is known to have expired (false when its expiry is unknown, e.g. an opaque token). */
+  isAccessTokenExpired?(): boolean;
 }
 
 export interface SignalRServiceDependencies {
@@ -75,6 +91,57 @@ const UNLOGGED_HUB_METHODS = new Set(['onunitlocationupdated', 'onpersonnellocat
 
 export const isUnloggedHubMethod = (method: string): boolean => UNLOGGED_HUB_METHODS.has(method.toLowerCase());
 
+const UNAUTHORIZED_STATUS = /status code '?401'?|\bunauthorized\b/i;
+
+/**
+ * A SignalR connect or close failure as the client raises it: an `HttpError` carries `statusCode`, a failed negotiation
+ * wraps the status in its message ("…Unauthorized: Status code '401'"), and a start that tried every transport lists each
+ * transport's failure in `innerErrors`.
+ */
+export interface HubFailure {
+  message?: string;
+  statusCode?: number;
+  innerErrors?: readonly HubFailure[];
+}
+
+/** Whether the server turned the access token away (401 on negotiate or a transport). */
+export const isHubAuthRejection = (failure: HubFailure | null | undefined): boolean =>
+  !!failure && (failure.statusCode === 401 || UNAUTHORIZED_STATUS.test(failure.message ?? '') || (failure.innerErrors ?? []).some(isHubAuthRejection));
+
+/** The bearer token a hub request carried (the client sets `Authorization` before the request reaches our HTTP client). */
+const bearerOf = (request: HttpRequest): string | null => request.headers?.Authorization?.replace(/^Bearer /, '') ?? null;
+
+/**
+ * A hub's HTTP client (negotiate, long polling) that reports every 401 with the token it refused. SignalR's automatic
+ * reconnect swallows each failed try and closes without an error once its schedule runs out, so without this a refused
+ * token was only seen ~47 s later, by the rebuild loop's first attempt failing again.
+ */
+class AuthWatchingHttpClient extends HttpClient {
+  constructor(
+    private readonly inner: HttpClient,
+    private readonly onUnauthorized: (refusedToken: string | null) => void
+  ) {
+    super();
+  }
+
+  async send(request: HttpRequest): Promise<HttpResponse> {
+    try {
+      const response = await this.inner.send(request);
+
+      if (response.statusCode === 401) this.onUnauthorized(bearerOf(request));
+
+      return response;
+    } catch (error) {
+      if (error instanceof HttpError && error.statusCode === 401) this.onUnauthorized(bearerOf(request));
+      throw error;
+    }
+  }
+
+  override getCookieString(url: string): string {
+    return this.inner.getCookieString(url);
+  }
+}
+
 interface HubMethodHandler {
   method: string;
   handler: SignalREventListener;
@@ -91,6 +158,7 @@ class CancelledError extends Error {
 export function buildHubUrl(eventingUrl: string, hubName: string): string {
   const url = new URL(eventingUrl);
   const pathWithHub = url.pathname.endsWith('/') ? `${url.pathname}${hubName}` : `${url.pathname}/${hubName}`;
+
   return `${url.protocol}//${url.host}${pathWithHub}${url.search}`;
 }
 
@@ -111,6 +179,13 @@ export class SignalRService {
   private exhaustedHubs = new Set<string>();
   /** Web (not Electron) only: rebuilds deferred while the page is hidden, run on the next visibility resume. */
   private parkedWhileHidden = new Set<string>();
+  /** Hubs whose last connect, close or request was a 401, with the token they refused: the next try refreshes it first. */
+  private authRejections = new Map<string, string | null>();
+  /**
+   * Hubs that already got a new token for a 401 and have not connected since. A hub that refuses that one too isn't
+   * refusing the token, so it gets no more refreshes this outage: each refresh rotates the refresh token.
+   */
+  private authRefreshSpent = new Set<string>();
   private eventListeners = new Map<string, Set<SignalREventListener>>();
 
   private isPageVisible = true;
@@ -123,10 +198,12 @@ export class SignalRService {
   /** Wires token access and connectivity. Safe to call again (e.g. after the app shell restarts its services). */
   public configure(dependencies: SignalRServiceDependencies): void {
     if (dependencies.auth !== undefined) this.auth = dependencies.auth;
+
     if (dependencies.connectivity !== undefined) {
       this.connectivityUnsubscribe?.();
       this.connectivityUnsubscribe = null;
       this.connectivity = dependencies.connectivity;
+
       if (this.exhaustedHubs.size > 0) this.ensureConnectivityListener();
     }
   }
@@ -136,20 +213,25 @@ export class SignalRService {
 
   public async connectToHubWithEventingUrl(config: HubConnectConfig, options: ConnectOptions = {}): Promise<void> {
     const existingLock = this.connectionLocks.get(config.name);
+
     if (existingLock) {
       logger.debug({ message: `Connection to hub ${config.name} already in progress, waiting` });
       await existingLock;
+
       // The attempt we waited on may have failed; a live connection is the only reason to stop here.
       if (this.isHubConnected(config.name)) return;
       const currentLock = this.connectionLocks.get(config.name);
+
       if (currentLock && currentLock !== existingLock) {
         await currentLock;
+
         return;
       }
     }
 
     const attempt = this.connectInternal(config);
     this.connectionLocks.set(config.name, attempt);
+
     try {
       await attempt;
     } catch (error) {
@@ -158,6 +240,7 @@ export class SignalRService {
         // resume. The rebuild loop refreshes the token, backs off, and stops if the session is gone.
         this.scheduleReconnect(config.name);
       }
+
       throw error;
     } finally {
       if (this.connectionLocks.get(config.name) === attempt) this.connectionLocks.delete(config.name);
@@ -171,17 +254,21 @@ export class SignalRService {
 
     try {
       const existing = this.connections.get(config.name);
+
       if (existing) {
         if (existing.state !== HubConnectionState.Disconnected) {
           logger.debug({ message: `Already connected to hub: ${config.name}` });
+
           return;
         }
+
         // A closed connection still mapped (a close while the page was hidden) would make connecting a no-op.
         this.dropConnection(config.name, existing);
       }
 
       if (this.hubStates.get(config.name) === HubConnectingState.DIRECT_CONNECTING) {
         logger.debug({ message: `Hub ${config.name} is already connecting, skipping duplicate attempt` });
+
         return;
       }
 
@@ -201,8 +288,10 @@ export class SignalRService {
       if (abortController.signal.aborted) throw new CancelledError();
 
       const connectionOptions: IHttpConnectionOptions = {
-        // Read at call time: the client calls this on every transport connect, including automatic reconnects.
-        accessTokenFactory: () => this.currentToken() ?? '',
+        // Read at call time: the client calls this before every negotiate, including each automatic-reconnect try.
+        accessTokenFactory: () => this.tokenForConnect(config.name),
+        // The library's own client; its request warnings repeat the connection's own failure log, so they are dropped.
+        httpClient: new AuthWatchingHttpClient(new DefaultHttpClient(NullLogger.instance), (refusedToken) => this.noteAuthRejection(config.name, refusedToken)),
       };
 
       // The dev server's proxy (web development builds) carries HTTP only: no WebSocket attempt that is bound to fail.
@@ -218,6 +307,7 @@ export class SignalRService {
       connection.onclose((error?: Error) => {
         // Only the hub's current connection may drive reconnects; a replaced one closing late is noise.
         const current = this.connections.get(config.name);
+
         if (current && current !== connection) return;
         this.handleConnectionClose(config.name, error);
       });
@@ -230,6 +320,7 @@ export class SignalRService {
       connection.onreconnected(() => {
         logger.info({ message: `Reconnected to hub: ${config.name}` });
         this.reconnectAttempts.set(config.name, 0);
+        this.clearAuthRejection(config.name);
         // A reconnect issues a new connection id outside every server group: subscribers must re-announce.
         this.emitHubLifecycle(HUB_RECONNECTED_EVENT, config.name);
       });
@@ -241,6 +332,7 @@ export class SignalRService {
           if (!isUnloggedHubMethod(method)) logger.debug({ message: `Received ${method} from hub: ${config.name}` });
           this.emit(method, ...args);
         };
+
         connection.on(method, handler);
         handlers.push({ method, handler });
       });
@@ -258,8 +350,10 @@ export class SignalRService {
         this.cleanupHubMethodHandlers(config.name, connection);
         throw error;
       }
+
       this.connections.set(config.name, connection);
       this.reconnectAttempts.set(config.name, 0);
+      this.clearAuthRejection(config.name);
       this.exhaustedHubs.delete(config.name);
       this.parkedWhileHidden.delete(config.name);
       this.setHubState(config.name, HubConnectingState.IDLE);
@@ -270,10 +364,15 @@ export class SignalRService {
       this.emitHubLifecycle(HUB_CONNECTED_EVENT, config.name);
     } catch (error) {
       if (this.hubStates.get(config.name) === HubConnectingState.DIRECT_CONNECTING) this.setHubState(config.name, HubConnectingState.IDLE);
+
       if (abortController.signal.aborted || error instanceof CancelledError) {
         logger.debug({ message: `Connection attempt to hub ${config.name} was cancelled` });
+
         return;
       }
+
+      if (isHubAuthRejection(error instanceof Error ? error : null)) this.noteAuthRejection(config.name);
+
       // Transient and retried: warn, don't report every attempt as an error.
       logger.warn({ message: `Failed to connect to hub: ${config.name}`, context: { error } });
       throw error;
@@ -289,7 +388,10 @@ export class SignalRService {
     // No stored config means the app already let the hub go (a close that lands after its disconnect finished).
     const intentional = this.consumeIntentionalDisconnect(hubName) || !this.hubConfigs.has(hubName);
     const connection = this.connections.get(hubName);
+
     if (connection) this.dropConnection(hubName, connection);
+
+    if (isHubAuthRejection(error)) this.noteAuthRejection(hubName);
 
     if (intentional) {
       logger.debug({ message: `Hub ${hubName} closed by an intentional disconnect; not reconnecting` });
@@ -307,14 +409,18 @@ export class SignalRService {
   /** Schedules the next rebuild with linear backoff, or parks the hub once the attempt budget is spent. */
   private scheduleReconnect(hubName: string, options: { immediate?: boolean } = {}): void {
     this.cancelPendingReconnect(hubName);
+
     if (!this.hubConfigs.has(hubName)) {
       this.setHubState(hubName, HubConnectingState.IDLE);
+
       return;
     }
 
     const attempts = this.reconnectAttempts.get(hubName) ?? 0;
+
     if (attempts >= SIGNALR_MAX_RECONNECT_ATTEMPTS) {
       this.parkExhaustedHub(hubName);
+
       return;
     }
 
@@ -328,13 +434,16 @@ export class SignalRService {
       if (this.reconnectTimers.get(hubName) === timer) this.reconnectTimers.delete(hubName);
       void this.runReconnectAttempt(hubName, attempt);
     }, delay);
+
     this.reconnectTimers.set(hubName, timer);
   }
 
   private async runReconnectAttempt(hubName: string, attempt: number): Promise<void> {
     const config = this.hubConfigs.get(hubName);
+
     if (!config || this.intentionalDisconnects.has(hubName)) {
       this.setHubState(hubName, HubConnectingState.IDLE);
+
       return;
     }
 
@@ -343,23 +452,33 @@ export class SignalRService {
       logger.debug({ message: `Deferring rebuild of hub ${hubName} until the page is visible` });
       this.parkedWhileHidden.add(hubName);
       this.setHubState(hubName, HubConnectingState.IDLE);
+
       return;
     }
 
     if (this.isHubConnected(hubName)) {
       this.reconnectAttempts.set(hubName, 0);
       this.setHubState(hubName, HubConnectingState.IDLE);
+
       return;
     }
 
     try {
-      logger.info({ message: `Refreshing token before rebuilding hub: ${hubName}` });
-      await this.auth?.refreshAccessToken();
+      // Refresh only when the token is the problem: there is none, or the hub turned it away (401); an expired one is
+      // refreshed by `tokenForConnect`. Refreshing before every attempt rotated the refresh token every few seconds while
+      // a hub was down; a rotation whose answer never arrived (a reload, a timeout, the app killed mid-request) left the
+      // client holding a redeemed refresh token, and its next refresh, past the server's 30 s reuse leeway, ended the
+      // session (OpenIddict ID2012 "already redeemed").
+      if (!this.currentToken() || this.needsAuthRefresh(hubName)) {
+        logger.info({ message: `Refreshing token before rebuilding hub: ${hubName}` });
+        await this.refreshTokenFor(hubName);
 
-      // Disconnected (sign-out, background) while the refresh ran.
-      if (!this.hubConfigs.has(hubName) || this.intentionalDisconnects.has(hubName)) {
-        this.setHubState(hubName, HubConnectingState.IDLE);
-        return;
+        // Disconnected (sign-out, background) while the refresh ran.
+        if (!this.hubConfigs.has(hubName) || this.intentionalDisconnects.has(hubName)) {
+          this.setHubState(hubName, HubConnectingState.IDLE);
+
+          return;
+        }
       }
 
       if (!this.currentToken()) {
@@ -367,11 +486,13 @@ export class SignalRService {
         // layer owns the sign-out; a later sign-in connects again from scratch.
         logger.warn({ message: `No access token after refresh; stopping reconnects for hub: ${hubName}` });
         this.forgetHub(hubName);
+
         return;
       }
 
       logger.info({ message: `Rebuilding hub: ${hubName} (attempt ${attempt}/${SIGNALR_MAX_RECONNECT_ATTEMPTS})` });
       await this.connectToHubWithEventingUrl(config, { retryOnFailure: false });
+
       if (!this.isHubConnected(hubName)) throw new Error(`Hub ${hubName} did not connect`);
       this.reconnectAttempts.set(hubName, 0);
     } catch (error) {
@@ -386,6 +507,7 @@ export class SignalRService {
   private parkExhaustedHub(hubName: string): void {
     logger.error({ message: `Max reconnection attempts (${SIGNALR_MAX_RECONNECT_ATTEMPTS}) reached for hub: ${hubName}; waiting for the network` });
     const connection = this.connections.get(hubName);
+
     if (connection) this.dropConnection(hubName, connection);
     this.reconnectAttempts.delete(hubName);
     this.setHubState(hubName, HubConnectingState.IDLE);
@@ -427,10 +549,12 @@ export class SignalRService {
     // An explicit disconnect ends any outage: no network-triggered or visibility-triggered retries.
     this.exhaustedHubs.delete(hubName);
     this.parkedWhileHidden.delete(hubName);
+    this.clearAuthRejection(hubName);
     this.intentionalDisconnects.add(hubName);
 
     try {
       const existingLock = this.connectionLocks.get(hubName);
+
       if (existingLock) {
         try {
           await existingLock;
@@ -445,8 +569,10 @@ export class SignalRService {
       this.reconnectAttempts.delete(hubName);
 
       const connection = this.connections.get(hubName);
+
       if (connection) {
         this.cleanupHubMethodHandlers(hubName, connection);
+
         try {
           await connection.stop();
           logger.info({ message: `Disconnected from hub: ${hubName}` });
@@ -474,6 +600,7 @@ export class SignalRService {
 
   public async invoke<TResult = unknown>(hubName: string, method: string, ...args: unknown[]): Promise<TResult> {
     const existingLock = this.connectionLocks.get(hubName);
+
     if (existingLock) {
       try {
         await existingLock;
@@ -483,6 +610,7 @@ export class SignalRService {
     }
 
     const connection = this.connections.get(hubName);
+
     if (!connection) {
       const reason = this.hubStates.get(hubName) === HubConnectingState.RECONNECTING ? 'hub is currently reconnecting' : 'hub is not connected';
       throw new Error(`Cannot invoke method ${method} on hub ${hubName}: ${reason}`);
@@ -504,6 +632,7 @@ export class SignalRService {
       } else {
         logger.error({ message: `Error invoking ${method} on hub: ${hubName}`, context: { error } });
       }
+
       throw error;
     }
   }
@@ -555,13 +684,16 @@ export class SignalRService {
     const listeners = this.eventListeners.get(event) ?? new Set<SignalREventListener>();
     listeners.add(listener);
     this.eventListeners.set(event, listeners);
+
     return () => this.off(event, listener);
   }
 
   public off(event: string, listener: SignalREventListener): void {
     const listeners = this.eventListeners.get(event);
+
     if (!listeners) return;
     listeners.delete(listener);
+
     if (listeners.size === 0) this.eventListeners.delete(event);
   }
 
@@ -582,6 +714,7 @@ export class SignalRService {
     this.eventListeners.forEach((listeners) => {
       total += listeners.size;
     });
+
     return total;
   }
 
@@ -594,7 +727,9 @@ export class SignalRService {
   /** Every listener runs even when one throws (Responder's emit had no guard). */
   private emit(event: string, ...args: unknown[]): void {
     const listeners = this.eventListeners.get(event);
+
     if (!listeners) return;
+
     for (const listener of [...listeners]) {
       try {
         listener(...args);
@@ -612,8 +747,10 @@ export class SignalRService {
     this.visibilityHandler = () => {
       const wasVisible = this.isPageVisible;
       this.isPageVisible = document.visibilityState !== 'hidden';
+
       if (!wasVisible && this.isPageVisible) void this.reconnectOnVisibilityResume();
     };
+
     document.addEventListener('visibilitychange', this.visibilityHandler);
   }
 
@@ -621,10 +758,12 @@ export class SignalRService {
     for (const [hubName, config] of this.hubConfigs) {
       if (this.isHubConnected(hubName) || this.isHubConnecting(hubName) || this.reconnectTimers.has(hubName)) continue;
       const connection = this.connections.get(hubName);
+
       // One still inside its automatic reconnect will recover or close and schedule its own rebuild.
       if (connection && connection.state !== HubConnectionState.Disconnected) continue;
       this.parkedWhileHidden.delete(hubName);
       this.reconnectAttempts.set(hubName, 0);
+
       try {
         await this.connectToHubWithEventingUrl(config);
       } catch (error) {
@@ -636,9 +775,64 @@ export class SignalRService {
   // ---------------------------------------------------------------------------------------------------------------
   // Internals
 
+  /**
+   * The bearer token for a negotiate. The client asks before every one, automatic-reconnect tries included, so a token
+   * that expired or that the hub refused is replaced on the very next try rather than retried for the rest of the
+   * reconnect schedule.
+   */
+  private async tokenForConnect(hubName: string): Promise<string> {
+    if (this.currentToken() && (this.needsAuthRefresh(hubName) || this.isTokenExpired())) {
+      logger.info({ message: `Refreshing token before connecting to hub: ${hubName}` });
+
+      try {
+        await this.refreshTokenFor(hubName);
+      } catch (error) {
+        // Connect with the token there is; the auth layer retries a failed refresh on its own schedule.
+        logger.warn({ message: `Token refresh before connecting to hub ${hubName} failed`, context: { error } });
+      }
+    }
+
+    return this.currentToken() ?? '';
+  }
+
+  /** Refreshes the token; a 401 answered with a new token spends that hub's refresh for this outage. */
+  private async refreshTokenFor(hubName: string): Promise<void> {
+    const before = this.currentToken();
+    const refused = this.authRejections.has(hubName);
+    await this.auth?.refreshAccessToken();
+    this.authRejections.delete(hubName);
+
+    if (refused && this.currentToken() !== before) this.authRefreshSpent.add(hubName);
+  }
+
+  /** A hub's 401 is worth one refresh per outage, and only while the client still holds the token it refused. */
+  private needsAuthRefresh(hubName: string): boolean {
+    if (!this.authRejections.has(hubName) || this.authRefreshSpent.has(hubName)) return false;
+
+    return this.authRejections.get(hubName) === this.currentToken();
+  }
+
+  private noteAuthRejection(hubName: string, refusedToken: string | null = this.currentToken()): void {
+    this.authRejections.set(hubName, refusedToken);
+  }
+
+  private clearAuthRejection(hubName: string): void {
+    this.authRejections.delete(hubName);
+    this.authRefreshSpent.delete(hubName);
+  }
+
+  private isTokenExpired(): boolean {
+    try {
+      return this.auth?.isAccessTokenExpired?.() === true;
+    } catch {
+      return false;
+    }
+  }
+
   private currentToken(): string | null {
     try {
       const token = this.auth?.getAccessToken();
+
       return typeof token === 'string' && token.length > 0 ? token : null;
     } catch {
       return null;
@@ -647,6 +841,7 @@ export class SignalRService {
 
   private isHubConnecting(hubName: string): boolean {
     const state = this.hubStates.get(hubName);
+
     return state === HubConnectingState.RECONNECTING || state === HubConnectingState.DIRECT_CONNECTING;
   }
 
@@ -658,11 +853,13 @@ export class SignalRService {
   private consumeIntentionalDisconnect(hubName: string): boolean {
     if (!this.intentionalDisconnects.has(hubName)) return false;
     this.intentionalDisconnects.delete(hubName);
+
     return true;
   }
 
   private cancelPendingReconnect(hubName: string): void {
     const timer = this.reconnectTimers.get(hubName);
+
     if (timer !== undefined) {
       clearTimeout(timer);
       this.reconnectTimers.delete(hubName);
@@ -671,11 +868,13 @@ export class SignalRService {
 
   private dropConnection(hubName: string, connection: HubConnection): void {
     this.cleanupHubMethodHandlers(hubName, connection);
+
     if (this.connections.get(hubName) === connection) this.connections.delete(hubName);
   }
 
   private cleanupHubMethodHandlers(hubName: string, connection: HubConnection): void {
     const handlers = this.hubMethodHandlers.get(hubName);
+
     if (!handlers) return;
     handlers.forEach(({ method, handler }) => {
       try {
@@ -694,6 +893,7 @@ export class SignalRService {
     this.reconnectAttempts.delete(hubName);
     this.exhaustedHubs.delete(hubName);
     this.parkedWhileHidden.delete(hubName);
+    this.clearAuthRejection(hubName);
     this.setHubState(hubName, HubConnectingState.IDLE);
   }
 
@@ -712,9 +912,12 @@ export class SignalRService {
     this.intentionalDisconnects.clear();
     this.exhaustedHubs.clear();
     this.parkedWhileHidden.clear();
+    this.authRejections.clear();
+    this.authRefreshSpent.clear();
     this.eventListeners.clear();
     this.connectivityUnsubscribe?.();
     this.connectivityUnsubscribe = null;
+
     if (this.visibilityHandler && typeof document !== 'undefined') document.removeEventListener('visibilitychange', this.visibilityHandler);
     this.visibilityHandler = null;
     this.isPageVisible = true;

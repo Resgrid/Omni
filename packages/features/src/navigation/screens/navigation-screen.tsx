@@ -1,5 +1,5 @@
 import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
-import { useCallsStore } from '@resgrid/data';
+import { useCallsStore, useRoutesStore } from '@resgrid/data';
 import { revealedCallText } from '@resgrid/features/calls';
 import { useNavigationHandoff } from '@resgrid/features/contacts';
 import { useStatusContext } from '@resgrid/features/status';
@@ -47,12 +47,18 @@ const sameDestination = (a: NavigationDestination | null, b: NavigationDestinati
   return false;
 };
 
-const toDestination = (request: NavigationRequest, callName: string | null): NavigationDestination | null => {
+/** What the routes store knows of the run being navigated: its name and whether its start was reached (Core M0322). */
+interface RouteFacts {
+  name: string | null;
+  startReached: boolean;
+}
+
+const toDestination = (request: NavigationRequest, callName: string | null, route: RouteFacts): NavigationDestination | null => {
   if (!request) return null;
 
   if (request.kind === 'call') return { kind: 'call', callId: request.callId, name: callName };
 
-  if (request.kind === 'route') return { kind: 'route', routeInstanceId: request.routeInstanceId, name: null };
+  if (request.kind === 'route') return { kind: 'route', routeInstanceId: request.routeInstanceId, name: route.name, startReached: route.startReached };
 
   return { kind: 'point', latitude: request.point.latitude, longitude: request.point.longitude, name: request.point.name };
 };
@@ -94,7 +100,11 @@ export default function NavigationScreen({ simulationSpeedMps: simulationProp = 
   const call = useCallsStore((state) => (request?.kind === 'call' ? state.calls.find((item) => Number(item.CallId) === request.callId) : undefined));
   // The name goes into the navigation notification: a withheld or missing one leaves it out ("Navigating").
   const callName = call ? revealedCallText(call, 'Name') || null : null;
-  const destination = useMemo(() => toDestination(request, callName), [request, callName]);
+  // A run's start reached before this session (also a ReachRouteStart still queued here) is never asked for again.
+  const routeInstanceId = request?.kind === 'route' ? request.routeInstanceId : null;
+  const routeName = useRoutesStore((state) => (routeInstanceId && state.activeInstance?.RouteInstanceId === routeInstanceId ? state.activeInstance.RoutePlanName || null : null));
+  const startReached = useRoutesStore((state) => !!routeInstanceId && state.activeInstance?.RouteInstanceId === routeInstanceId && !!state.activeInstance.StartReachedOn);
+  const destination = useMemo(() => toDestination(request, callName, { name: routeName, startReached }), [request, callName, routeName, startReached]);
   const status = useNavigationStore((state) => state.status);
   const error = useNavigationStore((state) => state.error);
   const sessionDestination = useNavigationStore((state) => state.destination);
@@ -191,7 +201,7 @@ export default function NavigationScreen({ simulationSpeedMps: simulationProp = 
     destination.kind === 'call' ? (
       <CallArrivalPanel unitId={activeUnitId} onEnd={end} />
     ) : destination.kind === 'route' ? (
-      <StopArrivalPanel unitId={activeUnitId} onEnd={end} onOpenStop={(id) => pushRoutePath(router, unitRoutesRoutes.stop(id))} />
+      <StopArrivalPanel unitId={activeUnitId} routeInstanceId={destination.routeInstanceId} onEnd={end} onOpenStop={(id) => pushRoutePath(router, unitRoutesRoutes.stop(id))} />
     ) : (
       <PointArrivalPanel name={destination.name} onEnd={end} />
     );

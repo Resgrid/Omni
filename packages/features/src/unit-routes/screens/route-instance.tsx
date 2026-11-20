@@ -1,14 +1,16 @@
 import { useRoutesStore } from '@resgrid/data';
 import { useDepartmentTimeZone } from '@resgrid/features/department-config';
+import { planPreviewLine } from '@resgrid/features/route-plans/lib/route-plan-preview';
 import { useTranslation } from '@resgrid/i18n';
 import type { RouteStopWithDetailsResultData } from '@resgrid/models';
-import { HStack, Loading, ScreenHeader, ScrollView, Text, View, VStack, ZeroState } from '@resgrid/ui';
+import { HStack, Loading, RefreshControl, ScreenHeader, ScrollView, Text, View, VStack, ZeroState } from '@resgrid/ui';
 import { router, useLocalSearchParams } from 'expo-router';
 import { History } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import { StyleSheet } from 'react-native';
 
 import { RouteStats } from '../components/route-stats';
+import { RunCallLink } from '../components/run-call-link';
 import { formatDistance, formatDuration, formatRouteTime } from '../lib/route-format';
 import { instanceMapStops, mapBounds, routeColor } from '../lib/route-map';
 import { instanceStatusLook, sortStops, stopStatusLook } from '../lib/route-status';
@@ -18,6 +20,10 @@ import { readRouteParam, unitRoutesRoutes } from '../routes';
 export interface RouteInstanceScreenProps {
   instanceId?: string;
   renderMap?: RenderRouteMap;
+  /** Back when there is nothing to go back to (default: the Unit routes list). */
+  onBack?: () => void;
+  /** Also draw the plan's route line (a plan preview read, `fetchRoutePlanPreview`): the desk watching a running route. */
+  showPlanLine?: boolean;
 }
 
 const dwellText = (seconds: number | null, t: (key: string, options?: Record<string, unknown>) => string): string => (seconds && seconds > 0 ? `${t('routes.dwell_time')}: ${formatDuration(seconds, t)}` : '');
@@ -27,7 +33,7 @@ const dwellText = (seconds: number | null, t: (key: string, options?: Record<str
  * check-out, dwell, skip reason and notes, with a map. Read into its own slot so the live route is never replaced
  * (Unit kept this in local screen state for the same reason).
  */
-export default function RouteInstanceScreen({ instanceId: instanceIdProp, renderMap }: RouteInstanceScreenProps) {
+export default function RouteInstanceScreen({ instanceId: instanceIdProp, renderMap, onBack, showPlanLine = false }: RouteInstanceScreenProps) {
   const { t } = useTranslation();
   const timeZone = useDepartmentTimeZone();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
@@ -35,7 +41,10 @@ export default function RouteInstanceScreen({ instanceId: instanceIdProp, render
   const detail = useRoutesStore((state) => (instanceId ? state.instanceDetailsById[instanceId] : undefined)) ?? null;
   const error = useRoutesStore((state) => state.errors.instanceDetail ?? null);
   const plans = useRoutesStore((state) => state.routePlans);
+  const planId = detail?.progress?.Instance?.RoutePlanId ?? null;
+  const planPreview = useRoutesStore((state) => (showPlanLine && planId ? state.planPreviewsById[planId] : undefined)) ?? null;
   const [isLoading, setIsLoading] = useState(!detail && !!instanceId);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     if (!instanceId) return undefined;
@@ -46,18 +55,36 @@ export default function RouteInstanceScreen({ instanceId: instanceIdProp, render
       .finally(() => {
         if (active) setIsLoading(false);
       });
+
     return () => {
       active = false;
     };
   }, [instanceId]);
 
+  useEffect(() => {
+    if (showPlanLine && planId) void useRoutesStore.getState().fetchRoutePlanPreview(planId);
+  }, [planId, showPlanLine]);
+
   const stops = useMemo(() => sortStops(detail?.stops ?? []), [detail?.stops]);
   const mapStops = useMemo(() => instanceMapStops(stops, null), [stops]);
+  // The plan's line, else its stored directions' line (an empty or unreadable plan geometry falls through).
+  const line = useMemo(() => (planPreview ? planPreviewLine(planPreview.plan, planPreview.directions) : null), [planPreview]);
   const instance = detail?.progress?.Instance ?? null;
-  const back = () => (router.canGoBack() ? router.back() : router.replace(unitRoutesRoutes.list()));
+  const back = () => (router.canGoBack() ? router.back() : onBack ? onBack() : router.replace(unitRoutesRoutes.list()));
 
   const reload = async () => {
     if (instanceId) await useRoutesStore.getState().fetchInstanceDetail(instanceId, { bypassCache: true });
+  };
+
+  // Pull to refresh: a run that is still going moves on (the desk watching it).
+  const refresh = async () => {
+    setIsRefreshing(true);
+
+    try {
+      await reload();
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   if (!instance) {
@@ -74,11 +101,12 @@ export default function RouteInstanceScreen({ instanceId: instanceIdProp, render
   }
 
   const look = instanceStatusLook(instance.Status);
-  const color = routeColor(plans.find((plan) => plan.RoutePlanId === instance.RoutePlanId)?.RouteColor);
+  const color = routeColor(plans.find((plan) => plan.RoutePlanId === instance.RoutePlanId)?.RouteColor ?? planPreview?.plan.RouteColor);
 
   const renderStop = (stop: RouteStopWithDetailsResultData) => {
     const id = stop.RouteInstanceStopId ?? stop.RouteStopId;
     const stopLook = stopStatusLook(stop.Status);
+
     const lines = [
       stop.CheckInOn ? t('unit_routes.checked_in_at', { time: formatRouteTime(stop.CheckInOn, timeZone) }) : '',
       stop.CheckOutOn ? t('unit_routes.checked_out_at', { time: formatRouteTime(stop.CheckOutOn, timeZone) }) : '',
@@ -86,6 +114,7 @@ export default function RouteInstanceScreen({ instanceId: instanceIdProp, render
       stop.SkipReason ? `${t('routes.skip_reason')}: ${stop.SkipReason}` : '',
       stop.InstanceNotes ? `${t('routes.notes')}: ${stop.InstanceNotes}` : '',
     ].filter((line) => line !== '');
+
     return (
       <HStack key={id} space="md" className="items-start border-b border-outline-100 py-3" testID={`route-instance-stop-${id}`}>
         <View style={StyleSheet.flatten([styles.order, { backgroundColor: stopLook.color }])}>
@@ -112,8 +141,8 @@ export default function RouteInstanceScreen({ instanceId: instanceIdProp, render
   return (
     <View className="flex-1 bg-background-50" testID="route-instance-screen">
       <ScreenHeader title={instance.RoutePlanName || t('routes.instance_detail')} onBack={back} />
-      <ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
-        <RouteMapSlot kind="instance" renderMap={renderMap} height={240} stops={mapStops} line={null} geofence={null} color={color} bounds={mapBounds(mapStops, null)} showUserLocation={false} />
+      <ScrollView contentContainerStyle={{ paddingBottom: 24 }} refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => void refresh()} />}>
+        <RouteMapSlot kind="instance" renderMap={renderMap} height={240} stops={mapStops} line={line} geofence={null} color={color} bounds={mapBounds(mapStops, line)} showUserLocation={false} />
         <VStack space="md" className="px-4 pt-4">
           <VStack space="sm" className="rounded-xl bg-background-0 p-4">
             <HStack space="sm" className="items-center">
@@ -126,6 +155,7 @@ export default function RouteInstanceScreen({ instanceId: instanceIdProp, render
             </HStack>
             {instance.ActualStartOn ? <Text className="text-sm text-typography-700">{`${t('routes.start')}: ${formatRouteTime(instance.ActualStartOn, timeZone)}`}</Text> : null}
             {instance.ActualEndOn ? <Text className="text-sm text-typography-700">{`${t('routes.end')}: ${formatRouteTime(instance.ActualEndOn, timeZone)}`}</Text> : null}
+            <RunCallLink instance={instance} testID="route-instance-call" />
             <RouteStats
               stats={[
                 { id: 'stops', label: t('routes.stops_completed'), value: `${detail?.progress?.CompletedStops ?? instance.StopsCompleted}/${detail?.progress?.TotalStops ?? instance.StopsTotal}` },

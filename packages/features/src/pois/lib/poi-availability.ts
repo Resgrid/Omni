@@ -40,6 +40,19 @@ export const availabilityExpiresAt = (poi: Pick<PoiResultData, 'AvailabilityStat
   return expires !== null && expires > now ? expires : null;
 };
 
+/** When the first report among these destinations lapses after `now` (epoch ms); null when none will. */
+export const nextAvailabilityLapse = (pois: readonly Pick<PoiResultData, 'AvailabilityStatus' | 'AvailabilityExpiresOnUtc'>[], now: number): number | null => {
+  let next: number | null = null;
+
+  for (const poi of pois) {
+    const expires = availabilityExpiresAt(poi, now);
+
+    if (expires !== null && (next === null || expires < next)) next = expires;
+  }
+
+  return next;
+};
+
 /** Whole minutes left until `expiresAt` (at least 1), to send a report again without changing when it lapses. */
 export const minutesUntil = (expiresAt: number, now: number = Date.now()): number => Math.max(1, Math.ceil((expiresAt - now) / 60000));
 
@@ -69,6 +82,13 @@ export const poiCapabilityOptions = (poi: Pick<PoiResultData, 'CapabilityIds' | 
 
 /** True when the POI offers the capability (by id, or by name on servers that send names only). */
 export const poiOffersCapability = (poi: PoiResultData, capabilityId: string): boolean => poiCapabilityOptions(poi).some((option) => sameId(option.id, capabilityId));
+
+/** The required capabilities the destination does not offer (destination rules). */
+export const requiredCapabilitiesMissing = (poi: PoiResultData | null | undefined, requiredIds: readonly string[]): string[] => (poi ? requiredIds.filter((id) => !poiOffersCapability(poi, id)) : []);
+
+/** The required capabilities the destination offers but reports unavailable right now (Destination Availability). */
+export const requiredCapabilitiesDown = (poi: PoiResultData | null | undefined, requiredIds: readonly string[], now: number = Date.now()): string[] =>
+  poi ? requiredIds.filter((id) => poiOffersCapability(poi, id) && isPoiCapabilityUnavailable(poi, id, now)) : [];
 
 /** Every capability the POIs offer, once, by name. */
 export const collectCapabilityOptions = (pois: readonly PoiResultData[]): PoiCapabilityOption[] => {

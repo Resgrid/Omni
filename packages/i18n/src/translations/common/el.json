@@ -226,7 +226,8 @@
       "site": "Πληροφορίες χώρου",
       "timeline": "Δραστηριότητα",
       "video": "Βίντεο",
-      "notes": "Notes & files"
+      "notes": "Notes & files",
+      "route": "Διαδρομή"
     },
     "timestamp": "Χρονική Σήμανση",
     "title": "Λεπτομέρειες Κλήσης",
@@ -263,7 +264,16 @@
     "audio_play_error": "Could not play this recording",
     "scheduled_on": "Προγραμματισμένη Ημερομηνία και Ώρα Αποστολής",
     "destination_type": "Τύπος Προορισμού",
-    "keyboard_shortcuts": "Tip: Press 1-9 to switch tabs, Ctrl+E to edit, Escape to go back"
+    "keyboard_shortcuts": "Tip: Press 1-9 to switch tabs, Ctrl+E to edit, Escape to go back",
+    "location_poi": "Σημείο ενδιαφέροντος τοποθεσίας",
+    "destination_coordinates": "Συντεταγμένες προορισμού",
+    "destination_what3words": "what3words προορισμού",
+    "route": "Διαδρομή",
+    "route_runs": "Εκτελέσεις διαδρομής",
+    "route_no_runs": "Καμία μονάδα δεν έχει ξεκινήσει ακόμη αυτή τη διαδρομή.",
+    "route_run_started": "Ξεκίνησε {{time}}",
+    "route_run_start_reached": "Έφτασε στην αφετηρία {{time}}",
+    "route_run_ended": "Ολοκληρώθηκε {{time}}"
   },
   "calls": {
     "address": "Διεύθυνση",
@@ -535,6 +545,7 @@
     "longitude_placeholder": "π.χ. -119.758773",
     "latitude_invalid": "Εισαγάγετε γεωγραφικό πλάτος σε δεκαδικές μοίρες, από -90 έως 90",
     "longitude_invalid": "Εισαγάγετε γεωγραφικό μήκος σε δεκαδικές μοίρες, από -180 έως 180",
+    "destination_point_unusable": "Το 0, 0 δεν είναι χρησιμοποιήσιμο σημείο προορισμού. Εισαγάγετε το γεωγραφικό πλάτος και μήκος του προορισμού",
     "coordinates_incomplete": "Εισαγάγετε γεωγραφικό πλάτος και μήκος",
     "place_on_map": "Place on map",
     "destination_poi_select": "Select a destination",
@@ -572,7 +583,59 @@
     "all_call_dispatch_now_help": "Όλες οι λίστες αποστολής είναι κρυφές. Ενεργοποιήστε τη Γενική κλήση για να σταλεί αυτή η κλήση σε όλους ή αφήστε την ανενεργή για να σταλεί στους παραλήπτες με τους οποίους αποθηκεύτηκε.",
     "additional_contacts": "Πρόσθετες επαφές",
     "check_in_timers": "Χρονόμετρα παρουσίας",
-    "part2_consent": "Συγκατάθεση 42 CFR Part 2"
+    "part2_consent": "Συγκατάθεση 42 CFR Part 2",
+    "location_poi": "Τοποθεσία από σημείο ενδιαφέροντος",
+    "location_poi_select": "Επιλέξτε σημείο ενδιαφέροντος",
+    "location_poi_search": "Αναζήτηση σημείων ενδιαφέροντος...",
+    "location_poi_none_found": "Κανένα σημείο ενδιαφέροντος δεν ταιριάζει με την αναζήτησή σας",
+    "location_poi_load_error": "Δεν ήταν δυνατή η φόρτωση των σημείων ενδιαφέροντος.",
+    "location_poi_clear": "Απαλοιφή σημείου ενδιαφέροντος",
+    "location_poi_moved": "Η τοποθεσία απομακρύνθηκε από το σημείο «{{name}}», οπότε η κλήση δεν θα συνδεθεί με αυτό.",
+    "destination_mode_poi": "Σημείο ενδιαφέροντος",
+    "destination_mode_location": "Διεύθυνση ή σημείο",
+    "destination_address": "Διεύθυνση προορισμού",
+    "destination_address_placeholder": "Εισαγάγετε τη διεύθυνση προορισμού",
+    "destination_found": "Ο προορισμός βρέθηκε και η τοποθεσία του ενημερώθηκε",
+    "destination_pick_on_map": "Επιλογή προορισμού στον χάρτη",
+    "destination_location_clear": "Απαλοιφή προορισμού",
+    "route_section": "Διαδρομή",
+    "route": "Προκαθορισμένη διαδρομή",
+    "route_hint": "Η αφετηρία της διαδρομής συμπληρώνει μια κενή τοποθεσία κλήσης και το τέρμα της έναν προορισμό που λείπει.",
+    "route_select": "Επιλέξτε διαδρομή",
+    "route_search": "Αναζήτηση διαδρομών...",
+    "route_none_found": "Καμία διαδρομή δεν ταιριάζει με την αναζήτησή σας",
+    "route_clear": "Απαλοιφή διαδρομής",
+    "route_unknown": "Η διαδρομή δεν είναι πλέον διαθέσιμη",
+    "route_stops_count": "Στάσεις: {{count}}",
+    "route_start_end": "{{start}} → {{end}}",
+    "destination_to": "Προς: {{destination}}",
+    "route_named": "Διαδρομή: {{name}}",
+    "intake_source": {
+      "intake": "Intake",
+      "intake_named": "Intake: {{name}}",
+      "voice": "Voice line",
+      "voice_named": "Voice line: {{name}}",
+      "via_sms": "Via text message",
+      "via_sms_named": "Via text message: {{name}}",
+      "via_email": "Via email",
+      "via_email_named": "Via email: {{name}}",
+      "via_whatsapp": "Via WhatsApp",
+      "via_whatsapp_named": "Via WhatsApp: {{name}}",
+      "via_slack": "Via Slack",
+      "via_slack_named": "Via Slack: {{name}}",
+      "via_teams": "Via Teams",
+      "via_teams_named": "Via Teams: {{name}}",
+      "via_telegram": "Via Telegram",
+      "via_telegram_named": "Via Telegram: {{name}}",
+      "via_discord": "Via Discord",
+      "via_discord_named": "Via Discord: {{name}}",
+      "via_google_chat": "Via Google Chat",
+      "via_google_chat_named": "Via Google Chat: {{name}}",
+      "via_webhook": "Via webhook",
+      "via_webhook_named": "Via webhook: {{name}}",
+      "via_voice": "Via voice line",
+      "via_voice_named": "Via voice line: {{name}}"
+    }
   },
   "chat": {
     "ack_pending_count": "Έχετε {{count}} επείγοντα μηνύματα προς επιβεβαίωση",
@@ -2424,6 +2487,117 @@
       "saved": "Η διαθεσιμότητα αποθηκεύτηκε",
       "save_failed": "Η διαθεσιμότητα δεν αποθηκεύτηκε",
       "expiry_passed": "Η ώρα λήξης της αναφοράς έχει περάσει. Επιλέξτε πόσο διαρκεί."
+    },
+    "destinations": {
+      "capabilities": {
+        "empty": "Δεν υπάρχουν δυνατότητες",
+        "empty_description": "Δυνατότητες όπως Αιμοδυναμικό εργαστήριο ή Ελικοδρόμιο προστίθενται στον ιστό στο Χαρτογράφηση → Σημεία Ενδιαφέροντος → Δυνατότητες.",
+        "intro": "Τι προσφέρουν οι προορισμοί σας. Πατήστε μια δυνατότητα για να δείτε τους προορισμούς που την προσφέρουν.",
+        "offered_by": "Προορισμοί που την προσφέρουν: {{count}}",
+        "show_hint": "Εμφανίζει τους προορισμούς που την προσφέρουν",
+        "unavailable": "Μη διαθέσιμη σε {{count}}"
+      },
+      "counts": "Ανοιχτοί {{open}} · Περιορισμένοι {{limited}} · Εκτροπή {{diversion}} · Κλειστοί {{closed}}",
+      "empty": "Δεν υπάρχουν προορισμοί",
+      "empty_description": "Εδώ εμφανίζονται οι τύποι σημείων ενδιαφέροντος που έχουν οριστεί ως προορισμοί στον ιστό (Χαρτογράφηση → Σημεία Ενδιαφέροντος).",
+      "filter_all": "Όλοι ({{count}})",
+      "filter_not_open": "Μη ανοιχτοί ({{count}})",
+      "loading": "Φόρτωση προορισμών...",
+      "no_match": "Κανένας προορισμός δεν ταιριάζει",
+      "rules": {
+        "any_destination": "Οποιοσδήποτε προορισμός",
+        "condition_call_type": "Τύπος κλήσης: {{name}}",
+        "condition_priority": "Προτεραιότητα: {{name}}",
+        "condition_unit_type": "Τύπος μονάδας: {{name}}",
+        "deleted": "(διαγράφηκε)",
+        "destination": "Προορισμός",
+        "empty": "Δεν υπάρχουν κανόνες προορισμού",
+        "empty_description": "Χωρίς κανόνες προτείνεται κάθε προορισμός, πρώτα ο πλησιέστερος ανοιχτός.",
+        "every_call": "Κάθε κλήση",
+        "load_failed": "Δεν ήταν δυνατή η φόρτωση των κανόνων προορισμού",
+        "loading": "Φόρτωση κανόνων προορισμού...",
+        "mode_fill": "Πρόταση και συμπλήρωση",
+        "mode_off": "Ανενεργές",
+        "mode_suggest": "Πρόταση προορισμών",
+        "needs_attention": "Αναφέρεται σε διαγραμμένα στοιχεία ({{count}}). Διορθώστε τον στον ιστό.",
+        "nothing": "Τίποτα",
+        "prefers": "Προτιμά",
+        "read_only": "Οι κανόνες και οι προτάσεις ορίζονται στον ιστό στο Χαρτογράφηση → Σημεία Ενδιαφέροντος → Κανόνες προορισμού.",
+        "requires": "Απαιτεί",
+        "suggestions": "Προτάσεις",
+        "window": "Ένας προορισμός με περισσότερες προτιμώμενες δυνατότητες προηγείται μόνο εντός {{count}} λεπτών από τον πλησιέστερο."
+      },
+      "search": "Αναζήτηση προορισμών...",
+      "tab_availability": "Διαθεσιμότητα",
+      "tab_capabilities": "Δυνατότητες",
+      "tab_rules": "Κανόνες",
+      "title": "Προορισμοί"
+    },
+    "suggestions": {
+      "failed": "Οι προτάσεις προορισμού δεν είναι διαθέσιμες αυτή τη στιγμή.",
+      "filled": "Συμπληρώθηκε με τον προτεινόμενο προορισμό. Επιλέξτε άλλον αν χρειάζεται.",
+      "loading": "Αναζήτηση προορισμών...",
+      "missing": "Λείπει: {{names}}",
+      "needs": "Απαιτεί: {{names}}",
+      "none": "Δεν βρέθηκε προορισμός.",
+      "none_meet": "Κανένας κοντινός προορισμός δεν προσφέρει όλα όσα απαιτούνται.",
+      "prefers": "Προτιμά: {{names}}",
+      "rules": "Κανόνες: {{names}}",
+      "selected": "Επιλεγμένος",
+      "set_aside": "Παραμερίστηκαν: {{names}}",
+      "set_aside_rule": "{{name}} ({{reason}})",
+      "set_aside_type_conflict": "ένας πιο συγκεκριμένος κανόνας στέλνει σε άλλους τύπους προορισμού",
+      "set_aside_types_removed": "οι τύποι προορισμού του δεν υπάρχουν πλέον",
+      "suggested": "Προτεινόμενος",
+      "title": "Προτεινόμενοι προορισμοί",
+      "types": "Τύποι: {{names}}",
+      "use": "Χρήση",
+      "use_label": "Χρήση του {{name}} ως προορισμού",
+      "down": "Μη διαθέσιμο τώρα: {{names}}"
+    },
+    "ai_advice": {
+      "advised_at": "Advised {{time}}",
+      "apply": "Apply",
+      "apply_label": "Make {{name}} the call's destination",
+      "ask": "Ask Enhanced AI",
+      "asking": "Asking Enhanced AI…",
+      "confidence": "Confidence {{percent}}%",
+      "consider": "Consider {{name}}",
+      "current": "Current destination: {{name}}",
+      "current_free": "Current destination: an address or point (no destination POI)",
+      "current_none": "The call has no destination yet.",
+      "dismiss": "Dismiss",
+      "dismiss_reason": "Why dismiss it? (optional)",
+      "dismiss_reason_placeholder": "e.g. Patient asked for another hospital",
+      "error": {
+        "failed": "Something went wrong. Please try again.",
+        "not_allowed": "You cannot change this call.",
+        "offline": "No connection. Try again when you are back online."
+      },
+      "keep": "Keep the current destination",
+      "low_confidence": "Low confidence: check before applying",
+      "no_suggestion": "No destination suggested",
+      "none": "No destination advice for this call yet.",
+      "outcome": {
+        "applied": "{{name}} is now the call's destination.",
+        "budget_exhausted": "Your department's Enhanced AI allowance is used up for now.",
+        "busy": "Enhanced AI is busy. Try again in a moment.",
+        "call_not_open": "The call is no longer open.",
+        "destination_gone": "The recommended destination is no longer available.",
+        "dismissed": "Advice dismissed.",
+        "invalid_output": "Enhanced AI's answer could not be used. Try again.",
+        "model_unavailable": "Enhanced AI could not answer right now. Try again later.",
+        "no_candidates": "No destination could be considered for this call.",
+        "no_location": "The call needs a location before Enhanced AI can advise.",
+        "not_found": "This advice is no longer available.",
+        "not_open": "This advice was already applied, dismissed or replaced.",
+        "nothing_to_apply": "The advice is to keep the current destination: there is nothing to apply.",
+        "protection_unsupported": "Enhanced AI destination advice is not available while Advanced Data Protection is on.",
+        "unavailable_for_department": "Enhanced AI destination advice is not available for your department.",
+        "unchanged": "Nothing the advice reads has changed: this is still the advice."
+      },
+      "suggests": "Enhanced AI suggests",
+      "title": "Enhanced AI destination advice"
     }
   },
   "protocols": {
@@ -3115,7 +3289,10 @@
     "call_assigned_destination": "Προορισμός κλήσης: {{name}}",
     "transport_destination_differs": "Διαφέρει από τον ορισμένο προορισμό της κλήσης: {{name}}",
     "transport_reason_required": "Αυτός ο προορισμός διαφέρει από τον ορισμένο προορισμό της κλήσης ({{name}}). Δώστε αιτιολογία (υποχρεωτικό).",
-    "destination_availability": "{{name}}: {{status}}"
+    "destination_availability": "{{name}}: {{status}}",
+    "destination_missing": "{{name}} δεν διαθέτει όσα απαιτούνται: {{names}}",
+    "destination_required_down": "{{name}} αναφέρει μη διαθέσιμο τώρα: {{names}}",
+    "finding_suggested_destination": "Αναζήτηση προτεινόμενου προορισμού..."
   },
   "tabs": {
     "calendar": "Ημερολόγιο",
@@ -4428,7 +4605,12 @@
       "waypoint": "Waypoint"
     },
     "stops_done": "{{done}} of {{total}} stops",
-    "stop_eta": "ETA {{time}}"
+    "stop_eta": "ETA {{time}}",
+    "for_a_call": "Ξεκίνησε για κλήση",
+    "for_call": "Κλήση: {{call}}",
+    "route_start": "Αφετηρία διαδρομής",
+    "route_start_pending": "Μεταβείτε πρώτα στην αφετηρία της διαδρομής: {{name}}",
+    "route_start_pending_unnamed": "Μεταβείτε πρώτα στην αφετηρία της διαδρομής"
   },
   "unit_status": {
     "console_title": "Status console",
@@ -4446,7 +4628,19 @@
     "timer_warning": "Status timer warning: {{status}} for {{elapsed}}",
     "timer_notification_body": "{{unit}}: update your status if it has changed.",
     "timer_exact_alarms_allow": "Allow on-time timer alerts",
-    "timer_exact_alarms_hint": "Status timer alerts can arrive late while the app is in the background."
+    "timer_exact_alarms_hint": "Status timer alerts can arrive late while the app is in the background.",
+    "route": {
+      "conflict_cancel": "Ακύρωση και έναρξη αυτής της διαδρομής",
+      "conflict_end": "Τερματισμός και έναρξη αυτής της διαδρομής",
+      "conflict_keep": "Διατήρηση της τρέχουσας διαδρομής",
+      "conflict_message": "Αυτή η μονάδα εκτελεί τη διαδρομή {{route}}. Τερματίστε ή ακυρώστε την για να ξεκινήσετε τη διαδρομή αυτής της κλήσης ή αφήστε τη να συνεχίσει.",
+      "conflict_message_unnamed": "Αυτή η μονάδα εκτελεί άλλη διαδρομή. Τερματίστε ή ακυρώστε την για να ξεκινήσετε τη διαδρομή αυτής της κλήσης ή αφήστε τη να συνεχίσει.",
+      "conflict_title": "Εκτελείται άλλη διαδρομή",
+      "continue": "Συνέχεια διαδρομής",
+      "name": "Διαδρομή: {{name}}",
+      "start": "Έναρξη διαδρομής",
+      "unnamed": "Διαδρομή κλήσης"
+    }
   },
   "workOrders": {
     "reportNotSent": "Not sent",
@@ -4507,7 +4701,13 @@
       "set_status": "Set {{status}}",
       "stop_fallback": "the stop",
       "stop_title": "Arrived at {{name}}",
-      "title": "You have arrived"
+      "title": "You have arrived",
+      "end_route": "Τερματισμός διαδρομής",
+      "route_ended": "Η διαδρομή τερματίστηκε",
+      "route_start_at": "Αφετηρία διαδρομής: {{name}}",
+      "route_start_auto": "Συνέχεια προς την πρώτη στάση σε {{seconds}} δ.",
+      "route_start_continue": "Μετάβαση στην πρώτη στάση",
+      "route_start_title": "Φτάσατε στην αφετηρία της διαδρομής"
     },
     "back": "Back",
     "error": {
@@ -4660,7 +4860,9 @@
       "times_required": "Προσθέστε τουλάχιστον μία ώρα της ημέρας.",
       "title": "Δεν ήταν δυνατή η αποθήκευση του προγράμματος",
       "too_many_times": "Το πολύ {{max}} ώρες την ημέρα.",
-      "unknown": "Κάτι στο πρόγραμμα δεν είναι έγκυρο."
+      "unknown": "Κάτι στο πρόγραμμα δεν είναι έγκυρο.",
+      "destination_coordinates_invalid": "Το σημείο προορισμού δεν είναι έγκυρη τοποθεσία.",
+      "route_plan_invalid": "Η διαδρομή δεν είναι πλέον ενεργή ή δεν έχει αφετηρία ή τέρμα. Επιλέξτε άλλη διαδρομή."
     },
     "facility_value": "Παραλαβή: {{facility}}",
     "field_address": "Διεύθυνση",
@@ -4819,6 +5021,49 @@
     "week_fourth": "τέταρτη",
     "week_last": "τελευταία",
     "week_second": "δεύτερη",
-    "week_third": "τρίτη"
+    "week_third": "τρίτη",
+    "destination_location_none": "Χωρίς σημείο προορισμού",
+    "destination_location_set": "Προορισμός: {{latitude}}, {{longitude}}",
+    "destination_poi_wins_hint": "Οι κλήσεις κατευθύνονται στο σημείο ενδιαφέροντος προορισμού. Επιλέξτε «Κανένα» για να ορίσετε αντί γι' αυτό διεύθυνση ή σημείο.",
+    "facility_poi_hint": "Η τοποθεσία κάθε κλήσης συνδέεται με αυτό το σημείο ενδιαφέροντος, το οποίο συμπληρώνει επίσης μια κενή διεύθυνση κλήσης.",
+    "field_destination_address": "Διεύθυνση προορισμού",
+    "field_destination_location": "Τοποθεσία προορισμού",
+    "field_route": "Διαδρομή"
+  },
+  "route_plans": {
+    "duration_with_stops": "Με στάσεις",
+    "first_stop": "πρώτη στάση",
+    "last_stop": "τελευταία στάση",
+    "map_end_label": "Τ",
+    "map_start_label": "Α",
+    "not_found": "Η διαδρομή δεν βρέθηκε",
+    "not_found_description": "Δεν ήταν δυνατή η φόρτωση αυτής της διαδρομής. Μπορεί να έχει αφαιρεθεί ή να μην είναι ενεργή.",
+    "preview_action": "Προεπισκόπηση διαδρομής",
+    "preview_title": "Προεπισκόπηση Διαδρομής",
+    "profile": {
+      "cycling": "Ποδήλατο",
+      "driving": "Οδήγηση",
+      "driving_traffic": "Οδήγηση (με κίνηση)",
+      "truck": "Φορτηγό",
+      "walking": "Πεζή"
+    },
+    "profile_label": "Τρόπος μετακίνησης",
+    "stale_route": "Οι στάσεις άλλαξαν μετά τον υπολογισμό αυτής της διαδρομής, οπότε η γραμμή μπορεί να μην είναι ενημερωμένη.",
+    "status": {
+      "active": "Ενεργή",
+      "archived": "Αρχειοθετημένη",
+      "draft": "Πρόχειρη",
+      "paused": "Σε παύση"
+    }
+  },
+  "routes_overview": {
+    "next_stop": "Επόμενη στάση: {{name}}",
+    "no_running": "Καμία διαδρομή σε εξέλιξη",
+    "no_running_description": "Οι διαδρομές που ξεκινούν οι μονάδες σας εμφανίζονται εδώ με την πρόοδό τους.",
+    "plans_tab": "Σχέδια",
+    "running_tab": "Σε εξέλιξη",
+    "started_at": "Ξεκίνησε {{time}}",
+    "for_a_call": "Ξεκίνησε για κλήση",
+    "for_call": "Κλήση {{number}}: {{name}}"
   }
 }

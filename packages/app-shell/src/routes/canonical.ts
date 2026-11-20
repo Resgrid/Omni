@@ -45,6 +45,9 @@ const customIndoorMaps = { requires: (m: VariantManifest) => m.capabilities.maps
 /** Recurring call schedules, their calendar and the dispatcher alerts (`features/recurring-calls`). */
 const recurringCalls = { requires: (m: VariantManifest) => m.capabilities.calls.recurringCalls } as const;
 
+/** Route plan previews and the department's routes (`features/route-plans`, `features/routes-overview`; Core M0322). */
+const routesPreview = { requires: (m: VariantManifest) => m.capabilities.routes.preview } as const;
+
 export const CANONICAL_ROUTES = {
   home: route('/'),
   /** The variant's `shell.homeRoute` when it is not `/` (Responder's member home; later Dispatch's console, BigBoard's dashboard). */
@@ -76,6 +79,8 @@ export const CANONICAL_ROUTES = {
   contactDetail: route('/contacts/[id]', ['id']),
   pois: route('/pois'),
   poiDetail: route('/poi/[id]', ['id']),
+  /** The dispatcher's destinations: availability (set here), capabilities and destination rules. */
+  destinations: route('/destinations', [], { requires: (m) => m.capabilities.calls.destinationAvailability }),
   weatherAlerts: route('/weather-alerts'),
   weatherAlertDetail: route('/weather-alerts/[id]', ['id']),
   weatherAlertSettings: route('/weather-alerts/settings', [], { requires: (m) => m.capabilities.weatherAlerts.admin }),
@@ -149,6 +154,11 @@ export const CANONICAL_ROUTES = {
   recurringCallDetail: route('/recurring-calls/[id]', ['id'], recurringCalls),
   recurringCallEdit: route('/recurring-calls/[id]/edit', ['id'], recurringCalls),
   recurringCallAlerts: route('/recurring-call-alerts', [], recurringCalls),
+  // Route plans (Core M0322): a plan preview any app that picks or runs routes opens (call form and detail, Unit routes),
+  // and the department's routes with its running routes, read only (Dispatch's routes area).
+  routePlans: route('/route-plans', [], routesPreview),
+  routePlanPreview: route('/route-plans/[id]', ['id'], routesPreview),
+  routeInstanceView: route('/route-instances/[id]', ['id'], routesPreview),
   // Public routes (outside the gated `(app)` group): the sign-in pages for deep links and the web, and the SSO return.
   login: route('/login'),
   loginSso: route('/login/sso'),

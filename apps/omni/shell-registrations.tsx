@@ -23,7 +23,7 @@ import { CALL_RECORDS_TAB, configureRecords, registerRecordsContextHook } from '
 import { RecurringCallAlertsBanner, RecurringCallAlertsHost, recurringCallsRoutes, registerRecurringCallsHookPoints } from '@resgrid/features/recurring-calls';
 import { registerRunCardCallDetailTab, registerRunCardHookPoints } from '@resgrid/features/runcards';
 import { configureSettings } from '@resgrid/features/settings';
-import { registerUnitStatusCallDetailAction, StatusTimerBanner, StatusTimerNotifications, unitStatusRoutes, UnitStatusSidebar } from '@resgrid/features/unit-status';
+import { CallRouteLauncher, registerUnitStatusCallDetailAction, StatusTimerBanner, StatusTimerNotifications, unitStatusRoutes, UnitStatusSidebar } from '@resgrid/features/unit-status';
 import { AudioStreamSheet, VoiceChannelSheet, VoiceMenuButtons } from '@resgrid/features/voice';
 import { FullScreenLocationPicker, StaticMap } from '@resgrid/maps';
 import { configureNotificationSounds } from '@resgrid/notifications';
@@ -137,6 +137,11 @@ registerShellBanner('unit-status-timer', UnitTimerBanner);
 // ...and its notifications while the app is in the background or the screen is off (same gates; iOS and Android).
 registerShellOverlay('unit-status-timer-notifications', StatusTimerNotifications);
 
+// A call's pre-defined route on the Unit (Core M0322): a new active call with a route — or "Start route" / "Continue route"
+// — starts the unit's run and opens navigation through its stops, and the unit's running route is picked up again at start
+// (inert where the device does not report status for a unit or the app has no routes module).
+registerShellOverlay('unit-call-route', CallRouteLauncher);
+
 // Unit's status console in the sidebar (only read where shell.sidebarContent is 'unit-status').
 registerSidebarContent('unit-status', UnitSidebar);
 
@@ -173,7 +178,8 @@ registerRecurringCallsHookPoints();
 // The calls screens never import maps or native audio: the app hands them the map picker, the static map and clip playback.
 registerCallFormHookPoints({ LocationPicker: CallLocationPicker, StaticLocationMap: CallStaticMap, playAudioClip });
 
-// "Set Active" beside a call's title on its detail screen (shown only where the device reports status for a unit: Unit).
+// "Set Active" beside a call's title on its detail screen, and the active call's route (shown only where the device reports
+// status for a unit: Unit).
 registerUnitStatusCallDetailAction();
 
 // Readiness checklist runs save through the data layer's checklists store.

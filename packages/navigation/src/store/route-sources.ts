@@ -13,6 +13,7 @@ const headingOf = (fix: NavFix): number | undefined => (fix.heading !== null && 
 /** A Routing/GetRoute or GetCallRoute answer; an empty `Data` (no provider) means no route was found. */
 export const fromRouteResult = (data: RouteResultData | null | undefined): NavigationRouteResult | null => {
   if (!data?.Provider) return null;
+
   return {
     route: parseNavRoute(data.Route, data.Geometry),
     provider: data.Provider,
@@ -30,6 +31,7 @@ export const fromDirectionsResult = (data: RouteDirectionsResultData | null | un
   if (!data) return null;
   const route = parseNavRoute(data.Route, data.Geometry);
   const provider = data.Provider ?? null;
+
   return {
     route,
     provider,
@@ -55,7 +57,9 @@ export interface ServerRouteSourceOptions {
 
 const requireContext = (options: ServerRouteSourceOptions): ApiContext => {
   const ctx = options.getApiContext();
+
   if (!ctx) throw new Error('Navigation needs a signed-in API context.');
+
   return ctx;
 };
 
@@ -72,9 +76,12 @@ export const createServerRouteSource = (options: ServerRouteSourceOptions): Navi
       language: options.getLanguage(),
       metric: options.isMetric(),
     });
+
     return fromRouteResult(result?.Data);
   },
-  toRouteStops: async ({ routeInstanceId, from }) => {
+  // `includeStart` (Core M0322) is sent only while the session still drives to the run's start: the server then leads a
+  // call-linked run not yet at its start there first; once reached it leaves the start out on its own as well.
+  toRouteStops: async ({ routeInstanceId, from, includeStart }) => {
     const result = await getInstanceDirections(requireContext(options), {
       instanceId: routeInstanceId,
       latitude: from.latitude,
@@ -83,7 +90,10 @@ export const createServerRouteSource = (options: ServerRouteSourceOptions): Navi
       navigation: true,
       language: options.getLanguage(),
       metric: options.isMetric(),
+      // Left out (undefined is not sent) rather than false: the answer is then exactly the one legacy apps get.
+      includeStart: includeStart ? true : undefined,
     });
+
     return fromDirectionsResult(result?.Data);
   },
   toPoint: async ({ latitude, longitude, from, unitId }) => {
@@ -99,6 +109,7 @@ export const createServerRouteSource = (options: ServerRouteSourceOptions): Navi
       Language: options.getLanguage(),
       Metric: options.isMetric(),
     });
+
     return fromRouteResult(result?.Data);
   },
 });

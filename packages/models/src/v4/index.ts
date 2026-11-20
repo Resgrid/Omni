@@ -1,4 +1,7 @@
 // Core v4 models by domain. Import a domain barrel (`@resgrid/models/v4/calls`) or a file directly to keep bundles small.
+export * from './aiDestinations';
+
+// Enhanced AI destination advice (AiDestinations, M0323) sits above; the domains stay alphabetical across this break.
 export * from './auth';
 export * from './autofills';
 export * from './awaitingResources';

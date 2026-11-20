@@ -226,7 +226,8 @@
       "site": "Info sito",
       "timeline": "Attività",
       "video": "Video",
-      "notes": "Notes & files"
+      "notes": "Notes & files",
+      "route": "Percorso"
     },
     "timestamp": "Data e ora",
     "title": "Dettagli chiamata",
@@ -263,7 +264,16 @@
     "audio_play_error": "Could not play this recording",
     "scheduled_on": "Data e ora di invio programmate",
     "destination_type": "Tipo di destinazione",
-    "keyboard_shortcuts": "Tip: Press 1-9 to switch tabs, Ctrl+E to edit, Escape to go back"
+    "keyboard_shortcuts": "Tip: Press 1-9 to switch tabs, Ctrl+E to edit, Escape to go back",
+    "location_poi": "POI della posizione",
+    "destination_coordinates": "Coordinate della destinazione",
+    "destination_what3words": "what3words della destinazione",
+    "route": "Percorso",
+    "route_runs": "Esecuzioni del percorso",
+    "route_no_runs": "Nessuna unità ha ancora avviato questo percorso.",
+    "route_run_started": "Avviato {{time}}",
+    "route_run_start_reached": "Partenza raggiunta {{time}}",
+    "route_run_ended": "Terminato {{time}}"
   },
   "calls": {
     "address": "Indirizzo",
@@ -535,6 +545,7 @@
     "longitude_placeholder": "es. -119.758773",
     "latitude_invalid": "Inserisci una latitudine in gradi decimali, tra -90 e 90",
     "longitude_invalid": "Inserisci una longitudine in gradi decimali, tra -180 e 180",
+    "destination_point_unusable": "0, 0 non è un punto di destinazione utilizzabile. Inserisci latitudine e longitudine della destinazione",
     "coordinates_incomplete": "Inserisci sia la latitudine sia la longitudine",
     "place_on_map": "Place on map",
     "destination_poi_select": "Select a destination",
@@ -572,7 +583,59 @@
     "all_call_dispatch_now_help": "Tutti gli elenchi di invio sono nascosti. Attiva la chiamata generale per inviare questa chiamata a tutti, oppure lasciala disattivata per inviarla ai destinatari con cui è stata salvata.",
     "additional_contacts": "Contatti aggiuntivi",
     "check_in_timers": "Timer di check-in",
-    "part2_consent": "Consenso 42 CFR Part 2"
+    "part2_consent": "Consenso 42 CFR Part 2",
+    "location_poi": "Posizione da POI",
+    "location_poi_select": "Scegli un punto di interesse",
+    "location_poi_search": "Cerca punti di interesse...",
+    "location_poi_none_found": "Nessun punto di interesse corrisponde alla ricerca",
+    "location_poi_load_error": "Impossibile caricare i punti di interesse.",
+    "location_poi_clear": "Rimuovi punto di interesse",
+    "location_poi_moved": "La posizione è stata spostata lontano da {{name}}, quindi la chiamata non vi sarà collegata.",
+    "destination_mode_poi": "Punto di interesse",
+    "destination_mode_location": "Indirizzo o punto",
+    "destination_address": "Indirizzo di destinazione",
+    "destination_address_placeholder": "Inserisci l'indirizzo di destinazione",
+    "destination_found": "Destinazione trovata e posizione aggiornata",
+    "destination_pick_on_map": "Scegli la destinazione sulla mappa",
+    "destination_location_clear": "Rimuovi destinazione",
+    "route_section": "Percorso",
+    "route": "Percorso predefinito",
+    "route_hint": "La partenza del percorso compila una posizione della chiamata vuota e il suo arrivo una destinazione mancante.",
+    "route_select": "Scegli un percorso",
+    "route_search": "Cerca percorsi...",
+    "route_none_found": "Nessun percorso corrisponde alla ricerca",
+    "route_clear": "Rimuovi percorso",
+    "route_unknown": "Percorso non più disponibile",
+    "route_stops_count": "Fermate: {{count}}",
+    "route_start_end": "{{start}} → {{end}}",
+    "destination_to": "Verso: {{destination}}",
+    "route_named": "Percorso: {{name}}",
+    "intake_source": {
+      "intake": "Intake",
+      "intake_named": "Intake: {{name}}",
+      "voice": "Voice line",
+      "voice_named": "Voice line: {{name}}",
+      "via_sms": "Via text message",
+      "via_sms_named": "Via text message: {{name}}",
+      "via_email": "Via email",
+      "via_email_named": "Via email: {{name}}",
+      "via_whatsapp": "Via WhatsApp",
+      "via_whatsapp_named": "Via WhatsApp: {{name}}",
+      "via_slack": "Via Slack",
+      "via_slack_named": "Via Slack: {{name}}",
+      "via_teams": "Via Teams",
+      "via_teams_named": "Via Teams: {{name}}",
+      "via_telegram": "Via Telegram",
+      "via_telegram_named": "Via Telegram: {{name}}",
+      "via_discord": "Via Discord",
+      "via_discord_named": "Via Discord: {{name}}",
+      "via_google_chat": "Via Google Chat",
+      "via_google_chat_named": "Via Google Chat: {{name}}",
+      "via_webhook": "Via webhook",
+      "via_webhook_named": "Via webhook: {{name}}",
+      "via_voice": "Via voice line",
+      "via_voice_named": "Via voice line: {{name}}"
+    }
   },
   "chat": {
     "ack_pending_count": "Hai {{count}} messaggi urgenti da confermare",
@@ -2424,6 +2487,117 @@
       "saved": "Disponibilità salvata",
       "save_failed": "Impossibile salvare la disponibilità",
       "expiry_passed": "L'ora di fine della segnalazione è passata. Scegli quanto dura."
+    },
+    "destinations": {
+      "capabilities": {
+        "empty": "Nessuna capacità",
+        "empty_description": "Capacità come Emodinamica o Eliporto si aggiungono sul web in Mappe → POI → Capacità dei POI.",
+        "intro": "Cosa offrono le tue destinazioni. Tocca una capacità per vedere le destinazioni che la offrono.",
+        "offered_by": "Destinazioni che la offrono: {{count}}",
+        "show_hint": "Mostra le destinazioni che la offrono",
+        "unavailable": "Non disponibile in {{count}}"
+      },
+      "counts": "Aperte {{open}} · Limitate {{limited}} · Dirottamento {{diversion}} · Chiuse {{closed}}",
+      "empty": "Nessuna destinazione",
+      "empty_description": "Qui compaiono i tipi di POI contrassegnati come destinazione sul web (Mappe → POI).",
+      "filter_all": "Tutte ({{count}})",
+      "filter_not_open": "Non aperte ({{count}})",
+      "loading": "Caricamento destinazioni...",
+      "no_match": "Nessuna destinazione corrisponde",
+      "rules": {
+        "any_destination": "Qualsiasi destinazione",
+        "condition_call_type": "Tipo di chiamata: {{name}}",
+        "condition_priority": "Priorità: {{name}}",
+        "condition_unit_type": "Tipo di unità: {{name}}",
+        "deleted": "(eliminato)",
+        "destination": "Destinazione",
+        "empty": "Nessuna regola di destinazione",
+        "empty_description": "Senza regole viene suggerita qualsiasi destinazione, prima la più vicina aperta.",
+        "every_call": "Ogni chiamata",
+        "load_failed": "Impossibile caricare le regole di destinazione",
+        "loading": "Caricamento regole di destinazione...",
+        "mode_fill": "Suggerisci e compila",
+        "mode_off": "Disattivati",
+        "mode_suggest": "Suggerisci destinazioni",
+        "needs_attention": "Fa riferimento a elementi eliminati ({{count}}); correggila sul web.",
+        "nothing": "Niente",
+        "prefers": "Preferisce",
+        "read_only": "Regole e suggerimenti si impostano sul web in Mappe → POI → Regole di destinazione.",
+        "requires": "Richiede",
+        "suggestions": "Suggerimenti",
+        "window": "Una destinazione con più capacità preferite passa prima solo entro {{count}} min dalla più vicina."
+      },
+      "search": "Cerca destinazioni...",
+      "tab_availability": "Disponibilità",
+      "tab_capabilities": "Capacità",
+      "tab_rules": "Regole",
+      "title": "Destinazioni"
+    },
+    "suggestions": {
+      "failed": "I suggerimenti di destinazione non sono disponibili al momento.",
+      "filled": "Compilata con la destinazione suggerita. Scegline un’altra se serve.",
+      "loading": "Ricerca delle destinazioni...",
+      "missing": "Manca: {{names}}",
+      "needs": "Richiede: {{names}}",
+      "none": "Nessuna destinazione trovata.",
+      "none_meet": "Nessuna destinazione vicina offre tutto il necessario.",
+      "prefers": "Preferisce: {{names}}",
+      "rules": "Regole: {{names}}",
+      "selected": "Selezionata",
+      "set_aside": "Accantonate: {{names}}",
+      "set_aside_rule": "{{name}} ({{reason}})",
+      "set_aside_type_conflict": "una regola più specifica indirizza ad altri tipi di destinazione",
+      "set_aside_types_removed": "i suoi tipi di destinazione non esistono più",
+      "suggested": "Suggerita",
+      "title": "Destinazioni suggerite",
+      "types": "Tipi: {{names}}",
+      "use": "Usa",
+      "use_label": "Usa {{name}} come destinazione",
+      "down": "Non disponibile ora: {{names}}"
+    },
+    "ai_advice": {
+      "advised_at": "Advised {{time}}",
+      "apply": "Apply",
+      "apply_label": "Make {{name}} the call's destination",
+      "ask": "Ask Enhanced AI",
+      "asking": "Asking Enhanced AI…",
+      "confidence": "Confidence {{percent}}%",
+      "consider": "Consider {{name}}",
+      "current": "Current destination: {{name}}",
+      "current_free": "Current destination: an address or point (no destination POI)",
+      "current_none": "The call has no destination yet.",
+      "dismiss": "Dismiss",
+      "dismiss_reason": "Why dismiss it? (optional)",
+      "dismiss_reason_placeholder": "e.g. Patient asked for another hospital",
+      "error": {
+        "failed": "Something went wrong. Please try again.",
+        "not_allowed": "You cannot change this call.",
+        "offline": "No connection. Try again when you are back online."
+      },
+      "keep": "Keep the current destination",
+      "low_confidence": "Low confidence: check before applying",
+      "no_suggestion": "No destination suggested",
+      "none": "No destination advice for this call yet.",
+      "outcome": {
+        "applied": "{{name}} is now the call's destination.",
+        "budget_exhausted": "Your department's Enhanced AI allowance is used up for now.",
+        "busy": "Enhanced AI is busy. Try again in a moment.",
+        "call_not_open": "The call is no longer open.",
+        "destination_gone": "The recommended destination is no longer available.",
+        "dismissed": "Advice dismissed.",
+        "invalid_output": "Enhanced AI's answer could not be used. Try again.",
+        "model_unavailable": "Enhanced AI could not answer right now. Try again later.",
+        "no_candidates": "No destination could be considered for this call.",
+        "no_location": "The call needs a location before Enhanced AI can advise.",
+        "not_found": "This advice is no longer available.",
+        "not_open": "This advice was already applied, dismissed or replaced.",
+        "nothing_to_apply": "The advice is to keep the current destination: there is nothing to apply.",
+        "protection_unsupported": "Enhanced AI destination advice is not available while Advanced Data Protection is on.",
+        "unavailable_for_department": "Enhanced AI destination advice is not available for your department.",
+        "unchanged": "Nothing the advice reads has changed: this is still the advice."
+      },
+      "suggests": "Enhanced AI suggests",
+      "title": "Enhanced AI destination advice"
     }
   },
   "protocols": {
@@ -3115,7 +3289,10 @@
     "call_assigned_destination": "Destinazione della chiamata: {{name}}",
     "transport_destination_differs": "Diversa dalla destinazione assegnata alla chiamata: {{name}}",
     "transport_reason_required": "Questa destinazione è diversa da quella assegnata alla chiamata ({{name}}). Indica un motivo (obbligatorio).",
-    "destination_availability": "{{name}}: {{status}}"
+    "destination_availability": "{{name}}: {{status}}",
+    "destination_missing": "{{name}} non offre quanto richiesto: {{names}}",
+    "destination_required_down": "{{name}} segnala non disponibile ora: {{names}}",
+    "finding_suggested_destination": "Ricerca della destinazione suggerita..."
   },
   "tabs": {
     "calendar": "Calendario",
@@ -4428,7 +4605,12 @@
       "waypoint": "Waypoint"
     },
     "stops_done": "{{done}} of {{total}} stops",
-    "stop_eta": "ETA {{time}}"
+    "stop_eta": "ETA {{time}}",
+    "for_a_call": "Avviato per una chiamata",
+    "for_call": "Chiamata: {{call}}",
+    "route_start": "Partenza del percorso",
+    "route_start_pending": "Raggiungi prima la partenza del percorso: {{name}}",
+    "route_start_pending_unnamed": "Raggiungi prima la partenza del percorso"
   },
   "unit_status": {
     "console_title": "Status console",
@@ -4446,7 +4628,19 @@
     "timer_warning": "Status timer warning: {{status}} for {{elapsed}}",
     "timer_notification_body": "{{unit}}: update your status if it has changed.",
     "timer_exact_alarms_allow": "Allow on-time timer alerts",
-    "timer_exact_alarms_hint": "Status timer alerts can arrive late while the app is in the background."
+    "timer_exact_alarms_hint": "Status timer alerts can arrive late while the app is in the background.",
+    "route": {
+      "conflict_cancel": "Annullalo e avvia questo percorso",
+      "conflict_end": "Terminalo e avvia questo percorso",
+      "conflict_keep": "Mantieni il percorso attuale",
+      "conflict_message": "Questa unità sta effettuando {{route}}. Terminalo o annullalo per avviare il percorso di questa chiamata, oppure lascialo in corso.",
+      "conflict_message_unnamed": "Questa unità sta effettuando un altro percorso. Terminalo o annullalo per avviare il percorso di questa chiamata, oppure lascialo in corso.",
+      "conflict_title": "Un altro percorso è in corso",
+      "continue": "Continua percorso",
+      "name": "Percorso: {{name}}",
+      "start": "Avvia percorso",
+      "unnamed": "Percorso della chiamata"
+    }
   },
   "workOrders": {
     "reportNotSent": "Not sent",
@@ -4507,7 +4701,13 @@
       "set_status": "Set {{status}}",
       "stop_fallback": "the stop",
       "stop_title": "Arrived at {{name}}",
-      "title": "You have arrived"
+      "title": "You have arrived",
+      "end_route": "Termina percorso",
+      "route_ended": "Percorso terminato",
+      "route_start_at": "Partenza del percorso: {{name}}",
+      "route_start_auto": "Si prosegue verso la prima fermata tra {{seconds}} s",
+      "route_start_continue": "Vai alla prima fermata",
+      "route_start_title": "Hai raggiunto la partenza del percorso"
     },
     "back": "Back",
     "error": {
@@ -4660,7 +4860,9 @@
       "times_required": "Aggiungi almeno un orario.",
       "title": "Impossibile salvare la programmazione",
       "too_many_times": "Al massimo {{max}} orari al giorno.",
-      "unknown": "Qualcosa nella programmazione non è valido."
+      "unknown": "Qualcosa nella programmazione non è valido.",
+      "destination_coordinates_invalid": "Il punto di destinazione non è una posizione valida.",
+      "route_plan_invalid": "Il percorso non è più attivo oppure non ha una partenza o un arrivo. Scegli un altro percorso."
     },
     "facility_value": "Prelievo: {{facility}}",
     "field_address": "Indirizzo",
@@ -4819,6 +5021,49 @@
     "week_fourth": "quarto",
     "week_last": "ultimo",
     "week_second": "secondo",
-    "week_third": "terzo"
+    "week_third": "terzo",
+    "destination_location_none": "Nessun punto di destinazione",
+    "destination_location_set": "Destinazione: {{latitude}}, {{longitude}}",
+    "destination_poi_wins_hint": "Le chiamate vanno al punto di interesse di destinazione. Scegli «Nessuno» per indicare invece un indirizzo o un punto.",
+    "facility_poi_hint": "La posizione di ogni chiamata è collegata a questo punto di interesse, che compila anche un indirizzo della chiamata vuoto.",
+    "field_destination_address": "Indirizzo di destinazione",
+    "field_destination_location": "Posizione di destinazione",
+    "field_route": "Percorso"
+  },
+  "route_plans": {
+    "duration_with_stops": "Con fermate",
+    "first_stop": "prima fermata",
+    "last_stop": "ultima fermata",
+    "map_end_label": "A",
+    "map_start_label": "P",
+    "not_found": "Percorso non trovato",
+    "not_found_description": "Impossibile caricare questo percorso. Potrebbe essere stato rimosso o non essere attivo.",
+    "preview_action": "Anteprima percorso",
+    "preview_title": "Anteprima percorso",
+    "profile": {
+      "cycling": "Bicicletta",
+      "driving": "In auto",
+      "driving_traffic": "In auto (con traffico)",
+      "truck": "Camion",
+      "walking": "A piedi"
+    },
+    "profile_label": "Modalità di viaggio",
+    "stale_route": "Le fermate sono cambiate dopo il calcolo di questo percorso, quindi la linea potrebbe non essere aggiornata.",
+    "status": {
+      "active": "Attivo",
+      "archived": "Archiviato",
+      "draft": "Bozza",
+      "paused": "In pausa"
+    }
+  },
+  "routes_overview": {
+    "next_stop": "Prossima fermata: {{name}}",
+    "no_running": "Nessun percorso in corso",
+    "no_running_description": "I percorsi avviati dalle tue unità compaiono qui con il loro avanzamento.",
+    "plans_tab": "Piani",
+    "running_tab": "In corso",
+    "started_at": "Avviato {{time}}",
+    "for_a_call": "Avviato per una chiamata",
+    "for_call": "Chiamata {{number}}: {{name}}"
   }
 }

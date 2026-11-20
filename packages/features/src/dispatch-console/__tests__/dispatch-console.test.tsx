@@ -41,6 +41,10 @@ jest.mock('@resgrid/maps', () => {
     MapPins: ({ pins }: { pins: unknown[] }) => mockReact.createElement(View, { testID: `map-pins-${pins.length}` }),
     TrafficLayer: ({ visible }: { visible?: boolean }) => mockReact.createElement(View, { testID: `console-traffic-${visible === false ? 'hidden' : 'visible'}` }),
     MapTrafficButton: ({ onPress, testID }: { onPress: () => void; testID?: string }) => mockReact.createElement(require('react-native').Pressable, { onPress, testID }),
+    GeoJsonMapLayer: () => null,
+    OfflineDepartmentLayers: () => null,
+    // Department layers on the console map are covered by console-map-layers.test.
+    useMapCapabilities: () => ({ layers: false, customIndoor: false, navigationInApp: false }),
     useMapStyle: () => ({ isAvailable: true, status: 'ready' }),
     useMapCenter: () => ({ latitude: 39, longitude: -105, zoomLevel: 9 }),
   };

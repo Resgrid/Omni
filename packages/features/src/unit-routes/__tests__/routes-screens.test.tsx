@@ -25,12 +25,15 @@ import { detailStop, directions, instance, plan, planDetail } from './fixtures';
 
 // In-app navigation availability (maps routing context + Navigation.InApp flag) is switched per test.
 const mockInAppNavigation = { available: false };
+
 jest.mock('@resgrid/features/navigation/hooks/use-in-app-navigation', () => ({ useInAppNavigationAvailable: () => mockInAppNavigation.available }));
 
 const navigateTo = jest.fn(async () => true);
 const mapCalls: RouteMapSlotProps[] = [];
+
 const renderMap = (props: RouteMapSlotProps) => {
   mapCalls.push(props);
+
   return <Text testID={`map-${props.kind}`}>{`${props.stops.length} stops`}</Text>;
 };
 
@@ -126,6 +129,7 @@ describe('RouteStartScreen', () => {
     useRoutesStore.setState({ activePlan: planDetail('p1') });
     store.startRouteInstance.mockImplementation(async () => {
       useRoutesStore.setState({ activeInstance: instance('ri-9') });
+
       return true;
     });
     await wrap(<RouteStartScreen planId="p1" />);
@@ -224,7 +228,8 @@ describe('RouteActiveScreen', () => {
     await wrap(<RouteActiveScreen pollMs={0} />);
     expect(store.fetchRouteProgress).toHaveBeenCalledWith('ri-1', { bypassCache: false });
     expect(store.fetchStopsForInstance).toHaveBeenCalledWith('ri-1');
-    expect(store.fetchDirections).toHaveBeenCalledWith('ri-1');
+    // Not a call's run: no start leg is asked for.
+    expect(store.fetchDirections).toHaveBeenCalledWith('ri-1', null, { includeStart: false });
     expect(screen.getByTestId('route-active-progress')).toHaveTextContent('routes.progress:33');
     expect(screen.getByTestId('route-deviation-banner-type')).toHaveTextContent('routes.deviation_type_off_route');
     expect(screen.getByTestId('route-active-current')).toBeTruthy();
@@ -283,7 +288,7 @@ describe('RouteDirectionsScreen', () => {
   it('shows the server route summary and waypoints, and hands the next stop to the navigation app', async () => {
     useRoutesStore.setState({ activeInstance: instance('ri-1'), directions: directions() });
     await wrap(<RouteDirectionsScreen />);
-    expect(store.fetchDirections).toHaveBeenCalledWith('ri-1');
+    expect(store.fetchDirections).toHaveBeenCalledWith('ri-1', null, { includeStart: false });
     expect(screen.getByTestId('route-stats-distance')).toHaveTextContent(/4\.2 km/);
     expect(screen.getByTestId('route-directions-waypoint-a')).toBeTruthy();
     expect(screen.queryByTestId('route-directions-navigate-a')).toBeNull();
@@ -300,6 +305,7 @@ describe('RouteDirectionsScreen', () => {
 
   it('offers in-app navigation through the remaining stops and shows live stop ETAs where the server sends them', async () => {
     mockInAppNavigation.available = true;
+
     try {
       const live = directions();
       useRoutesStore.setState({ activeInstance: instance('ri-1'), directions: { ...live, IsLive: true, Waypoints: live.Waypoints.map((waypoint) => ({ ...waypoint, EtaUtc: '2026-11-01T15:42:00Z' })) } });
@@ -369,6 +375,7 @@ describe('RouteStopContactScreen', () => {
   it('reads the contact by plan stop id and shows name, phone and the location points on the map', async () => {
     store.fetchStopContact.mockImplementation(async () => {
       useRoutesStore.setState({ stopContactsById: { 'rs-b': contact } });
+
       return contact as never;
     });
     jest.mocked(useLocalSearchParams).mockReturnValue({ stopId: 'rs-b' });
@@ -406,6 +413,7 @@ describe('route history', () => {
           },
         },
       });
+
       return null;
     });
     await wrap(<RouteInstanceScreen instanceId="ri-7" />);

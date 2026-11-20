@@ -14,10 +14,12 @@ import { notificationsNav } from '@resgrid/features/notifications/nav';
 import { offlineMapsNav } from '@resgrid/features/offline-maps/nav';
 import { operationsNav } from '@resgrid/features/operations/nav';
 import { personnelNav } from '@resgrid/features/personnel/nav';
-import { poisNav } from '@resgrid/features/pois/nav';
+import { destinationsNav, poisNav } from '@resgrid/features/pois/nav';
 import { protocolsNav } from '@resgrid/features/protocols/nav';
 import { recordsNav } from '@resgrid/features/records/nav';
 import { recurringCallsNav } from '@resgrid/features/recurring-calls/nav';
+import { routePlansNav } from '@resgrid/features/route-plans/nav';
+import { routesOverviewNav } from '@resgrid/features/routes-overview/nav';
 import { settingsNavEntries } from '@resgrid/features/settings/nav';
 import { unitsNav } from '@resgrid/features/units/nav';
 import { weatherAlertsNav } from '@resgrid/features/weather-alerts/nav';
@@ -50,6 +52,10 @@ export const routes = defineRoutes([
   'recurringCallAlerts',
   'pois',
   'poiDetail',
+  'destinations',
+  'routePlans',
+  'routePlanPreview',
+  'routeInstanceView',
   'map',
   'maps',
   'mapsSearch',
@@ -105,6 +111,9 @@ export const nav = defineNav([
   ...featureNav(awaitingResourcesNav, 'sidebar', { order: 12 }),
   ...featureNav(recurringCallsNav, 'sidebar', { overrides: { 'recurring-call-alerts': { order: 12 }, 'recurring-calls': { order: 13 } } }),
   ...featureNav(poisNav, 'sidebar', { order: 20 }),
+  ...featureNav(destinationsNav, 'sidebar', { order: 21 }),
+  ...featureNav(routesOverviewNav, { 'route-plans': 'sidebar', 'route-instance-view': 'hidden' }, { order: 22 }),
+  ...featureNav(routePlansNav, 'hidden', { order: 23 }),
   ...featureNav(mapNav, 'sidebar', { order: 25 }),
   ...featureNav(personnelNav, 'sidebar', { order: 30 }),
   ...featureNav(unitsNav, 'sidebar', { order: 31 }),

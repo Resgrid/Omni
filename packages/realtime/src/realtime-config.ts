@@ -12,6 +12,11 @@ export interface RealtimeDependencies {
   getAccessToken: () => string | null | undefined;
   /** Refreshes the token. Empty afterwards = session gone: hubs stop reconnecting (the auth layer signs out). */
   refreshAccessToken: () => Promise<unknown>;
+  /**
+   * Whether the access token is known to have expired. Hub rebuilds refresh only then (or after a 401), never on every
+   * attempt: each refresh rotates the refresh token.
+   */
+  isAccessTokenExpired?: () => boolean;
   /** `Config.EventingUrl` from the department config. */
   getEventingUrl: () => string | null | undefined;
   /** The signed-in department (`rights.DepartmentId`); Core's `Connect(departmentId)` must match the token. */
@@ -37,7 +42,11 @@ export function configureRealtime(next: RealtimeDependencies): void {
   dependencies = next;
   features = next.variant ? resolveRealtimeFeatures(next.variant) : null;
   signalRService.configure({
-    auth: { getAccessToken: () => dependencies?.getAccessToken() ?? null, refreshAccessToken: () => dependencies?.refreshAccessToken() ?? Promise.resolve(null) },
+    auth: {
+      getAccessToken: () => dependencies?.getAccessToken() ?? null,
+      refreshAccessToken: () => dependencies?.refreshAccessToken() ?? Promise.resolve(null),
+      isAccessTokenExpired: () => dependencies?.isAccessTokenExpired?.() === true,
+    },
     connectivity: next.connectivity ?? null,
   });
 }
