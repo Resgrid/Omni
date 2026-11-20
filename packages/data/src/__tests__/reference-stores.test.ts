@@ -43,6 +43,8 @@ jest.mock('@resgrid/api', () => {
     'getUserCertifications',
     'getCustomMaps',
     'getMapLayers',
+    'getMapLayerGeoJSON',
+    'getIndoorMapZonesGeoJSON',
     'searchAllMapFeatures',
     'getRecordDeployments',
     'getChecklistAccess',
@@ -330,6 +332,53 @@ describe('custom maps layer details (GetMayLayers)', () => {
     getMapLayers().mockResolvedValue(notFound(null));
     await useCustomMapsStore.getState().fetchMapLayers({ bypassCache: true });
     expect(useCustomMapsStore.getState().mapLayers).toEqual([]);
+  });
+});
+
+describe('custom maps GeoJSON (raw bodies, not v4 envelopes)', () => {
+  const mocked = (name: string): jest.Mock => jest.requireMock<Record<string, jest.Mock>>('@resgrid/api')[name];
+
+  // Core's GetMapLayerGeoJSON / GetIndoorMapZonesGeoJSON answer `Content(geoJson, "application/geo+json")`.
+  const square = {
+    type: 'FeatureCollection',
+    features: [
+      {
+        type: 'Feature',
+        geometry: {
+          type: 'Polygon',
+          coordinates: [
+            [
+              [0, 0],
+              [0, 1],
+              [1, 1],
+              [0, 0],
+            ],
+          ],
+        },
+        properties: { name: 'Square' },
+      },
+    ],
+  };
+
+  it('keeps a layer’s raw GeoJSON body', async () => {
+    mocked('getMapLayerGeoJSON').mockResolvedValue(square);
+    await expect(useCustomMapsStore.getState().fetchLayerGeoJSON('L1', { bypassCache: true })).resolves.toEqual(square);
+    expect(useCustomMapsStore.getState().layerGeoJSON.L1).toEqual(square);
+  });
+
+  it('keeps a floor’s raw zones GeoJSON body', async () => {
+    mocked('getIndoorMapZonesGeoJSON').mockResolvedValue(square);
+    await useCustomMapsStore.getState().fetchFloorZones('F1', { bypassCache: true });
+    expect(useCustomMapsStore.getState().zonesGeoJSONByFloor.F1).toEqual(square);
+  });
+
+  it('still reads an enveloped answer: not_found is no shapes', async () => {
+    mocked('getMapLayerGeoJSON').mockResolvedValue(notFound(null));
+    await useCustomMapsStore.getState().fetchLayerGeoJSON('L2', { bypassCache: true });
+    expect(useCustomMapsStore.getState().layerGeoJSON.L2).toBeNull();
+    mocked('getMapLayerGeoJSON').mockResolvedValue(ok(square));
+    await useCustomMapsStore.getState().fetchLayerGeoJSON('L3', { bypassCache: true });
+    expect(useCustomMapsStore.getState().layerGeoJSON.L3).toEqual(square);
   });
 });
 

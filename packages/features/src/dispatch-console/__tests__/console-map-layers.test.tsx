@@ -101,7 +101,8 @@ describe('ConsoleMap department layers', () => {
     expect(screen.getByTestId('mock-console-layer-E1')).toHaveTextContent('#ff8800');
     expect(screen.queryByTestId('mock-console-layer-L2')).toBeNull();
     expect(JSON.parse(String(screen.getByTestId('mock-console-offline-layers').props.children))).toEqual({ visible: ['E1'], exclude: ['E1'] });
-    expect(mocks.fetchActiveLayers).toHaveBeenCalled();
+    // The light on-by-default list skips the API cache when the map opens, so a layer uploaded a minute ago shows.
+    expect(mocks.fetchActiveLayers).toHaveBeenCalledWith({ bypassCache: true });
     expect(mocks.fetchMapLayers).toHaveBeenCalled();
   });
 

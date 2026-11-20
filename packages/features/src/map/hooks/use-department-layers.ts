@@ -45,7 +45,9 @@ export function useDepartmentLayers(enabled: boolean): { layers: DepartmentMapLa
   useEffect(() => {
     if (!enabled) return;
     const store = useCustomMapsStore.getState();
-    void store.fetchActiveLayers();
+    // The on-by-default list is read past the API cache whenever a map opens (it is light): a layer uploaded a minute
+    // ago shows at once. Offline, the cached copy still answers.
+    void store.fetchActiveLayers({ bypassCache: true });
     void store.fetchMapLayers();
     const timer = setInterval(() => void useCustomMapsStore.getState().fetchActiveLayers({ bypassCache: true }), ACTIVE_LAYERS_REFRESH_MS);
 

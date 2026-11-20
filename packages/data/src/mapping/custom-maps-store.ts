@@ -3,7 +3,7 @@ import type { ActiveLayerResultData, CustomMapResultData, GetCustomMapResultData
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-import { unwrapItem, unwrapList } from '../core/envelope';
+import { unwrapGeoJSON, unwrapItem, unwrapList } from '../core/envelope';
 import { dataPersistOptions, registerPersistedStore } from '../core/persist';
 import { registerDataStoreReset } from '../core/reset';
 import { getDataApiContext } from '../core/runtime';
@@ -109,7 +109,7 @@ export const useCustomMapsStore = create<CustomMapsState>()(
           if (cached !== undefined && !options?.bypassCache) return cached;
           const result = await runner.run(
             'layerGeoJSON',
-            async () => unwrapItem(await getMapLayerGeoJSON(getDataApiContext(), { layerId })),
+            async () => unwrapGeoJSON(await getMapLayerGeoJSON(getDataApiContext(), { layerId })),
             (geo, state) => ({ layerGeoJSON: { ...state.layerGeoJSON, [layerId]: geo } }),
             { flightKey: `layer:${layerId}` }
           );
@@ -147,7 +147,7 @@ export const useCustomMapsStore = create<CustomMapsState>()(
           if (cached !== undefined && !options?.bypassCache) return cached;
           const result = await runner.run(
             'zones',
-            async () => unwrapItem(await getIndoorMapZonesGeoJSON(getDataApiContext(), { floorId })),
+            async () => unwrapGeoJSON(await getIndoorMapZonesGeoJSON(getDataApiContext(), { floorId })),
             (geo, state) => ({ zonesGeoJSONByFloor: { ...state.zonesGeoJSONByFloor, [floorId]: geo } }),
             { flightKey: `zones:${floorId}` }
           );
