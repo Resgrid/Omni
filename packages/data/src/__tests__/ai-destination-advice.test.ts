@@ -186,6 +186,26 @@ describe('AI destination advice store', () => {
     expect(store().entries['12']?.advice).toBeNull();
   });
 
+  it('never lets a read refused (401/403) after an action left replace the advice the action brought', async () => {
+    let refuseRead: () => void = () => undefined;
+
+    jest.mocked(api.getAiDestinationAdvice).mockImplementationOnce(
+      () =>
+        new Promise<AiDestinationAdviceResult>((_resolve, reject) => {
+          refuseRead = () => reject(httpError(403));
+        })
+    );
+    jest.mocked(api.requestAiDestinationAdvice).mockResolvedValueOnce(answer({ Advice: advice({ Id: 'a2' }) }));
+
+    const read = store().fetchAdvice(12);
+
+    await store().requestAdvice(12);
+    refuseRead();
+    await read;
+
+    expect(store().entries['12']).toMatchObject({ available: true, advice: expect.objectContaining({ Id: 'a2' }) });
+  });
+
   it('forgets everything on reset (logout, department switch)', async () => {
     jest.mocked(api.getAiDestinationAdvice).mockRejectedValueOnce(httpError(404));
     await store().fetchAdvice(12);

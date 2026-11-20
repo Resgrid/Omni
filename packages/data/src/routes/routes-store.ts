@@ -335,6 +335,17 @@ export const useRoutesStore = create<RoutesState>()(
         }
       };
 
+      /**
+       * Makes a started run the active route. Another run's stops, progress and directions are dropped in the same update,
+       * so nothing reports the new run with the previous run's counts before its own progress read lands.
+       */
+      const activateInstance = (instance: RouteInstanceResultData, isTracking: boolean) =>
+        set((state) =>
+          state.activeInstance?.RouteInstanceId === instance.RouteInstanceId
+            ? { activeInstance: instance, isTracking }
+            : { activeInstance: instance, isTracking, progress: null, instanceStops: [], stopDetails: [], directions: null }
+        );
+
       const setInstanceStatus = (instanceId: string, status: number) =>
         set((state) => (state.activeInstance?.RouteInstanceId === instanceId ? { activeInstance: { ...state.activeInstance, Status: status }, isTracking: status === RouteInstanceStatus.InProgress } : {}));
 
@@ -388,7 +399,9 @@ export const useRoutesStore = create<RoutesState>()(
         startRouteInstance: (routePlanId, unitId) =>
           act(async () => {
             const instance = unwrapItem(assertV4Success(await startRoute(ctx(), { RoutePlanId: routePlanId, UnitId: unitId })));
-            set({ activeInstance: instance, isTracking: instance !== null });
+
+            if (instance) activateInstance(instance, true);
+            else set({ activeInstance: null, isTracking: false });
 
             if (instance) await Promise.all([get().fetchRouteProgress(instance.RouteInstanceId), get().fetchStopsForInstance(instance.RouteInstanceId)]);
           }),
@@ -475,11 +488,14 @@ export const useRoutesStore = create<RoutesState>()(
         },
         fetchDirections: async (instanceId, position, options) => {
           const from = position ?? positionOrFix();
+          const includeStart = options?.includeStart === true;
+          // One flight per variant: a call for the other `includeStart` must not share (and commit) the in-flight answer. The
+          // slice's race guard then keeps the newest request's answer, so the start leg follows the latest ask.
           await runner.run(
             'directions',
-            async () => unwrapItem(await getInstanceDirections(ctx(), directionsQuery(instanceId, from, options?.includeStart === true))),
+            async () => unwrapItem(await getInstanceDirections(ctx(), directionsQuery(instanceId, from, includeStart))),
             (directions) => ({ directions }),
-            { flightKey: `directions:${instanceId}` }
+            { flightKey: `directions:${instanceId}:${includeStart ? 'start' : 'plain'}` }
           );
         },
 
@@ -598,7 +614,7 @@ export const useRoutesStore = create<RoutesState>()(
               return { status: 'failed', error };
             }
 
-            set({ activeInstance: instance, isTracking: instance.Status === RouteInstanceStatus.InProgress });
+            activateInstance(instance, instance.Status === RouteInstanceStatus.InProgress);
             await Promise.all([get().fetchRouteProgress(instance.RouteInstanceId, { bypassCache: true }), get().fetchStopsForInstance(instance.RouteInstanceId, { bypassCache: true })]);
 
             return { status: 'started', instance };

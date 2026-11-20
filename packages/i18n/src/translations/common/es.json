@@ -545,6 +545,7 @@
     "longitude_placeholder": "p. ej. -119.758773",
     "latitude_invalid": "Introduzca una latitud en grados decimales, entre -90 y 90",
     "longitude_invalid": "Introduzca una longitud en grados decimales, entre -180 y 180",
+    "destination_point_unusable": "0, 0 no es un punto de destino válido. Introduzca la latitud y la longitud del destino",
     "coordinates_incomplete": "Introduzca la latitud y la longitud",
     "place_on_map": "Place on map",
     "destination_poi_select": "Select a destination",

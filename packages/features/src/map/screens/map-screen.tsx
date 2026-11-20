@@ -9,7 +9,6 @@ import { useCurrentLocation } from '@resgrid/location';
 import {
   Camera,
   type CameraRef,
-  GeoJsonMapLayer,
   getPinEntityId,
   type MapCameraChangedEvent,
   MapFocusBanner,
@@ -25,7 +24,6 @@ import {
   MapView,
   type MapViewRef,
   offlineDepartmentLayerIds,
-  OfflineDepartmentLayers,
   TrafficLayer,
   UnitLocationMarker,
   useFollowCamera,
@@ -41,6 +39,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { StyleSheet, View } from 'react-native';
 
 import { ActiveRouteOverlay } from '../components/active-route-overlay';
+import { DepartmentLayers } from '../components/department-layers';
 import { LayerDetailsSheet } from '../components/layer-details-sheet';
 import { LayerFeaturePanel, type LayerFeatureSelection } from '../components/layer-feature-details';
 import { MapHighlights } from '../components/map-highlights';
@@ -141,10 +140,6 @@ export default function MapScreen({ links = NO_LINKS, realtime = true }: MapScre
   const hiddenKinds = useMapViewStore((state) => state.hiddenKinds);
   const hiddenPoiTypes = useMapViewStore((state) => state.hiddenPoiTypes);
   const { layers: departmentLayers, toggleLayer } = useDepartmentLayers(mapsCapability.layers);
-  // Offline (§19.2): layers whose GeoJSON was not loaded online draw from the department data bundle. With no layer list
-  // on the device the department's on-by-default layers show.
-  const offlineLayerIds = useMemo(() => (departmentLayers.length > 0 ? departmentLayers.filter((layer) => layer.isOn).map((layer) => layer.id) : null), [departmentLayers]);
-  const onlineLayerIds = useMemo(() => departmentLayers.filter((layer) => layer.isOn && layer.data).map((layer) => layer.id), [departmentLayers]);
   // Unit: the device unit's running route (variants that ship the routes module).
   const hasUnitRoutes = useHasModule('unit-routes');
   const activeRoute = useActiveRouteOverlay(hasUnitRoutes && isUnitDevice, activeUnitId);
@@ -516,12 +511,7 @@ export default function MapScreen({ links = NO_LINKS, realtime = true }: MapScre
       >
         <Camera ref={cameraRef} defaultSettings={initialCamera} />
         <TrafficLayer visible={isTrafficOn} idPrefix="map-screen-traffic" />
-        {departmentLayers.map((layer) =>
-          layer.isOn && layer.data ? (
-            <GeoJsonMapLayer key={layer.id} id={`map-layer-${layer.id}`} data={layer.data} color={layer.color} showLabels onFeaturePress={(_feature, features) => handleFeaturePress(layer, features)} />
-          ) : null
-        )}
-        {mapsCapability.layers ? <OfflineDepartmentLayers visibleLayerIds={offlineLayerIds} excludeLayerIds={onlineLayerIds} idPrefix={OFFLINE_LAYERS_ID_PREFIX} /> : null}
+        <DepartmentLayers layers={departmentLayers} enabled={mapsCapability.layers} layerIdPrefix="map-layer" offlineIdPrefix={OFFLINE_LAYERS_ID_PREFIX} onFeaturePress={handleFeaturePress} />
         {activeRoute ? <ActiveRouteOverlay route={activeRoute} /> : null}
         <MapHighlights targets={highlights} colors={highlightColors} />
         <MapPins pins={drawnPins} onPinPress={handlePinPress} selectedPinId={markedPinId} canViewPersonnel={canUserViewPII} idPrefix="map-screen-pins" />

@@ -18,13 +18,15 @@ export interface DestinationAvailabilityRowProps {
   onOpen: (poi: PoiResultData) => void;
   /** Shown only to those who may set availability (Dispatch, IC). */
   onSetAvailability?: (poi: PoiResultData) => void;
+  /** The time availability is judged at: the screen's availability clock, so the row re-renders when a report lapses. */
+  now?: number;
 }
 
 /** A destination on the Destinations screen: what it offers (struck through when down), its availability, the note and until when. */
-export const DestinationAvailabilityRow: React.FC<DestinationAvailabilityRowProps> = React.memo(({ poi, timeZone, onOpen, onSetAvailability }) => {
+export const DestinationAvailabilityRow: React.FC<DestinationAvailabilityRowProps> = React.memo(({ poi, timeZone, onOpen, onSetAvailability, now }) => {
   const { t } = useTranslation();
-  const status = poiAvailabilityStatus(poi);
-  const expiresAt = availabilityExpiresAt(poi);
+  const status = poiAvailabilityStatus(poi, now);
+  const expiresAt = availabilityExpiresAt(poi, now);
   const capabilities = poiCapabilityOptions(poi);
 
   return (
@@ -42,13 +44,13 @@ export const DestinationAvailabilityRow: React.FC<DestinationAvailabilityRowProp
               {poi.Address && poi.Address !== poi.Name ? `${poi.PoiTypeName} · ${poi.Address}` : poi.PoiTypeName}
             </Text>
           </VStack>
-          <PoiAvailabilityBadge poi={poi} showOpen testID={`destination-row-${poi.PoiId}-availability`} />
+          <PoiAvailabilityBadge poi={poi} showOpen now={now} testID={`destination-row-${poi.PoiId}-availability`} />
         </HStack>
       </Pressable>
       {capabilities.length > 0 ? (
         <HStack space="xs" className="mt-2 flex-wrap">
           {capabilities.map((capability) => {
-            const isDown = isPoiCapabilityUnavailable(poi, capability.id);
+            const isDown = isPoiCapabilityUnavailable(poi, capability.id, now);
 
             return (
               <Text

@@ -77,7 +77,8 @@ export interface NavigationServices {
   onSessionChange(active: boolean, destinationName?: string | null): void;
   /** Short phrases the store uses itself: spoken `rerouted`, the `navigating_to` notification text. */
   text(key: 'rerouted' | 'navigating_to' | 'navigating', values?: Record<string, string>): string;
-  log(level: 'info' | 'warn', message: string, error?: unknown): void;
+  /** `context` carries non-identifying facts only (the operation, the destination kind): never positions or destinations. */
+  log(level: 'info' | 'warn', message: string, error?: unknown, context?: Record<string, string>): void;
   now(): number;
 }
 

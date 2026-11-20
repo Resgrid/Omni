@@ -1,5 +1,6 @@
 import { useRoutesStore } from '@resgrid/data';
 import { useDepartmentTimeZone } from '@resgrid/features/department-config';
+import { planPreviewLine } from '@resgrid/features/route-plans/lib/route-plan-preview';
 import { useTranslation } from '@resgrid/i18n';
 import type { RouteStopWithDetailsResultData } from '@resgrid/models';
 import { HStack, Loading, RefreshControl, ScreenHeader, ScrollView, Text, View, VStack, ZeroState } from '@resgrid/ui';
@@ -11,7 +12,6 @@ import { StyleSheet } from 'react-native';
 import { RouteStats } from '../components/route-stats';
 import { RunCallLink } from '../components/run-call-link';
 import { formatDistance, formatDuration, formatRouteTime } from '../lib/route-format';
-import { parseRouteGeometry } from '../lib/route-geo';
 import { instanceMapStops, mapBounds, routeColor } from '../lib/route-map';
 import { instanceStatusLook, sortStops, stopStatusLook } from '../lib/route-status';
 import { type RenderRouteMap, RouteMapSlot } from '../map-slot';
@@ -67,7 +67,8 @@ export default function RouteInstanceScreen({ instanceId: instanceIdProp, render
 
   const stops = useMemo(() => sortStops(detail?.stops ?? []), [detail?.stops]);
   const mapStops = useMemo(() => instanceMapStops(stops, null), [stops]);
-  const line = useMemo(() => parseRouteGeometry(planPreview?.plan.MapboxRouteGeometry ?? planPreview?.directions?.Geometry), [planPreview]);
+  // The plan's line, else its stored directions' line (an empty or unreadable plan geometry falls through).
+  const line = useMemo(() => (planPreview ? planPreviewLine(planPreview.plan, planPreview.directions) : null), [planPreview]);
   const instance = detail?.progress?.Instance ?? null;
   const back = () => (router.canGoBack() ? router.back() : onBack ? onBack() : router.replace(unitRoutesRoutes.list()));
 

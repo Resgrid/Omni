@@ -15,7 +15,7 @@ import { ActiveCallCard } from '../components/active-call-card';
 import { CallRouteDetailAction } from '../components/call-route-actions';
 import { CallRouteLauncher } from '../components/call-route-launcher';
 import { SetActiveCallButton } from '../components/set-active-call-button';
-import { requestCallRouteLaunch, resetCallRouteLaunchForTests, runScreenPath } from '../lib/call-route-launch';
+import { isCallRouteLaunching, requestCallRouteLaunch, resetCallRouteLaunchForTests, runScreenPath, useCallRouteLaunchStore } from '../lib/call-route-launch';
 import { activateUnitVariant, hidden } from './test-helpers';
 
 // In-app navigation availability (maps routing context + Navigation.InApp flag), switched per test.
@@ -76,12 +76,12 @@ const cancelRouteInstance = jest.fn(async () => true);
 const saveUnitStatus = jest.fn(async () => ({ outcome: 'sent' as const, id: 'evt-1' }));
 
 /** The shell's active call, held in state as the app shell holds it. */
-const Shell: React.FC<{ activeCallId?: string | null; children?: React.ReactNode }> = ({ activeCallId: initial = null, children }) => {
+const Shell: React.FC<{ activeCallId?: string | null; unitId?: string; children?: React.ReactNode }> = ({ activeCallId: initial = null, unitId = '10', children }) => {
   const [activeCallId, setActiveCallId] = useState<string | null>(initial);
 
   return (
     <NavigationHandoffProvider value={{ navigateTo: jest.fn(async () => true) }}>
-      <StatusProvider activeUnitId="10" activeCallId={activeCallId} onActiveCallChange={setActiveCallId}>
+      <StatusProvider activeUnitId={unitId} activeCallId={activeCallId} onActiveCallChange={setActiveCallId}>
         <CallRouteLauncher />
         {children}
       </StatusProvider>
@@ -195,6 +195,53 @@ describe('picking a call with a route as the active call', () => {
     await waitFor(() => expect(router.push).toHaveBeenCalledWith('/navigate?instanceId=ri-8'));
   });
 
+  it('opens nothing for a unit the crew changed from while the route was starting', async () => {
+    let answer: ((result: StartCallRouteResult) => void) | undefined;
+    startCallRoute.mockImplementationOnce(
+      () =>
+        new Promise<StartCallRouteResult>((resolve) => {
+          answer = resolve;
+        })
+    );
+    const { rerender } = await render(<Shell />);
+
+    await act(async () => requestCallRouteLaunch('8'));
+    await waitFor(() => expect(startCallRoute).toHaveBeenCalledWith('8', '10'));
+    await rerender(<Shell unitId="11" />);
+    await act(async () => answer?.(started(run())));
+
+    expect(router.push).not.toHaveBeenCalled();
+    expect(useCallRouteLaunchStore.getState().launchingCallIds).toEqual([]);
+  });
+
+  it('keeps each call busy until its own launch finishes', async () => {
+    const answers = new Map<string, () => void>();
+    startCallRoute.mockImplementation(
+      // SAFETY: the mock receives the store action's arguments; only the call id is read.
+      ((callId: string) =>
+        new Promise<StartCallRouteResult>((resolve) => {
+          answers.set(callId, () => resolve(started(run({ RouteInstanceId: `ri-${callId}`, CallId: Number(callId) }))));
+        })) as never
+    );
+    const OTHER = makeCall('12', { RoutePlanId: 'p2', RoutePlanName: 'Second run' });
+    useCallsStore.setState({ calls: [ROUTED, PLAIN, OTHER] });
+    await render(<Shell />);
+
+    await act(async () => requestCallRouteLaunch('8'));
+    await act(async () => requestCallRouteLaunch('12'));
+    await waitFor(() => expect(startCallRoute).toHaveBeenCalledTimes(2));
+    // A second ask for call 8 while its launch is under way starts nothing.
+    await act(async () => requestCallRouteLaunch('8'));
+    expect(startCallRoute).toHaveBeenCalledTimes(2);
+
+    await act(async () => answers.get('12')?.());
+    await waitFor(() => expect(isCallRouteLaunching(useCallRouteLaunchStore.getState(), '12')).toBe(false));
+    expect(isCallRouteLaunching(useCallRouteLaunchStore.getState(), '8')).toBe(true);
+
+    await act(async () => answers.get('8')?.());
+    await waitFor(() => expect(useCallRouteLaunchStore.getState().launchingCallIds).toEqual([]));
+  });
+
   it('is inert where the device does not report status for a unit', async () => {
     resetActiveVariantForTests();
     setActiveVariant(parseVariantManifest(responderManifest));
@@ -238,6 +285,17 @@ describe('the unit runs another route (409 route_in_progress)', () => {
     await fireEvent.press(screen.getByTestId('call-route-conflict-cancel', hidden));
     await waitFor(() => expect(cancelRouteInstance).toHaveBeenCalledWith('ri-old'));
     await waitFor(() => expect(router.push).toHaveBeenCalledWith('/navigate?instanceId=ri-8'));
+  });
+
+  it('drops the conflict when another unit is chosen, never ending the first unit’s route', async () => {
+    const { rerender } = await render(<Shell />);
+    await act(async () => requestCallRouteLaunch('8'));
+    await waitFor(() => expect(useCallRouteLaunchStore.getState().conflict).toMatchObject({ callId: '8', unitId: '10', existingInstanceId: 'ri-old' }));
+
+    await rerender(<Shell unitId="11" />);
+    await waitFor(() => expect(useCallRouteLaunchStore.getState().conflict).toBeNull());
+    expect(endRouteInstance).not.toHaveBeenCalled();
+    expect(cancelRouteInstance).not.toHaveBeenCalled();
   });
 
   it('keeps the current route', async () => {

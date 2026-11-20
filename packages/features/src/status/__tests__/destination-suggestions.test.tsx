@@ -313,6 +313,52 @@ describe('status destination suggestions', () => {
     }
   });
 
+  it('keeps a transport status on a call’s free destination: nothing is pre-selected and nothing waits', async () => {
+    setMode(DestinationSuggestionModes.SuggestAndFill);
+    // SAFETY: as above, a partial call row with a free destination (Core M0322).
+    const free = { ...call('100', null), DestinationAddress: '12 Harbour Rd', DestinationLatitude: 51.05, DestinationLongitude: 3.72 } as CallResultData;
+    const { onSubmitStatus } = await renderPicker({}, free);
+
+    await openDestinations(20);
+    expect(screen.queryByTestId('status-picker-awaiting-suggestion', q)).toBeNull();
+    expect(screen.getByTestId('status-destination-call-100', q).props.accessibilityState).toEqual({ selected: true });
+
+    await fireEvent.press(screen.getByTestId('status-picker-submit', q));
+    await waitFor(() => expect(onSubmitStatus).toHaveBeenCalledWith(expect.objectContaining({ respondingTo: '100', respondingToType: 2 })));
+  });
+
+  it('never changes the destination after the crew left the destination step', async () => {
+    jest.useFakeTimers();
+
+    try {
+      setMode(DestinationSuggestionModes.SuggestAndFill);
+      let answerWith: (value: SuggestedDestinationsResultData) => void = () => undefined;
+      fetchSuggestedDestinations.mockImplementation(
+        () =>
+          new Promise<SuggestedDestinationsResultData>((resolve) => {
+            answerWith = resolve;
+          })
+      );
+      const withNote = { ...DEPARTING, Note: 1 };
+      const { onSubmitStatus } = await renderPicker({ statuses: [withNote] });
+
+      await openDestinations(20);
+      await act(async () => {
+        jest.advanceTimersByTime(SUGGESTION_WAIT_MS);
+      });
+      // The wait is over with no suggestion: the crew goes on with the call to the note step.
+      await fireEvent.press(screen.getByTestId('status-picker-next', q));
+      await act(async () => answerWith(ANSWER));
+
+      expect(screen.getByTestId('status-picker-summary', q)).toHaveTextContent(/#100 Call 100/);
+      await fireEvent.press(screen.getByTestId('status-picker-submit', q));
+      await act(async () => undefined);
+      expect(onSubmitStatus).toHaveBeenCalledWith(expect.objectContaining({ respondingTo: '100', respondingToType: 2 }));
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   it('does not wait once the crew picks a destination', async () => {
     setMode(DestinationSuggestionModes.SuggestAndFill);
     fetchSuggestedDestinations.mockImplementation(() => new Promise(() => undefined));

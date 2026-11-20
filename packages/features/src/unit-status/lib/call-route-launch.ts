@@ -14,18 +14,23 @@ import { create } from 'zustand';
 /** The unit runs another route (409 `route_in_progress`): the crew ends or cancels it to start the call's route, or keeps it. */
 export interface CallRouteConflict {
   callId: string;
+  /** The unit whose start was refused: the conflict is that unit's, and goes away when another unit is chosen. */
+  unitId: string;
   /** The run the unit has going (the ProblemDetails `detail`, else the unit's active route); null when unknown. */
   existingInstanceId: string | null;
   existingName: string | null;
 }
 
 interface CallRouteLaunchState {
-  /** The call whose route is being started (its buttons show they are busy). */
-  launchingCallId: string | null;
+  /** The calls whose route is being started, one entry per launch under way (their buttons show they are busy). */
+  launchingCallIds: string[];
   conflict: CallRouteConflict | null;
 }
 
-export const useCallRouteLaunchStore = create<CallRouteLaunchState>()(() => ({ launchingCallId: null, conflict: null }));
+export const useCallRouteLaunchStore = create<CallRouteLaunchState>()(() => ({ launchingCallIds: [], conflict: null }));
+
+/** Whether a start (or continue) of this call's route is under way. */
+export const isCallRouteLaunching = (state: Pick<CallRouteLaunchState, 'launchingCallIds'>, callId: string | null | undefined): boolean => !!callId && state.launchingCallIds.includes(callId);
 
 type LaunchListener = (callId: string) => void;
 
@@ -62,5 +67,5 @@ export const runScreenPath = (instance: Pick<RouteInstanceResultData, 'RouteInst
 /** Test helper. */
 export function resetCallRouteLaunchForTests(): void {
   listeners.clear();
-  useCallRouteLaunchStore.setState({ launchingCallId: null, conflict: null });
+  useCallRouteLaunchStore.setState({ launchingCallIds: [], conflict: null });
 }

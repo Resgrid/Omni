@@ -29,17 +29,19 @@ const medic = (extra: Partial<UnitInfoResultData> = {}): UnitInfoResultData =>
   ({ UnitId: '5', Name: 'Medic 5', Type: 'Ambulance', CustomStatusSetId: '7', ActiveCallId: '40', CurrentDestinationId: '', CurrentDestinationType: null, CurrentStatusBaseType: null, ...extra }) as UnitInfoResultData;
 
 const saveUnitStatus = jest.fn(async () => ({ outcome: 'sent' as const, id: 'evt-1' }));
+const fetchCallDispatches = jest.fn(async () => undefined);
 
 beforeEach(() => {
   activateVariant('dispatch');
   saveUnitStatus.mockClear();
+  fetchCallDispatches.mockClear();
   useUnitsStore.setState({
     unitInfos: [medic()],
     // SAFETY: a status set with only the fields the sheet reads.
     unitTypeStatuses: [{ UnitType: 'Ambulance', StatusId: '7', Statuses: [option(20, 'Departing', { BaseType: ActionBaseTypes.Transporting, Detail: 5 })] }] as UnitTypeStatusResultData[],
     fetchUnits: jest.fn(async () => undefined),
   });
-  useCallsStore.setState({ calls: [makeCall('39'), makeCall('40', { DestinationPoiId: 900, DestinationName: 'UZ Gent' })], callDispatches: {}, loading: {} });
+  useCallsStore.setState({ calls: [makeCall('39'), makeCall('40', { DestinationPoiId: 900, DestinationName: 'UZ Gent' })], callDispatches: {}, loading: {}, fetchCallDispatches });
   usePoisStore.setState({ destinationPois: [poi(900, 'UZ Gent'), poi(901, 'AZ Zottegem')], fetchDestinationPois: jest.fn(async () => undefined) });
   usePersonnelStore.setState({ groups: [], fetchGroups: jest.fn(async () => undefined) });
   useUnitStatusStore.setState({ saveUnitStatus });
@@ -76,11 +78,22 @@ describe('ConsoleUnitStatusSheet without a filtered call', () => {
   it('finds the working call from the unit’s one open dispatch when the server names none', async () => {
     useUnitsStore.setState({ unitInfos: [medic({ ActiveCallId: null })] });
     // SAFETY: dispatch rows with only the fields the matching reads.
+    useCallsStore.setState({ callDispatches: { '39': [], '40': [{ Id: '5', Type: 'Unit', Name: 'Medic 5' }] as never } });
+    await render(<ConsoleUnitStatusSheet isOpen onClose={jest.fn()} unitIds={['5']} />);
+    expect(fetchCallDispatches).toHaveBeenCalledWith(['39', '40']);
+
+    await pickDeparting();
+    expect(screen.getByTestId('status-destination-poi-900', hidden).props.accessibilityState).toEqual({ selected: true });
+  });
+
+  it('names no working call while another open call’s dispatches are not loaded', async () => {
+    useUnitsStore.setState({ unitInfos: [medic({ ActiveCallId: null })] });
+    // SAFETY: dispatch rows with only the fields the matching reads.
     useCallsStore.setState({ callDispatches: { '40': [{ Id: '5', Type: 'Unit', Name: 'Medic 5' }] as never } });
     await render(<ConsoleUnitStatusSheet isOpen onClose={jest.fn()} unitIds={['5']} />);
 
     await pickDeparting();
-    expect(screen.getByTestId('status-destination-poi-900', hidden).props.accessibilityState).toEqual({ selected: true });
+    expect(screen.getByTestId('status-destination-none', hidden).props.accessibilityState).toEqual({ selected: true });
   });
 
   it('defaults to nothing for a unit that works no call', async () => {

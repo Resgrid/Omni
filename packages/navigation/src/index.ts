@@ -15,6 +15,7 @@ export {
   type NavigationErrorCode,
   type NavigationLegStop,
   type NavigationRouteMeta,
+  navigationSession,
   type NavigationState,
   type NavigationStatus,
   remainingToLeg,

@@ -118,7 +118,8 @@ export const RoutePlanField: React.FC<RoutePlanFieldProps> = ({ plans, selectedI
   const routes = useCapability('routes');
   const [isOpen, setIsOpen] = useState(false);
   const selected = selectedId ? (plans.find((plan) => plan.RoutePlanId === selectedId) ?? null) : null;
-  const name = selected?.Name || fallbackName?.trim() || (selectedId ? t('calls.route_unknown') : '');
+  // No route picked shows no name: the fallback names only a picked route that `plans` lacks.
+  const name = selectedId ? selected?.Name || fallbackName?.trim() || t('calls.route_unknown') : '';
   const previewPath = selectedId && routes.preview ? routePlansRoutes.preview(selectedId) : null;
 
   return (

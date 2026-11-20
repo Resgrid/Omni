@@ -262,6 +262,26 @@ const SAME_PLACE_DEGREES = 0.00001;
 const samePlace = (a: FormPoint, b: FormPoint): boolean => Math.abs(a.latitude - b.latitude) < SAME_PLACE_DEGREES && Math.abs(a.longitude - b.longitude) < SAME_PLACE_DEGREES;
 
 /**
+ * The call's location as the dispatcher has it (address, point, what3words, plus code, location POI): a lookup's answer
+ * fills it only while this is unchanged (a map pick, a POI or an edit that came first is theirs).
+ */
+export const locationLookupKey = (values: Pick<CallFormValues, 'address' | 'latitude' | 'longitude' | 'what3words' | 'plusCode' | 'locationPoi'>): string =>
+  JSON.stringify([values.address, values.latitude, values.longitude, values.what3words, values.plusCode, values.locationPoi?.poiId ?? null]);
+
+/** The free destination as the dispatcher has it, for the same rule as `locationLookupKey`. */
+export const destinationLookupKey = (
+  values: Pick<CallFormValues, 'destinationKind' | 'destinationPoiId' | 'destinationAddress' | 'destinationLatitude' | 'destinationLongitude' | 'destinationWhat3Words' | 'destinationPlusCode'>
+): string =>
+  JSON.stringify([values.destinationKind, values.destinationPoiId, values.destinationAddress, values.destinationLatitude, values.destinationLongitude, values.destinationWhat3Words, values.destinationPlusCode]);
+
+/** The latitude and longitude fields still give this point: a lookup made for it may fill in what it found. */
+export const fieldsHoldPoint = (latitude: string, longitude: string, point: FormPoint): boolean => {
+  const parsed = parseCoordinateFields(latitude, longitude);
+
+  return parsed.ok && samePlace(parsed, point);
+};
+
+/**
  * Core M0322: the location POI the call keeps — the picked POI while the call's point is still the POI's. Moving the point
  * elsewhere (the map, a lookup, a contact, typing) drops the link; changing only the address keeps it, and a blank point
  * keeps it too (the server fills a blank location from the POI). Null when there is none.
@@ -294,11 +314,14 @@ export function applyLocationPoi(values: CallFormValues, poi: Pick<PoiResultData
   };
 }
 
-/** The free destination's point, or null when its fields do not hold one. */
+/**
+ * The free destination's point, or null when its fields do not hold a usable one. 0,0 is no point: the request leaves it
+ * out (`formatGeolocation`), so it never stands for the destination.
+ */
 export const freeDestinationPoint = (values: Pick<CallFormValues, 'destinationLatitude' | 'destinationLongitude'>): FormPoint | null => {
   const parsed = parseCoordinateFields(values.destinationLatitude, values.destinationLongitude);
 
-  return parsed.ok ? { latitude: parsed.latitude, longitude: parsed.longitude } : null;
+  return parsed.ok && isUsablePoint(parsed.latitude, parsed.longitude) ? { latitude: parsed.latitude, longitude: parsed.longitude } : null;
 };
 
 /** The form holds a free destination: an address, a point or what3words. */
@@ -589,6 +612,11 @@ export function validateCallForm(values: CallFormValues, options: CallFormValida
   if (destinationErrors.latitude) errors.destinationLatitude = destinationErrors.latitude;
 
   if (destinationErrors.longitude) errors.destinationLongitude = destinationErrors.longitude;
+
+  // A destination at 0,0 parses but is no place (0 on one axis is fine).
+  if (!destinationErrors.latitude && !destinationErrors.longitude && parseCoordinateFields(values.destinationLatitude, values.destinationLongitude).ok && freeDestinationPoint(values) === null) {
+    errors.destinationLatitude = 'calls.destination_point_unusable';
+  }
 
   const dispatchOn = pickedDispatchOn(values, options.edit);
   const dispatchTooSoon = !!dispatchOn && !Number.isNaN(Date.parse(dispatchOn)) && isDispatchTimeTooSoon(dispatchOn, options.now);

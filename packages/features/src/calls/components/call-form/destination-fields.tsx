@@ -4,10 +4,20 @@ import { toDestinationOrigin } from '@resgrid/features/pois/lib/poi-availability
 import { useTranslation } from '@resgrid/i18n';
 import { Button, ButtonText, Input, InputField, Pressable, Spinner, Text, useThemeColors, useToast } from '@resgrid/ui';
 import { ChevronDown, MapPin, Search, X } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { type CallFormErrorKey, type CallFormValues, clearDestination, type DestinationKind, hasFreeDestination, parseCoordinates, toDestinationFields, withDestinationPoi } from '../../lib/call-form';
+import {
+  type CallFormErrorKey,
+  type CallFormValues,
+  clearDestination,
+  type DestinationKind,
+  destinationLookupKey,
+  hasFreeDestination,
+  parseCoordinates,
+  toDestinationFields,
+  withDestinationPoi,
+} from '../../lib/call-form';
 import { type GeocodeLookup, isWhat3WordsFormat, lookupAddress, lookupPlusCode, lookupWhat3Words } from '../../lib/call-geocoding';
 import { OptionChips } from '../option-chips';
 
@@ -82,6 +92,12 @@ export const CallDestinationFields: React.FC<CallDestinationFieldsProps> = ({
   const toast = useToast();
   const colors = useThemeColors();
   const [lookup, setLookup] = useState<DestinationLookup | null>(null);
+  // The form's latest values, read when a lookup answers (a clear, an edit or a map pick may have come first).
+  const latestValues = useRef(values);
+
+  useEffect(() => {
+    latestValues.current = values;
+  }, [values]);
   // A POI already on the call shows as one even if the department's list no longer has it.
   const kind: DestinationKind = values.destinationPoiId !== null ? 'poi' : poisAvailable ? values.destinationKind : 'location';
   const requiredError = errors.destinationPoi;
@@ -124,13 +140,17 @@ export const CallDestinationFields: React.FC<CallDestinationFieldsProps> = ({
     }
 
     setLookup(kindOfLookup);
+    const asked = destinationLookupKey(values);
 
     try {
       const result: GeocodeLookup = await (kindOfLookup === 'address' ? lookupAddress(text) : kindOfLookup === 'what3words' ? lookupWhat3Words(text) : lookupPlusCode(text));
       const place = result.place;
 
+      // The dispatcher changed or cleared the destination meanwhile: the answer is for a destination no longer there.
+      if (destinationLookupKey(latestValues.current) !== asked) return;
+
       if (place) {
-        update((current) => ({ ...current, ...toDestinationFields(place.latitude, place.longitude), destinationAddress: place.address || current.destinationAddress }));
+        update((current) => (destinationLookupKey(current) === asked ? { ...current, ...toDestinationFields(place.latitude, place.longitude), destinationAddress: place.address || current.destinationAddress } : current));
         clearErrors(DESTINATION_POINT_ERRORS);
         toast.success(t(messages.found));
       } else {

@@ -1,6 +1,7 @@
 import { useSecurity } from '@resgrid/auth';
 import { getDataApiContext, hasDataApiContext, useMapMarkersStore } from '@resgrid/data';
 import { useDepartmentConfig } from '@resgrid/features/department-config';
+import { DepartmentLayersOverlay } from '@resgrid/features/map/components/department-layers';
 import { useNavigationEtaPins } from '@resgrid/features/navigation-eta';
 import { useTranslation } from '@resgrid/i18n';
 import { Camera, type CameraRef, MapPins, MapProvider, MapView, useFitBounds, useMapProviderContext } from '@resgrid/maps';
@@ -99,12 +100,16 @@ const DepartmentMap: React.FC<{ isEditMode: boolean }> = ({ isEditMode }) => {
         zoomLevel={settings.showAllMarkers ? undefined : settings.zoomLevel}
         animationDuration={0}
       />
+      <DepartmentLayersOverlay idPrefix="dashboard" showLabels={!settings.hideLabels} />
       <MapPins pins={etaPins} canViewPersonnel={canUserViewPII} showLabels={!settings.hideLabels} idPrefix="dashboard-pins" />
     </MapView>
   );
 };
 
-/** The department map: calls, units, stations and personnel pins (as configured), live positions, attribution on. */
+/**
+ * The department map: calls, units, stations and personnel pins (as configured), live positions, the department layers
+ * that are on (imported KML/KMZ/GeoJSON event layers included, as on the Map screen), attribution on.
+ */
 export const MapWidget: React.FC<WidgetProps> = ({ isEditMode, onRemove, onConfigure }) => {
   const title = useWidgetTitle(WidgetTypes.MAP);
   const hasPins = useMapMarkersStore((state) => state.markers.length > 0);

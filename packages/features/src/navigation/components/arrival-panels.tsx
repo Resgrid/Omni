@@ -1,8 +1,8 @@
-import { selectUnitById, useRoutesStore, useUnitsStore } from '@resgrid/data';
+import { selectUnitById, toDataError, useRoutesStore, useUnitsStore } from '@resgrid/data';
 import { ActionBaseTypes, getUnitStatusOptions, UnitStatusSheet } from '@resgrid/features/status';
 import { useTranslation } from '@resgrid/i18n';
 import type { StatusesResultData, UnitTypeStatusResultData } from '@resgrid/models';
-import { isRouteStartLeg, useNavigationStore } from '@resgrid/navigation';
+import { isRouteStartLeg, navigationSession, useNavigationStore } from '@resgrid/navigation';
 import { Button, ButtonText, HStack, Text, useToast, View, VStack } from '@resgrid/ui';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet } from 'react-native';
@@ -121,6 +121,7 @@ interface RouteEndpointPanelProps {
  */
 const RouteStartArrivalPanel: React.FC<RouteEndpointPanelProps> = ({ routeInstanceId, name, onEnd }) => {
   const { t } = useTranslation();
+  const toast = useToast();
   const [countdown, setCountdown] = useState(ROUTE_START_CONTINUE_SECONDS);
   const reachedRef = useRef(false);
 
@@ -128,13 +129,20 @@ const RouteStartArrivalPanel: React.FC<RouteEndpointPanelProps> = ({ routeInstan
     if (reachedRef.current) return;
     reachedRef.current = true;
     const fix = useNavigationStore.getState().lastFix;
-    // Queued through the outbox (offline-safe); a refusal rolls the optimistic `StartReachedOn` back by itself.
-    useRoutesStore
-      .getState()
-      .reachRouteStart(routeInstanceId, fix ? { latitude: fix.latitude, longitude: fix.longitude } : null)
-      .catch(() => undefined);
+
+    // Queued through the outbox (offline-safe); a refusal rolls the optimistic `StartReachedOn` back by itself. A write the
+    // outbox could not even store (signed out, storage failure) is told to the crew: nothing would ever send it.
+    const reach = async () => {
+      try {
+        await useRoutesStore.getState().reachRouteStart(routeInstanceId, fix ? { latitude: fix.latitude, longitude: fix.longitude } : null);
+      } catch (error) {
+        toast.error(t(toDataError(error).messageKey));
+      }
+    };
+
+    void reach();
     useNavigationStore.getState().continueToNextLeg();
-  }, [routeInstanceId]);
+  }, [routeInstanceId, t, toast]);
 
   useEffect(() => {
     const timer = setInterval(() => setCountdown((value) => (value > 0 ? value - 1 : value)), 1000);
@@ -170,6 +178,7 @@ const RouteEndArrivalPanel: React.FC<RouteEndpointPanelProps> = ({ routeInstance
   const [busy, setBusy] = useState(false);
 
   const endRoute = async () => {
+    const session = navigationSession();
     setBusy(true);
     const ended = await useRoutesStore.getState().endRouteInstance(routeInstanceId);
     setBusy(false);
@@ -181,7 +190,9 @@ const RouteEndArrivalPanel: React.FC<RouteEndpointPanelProps> = ({ routeInstance
     }
 
     toast.success(t('navigation.arrival.route_ended'));
-    onEnd();
+
+    // The crew ended the guidance meanwhile (the secondary End), maybe starting another session: that one is not ours to end.
+    if (session === navigationSession()) onEnd();
   };
 
   return (
@@ -207,6 +218,7 @@ interface RouteStopArrivalPanelProps {
  */
 const RouteStopArrivalPanel: React.FC<RouteStopArrivalPanelProps> = ({ unitId, onEnd, onOpenStop }) => {
   const { t } = useTranslation();
+  const toast = useToast();
   const legStop = useNavigationStore((state) => state.meta?.legStops[state.activeLegIndex] ?? null);
   const isLastLeg = useNavigationStore((state) => (state.route ? state.activeLegIndex >= state.route.legs.length - 1 : true));
   const fix = useNavigationStore((state) => state.lastFix);
@@ -252,21 +264,33 @@ const RouteStopArrivalPanel: React.FC<RouteStopArrivalPanelProps> = ({ unitId, o
 
     try {
       await useRoutesStore.getState().checkIn(routeInstanceStopId, fix ? { latitude: fix.latitude, longitude: fix.longitude } : null);
+    } catch (error) {
+      toast.error(t(toDataError(error).messageKey));
     } finally {
       setBusy(false);
     }
   };
 
   const checkOutAndContinue = async () => {
+    const session = navigationSession();
+
     if (routeInstanceStopId) {
       setBusy(true);
 
       try {
         await useRoutesStore.getState().checkOut(routeInstanceStopId, fix ? { latitude: fix.latitude, longitude: fix.longitude } : null);
+      } catch (error) {
+        // Not stored, so never sent: the crew stays at the stop and can try again.
+        toast.error(t(toDataError(error).messageKey));
+
+        return;
       } finally {
         setBusy(false);
       }
     }
+
+    // The crew ended this guidance while the check-out was stored (maybe starting another session): nothing to go on with.
+    if (session !== navigationSession()) return;
 
     // The last stop with no leg after it (a route whose end is its last stop): the guidance is over, so the screen closes.
     if (isLastLeg) onEnd();

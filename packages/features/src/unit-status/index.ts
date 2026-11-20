@@ -13,7 +13,17 @@ import { StatusTimerBanner, type StatusTimerBannerProps } from './components/sta
 import { StatusTimerCard, type StatusTimerCardProps } from './components/status-timer-card';
 import { StatusTimerNotifications } from './components/status-timer-notifications';
 import { type CallRouteRun, type CallRouteState, useCallRoute } from './hooks/use-call-route';
-import { type CallRouteConflict, isRunGoing, onCallRouteLaunchRequested, requestCallRouteLaunch, resetCallRouteLaunchForTests, runOfCall, runScreenPath, useCallRouteLaunchStore } from './lib/call-route-launch';
+import {
+  type CallRouteConflict,
+  isCallRouteLaunching,
+  isRunGoing,
+  onCallRouteLaunchRequested,
+  requestCallRouteLaunch,
+  resetCallRouteLaunchForTests,
+  runOfCall,
+  runScreenPath,
+  useCallRouteLaunchStore,
+} from './lib/call-route-launch';
 import { timerToneColors, unitTimerNotifications, type UnitTimerText, unitTimerText, type UnitTimerTone } from './lib/status-timer-text';
 import { registerUnitStatusCallDetailAction, UnitCallDetailActions } from './register';
 
@@ -54,6 +64,7 @@ export {
   type CallRouteState,
   CallRouteStrip,
   type CallRouteStripProps,
+  isCallRouteLaunching,
   isRunGoing,
   onCallRouteLaunchRequested,
   registerUnitStatusCallDetailAction,

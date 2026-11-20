@@ -172,6 +172,23 @@ describe('call form: suggested destinations', () => {
     expect(screen.queryByTestId('call-form-destination-suggestions-filled')).toBeNull();
   });
 
+  it('keeps a destination picked by hand, even the one it filled in, when a later suggestion differs', async () => {
+    activateVariant('dispatch');
+    await render(<CallFormScreen mode="create" />);
+    await placeCall();
+    await waitFor(() => expect(screen.getByTestId('call-form-destination')).toHaveTextContent('Renown'));
+
+    // The dispatcher picks the filled-in POI again in the picker: it is theirs now.
+    await fireEvent.press(screen.getByTestId('call-form-destination'));
+    await fireEvent.press(screen.getByTestId('call-destination-poi-1', { includeHiddenElements: true }));
+
+    mockFetchSuggested.mockResolvedValue(answer(2));
+    await fireEvent.changeText(screen.getByTestId('call-form-latitude'), '39.2, -119.7');
+    await waitFor(() => expect(mockFetchSuggested).toHaveBeenCalledTimes(2));
+    await act(async () => undefined);
+    expect(screen.getByTestId('call-form-destination')).toHaveTextContent('Renown');
+  });
+
   it('fills again after a switch away and back that only took out its own fill', async () => {
     activateVariant('dispatch');
     await render(<CallFormScreen mode="create" />);

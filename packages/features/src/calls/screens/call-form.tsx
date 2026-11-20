@@ -4,7 +4,7 @@ import { useCapability } from '@resgrid/config';
 import { useCallDetailStore, useCallsStore, usePoisStore, useRoutesStore, useRunCardsStore } from '@resgrid/data';
 import { ProtectedLabel, ProtectedRevealBar } from '@resgrid/features/data-protection';
 import { AiDestinationAdviceCard } from '@resgrid/features/pois/components/ai-destination-advice-card';
-import type { DestinationFillState } from '@resgrid/features/pois/lib/destination-fill';
+import { type DestinationFillState, pickedDestinationByHand } from '@resgrid/features/pois/lib/destination-fill';
 import { useTranslation } from '@resgrid/i18n';
 import { type CallQuickTemplateResultData, type CallRoutePlanResultData, type NewCallFieldKey, NewCallFieldKeys, type PoiResultData, type UdfFieldValueInput } from '@resgrid/models';
 import {
@@ -64,8 +64,10 @@ import {
   createRequestToFormValues,
   effectiveLocationPoi,
   emptyCallFormValues,
+  fieldsHoldPoint,
   freeDestinationPoint,
   hasFreeDestination,
+  locationLookupKey,
   type LocationPoiRef,
   parseCoordinateFields,
   parseCoordinates,
@@ -187,6 +189,12 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
   // "Suggest and fill" for this form's session: kept here, so a pick or clear by hand outlives the destination field
   // (switching the destination kind, or the field hidden and shown again, remounts it).
   const destinationFill = useRef<DestinationFillState | null>(null);
+  // The form's latest values, read when a lookup answers (a pick, a clear or an edit may have come first).
+  const latestValues = useRef(values);
+
+  useEffect(() => {
+    latestValues.current = values;
+  }, [values]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [lookup, setLookup] = useState<LookupKind | null>(null);
   const [open, setOpen] = useState<null | 'dispatch' | 'templates' | 'linked' | 'protocols' | 'contact' | 'location' | 'destination' | 'locationPoi' | 'destinationMap'>(null);
@@ -358,7 +366,12 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
       try {
         const address = await lookupAddressAt(point.latitude, point.longitude);
 
-        if (address) setValues((current) => (current[key].trim() ? current : { ...current, [key]: address }));
+        // The answer is this point's: it fills the address only while the form still holds that point (a point picked
+        // meanwhile has its own lookup) and the address is still blank.
+        const holdsPoint = (current: CallFormValues): boolean =>
+          key === 'address' ? fieldsHoldPoint(current.latitude, current.longitude, point) : fieldsHoldPoint(current.destinationLatitude, current.destinationLongitude, point);
+
+        if (address) setValues((current) => (current[key].trim() || !holdsPoint(current) ? current : { ...current, [key]: address }));
       } catch {
         // The point is kept either way; the address stays as typed.
       } finally {
@@ -441,13 +454,17 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
     }
 
     setLookup(kind);
+    const asked = locationLookupKey(values);
 
     try {
       const result: GeocodeLookup = await (kind === 'address' ? lookupAddress(text) : kind === 'what3words' ? lookupWhat3Words(text) : lookupPlusCode(text));
       const place = result.place;
 
+      // The dispatcher changed the location meanwhile (a map pick, a POI, an edit): the answer is for one no longer there.
+      if (locationLookupKey(latestValues.current) !== asked) return;
+
       if (place) {
-        setValues((current) => ({ ...current, ...toCoordinateFields(place.latitude, place.longitude), address: place.address || current.address }));
+        setValues((current) => (locationLookupKey(current) === asked ? { ...current, ...toCoordinateFields(place.latitude, place.longitude), address: place.address || current.address } : current));
         clearCoordinateErrors();
         setHeldMapPoint(null);
         toast.success(t(messages.found));
@@ -1355,6 +1372,8 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
         origin={location}
         selectedId={values.destinationPoiId}
         onSelect={(poiId) => {
+          // A pick by hand is the dispatcher's, even of the POI "Suggest and fill" put there: the next suggestion keeps it.
+          destinationFill.current = pickedDestinationByHand();
           setValues((current) => withDestinationPoi(current, poiId));
           clearErrors([NewCallFieldKeys.DestinationPoi]);
           setOpen(null);

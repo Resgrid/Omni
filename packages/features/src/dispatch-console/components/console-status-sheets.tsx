@@ -11,6 +11,7 @@ import {
   type StatusSubmitOutcome,
   toRespondingTo,
   useStatusContext,
+  useWorkingCallDispatches,
 } from '@resgrid/features/status';
 import { useTranslation } from '@resgrid/i18n';
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
@@ -64,7 +65,8 @@ export const ConsoleUnitStatusSheet: React.FC<ConsoleUnitStatusSheetProps> = ({ 
   const unitInfos = useUnitsStore((state) => state.unitInfos);
   const statusSets = useUnitsStore((state) => state.unitTypeStatuses);
   const { lists, isLoading } = useDestinationLists(isOpen);
-  const callDispatches = useCallsStore((state) => state.callDispatches);
+  // One unit: the dispatches of every call it may go to, the last way to tell which call it works.
+  const callDispatches = useWorkingCallDispatches(lists.calls, isOpen && !defaultCallId && unitIds.length === 1);
   // The units a partly refused submit saved, by what it sent (status, destination, note): they are not sent it twice.
   const savedRef = useRef<{ key: string; unitIds: ReadonlySet<string> } | null>(null);
   const unitIdsKey = unitIds.join(',');

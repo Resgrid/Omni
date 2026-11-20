@@ -21,11 +21,19 @@ const EMPTY_ACTIVE: ActiveLayerResultData[] = [];
 const EMPTY_LAYERS: MapLayerDetailsSource[] = [];
 
 /**
+ * A map left open (a wall board, the dispatch console) re-reads the on-by-default list this often, so a layer imported
+ * — or an event that starts — while it is open shows without a reload. That list is a light summary with no geometry;
+ * the full list (every layer's shapes) is still read only when a map opens.
+ */
+export const ACTIVE_LAYERS_REFRESH_MS = 5 * 60 * 1000;
+
+/**
  * Department map layers / geofences drawn as GeoJSON. The list is every layer from `Mapping/GetMayLayers` (with its
  * description, event dates and contact; the shapes it carries are dropped by the store) plus the on-by-default ones from
  * `Mapping/GetAllActiveLayers`, so the map works before, or without, the full list. A layer starts as the department set
  * it (`IsOnByDefault`, which Core turns on while a layer's event runs) until the member toggles it; GeoJSON is fetched
- * (`GetMapLayerGeoJSON/{id}`) only for layers that are on. Custom-map region layers (`LayerSource` "custommaplayer")
+ * (`GetMapLayerGeoJSON/{id}`) only for layers that are on; the on-by-default list is re-read every
+ * `ACTIVE_LAYERS_REFRESH_MS` while the map stays open. Custom-map region layers (`LayerSource` "custommaplayer")
  * are left to the custom maps screens: the store has no region-GeoJSON slice yet.
  */
 export function useDepartmentLayers(enabled: boolean): { layers: DepartmentMapLayer[]; toggleLayer: (layerId: string) => void } {
@@ -39,6 +47,9 @@ export function useDepartmentLayers(enabled: boolean): { layers: DepartmentMapLa
     const store = useCustomMapsStore.getState();
     void store.fetchActiveLayers();
     void store.fetchMapLayers();
+    const timer = setInterval(() => void useCustomMapsStore.getState().fetchActiveLayers({ bypassCache: true }), ACTIVE_LAYERS_REFRESH_MS);
+
+    return () => clearInterval(timer);
   }, [enabled]);
 
   const merged = useMemo(() => mergeDepartmentLayers(activeLayers, mapLayers), [activeLayers, mapLayers]);

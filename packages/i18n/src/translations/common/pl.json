@@ -545,6 +545,7 @@
     "longitude_placeholder": "np. -119.758773",
     "latitude_invalid": "Podaj szerokość geograficzną w stopniach dziesiętnych, od -90 do 90",
     "longitude_invalid": "Podaj długość geograficzną w stopniach dziesiętnych, od -180 do 180",
+    "destination_point_unusable": "0, 0 nie jest użytecznym punktem celu. Podaj szerokość i długość geograficzną celu",
     "coordinates_incomplete": "Podaj szerokość i długość geograficzną",
     "place_on_map": "Place on map",
     "destination_poi_select": "Select a destination",

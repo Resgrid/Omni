@@ -32,14 +32,16 @@ export interface PoiAvailabilityBadgeProps {
   capabilityId?: string | null;
   /** Shows "Open" too (POI detail); lists show nothing for an open destination. */
   showOpen?: boolean;
+  /** The time availability is judged at (a screen's availability clock); now when not given. */
+  now?: number;
   testID?: string;
 }
 
 /** A destination's availability (Limited / Diversion / Closed) as a pill, and a chosen capability that is down. */
-export const PoiAvailabilityBadge: React.FC<PoiAvailabilityBadgeProps> = ({ poi, capabilityId = null, showOpen = false, testID }) => {
+export const PoiAvailabilityBadge: React.FC<PoiAvailabilityBadgeProps> = ({ poi, capabilityId = null, showOpen = false, now, testID }) => {
   const { t } = useTranslation();
-  const status = poiAvailabilityStatus(poi);
-  const capabilityDown = isPoiCapabilityUnavailable(poi, capabilityId);
+  const status = poiAvailabilityStatus(poi, now);
+  const capabilityDown = isPoiCapabilityUnavailable(poi, capabilityId, now);
 
   if (status === PoiAvailabilityStatuses.Open && !showOpen) return null;
 

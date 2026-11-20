@@ -5125,7 +5125,6 @@
   "packages/realtime/src/__tests__/fakes/signalr.ts": {
     "anti-slop/no-runtime-typeof": 1,
     "anti-slop/no-unknown-returns": 1,
-    "anti-slop/require-readable-spacing": 18,
     "anti-slop/require-safety-comment-for-type-assertion": 3
   },
   "packages/realtime/src/__tests__/helpers/realtime-test-env.ts": {
@@ -5145,9 +5144,6 @@
   },
   "packages/realtime/src/__tests__/refetch.test.ts": {
     "anti-slop/require-readable-spacing": 11
-  },
-  "packages/realtime/src/__tests__/signalr-service.test.ts": {
-    "anti-slop/require-readable-spacing": 4
   },
   "packages/realtime/src/__tests__/watchdog.test.ts": {
     "anti-slop/require-readable-spacing": 2
@@ -5214,8 +5210,7 @@
   },
   "packages/realtime/src/signalr-service.ts": {
     "anti-slop/no-runtime-typeof": 1,
-    "anti-slop/no-unknown-returns": 1,
-    "anti-slop/require-readable-spacing": 55
+    "anti-slop/no-unknown-returns": 1
   },
   "packages/realtime/src/watchdog.ts": {
     "anti-slop/require-readable-spacing": 4

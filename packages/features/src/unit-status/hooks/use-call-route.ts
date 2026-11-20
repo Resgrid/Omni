@@ -6,7 +6,7 @@ import { isStopDone } from '@resgrid/features/unit-routes/lib/route-status';
 import type { CallResultData } from '@resgrid/models';
 import { useMemo } from 'react';
 
-import { runOfCall, useCallRouteLaunchStore } from '../lib/call-route-launch';
+import { isCallRouteLaunching, runOfCall, useCallRouteLaunchStore } from '../lib/call-route-launch';
 
 /** The unit's run of the call's route that is still going. */
 export interface CallRouteRun {
@@ -42,7 +42,7 @@ export function useCallRoute(call: Pick<CallResultData, 'CallId' | 'State' | 'Ro
   const activeInstance = useRoutesStore((state) => state.activeInstance);
   const instanceStops = useRoutesStore((state) => state.instanceStops);
   const extraData = useCallDetailStore((state) => (callId ? state.details[callId]?.extraData : undefined));
-  const isLaunching = useCallRouteLaunchStore((state) => !!callId && state.launchingCallId === callId);
+  const isLaunching = useCallRouteLaunchStore((state) => isCallRouteLaunching(state, callId));
 
   return useMemo<CallRouteState>(() => {
     const planId = callRoutePlanId(call);

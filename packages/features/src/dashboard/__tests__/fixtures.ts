@@ -1,8 +1,9 @@
 import { securityStore } from '@resgrid/auth';
-import { useCallsStore, useMapMarkersStore, useMessagesStore, useNotesStore, usePersonnelStore, useUnitsStore, useUnitStatusAlertsStore, useWeatherAlertsStore } from '@resgrid/data';
+import { useCallsStore, useCustomMapsStore, useMapMarkersStore, useMessagesStore, useNotesStore, usePersonnelStore, useUnitsStore, useUnitStatusAlertsStore, useWeatherAlertsStore } from '@resgrid/data';
 import { useDepartmentConfigStore } from '@resgrid/features/department-config';
 import type { DepartmentRightsResultData, GetConfigResultData } from '@resgrid/models';
 
+import { useMapViewStore } from '../../map/hooks/use-map-view-store';
 import { useDashboardStore } from '../hooks/use-dashboard-store';
 import { useDashboardViewStore } from '../hooks/use-dashboard-view-store';
 import { useWidgetSettingsStore } from '../hooks/use-widget-settings-store';
@@ -28,6 +29,9 @@ export function stubDataStores() {
     clear: jest.fn(async () => ({ ok: true as const })),
     fetchRecipients: noop(),
     fetchMarkers: noop(),
+    fetchActiveLayers: noop(),
+    fetchMapLayers: noop(),
+    fetchLayerGeoJSON: jest.fn(async () => null),
     loadConfig: noop(),
   };
   useCallsStore.setState({
@@ -60,6 +64,15 @@ export function stubDataStores() {
   useUnitStatusAlertsStore.setState({ acknowledgements: {}, loading: {}, errors: {}, fetchAcknowledgements: mocks.fetchAcknowledgements, acknowledge: mocks.acknowledge, clear: mocks.clear });
   useMessagesStore.setState({ recipients: [], fetchRecipients: mocks.fetchRecipients });
   useMapMarkersStore.setState({ markers: [], centerLatitude: null, centerLongitude: null, loading: {}, errors: {}, fetchedAt: {}, fetchMarkers: mocks.fetchMarkers });
+  useCustomMapsStore.setState({
+    activeLayers: [],
+    mapLayers: [],
+    layerGeoJSON: {},
+    fetchActiveLayers: mocks.fetchActiveLayers,
+    fetchMapLayers: mocks.fetchMapLayers,
+    fetchLayerGeoJSON: mocks.fetchLayerGeoJSON,
+  });
+  useMapViewStore.getState().reset();
   useDepartmentConfigStore.setState({ config: null, isLoading: false, hasError: false, load: mocks.loadConfig });
   useDashboardStore.setState({ widgets: [] });
   useDashboardViewStore.setState({ isEditMode: false, showAddMenu: false });

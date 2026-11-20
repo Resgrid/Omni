@@ -545,6 +545,7 @@
     "longitude_placeholder": "π.χ. -119.758773",
     "latitude_invalid": "Εισαγάγετε γεωγραφικό πλάτος σε δεκαδικές μοίρες, από -90 έως 90",
     "longitude_invalid": "Εισαγάγετε γεωγραφικό μήκος σε δεκαδικές μοίρες, από -180 έως 180",
+    "destination_point_unusable": "Το 0, 0 δεν είναι χρησιμοποιήσιμο σημείο προορισμού. Εισαγάγετε το γεωγραφικό πλάτος και μήκος του προορισμού",
     "coordinates_incomplete": "Εισαγάγετε γεωγραφικό πλάτος και μήκος",
     "place_on_map": "Place on map",
     "destination_poi_select": "Select a destination",

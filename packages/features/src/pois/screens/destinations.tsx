@@ -12,6 +12,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { CapabilitySummaryRow, DestinationAvailabilityRow, DestinationRuleCard } from '../components/destination-board-parts';
 import { CapabilityFilterChips, DestinationFilterChip } from '../components/destination-parts';
 import { PoiAvailabilitySheet } from '../components/poi-availability-sheet';
+import { useAvailabilityClock } from '../hooks/use-availability-clock';
 import {
   type CapabilitySummary,
   countAvailability,
@@ -68,10 +69,13 @@ export default function DestinationsScreen({ initialTab = 'availability' }: Dest
     setIsRefreshing(false);
   }, []);
 
-  const counts = useMemo(() => countAvailability(destinations), [destinations]);
-  const visible = useMemo(() => filterDestinations(destinations, filter), [destinations, filter]);
+  // One clock for the rows, the counts, the filter and the tab badge: it moves on when a report lapses, so all of them show
+  // that destination open again together, without a reload.
+  const now = useAvailabilityClock(destinations);
+  const counts = useMemo(() => countAvailability(destinations, now), [destinations, now]);
+  const visible = useMemo(() => filterDestinations(destinations, filter, now), [destinations, filter, now]);
   const typeOptions = useMemo(() => destinationTypeOptions(destinations), [destinations]);
-  const capabilitySummaries = useMemo(() => summarizeCapabilities(capabilities, destinations), [capabilities, destinations]);
+  const capabilitySummaries = useMemo(() => summarizeCapabilities(capabilities, destinations, now), [capabilities, destinations, now]);
   const capabilityOptions = useMemo(() => capabilitySummaries.filter((summary) => summary.offeredBy > 0), [capabilitySummaries]);
   const notOpen = counts.total - counts.open;
 
@@ -157,7 +161,7 @@ export default function DestinationsScreen({ initialTab = 'availability' }: Dest
         <FlatList
           data={visible}
           keyExtractor={(poi) => String(poi.PoiId)}
-          renderItem={({ item }) => <DestinationAvailabilityRow poi={item} timeZone={timeZone} onOpen={openPoi} onSetAvailability={destinationAvailability ? setEditing : undefined} />}
+          renderItem={({ item }) => <DestinationAvailabilityRow poi={item} timeZone={timeZone} now={now} onOpen={openPoi} onSetAvailability={destinationAvailability ? setEditing : undefined} />}
           refreshControl={refreshControl}
           contentContainerStyle={{ paddingBottom: 96 }}
           testID="destinations-list"

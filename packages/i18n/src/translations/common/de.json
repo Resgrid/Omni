@@ -545,6 +545,7 @@
     "longitude_placeholder": "z. B. -119.758773",
     "latitude_invalid": "Geben Sie einen Breitengrad in Dezimalgrad zwischen -90 und 90 ein",
     "longitude_invalid": "Geben Sie einen Längengrad in Dezimalgrad zwischen -180 und 180 ein",
+    "destination_point_unusable": "0, 0 ist kein verwendbarer Zielpunkt. Geben Sie Breiten- und Längengrad des Ziels ein",
     "coordinates_incomplete": "Geben Sie Breiten- und Längengrad ein",
     "place_on_map": "Place on map",
     "destination_poi_select": "Select a destination",

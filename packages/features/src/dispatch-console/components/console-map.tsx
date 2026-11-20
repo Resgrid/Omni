@@ -1,5 +1,6 @@
 import { useSecurity } from '@resgrid/auth';
 import { useMapMarkersStore } from '@resgrid/data';
+import { DepartmentLayersOverlay } from '@resgrid/features/map/components/department-layers';
 import { TRAFFIC_SURFACES, useTrafficPreference } from '@resgrid/features/map/hooks/use-traffic-preference';
 import { useNavigationEtaPins } from '@resgrid/features/navigation-eta';
 import { useTranslation } from '@resgrid/i18n';
@@ -22,7 +23,8 @@ const DEFAULT_ZOOM = 11;
 /**
  * The console's live map (MapLibre through @resgrid/maps): the department's pins (calls, units, personnel by the rights
  * DTO's CanViewPII, stations, POIs) from the persisted map-markers store, centred on the department or the filtered
- * call, with live traffic (on unless the dispatcher turned it off on this device; hidden when the server has none).
+ * call, with live traffic (on unless the dispatcher turned it off on this device; hidden when the server has none) and the
+ * department layers that are on (imported KML/KMZ/GeoJSON event layers included, as on the Map screen).
  * Style, attribution and offline packs come from the app's MapProvider; without a configured style it says so.
  */
 export const ConsoleMap: React.FC<ConsoleMapProps> = ({ focus = null, onPinPress, selectedPinId = null }) => {
@@ -57,6 +59,7 @@ export const ConsoleMap: React.FC<ConsoleMapProps> = ({ focus = null, onPinPress
       <MapView style={styles.map} compassEnabled testID="console-map">
         <Camera defaultSettings={camera} centerCoordinate={camera.centerCoordinate} zoomLevel={camera.zoomLevel} animationMode="flyTo" animationDuration={600} />
         <TrafficLayer visible={isTrafficOn} idPrefix="console-traffic" />
+        <DepartmentLayersOverlay idPrefix="console" />
         <MapPins pins={pins} onPinPress={onPinPress} selectedPinId={selectedPinId} canViewPersonnel={canUserViewPII} idPrefix="console-pins" />
       </MapView>
       <MapTrafficButton isOn={isTrafficOn} side="left" bottomOffset={12} onPress={toggleTraffic} testID="console-map-traffic-button" />

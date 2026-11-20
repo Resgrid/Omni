@@ -545,6 +545,7 @@
     "longitude_placeholder": "مثال: -119.758773",
     "latitude_invalid": "أدخل خط عرض بالدرجات العشرية بين -90 و 90",
     "longitude_invalid": "أدخل خط طول بالدرجات العشرية بين -180 و 180",
+    "destination_point_unusable": "النقطة 0، 0 ليست نقطة وجهة صالحة. أدخل خط العرض وخط الطول للوجهة",
     "coordinates_incomplete": "أدخل خط العرض وخط الطول معًا",
     "place_on_map": "Place on map",
     "destination_poi_select": "Select a destination",

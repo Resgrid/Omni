@@ -15,7 +15,7 @@ import {
   SignalRService,
 } from '../signalr-service';
 import { Platform } from './fakes/react-native';
-import { fakeSignalR, HttpTransportType, HubConnectionState, LogLevel } from './fakes/signalr';
+import { fakeSignalR, HttpError, HttpTransportType, HubConnectionState, LogLevel } from './fakes/signalr';
 import { createTestConnectivity, flush } from './helpers/realtime-test-env';
 
 const EVENTING = 'eventingHub';
@@ -49,6 +49,7 @@ const createAuth = (token: string | null = 'token-1'): MutableAuth => {
     },
     isAccessTokenExpired: () => auth.expired,
   };
+
   return auth;
 };
 
@@ -246,6 +247,79 @@ describe('SignalRService', () => {
 
       expect(auth.refreshCalls).toBe(1);
       expect(fakeSignalR.latest(GEO).tokensSeen).toEqual(['token-4']);
+    });
+
+    // SignalR's automatic reconnect swallows each failed try and, once its schedule (~47 s) runs out, closes without an
+    // error: a refused token used to be retried for all of it, and refreshed only on the rebuild loop's second attempt.
+    it('refreshes on the automatic reconnect’s next try once a try is refused with 401 (and not after a 500)', async () => {
+      await service.connectToHubWithEventingUrl(config(EVENTING));
+      const connection = fakeSignalR.latest(EVENTING);
+      auth.refreshed = 'token-2';
+      fakeSignalR.negotiateBehaviors.push(new HttpError('Internal Server Error', 500), new HttpError('Unauthorized', 401));
+      connection.simulateReconnecting(new Error('transport lost'));
+
+      expect(await connection.simulateReconnectAttempt()).toBe(false);
+      expect(await connection.simulateReconnectAttempt()).toBe(false);
+      expect(auth.refreshCalls).toBe(0);
+
+      expect(await connection.simulateReconnectAttempt()).toBe(true);
+      expect(auth.refreshCalls).toBe(1);
+      expect(connection.tokensSeen).toEqual(['token-1', 'token-1', 'token-1', 'token-2']);
+      expect(fakeSignalR.forHub(EVENTING)).toHaveLength(1);
+    });
+
+    it('gives a hub that refuses the new token too no more refreshes until it connects again', async () => {
+      await service.connectToHubWithEventingUrl(config(EVENTING));
+      const connection = fakeSignalR.latest(EVENTING);
+      auth.refreshed = 'token-2';
+
+      for (let i = 0; i < 4; i += 1) fakeSignalR.negotiateBehaviors.push(new HttpError('Unauthorized', 401));
+      connection.simulateReconnecting(new Error('transport lost'));
+
+      for (let i = 0; i < 4; i += 1) await connection.simulateReconnectAttempt();
+
+      expect(auth.refreshCalls).toBe(1);
+      expect(connection.tokensSeen).toEqual(['token-1', 'token-1', 'token-2', 'token-2', 'token-2']);
+
+      // Connected again: a later refusal is worth a refresh again.
+      expect(await connection.simulateReconnectAttempt()).toBe(true);
+      auth.refreshed = 'token-3';
+      fakeSignalR.negotiateBehaviors.push(new HttpError('Unauthorized', 401));
+      connection.simulateReconnecting(new Error('transport lost'));
+      await connection.simulateReconnectAttempt();
+
+      expect(await connection.simulateReconnectAttempt()).toBe(true);
+      expect(auth.refreshCalls).toBe(2);
+    });
+
+    it('refreshes once when two hubs refused the same token', async () => {
+      await service.connectToHubWithEventingUrl(config(EVENTING));
+      await service.connectToHubWithEventingUrl(config(GEO));
+      const eventing = fakeSignalR.latest(EVENTING);
+      const geo = fakeSignalR.latest(GEO);
+      auth.refreshed = 'token-2';
+      fakeSignalR.negotiateBehaviors.push(new HttpError('Unauthorized', 401), new HttpError('Unauthorized', 401));
+      eventing.simulateReconnecting(new Error('transport lost'));
+      geo.simulateReconnecting(new Error('transport lost'));
+      await eventing.simulateReconnectAttempt();
+      await geo.simulateReconnectAttempt();
+
+      expect(await eventing.simulateReconnectAttempt()).toBe(true);
+      expect(await geo.simulateReconnectAttempt()).toBe(true);
+      expect(auth.refreshCalls).toBe(1);
+      expect(geo.tokensSeen).toEqual(['token-1', 'token-1', 'token-2']);
+    });
+
+    it('refreshes an expired token before an automatic-reconnect try instead of sending it', async () => {
+      await service.connectToHubWithEventingUrl(config(EVENTING));
+      const connection = fakeSignalR.latest(EVENTING);
+      auth.expired = true;
+      auth.refreshed = 'token-2';
+      connection.simulateReconnecting(new Error('transport lost'));
+
+      expect(await connection.simulateReconnectAttempt()).toBe(true);
+      expect(auth.refreshCalls).toBe(1);
+      expect(connection.tokensSeen).toEqual(['token-1', 'token-2']);
     });
 
     it('recognises a 401 from the status code, the negotiation message or any transport attempt, and nothing else', () => {
@@ -488,6 +562,7 @@ describe('SignalRService', () => {
       const failing = jest.fn(() => {
         throw new Error('listener bug');
       });
+
       const healthy = jest.fn();
       service.on('callsUpdated', failing);
       service.on('callsUpdated', healthy);
@@ -513,6 +588,7 @@ describe('SignalRService', () => {
       const records: LogRecord[] = [];
       logger.setMinLevel('debug');
       const removeListener = addLogListener((record) => records.push(record));
+
       try {
         await service.connectToHubWithEventingUrl(config(EVENTING));
         const connection = fakeSignalR.latest(EVENTING);
@@ -522,6 +598,7 @@ describe('SignalRService', () => {
         removeListener();
         logger.setMinLevel('warn');
       }
+
       const text = JSON.stringify(records);
       expect(text).not.toContain('onUnitLocationUpdated');
       expect(text).not.toContain('39.1234');

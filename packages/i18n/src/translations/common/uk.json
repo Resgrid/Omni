@@ -545,6 +545,7 @@
     "longitude_placeholder": "напр. -119.758773",
     "latitude_invalid": "Введіть широту в десяткових градусах, від -90 до 90",
     "longitude_invalid": "Введіть довготу в десяткових градусах, від -180 до 180",
+    "destination_point_unusable": "0, 0 не є придатною точкою призначення. Введіть широту й довготу місця призначення",
     "coordinates_incomplete": "Введіть широту й довготу",
     "place_on_map": "Place on map",
     "destination_poi_select": "Select a destination",

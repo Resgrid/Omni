@@ -155,6 +155,12 @@ const resetRuntime = (): void => {
   runtime.lastFix = null;
 };
 
+/**
+ * The current guidance session: it changes whenever a session starts or stops. Work that awaits (ending a route) compares it
+ * afterwards so a late answer cannot end a session that replaced the one it was started for.
+ */
+export const navigationSession = (): number => runtime.generation;
+
 const IDLE: Omit<NavigationState, 'start' | 'handleFix' | 'reroute' | 'continueToNextLeg' | 'resumeAfterArrival' | 'stop' | 'setMuted' | 'muted'> = {
   status: 'idle',
   destination: null,
@@ -342,7 +348,7 @@ export const useNavigationStore = create<NavigationState>()((set, get) => {
       try {
         result = await fetchRoute(destination, from);
       } catch (error) {
-        s.log('warn', 'Navigation route request failed', error);
+        s.log('warn', 'Navigation route request failed', error, { operation: 'start', destinationKind: destination.kind });
         // Core answers a bare HTTP 404 for a call (or route) that is gone, not visible to this user, or has no usable location.
         const code: NavigationErrorCode = isApiError(error) && error.kind === 'http' && error.status === 404 ? 'no-destination' : 'failed';
 
@@ -440,6 +446,8 @@ export const useNavigationStore = create<NavigationState>()((set, get) => {
       if (!state.destination || !from || state.rerouting) return false;
       const s = services();
       const generation = runtime.generation;
+      // What the request asked for: a route asked with the start leg must not land after the start was reached.
+      const startReachedAtRequest = runtime.startReached;
       const now = s.now();
       const counted = state.offRoute.offRoute;
       set({ rerouting: true, lastRerouteAt: now, rerouteCount: counted ? state.rerouteCount + 1 : state.rerouteCount });
@@ -448,10 +456,18 @@ export const useNavigationStore = create<NavigationState>()((set, get) => {
       try {
         result = await fetchRoute(state.destination, from);
       } catch (error) {
-        s.log('warn', 'Navigation reroute failed; following the last route', error);
+        s.log('warn', 'Navigation reroute failed; following the last route', error, { operation: 'reroute', destinationKind: state.destination.kind });
       }
 
       if (generation !== runtime.generation) return false;
+
+      // The crew reached the start while this was in flight: the answer may still lead there, so guidance stays on the
+      // current route (already past the start) and the next reroute asks without the start leg.
+      if (startReachedAtRequest !== runtime.startReached) {
+        set({ rerouting: false });
+
+        return false;
+      }
 
       if (!isNavigable(result)) {
         set({ rerouting: false, usingLastRoute: true });

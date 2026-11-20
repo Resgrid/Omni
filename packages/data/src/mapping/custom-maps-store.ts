@@ -7,7 +7,7 @@ import { unwrapItem, unwrapList } from '../core/envelope';
 import { dataPersistOptions, registerPersistedStore } from '../core/persist';
 import { registerDataStoreReset } from '../core/reset';
 import { getDataApiContext } from '../core/runtime';
-import { createSliceRunner, emptySliceMeta, type FetchOptions, isSliceFresh, type SliceMeta, type SliceRunner } from '../core/slices';
+import { cacheOptions, createSliceRunner, emptySliceMeta, type FetchOptions, isSliceFresh, type SliceMeta, type SliceRunner } from '../core/slices';
 
 type MapsSlice = 'activeLayers' | 'mapLayers' | 'layerGeoJSON' | 'indoorMaps' | 'indoorMap' | 'floor' | 'zones' | 'customMaps' | 'customMap' | 'search';
 
@@ -87,10 +87,10 @@ export const useCustomMapsStore = create<CustomMapsState>()(
       return {
         ...initialData(),
 
-        fetchActiveLayers: async () => {
+        fetchActiveLayers: async (options) => {
           await runner.run(
             'activeLayers',
-            async () => unwrapList(await getAllActiveLayers(getDataApiContext())),
+            async () => unwrapList(await getAllActiveLayers(getDataApiContext(), cacheOptions(options))),
             (activeLayers) => ({ activeLayers })
           );
         },

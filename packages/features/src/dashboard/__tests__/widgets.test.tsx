@@ -1,7 +1,7 @@
 import './test-setup';
 
 import { useNetInfo } from '@react-native-community/netinfo';
-import { useCallsStore, useMapMarkersStore, useNotesStore, usePersonnelStore, useUnitsStore, useWeatherAlertsStore } from '@resgrid/data';
+import { useCallsStore, useCustomMapsStore, useMapMarkersStore, useNotesStore, usePersonnelStore, useUnitsStore, useWeatherAlertsStore } from '@resgrid/data';
 import type { CallPriorityResultData, CallResultData, MapMakerInfoData, NoteResultData, PersonnelInfoResultData, StatusesResultData, UnitInfoResultData, WeatherAlertResultData } from '@resgrid/models';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { router } from 'expo-router';
@@ -284,5 +284,29 @@ describe('MapWidget', () => {
     expect(mocks.fetchMarkers).toHaveBeenCalled();
     // No app-level MapProvider: the widget provides one from the department config.
     expect(screen.getByTestId('mock-map-provider')).toBeTruthy();
+  });
+
+  it('draws the department layers that are on, an imported event layer included, with labels as configured', async () => {
+    const waterPoints = { type: 'FeatureCollection', features: [{ type: 'Feature', geometry: { type: 'Point', coordinates: [3.7, 51.05] }, properties: { name: 'Water point' } }] };
+    useCustomMapsStore.setState({
+      activeLayers: [{ Id: 'E1', Name: 'City marathon', LayerSource: 'maplayer', Type: 0, Color: '#ff8800', IsSearchable: false, IsOnByDefault: true }],
+      layerGeoJSON: { E1: waterPoints, L2: waterPoints },
+    });
+    await render(<MapWidget {...props} />);
+    expect(screen.getByTestId('mock-dashboard-layer-E1')).toHaveTextContent('labels');
+    expect(screen.queryByTestId('mock-dashboard-layer-L2')).toBeNull();
+    expect(screen.getByTestId('mock-dashboard-offline-layers')).toBeTruthy();
+    expect(mocks.fetchActiveLayers).toHaveBeenCalled();
+    expect(mocks.fetchMapLayers).toHaveBeenCalled();
+  });
+
+  it('hides layer labels with the pin labels', async () => {
+    useCustomMapsStore.setState({
+      activeLayers: [{ Id: 'E1', Name: 'City marathon', LayerSource: 'maplayer', Type: 0, Color: '#ff8800', IsSearchable: false, IsOnByDefault: true }],
+      layerGeoJSON: { E1: { type: 'FeatureCollection', features: [{ type: 'Feature', geometry: { type: 'Point', coordinates: [3.7, 51.05] }, properties: {} }] } },
+    });
+    useWidgetSettingsStore.getState().updateSettings('map', { hideLabels: true });
+    await render(<MapWidget {...props} />);
+    expect(screen.getByTestId('mock-dashboard-layer-E1')).toHaveTextContent('no-labels');
   });
 });

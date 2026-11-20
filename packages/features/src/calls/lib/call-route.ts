@@ -1,3 +1,4 @@
+import { parseUtcMs } from '@resgrid/core/utils/dates';
 import { RouteInstanceStatus } from '@resgrid/data';
 import { formatDistance, formatDuration } from '@resgrid/features/unit-routes/lib/route-format';
 import type { CallExtraDataResultData, CallResultData, CallRouteInstanceResultData, CallRoutePlanResultData, RouteEndpointData } from '@resgrid/models';
@@ -36,12 +37,32 @@ export const callRouteInstancesOf = (extraData: Pick<CallExtraDataResultData, 'R
 /** A route run that is still going (in progress or paused). */
 export const isCallRouteRunning = (run: Pick<CallRouteInstanceResultData, 'Status'>): boolean => RUNNING_STATUSES.includes(run.Status);
 
+/**
+ * The run started last: by `ActualStartOn` (the server sends `RouteInstances` in no stated order). A run that never started
+ * counts as older than any that did; between runs with the same start (or none) the later in the list wins.
+ */
+const latestRun = (runs: readonly CallRouteInstanceResultData[]): CallRouteInstanceResultData | null => {
+  let latest: CallRouteInstanceResultData | null = null;
+  let latestStart = -Infinity;
+
+  for (const run of runs) {
+    const start = parseUtcMs(run.ActualStartOn) ?? -Infinity;
+
+    if (latest === null || start >= latestStart) {
+      latest = run;
+      latestStart = start;
+    }
+  }
+
+  return latest;
+};
+
 /** The unit's run of the call's route: the one still going, else its latest; null when the unit has not started it. */
 export const callRouteInstanceForUnit = (extraData: Pick<CallExtraDataResultData, 'RouteInstances'> | null | undefined, unitId: number | string | null | undefined): CallRouteInstanceResultData | null => {
   if (unitId === null || unitId === undefined || String(unitId) === '') return null;
   const runs = callRouteInstancesOf(extraData).filter((run) => String(run.UnitId) === String(unitId));
 
-  return runs.find(isCallRouteRunning) ?? runs[runs.length - 1] ?? null;
+  return runs.find(isCallRouteRunning) ?? latestRun(runs);
 };
 
 /** The translate function the route wording takes (the one `formatDuration` takes). */

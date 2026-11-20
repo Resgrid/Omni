@@ -10,7 +10,7 @@ import React from 'react';
 import { Text } from 'react-native';
 
 import dispatchManifest from '../../../../../apps/omni/variants/dispatch/variant.json';
-import { detailStop, instance, plan, planDetail } from '../../unit-routes/__tests__/fixtures';
+import { detailStop, directions, instance, plan, planDetail } from '../../unit-routes/__tests__/fixtures';
 import { type RouteMapSlotProps, UnitRoutesMapProvider } from '../../unit-routes/map-slot';
 import { DepartmentRoutePlans } from '../components/department-route-plans';
 import { RunningRoutes } from '../components/running-routes';
@@ -162,5 +162,15 @@ describe('RouteInstanceViewScreen', () => {
     jest.mocked(router.canGoBack).mockReturnValueOnce(false);
     await fireEvent.press(screen.getByTestId('back-button'));
     expect(router.replace).toHaveBeenCalledWith('/route-plans');
+  });
+
+  it('draws the stored directions’ line when the plan’s own geometry is empty', async () => {
+    jest.mocked(useLocalSearchParams).mockReturnValue({ id: 'ri-1' });
+    useRoutesStore.setState({
+      instanceDetailsById: { 'ri-1': { progress: { Instance: instance('ri-1'), TotalStops: 1, CompletedStops: 0, SkippedStops: 0, PendingStops: 1, Stops: [] }, stops: [detailStop('a', 1)] } },
+      planPreviewsById: { p1: { plan: planDetail('p1', { MapboxRouteGeometry: '' }), directions: directions() } },
+    });
+    await wrap(<RouteInstanceViewScreen />);
+    expect(mapCalls[mapCalls.length - 1].line?.type).toBe('LineString');
   });
 });

@@ -89,12 +89,17 @@ describe('the call a unit is working (status on its behalf)', () => {
   it('takes the server’s ActiveCallId, else the status’s call, else the one open dispatch', () => {
     expect(resolveUnitWorkingCall(calls, { UnitId: '5', Name: 'Medic 5', ActiveCallId: '41' }, null)?.CallId).toBe('41');
     expect(resolveUnitWorkingCall(calls, { UnitId: '5', Name: 'Medic 5', ActiveCallId: null }, { DestinationId: '42', DestinationType: 2 })?.CallId).toBe('42');
-    expect(resolveUnitWorkingCall(calls, { UnitId: '5', Name: 'Medic 5' }, null, { '40': [unitRow('5')], '41': [unitRow('6')] })?.CallId).toBe('40');
+    expect(resolveUnitWorkingCall(calls, { UnitId: '5', Name: 'Medic 5' }, null, { '40': [unitRow('5')], '41': [unitRow('6')], '42': [] })?.CallId).toBe('40');
+  });
+
+  it('does not take a single dispatch for the working call while another open call’s dispatches are not loaded', () => {
+    expect(resolveUnitWorkingCall(calls, { UnitId: '5', Name: 'Medic 5' }, null, { '40': [unitRow('5')], '41': [unitRow('6')] })).toBeNull();
+    expect(resolveUnitWorkingCall(calls, { UnitId: '5', Name: 'Medic 5' }, null)).toBeNull();
   });
 
   it('names no call when none is open or the unit is on several', () => {
     expect(resolveUnitWorkingCall(calls, { UnitId: '5', Name: 'Medic 5', ActiveCallId: '99' }, null)).toBeNull();
-    expect(resolveUnitWorkingCall(calls, { UnitId: '5', Name: 'Medic 5' }, null, { '40': [unitRow('5')], '41': [unitRow('5')] })).toBeNull();
+    expect(resolveUnitWorkingCall(calls, { UnitId: '5', Name: 'Medic 5' }, null, { '40': [unitRow('5')], '41': [unitRow('5')], '42': [] })).toBeNull();
     expect(resolveUnitWorkingCall(calls, null, null)).toBeNull();
   });
 });
@@ -181,7 +186,27 @@ describe('UnitStatusSheet on behalf (Dispatch, unit detail)', () => {
       saveUnitStatus,
     });
     useUnitRolesStore.setState({ assignmentsByUnit: { u5: [] } });
-    useCallsStore.setState({ callDispatches: {} });
+    useCallsStore.setState({ callDispatches: {}, fetchCallDispatches });
+  });
+
+  const fetchCallDispatches = jest.fn(async () => undefined);
+
+  it('reads the dispatches of every call it may go to, and uses the unit’s reported destination until its status is read', async () => {
+    fetchCallDispatches.mockClear();
+    useUnitsStore.setState({
+      // SAFETY: unit rows with only the fields the sheet reads.
+      unitInfos: [{ UnitId: 'u5', Name: 'Medic 5', ActiveCallId: null, CurrentStatusId: '', CurrentDestinationId: '40', CurrentDestinationType: 2 } as UnitInfoResultData],
+    });
+    await render(
+      <StatusProvider activeCallId="39">
+        <UnitStatusSheet isOpen onClose={jest.fn()} unitId="u5" isOnBehalf />
+      </StatusProvider>
+    );
+    expect(fetchCallDispatches).toHaveBeenCalledWith(['39', '40']);
+
+    await fireEvent.press(screen.getByTestId('status-option-20', q));
+    await fireEvent.press(screen.getByTestId('unit-status-sheet-next', q));
+    expect(screen.getByTestId('status-destination-poi-900', q).props.accessibilityState).toEqual({ selected: true });
   });
 
   it("defaults to the call the unit is working, so a transport status pre-selects that call's hospital for the dispatcher", async () => {
@@ -244,5 +269,45 @@ describe('UnitStatusSheet for the crew', () => {
 
     await rerender(<Sheet isOpen={false} />);
     expect(heard).toEqual(['8']);
+  });
+
+  it('takes no hold for a submit that resumes after the sheet closed, so later changes still reach listeners', async () => {
+    const { acquireLocationFix } = jest.requireMock<{ acquireLocationFix: jest.Mock }>('@resgrid/location');
+    let giveFix: (() => void) | undefined;
+    acquireLocationFix.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          giveFix = () => resolve({ outcome: 'acquired', location: { coords: { latitude: 51.05, longitude: 3.72 } } });
+        })
+    );
+    // SAFETY: a status set with only the fields the sheet reads.
+    useUnitsStore.setState({
+      unitTypeStatuses: [
+        { UnitType: 'Engine', StatusId: '5', Statuses: [{ Id: 31, Text: 'Responding', BaseType: ActionBaseTypes.Responding, Detail: 3, Note: 0, Gps: true, BColor: '#000' }] },
+      ] as UnitTypeStatusResultData[],
+    });
+    const heard: string[] = [];
+    onActiveCallChanged((callId) => heard.push(callId));
+
+    const Sheet = ({ isOpen }: { isOpen: boolean }) => (
+      <StatusProvider activeUnitId="u1" activeCallId="7" onActiveCallChange={jest.fn()}>
+        <UnitStatusSheet isOpen={isOpen} onClose={jest.fn()} />
+      </StatusProvider>
+    );
+
+    const { rerender } = await render(<Sheet isOpen />);
+    await fireEvent.press(screen.getByTestId('status-option-31', q));
+    await fireEvent.press(screen.getByTestId('unit-status-sheet-next', q));
+    await fireEvent.press(screen.getByTestId('status-destination-call-8', q));
+    await fireEvent.press(screen.getByTestId('unit-status-sheet-submit', q));
+    await waitFor(() => expect(acquireLocationFix).toHaveBeenCalled());
+
+    await rerender(<Sheet isOpen={false} />);
+    await act(async () => giveFix?.());
+    await waitFor(() => expect(saveUnitStatus).toHaveBeenCalledWith(expect.objectContaining({ respondingTo: '8' })));
+    expect(heard).toEqual(['8']);
+
+    await act(async () => announceActiveCallChange('9'));
+    expect(heard).toEqual(['8', '9']);
   });
 });

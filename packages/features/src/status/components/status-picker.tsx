@@ -7,7 +7,7 @@ import { adviceRecommendedPoiId } from '@resgrid/features/pois/lib/ai-destinatio
 import { configuredDestinationSuggestionMode } from '@resgrid/features/pois/lib/destination-suggestion-mode';
 import { availabilityLabelKey, type DestinationOrigin, poiAvailabilityStatus, requiredCapabilitiesDown, requiredCapabilitiesMissing, toDestinationOrigin } from '@resgrid/features/pois/lib/poi-availability';
 import { useTranslation } from '@resgrid/i18n';
-import { type CallResultData, CustomStateDetailTypes, DestinationSuggestionModes, PoiAvailabilityStatuses } from '@resgrid/models';
+import { type CallResultData, CustomStateDetailTypes, DestinationSuggestionModes, PoiAvailabilityStatuses, type PoiResultData } from '@resgrid/models';
 import { Button, ButtonText, CustomBottomSheet, getBottomSheetHeight, HStack, Pressable, ScrollView, Spinner, Text, Textarea, TextareaInput, useThemeColors, useToast, VStack } from '@resgrid/ui';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, useWindowDimensions } from 'react-native';
@@ -197,6 +197,9 @@ export const StatusPicker: React.FC<StatusPickerProps> = ({
   // a default (a hold that saves without the list never goes to a destination the crew did not see).
   const [hasShownPois, setHasShownPois] = useState(false);
   const [suggestionWaitExpired, setSuggestionWaitExpired] = useState(false);
+  // The suggestion as it stood when the crew went on from the destination step: an answer landing later never changes
+  // what they reviewed. Null while they are on (or have not reached) that step.
+  const [settledSuggestion, setSettledSuggestion] = useState<{ poi: PoiResultData | null } | null>(null);
   const [destinationTab, setDestinationTab] = useState<DestinationTab>('call');
   const [note, setNote] = useState('');
   const [showAll, setShowAll] = useState(false);
@@ -219,6 +222,7 @@ export const StatusPicker: React.FC<StatusPickerProps> = ({
     setHasExplicitChoice(false);
     setHasShownPois(false);
     setSuggestionWaitExpired(false);
+    setSettledSuggestion(null);
     setNote('');
     setShowAll(false);
     setHoldPending(isOpen && initialStatusId != null && initialHoldConfirmed);
@@ -258,9 +262,16 @@ export const StatusPicker: React.FC<StatusPickerProps> = ({
   // A config that could not be loaded reads as off here: Set Status never waits on a setting it cannot read.
   const suggestionMode = configuredDestinationSuggestionMode(config) ?? DestinationSuggestionModes.Off;
   const suggestionsOn = suggestionMode === DestinationSuggestionModes.Suggest || suggestionMode === DestinationSuggestionModes.SuggestAndFill;
+  // Core M0322: a transport status of a call whose destination is a free location stays on the call until the crew picks a
+  // POI (a hospital the unit reported, or one assigned on the call, still wins as below).
+  const keepsCallFreeDestination = isTransportStatus && !!defaultCall && callFreeDestination(defaultCall) !== null;
+
   // "Suggest and fill" pre-selects the suggestion for a transport status or one whose own Detail is POIs only, never for
-  // a status that offers POIs only by the lenient rule (a unit returning to quarters is not sent to a hospital).
-  const mayPreselectSuggestion = suggestionMode === DestinationSuggestionModes.SuggestAndFill && (isTransportStatus || (detail === CustomStateDetailTypes.Pois && subject === 'unit' && !fixedCall));
+  // a status that offers POIs only by the lenient rule (a unit returning to quarters is not sent to a hospital), nor over
+  // a call's free destination.
+  const mayPreselectSuggestion =
+    suggestionMode === DestinationSuggestionModes.SuggestAndFill && ((isTransportStatus && !keepsCallFreeDestination) || (detail === CustomStateDetailTypes.Pois && subject === 'unit' && !fixedCall));
+
   const callOrigin = useMemo(() => toDestinationOrigin(defaultCall?.Latitude, defaultCall?.Longitude), [defaultCall?.Latitude, defaultCall?.Longitude]);
   const suggestionOrigin = destinationOrigin ?? callOrigin;
 
@@ -295,7 +306,8 @@ export const StatusPicker: React.FC<StatusPickerProps> = ({
 
   const reportedOrAssignedPoi = currentTransportPoi ?? assignedPoi;
   // The rules' suggestion comes after the hospital the unit reported and the call's assigned one, until the crew picks one.
-  const suggestedDefaultPoi = mayPreselectSuggestion && hasShownPois && !hasExplicitChoice ? suggestedPoi : null;
+  const liveSuggestedDefaultPoi = mayPreselectSuggestion && hasShownPois && !hasExplicitChoice ? suggestedPoi : null;
+  const suggestedDefaultPoi = settledSuggestion ? settledSuggestion.poi : liveSuggestedDefaultPoi;
   const defaultPoi = reportedOrAssignedPoi ?? suggestedDefaultPoi;
   // A hold saves without showing the list only for a POI the crew already knows (reported or assigned), never a suggestion.
   const hasDefaultPoi = !!reportedOrAssignedPoi && offersPois;
@@ -455,6 +467,7 @@ export const StatusPicker: React.FC<StatusPickerProps> = ({
     setHasExplicitChoice(false);
     setHasShownPois(false);
     setSuggestionWaitExpired(false);
+    setSettledSuggestion(null);
     setError(null);
   }, []);
 
@@ -490,13 +503,20 @@ export const StatusPicker: React.FC<StatusPickerProps> = ({
   const handleNext = useCallback(() => {
     if (!canProceed) return;
 
-    if (!isLastStep) setStep(steps[stepIndex + 1]);
-    else if (isStaffingTab) submitStaffing();
+    if (!isLastStep) {
+      // Leaving the destination step settles the automatic default the crew saw there.
+      if (currentStep === 'destination') setSettledSuggestion({ poi: liveSuggestedDefaultPoi });
+      setStep(steps[stepIndex + 1]);
+    } else if (isStaffingTab) submitStaffing();
     else submitStatus();
-  }, [canProceed, isLastStep, isStaffingTab, stepIndex, steps, submitStaffing, submitStatus]);
+  }, [canProceed, currentStep, isLastStep, isStaffingTab, liveSuggestedDefaultPoi, stepIndex, steps, submitStaffing, submitStatus]);
 
   const handleBack = useCallback(() => {
-    if (stepIndex > 0) setStep(steps[stepIndex - 1]);
+    if (stepIndex <= 0) return;
+
+    // Back on the destination step, the suggestion is live again (the crew sees it there).
+    if (steps[stepIndex - 1] === 'destination') setSettledSuggestion(null);
+    setStep(steps[stepIndex - 1]);
   }, [stepIndex, steps]);
 
   const title =

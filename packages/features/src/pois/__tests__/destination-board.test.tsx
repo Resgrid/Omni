@@ -2,7 +2,7 @@ import '../../status/__tests__/test-setup';
 
 import { usePoisStore } from '@resgrid/data';
 import { type DestinationRuleResultData, type DestinationRulesResultData, DestinationSuggestionModes, PoiAvailabilityStatuses, type PoiResultData } from '@resgrid/models';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import React from 'react';
 
 import { activateVariant } from '../../calls/__tests__/test-utils';
@@ -170,6 +170,30 @@ describe('Destinations screen', () => {
 
     expect(screen.queryByTestId('destination-row-1', q)).toBeNull();
     expect(screen.getByTestId('destination-row-3', q)).toBeTruthy();
+  });
+
+  it('shows a report that lapses while the board is open as open, in the row, the counts and the tab badge together', async () => {
+    jest.useFakeTimers();
+
+    try {
+      activateVariant('dispatch');
+      const lapsesAt = new Date(Date.now() + 60_000).toISOString();
+      const closing = poi(4, 'Jan Yperman', { ...ED, AvailabilityStatus: PoiAvailabilityStatuses.Closed, AvailabilityExpiresOnUtc: lapsesAt });
+      usePoisStore.setState({ destinationPois: [OPEN_ED, closing] });
+
+      await render(<DestinationsScreen />);
+      expect(screen.getByTestId('destination-row-4-availability', q)).toHaveTextContent('pois.availability.closed');
+      expect(screen.getByTestId('destinations-counts', q)).toHaveTextContent('pois.destinations.counts:1,0,0,1');
+
+      await act(async () => {
+        jest.advanceTimersByTime(61_000);
+      });
+      expect(screen.getByTestId('destination-row-4-availability', q)).toHaveTextContent('pois.availability.open');
+      expect(screen.getByTestId('destinations-counts', q)).toHaveTextContent('pois.destinations.counts:2,0,0,0');
+      expect(screen.getByTestId('destinations-status-not-open', q)).toHaveTextContent('pois.destinations.filter_not_open:0');
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('opens the availability sheet for a destination', async () => {

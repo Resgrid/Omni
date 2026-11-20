@@ -1,5 +1,5 @@
 import { ApiError, getActiveRouteInstances, getCallRoutePlans, getDirections, getInstanceDirections, getRoutePlan, getRouteProgress, getStopsForInstance, reachRouteStart, startCallRoute } from '@resgrid/api';
-import type { CallRoutePlanResultData, RouteInstanceResultData, RoutePlanDetailResultData } from '@resgrid/models';
+import type { CallRoutePlanResultData, RouteInstanceResultData, RouteInstanceStopResultData, RoutePlanDetailResultData } from '@resgrid/models';
 import { defaultResetRegistry } from '@resgrid/offline';
 
 import { createDataTestRuntime, type DataTestRuntime, flush, httpError, persisted } from '../../__tests__/helpers';
@@ -37,6 +37,25 @@ const instance = (overrides: Partial<RouteInstanceResultData> = {}): RouteInstan
   CallId: 42,
   StartReachedOn: null,
   ...overrides,
+});
+
+const instanceStop = (RouteInstanceStopId: string): RouteInstanceStopResultData => ({
+  RouteInstanceStopId,
+  RouteStopId: `s-${RouteInstanceStopId}`,
+  StopOrder: 1,
+  Status: 0,
+  CheckInOn: null,
+  CheckInType: null,
+  CheckInLatitude: null,
+  CheckInLongitude: null,
+  CheckOutOn: null,
+  CheckOutLatitude: null,
+  CheckOutLongitude: null,
+  DwellSeconds: null,
+  SkipReason: null,
+  Notes: null,
+  EstimatedArrivalOn: null,
+  ActualArrivalDeviation: null,
 });
 
 const endpoint = (Name: string, Latitude: number) => ({ Latitude, Longitude: -119.8, DepartmentGroupId: null, Name });
@@ -178,6 +197,38 @@ describe('routes store: starting a call’s route', () => {
     expect(getStopsForInstance).toHaveBeenCalledWith(expect.anything(), { instanceId: 'ri-1' });
   });
 
+  it('drops the previous run’s stops and progress in the same update that activates a different run', async () => {
+    useRoutesStore.setState({ activeInstance: instance({ RouteInstanceId: 'ri-old' }), instanceStops: [instanceStop('ris-old')], progress: { total: 5, completed: 4, skipped: 0, pending: 1 } });
+    let resolveProgress: (() => void) | undefined;
+    jest.mocked(getRouteProgress).mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveProgress = () => resolve(answer({ Instance: instance(), TotalStops: 2, CompletedStops: 0, SkippedStops: 0, PendingStops: 2, Stops: [] }));
+      })
+    );
+    jest.mocked(startCallRoute).mockResolvedValue(answer(instance()));
+
+    const started = useRoutesStore.getState().startCallRoute(42, 10);
+    await flush();
+    expect(useRoutesStore.getState().activeInstance?.RouteInstanceId).toBe('ri-1');
+    expect(useRoutesStore.getState().instanceStops).toEqual([]);
+    expect(useRoutesStore.getState().progress).toBeNull();
+
+    resolveProgress?.();
+    await started;
+    expect(useRoutesStore.getState().progress).toEqual({ total: 2, completed: 0, skipped: 0, pending: 2 });
+  });
+
+  it('keeps the stops of the run it continues', async () => {
+    const stop = instanceStop('ris-1');
+    useRoutesStore.setState({ activeInstance: instance(), instanceStops: [stop] });
+    jest.mocked(getRouteProgress).mockReturnValueOnce(new Promise(() => undefined));
+    jest.mocked(startCallRoute).mockResolvedValue(answer(instance()));
+
+    void useRoutesStore.getState().startCallRoute(42, 10);
+    await flush();
+    expect(useRoutesStore.getState().instanceStops).toEqual([stop]);
+  });
+
   it('returns the paused run for this call as it is (the crew resumes it)', async () => {
     const paused = instance({ Status: RouteInstanceStatus.Paused });
     jest.mocked(startCallRoute).mockResolvedValue(answer(paused));
@@ -247,5 +298,25 @@ describe('routes store: directions with the route start leg', () => {
     setDataLocationProvider(() => null);
     await useRoutesStore.getState().fetchDirections('ri-1', null, { includeStart: true });
     expect(getInstanceDirections).toHaveBeenLastCalledWith(expect.anything(), { instanceId: 'ri-1' });
+  });
+
+  it('sends a start-leg request while a plain one is in flight, and keeps the newest answer', async () => {
+    const position = { latitude: 39.1, longitude: -104.2 };
+    let resolvePlain: (() => void) | undefined;
+    jest.mocked(getInstanceDirections).mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolvePlain = () => resolve(answer({ Waypoints: [], Geometry: 'plain' }));
+      })
+    );
+    jest.mocked(getInstanceDirections).mockResolvedValueOnce(answer({ Waypoints: [], Geometry: 'with-start' }));
+
+    const plain = useRoutesStore.getState().fetchDirections('ri-1', position);
+    await useRoutesStore.getState().fetchDirections('ri-1', position, { includeStart: true });
+    expect(getInstanceDirections).toHaveBeenCalledTimes(2);
+    expect(getInstanceDirections).toHaveBeenLastCalledWith(expect.anything(), { instanceId: 'ri-1', ...position, includeStart: true });
+
+    resolvePlain?.();
+    await plain;
+    expect(useRoutesStore.getState().directions).toMatchObject({ Geometry: 'with-start' });
   });
 });

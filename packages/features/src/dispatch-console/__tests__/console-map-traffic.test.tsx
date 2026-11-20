@@ -16,6 +16,9 @@ jest.mock('@resgrid/maps', () => {
     MapView: ({ children, testID }: { children?: unknown; testID?: string }) => mockReact.createElement(View, { testID }, children),
     Camera: () => null,
     MapPins: () => null,
+    GeoJsonMapLayer: () => null,
+    OfflineDepartmentLayers: () => null,
+    useMapCapabilities: () => ({ layers: false, customIndoor: false, navigationInApp: false }),
     TrafficLayer: ({ visible, idPrefix }: { visible?: boolean; idPrefix?: string }) => mockReact.createElement(View, { testID: `traffic-${idPrefix}`, accessibilityLabel: visible === false ? 'hidden' : 'visible' }),
     MapTrafficButton: ({ isOn, onPress, testID, side }: { isOn: boolean; onPress: () => void; testID?: string; side?: string }) =>
       mockReact.createElement(Pressable, { onPress, testID, accessibilityHint: side, accessibilityState: { selected: isOn } }),

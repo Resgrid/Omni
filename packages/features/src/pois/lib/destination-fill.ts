@@ -20,6 +20,12 @@ export interface DestinationFillState {
 /** A form opening with a destination already set belongs to the dispatcher. */
 export const initialDestinationFillState = (selectedPoiId: number | null): DestinationFillState => ({ autoFilledId: null, touched: selectedPoiId !== null });
 
+/**
+ * The dispatcher picked a destination by hand (the picker, a suggestion's Use): no more filling on this form, also when the
+ * pick is the POI this filled in (the selection does not change then, so `observeDestinationChange` never sees it).
+ */
+export const pickedDestinationByHand = (): DestinationFillState => ({ autoFilledId: null, touched: true });
+
 /** The form's destination changed: anything other than what this filled in is the dispatcher's own choice. */
 export const observeDestinationChange = (state: DestinationFillState, selectedPoiId: number | null): DestinationFillState => {
   if (selectedPoiId !== null && selectedPoiId === state.autoFilledId) return state;

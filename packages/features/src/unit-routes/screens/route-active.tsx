@@ -20,7 +20,7 @@ import { RunCallLink } from '../components/run-call-link';
 import { SkipStopDialog } from '../components/skip-stop-dialog';
 import { StopCard } from '../components/stop-card';
 import { useStopActions } from '../hooks/use-stop-actions';
-import { isRouteStartPending, routeStartMapStop, routeStartWaypoint } from '../lib/call-run';
+import { isRouteStartPending, isStopMarker, routeStartMapStop, routeStartWaypoint } from '../lib/call-run';
 import { parseRouteGeometry } from '../lib/route-geo';
 import { instanceMapStops, mapBounds, routeColor, stopGeofence } from '../lib/route-map';
 import { currentStop, instanceDeviations, progressPercent, sortStops, type StopActionKind } from '../lib/route-status';
@@ -107,7 +107,13 @@ export default function RouteActiveScreen({ instanceId: instanceIdProp, renderMa
   const plan = plans.find((candidate) => candidate.RoutePlanId === instance?.RoutePlanId) ?? null;
   const planDetail = activePlan && activePlan.RoutePlanId === instance?.RoutePlanId ? activePlan : null;
   const color = routeColor(plan?.RouteColor ?? planDetail?.RouteColor);
-  const line = useMemo(() => parseRouteGeometry(directions?.RouteInstanceId === instanceId ? directions?.Geometry : planDetail?.MapboxRouteGeometry), [directions, instanceId, planDetail?.MapboxRouteGeometry]);
+
+  // The live directions' line, else the plan's stored line (also when the live geometry is empty or unreadable).
+  const line = useMemo(
+    () => parseRouteGeometry(directions?.RouteInstanceId === instanceId ? directions?.Geometry : null) ?? parseRouteGeometry(planDetail?.MapboxRouteGeometry),
+    [directions, instanceId, planDetail?.MapboxRouteGeometry]
+  );
+
   // The start leg's waypoint, while the live directions still lead there.
   const startWaypoint = useMemo(() => (startPending && directions?.RouteInstanceId === instanceId ? routeStartWaypoint(directions?.Waypoints) : null), [directions, instanceId, startPending]);
   const startMarker = useMemo(() => routeStartMapStop(startWaypoint, t('route_plans.map_start_label'), ROUTE_START_COLOR), [startWaypoint, t]);
@@ -149,6 +155,11 @@ export default function RouteActiveScreen({ instanceId: instanceIdProp, renderMa
   };
 
   const back = () => (router.canGoBack() ? router.back() : router.replace(unitRoutesRoutes.list()));
+
+  // The route start marker is not a stop: it has no details to open.
+  const openStop = (stopId: string) => {
+    if (isStopMarker(stopId)) pushRoutePath(router, unitRoutesRoutes.stop(stopId));
+  };
 
   if (!instance) {
     return (
@@ -201,7 +212,7 @@ export default function RouteActiveScreen({ instanceId: instanceIdProp, renderMa
           color={color}
           bounds={mapBounds(mapStops, line, getDataLocationFix())}
           showUserLocation
-          onStopPress={(stopId) => pushRoutePath(router, unitRoutesRoutes.stop(stopId))}
+          onStopPress={openStop}
         />
         <HStack space="sm" className="items-center px-4 pt-3">
           <View className="flex-1 overflow-hidden rounded-full bg-background-200" style={styles.track}>

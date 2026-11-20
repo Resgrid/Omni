@@ -7,7 +7,7 @@ import React, { useEffect, useRef, useState } from 'react';
 
 import { type CapabilityNamer, useCapabilityNames } from '../hooks/use-capability-names';
 import { useSuggestedDestinations } from '../hooks/use-suggested-destinations';
-import { decideDestinationFill, type DestinationFillState, initialDestinationFillState, observeDestinationChange, resumeDestinationFill, withdrawDestinationFill } from '../lib/destination-fill';
+import { decideDestinationFill, type DestinationFillState, initialDestinationFillState, observeDestinationChange, pickedDestinationByHand, resumeDestinationFill, withdrawDestinationFill } from '../lib/destination-fill';
 import { configuredDestinationSuggestionMode } from '../lib/destination-suggestion-mode';
 import { type DestinationOrigin, requiredCapabilitiesDown } from '../lib/poi-availability';
 import { poiLabel } from '../lib/poi-filters';
@@ -111,7 +111,7 @@ export const SuggestedDestinationsPanel: React.FC<SuggestedDestinationsPanelProp
   if (isOff || (!data && !isLoading && !failed)) return null;
 
   const pick = (poi: PoiResultData) => {
-    fill.current = { autoFilledId: null, touched: true };
+    fill.current = pickedDestinationByHand();
     setFilledId(null);
     onSelect(poi.PoiId, poi);
   };

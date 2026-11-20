@@ -189,6 +189,63 @@ describe('call form: destination', () => {
     expect(input).not.toHaveProperty('DestinationGeolocation');
   });
 
+  it('drops a lookup answer for a destination cleared while it was on its way', async () => {
+    let answer: (() => void) | undefined;
+    mockLookupAddress.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          answer = () => resolve({ succeeded: true, place: { latitude: 39.3, longitude: -119.3, address: '5 Oak Ave, Reno' } });
+        })
+    );
+    activateVariant('unit');
+    await render(<CallFormScreen mode="create" />);
+    await fillBasics();
+
+    await fireEvent.changeText(screen.getByTestId('call-form-destination-address'), '5 oak');
+    await act(async () => fireEvent.press(screen.getByTestId('call-form-destination-address-search')));
+    await fireEvent.press(screen.getByTestId('call-form-destination-location-clear'));
+    await act(async () => answer?.());
+
+    expect(screen.getByTestId('call-form-destination-address').props.value).toBe('');
+    expect(screen.getByTestId('call-form-destination-latitude').props.value).toBe('');
+    expect(lastToast()?.message).not.toBe('calls.destination_found');
+  });
+
+  it('fills a picked destination’s blank address only from the lookup for that point', async () => {
+    const points = [
+      { latitude: 39.35, longitude: -119.35 },
+      { latitude: 39.45, longitude: -119.45 },
+    ];
+
+    let picks = 0;
+    registerCallFormHookPoints({
+      LocationPicker: ({ isOpen, onSelect }) => (isOpen ? <Text testID="map-picker" onPress={() => onSelect(points[picks++])} /> : null),
+    });
+    const answers: ((address: string) => void)[] = [];
+    mockLookupAddressAt.mockImplementation(
+      () =>
+        new Promise<string>((resolve) => {
+          answers.push(resolve);
+        })
+    );
+    activateVariant('unit');
+    await render(<CallFormScreen mode="create" />);
+    await fillBasics();
+
+    await fireEvent.press(screen.getByTestId('call-form-destination-pick-on-map'));
+    await act(async () => fireEvent.press(screen.getByTestId('map-picker')));
+    await fireEvent.press(screen.getByTestId('call-form-destination-pick-on-map'));
+    await act(async () => fireEvent.press(screen.getByTestId('map-picker')));
+    expect(answers).toHaveLength(2);
+    expect(screen.getByTestId('call-form-destination-latitude').props.value).toBe('39.45');
+
+    // The first pick's answer lands late: it is not this point's address.
+    await act(async () => answers[0]('1 First St'));
+    expect(screen.getByTestId('call-form-destination-address').props.value).toBe('');
+    await act(async () => answers[1]('2 Second St'));
+    expect(screen.getByTestId('call-form-destination-address').props.value).toBe('2 Second St');
+  });
+
   it('without destination POIs offers the free location, which meets a required destination', async () => {
     mockRules = [{ Key: 'destinationPoi', Visible: true, Required: true }];
     activateVariant('unit');
@@ -216,6 +273,22 @@ describe('call form: destination', () => {
     await submit();
     expect(mockCreateCall).not.toHaveBeenCalled();
     expect(screen.getByTestId('call-form-destination-latitude-error')).toHaveTextContent('calls.latitude_invalid');
+  });
+
+  it('refuses 0,0 as the destination point, which would not reach the server, but takes 0 on one axis', async () => {
+    mockRules = [{ Key: 'destinationPoi', Visible: true, Required: true }];
+    activateVariant('dispatch');
+    await render(<CallFormScreen mode="create" />);
+    await fillBasics();
+    await fireEvent.changeText(screen.getByTestId('call-form-destination-latitude'), '0');
+    await fireEvent.changeText(screen.getByTestId('call-form-destination-longitude'), '0');
+    await submit();
+    expect(mockCreateCall).not.toHaveBeenCalled();
+    expect(screen.getByTestId('call-form-destination-latitude-error')).toHaveTextContent('calls.destination_point_unusable');
+
+    await fireEvent.changeText(screen.getByTestId('call-form-destination-longitude'), '1');
+    await submit();
+    expect(buildNewCallInput(lastCreateRequest())).toMatchObject({ DestinationGeolocation: '0,1' });
   });
 
   it('is left out when the department hides the destination', async () => {

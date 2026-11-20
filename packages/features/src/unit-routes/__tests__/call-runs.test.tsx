@@ -5,7 +5,7 @@ import { RouteStopStatus, useCallsStore, useRoutesStore } from '@resgrid/data';
 import { NavigationHandoffProvider } from '@resgrid/features/contacts';
 import { StatusProvider } from '@resgrid/features/status';
 import { CallResultData } from '@resgrid/models';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import React from 'react';
 import { Text } from 'react-native';
@@ -102,6 +102,14 @@ describe('RouteActiveScreen for a call’s run', () => {
     expect(screen.getByTestId('route-active-start-pending')).toHaveTextContent('unit_routes.route_start_pending:Station 1');
     const active = mapCalls.filter((call) => call.kind === 'active').at(-1);
     expect(active?.stops[0]).toMatchObject({ id: 'route-start', label: 'route_plans.map_start_label', isCurrent: true });
+
+    // The start marker is not a stop: pressing it opens nothing, while an actual stop still opens its details.
+    await act(async () => active?.onStopPress?.('route-start'));
+    expect(router.push).not.toHaveBeenCalled();
+    const stopMarker = active?.stops[1]?.id ?? '';
+    await act(async () => active?.onStopPress?.(stopMarker));
+    expect(router.push).toHaveBeenCalledWith(`/routes/stop/${stopMarker}`);
+    jest.mocked(router.push).mockClear();
 
     await fireEvent.press(screen.getByTestId('route-active-call'));
     expect(router.push).toHaveBeenCalledWith('/call/77');

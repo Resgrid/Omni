@@ -111,6 +111,32 @@ describe('a call route that starts at its station', () => {
     expect(reports[reports.length - 1]).toMatchObject({ routeInstanceStopId: 'is1', state: UnitNavigationState.Rerouted });
   });
 
+  it('drops a reroute asked with the start leg that lands after the start was reached', async () => {
+    await store().start({ kind: 'route', routeInstanceId: 'ri-9', name: null }, { unitId: 7 });
+    const routeBefore = store().route;
+    let answer: ((result: NavigationRouteResult) => void) | undefined;
+    toRouteStops.mockReturnValueOnce(
+      new Promise<NavigationRouteResult>((resolve) => {
+        answer = resolve;
+      })
+    );
+
+    const rerouted = store().reroute(fix(EAST_LEG[2]));
+    expect(toRouteStops).toHaveBeenLastCalledWith(expect.objectContaining({ includeStart: true }));
+    drive(CORNER);
+    store().continueToNextLeg();
+    answer?.(resultFor(buildTwoLegRouteObject(), [START_LEG, STOP_LEG]));
+
+    expect(await rerouted).toBe(false);
+    expect(store()).toMatchObject({ rerouting: false, usingLastRoute: false, activeLegIndex: 1, status: 'navigating' });
+    expect(store().route).toBe(routeBefore);
+
+    // The next reroute asks without the start.
+    toRouteStops.mockResolvedValueOnce(resultFor(buildRouteObject(), [STOP_LEG]));
+    expect(await store().reroute(fix(CORNER))).toBe(true);
+    expect(toRouteStops).toHaveBeenLastCalledWith(expect.objectContaining({ includeStart: false }));
+  });
+
   it('never asks for the start when the run had reached it before the session', async () => {
     toRouteStops.mockResolvedValue(resultFor(buildRouteObject(), [STOP_LEG]));
     await store().start({ kind: 'route', routeInstanceId: 'ri-9', name: null, startReached: true }, { unitId: 7 });

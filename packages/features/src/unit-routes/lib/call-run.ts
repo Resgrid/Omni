@@ -22,8 +22,14 @@ export const isRouteStartPending = (instance: Pick<RouteInstanceResultData, 'Cal
 /** The leading "route start" waypoint of live directions, or null when there is none (start reached, or not a call's run). */
 export const routeStartWaypoint = (waypoints: readonly RouteDirectionWaypointData[] | null | undefined): RouteDirectionWaypointData | null => waypoints?.find((waypoint) => waypoint.IsRouteStart === true) ?? null;
 
+/** The map marker id of the route start: not a stop, so a press on it opens no stop details. */
+export const ROUTE_START_MARKER_ID = 'route-start';
+
+/** True for the press of an actual stop marker (any marker but the route start). */
+export const isStopMarker = (markerId: string): boolean => markerId !== ROUTE_START_MARKER_ID;
+
 /** The route start as its own labelled map marker (drawn before the first stop), or null when it has no position. */
 export const routeStartMapStop = (waypoint: RouteDirectionWaypointData | null, label: string, color: string): RouteMapStop | null =>
   waypoint && isMappable(waypoint.Latitude, waypoint.Longitude)
-    ? { id: 'route-start', order: 0, name: waypoint.Name ?? '', latitude: waypoint.Latitude, longitude: waypoint.Longitude, status: 0, isCurrent: true, color, label }
+    ? { id: ROUTE_START_MARKER_ID, order: 0, name: waypoint.Name ?? '', latitude: waypoint.Latitude, longitude: waypoint.Longitude, status: 0, isCurrent: true, color, label }
     : null;

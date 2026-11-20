@@ -40,6 +40,19 @@ export const availabilityExpiresAt = (poi: Pick<PoiResultData, 'AvailabilityStat
   return expires !== null && expires > now ? expires : null;
 };
 
+/** When the first report among these destinations lapses after `now` (epoch ms); null when none will. */
+export const nextAvailabilityLapse = (pois: readonly Pick<PoiResultData, 'AvailabilityStatus' | 'AvailabilityExpiresOnUtc'>[], now: number): number | null => {
+  let next: number | null = null;
+
+  for (const poi of pois) {
+    const expires = availabilityExpiresAt(poi, now);
+
+    if (expires !== null && (next === null || expires < next)) next = expires;
+  }
+
+  return next;
+};
+
 /** Whole minutes left until `expiresAt` (at least 1), to send a report again without changing when it lapses. */
 export const minutesUntil = (expiresAt: number, now: number = Date.now()): number => Math.max(1, Math.ceil((expiresAt - now) / 60000));
 

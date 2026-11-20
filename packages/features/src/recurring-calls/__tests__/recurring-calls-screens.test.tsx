@@ -414,6 +414,9 @@ describe('RecurringCallFormScreen', () => {
     expect(screen.getByTestId('recurring-call-form-destination-address')).toHaveProp('value', '5 Oak Ave');
     expect(screen.getByTestId('recurring-call-form-destination-location')).toHaveTextContent('recurring_calls.destination_location_set:39.30000,-119.30000');
     expect(screen.getByTestId('recurring-call-form-route')).toHaveTextContent('Old route');
+    // Cleared, the stored route's name no longer shows as picked.
+    await fireEvent.press(screen.getByTestId('recurring-call-form-route-clear'));
+    expect(screen.getByTestId('recurring-call-form-route')).not.toHaveTextContent('Old route');
     expect(screen.getByTestId('recurring-call-form-facility-poi-hint')).toHaveTextContent('recurring_calls.facility_poi_hint');
 
     await fireEvent.press(screen.getByTestId('recurring-call-form-pick-destination-location'));

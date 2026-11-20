@@ -85,4 +85,14 @@ describe('call route', () => {
     expect(callRouteInstanceForUnit(extraData, null)).toBeNull();
     expect(isCallRouteRunning(run('x', 1, RouteInstanceStatus.Cancelled))).toBe(false);
   });
+
+  it('takes the run started last when none is going, whatever order the server lists them in', () => {
+    const newer = { ...run('ri-new', 10, RouteInstanceStatus.Completed), ActualStartOn: '2026-11-19T12:00:00' };
+    const older = { ...run('ri-old', 10, RouteInstanceStatus.Cancelled), ActualStartOn: '2026-11-19T09:00:00Z' };
+    const neverStarted = { ...run('ri-none', 10, RouteInstanceStatus.Cancelled), ActualStartOn: null };
+
+    expect(callRouteInstanceForUnit({ RouteInstances: [newer, older, neverStarted] }, 10)?.RouteInstanceId).toBe('ri-new');
+    expect(callRouteInstanceForUnit({ RouteInstances: [neverStarted, older] }, 10)?.RouteInstanceId).toBe('ri-old');
+    expect(callRouteInstanceForUnit({ RouteInstances: [neverStarted] }, 10)?.RouteInstanceId).toBe('ri-none');
+  });
 });

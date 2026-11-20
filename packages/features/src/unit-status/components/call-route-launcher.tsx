@@ -11,7 +11,7 @@ import { useToast } from '@resgrid/ui';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
-import { type CallRouteConflict, onCallRouteLaunchRequested, runOfCall, runScreenPath, useCallRouteLaunchStore } from '../lib/call-route-launch';
+import { type CallRouteConflict, isCallRouteLaunching, onCallRouteLaunchRequested, runOfCall, runScreenPath, useCallRouteLaunchStore } from '../lib/call-route-launch';
 import { type RouteConflictChoice, RouteConflictDialog } from './route-conflict-dialog';
 
 /** The call from the calls list, else from its loaded detail, else read now; null when it cannot be found. */
@@ -29,7 +29,10 @@ const findCall = async (callId: string): Promise<CallResultData | null> => {
   return useCallDetailStore.getState().details[callId]?.call ?? null;
 };
 
-const setLaunching = (launchingCallId: string | null): void => useCallRouteLaunchStore.setState({ launchingCallId });
+const addLaunching = (callId: string): void => useCallRouteLaunchStore.setState((state) => ({ launchingCallIds: [...state.launchingCallIds, callId] }));
+
+/** Ends this launch's record only: another call's launch keeps showing it is busy. */
+const removeLaunching = (callId: string): void => useCallRouteLaunchStore.setState((state) => ({ launchingCallIds: state.launchingCallIds.filter((id) => id !== callId) }));
 
 const setConflict = (conflict: CallRouteConflict | null): void => useCallRouteLaunchStore.setState({ conflict });
 
@@ -55,6 +58,15 @@ export const CallRouteLauncher: React.FC = () => {
   const [isResolving, setIsResolving] = useState(false);
   const enabled = subject === 'unit' && hasRoutes && !!activeUnitId;
   const inAppNavigation = navigationInApp && inAppAvailable;
+  // The unit chosen now: a launch (or a conflict) for a unit the crew has since changed from is dropped.
+  const unitRef = useRef(activeUnitId);
+
+  useEffect(() => {
+    unitRef.current = activeUnitId;
+    const conflictNow = useCallRouteLaunchStore.getState().conflict;
+
+    if (conflictNow && conflictNow.unitId !== activeUnitId) setConflict(null);
+  }, [activeUnitId]);
 
   // A run that outlived the app (or was started elsewhere) is the unit's active route again.
   useEffect(() => {
@@ -64,9 +76,14 @@ export const CallRouteLauncher: React.FC = () => {
   const showError = useCallback((messageKey: string | null | undefined) => toast.error(t(messageKey ?? 'common.errorOccurred')), [t, toast]);
 
   const openRun = useCallback(
-    async (instance: RouteInstanceResultData) => {
+    async (instance: RouteInstanceResultData, isCurrentUnit: () => boolean) => {
       // A paused run is resumed: the crew asked to drive it. Without the server it stays paused, on its own screen.
-      if (instance.Status === RouteInstanceStatus.Paused && !(await useRoutesStore.getState().resumeRouteInstance(instance.RouteInstanceId))) {
+      const resumed = instance.Status === RouteInstanceStatus.Paused ? await useRoutesStore.getState().resumeRouteInstance(instance.RouteInstanceId) : true;
+
+      // The crew chose another unit while the run resumed: nothing opens over the new unit.
+      if (!isCurrentUnit()) return;
+
+      if (!resumed) {
         showError(useRoutesStore.getState().actionError?.messageKey);
         pushRoutePath(router, unitRoutesRoutes.active(instance.RoutePlanId, instance.RouteInstanceId));
 
@@ -81,40 +98,47 @@ export const CallRouteLauncher: React.FC = () => {
   const launch = useCallback(
     async (callId: string) => {
       // One launch per call at a time: picking the call and tapping its route button together starts it once.
-      if (!enabled || !activeUnitId || useCallRouteLaunchStore.getState().launchingCallId === callId) return;
-      setLaunching(callId);
+      if (!enabled || !activeUnitId || isCallRouteLaunching(useCallRouteLaunchStore.getState(), callId)) return;
+      const unitId = activeUnitId;
+      const isCurrentUnit = (): boolean => unitRef.current === unitId;
+      addLaunching(callId);
 
       try {
         const call = await findCall(callId);
 
-        if (!call || !callHasRoute(call) || !isCallActiveState(call.State)) return;
+        if (!call || !callHasRoute(call) || !isCallActiveState(call.State) || !isCurrentUnit()) return;
         const routes = useRoutesStore.getState();
-        const result = await routes.startCallRoute(callId, activeUnitId);
+        const result = await routes.startCallRoute(callId, unitId);
+
+        // The crew chose another unit meanwhile: this unit's run (started or not) opens nothing over the new unit.
+        if (!isCurrentUnit()) return;
 
         if (result.status === 'started') {
-          await openRun(result.instance);
+          await openRun(result.instance, isCurrentUnit);
 
           return;
         }
 
         if (result.status === 'route_in_progress') {
           // Named by the 409's detail; the unit's active route (read again) gives its name.
-          await useRoutesStore.getState().fetchActiveRoute(activeUnitId, { bypassCache: true });
+          await useRoutesStore.getState().fetchActiveRoute(unitId, { bypassCache: true });
+
+          if (!isCurrentUnit()) return;
           const running = useRoutesStore.getState().activeInstance;
           const existingInstanceId = result.existingInstanceId ?? running?.RouteInstanceId ?? null;
           const existingName = running && running.RouteInstanceId === existingInstanceId ? running.RoutePlanName || null : null;
-          setConflict({ callId, existingInstanceId, existingName });
+          setConflict({ callId, unitId, existingInstanceId, existingName });
 
           return;
         }
 
         // Offline (or refused): a run of this call the device already knows still opens, else the crew hears why.
-        const known = runOfCall(useRoutesStore.getState().activeInstance, callId, activeUnitId);
+        const known = runOfCall(useRoutesStore.getState().activeInstance, callId, unitId);
 
         if (known) pushRoutePath(router, runScreenPath(known, inAppNavigation));
         else showError(result.error.messageKey);
       } finally {
-        setLaunching(null);
+        removeLaunching(callId);
       }
     },
     [activeUnitId, enabled, inAppNavigation, openRun, showError]
@@ -143,7 +167,8 @@ export const CallRouteLauncher: React.FC = () => {
 
       if (!current) return;
 
-      if (choice === 'keep' || !current.existingInstanceId) {
+      // Only the chosen unit's conflict acts: another unit's run is never ended or cancelled from here.
+      if (choice === 'keep' || !current.existingInstanceId || current.unitId !== unitRef.current) {
         setConflict(null);
 
         return;
@@ -161,9 +186,10 @@ export const CallRouteLauncher: React.FC = () => {
       }
 
       setConflict(null);
-      await launch(current.callId);
+
+      if (current.unitId === unitRef.current) await launchRef.current(current.callId);
     },
-    [launch, showError]
+    [showError]
   );
 
   if (!enabled) return null;

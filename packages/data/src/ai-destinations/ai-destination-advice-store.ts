@@ -159,6 +159,8 @@ export const useAiDestinationAdviceStore = create<AiDestinationAdviceState>()((s
       }
 
       if (status === 401 || status === 403) {
+        // As for an answer: an action that landed while this read was out is newer than its refusal.
+        if ((writes.get(key) ?? 0) !== writesAtStart) return get().entries[key] ?? null;
         const entry = UNAVAILABLE(dataNow());
 
         store(key, entry);

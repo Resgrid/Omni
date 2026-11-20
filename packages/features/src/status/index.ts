@@ -1,6 +1,7 @@
 // @resgrid/features/status — the one StatusPicker (unit | personnel, self | on behalf, staffing) and its bindings.
-// The active call announcements and `locationForStatus` are re-exported through one statement: Oxlint's readable spacing
-// wants a blank line between top-level statements, which the export sorter removes.
+// The active call announcements, `locationForStatus` and `useWorkingCallDispatches` are re-exported through one statement:
+// Oxlint's readable spacing wants a blank line between top-level statements, which the export sorter removes.
+import { useWorkingCallDispatches } from './hooks/use-working-call-dispatches';
 import { announceActiveCallChange, deferActiveCallEvents, onActiveCallChanged, resetActiveCallEventsForTests } from './lib/active-call-events';
 import { locationForStatus } from './lib/location-for-status';
 
@@ -22,4 +23,4 @@ export * from './lib/unit-status-set';
 export { statusNav } from './nav';
 export { STATUS_ROUTE_PATTERNS, statusRoutes } from './routes';
 export { type StatusContextValue, StatusProvider, type StatusProviderProps, useStatusContext } from './status-context';
-export { announceActiveCallChange, deferActiveCallEvents, locationForStatus, onActiveCallChanged, resetActiveCallEventsForTests };
+export { announceActiveCallChange, deferActiveCallEvents, locationForStatus, onActiveCallChanged, resetActiveCallEventsForTests, useWorkingCallDispatches };
