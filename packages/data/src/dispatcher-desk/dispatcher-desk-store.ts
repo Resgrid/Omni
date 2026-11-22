@@ -213,6 +213,20 @@ let deskSession: DeskSession = {};
  */
 let presenceRevision = 0;
 
+let deviceQueue: Promise<unknown> = Promise.resolve();
+
+/**
+ * Desk device registrations and removals run one at a time, in the order asked for. The server knows a registration
+ * only by user, platform and token. If the same dispatcher signs out and back in while a registration is still out, the
+ * late removal for the ended session therefore lands before the new session registers that token again, never after.
+ */
+const queueDeviceWork = <T>(work: () => Promise<T>): Promise<T> => {
+  const run = deviceQueue.then(work, work);
+  deviceQueue = run.catch(() => undefined);
+
+  return run;
+};
+
 /** Takes a device off the desk subscriber as a session that has ended (straight to the server, never the signed-in client). */
 const takeOffAsEndedSession = async (request: EndedSessionRequest, device: DispatcherDeviceInput, operation: string): Promise<void> => {
   if (!(await unregisterDispatcherDeskDeviceForEndedSession(request, device))) {
@@ -364,6 +378,45 @@ export const useDispatcherDeskStore = create<DispatcherDeskState>()(
 
       const ctx = () => getDataApiContext();
 
+      /** One registration on the desk subscriber (run in the device queue). */
+      const registerDeskDevice = async (device: DispatcherDeviceInput, session: DeskSession): Promise<boolean> => {
+        const generation = runner.generation();
+        const taken: DispatcherDeviceInput = { Platform: device.Platform, Token: device.Token };
+
+        try {
+          const result = await registerDispatcherDeskDevice(ctx(), device);
+          const accepted = result?.Success === true;
+
+          if (session !== deskSession) {
+            // Signed out while the request was out: sign-out could not take off what had not landed yet. Take it off now
+            // as the session that ended, so the next person on the device never gets this dispatcher's desk pushes. The
+            // device queue holds the next session back until this removal is done.
+            if (accepted && session.signOut) await takeOffAsEndedSession(session.signOut, taken, 'registerDevice');
+
+            return false;
+          }
+
+          if (!accepted) return false;
+          // Recorded even when the desk was switched off meanwhile: sign-out still takes it off.
+          registeredDeskDevice = taken;
+
+          if (generation !== runner.generation()) return false;
+          set({ deskDevice: taken });
+
+          return true;
+        } catch (error) {
+          const dataError = toDataError(error);
+          getDataLogger().warn({
+            message: 'The desk push subscriber did not take this device',
+            context: { operation: 'registerDevice', platform: device.Platform, code: dataError.code, status: dataError.status },
+          });
+
+          if (generation === runner.generation()) markUnsupported(dataError);
+
+          return false;
+        }
+      };
+
       return {
         ...initialData(),
 
@@ -483,67 +536,43 @@ export const useDispatcherDeskStore = create<DispatcherDeskState>()(
         assignToDay: (input) => runAction(deskRosterKey(input.ShiftDayId), 'assignToDay', () => assignDispatcherToDay(ctx(), input)),
         removeFromDay: (input) => runAction(deskRosterKey(input.ShiftDayId), 'removeFromDay', () => removeDispatcherFromDay(ctx(), input)),
 
-        registerDevice: async (device) => {
-          if (get().unsupported || !device.Token) return false;
-          const current = get().deskDevice;
-
-          // Already on the desk subscriber this session.
-          if (current && current.Token === device.Token && current.Platform === device.Platform) return true;
-          const generation = runner.generation();
+        registerDevice: (device) => {
           const session = deskSession;
-          const taken: DispatcherDeviceInput = { Platform: device.Platform, Token: device.Token };
 
-          try {
-            const result = await registerDispatcherDeskDevice(ctx(), device);
-            const accepted = result?.Success === true;
+          return queueDeviceWork(async () => {
+            // Asked for by a session that has ended while earlier device work ran: not this session's to register.
+            if (session !== deskSession || get().unsupported || !device.Token) return false;
+            const current = get().deskDevice;
 
-            if (session !== deskSession) {
-              // Signed out while the request was out: sign-out could not take off what had not landed yet. Take it off now
-              // as the session that ended, so the next person on the device never gets this dispatcher's desk pushes.
-              if (accepted && session.signOut) await takeOffAsEndedSession(session.signOut, taken, 'registerDevice');
+            // Already on the desk subscriber this session.
+            if (current && current.Token === device.Token && current.Platform === device.Platform) return true;
 
-              return false;
-            }
-
-            if (!accepted) return false;
-            // Recorded even when the desk was switched off meanwhile: sign-out still takes it off.
-            registeredDeskDevice = taken;
-
-            if (generation !== runner.generation()) return false;
-            set({ deskDevice: taken });
-
-            return true;
-          } catch (error) {
-            const dataError = toDataError(error);
-            getDataLogger().warn({
-              message: 'The desk push subscriber did not take this device',
-              context: { operation: 'registerDevice', platform: device.Platform, code: dataError.code, status: dataError.status },
-            });
-
-            if (generation === runner.generation()) markUnsupported(dataError);
-
-            return false;
-          }
+            return registerDeskDevice(device, session);
+          });
         },
 
-        unregisterDevice: async () => {
-          const device = get().deskDevice;
+        unregisterDevice: () => {
+          const session = deskSession;
 
-          if (!device) return true;
+          return queueDeviceWork(async () => {
+            const device = get().deskDevice;
 
-          try {
-            const result = await unregisterDispatcherDeskDevice(ctx(), device);
-            const removed = result?.Success === true;
+            if (session !== deskSession || !device) return true;
 
-            // Only what this call took off: a registration that replaced it while the request was out stays recorded.
-            if (removed && registeredDeskDevice === device) registeredDeskDevice = null;
+            try {
+              const result = await unregisterDispatcherDeskDevice(ctx(), device);
+              const removed = result?.Success === true;
 
-            if (removed && get().deskDevice === device) set({ deskDevice: null });
+              // Only what this call took off: a registration that replaced it while the request was out stays recorded.
+              if (removed && registeredDeskDevice === device) registeredDeskDevice = null;
 
-            return removed;
-          } catch {
-            return false;
-          }
+              if (removed && get().deskDevice === device) set({ deskDevice: null });
+
+              return removed;
+            } catch {
+              return false;
+            }
+          });
         },
 
         disable: () => {
@@ -563,7 +592,8 @@ export const useDispatcherDeskStore = create<DispatcherDeskState>()(
 /**
  * Sign-out (the auth sign-out hook, as the ended session): takes this device's token off the desk subscriber so the next
  * person on the device never gets the previous dispatcher's desk pushes. A registration still out keeps the ended
- * session's credentials and takes itself off when it lands. Nothing to do when the desk never took the device.
+ * session's credentials and takes itself off when it lands. Nothing to do when the desk never took the device. The
+ * session ends at once; the removal waits in the device queue for work already out (the hook's own timeout bounds it).
  */
 export const unregisterDispatcherDeskDeviceAtSignOut = async (session: { accessToken: string | null; baseUrl: string }): Promise<void> => {
   const ended = deskSession;
@@ -576,7 +606,7 @@ export const unregisterDispatcherDeskDeviceAtSignOut = async (session: { accessT
   registeredDeskDevice = null;
 
   if (!device || !request) return;
-  await takeOffAsEndedSession(request, device, 'signOut');
+  await queueDeviceWork(() => takeOffAsEndedSession(request, device, 'signOut'));
 };
 
 registerPersistedStore('omni-dispatcher-desk-storage', useDispatcherDeskStore);
@@ -598,4 +628,5 @@ useBadgeCountsStore.getState().setDeskQueue(deskQueueCount(useDispatcherDeskStor
 export const resetDispatcherDeskDeviceForTests = (): void => {
   registeredDeskDevice = null;
   deskSession = {};
+  deviceQueue = Promise.resolve();
 };

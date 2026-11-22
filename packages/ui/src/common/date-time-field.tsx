@@ -39,24 +39,38 @@ export const DateTimeField = ({ value, onChange, label, mode = 'date', disabled 
   const locale = i18n?.language ?? 'en';
   // Another zone's wall clock: the calendar and clock show its reading, and Done turns the reading back into the instant.
   const zone = mode === 'datetime' && timeZone ? timeZone : null;
-  const toPicker = (raw: string): Date => (zone ? toZonedPickerDate(parsePickerValue(raw, mode), zone) : parsePickerValue(raw, mode));
-  const toValue = (picked: Date): string => (zone ? fromZonedPickerDate(picked, zone).toISOString() : serializePickerValue(picked, mode));
+  const toPicker = (raw: string, inZone: string | null): Date => (inZone ? toZonedPickerDate(parsePickerValue(raw, mode), inZone) : parsePickerValue(raw, mode));
   const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState(() => toPicker(value));
+  // The draft is read and written back in the zone it was opened in, even if the zone given changes meanwhile (the
+  // department's arriving): a draft built in one zone and saved in another would move the instant.
+  const [draftZone, setDraftZone] = useState<string | null>(zone);
+  // The draft as opened: Done without a change keeps the stored instant (a repeated fall-back hour reads two ways).
+  const [openedMs, setOpenedMs] = useState<number | null>(null);
+  const [draft, setDraft] = useState(() => toPicker(value, zone));
   const [month, setMonth] = useState(draft.getMonth());
   const [year, setYear] = useState(draft.getFullYear());
   const [view, setView] = useState<'days' | 'months' | 'years'>('days');
   const [yearPage, setYearPage] = useState(year - 11);
-  const selected = toPicker(value);
+  const selected = toPicker(value, zone);
   const display = !value ? label : mode === 'time' ? pickerTime(selected) : mode === 'date' ? selected.toLocaleDateString(locale) : selected.toLocaleString(locale);
   const draftText = mode === 'time' ? pickerTime(draft) : mode === 'date' ? draft.toLocaleDateString(locale, LONG_DATE) : draft.toLocaleString(locale, LONG_DATE_TIME);
-  const today = zone ? toZonedPickerDate(new Date(), zone) : new Date();
+  const calendarZone = open ? draftZone : zone;
+  const today = calendarZone ? toZonedPickerDate(new Date(), calendarZone) : new Date();
   const todayKey = pickerDate(today);
   const FieldIcon = mode === 'time' ? Clock : CalendarDays;
 
+  /** The value Done saves: the stored instant when the reading was not changed, else the reading in the zone it was opened in. */
+  const toValue = (picked: Date): string => {
+    if (!draftZone) return serializePickerValue(picked, mode);
+
+    return value && openedMs === picked.getTime() ? parsePickerValue(value, mode).toISOString() : fromZonedPickerDate(picked, draftZone).toISOString();
+  };
+
   const show = () => {
     if (disabled) return;
-    const next = toPicker(value);
+    const next = toPicker(value, zone);
+    setDraftZone(zone);
+    setOpenedMs(next.getTime());
     setDraft(next);
     setMonth(next.getMonth());
     setYear(next.getFullYear());

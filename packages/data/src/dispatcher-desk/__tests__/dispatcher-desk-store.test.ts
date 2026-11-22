@@ -403,6 +403,8 @@ describe('dispatcher desk store', () => {
       })
     );
     const registering = useDispatcherDeskStore.getState().registerDevice({ Platform: 2, Token: 'late' });
+    await flush();
+    expect(registerDispatcherDeskDevice).toHaveBeenCalledTimes(1);
 
     // Sign-out finds nothing registered yet: the request is still out.
     await unregisterDispatcherDeskDeviceAtSignOut({ accessToken: 'ended', baseUrl: 'https://api.example.com/api/v4' });
@@ -420,7 +422,36 @@ describe('dispatcher desk store', () => {
     expect(unregisterDispatcherDeskDeviceForEndedSession).not.toHaveBeenCalled();
   });
 
-  it('keeps a registration that replaced the one a slow unregister took off', async () => {
+  it('lets the same dispatcher signing back in register the token only after the ended session took its late registration off', async () => {
+    let resolveRequest: (value: DispatcherDeskActionResult) => void = () => undefined;
+    jest.mocked(registerDispatcherDeskDevice).mockReturnValueOnce(
+      new Promise((done) => {
+        resolveRequest = done;
+      })
+    );
+    const late = useDispatcherDeskStore.getState().registerDevice({ Platform: 2, Token: 'same' });
+    await flush();
+    expect(registerDispatcherDeskDevice).toHaveBeenCalledTimes(1);
+
+    await unregisterDispatcherDeskDeviceAtSignOut({ accessToken: 'ended', baseUrl: 'https://api.example.com/api/v4' });
+    await reset('data.dispatcher-desk');
+
+    // Signed back in: the next session asks for the same token while the old request is still out.
+    jest.mocked(registerDispatcherDeskDevice).mockResolvedValueOnce(actionAnswer({}));
+    const next = useDispatcherDeskStore.getState().registerDevice({ Platform: 2, Token: 'same' });
+
+    resolveRequest(actionAnswer({}));
+    await expect(late).resolves.toBe(false);
+    await expect(next).resolves.toBe(true);
+
+    // The ended session's removal reached the server before the new registration was sent.
+    const removedAt = jest.mocked(unregisterDispatcherDeskDeviceForEndedSession).mock.invocationCallOrder[0];
+    const registeredAgainAt = jest.mocked(registerDispatcherDeskDevice).mock.invocationCallOrder[1];
+    expect(removedAt).toBeLessThan(registeredAgainAt);
+    expect(useDispatcherDeskStore.getState().deskDevice).toEqual({ Platform: 2, Token: 'same' });
+  });
+
+  it('registers a new token only after a slow unregister of the old one, and keeps it', async () => {
     jest.mocked(registerDispatcherDeskDevice).mockResolvedValue(actionAnswer({}));
     await useDispatcherDeskStore.getState().registerDevice({ Platform: 2, Token: 'a' });
     let resolveRequest: (value: DispatcherDeskActionResult) => void = () => undefined;
@@ -430,10 +461,16 @@ describe('dispatcher desk store', () => {
       })
     );
     const unregistering = useDispatcherDeskStore.getState().unregisterDevice();
+    const registering = useDispatcherDeskStore.getState().registerDevice({ Platform: 2, Token: 'b' });
 
-    await useDispatcherDeskStore.getState().registerDevice({ Platform: 2, Token: 'b' });
+    // The new token waits for the removal in flight.
+    await flush();
+    expect(registerDispatcherDeskDevice).toHaveBeenCalledTimes(1);
+
     resolveRequest(actionAnswer({}));
     await expect(unregistering).resolves.toBe(true);
+    await expect(registering).resolves.toBe(true);
+    expect(registerDispatcherDeskDevice).toHaveBeenCalledTimes(2);
     expect(useDispatcherDeskStore.getState().deskDevice).toEqual({ Platform: 2, Token: 'b' });
 
     // Sign-out still takes the newer one off.
