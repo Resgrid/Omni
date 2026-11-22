@@ -1,6 +1,7 @@
 // Foreground push modal store, ported from the Responder/Unit push-notification store tests (show/hide, parsing, sound
 // before the modal) and adapted to typed targets.
-import { configureNotificationSounds } from '../notification-sound';
+import { clearAlertSuppressorsForTests, registerAlertSuppressor } from '../alert-suppression';
+import { configureNotificationSounds, notificationSoundService } from '../notification-sound';
 import { parseNotificationData, usePushNotificationModalStore } from '../push-modal-store';
 import { configureForTest, selectVariant } from './helpers';
 import * as audio from './mocks/expo-audio';
@@ -82,6 +83,21 @@ describe('usePushNotificationModalStore', () => {
     });
     await state().showNotificationModal({ eventCode: 't:1' }, { playSound: true });
     expect(state().isOpen).toBe(true);
+  });
+
+  it('holds the modal back when a break starts while its sound plays', async () => {
+    let onBreak = false;
+    registerAlertSuppressor('desk', () => onBreak);
+    jest.spyOn(notificationSoundService, 'playForNotification').mockImplementationOnce(async () => {
+      onBreak = true;
+    });
+
+    try {
+      await state().showNotificationModal({ eventCode: 'C:1' }, { playSound: true });
+      expect(state().isOpen).toBe(false);
+    } finally {
+      clearAlertSuppressorsForTests();
+    }
   });
 
   it('uses the injected chatbot check', async () => {

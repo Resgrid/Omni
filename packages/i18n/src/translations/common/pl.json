@@ -5208,6 +5208,7 @@
       "dispatch_now": "Zadysponuj teraz",
       "due_on": "Termin {{time}}",
       "history": "Historia ({{count}})",
+      "link_saved_call": "Powiąż zapisane zgłoszenie",
       "loading": "Wczytywanie…",
       "not_found": "Tego zadania nie ma już na stanowisku",
       "open_call": "Otwórz zgłoszenie",

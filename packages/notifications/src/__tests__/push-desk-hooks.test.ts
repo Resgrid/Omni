@@ -69,4 +69,16 @@ describe('desk hooks of the native push service', () => {
     onPushTokenRegistered(late);
     expect(late).not.toHaveBeenCalled();
   });
+
+  it('tells the followers again on a check that finds the device already registered, so a failed follower retries', async () => {
+    const heard = jest.fn();
+    onPushTokenRegistered(heard);
+
+    await pushNotificationService.registerForPushNotifications({ requestPermission: true });
+    heard.mockClear();
+
+    // The foreground check: same token, same subject, nothing sent to the server again.
+    await pushNotificationService.registerForPushNotifications({ requestPermission: false });
+    expect(heard).toHaveBeenCalledWith({ token: 'device-token', platform: 2 });
+  });
 });

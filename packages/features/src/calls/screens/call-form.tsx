@@ -3,6 +3,7 @@ import { REDACTION_VALUE, useFeatureFlag } from '@resgrid/auth';
 import { useCapability } from '@resgrid/config';
 import { useCallDetailStore, useCallsStore, usePoisStore, useRoutesStore, useRunCardsStore } from '@resgrid/data';
 import { ProtectedLabel, ProtectedRevealBar } from '@resgrid/features/data-protection';
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { AiDestinationAdviceCard } from '@resgrid/features/pois/components/ai-destination-advice-card';
 import { type DestinationFillState, pickedDestinationByHand } from '@resgrid/features/pois/lib/destination-fill';
 import { useTranslation } from '@resgrid/i18n';
@@ -161,6 +162,7 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
   const router = useRouter();
   const toast = useToast();
   const colors = useThemeColors();
+  const timeZone = useDepartmentTimeZone();
   const calls = useCapability('calls');
   const runCardsFlag = useFeatureFlag('Dispatch.RunCards');
   const runCardPreview = useRunCardsStore((state) => state.recommendation);
@@ -197,6 +199,9 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
   const [values, setValues] = useState<CallFormValues>(() => ({ ...emptyCallFormValues(defaultPriorityId(callPriorities)), ...(mode === 'create' ? prefill : undefined) }));
   // A prefilled name or nature is not the dispatcher's own typing: the department's default priority still applies.
   const prefilledText = useRef({ name: mode === 'create' ? (prefill?.name ?? '') : '', nature: mode === 'create' ? (prefill?.nature ?? '') : '' });
+  // A priority the prefill brought, the dispatcher picked or a template set is kept: a later read of the priorities never
+  // puts the department default back over it.
+  const priorityChosen = useRef(mode === 'create' && prefill?.priority !== undefined && prefill.priority !== null);
   const [errors, setErrors] = useState<Partial<Record<CallFormErrorKey, string>>>({});
   const [missingUdf, setMissingUdf] = useState<string[]>([]);
   // "Suggest and fill" for this form's session: kept here, so a pick or clear by hand outlives the destination field
@@ -258,7 +263,7 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
     } else if (!isEdit && queuedCall) {
       setValues(createRequestToFormValues(queuedCall.request));
       setStartedFrom('source');
-    } else if (startedFrom === 'blank' && callPriorities.length > 0) {
+    } else if (startedFrom === 'blank' && callPriorities.length > 0 && !priorityChosen.current) {
       setValues((current) =>
         (current.name && current.name !== prefilledText.current.name) || (current.nature && current.nature !== prefilledText.current.nature) ? current : { ...current, priority: defaultPriorityId(callPriorities) }
       );
@@ -528,6 +533,7 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
   };
 
   const applyTemplate = (template: CallQuickTemplateResultData) => {
+    if (priorities.some((priority) => priority.id === template.CallPriority)) priorityChosen.current = true;
     setValues((current) =>
       applyCallTemplate(
         current,
@@ -611,6 +617,9 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
 
         if (ok) {
           toast.success(t('calls.queued.resubmitted'));
+          // The corrected call is the one this form created (a desk item links it through this, as after a direct create).
+          const syncedCallId = useCallsStore.getState().syncedCalls[correctingId]?.callId ?? null;
+          onCreated?.({ localId: correctingId, callId: syncedCallId, outcome: syncedCallId ? 'sent' : 'queued' });
           done();
         } else {
           toast.error(t('calls.queued.correction_failed'));
@@ -848,7 +857,10 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
               <OptionChips
                 options={priorities.map((priority) => ({ value: priority.id, label: priority.isLabelKey ? t(priority.label) : priority.label, color: priority.color }))}
                 selected={values.priority === null ? [] : [values.priority]}
-                onToggle={(id) => set('priority', id)}
+                onToggle={(id) => {
+                  priorityChosen.current = true;
+                  set('priority', id);
+                }}
                 accessibilityLabel={t('calls.priority')}
                 testID="call-form-priority"
               />
@@ -1282,6 +1294,8 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
                       label={`${t('calls.dispatch_on')}${isEdit ? '' : req(NewCallFieldKeys.DispatchOn)}`}
                       value={values.dispatchOnUtc}
                       onChange={(value) => set('dispatchOnUtc', value)}
+                      // Picked as department time, the time the scheduled queue and the call show.
+                      timeZone={timeZone}
                       // A scheduled call's time can be moved but not cleared (EditCall cannot remove a schedule).
                       clearable={!isEdit || !initialDispatchOnUtc}
                       testID="call-form-dispatch-on"

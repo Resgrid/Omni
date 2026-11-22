@@ -12,7 +12,9 @@ import { breakTypeLabelKey } from '../lib/desk-format';
 const ROW_HEIGHT = 40;
 const NAME_WIDTH = { phone: 96, tablet: 140 } as const;
 const HOUR_WIDTH = { phone: 64, tablet: 96 } as const;
-const HOUR_LABEL: Intl.DateTimeFormatOptions = { hour: 'numeric' };
+
+// The ticks are whole UTC hours: with minutes the label reads right in a half-hour zone too (05:30, not 5 AM).
+const HOUR_LABEL: Intl.DateTimeFormatOptions = { hour: 'numeric', minute: '2-digit' };
 
 export interface CoverageTimelineViewProps {
   coverage: DispatcherCoverageResultData;

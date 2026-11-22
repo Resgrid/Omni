@@ -10,6 +10,7 @@
     "@gluestack-ui/core": "catalog:",
     "@gluestack-ui/utils": "catalog:",
     "@legendapp/motion": "catalog:",
+    "@resgrid/core": "workspace:*",
     "@resgrid/i18n": "workspace:*",
     "@shopify/flash-list": "catalog:",
     "axios": "catalog:",

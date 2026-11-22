@@ -1,6 +1,6 @@
 import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { parseUtcMs } from '@resgrid/core/utils/dates';
-import { breakDueBackMs, isOnBreak, selectMyOffers, useDispatcherDeskStore } from '@resgrid/data';
+import { activeBreakOf, breakDueBackMs, isOnBreak, selectMyOffers, useDispatcherDeskStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import type { DispatcherBreakData, DispatcherQueueItemData } from '@resgrid/models';
 import { isAlertSuppressed, notificationSoundService, soundForDeskEvent } from '@resgrid/notifications';
@@ -12,6 +12,7 @@ import { breakAlertKey, dueBreakAlerts, escalationKey, findNewEscalations, findN
 import { breakTypeLabelKey, itemTitle, kindLabelKey } from '../lib/desk-format';
 import { openDeskSheet } from '../lib/desk-ui-store';
 import { dispatcherDeskRoutes } from '../routes';
+import { useDeskActions } from './use-desk-actions';
 import { useDispatcherDeskView, useNow } from './use-dispatcher-desk';
 
 /** How often the break alerts are checked while signed in to the desk. */
@@ -28,6 +29,13 @@ export const noteOwnBreakEnd = (): void => {
 };
 
 const deskSoundHeld = (): boolean => isAlertSuppressed({ channel: 'sound', kind: 'deskItem' });
+
+/** Whether this break is the member's running break on the board now. */
+const isRunningBreak = (breakId: string): boolean => {
+  const desk = useDispatcherDeskStore.getState().desk;
+
+  return isOnBreak(desk?.Me) && activeBreakOf(desk?.Me, desk?.MyBreaks ?? [])?.DispatcherBreakId === breakId;
+};
 
 const playDeskSound = (event: Parameters<typeof soundForDeskEvent>[0]): void => void notificationSoundService.play(soundForDeskEvent(event));
 
@@ -57,6 +65,8 @@ export function useDeskAlerts(): DeskAlertsState {
   const unread = useRef<Map<string, number> | null>(null);
   const announcedBreaks = useRef(new Set<string>());
   const wasOnBreak = useRef<{ entry: DispatcherBreakData | null } | null>(null);
+  const breakOverToast = useRef<{ toastId: string; breakId: string } | null>(null);
+  const { run } = useDeskActions();
   const userId = me?.UserId ?? null;
 
   // Offers: the sound once per offer (a re-offer after it went round is a new one).
@@ -113,13 +123,23 @@ export function useDeskAlerts(): DeskAlertsState {
       const type = t(breakTypeLabelKey(alert.breakEntry.BreakType));
 
       if (alert.kind === 'over') {
-        toast.warning(t('dispatcher_desk.alerts.break_over'), t('dispatcher_desk.alerts.break_over_title'), {
+        const breakId = alert.breakEntry.DispatcherBreakId;
+
+        if (breakOverToast.current) toast.dismiss(breakOverToast.current.toastId);
+
+        const toastId = toast.warning(t('dispatcher_desk.alerts.break_over'), t('dispatcher_desk.alerts.break_over_title'), {
           duration: 0,
           onPress: () => {
+            breakOverToast.current = null;
+
+            // Only the break this alert named: a stale toast never ends a later break.
+            if (!isRunningBreak(breakId)) return;
             noteOwnBreakEnd();
-            void useDispatcherDeskStore.getState().endBreak();
+            void run(() => useDispatcherDeskStore.getState().endBreak());
           },
         });
+
+        breakOverToast.current = { toastId, breakId };
         playDeskSound('breakOver');
       } else if (alert.kind === 'due') {
         toast.info(t('dispatcher_desk.alerts.break_due', { type }), t('dispatcher_desk.alerts.break_title'), { onPress: () => openDeskSheet('takeBreak', { plannedBreakId: alert.breakEntry.DispatcherBreakId }) });
@@ -131,7 +151,16 @@ export function useDeskAlerts(): DeskAlertsState {
         playDeskSound('breakReminder');
       }
     }
-  }, [desk, isSignedIn, now, t, toast]);
+  }, [desk, isSignedIn, now, run, t, toast]);
+
+  // The "break over" toast stays up until pressed: it goes once the break it named is no longer running.
+  useEffect(() => {
+    const shown = breakOverToast.current;
+
+    if (!shown || isRunningBreak(shown.breakId)) return;
+    toast.dismiss(shown.toastId);
+    breakOverToast.current = null;
+  }, [desk, toast]);
 
   // The desk ended the member's break for them (auto return, a supervisor): say so.
   useEffect(() => {

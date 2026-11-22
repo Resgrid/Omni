@@ -8,10 +8,9 @@
  * Web and Electron resolve `push-notification.web.ts` instead (same exported surface).
  */
 import notifee, { type AndroidChannel, AndroidImportance, AndroidVisibility, AuthorizationStatus, type Event as NotifeeEvent, EventType } from '@notifee/react-native';
-import { IC_PUSH_SOURCE, type PushSubject, registerPushDevice, unregisterPushToken } from '@resgrid/api';
+import { IC_PUSH_SOURCE, isPushRegistrationAccepted, type PushSubject, registerPushDevice, unregisterPushToken } from '@resgrid/api';
 import { logger, useAppLifecycle } from '@resgrid/core';
 import { translate } from '@resgrid/i18n';
-import type { PushRegistrationResult } from '@resgrid/models';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { useEffect, useRef } from 'react';
@@ -44,8 +43,6 @@ import { createMemoryNotificationsKv, isSameRegistration, isSameSubscriber, type
 export const PUSH_PLATFORM_IOS = 1;
 export const PUSH_PLATFORM_ANDROID = 2;
 
-/** RegisterDevice answers 200 even when it fails; only these statuses mean the server took the registration. */
-const REGISTERED_STATUSES = ['queued', 'success'];
 /** Request identifiers remembered for the cold-start dedupe (one entry per tap). */
 export const HANDLED_RESPONSE_LIMIT = 200;
 /** A stalled sign-out call must not hold sign-out up. */
@@ -104,8 +101,6 @@ const foregroundPresentation = (request: Notifications.NotificationRequest): Not
 
   return isAlertSuppressed({ channel: 'presentation', eventCode: extractPushNotificationData(request).eventCode ?? null }) ? QUIET_FOREGROUND_PRESENTATION : FOREGROUND_PRESENTATION;
 };
-
-const isAccepted = (result: PushRegistrationResult | null | undefined): boolean => REGISTERED_STATUSES.includes((result?.Status ?? '').toLowerCase());
 
 const errorContext = (error: unknown): { errorName: string; errorMessage: string } => ({
   errorName: error instanceof Error ? error.name : 'UnknownError',
@@ -459,6 +454,9 @@ class NativePushNotificationService implements PushNotificationService {
       const apiUrl = deps.getBaseApiUrl();
       const key = [apiUrl, identityKey(identity), token].join('|');
       if (key === this.registeredKey) {
+        // Already registered: the followers hear it again (as on the web), so one whose own registration failed (the
+        // Dispatch desk subscriber) tries again on this check instead of waiting for a new token or a restart.
+        notifyPushTokenRegistered({ token, platform: Platform.OS === 'ios' ? PUSH_PLATFORM_IOS : PUSH_PLATFORM_ANDROID });
         return token;
       }
 
@@ -491,7 +489,7 @@ class NativePushNotificationService implements PushNotificationService {
         return null;
       }
 
-      if (!isAccepted(result)) {
+      if (!isPushRegistrationAccepted(result)) {
         logger.warn({ message: 'Push registration was not accepted by the server', context: { status: result?.Status, subject: identity.kind } });
         return null;
       }

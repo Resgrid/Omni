@@ -5208,6 +5208,7 @@
       "dispatch_now": "Larma ut nu",
       "due_on": "Planerat {{time}}",
       "history": "Historik ({{count}})",
+      "link_saved_call": "Koppla sparat larm",
       "loading": "Läser in…",
       "not_found": "Den här uppgiften finns inte längre på operatörsplatsen",
       "open_call": "Öppna larm",

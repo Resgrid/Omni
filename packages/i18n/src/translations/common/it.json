@@ -5208,6 +5208,7 @@
       "dispatch_now": "Invia ora",
       "due_on": "Prevista {{time}}",
       "history": "Cronologia ({{count}})",
+      "link_saved_call": "Collega chiamata salvata",
       "loading": "Caricamento…",
       "not_found": "Questa attività non è più nella postazione",
       "open_call": "Apri chiamata",

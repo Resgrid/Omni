@@ -5208,6 +5208,7 @@
       "dispatch_now": "Jetzt alarmieren",
       "due_on": "Fällig {{time}}",
       "history": "Verlauf ({{count}})",
+      "link_saved_call": "Gespeicherten Einsatz verknüpfen",
       "loading": "Wird geladen…",
       "not_found": "Dieser Vorgang liegt nicht mehr am Disponentenplatz",
       "open_call": "Einsatz öffnen",

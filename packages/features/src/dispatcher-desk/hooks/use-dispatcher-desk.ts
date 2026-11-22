@@ -1,5 +1,5 @@
 import { useCapability } from '@resgrid/config';
-import { isOnBreak, useDispatcherDeskStore } from '@resgrid/data';
+import { firstOfferExpiryMs, isOnBreak, useDispatcherDeskStore } from '@resgrid/data';
 import type { DispatcherDeskConfigData, DispatcherDeskMemberData, DispatcherDeskResultData, DispatcherQueueItemData } from '@resgrid/models';
 import { onPushTokenRegistered, registerAlertSuppressor } from '@resgrid/notifications';
 import { useRealtimeEvent } from '@resgrid/realtime';
@@ -13,6 +13,9 @@ export const DESK_FOREGROUND_REFRESH_MS = 10000;
 
 /** "Still here" while signed in to the desk and the app is in the foreground (plan §4 Heartbeat). */
 export const DESK_HEARTBEAT_MS = 60000;
+
+/** How long after an offer on the board runs out the board is read again (the server's own expiry pass runs first). */
+export const OFFER_EXPIRY_GRACE_MS = 2000;
 
 /** The desk is a Dispatch module (`capabilities.calls.dispatcherDesk`). Off means no request, no state, no UI. */
 export const useIsDispatcherDeskEnabled = (): boolean => useCapability('calls').dispatcherDesk;
@@ -71,6 +74,20 @@ export function useNow(intervalMs = 1000, enabled = true): number {
 const refreshDesk = (): void => void useDispatcherDeskStore.getState().fetchDesk({ bypassCache: true });
 
 /**
+ * After a gap (a hub rejoin, a return to the foreground) the hub replays nothing: the board and the conversations of the
+ * open items this device read are read again, so a message sent meanwhile shows in its thread.
+ */
+const refreshDeskAfterGap = (): void => {
+  refreshDesk();
+  const { desk, items, fetchItem } = useDispatcherDeskStore.getState();
+  const open = new Set((desk?.Queue ?? []).map((item) => item.DispatcherQueueItemId));
+
+  for (const itemId of Object.keys(items)) {
+    if (open.has(itemId)) void fetchItem(itemId, { bypassCache: true });
+  }
+};
+
+/**
  * Keeps the desk live for the signed-in Dispatch shell (mount once, through `DispatcherDeskHost`): loads the board, reads
  * it again on every `dispatcherDeskUpdated` / `dispatcherQueueUpdated` ping (and the open item on a queue ping for it),
  * after a hub rejoin and when the app comes back to the foreground (throttled); sends the heartbeat every minute while
@@ -82,6 +99,7 @@ export function useDispatcherDeskSync(enabledOverride?: boolean): void {
   const enabled = enabledOverride ?? capability;
   const deskOn = useDispatcherDeskStore((state) => !!state.desk?.Enabled && !!state.desk.IsDispatcher && !state.unsupported);
   const signedIn = useDispatcherDeskStore((state) => !!state.desk?.Me?.IsSignedIn);
+  const offerExpiresAt = useDispatcherDeskStore((state) => firstOfferExpiryMs(state.desk?.Queue ?? NO_ITEMS, state.desk?.Me?.UserId));
   const [isActive, setIsActive] = useState(() => AppState.currentState !== 'background' && AppState.currentState !== 'inactive');
 
   useEffect(() => {
@@ -130,11 +148,20 @@ export function useDispatcherDeskSync(enabledOverride?: boolean): void {
   useRealtimeEvent(
     'eventingHubJoined',
     (info) => {
-      // The hub replays nothing: after an outage the board may be stale.
-      if (info.rejoin) refreshDesk();
+      // The hub replays nothing: after an outage the board and the open conversations may be stale.
+      if (info.rejoin) refreshDeskAfterGap();
     },
     enabled
   );
+
+  // An offer on the board that runs out is read again then: one the server replaced (or took back) gives way to what the
+  // member really has before that runs out too, even when the realtime event was lost.
+  useEffect(() => {
+    if (!enabled || offerExpiresAt === null) return undefined;
+    const timer = setTimeout(refreshDesk, Math.max(0, offerExpiresAt - Date.now()) + OFFER_EXPIRY_GRACE_MS);
+
+    return () => clearTimeout(timer);
+  }, [enabled, offerExpiresAt]);
 
   // Foreground: refresh (at most once per interval, with one trailing refresh for a return inside it).
   useEffect(() => {
@@ -150,7 +177,7 @@ export function useDispatcherDeskSync(enabledOverride?: boolean): void {
     const refresh = () => {
       cancelTrailing();
       lastRefresh = Date.now();
-      refreshDesk();
+      refreshDeskAfterGap();
     };
 
     const subscription = AppState.addEventListener('change', (state) => {

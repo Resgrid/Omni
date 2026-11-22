@@ -5208,6 +5208,7 @@
       "dispatch_now": "Engager maintenant",
       "due_on": "Échéance {{time}}",
       "history": "Historique ({{count}})",
+      "link_saved_call": "Lier l'intervention enregistrée",
       "loading": "Chargement…",
       "not_found": "Cette tâche ne figure plus au poste",
       "open_call": "Ouvrir l'intervention",

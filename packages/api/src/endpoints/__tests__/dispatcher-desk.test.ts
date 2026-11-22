@@ -119,6 +119,13 @@ describe('dispatcher desk (DispatcherDesk v4)', () => {
 
     adapter.mockImplementationOnce(async (config) => Promise.reject(httpError(config, 503, { Error: 'Busy' })));
     await expect(api.acceptDispatcherItem(ctx, { ItemId: 'q-1' })).rejects.toMatchObject({ kind: 'http', status: 503 });
+
+    // Core answers NotADispatcher as a 403 with a desk body: a refusal. A 401 stays an error whatever its body says.
+    adapter.mockImplementationOnce(async (config) => Promise.reject(httpError(config, 403, { Success: false, Error: 'NotADispatcher' })));
+    await expect(api.signInToDispatcherDesk(ctx, { DeviceKind: 'phone' })).resolves.toMatchObject({ Success: false, Error: 'NotADispatcher' });
+
+    adapter.mockImplementationOnce(async (config) => Promise.reject(httpError(config, 401, { type: 'https://resgrid.com/problems/session', Error: 'NotADispatcher' })));
+    await expect(api.acceptDispatcherItem(ctx, { ItemId: 'q-1' })).rejects.toMatchObject({ kind: 'http', status: 401 });
   });
 
   it('unregisters the desk device as an ended session straight to the server, quietly', async () => {

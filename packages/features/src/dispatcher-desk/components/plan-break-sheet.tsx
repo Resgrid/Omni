@@ -182,7 +182,8 @@ export const PlanBreakSheet: React.FC<PlanBreakSheetProps> = ({ target, onClose 
           testID="desk-plan-length"
         />
         <View className="mt-3">
-          <DateTimeField mode="datetime" value={startOn} onChange={setStartOn} label={t('dispatcher_desk.plan.start')} clearable={false} testID="desk-plan-start" />
+          {/* Picked as department time, the time the break list shows. */}
+          <DateTimeField mode="datetime" value={startOn} onChange={setStartOn} label={t('dispatcher_desk.plan.start')} clearable={false} timeZone={timeZone} testID="desk-plan-start" />
         </View>
         <Text size="xs" className="mt-1 text-typography-500">
           {t('dispatcher_desk.plan.length_hint')}

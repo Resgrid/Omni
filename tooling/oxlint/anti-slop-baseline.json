@@ -434,8 +434,7 @@
     "anti-slop/require-readable-spacing": 1
   },
   "packages/api/src/endpoints/devices/push-registration.ts": {
-    "anti-slop/no-conditional-empty-object-spread": 4,
-    "anti-slop/require-readable-spacing": 2
+    "anti-slop/no-conditional-empty-object-spread": 4
   },
   "packages/api/src/endpoints/index.ts": {
     "anti-slop/require-readable-spacing": 42
@@ -4848,8 +4847,7 @@
   "packages/notifications/src/push-modal-store.ts": {
     "anti-slop/no-conditional-empty-object-spread": 3,
     "anti-slop/no-runtime-typeof": 1,
-    "anti-slop/no-unsafe-dictionary-type": 2,
-    "anti-slop/require-readable-spacing": 2
+    "anti-slop/no-unsafe-dictionary-type": 2
   },
   "packages/notifications/src/push-notification.ts": {
     "anti-slop/no-conditional-empty-object-spread": 12,
@@ -4866,7 +4864,7 @@
     "anti-slop/no-runtime-typeof": 6,
     "anti-slop/no-unknown-parameters": 4,
     "anti-slop/no-unsafe-dictionary-type": 1,
-    "anti-slop/require-readable-spacing": 77,
+    "anti-slop/require-readable-spacing": 75,
     "anti-slop/require-safety-comment-for-type-assertion": 8
   },
   "packages/notifications/src/registration-storage.ts": {

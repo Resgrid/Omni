@@ -17,8 +17,10 @@ import { CompleteItemSheet } from '../components/item-sheets';
 import { SignInSheet } from '../components/sign-in-sheet';
 import { TakeBreakSheet } from '../components/take-break-sheet';
 import { TeamBoard } from '../components/team-board';
+import { OFFER_EXPIRY_GRACE_MS } from '../hooks/use-dispatcher-desk';
 import { useDeskUiStore } from '../lib/desk-ui-store';
 import DeskBreaksScreen from '../screens/desk-breaks';
+import DeskItemCallScreen from '../screens/desk-item-call';
 import DispatcherDeskScreen from '../screens/dispatcher-desk';
 import { board, breakEntry, item, member } from './desk-fixtures';
 
@@ -50,6 +52,7 @@ const actions = {
   setAvailable: jest.fn(async () => ok()),
   sendMessage: jest.fn(async () => ok()),
   addNote: jest.fn(async () => ok()),
+  linkCall: jest.fn(async () => ok()),
 };
 
 const setWindow = async (width: number, height: number) => {
@@ -57,7 +60,11 @@ const setWindow = async (width: number, height: number) => {
   await act(() => Dimensions.set({ window: metrics, screen: metrics }));
 };
 
-const setDesk = (desk: ReturnType<typeof board>) => useDispatcherDeskStore.setState({ desk, items: {}, recent: [], busyKeys: [], unsupported: false, loading: {}, errors: {}, fetchedAt: { desk: 1 }, ...actions });
+const setDesk = (desk: ReturnType<typeof board>) =>
+  useDispatcherDeskStore.setState({ desk, items: {}, recent: [], busyKeys: [], pendingCallLinks: {}, unsupported: false, loading: {}, errors: {}, fetchedAt: { desk: 1 }, ...actions });
+
+/** A board read again behind the screen: the same items, new objects. */
+const refreshBoard = (desk: ReturnType<typeof board>) => useDispatcherDeskStore.setState({ desk });
 
 beforeEach(async () => {
   jest.clearAllMocks();
@@ -150,6 +157,51 @@ describe('desk host', () => {
     expect(router.push).toHaveBeenCalledWith('/desk/item/o1');
     expect(notificationSoundService.play).toHaveBeenCalledTimes(1);
   });
+
+  it('ends only the break its "break over" alert named, and takes the alert away once that break is over', async () => {
+    const over = (id: string) => breakEntry(id, { State: DispatcherBreakState.Active, StartedOn: new Date(Date.now() - 20 * 60000).toISOString(), ExpectedReturnOn: new Date(Date.now() - 60000).toISOString() });
+    const onBreak = (entry: ReturnType<typeof breakEntry>) => board({ Me: member('me', { DisplayState: DispatcherDisplayState.OnBreak, ActiveBreak: entry }), MyBreaks: [entry] });
+    const breakOverToast = () => useToastStore.getState().toasts.find((toast) => toast.message === 'dispatcher_desk.alerts.break_over');
+
+    // A press runs the toast's action and dismisses it, as the toast on screen does.
+    const press = (toast: ReturnType<typeof breakOverToast>) => {
+      if (!toast) return;
+      useToastStore.getState().removeToast(toast.id);
+      toast.onPress?.();
+    };
+
+    setDesk(onBreak(over('b1')));
+    await render(<DispatcherDeskHost />);
+
+    // Pressed while that break still runs: it ends it.
+    await act(async () => press(breakOverToast()));
+    expect(actions.endBreak).toHaveBeenCalledTimes(1);
+
+    // A later break: the old alert is gone, and its press (from a toast still on screen) changes nothing.
+    await act(async () => refreshBoard(onBreak(over('b2'))));
+    const second = breakOverToast();
+    await act(async () => refreshBoard(onBreak(breakEntry('b3', { State: DispatcherBreakState.Active, StartedOn: new Date().toISOString(), DurationMinutes: 30 }))));
+    expect(breakOverToast()).toBeUndefined();
+    expect(second).toBeDefined();
+    await act(async () => press(second));
+    expect(actions.endBreak).toHaveBeenCalledTimes(1);
+  });
+
+  it('reads the board again once an offer on it runs out', async () => {
+    jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+
+    try {
+      const offer = item('o1', { State: DispatcherQueueItemState.Offered, AssignedUserId: 'me', OfferedOn: new Date().toISOString(), OfferExpiresOn: new Date(Date.now() + 30000).toISOString() });
+      setDesk(board({ Queue: [offer] }));
+      await render(<DispatcherDeskHost />);
+      actions.fetchDesk.mockClear();
+
+      await act(async () => jest.advanceTimersByTimeAsync(30000 + OFFER_EXPIRY_GRACE_MS));
+      expect(actions.fetchDesk).toHaveBeenCalledWith({ bypassCache: true });
+    } finally {
+      jest.useRealTimers();
+    }
+  });
 });
 
 describe('desk screen', () => {
@@ -235,6 +287,16 @@ describe('sign-in sheet', () => {
     await act(async () => setDesk(board()));
     expect(onClose).not.toHaveBeenCalled();
   });
+
+  it('keeps what the member entered when the board is read again behind the open sheet', async () => {
+    setDesk(board({ Me: member('me', { IsSignedIn: false, DisplayState: DispatcherDisplayState.Offline, CallbackNumber: '+15555550100' }) }));
+    await render(<SignInSheet isOpen onClose={jest.fn()} />);
+    expect(screen.getByTestId('desk-sign-in-callback').props.value).toBe('+15555550100');
+
+    await fireEvent.changeText(screen.getByTestId('desk-sign-in-callback'), '+15555550199');
+    await act(async () => refreshBoard(board({ Me: member('me', { IsSignedIn: false, DisplayState: DispatcherDisplayState.Offline, CallbackNumber: '+15555550123', IsOnDuty: false }) })));
+    expect(screen.getByTestId('desk-sign-in-callback').props.value).toBe('+15555550199');
+  });
 });
 
 describe('item detail', () => {
@@ -253,6 +315,70 @@ describe('item detail', () => {
     await fireEvent.press(screen.getByTestId('desk-composer-send'));
     expect(actions.addNote).toHaveBeenCalledWith('h1', 'Caller calm');
     expect(screen.getByTestId('desk-item-create-call')).toBeTruthy();
+  });
+
+  it('keeps a draft typed while the reply before it was sending', async () => {
+    const held = item('h1', { State: DispatcherQueueItemState.Accepted, AssignedUserId: 'me' });
+    setDesk(board({ Queue: [held] }));
+    useDispatcherDeskStore.setState({ items: { h1: { Item: held, Events: [], Messages: [], CanReply: true, CanConnectVoice: false } } });
+    let answerSend: (outcome: DeskActionOutcome) => void = () => undefined;
+    actions.sendMessage.mockReturnValueOnce(
+      new Promise((done) => {
+        answerSend = done;
+      })
+    );
+    await render(<DeskItemDetail itemId="h1" />);
+
+    await fireEvent.changeText(screen.getByTestId('desk-composer-input'), 'First');
+    await fireEvent.press(screen.getByTestId('desk-composer-send'));
+    await fireEvent.changeText(screen.getByTestId('desk-composer-input'), 'Second');
+    await act(async () => answerSend(ok()));
+    expect(screen.getByTestId('desk-composer-input').props.value).toBe('Second');
+  });
+
+  it('starts the call from a conversation only once this item’s fresh read is in, never from a cached copy', async () => {
+    const inbound = (id: string, Body: string) => ({
+      DispatcherConversationMessageId: id,
+      Direction: 1,
+      FromAddress: '+15555550100',
+      ToAddress: null,
+      Body,
+      UserId: null,
+      UserName: null,
+      CreatedOn: null,
+      DeliveryState: 0,
+      Error: null,
+    });
+
+    const held = item('h1', { State: DispatcherQueueItemState.Accepted, AssignedUserId: 'me' });
+    setDesk(board({ Queue: [held] }));
+    useDispatcherDeskStore.setState({ items: { h1: { Item: held, Events: [], Messages: [inbound('m1', 'Old text')], CanReply: true, CanConnectVoice: false } } });
+    jest.mocked(useLocalSearchParams).mockReturnValue({ id: 'h1' });
+    let finishRead: () => void = () => undefined;
+    actions.fetchItem.mockReturnValueOnce(
+      new Promise<undefined>((done) => {
+        finishRead = () => done(undefined);
+      })
+    );
+    await render(<DeskItemCallScreen />);
+    expect(screen.queryByTestId('call-form-nature')).toBeNull();
+
+    await act(async () => {
+      useDispatcherDeskStore.setState({ items: { h1: { Item: held, Events: [], Messages: [inbound('m1', 'Old text'), inbound('m2', 'Fire on the 3rd floor')], CanReply: true, CanConnectVoice: false } } });
+      finishRead();
+    });
+    expect(screen.getByTestId('call-form-nature').props.value).toBe('Old text\nFire on the 3rd floor');
+  });
+
+  it('links a call created here that the desk did not link, instead of offering to create another', async () => {
+    const held = item('h1', { State: DispatcherQueueItemState.Accepted, AssignedUserId: 'me' });
+    setDesk(board({ Queue: [held] }));
+    useDispatcherDeskStore.setState({ pendingCallLinks: { h1: 42 }, items: { h1: { Item: held, Events: [], Messages: [], CanReply: true, CanConnectVoice: false } } });
+    await render(<DeskItemDetail itemId="h1" />);
+
+    expect(screen.queryByTestId('desk-item-create-call')).toBeNull();
+    await fireEvent.press(screen.getByTestId('desk-item-link-call'));
+    expect(actions.linkCall).toHaveBeenCalledWith('h1', 42);
   });
 
   it('shows an intake text thread with who is answering, and reads the item again after a reply', async () => {
@@ -489,6 +615,18 @@ describe('breaks screen', () => {
     expect(useDeskUiStore.getState()).toMatchObject({ sheet: 'takeBreak', request: { plannedBreakId: 'b1' } });
     expect(screen.getByTestId('desk-coverage-timeline-break-b2-planned')).toBeTruthy();
     expect(screen.getByTestId('desk-breaks-warnings')).toHaveTextContent('dispatcher_desk.warnings.breaks_overlap:0,0,0');
+  });
+
+  it('offers start and change only on a planned break, not on one that is over', async () => {
+    setDesk(board({ MyBreaks: [breakEntry('b1'), breakEntry('done', { State: DispatcherBreakState.Completed }), breakEntry('gone', { State: DispatcherBreakState.Cancelled })] }));
+    useDispatcherDeskStore.setState({ coverage });
+    await render(<DeskBreaksScreen />);
+
+    expect(screen.getByTestId('desk-my-break-b1-start')).toBeTruthy();
+    expect(screen.getByTestId('desk-my-break-done')).toBeTruthy();
+    expect(screen.queryByTestId('desk-my-break-done-start')).toBeNull();
+    expect(screen.queryByTestId('desk-my-break-done-edit')).toBeNull();
+    expect(screen.queryByTestId('desk-my-break-gone-start')).toBeNull();
   });
 
   it('opens a dispatcher’s breaks from the timeline for a supervisor only', async () => {

@@ -1,4 +1,5 @@
 import { DESK_PRESENCE_KEY, useDispatcherDeskStore } from '@resgrid/data';
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import { Button, ButtonText, CustomBottomSheet, DateTimeField, Input, InputField, Switch, Text, useFormFactor } from '@resgrid/ui';
 import React, { useEffect, useRef, useState } from 'react';
@@ -6,6 +7,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { useDeskActions } from '../hooks/use-desk-actions';
 import { useDispatcherDeskView } from '../hooks/use-dispatcher-desk';
+import { useResetOnOpen } from '../hooks/use-reset-on-open';
 import { deviceLabelKey } from '../lib/desk-format';
 
 export interface SignInSheetProps {
@@ -21,6 +23,7 @@ export interface SignInSheetProps {
 export const SignInSheet: React.FC<SignInSheetProps> = ({ isOpen, onClose }) => {
   const { t } = useTranslation();
   const { formFactor } = useFormFactor();
+  const timeZone = useDepartmentTimeZone();
   const { me, config } = useDispatcherDeskView();
   const actions = useDeskActions();
   const busy = useDispatcherDeskStore((state) => state.busyKeys.includes(DESK_PRESENCE_KEY));
@@ -44,13 +47,13 @@ export const SignInSheet: React.FC<SignInSheetProps> = ({ isOpen, onClose }) => 
     if (isOpen && signedIn && !before) onClose();
   }, [isOpen, onClose, signedIn]);
 
-  useEffect(() => {
-    if (!isOpen) return;
+  // The opening defaults, once per opening: a board read while the sheet is open never undoes what the member entered.
+  useResetOnOpen(isOpen, () => {
     setCallbackNumber(me?.CallbackNumber ?? '');
     setUnscheduled(allowUnscheduled && !me?.IsOnDuty);
     setDutyEndsOn('');
     setStartAway(false);
-  }, [allowUnscheduled, isOpen, me?.CallbackNumber, me?.IsOnDuty]);
+  });
 
   const submit = async () => {
     const outcome = await actions.run(
@@ -118,7 +121,7 @@ export const SignInSheet: React.FC<SignInSheetProps> = ({ isOpen, onClose }) => 
 
         {allowUnscheduled && unscheduled ? (
           <View className="mb-3">
-            <DateTimeField mode="datetime" value={dutyEndsOn} onChange={setDutyEndsOn} label={t('dispatcher_desk.sign_in.until')} testID="desk-sign-in-until" />
+            <DateTimeField mode="datetime" value={dutyEndsOn} onChange={setDutyEndsOn} label={t('dispatcher_desk.sign_in.until')} timeZone={timeZone} testID="desk-sign-in-until" />
           </View>
         ) : null}
 

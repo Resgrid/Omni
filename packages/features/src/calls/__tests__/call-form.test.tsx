@@ -205,6 +205,42 @@ describe('CallFormScreen: create', () => {
     expect(mockCreateCall).toHaveBeenCalledTimes(1);
   });
 
+  it('hands a call corrected after a refused create to the screen that asked for it, as a direct create does', async () => {
+    activateVariant('dispatch');
+    const request: CreateCallRequest = { name: 'Kitchen fire', nature: 'Smoke from kitchen', priority: 0 };
+    const onCreated = jest.fn();
+    mockCreateCall.mockImplementation(async () => {
+      useCallsStore.setState({ queuedCalls: { 'local-r': { localId: 'local-r', request, input: buildNewCallInput(request), createdAt: 1, state: 'rejected' } } });
+
+      return { outcome: 'rejected', id: 'local-r' };
+    });
+    mockCorrectQueuedCall.mockImplementation(async () => {
+      useCallsStore.setState({ syncedCalls: { 'local-r': { localId: 'local-r', callId: '555', number: '26-555', syncedAt: 1, possibleDuplicate: false, duplicateCallIds: [], acknowledged: false } } });
+
+      return true;
+    });
+    await render(<CallFormScreen mode="create" onCreated={onCreated} />);
+    await fillBasics();
+    await act(async () => fireEvent.press(screen.getByTestId('call-form-submit')));
+    expect(onCreated).not.toHaveBeenCalled();
+
+    await act(async () => fireEvent.press(screen.getByTestId('call-form-submit')));
+    expect(onCreated).toHaveBeenCalledWith({ localId: 'local-r', callId: '555', outcome: 'sent' });
+    useCallsStore.setState({ syncedCalls: {} });
+  });
+
+  it('keeps the priority the dispatcher picked when the department’s priorities are read again', async () => {
+    activateVariant('dispatch');
+    const priority = (Id: number, Name: string, IsDefault: boolean) => ({ Id, DepartmentId: 1, Name, Color: '', Sort: Id, IsDeleted: false, IsDefault, Tone: 0 });
+    useCallsStore.setState({ callPriorities: [priority(1, 'Low', true), priority(2, 'High', false)] });
+    await render(<CallFormScreen mode="create" />);
+    expect(screen.getByTestId('call-form-priority-1').props.accessibilityState).toEqual({ selected: true });
+
+    await fireEvent.press(screen.getByTestId('call-form-priority-2'));
+    await act(async () => useCallsStore.setState({ callPriorities: [priority(1, 'Low', true), priority(2, 'High', false)] }));
+    expect(screen.getByTestId('call-form-priority-2').props.accessibilityState).toEqual({ selected: true });
+  });
+
   it('corrects a rejected queued call opened from Pending sync', async () => {
     activateVariant('unit');
     const request: CreateCallRequest = { name: 'Offline call', nature: 'Downed lines', priority: 0, type: 'Fire', address: 'Wrong St' };

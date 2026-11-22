@@ -47,9 +47,11 @@ export default function DeskItemCallScreen() {
   const detail = useDispatcherDeskStore((state) => (itemId ? (state.items[itemId] ?? null) : null));
   const queued = useDispatcherDeskStore((state) => (itemId ? (state.desk?.Queue.find((entry) => entry.DispatcherQueueItemId === itemId) ?? null) : null));
   const item = queued ?? detail?.Item ?? null;
-  // The form starts once, from the conversation as read now: wait for that read (or its failure) first.
-  const [readDone, setReadDone] = useState(detail !== null);
-  const prefill = useMemo(() => (item && (readDone || detail) ? callPrefillFromItem(item, detail, t) : null), [detail, item, readDone, t]);
+  // The form starts once (it reads `prefill` only when it mounts), from the conversation as read now: wait for this item's
+  // fresh read (or its failure) first, never a cached copy or another item's read.
+  const [readFor, setReadFor] = useState<string | null>(null);
+  const readDone = itemId !== null && readFor === itemId;
+  const prefill = useMemo(() => (item && readDone ? callPrefillFromItem(item, detail, t) : null), [detail, item, readDone, t]);
 
   useEffect(() => {
     if (!itemId) return undefined;
@@ -59,7 +61,7 @@ export default function DeskItemCallScreen() {
       .getState()
       .fetchItem(itemId, { bypassCache: true })
       .finally(() => {
-        if (live) setReadDone(true);
+        if (live) setReadFor(itemId);
       });
 
     return () => {

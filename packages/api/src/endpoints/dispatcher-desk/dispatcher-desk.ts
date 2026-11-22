@@ -118,15 +118,17 @@ export const getDispatcherDeskConfig = (ctx: ApiContext, options?: RequestOption
 
 /**
  * A desk refusal Core answers with an HTTP error status (a 4xx whose body names the `DispatcherDeskErrors` value) reads
- * the same as one it answers with 200: an action result with `Success` false and the `Error` name. Anything else
- * (no answer, 5xx, a 404 without a desk body from a Core that has no desk) is thrown as the `ApiError` it is.
+ * the same as one it answers with 200: an action result with `Success` false and the `Error` name (Core answers
+ * `NotADispatcher` as a 403 with a desk body). Anything else (no answer, 5xx, a 401 whatever its body, a 404 without a
+ * desk body from a Core that has no desk) is thrown as the `ApiError` it is, so session handling still sees a 401.
  */
 const asDeskAnswer = async (send: () => Promise<DispatcherDeskActionResult>): Promise<DispatcherDeskActionResult> => {
   try {
     return await send();
   } catch (error) {
     const apiError = toApiError(error);
-    const refused = apiError.kind === 'http' && (apiError.status ?? 500) < 500;
+    const status = apiError.status ?? 500;
+    const refused = apiError.kind === 'http' && status < 500 && status !== 401;
     const refusal = refused ? errorBodyString(apiError, 'Error') : undefined;
 
     if (!refusal) throw apiError;

@@ -35,9 +35,16 @@ export const buildPushRegistrationInput = (subject: PushSubject, device: PushDev
   ...(sourceFor(subject) ? { Source: sourceFor(subject) } : {}),
 });
 
+/** RegisterDevice answers 200 even when it fails; only these statuses mean the server took the registration. */
+const ACCEPTED_REGISTRATION_STATUSES: readonly string[] = ['queued', 'success'];
+
+/** Whether the server took a push registration (native and web alike): a resolved answer is not enough on its own. */
+export const isPushRegistrationAccepted = (result: Pick<PushRegistrationResult, 'Status'> | null | undefined): boolean => ACCEPTED_REGISTRATION_STATUSES.includes((result?.Status ?? '').toLowerCase());
+
 /** Registers a push token for the subject (user, unit or IC user). */
 export const registerPushDevice = (ctx: ApiContext, subject: PushSubject, device: PushDevice, options?: RequestOptions): Promise<PushRegistrationResult> => {
   const body = buildPushRegistrationInput(subject, device);
+
   return subject.kind === 'unit' ? registerUnitDevice(ctx, body, options) : registerDevice(ctx, body, options);
 };
 
@@ -49,5 +56,6 @@ export const unregisterPushToken = (ctx: ApiContext, subject: PushSubject, chann
     ...(subject.kind === 'unit' ? { UnitId: subject.unitId } : {}),
     ...(sourceFor(subject) ? { Source: sourceFor(subject) } : {}),
   };
+
   return channel === 'native' ? unRegisterNativePush(ctx, body, options) : unRegisterWebPush(ctx, body, options);
 };

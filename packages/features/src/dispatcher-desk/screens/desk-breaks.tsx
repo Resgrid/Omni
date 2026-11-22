@@ -34,6 +34,8 @@ const MyBreakRow: React.FC<{ entry: DispatcherBreakData; now: number; timeZone: 
   const { t } = useTranslation();
   const actions = useDeskActions();
   const active = entry.State === DispatcherBreakState.Active;
+  // Only a planned break can be started or changed; a finished, missed or cancelled one is shown, not acted on.
+  const planned = entry.State === DispatcherBreakState.Scheduled;
   const dueBack = active ? breakDueBackMs(entry) : plannedBreakEndMs(entry);
   const start = active ? entry.StartedOn : entry.ScheduledStartOn;
   const overdue = active && dueBack !== null && now > dueBack;
@@ -69,7 +71,7 @@ const MyBreakRow: React.FC<{ entry: DispatcherBreakData; now: number; timeZone: 
           >
             <ButtonText>{t('dispatcher_desk.actions.im_back')}</ButtonText>
           </Button>
-        ) : (
+        ) : planned ? (
           <>
             <Button size="md" className="mr-2 min-h-[44px]" onPress={() => openDeskSheet('takeBreak', { plannedBreakId: entry.DispatcherBreakId })} testID={`desk-my-break-${entry.DispatcherBreakId}-start`}>
               <ButtonText>{t('dispatcher_desk.breaks.start_now')}</ButtonText>
@@ -78,7 +80,7 @@ const MyBreakRow: React.FC<{ entry: DispatcherBreakData; now: number; timeZone: 
               <ButtonText>{t('dispatcher_desk.plan.edit')}</ButtonText>
             </Button>
           </>
-        )}
+        ) : null}
       </HStack>
     </View>
   );

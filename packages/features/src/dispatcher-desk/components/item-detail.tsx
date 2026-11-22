@@ -8,7 +8,7 @@ import { DispatcherMessageDeliveryState, DispatcherMessageDirection, type Dispat
 import { Button, ButtonSpinner, ButtonText, HStack, Input, InputField, KeyboardAwareScrollView, Loading, Pressable, Text, Textarea, TextareaInput, useThemeColors, useToast, VStack, ZeroState } from '@resgrid/ui';
 import { useRouter } from 'expo-router';
 import type { LucideIcon } from 'lucide-react-native';
-import { ArrowRightLeft, CheckCircle2, ChevronDown, ChevronRight, ExternalLink, FilePlus2, Phone, PhoneCall, Send, StickyNote, Undo2 } from 'lucide-react-native';
+import { ArrowRightLeft, CheckCircle2, ChevronDown, ChevronRight, ExternalLink, FilePlus2, Link2, Phone, PhoneCall, Send, StickyNote, Undo2 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { type GestureResponderEvent, StyleSheet, View } from 'react-native';
 
@@ -186,7 +186,8 @@ const Composer: React.FC<{ item: DispatcherQueueItemData; canReply: boolean }> =
   const asNote = mode === 'note' || !canReply;
 
   const submit = async () => {
-    const text = body.trim();
+    const draft = body;
+    const text = draft.trim();
 
     if (!text) return;
     const store = useDispatcherDeskStore.getState();
@@ -197,7 +198,8 @@ const Composer: React.FC<{ item: DispatcherQueueItemData; canReply: boolean }> =
     if (!asNote && item.IntakeConversationId) void store.fetchItem(item.DispatcherQueueItemId, { bypassCache: true });
 
     if (!outcome.ok) return;
-    setBody('');
+    // Only what was sent is cleared: a new draft typed while it was sending stays.
+    setBody((current) => (current === draft ? '' : current));
   };
 
   return (
@@ -362,6 +364,7 @@ export const DeskItemDetail: React.FC<DeskItemDetailProps> = ({ itemId, onLeave,
   const loading = useDispatcherDeskStore((state) => state.loading.item === true);
   const error = useDispatcherDeskStore((state) => state.errors.item ?? null);
   const busy = useDispatcherDeskStore((state) => state.busyKeys.includes(deskItemKey(itemId)));
+  const pendingCallId = useDispatcherDeskStore((state) => state.pendingCallLinks[itemId] ?? null);
   const actions = useDeskActions();
   const now = useNow(30000);
   const [sheet, setSheet] = useState<'transfer' | 'complete' | null>(null);
@@ -449,8 +452,20 @@ export const DeskItemDetail: React.FC<DeskItemDetailProps> = ({ itemId, onLeave,
           {waiting && isSignedIn ? (
             <ItemAction label={t('dispatcher_desk.queue.take')} icon={CheckCircle2} tone="primary" isBusy={busy} onPress={() => void actions.run(() => store().accept(itemId))} testID="desk-item-take" />
           ) : null}
+          {/* A call created here that the desk did not link is linked again, never created a second time. */}
           {held && isConversationItem(item) && !item.CallId ? (
-            <ItemAction label={t('dispatcher_desk.item.create_call')} icon={FilePlus2} onPress={() => pushRoutePath(router, dispatcherDeskRoutes.itemCall(itemId))} testID="desk-item-create-call" />
+            pendingCallId !== null ? (
+              <ItemAction
+                label={t('dispatcher_desk.item.link_saved_call')}
+                icon={Link2}
+                tone="primary"
+                isBusy={busy}
+                onPress={() => void actions.run(() => store().linkCall(itemId, pendingCallId), { success: t('dispatcher_desk.create_call.linked') })}
+                testID="desk-item-link-call"
+              />
+            ) : (
+              <ItemAction label={t('dispatcher_desk.item.create_call')} icon={FilePlus2} onPress={() => pushRoutePath(router, dispatcherDeskRoutes.itemCall(itemId))} testID="desk-item-create-call" />
+            )
           ) : null}
           {held && isConversationItem(item) && item.CallId ? (
             <ItemAction label={t('dispatcher_desk.item.open_call')} icon={ExternalLink} onPress={() => pushRoutePath(router, callRoutes.callDetail(String(item.CallId)))} testID="desk-item-linked-call" />

@@ -35,6 +35,17 @@ export const isHeldBy = (item: Pick<DispatcherQueueItemData, 'State' | 'Assigned
 export const isDeskOutOfStep = (queue: readonly DispatcherQueueItemData[], me: Pick<DispatcherDeskMemberData, 'UserId' | 'OfferedItemCount' | 'ActiveItemCount'>): boolean =>
   queue.filter((item) => isOfferedTo(item, me.UserId)).length !== me.OfferedItemCount || queue.filter((item) => isHeldBy(item, me.UserId)).length !== me.ActiveItemCount;
 
+/**
+ * When the member's first offer on the board runs out (epoch ms), or null with none. The board is read again then: an
+ * offer the server replaced with another (same counts, so a heartbeat cannot tell) shows before the new one runs out.
+ */
+export const firstOfferExpiryMs = (queue: readonly DispatcherQueueItemData[], userId: string | null | undefined): number | null =>
+  queue.reduce<number | null>((first, item) => {
+    const expires = isOfferedTo(item, userId) ? parseUtcMs(item.OfferExpiresOn) : null;
+
+    return expires !== null && (first === null || expires < first) ? expires : first;
+  }, null);
+
 /** Waiting in the shared queue: any on-duty dispatcher can take it. */
 export const isWaitingInQueue = (item: Pick<DispatcherQueueItemData, 'State'>): boolean => item.State === DispatcherQueueItemState.Queued;
 

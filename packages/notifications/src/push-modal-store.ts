@@ -6,7 +6,7 @@
 import { logger } from '@resgrid/core';
 import { create } from 'zustand';
 
-import { isAlertSuppressed } from './alert-suppression';
+import { type AlertDescriptor, isAlertSuppressed } from './alert-suppression';
 import { getOptionalNotificationsDependencies } from './configure';
 import { type ParsedEventCode, parseEventCode } from './event-codes';
 import { notificationSoundService } from './notification-sound';
@@ -41,6 +41,7 @@ export interface PushNotificationModalState {
 /** Parses a push into what the modal shows; the target is null for unknown codes and unsafe ids. */
 export const parseNotificationData = (notification: PushNotificationData): ParsedNotification => {
   const isChatbotChannel = getOptionalNotificationsDependencies()?.isChatbotChannel;
+
   return {
     ...parseEventCode(notification.eventCode, isChatbotChannel ? { isChatbotChannel } : {}),
     ...(notification.title ? { title: notification.title } : {}),
@@ -58,10 +59,12 @@ export const usePushNotificationModalStore = create<PushNotificationModalState>(
     if (!notification?.eventCode || typeof notification.eventCode !== 'string') {
       return;
     }
+
     const parsed = parseNotificationData(notification);
+    const alert: AlertDescriptor = { channel: 'modal', eventCode: parsed.eventCode, kind: parsed.kind };
 
     // Alerts held back (a dispatcher on break): no modal and no sound; the push itself stays in the inbox and the OS list.
-    if (isAlertSuppressed({ channel: 'modal', eventCode: parsed.eventCode, kind: parsed.kind })) {
+    if (isAlertSuppressed(alert)) {
       logger.info({ message: 'Push notification modal held back', context: { kind: parsed.kind } });
 
       return;
@@ -72,6 +75,13 @@ export const usePushNotificationModalStore = create<PushNotificationModalState>(
     if (options.playSound) {
       // Started before the modal appears, as Unit did; a sound failure never blocks the modal.
       await notificationSoundService.playForNotification({ kind: parsed.kind, closed: parsed.target?.closed === true, soundType: parsed.data?.type });
+
+      // A break may have started while the sound played: the modal is held back then too.
+      if (isAlertSuppressed(alert)) {
+        logger.info({ message: 'Push notification modal held back', context: { kind: parsed.kind } });
+
+        return;
+      }
     }
 
     set({ isOpen: true, notification: parsed });

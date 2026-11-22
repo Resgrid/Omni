@@ -91,6 +91,19 @@ describe('RescheduleCallSheet in the department zone', () => {
     expect(Math.abs(readByCore(wallClock, departmentZone) - pickedAt)).toBeLessThan(60_000);
   });
 
+  it('picks the time on the department clock, so the time picked is the time sent', async () => {
+    withDepartmentZone(departmentZone);
+    const reschedule = await openSheet();
+
+    await fireEvent.press(screen.getByTestId('reschedule-datetime', hidden));
+    await fireEvent.press(screen.getByTestId('reschedule-datetime-hour-10', hidden));
+    await fireEvent.press(screen.getByTestId('reschedule-datetime-minute-15', hidden));
+    await fireEvent.press(screen.getByTestId('reschedule-datetime-done', hidden));
+    await act(async () => fireEvent.press(screen.getByTestId('reschedule-submit', hidden)));
+
+    expect(reschedule.mock.calls[0][1]).toMatch(/T10:15:00$/);
+  });
+
   it('puts "tomorrow morning" at 08:00 department time, or device time without a department zone', async () => {
     withDepartmentZone(departmentZone);
     let reschedule = await openSheet();

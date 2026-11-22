@@ -89,6 +89,9 @@ export interface DeskActionOutcome {
   result: DispatcherDeskActionResult | null;
 }
 
+/** A created call's server id by the desk item it waits to be linked to. */
+export type PendingCallLinks = Record<string, number>;
+
 /** The busy key of the member's own presence actions (sign in or off, away, available, breaks of their own). */
 export const DESK_PRESENCE_KEY = 'presence';
 
@@ -121,6 +124,11 @@ interface DispatcherDeskData extends SliceMeta<DeskSlice> {
   unsupported: boolean;
   /** This device's push token as the desk subscriber took it this session. */
   deskDevice: DispatcherDeviceInput | null;
+  /**
+   * Calls created from an item that the desk then refused (or failed) to link, by item id: the item offers to link that
+   * call again instead of creating another one for the same conversation.
+   */
+  pendingCallLinks: PendingCallLinks;
 }
 
 export interface DispatcherDeskState extends DispatcherDeskData {
@@ -178,9 +186,10 @@ const initialData = (): DispatcherDeskData => ({
   busyKeys: [],
   unsupported: false,
   deskDevice: null,
+  pendingCallLinks: {},
 });
 
-type PersistedDesk = Pick<DispatcherDeskData, 'desk' | 'coverage' | 'recent' | 'fetchedAt'>;
+type PersistedDesk = Pick<DispatcherDeskData, 'desk' | 'coverage' | 'recent' | 'fetchedAt' | 'pendingCallLinks'>;
 
 let runner: SliceRunner<DeskSlice, DispatcherDeskState>;
 
@@ -189,6 +198,51 @@ const writes = createKeyedFlight();
 
 /** The token the desk subscriber took, kept apart from the store so the sign-out hook can still take it off after a reset. */
 let registeredDeskDevice: DispatcherDeviceInput | null = null;
+
+interface DeskSession {
+  /** Set at sign-out: how that session reached the server, for a desk registration that lands after it. */
+  signOut?: EndedSessionRequest;
+}
+
+/** The signed-in session's desk registrations; sign-out starts a new one. */
+let deskSession: DeskSession = {};
+
+/**
+ * Advanced whenever an action answer applies the member's desk state: a heartbeat sent before that answer (and
+ * answering after it) carries the older state and is dropped.
+ */
+let presenceRevision = 0;
+
+/** Takes a device off the desk subscriber as a session that has ended (straight to the server, never the signed-in client). */
+const takeOffAsEndedSession = async (request: EndedSessionRequest, device: DispatcherDeviceInput, operation: string): Promise<void> => {
+  if (!(await unregisterDispatcherDeskDeviceForEndedSession(request, device))) {
+    getDataLogger().warn({ message: 'The desk push subscriber could not be cleared for an ended session', context: { operation, platform: device.Platform } });
+  }
+};
+
+/** Records (or with `callId` null forgets) a created call the desk did not link to its item. */
+const withPendingCallLink = (links: PendingCallLinks, itemId: string, callId: number | null) => {
+  if (callId === null) {
+    if (!(itemId in links)) return links;
+    const next = { ...links };
+    delete next[itemId];
+
+    return next;
+  }
+
+  return links[itemId] === callId ? links : { ...links, [itemId]: callId };
+};
+
+/** A fresh board settles pending links: an item that left the queue, or that has a call now, needs none. */
+export const prunePendingCallLinks = (links: PendingCallLinks, queue: readonly DispatcherQueueItemData[]): PendingCallLinks => {
+  const ids = Object.keys(links);
+
+  if (ids.length === 0) return links;
+  const waiting = new Set(queue.flatMap((item) => (item.CallId ? [] : [item.DispatcherQueueItemId])));
+  const kept = ids.filter((id) => waiting.has(id));
+
+  return kept.length === ids.length ? links : Object.fromEntries(kept.map((id) => [id, links[id]]));
+};
 
 const upsertItem = (list: readonly DispatcherQueueItemData[], item: DispatcherQueueItemData): DispatcherQueueItemData[] =>
   list.some((entry) => entry.DispatcherQueueItemId === item.DispatcherQueueItemId) ? list.map((entry) => (entry.DispatcherQueueItemId === item.DispatcherQueueItemId ? item : entry)) : [...list, item];
@@ -288,7 +342,10 @@ export const useDispatcherDeskStore = create<DispatcherDeskState>()(
             const refusal = refusalOf(result);
             outcome = { ok: refusal === null, refusal, error: null, warnings: result?.Warnings ?? [], result: result ?? null };
 
-            if (generation === runner.generation() && result) set((state) => applyDeskActionResult(state, result, itemId));
+            if (generation === runner.generation() && result) {
+              if (result.Me) presenceRevision += 1;
+              set((state) => applyDeskActionResult(state, result, itemId));
+            }
           } catch (error) {
             const dataError = toDataError(error);
             getDataLogger().warn({ message: 'A dispatcher desk action failed', context: { operation, code: dataError.code, status: dataError.status } });
@@ -317,7 +374,7 @@ export const useDispatcherDeskStore = create<DispatcherDeskState>()(
           const result = await runner.run(
             'desk',
             async () => unwrapItem(await getDispatcherDesk(ctx())),
-            (board, state) => (board ? applyDeskBoard(state, board) : { desk: null }),
+            (board, state) => (board ? { ...applyDeskBoard(state, board), pendingCallLinks: prunePendingCallLinks(state.pendingCallLinks, board.Queue ?? []) } : { desk: null }),
             {
               trailing: options?.bypassCache === true,
             }
@@ -366,17 +423,20 @@ export const useDispatcherDeskStore = create<DispatcherDeskState>()(
         heartbeat: async () => {
           if (get().unsupported) return false;
           const generation = runner.generation();
+          const revision = presenceRevision;
 
           try {
             const result = await sendDispatcherDeskHeartbeat(ctx());
 
-            if (generation === runner.generation() && result?.Me) {
+            // An action answered while this heartbeat was out (an "I'm back", a sign-in): its state is newer than this one.
+            if (generation === runner.generation() && revision === presenceRevision && result?.Me) {
               const me = result.Me;
               const board = get().desk;
               set((state) => applyDeskActionResult(state, { ...result, Item: null, Break: null, Message: null }));
 
-              // A missed realtime event: the server has work for the member the board doesn't show (or no longer has).
-              if (board && isDeskOutOfStep(board.Queue ?? [], me)) void get().fetchDesk({ bypassCache: true });
+              // A missed realtime event: the server has work for the member the board doesn't show (or no longer has). With
+              // an offer out the board is read anyway: one offer the server replaced with another leaves the counts equal.
+              if (board && (isDeskOutOfStep(board.Queue ?? [], me) || me.OfferedItemCount > 0)) void get().fetchDesk({ bypassCache: true });
             }
 
             return result?.Success === true;
@@ -398,7 +458,15 @@ export const useDispatcherDeskStore = create<DispatcherDeskState>()(
         release: (itemId) => runAction(deskItemKey(itemId), 'release', () => releaseDispatcherItem(ctx(), { ItemId: itemId }), itemId),
         transfer: (itemId, toUserId, note) => runAction(deskItemKey(itemId), 'transfer', () => transferDispatcherItem(ctx(), { ItemId: itemId, ToUserId: toUserId, Note: note?.trim() || null }), itemId),
         complete: (input) => runAction(deskItemKey(input.ItemId), 'complete', () => completeDispatcherItem(ctx(), { ...input, Note: input.Note?.trim() || null }), input.ItemId),
-        linkCall: (itemId, callId) => runAction(deskItemKey(itemId), 'linkCall', () => linkDispatcherItemCall(ctx(), { ItemId: itemId, CallId: callId }), itemId),
+        linkCall: async (itemId, callId) => {
+          const generation = runner.generation();
+          const outcome = await runAction(deskItemKey(itemId), 'linkCall', () => linkDispatcherItemCall(ctx(), { ItemId: itemId, CallId: callId }), itemId);
+
+          // A link the desk did not make is kept, so the item links this call again rather than creating a second one.
+          if (generation === runner.generation()) set((state) => ({ pendingCallLinks: withPendingCallLink(state.pendingCallLinks, itemId, outcome.ok ? null : callId) }));
+
+          return outcome;
+        },
         sendMessage: (itemId, body) => runAction(deskItemKey(itemId), 'sendMessage', () => sendDispatcherMessage(ctx(), { ItemId: itemId, Body: body.trim() }), itemId),
         addNote: (itemId, body) => runAction(deskItemKey(itemId), 'addNote', () => addDispatcherNote(ctx(), { ItemId: itemId, Body: body.trim() }), itemId),
         connectVoice: (itemId, callbackNumber) => runAction(deskItemKey(itemId), 'connectVoice', () => connectDispatcherVoice(ctx(), { ItemId: itemId, CallbackNumber: callbackNumber?.trim() || null }), itemId),
@@ -422,18 +490,35 @@ export const useDispatcherDeskStore = create<DispatcherDeskState>()(
           // Already on the desk subscriber this session.
           if (current && current.Token === device.Token && current.Platform === device.Platform) return true;
           const generation = runner.generation();
+          const session = deskSession;
+          const taken: DispatcherDeviceInput = { Platform: device.Platform, Token: device.Token };
 
           try {
             const result = await registerDispatcherDeskDevice(ctx(), device);
+            const accepted = result?.Success === true;
 
-            if (generation !== runner.generation() || result?.Success !== true) return false;
-            registeredDeskDevice = { Platform: device.Platform, Token: device.Token };
-            set({ deskDevice: registeredDeskDevice });
+            if (session !== deskSession) {
+              // Signed out while the request was out: sign-out could not take off what had not landed yet. Take it off now
+              // as the session that ended, so the next person on the device never gets this dispatcher's desk pushes.
+              if (accepted && session.signOut) await takeOffAsEndedSession(session.signOut, taken, 'registerDevice');
+
+              return false;
+            }
+
+            if (!accepted) return false;
+            // Recorded even when the desk was switched off meanwhile: sign-out still takes it off.
+            registeredDeskDevice = taken;
+
+            if (generation !== runner.generation()) return false;
+            set({ deskDevice: taken });
 
             return true;
           } catch (error) {
             const dataError = toDataError(error);
-            getDataLogger().warn({ message: 'The desk push subscriber did not take this device', context: { code: dataError.code, status: dataError.status } });
+            getDataLogger().warn({
+              message: 'The desk push subscriber did not take this device',
+              context: { operation: 'registerDevice', platform: device.Platform, code: dataError.code, status: dataError.status },
+            });
 
             if (generation === runner.generation()) markUnsupported(dataError);
 
@@ -450,10 +535,10 @@ export const useDispatcherDeskStore = create<DispatcherDeskState>()(
             const result = await unregisterDispatcherDeskDevice(ctx(), device);
             const removed = result?.Success === true;
 
-            if (removed) {
-              registeredDeskDevice = null;
-              set({ deskDevice: null });
-            }
+            // Only what this call took off: a registration that replaced it while the request was out stays recorded.
+            if (removed && registeredDeskDevice === device) registeredDeskDevice = null;
+
+            if (removed && get().deskDevice === device) set({ deskDevice: null });
 
             return removed;
           } catch {
@@ -470,23 +555,28 @@ export const useDispatcherDeskStore = create<DispatcherDeskState>()(
     },
     dataPersistOptions<DispatcherDeskState, PersistedDesk>({
       name: 'omni-dispatcher-desk-storage',
-      partialize: (state) => ({ desk: state.desk, coverage: state.coverage, recent: state.recent, fetchedAt: state.fetchedAt }),
+      partialize: (state) => ({ desk: state.desk, coverage: state.coverage, recent: state.recent, fetchedAt: state.fetchedAt, pendingCallLinks: state.pendingCallLinks }),
     })
   )
 );
 
 /**
  * Sign-out (the auth sign-out hook, as the ended session): takes this device's token off the desk subscriber so the next
- * person on the device never gets the previous dispatcher's desk pushes. Nothing to do when the desk never took it.
+ * person on the device never gets the previous dispatcher's desk pushes. A registration still out keeps the ended
+ * session's credentials and takes itself off when it lands. Nothing to do when the desk never took the device.
  */
 export const unregisterDispatcherDeskDeviceAtSignOut = async (session: { accessToken: string | null; baseUrl: string }): Promise<void> => {
+  const ended = deskSession;
+  const request: EndedSessionRequest | null = session.accessToken && session.baseUrl ? { accessToken: session.accessToken, baseUrl: session.baseUrl } : null;
+
+  deskSession = {};
+
+  if (request) ended.signOut = request;
   const device = registeredDeskDevice;
   registeredDeskDevice = null;
 
-  if (!device || !session.accessToken || !session.baseUrl) return;
-  const request: EndedSessionRequest = { accessToken: session.accessToken, baseUrl: session.baseUrl };
-
-  if (!(await unregisterDispatcherDeskDeviceForEndedSession(request, device))) getDataLogger().warn({ message: 'The desk push subscriber could not be cleared at sign-out' });
+  if (!device || !request) return;
+  await takeOffAsEndedSession(request, device, 'signOut');
 };
 
 registerPersistedStore('omni-dispatcher-desk-storage', useDispatcherDeskStore);
@@ -504,7 +594,8 @@ useDispatcherDeskStore.subscribe((state, previous) => {
 // A board restored before the subscription existed counts too.
 useBadgeCountsStore.getState().setDeskQueue(deskQueueCount(useDispatcherDeskStore.getState().desk));
 
-/** Test hook: forgets the device the desk subscriber took. */
+/** Test hook: forgets the device the desk subscriber took and starts a new session. */
 export const resetDispatcherDeskDeviceForTests = (): void => {
   registeredDeskDevice = null;
+  deskSession = {};
 };
