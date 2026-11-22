@@ -1,4 +1,5 @@
-import { closeCallWith, dispatchCallNow } from '@resgrid/api';
+import { closeCallWith, dismissIntakeCallAsSpam, dispatchCallNow } from '@resgrid/api';
+import { IntakeDismissOutcomes } from '@resgrid/models';
 import { create } from 'zustand';
 
 import { useCallsStore } from '../calls/calls-store';
@@ -31,6 +32,11 @@ export interface CallQueueActionsState extends CallQueueActionsData {
   /** `dispatchList` replaces the call's proposed recipients; omitted, the server dispatches whoever was proposed. */
   dispatchNow: (callId: string, options?: { dispatchList?: string; unitResponseCodes?: string }) => Promise<QueueActionOutcome>;
   cancelPending: (callId: string) => Promise<QueueActionOutcome>;
+  /**
+   * Cancels a pending intake call as spam (Core M0326 `IntakeScreening/DismissAsSpam`): nobody is notified, nothing is texted back and,
+   * with `blockSender`, the sender is blocked from the department's intake channels. Fails (ok false) when the call is no longer pending.
+   */
+  dismissAsSpam: (callId: string, blockSender: boolean) => Promise<QueueActionOutcome>;
 }
 
 const initialData = (): CallQueueActionsData => ({ busyCallId: null });
@@ -74,6 +80,21 @@ export const useCallQueueActionsStore = create<CallQueueActionsState>()((set) =>
       ),
 
     cancelPending: (callId) => run(callId, 'Cancelling a pending call failed', () => closeCallWith(getDataApiContext(), { callId, type: CANCELLED_STATE, sendNotification: false }), false),
+
+    dismissAsSpam: (callId, blockSender) =>
+      run(
+        callId,
+        'Dismissing an intake call as spam failed',
+        async () => {
+          const result = await dismissIntakeCallAsSpam(getDataApiContext(), { CallId: Number(callId), BlockSender: blockSender });
+
+          // NotFound / NotPending arrive as a 200 `not_found` envelope, which is no failure to assertV4Success: the call was not dismissed.
+          if (result?.Data?.Outcome !== IntakeDismissOutcomes.Dismissed && result?.Status !== 'failure') throw new Error(`Intake call not dismissed: ${result?.Data?.Outcome ?? 'no outcome'}`);
+
+          return result;
+        },
+        false
+      ),
   };
 });
 

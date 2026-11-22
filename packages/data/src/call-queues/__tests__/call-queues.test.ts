@@ -1,4 +1,5 @@
-import { closeCallWith, dispatchCallNow, getActiveCalls, getAllPendingScheduledCalls, getPendingCalls, request } from '@resgrid/api';
+import { closeCallWith, dismissIntakeCallAsSpam, dispatchCallNow, getActiveCalls, getAllPendingScheduledCalls, getPendingCalls, request } from '@resgrid/api';
+import type { DismissIntakeCallResult } from '@resgrid/models';
 import { defaultResetRegistry } from '@resgrid/offline';
 
 import { createDataTestRuntime, flush, httpError, ok } from '../../__tests__/helpers';
@@ -11,6 +12,7 @@ jest.mock('@resgrid/api', () => ({
   request: jest.fn(),
   dispatchCallNow: jest.fn(),
   closeCallWith: jest.fn(),
+  dismissIntakeCallAsSpam: jest.fn(),
   getPendingCalls: jest.fn(),
   getAllPendingScheduledCalls: jest.fn(),
   getActiveCalls: jest.fn(),
@@ -22,6 +24,17 @@ beforeEach(async () => {
   jest.mocked(getPendingCalls).mockResolvedValue(ok([]) as never);
   jest.mocked(getAllPendingScheduledCalls).mockResolvedValue(ok([]) as never);
   jest.mocked(getActiveCalls).mockResolvedValue(ok([]) as never);
+});
+
+const dismissResult = (Status: string, Outcome: string): DismissIntakeCallResult => ({
+  Data: { CallId: 31, Outcome, SenderBlocked: Outcome === 'Dismissed', SenderNotBlockable: false, BlockedUntilUtc: null },
+  PageSize: 0,
+  Timestamp: '',
+  Version: 'v4',
+  Node: '',
+  RequestId: '',
+  Status,
+  Environment: '',
 });
 
 const answerArchived = (years: string[], callsByYear: Record<string, unknown[]>) =>
@@ -98,5 +111,19 @@ describe('call queue actions', () => {
     useCallsStore.setState({ pendingCalls: [] });
     await useCallQueueActionsStore.getState().cancelPending('p1');
     expect(closeCallWith).toHaveBeenCalledWith(expect.anything(), { callId: 'p1', type: 2, sendNotification: false });
+  });
+
+  it('dismisses an intake call as spam through IntakeScreening and reports a call that is no longer pending (Core M0326)', async () => {
+    jest.mocked(dismissIntakeCallAsSpam).mockResolvedValueOnce(dismissResult('updated', 'Dismissed'));
+    useCallsStore.setState({ pendingCalls: [] });
+
+    const done = await useCallQueueActionsStore.getState().dismissAsSpam('31', true);
+
+    expect(done.ok).toBe(true);
+    expect(dismissIntakeCallAsSpam).toHaveBeenCalledWith(expect.anything(), { CallId: 31, BlockSender: true });
+
+    jest.mocked(dismissIntakeCallAsSpam).mockResolvedValueOnce(dismissResult('not_found', 'NotPending'));
+    expect((await useCallQueueActionsStore.getState().dismissAsSpam('31', false)).ok).toBe(false);
+    expect(useCallQueueActionsStore.getState().busyCallId).toBeNull();
   });
 });

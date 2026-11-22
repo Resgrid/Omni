@@ -635,6 +635,11 @@
       "via_webhook_named": "Via webhook: {{name}}",
       "via_voice": "Via voice line",
       "via_voice_named": "Via voice line: {{name}}"
+    },
+    "intake_screening": {
+      "likely_not_incident": "Enhanced AI: likely not an incident",
+      "repeat_sender": "Repeat sender: over the hourly limit",
+      "dismissed_as_spam": "Dismissed as spam"
     }
   },
   "chat": {
@@ -2630,7 +2635,9 @@
       "sign_in_approval": "Sign-in Approval",
       "weather": "Weather Alert",
       "work_order": "Work Order",
-      "recurring_call_alert": "Recurring Call Alert"
+      "recurring_call_alert": "Recurring Call Alert",
+      "desk_item": "Dispatcher Desk",
+      "desk_break": "Break"
     },
     "unknown_type_warning": "This notification type is not recognized.",
     "view_call": "View Call",
@@ -2667,7 +2674,12 @@
       "generic_call": "Generic Call",
       "general_notification": "Notifications",
       "general_message": "Messages",
-      "unit_status_timer": "Unit Status Timer"
+      "unit_status_timer": "Unit Status Timer",
+      "desk_offer": "Desk Offer",
+      "desk_queue_alert": "Desk Queue Alert",
+      "desk_message": "Desk Message",
+      "break_reminder": "Break Reminder",
+      "break_over": "Break Over"
     },
     "communication_test_confirmed": "Receipt confirmed",
     "communication_test_failed": "Could not confirm receipt. Please try again.",
@@ -2678,7 +2690,9 @@
     "view_chat": "View Chat",
     "view_sign_in": "Review",
     "view_work_order": "View Work Order",
-    "view_recurring_call_alerts": "View Alerts"
+    "view_recurring_call_alerts": "View Alerts",
+    "view_desk_break": "View Breaks",
+    "view_desk_item": "Open Desk"
   },
   "records": {
     "add_row": "Add row",
@@ -3807,7 +3821,13 @@
     "no_pending_calls_description": "There are no calls waiting to be dispatched.",
     "search": "Search pending calls...",
     "table_received": "Received",
-    "title": "Pending Calls"
+    "title": "Pending Calls",
+    "dismiss_spam": "Dismiss as Spam",
+    "dismiss_spam_block": "Also block the sender from your intake channels",
+    "dismiss_spam_blocked": "Dismissed as spam; the sender is blocked",
+    "dismiss_spam_confirm": "Dismiss this call as spam? It is cancelled without notifying anyone, and nothing is sent back to the sender.",
+    "dismiss_spam_error": "Failed to dismiss the call as spam",
+    "dismiss_spam_success": "Dismissed as spam"
   },
   "scheduled_calls": {
     "loading": "Loading scheduled calls...",
@@ -5029,6 +5049,353 @@
     "field_destination_address": "Destination address",
     "field_destination_location": "Destination location",
     "field_route": "Route"
+  },
+  "dispatcher_desk": {
+    "actions": {
+      "away": "Away",
+      "go_available": "Go available",
+      "im_back": "I'm back",
+      "im_back_done": "Welcome back. You are on the desk again.",
+      "sign_in": "Sign in to the desk",
+      "sign_off": "Sign off",
+      "take_break": "Take break"
+    },
+    "alerts": {
+      "auto_returned": "Your break ran past its length, so the desk returned you automatically.",
+      "back_title": "Back on the desk",
+      "break_due": "Your {{type}} is due now. Tap to take it.",
+      "break_ended_for_you": "Your break was ended. You are back on the desk.",
+      "break_over": "Your break is over. Tap \"I'm back\" to return to the desk.",
+      "break_over_title": "Your break is over",
+      "break_reminder": "Your {{type}} starts in {{minutes}} min",
+      "break_title": "Break",
+      "escalated": "Waiting too long: {{count}} ({{kind}})",
+      "escalated_title": "Desk work waiting",
+      "new_message": "New message from {{name}}",
+      "new_message_title": "New message"
+    },
+    "break_state": {
+      "active": "On break",
+      "done": "Done",
+      "planned": "Planned"
+    },
+    "break_type": {
+      "break": "Break",
+      "meal": "Meal",
+      "other": "Other",
+      "personal": "Personal"
+    },
+    "breaks": {
+      "coverage_prevented": "This break would leave {{available}} available, below the minimum of {{minimum}}. Your department does not allow that: ask a desk supervisor to start it.",
+      "coverage_refused": "Coverage is too low to start your break now. A desk supervisor can start it for you.",
+      "coverage_warning": "This break leaves {{available}} available, below the minimum of {{minimum}}.",
+      "due_back_at": "Due back at {{time}}",
+      "duty": "{{shift}} · {{start}}–{{end}}",
+      "left": "{{time}} left",
+      "length": "Length",
+      "minutes": "{{minutes}} min",
+      "my_breaks": "My breaks today",
+      "my_duty": "My duty",
+      "overdue_by": "Overdue by {{time}}",
+      "plan_mine": "Plan a break",
+      "plan_shift": "Plan breaks for the shift",
+      "plan_shift_confirm": "Plan breaks",
+      "plan_shift_done": "Breaks planned for the shift",
+      "plan_shift_message": "Stagger the shift's break plan across today's dispatchers so breaks do not overlap.",
+      "plan_shift_replace": "Replace breaks already planned",
+      "planned_at": "Planned for {{time}}",
+      "return_work": "Return my work to the queue (held: {{count}})",
+      "return_work_hint": "A break starts only once your work is back in the queue for another dispatcher.",
+      "row": "{{type}} · {{minutes}} min",
+      "start_now": "Start now",
+      "start_planned": "Planned {{type}} · {{minutes}} min · {{time}}",
+      "started": "Enjoy your break. You are due back at {{time}}.",
+      "started_at": "Started {{time}}",
+      "take_anyway": "Take break anyway",
+      "take_new": "A new break now",
+      "take_now": "Take a break now",
+      "take_title": "Take a break",
+      "title": "Breaks",
+      "type": "Type"
+    },
+    "complete": {
+      "done": "Completed",
+      "note": "Note",
+      "outcome": "How did it end?",
+      "title": "Complete",
+      "notify_participant": "Tell the texter the conversation ended",
+      "notify_participant_hint": "Sends a closing text from the Resgrid number."
+    },
+    "conversation": {
+      "add_note": "Add note",
+      "empty": "No messages yet.",
+      "note_by": "Note · {{name}}",
+      "note_placeholder": "Write a note for the desk (never sent)…",
+      "reply": "Reply",
+      "reply_placeholder": "Write a reply…",
+      "save_note": "Save note",
+      "send": "Send reply"
+    },
+    "create_call": {
+      "link_failed": "The call was saved but could not be linked to the conversation.",
+      "link_later": "The call was saved on this device and is sent when you are back online. Complete the conversation once it is sent.",
+      "linked": "The call is linked to the conversation.",
+      "name": "{{kind}} from {{source}}"
+    },
+    "delivery": {
+      "failed": "Not delivered",
+      "queued": "Sending",
+      "received": "Received",
+      "sent": "Sent"
+    },
+    "desk_off": "The dispatcher desk is turned off",
+    "desk_off_description": "Your department has not turned on the dispatcher desk. A department administrator can turn it on under Shifts > Dispatcher Desk Settings.",
+    "device": {
+      "desktop": "Desktop",
+      "phone": "Phone",
+      "tablet": "Tablet"
+    },
+    "errors": {
+      "already_on_break": "You are already on a break.",
+      "already_on_roster": "You are already on that day's dispatch roster.",
+      "at_capacity": "You already hold as much work as the desk allows. Finish or release something first.",
+      "break_not_found": "That break is no longer planned.",
+      "break_not_startable": "That break cannot be started now.",
+      "break_overlaps": "That break overlaps another of your breaks.",
+      "channel_unavailable": "That channel cannot send right now.",
+      "coverage_too_low": "Coverage is too low to start a break now. A desk supervisor can start it for you.",
+      "desk_disabled": "Your department has turned the dispatcher desk off.",
+      "dispatchers_not_enabled": "That shift has no dispatchers on duty.",
+      "holding_work": "You hold work. Return it to the queue to start your break.",
+      "invalid_input": "Something in the request is missing or not valid.",
+      "item_not_available": "That work has already been taken or finished.",
+      "item_not_found": "That work is no longer on the desk.",
+      "no_callback_number": "Enter the number the desk should ring.",
+      "not_a_dispatcher": "Only dispatchers can use the desk.",
+      "not_assigned_to_you": "That work is held by another dispatcher.",
+      "not_on_break": "There is no break running to end.",
+      "not_on_duty": "You are not on a dispatch shift right now.",
+      "not_permitted": "You are not allowed to do that on the desk.",
+      "not_signed_in": "Sign in to the desk first.",
+      "shift_not_found": "That shift could not be found.",
+      "title": "Desk",
+      "unknown": "The desk could not do that. Please try again."
+    },
+    "event": {
+      "accepted": "Accepted",
+      "cancelled": "Cancelled",
+      "completed": "Completed",
+      "created": "Came in",
+      "declined": "Declined",
+      "escalated": "Waited too long",
+      "message_received": "Message received",
+      "message_sent": "Message sent",
+      "offer_expired": "Offer ran out",
+      "offered": "Offered",
+      "overflowed": "Sent to overflow",
+      "released": "Returned to the queue",
+      "reopened": "Reopened",
+      "transferred": "Handed over",
+      "voice_connected": "Call connected",
+      "voice_connecting": "Connecting the call",
+      "voice_ended": "Call ended",
+      "conversation_closed": "Text thread ended",
+      "held_for_review": "Held for review: screened intake call"
+    },
+    "item": {
+      "complete": "Complete",
+      "create_call": "Create call",
+      "dispatch_now": "Dispatch now",
+      "due_on": "Due {{time}}",
+      "history": "History ({{count}})",
+      "loading": "Loading…",
+      "not_found": "This work is no longer on the desk",
+      "open_call": "Open call",
+      "release": "Return to queue",
+      "released": "Returned to the queue",
+      "title": "Desk work",
+      "transfer": "Hand over"
+    },
+    "item_state": {
+      "accepted": "In progress",
+      "cancelled": "Cancelled",
+      "completed": "Done",
+      "offered": "Offered",
+      "overflowed": "Sent to overflow",
+      "queued": "Waiting"
+    },
+    "kind": {
+      "chat": "Chat",
+      "email": "Email",
+      "other": "Desk work",
+      "pending_call": "Pending call",
+      "scheduled_call": "Scheduled call",
+      "text": "Text message",
+      "voice": "Phone call"
+    },
+    "loading": "Loading the desk…",
+    "not_available": "The dispatcher desk is not available in this app",
+    "not_dispatcher": "You are not a dispatcher",
+    "not_dispatcher_description": "Only members who may sign in to the Dispatch app can use the dispatcher desk.",
+    "offer": {
+      "accept": "Accept",
+      "decline": "Decline",
+      "expires_in": "Answer within {{time}}",
+      "more": "More offers waiting: {{count}}",
+      "title": "Work offered to you"
+    },
+    "outcome": {
+      "call_created": "Call created",
+      "closed": "Call closed",
+      "dispatched": "Dispatched",
+      "duplicate": "Duplicate",
+      "left_pending": "Left pending",
+      "no_action_needed": "No action needed",
+      "none": "No outcome",
+      "referred": "Referred elsewhere"
+    },
+    "plan": {
+      "add_title": "Plan a break",
+      "cancel": "Remove",
+      "cancelled": "Break removed",
+      "edit": "Change",
+      "edit_title": "Change the break",
+      "entry": "{{type}} · {{minutes}} min · {{start}}–{{end}}",
+      "length_hint": "A break is a length: it can start early or late, and is due back its length after it starts.",
+      "none": "No breaks planned today.",
+      "save": "Save break",
+      "saved": "Break saved",
+      "start": "Planned start",
+      "start_now": "Start break now",
+      "started_for": "{{name}} is on break",
+      "title_for": "Breaks for {{name}}",
+      "title_mine": "My breaks"
+    },
+    "queue": {
+      "escalated": "Waiting too long",
+      "held_by": "Held by {{name}}",
+      "mine": "My work",
+      "mine_empty": "Nothing offered to you or held by you.",
+      "recent": "Recent",
+      "recent_empty": "No recent work on this device.",
+      "take": "Take",
+      "waited": "Waiting {{minutes}} min",
+      "waiting": "Waiting",
+      "waiting_empty": "Nothing is waiting in the queue."
+    },
+    "sign_in": {
+      "callback_hint": "The desk rings this phone to connect callers. Leave it empty to use your profile mobile.",
+      "callback_number": "Callback number",
+      "callback_placeholder": "+1 555 555 0100",
+      "device": "Signing in on: {{device}}",
+      "done": "You are signed in to the desk.",
+      "no_shift": "You are not on a dispatch shift right now, so the desk may refuse the sign-in.",
+      "no_shift_unscheduled": "You are not on a dispatch shift right now. Turn on unscheduled duty to sign in anyway.",
+      "prompt": "Sign in to take routed work and see it offered to you.",
+      "prompt_title": "You are not signed in to the desk",
+      "start_away": "Start as away",
+      "start_away_hint": "Take no routed work until you go available.",
+      "title": "Sign in to the desk",
+      "unscheduled": "Unscheduled duty",
+      "unscheduled_hint": "Go on duty without a dispatch shift (an event, cover).",
+      "until": "On duty until (optional)"
+    },
+    "sign_off": {
+      "done": "You are signed off the desk.",
+      "message": "You stop getting routed work until you sign in again.",
+      "message_holding": "You stop getting routed work, and the work you hold goes back to the queue (items: {{count}}).",
+      "title": "Sign off the desk?"
+    },
+    "state": {
+      "available": "Available",
+      "away": "Away",
+      "busy": "Busy",
+      "offline": "Signed off",
+      "on_break": "On break",
+      "on_break_left": "On break · {{time}} left",
+      "on_break_overdue": "Break overdue by {{minutes}} min"
+    },
+    "status_bar": {
+      "counts": "Offered {{offered}} · Held {{held}} · Waiting {{waiting}}",
+      "less": "Fewer desk actions",
+      "more": "More desk actions",
+      "not_signed_in": "Not signed in to the desk · Waiting {{waiting}}"
+    },
+    "team": {
+      "break_ended": "{{name}} is back on the desk",
+      "breaks": "Breaks",
+      "empty": "No dispatchers on the desk.",
+      "end_break": "End break",
+      "holding": "Holding {{count}} of {{capacity}}",
+      "next_break": "Next: {{type}} at {{time}} ({{minutes}} min)",
+      "no_shift": "Not on a dispatch shift",
+      "offered": "Offered: {{count}}",
+      "on_shift": "{{shift}} until {{time}}",
+      "open": "signed off",
+      "summary": "Available {{available}} · On break {{onBreak}} · On duty {{onDuty}} · Minimum {{minimum}}",
+      "supervisor": "Supervisor",
+      "title": "Team",
+      "unscheduled": "Unscheduled duty until {{time}}",
+      "you": "you"
+    },
+    "timeline": {
+      "coverage": "Coverage",
+      "empty": "Nobody is on dispatch duty today.",
+      "hint": "Everyone's duty and breaks today. Red marks coverage below the minimum.",
+      "hint_supervisor": "Everyone's duty and breaks today. Tap a dispatcher to plan or change their breaks.",
+      "legend_below": "Below minimum",
+      "legend_overdue": "Overdue break",
+      "legend_duty": "On duty",
+      "legend_planned": "Planned break",
+      "legend_taken": "Break taken",
+      "loading": "Loading the timeline…",
+      "title": "Team timeline",
+      "unavailable": "The timeline could not be loaded"
+    },
+    "title": "Dispatcher Desk",
+    "transfer": {
+      "done": "Handed over",
+      "none": "No other dispatcher is signed in and free to take it.",
+      "note": "Note for them",
+      "title": "Hand over to"
+    },
+    "unsupported": "The dispatcher desk is not available yet",
+    "unsupported_description": "Your Resgrid server does not have the dispatcher desk. Ask your administrator to update it.",
+    "voice": {
+      "answer": "Answer",
+      "call_back": "Call back",
+      "caller": "Caller",
+      "caller_gone": "Caller hung up",
+      "caller_waiting": "Caller waiting",
+      "ring_hint": "The desk calls this phone and connects the caller when you press 1.",
+      "ring_number": "Ring this number",
+      "ringing": "Your phone will ring. Press 1 to connect.",
+      "unavailable": "The desk cannot connect phone calls for this department.",
+      "unknown_caller": "Unknown number"
+    },
+    "warnings": {
+      "breaks_overlap": "Breaks overlap with another dispatcher's.",
+      "coverage_below_minimum": "Coverage drops below the minimum: {{available}} available, minimum {{minimum}}.",
+      "generic": "The desk noticed something about this change.",
+      "no_coverage": "Nobody would be available on the desk.",
+      "outside_duty": "The break falls outside the shift.",
+      "started_early": "The break started {{minutes}} min earlier than planned.",
+      "started_late": "The break started {{minutes}} min later than planned.",
+      "work_returned": "Your work went back to the queue."
+    },
+    "intake": {
+      "title": "Text thread",
+      "handler_assistant": "Enhanced AI is asking the texter questions until a dispatcher connects.",
+      "handler_unassisted": "The texter is waiting for a dispatcher.",
+      "handler_dispatcher": "Connected with {{name}}.",
+      "closed": "This text thread has ended.",
+      "opted_out": "The texter opted out (STOP). Nothing more can be sent.",
+      "reply_from": "Replies go out from {{number}}.",
+      "author_participant": "Texter",
+      "author_assistant": "Enhanced AI",
+      "author_system": "Resgrid",
+      "failed": "Not delivered"
+    }
   },
   "route_plans": {
     "duration_with_stops": "With stops",

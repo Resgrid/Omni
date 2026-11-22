@@ -33,6 +33,7 @@ const mockFetchPending = jest.fn(async () => undefined);
 const mockFetchScheduled = jest.fn(async () => undefined);
 const mockDispatchNow = jest.fn(async () => ({ ok: true, error: null }));
 const mockCancelPending = jest.fn(async () => ({ ok: true, error: null }));
+const mockDismissAsSpam = jest.fn(async (_callId: string, _blockSender: boolean) => ({ ok: true, error: null }));
 const mockExtraData = jest.fn(async () => ({ Dispatches: [{ Id: 'u1', Type: 'Unit', Name: 'E1' }] }));
 
 type ExtraDataAnswer = Awaited<ReturnType<typeof mockExtraData>>;
@@ -53,7 +54,8 @@ beforeEach(() => {
     fetchScheduledCalls: mockFetchScheduled,
     fetchCallExtraData: mockExtraData as never,
   });
-  useCallQueueActionsStore.setState({ busyCallId: null, dispatchNow: mockDispatchNow, cancelPending: mockCancelPending });
+  useCallQueueActionsStore.setState({ busyCallId: null, dispatchNow: mockDispatchNow, cancelPending: mockCancelPending, dismissAsSpam: mockDismissAsSpam });
+  mockDismissAsSpam.mockClear();
 });
 
 afterEach(() => useToastStore.getState().clearToasts());
@@ -323,5 +325,62 @@ describe('PendingCallsScreen: calls from external intake (Core M0323)', () => {
     expect(screen.getByTestId('pending-call-intake-source-p3')).toHaveTextContent('calls.intake_source.via_sms_named:Hospital transfer line');
     expect(screen.getByTestId('pending-call-intake-source-p4')).toHaveTextContent('calls.intake_source.voice');
     expect(screen.queryByTestId('pending-call-intake-source-p5')).toBeNull();
+  });
+});
+
+describe('PendingCallsScreen: intake spam screening (Core M0326)', () => {
+  beforeEach(() => {
+    useCallsStore.setState({
+      pendingCalls: [
+        makeCall('p3', { Name: 'Win a cruise', State: 8, CallSource: 6, IntakeChannelType: 1, IntakeChannelName: 'Dispatch number', IntakeScreening: 1 }),
+        makeCall('p4', { Name: 'Repeat texter', State: 8, CallSource: 6, IntakeChannelType: 1, IntakeScreening: 2 }),
+        makeCall('p5', { Name: 'Logged by hand', State: 8, CallSource: 1, IntakeScreening: 1 }),
+        makeCall('p6', { Name: 'Older server', State: 8, CallSource: 6, IntakeChannelType: 1 }),
+      ],
+    });
+  });
+
+  it('badges screened intake calls only', async () => {
+    await render(<PendingCallsScreen realtime={false} />);
+
+    expect(screen.getByTestId('pending-call-intake-screening-p3')).toHaveTextContent('calls.intake_screening.likely_not_incident');
+    expect(screen.getByTestId('pending-call-intake-screening-p4')).toHaveTextContent('calls.intake_screening.repeat_sender');
+    expect(screen.queryByTestId('pending-call-intake-screening-p5')).toBeNull();
+    expect(screen.queryByTestId('pending-call-intake-screening-p6')).toBeNull();
+  });
+
+  it('offers Dismiss as Spam on intake calls only, with the Close Call permission', async () => {
+    const { unmount } = await render(<PendingCallsScreen realtime={false} />);
+    expect(screen.getByTestId('pending-call-dismiss-spam-p3')).toBeTruthy();
+    expect(screen.getByTestId('pending-call-dismiss-spam-p6')).toBeTruthy();
+    expect(screen.queryByTestId('pending-call-dismiss-spam-p5')).toBeNull();
+    await unmount();
+
+    setRights({ CanCloseCalls: false });
+    await render(<PendingCallsScreen realtime={false} />);
+    expect(screen.queryByTestId('pending-call-dismiss-spam-p3')).toBeNull();
+  });
+
+  it('dismisses only after confirming, blocking the sender by default', async () => {
+    await render(<PendingCallsScreen realtime={false} />);
+    await fireEvent.press(screen.getByTestId('pending-call-dismiss-spam-p3'));
+    expect(mockDismissAsSpam).not.toHaveBeenCalled();
+    expect(screen.getByText('pending_calls.dismiss_spam_confirm', hidden)).toBeTruthy();
+
+    await act(async () => fireEvent.press(screen.getByTestId('call-queue-confirm-confirm', hidden)));
+
+    expect(mockDismissAsSpam).toHaveBeenCalledWith('p3', true);
+    expect(useToastStore.getState().toasts[0]).toMatchObject({ type: 'success', message: 'pending_calls.dismiss_spam_blocked' });
+  });
+
+  it('can dismiss without blocking, and says so when the server refuses', async () => {
+    mockDismissAsSpam.mockResolvedValueOnce({ ok: false, error: null });
+    await render(<PendingCallsScreen realtime={false} />);
+    await fireEvent.press(screen.getByTestId('pending-call-dismiss-spam-p4'));
+    await fireEvent.press(screen.getByTestId('call-queue-confirm-block-sender', hidden));
+    await act(async () => fireEvent.press(screen.getByTestId('call-queue-confirm-confirm', hidden)));
+
+    expect(mockDismissAsSpam).toHaveBeenCalledWith('p4', false);
+    expect(useToastStore.getState().toasts[0]).toMatchObject({ type: 'error', message: 'pending_calls.dismiss_spam_error' });
   });
 });

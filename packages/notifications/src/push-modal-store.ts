@@ -6,6 +6,7 @@
 import { logger } from '@resgrid/core';
 import { create } from 'zustand';
 
+import { isAlertSuppressed } from './alert-suppression';
 import { getOptionalNotificationsDependencies } from './configure';
 import { type ParsedEventCode, parseEventCode } from './event-codes';
 import { notificationSoundService } from './notification-sound';
@@ -58,6 +59,13 @@ export const usePushNotificationModalStore = create<PushNotificationModalState>(
       return;
     }
     const parsed = parseNotificationData(notification);
+
+    // Alerts held back (a dispatcher on break): no modal and no sound; the push itself stays in the inbox and the OS list.
+    if (isAlertSuppressed({ channel: 'modal', eventCode: parsed.eventCode, kind: parsed.kind })) {
+      logger.info({ message: 'Push notification modal held back', context: { kind: parsed.kind } });
+
+      return;
+    }
 
     logger.info({ message: 'Showing push notification modal', context: { kind: parsed.kind, eventCode: parsed.eventCode } });
 

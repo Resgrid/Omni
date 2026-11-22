@@ -74,7 +74,7 @@ import { getMissingCallFieldsFromRefusal } from './lib/server-refusal';
 // Screens
 export { default as CallDetailScreen, type CallDetailScreenProps } from './screens/call-detail';
 export { default as CallEditScreen } from './screens/call-edit';
-export { type CallFormLocation, default as CallFormScreen, type CallFormScreenProps } from './screens/call-form';
+export { type CallFormCreated, type CallFormLocation, default as CallFormScreen, type CallFormScreenProps } from './screens/call-form';
 export { default as CallListScreen, type CallListScreenProps } from './screens/call-list';
 export { default as CallNewScreen } from './screens/call-new';
 

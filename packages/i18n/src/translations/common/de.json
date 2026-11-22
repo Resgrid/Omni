@@ -635,6 +635,11 @@
       "via_webhook_named": "Via webhook: {{name}}",
       "via_voice": "Via voice line",
       "via_voice_named": "Via voice line: {{name}}"
+    },
+    "intake_screening": {
+      "likely_not_incident": "Enhanced AI: likely not an incident",
+      "repeat_sender": "Repeat sender: over the hourly limit",
+      "dismissed_as_spam": "Dismissed as spam"
     }
   },
   "chat": {
@@ -2630,7 +2635,9 @@
       "sign_in_approval": "Sign-in Approval",
       "weather": "Wetterwarnung",
       "work_order": "Arbeitsauftrag",
-      "recurring_call_alert": "Alarm zu wiederkehrendem Einsatz"
+      "recurring_call_alert": "Alarm zu wiederkehrendem Einsatz",
+      "desk_item": "Disponenten-Pult",
+      "desk_break": "Pause"
     },
     "unknown_type_warning": "Dieser Benachrichtigungstyp wird nicht erkannt.",
     "view_call": "Einsatz anzeigen",
@@ -2667,7 +2674,12 @@
       "generic_call": "Generic Call",
       "general_notification": "Notifications",
       "general_message": "Messages",
-      "unit_status_timer": "Unit Status Timer"
+      "unit_status_timer": "Unit Status Timer",
+      "desk_offer": "Desk Offer",
+      "desk_queue_alert": "Desk Queue Alert",
+      "desk_message": "Desk Message",
+      "break_reminder": "Break Reminder",
+      "break_over": "Break Over"
     },
     "communication_test_confirmed": "Receipt confirmed",
     "communication_test_failed": "Could not confirm receipt. Please try again.",
@@ -2678,7 +2690,9 @@
     "view_chat": "Chat anzeigen",
     "view_sign_in": "Review",
     "view_work_order": "Arbeitsauftrag anzeigen",
-    "view_recurring_call_alerts": "Alarme anzeigen"
+    "view_recurring_call_alerts": "Alarme anzeigen",
+    "view_desk_break": "Pausen anzeigen",
+    "view_desk_item": "Pult öffnen"
   },
   "records": {
     "add_row": "Zeile hinzufügen",
@@ -3807,7 +3821,13 @@
     "no_pending_calls_description": "Derzeit warten keine Einsätze auf die Disposition.",
     "search": "Ausstehende Einsätze suchen...",
     "table_received": "Eingegangen",
-    "title": "Ausstehende Einsätze"
+    "title": "Ausstehende Einsätze",
+    "dismiss_spam": "Dismiss as Spam",
+    "dismiss_spam_block": "Also block the sender from your intake channels",
+    "dismiss_spam_blocked": "Dismissed as spam; the sender is blocked",
+    "dismiss_spam_confirm": "Dismiss this call as spam? It is cancelled without notifying anyone, and nothing is sent back to the sender.",
+    "dismiss_spam_error": "Failed to dismiss the call as spam",
+    "dismiss_spam_success": "Dismissed as spam"
   },
   "scheduled_calls": {
     "loading": "Geplante Einsätze werden geladen...",
@@ -5029,6 +5049,353 @@
     "field_destination_address": "Zieladresse",
     "field_destination_location": "Zielstandort",
     "field_route": "Route"
+  },
+  "dispatcher_desk": {
+    "actions": {
+      "away": "Abwesend",
+      "go_available": "Verfügbar melden",
+      "im_back": "Ich bin zurück",
+      "im_back_done": "Willkommen zurück. Sie sind wieder am Platz.",
+      "sign_in": "Am Disponentenplatz anmelden",
+      "sign_off": "Abmelden",
+      "take_break": "Pause machen"
+    },
+    "alerts": {
+      "auto_returned": "Ihre Pause hat die vorgesehene Länge überschritten, daher wurden Sie automatisch an den Platz zurückgemeldet.",
+      "back_title": "Wieder am Platz",
+      "break_due": "Jetzt fällig: {{type}}. Tippen Sie, um zu beginnen.",
+      "break_ended_for_you": "Ihre Pause wurde beendet. Sie sind wieder am Platz.",
+      "break_over": "Ihre Pause ist vorbei. Tippen Sie auf „Ich bin zurück“, um an den Platz zurückzukehren.",
+      "break_over_title": "Ihre Pause ist vorbei",
+      "break_reminder": "{{type}}: Beginn in {{minutes}} Min.",
+      "break_title": "Pause",
+      "escalated": "Wartet zu lange: {{count}} ({{kind}})",
+      "escalated_title": "Vorgänge warten",
+      "new_message": "Neue Nachricht von {{name}}",
+      "new_message_title": "Neue Nachricht"
+    },
+    "break_state": {
+      "active": "In Pause",
+      "done": "Erledigt",
+      "planned": "Geplant"
+    },
+    "break_type": {
+      "break": "Pause",
+      "meal": "Essen",
+      "other": "Sonstiges",
+      "personal": "Persönlich"
+    },
+    "breaks": {
+      "coverage_prevented": "Durch diese Pause wären nur noch {{available}} verfügbar, unter dem Minimum von {{minimum}}. Ihre Organisation erlaubt das nicht: Bitten Sie die Schichtführung, die Pause zu starten.",
+      "coverage_refused": "Die Besetzung ist zu gering, um Ihre Pause jetzt zu starten. Die Schichtführung kann sie für Sie starten.",
+      "coverage_warning": "Durch diese Pause sind nur noch {{available}} verfügbar, unter dem Minimum von {{minimum}}.",
+      "due_back_at": "Zurück um {{time}}",
+      "duty": "{{shift}} · {{start}}–{{end}}",
+      "left": "Noch {{time}}",
+      "length": "Dauer",
+      "minutes": "{{minutes}} Min.",
+      "my_breaks": "Meine Pausen heute",
+      "my_duty": "Mein Dienst",
+      "overdue_by": "{{time}} überfällig",
+      "plan_mine": "Pause planen",
+      "plan_shift": "Pausen für die Schicht planen",
+      "plan_shift_confirm": "Pausen planen",
+      "plan_shift_done": "Pausen für die Schicht geplant",
+      "plan_shift_message": "Den Pausenplan der Schicht so auf die heutigen Disponenten verteilen, dass sich die Pausen nicht überschneiden.",
+      "plan_shift_replace": "Bereits geplante Pausen ersetzen",
+      "planned_at": "Geplant für {{time}}",
+      "return_work": "Meine Vorgänge in die Warteschlange zurückgeben (übernommen: {{count}})",
+      "return_work_hint": "Eine Pause beginnt erst, wenn Ihre Vorgänge für einen anderen Disponenten wieder in der Warteschlange sind.",
+      "row": "{{type}} · {{minutes}} Min.",
+      "start_now": "Jetzt starten",
+      "start_planned": "Geplant: {{type}} · {{minutes}} Min. · {{time}}",
+      "started": "Genießen Sie Ihre Pause. Sie werden um {{time}} zurückerwartet.",
+      "started_at": "Begonnen um {{time}}",
+      "take_anyway": "Trotzdem Pause machen",
+      "take_new": "Jetzt eine neue Pause",
+      "take_now": "Jetzt Pause machen",
+      "take_title": "Pause machen",
+      "title": "Pausen",
+      "type": "Art"
+    },
+    "complete": {
+      "done": "Abgeschlossen",
+      "note": "Notiz",
+      "outcome": "Wie ist es ausgegangen?",
+      "title": "Abschließen",
+      "notify_participant": "Absender über das Ende informieren",
+      "notify_participant_hint": "Sendet eine abschließende SMS von der Resgrid-Nummer."
+    },
+    "conversation": {
+      "add_note": "Notiz hinzufügen",
+      "empty": "Noch keine Nachrichten.",
+      "note_by": "Notiz · {{name}}",
+      "note_placeholder": "Notiz für die Disponenten schreiben (wird nie gesendet)…",
+      "reply": "Antworten",
+      "reply_placeholder": "Antwort schreiben…",
+      "save_note": "Notiz speichern",
+      "send": "Antwort senden"
+    },
+    "create_call": {
+      "link_failed": "Der Einsatz wurde gespeichert, konnte aber nicht mit der Unterhaltung verknüpft werden.",
+      "link_later": "Der Einsatz wurde auf diesem Gerät gespeichert und wird gesendet, sobald Sie wieder online sind. Schließen Sie die Unterhaltung ab, sobald er gesendet wurde.",
+      "linked": "Der Einsatz ist mit der Unterhaltung verknüpft.",
+      "name": "{{kind}} von {{source}}"
+    },
+    "delivery": {
+      "failed": "Nicht zugestellt",
+      "queued": "Wird gesendet",
+      "received": "Empfangen",
+      "sent": "Gesendet"
+    },
+    "desk_off": "Der Disponentenplatz ist deaktiviert",
+    "desk_off_description": "Ihre Organisation hat den Disponentenplatz nicht aktiviert. Ein Administrator Ihrer Organisation kann ihn unter Schichten > Einstellungen Dispositionsplatz aktivieren.",
+    "device": {
+      "desktop": "Desktop",
+      "phone": "Telefon",
+      "tablet": "Tablet"
+    },
+    "errors": {
+      "already_on_break": "Sie sind bereits in Pause.",
+      "already_on_roster": "Sie stehen bereits auf dem Disponentenplan dieses Tages.",
+      "at_capacity": "Sie haben bereits so viele Vorgänge übernommen, wie der Disponentenplatz erlaubt. Schließen Sie zuerst etwas ab oder geben Sie etwas zurück.",
+      "break_not_found": "Diese Pause ist nicht mehr geplant.",
+      "break_not_startable": "Diese Pause kann jetzt nicht gestartet werden.",
+      "break_overlaps": "Diese Pause überschneidet sich mit einer anderen Ihrer Pausen.",
+      "channel_unavailable": "Über diesen Kanal kann gerade nicht gesendet werden.",
+      "coverage_too_low": "Die Besetzung ist zu gering, um jetzt eine Pause zu starten. Die Schichtführung kann sie für Sie starten.",
+      "desk_disabled": "Ihre Organisation hat den Disponentenplatz deaktiviert.",
+      "dispatchers_not_enabled": "In dieser Schicht sind keine Disponenten im Dienst.",
+      "holding_work": "Sie haben noch Vorgänge übernommen. Geben Sie sie in die Warteschlange zurück, um Ihre Pause zu starten.",
+      "invalid_input": "In der Anfrage fehlt etwas oder ist ungültig.",
+      "item_not_available": "Dieser Vorgang wurde bereits übernommen oder abgeschlossen.",
+      "item_not_found": "Dieser Vorgang liegt nicht mehr am Disponentenplatz.",
+      "no_callback_number": "Geben Sie die Nummer ein, die angerufen werden soll.",
+      "not_a_dispatcher": "Nur Disponenten können den Disponentenplatz nutzen.",
+      "not_assigned_to_you": "Dieser Vorgang wurde von einem anderen Disponenten übernommen.",
+      "not_on_break": "Es läuft keine Pause, die beendet werden kann.",
+      "not_on_duty": "Sie sind gerade in keiner Disponentenschicht.",
+      "not_permitted": "Das dürfen Sie am Disponentenplatz nicht.",
+      "not_signed_in": "Melden Sie sich zuerst am Disponentenplatz an.",
+      "shift_not_found": "Diese Schicht wurde nicht gefunden.",
+      "title": "Disponentenplatz",
+      "unknown": "Der Disponentenplatz konnte das nicht ausführen. Bitte versuchen Sie es erneut."
+    },
+    "event": {
+      "accepted": "Angenommen",
+      "cancelled": "Storniert",
+      "completed": "Abgeschlossen",
+      "created": "Eingegangen",
+      "declined": "Abgelehnt",
+      "escalated": "Zu lange gewartet",
+      "message_received": "Nachricht empfangen",
+      "message_sent": "Nachricht gesendet",
+      "offer_expired": "Angebot abgelaufen",
+      "offered": "Angeboten",
+      "overflowed": "An Überlauf weitergeleitet",
+      "released": "In die Warteschlange zurückgegeben",
+      "reopened": "Wieder geöffnet",
+      "transferred": "Übergeben",
+      "voice_connected": "Anruf verbunden",
+      "voice_connecting": "Anruf wird verbunden",
+      "voice_ended": "Anruf beendet",
+      "conversation_closed": "SMS-Verlauf beendet",
+      "held_for_review": "Held for review: screened intake call"
+    },
+    "item": {
+      "complete": "Abschließen",
+      "create_call": "Einsatz anlegen",
+      "dispatch_now": "Jetzt alarmieren",
+      "due_on": "Fällig {{time}}",
+      "history": "Verlauf ({{count}})",
+      "loading": "Wird geladen…",
+      "not_found": "Dieser Vorgang liegt nicht mehr am Disponentenplatz",
+      "open_call": "Einsatz öffnen",
+      "release": "Zurück in die Warteschlange",
+      "released": "In die Warteschlange zurückgegeben",
+      "title": "Vorgang",
+      "transfer": "Übergeben"
+    },
+    "item_state": {
+      "accepted": "In Bearbeitung",
+      "cancelled": "Storniert",
+      "completed": "Erledigt",
+      "offered": "Angeboten",
+      "overflowed": "An Überlauf weitergeleitet",
+      "queued": "Wartend"
+    },
+    "kind": {
+      "chat": "Chat",
+      "email": "E-Mail",
+      "other": "Vorgang",
+      "pending_call": "Ausstehender Einsatz",
+      "scheduled_call": "Geplanter Einsatz",
+      "text": "SMS",
+      "voice": "Telefonanruf"
+    },
+    "loading": "Disponentenplatz wird geladen…",
+    "not_available": "Der Disponentenplatz ist in dieser App nicht verfügbar",
+    "not_dispatcher": "Sie sind kein Disponent",
+    "not_dispatcher_description": "Nur Mitglieder, die sich bei der Dispatch-App anmelden dürfen, können den Disponentenplatz nutzen.",
+    "offer": {
+      "accept": "Annehmen",
+      "decline": "Ablehnen",
+      "expires_in": "Antwort innerhalb von {{time}}",
+      "more": "Weitere wartende Angebote: {{count}}",
+      "title": "Ihnen angebotener Vorgang"
+    },
+    "outcome": {
+      "call_created": "Einsatz angelegt",
+      "closed": "Einsatz abgeschlossen",
+      "dispatched": "Alarmiert",
+      "duplicate": "Duplikat",
+      "left_pending": "Ausstehend belassen",
+      "no_action_needed": "Keine Maßnahme nötig",
+      "none": "Kein Ergebnis",
+      "referred": "An andere Stelle verwiesen"
+    },
+    "plan": {
+      "add_title": "Pause planen",
+      "cancel": "Entfernen",
+      "cancelled": "Pause entfernt",
+      "edit": "Ändern",
+      "edit_title": "Pause ändern",
+      "entry": "{{type}} · {{minutes}} Min. · {{start}}–{{end}}",
+      "length_hint": "Eine Pause ist eine Dauer: Sie kann früher oder später beginnen, und die Rückkehr ist diese Dauer nach ihrem Beginn fällig.",
+      "none": "Heute keine Pausen geplant.",
+      "save": "Pause speichern",
+      "saved": "Pause gespeichert",
+      "start": "Geplanter Beginn",
+      "start_now": "Pause jetzt starten",
+      "started_for": "{{name}} ist in Pause",
+      "title_for": "Pausen für {{name}}",
+      "title_mine": "Meine Pausen"
+    },
+    "queue": {
+      "escalated": "Wartet zu lange",
+      "held_by": "Übernommen von {{name}}",
+      "mine": "Meine Vorgänge",
+      "mine_empty": "Ihnen ist nichts angeboten und Sie haben nichts übernommen.",
+      "recent": "Zuletzt",
+      "recent_empty": "Keine kürzlichen Vorgänge auf diesem Gerät.",
+      "take": "Übernehmen",
+      "waited": "Wartet seit {{minutes}} Min.",
+      "waiting": "Wartend",
+      "waiting_empty": "In der Warteschlange wartet nichts."
+    },
+    "sign_in": {
+      "callback_hint": "Der Disponentenplatz ruft dieses Telefon an, um Anrufer zu verbinden. Leer lassen, um die Mobilnummer aus Ihrem Profil zu verwenden.",
+      "callback_number": "Rückrufnummer",
+      "callback_placeholder": "+1 555 555 0100",
+      "device": "Anmeldung auf: {{device}}",
+      "done": "Sie sind am Disponentenplatz angemeldet.",
+      "no_shift": "Sie sind gerade in keiner Disponentenschicht, daher kann die Anmeldung abgelehnt werden.",
+      "no_shift_unscheduled": "Sie sind gerade in keiner Disponentenschicht. Aktivieren Sie den außerplanmäßigen Dienst, um sich trotzdem anzumelden.",
+      "prompt": "Melden Sie sich an, um zugeteilte Vorgänge angeboten zu bekommen und zu übernehmen.",
+      "prompt_title": "Sie sind nicht am Disponentenplatz angemeldet",
+      "start_away": "Als abwesend beginnen",
+      "start_away_hint": "Keine zugeteilten Vorgänge erhalten, bis Sie sich verfügbar melden.",
+      "title": "Am Disponentenplatz anmelden",
+      "unscheduled": "Außerplanmäßiger Dienst",
+      "unscheduled_hint": "Ohne Disponentenschicht in den Dienst gehen (Veranstaltung, Vertretung).",
+      "until": "Im Dienst bis (optional)"
+    },
+    "sign_off": {
+      "done": "Sie sind vom Disponentenplatz abgemeldet.",
+      "message": "Sie erhalten keine zugeteilten Vorgänge mehr, bis Sie sich erneut anmelden.",
+      "message_holding": "Sie erhalten keine zugeteilten Vorgänge mehr, und Ihre übernommenen Vorgänge gehen zurück in die Warteschlange (Anzahl: {{count}}).",
+      "title": "Vom Disponentenplatz abmelden?"
+    },
+    "state": {
+      "available": "Verfügbar",
+      "away": "Abwesend",
+      "busy": "Beschäftigt",
+      "offline": "Abgemeldet",
+      "on_break": "In Pause",
+      "on_break_left": "In Pause · noch {{time}}",
+      "on_break_overdue": "Pause {{minutes}} Min. überfällig"
+    },
+    "status_bar": {
+      "counts": "Angeboten {{offered}} · Übernommen {{held}} · Wartend {{waiting}}",
+      "less": "Weniger Aktionen",
+      "more": "Weitere Aktionen",
+      "not_signed_in": "Nicht am Disponentenplatz angemeldet · Wartend {{waiting}}"
+    },
+    "team": {
+      "break_ended": "{{name}} ist wieder am Platz",
+      "breaks": "Pausen",
+      "empty": "Keine Disponenten am Platz.",
+      "end_break": "Pause beenden",
+      "holding": "{{count}} von {{capacity}} übernommen",
+      "next_break": "Nächste: {{type}} um {{time}} ({{minutes}} Min.)",
+      "no_shift": "Keine Disponentenschicht",
+      "offered": "Angeboten: {{count}}",
+      "on_shift": "{{shift}} bis {{time}}",
+      "open": "abgemeldet",
+      "summary": "Verfügbar {{available}} · In Pause {{onBreak}} · Im Dienst {{onDuty}} · Minimum {{minimum}}",
+      "supervisor": "Schichtführung",
+      "title": "Team",
+      "unscheduled": "Außerplanmäßiger Dienst bis {{time}}",
+      "you": "Sie"
+    },
+    "timeline": {
+      "coverage": "Besetzung",
+      "empty": "Heute ist niemand im Disponentendienst.",
+      "hint": "Dienst und Pausen aller für heute. Rot markiert eine Besetzung unter dem Minimum.",
+      "hint_supervisor": "Dienst und Pausen aller für heute. Tippen Sie auf einen Disponenten, um seine Pausen zu planen oder zu ändern.",
+      "legend_below": "Unter Minimum",
+      "legend_overdue": "Überfällige Pause",
+      "legend_duty": "Im Dienst",
+      "legend_planned": "Geplante Pause",
+      "legend_taken": "Genommene Pause",
+      "loading": "Zeitleiste wird geladen…",
+      "title": "Team-Zeitleiste",
+      "unavailable": "Die Zeitleiste konnte nicht geladen werden"
+    },
+    "title": "Disponentenplatz",
+    "transfer": {
+      "done": "Übergeben",
+      "none": "Kein anderer Disponent ist angemeldet und frei, um ihn zu übernehmen.",
+      "note": "Notiz für den Empfänger",
+      "title": "Übergeben an"
+    },
+    "unsupported": "Der Disponentenplatz ist noch nicht verfügbar",
+    "unsupported_description": "Ihr Resgrid-Server bietet den Disponentenplatz nicht an. Bitten Sie Ihren Administrator, ihn zu aktualisieren.",
+    "voice": {
+      "answer": "Anruf annehmen",
+      "call_back": "Zurückrufen",
+      "caller": "Anrufer",
+      "caller_gone": "Anrufer hat aufgelegt",
+      "caller_waiting": "Anrufer wartet",
+      "ring_hint": "Der Disponentenplatz ruft dieses Telefon an und verbindet den Anrufer, sobald Sie die 1 drücken.",
+      "ring_number": "Diese Nummer anrufen",
+      "ringing": "Ihr Telefon klingelt gleich. Drücken Sie die 1, um zu verbinden.",
+      "unavailable": "Der Disponentenplatz kann für diese Organisation keine Telefonanrufe verbinden.",
+      "unknown_caller": "Unbekannte Nummer"
+    },
+    "warnings": {
+      "breaks_overlap": "Pausen überschneiden sich mit denen eines anderen Disponenten.",
+      "coverage_below_minimum": "Die Besetzung fällt unter das Minimum: {{available}} verfügbar, Minimum {{minimum}}.",
+      "generic": "Dem Disponentenplatz ist bei dieser Änderung etwas aufgefallen.",
+      "no_coverage": "Am Disponentenplatz wäre niemand verfügbar.",
+      "outside_duty": "Die Pause liegt außerhalb der Schicht.",
+      "started_early": "Die Pause hat {{minutes}} Min. früher als geplant begonnen.",
+      "started_late": "Die Pause hat {{minutes}} Min. später als geplant begonnen.",
+      "work_returned": "Ihre Vorgänge wurden in die Warteschlange zurückgegeben."
+    },
+    "intake": {
+      "title": "SMS-Verlauf",
+      "handler_assistant": "Enhanced AI stellt dem Absender Fragen, bis sich ein Disponent verbindet.",
+      "handler_unassisted": "Der Absender wartet auf einen Disponenten.",
+      "handler_dispatcher": "Verbunden mit {{name}}.",
+      "closed": "Dieser SMS-Verlauf ist beendet.",
+      "opted_out": "Der Absender hat sich abgemeldet (STOP). Es kann nichts mehr gesendet werden.",
+      "reply_from": "Antworten werden von {{number}} gesendet.",
+      "author_participant": "Absender",
+      "author_assistant": "Enhanced AI",
+      "author_system": "Resgrid",
+      "failed": "Nicht zugestellt"
+    }
   },
   "route_plans": {
     "duration_with_stops": "Mit Stopps",

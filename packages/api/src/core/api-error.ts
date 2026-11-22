@@ -131,6 +131,9 @@ const bodyString = (data: unknown, key: string): string | undefined => {
 /** The RFC 7807 problem `type` of a response body, when it has one. */
 export const problemTypeOf = (data: unknown): string | undefined => bodyString(data, 'type');
 
+/** A string field of the response body an HTTP error came with (`Error` of a refused v4 action), when it has one. */
+export const errorBodyString = (error: ApiError, key: string): string | undefined => bodyString(error.data, key);
+
 /** The RFC 7807 problem `detail` of a failed request's response body (e.g. the running instance id of `route_in_progress`). */
 export const problemDetailOf = (error: ApiError): string | undefined => bodyString(error.data, 'detail');
 

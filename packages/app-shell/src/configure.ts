@@ -1,5 +1,7 @@
 import { initSentry } from '@resgrid/core';
 import { initI18n } from '@resgrid/i18n';
+import { isAlertSuppressed } from '@resgrid/notifications';
+import { setToastAlertGate } from '@resgrid/ui';
 
 import { sessionInit, startupInit } from './init/app-init';
 import { registerDefaultInitSteps } from './init/default-steps';
@@ -25,6 +27,9 @@ export function configureAppShell(config: AppShellConfig): void {
   // adds it once one is, which changes the hook order of every mounted component (React error #311).
   initI18n({ variantResources: config.i18nResources });
   applyAppShellConfig(config);
+  // Alert toasts (pushes, realtime cues) follow the same quiet rule as push banners, modals and sounds (a dispatcher on
+  // break, `@resgrid/notifications` alert suppression); feedback toasts always show.
+  setToastAlertGate(() => isAlertSuppressed({ channel: 'toast' }));
   if (config.options?.registerDefaultSteps !== false) {
     registerDefaultInitSteps(startupInit, sessionInit, config);
   }

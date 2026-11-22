@@ -635,6 +635,11 @@
       "via_webhook_named": "Via webhook: {{name}}",
       "via_voice": "Via voice line",
       "via_voice_named": "Via voice line: {{name}}"
+    },
+    "intake_screening": {
+      "likely_not_incident": "Enhanced AI: likely not an incident",
+      "repeat_sender": "Repeat sender: over the hourly limit",
+      "dismissed_as_spam": "Dismissed as spam"
     }
   },
   "chat": {
@@ -2630,7 +2635,9 @@
       "sign_in_approval": "Sign-in Approval",
       "weather": "Alerte météo",
       "work_order": "Bon de travail",
-      "recurring_call_alert": "Alerte d'intervention récurrente"
+      "recurring_call_alert": "Alerte d'intervention récurrente",
+      "desk_item": "Poste de répartition",
+      "desk_break": "Pause"
     },
     "unknown_type_warning": "Ce type de notification n'est pas reconnu.",
     "view_call": "Voir l'appel",
@@ -2667,7 +2674,12 @@
       "generic_call": "Generic Call",
       "general_notification": "Notifications",
       "general_message": "Messages",
-      "unit_status_timer": "Unit Status Timer"
+      "unit_status_timer": "Unit Status Timer",
+      "desk_offer": "Desk Offer",
+      "desk_queue_alert": "Desk Queue Alert",
+      "desk_message": "Desk Message",
+      "break_reminder": "Break Reminder",
+      "break_over": "Break Over"
     },
     "communication_test_confirmed": "Receipt confirmed",
     "communication_test_failed": "Could not confirm receipt. Please try again.",
@@ -2678,7 +2690,9 @@
     "view_chat": "Voir la discussion",
     "view_sign_in": "Review",
     "view_work_order": "Voir le bon de travail",
-    "view_recurring_call_alerts": "Voir les alertes"
+    "view_recurring_call_alerts": "Voir les alertes",
+    "view_desk_break": "Voir les pauses",
+    "view_desk_item": "Ouvrir le poste"
   },
   "records": {
     "add_row": "Ajouter une ligne",
@@ -3807,7 +3821,13 @@
     "no_pending_calls_description": "Aucune intervention n’attend d’être dépêchée.",
     "search": "Rechercher des interventions en attente...",
     "table_received": "Reçue",
-    "title": "Interventions en attente"
+    "title": "Interventions en attente",
+    "dismiss_spam": "Dismiss as Spam",
+    "dismiss_spam_block": "Also block the sender from your intake channels",
+    "dismiss_spam_blocked": "Dismissed as spam; the sender is blocked",
+    "dismiss_spam_confirm": "Dismiss this call as spam? It is cancelled without notifying anyone, and nothing is sent back to the sender.",
+    "dismiss_spam_error": "Failed to dismiss the call as spam",
+    "dismiss_spam_success": "Dismissed as spam"
   },
   "scheduled_calls": {
     "loading": "Chargement des interventions planifiées...",
@@ -5029,6 +5049,353 @@
     "field_destination_address": "Adresse de destination",
     "field_destination_location": "Emplacement de destination",
     "field_route": "Itinéraire"
+  },
+  "dispatcher_desk": {
+    "actions": {
+      "away": "Absent",
+      "go_available": "Se rendre disponible",
+      "im_back": "Je suis de retour",
+      "im_back_done": "Bon retour. Vous êtes de nouveau au poste.",
+      "sign_in": "Se connecter au poste",
+      "sign_off": "Se déconnecter",
+      "take_break": "Prendre une pause"
+    },
+    "alerts": {
+      "auto_returned": "Votre pause a dépassé sa durée, le poste vous a donc remis en service automatiquement.",
+      "back_title": "De retour au poste",
+      "break_due": "C'est l'heure : {{type}}. Touchez pour commencer.",
+      "break_ended_for_you": "Votre pause a été terminée. Vous êtes de nouveau au poste.",
+      "break_over": "Votre pause est terminée. Touchez « Je suis de retour » pour revenir au poste.",
+      "break_over_title": "Votre pause est terminée",
+      "break_reminder": "{{type}} : début dans {{minutes}} min",
+      "break_title": "Pause",
+      "escalated": "Attente trop longue : {{count}} ({{kind}})",
+      "escalated_title": "Tâches en attente",
+      "new_message": "Nouveau message de {{name}}",
+      "new_message_title": "Nouveau message"
+    },
+    "break_state": {
+      "active": "En pause",
+      "done": "Terminée",
+      "planned": "Prévue"
+    },
+    "break_type": {
+      "break": "Pause",
+      "meal": "Repas",
+      "other": "Autre",
+      "personal": "Personnelle"
+    },
+    "breaks": {
+      "coverage_prevented": "Cette pause ferait passer les disponibles à {{available}}, sous le minimum de {{minimum}}. Votre service ne l'autorise pas : demandez à un superviseur de la démarrer.",
+      "coverage_refused": "La couverture est trop faible pour démarrer votre pause maintenant. Un superviseur peut la démarrer pour vous.",
+      "coverage_warning": "Cette pause fait passer les disponibles à {{available}}, sous le minimum de {{minimum}}.",
+      "due_back_at": "Retour prévu à {{time}}",
+      "duty": "{{shift}} · {{start}}–{{end}}",
+      "left": "Reste {{time}}",
+      "length": "Durée",
+      "minutes": "{{minutes}} min",
+      "my_breaks": "Mes pauses du jour",
+      "my_duty": "Ma garde",
+      "overdue_by": "En retard de {{time}}",
+      "plan_mine": "Prévoir une pause",
+      "plan_shift": "Planifier les pauses de la garde",
+      "plan_shift_confirm": "Planifier les pauses",
+      "plan_shift_done": "Pauses de la garde planifiées",
+      "plan_shift_message": "Répartir le plan de pauses de la garde entre les opérateurs du jour pour que les pauses ne se chevauchent pas.",
+      "plan_shift_replace": "Remplacer les pauses déjà planifiées",
+      "planned_at": "Prévue à {{time}}",
+      "return_work": "Remettre mes tâches dans la file d'attente (prises : {{count}})",
+      "return_work_hint": "Une pause ne commence qu'une fois vos tâches remises dans la file d'attente pour un autre opérateur.",
+      "row": "{{type}} · {{minutes}} min",
+      "start_now": "Commencer maintenant",
+      "start_planned": "Prévue : {{type}} · {{minutes}} min · {{time}}",
+      "started": "Bonne pause. Votre retour est prévu à {{time}}.",
+      "started_at": "Commencée à {{time}}",
+      "take_anyway": "Prendre la pause quand même",
+      "take_new": "Une nouvelle pause maintenant",
+      "take_now": "Prendre une pause maintenant",
+      "take_title": "Prendre une pause",
+      "title": "Pauses",
+      "type": "Type"
+    },
+    "complete": {
+      "done": "Terminée",
+      "note": "Note",
+      "outcome": "Comment cela s'est-il terminé ?",
+      "title": "Terminer",
+      "notify_participant": "Prévenir l'expéditeur de la fin de la conversation",
+      "notify_participant_hint": "Envoie un SMS de clôture depuis le numéro Resgrid."
+    },
+    "conversation": {
+      "add_note": "Ajouter une note",
+      "empty": "Aucun message pour l'instant.",
+      "note_by": "Note · {{name}}",
+      "note_placeholder": "Écrire une note pour les opérateurs (jamais envoyée)…",
+      "reply": "Répondre",
+      "reply_placeholder": "Écrire une réponse…",
+      "save_note": "Enregistrer la note",
+      "send": "Envoyer la réponse"
+    },
+    "create_call": {
+      "link_failed": "L'intervention a été enregistrée mais n'a pas pu être liée à la conversation.",
+      "link_later": "L'intervention a été enregistrée sur cet appareil et sera envoyée dès que vous serez de nouveau en ligne. Terminez la conversation une fois qu'elle est envoyée.",
+      "linked": "L'intervention est liée à la conversation.",
+      "name": "{{kind}} de {{source}}"
+    },
+    "delivery": {
+      "failed": "Non distribué",
+      "queued": "Envoi en cours",
+      "received": "Reçu",
+      "sent": "Envoyé"
+    },
+    "desk_off": "Le poste opérateur est désactivé",
+    "desk_off_description": "Votre service n'a pas activé le poste opérateur. Un administrateur du service peut l'activer dans Quarts > Paramètres du poste de répartition.",
+    "device": {
+      "desktop": "Ordinateur",
+      "phone": "Téléphone",
+      "tablet": "Tablette"
+    },
+    "errors": {
+      "already_on_break": "Vous êtes déjà en pause.",
+      "already_on_roster": "Vous êtes déjà au planning de régulation de ce jour.",
+      "at_capacity": "Vous avez déjà autant de tâches que le poste le permet. Terminez ou libérez-en une d'abord.",
+      "break_not_found": "Cette pause n'est plus prévue.",
+      "break_not_startable": "Cette pause ne peut pas être démarrée maintenant.",
+      "break_overlaps": "Cette pause chevauche une autre de vos pauses.",
+      "channel_unavailable": "Ce canal ne peut pas envoyer pour le moment.",
+      "coverage_too_low": "La couverture est trop faible pour démarrer une pause maintenant. Un superviseur peut la démarrer pour vous.",
+      "desk_disabled": "Votre service a désactivé le poste opérateur.",
+      "dispatchers_not_enabled": "Cette garde n'a aucun opérateur en service.",
+      "holding_work": "Vous avez des tâches prises. Remettez-les dans la file d'attente pour démarrer votre pause.",
+      "invalid_input": "Un élément de la demande est manquant ou invalide.",
+      "item_not_available": "Cette tâche a déjà été prise ou terminée.",
+      "item_not_found": "Cette tâche ne figure plus au poste.",
+      "no_callback_number": "Saisissez le numéro que le poste doit appeler.",
+      "not_a_dispatcher": "Seuls les opérateurs peuvent utiliser le poste.",
+      "not_assigned_to_you": "Cette tâche est prise par un autre opérateur.",
+      "not_on_break": "Aucune pause en cours à terminer.",
+      "not_on_duty": "Vous n'êtes pas de garde de régulation en ce moment.",
+      "not_permitted": "Vous n'êtes pas autorisé à faire cela au poste.",
+      "not_signed_in": "Connectez-vous d'abord au poste.",
+      "shift_not_found": "Cette garde est introuvable.",
+      "title": "Poste",
+      "unknown": "Le poste n'a pas pu effectuer cette action. Veuillez réessayer."
+    },
+    "event": {
+      "accepted": "Acceptée",
+      "cancelled": "Annulée",
+      "completed": "Terminée",
+      "created": "Reçue",
+      "declined": "Refusée",
+      "escalated": "Attente trop longue",
+      "message_received": "Message reçu",
+      "message_sent": "Message envoyé",
+      "offer_expired": "Proposition expirée",
+      "offered": "Proposée",
+      "overflowed": "Envoyée en débordement",
+      "released": "Remise dans la file d'attente",
+      "reopened": "Rouverte",
+      "transferred": "Transférée",
+      "voice_connected": "Appel connecté",
+      "voice_connecting": "Connexion de l'appel",
+      "voice_ended": "Appel terminé",
+      "conversation_closed": "Conversation SMS terminée",
+      "held_for_review": "Held for review: screened intake call"
+    },
+    "item": {
+      "complete": "Terminer",
+      "create_call": "Créer une intervention",
+      "dispatch_now": "Engager maintenant",
+      "due_on": "Échéance {{time}}",
+      "history": "Historique ({{count}})",
+      "loading": "Chargement…",
+      "not_found": "Cette tâche ne figure plus au poste",
+      "open_call": "Ouvrir l'intervention",
+      "release": "Remettre en file d'attente",
+      "released": "Remise dans la file d'attente",
+      "title": "Tâche",
+      "transfer": "Transférer"
+    },
+    "item_state": {
+      "accepted": "En cours",
+      "cancelled": "Annulée",
+      "completed": "Terminée",
+      "offered": "Proposée",
+      "overflowed": "Envoyée en débordement",
+      "queued": "En attente"
+    },
+    "kind": {
+      "chat": "Chat",
+      "email": "E-mail",
+      "other": "Tâche",
+      "pending_call": "Intervention en attente",
+      "scheduled_call": "Intervention planifiée",
+      "text": "SMS",
+      "voice": "Appel téléphonique"
+    },
+    "loading": "Chargement du poste…",
+    "not_available": "Le poste opérateur n'est pas disponible dans cette application",
+    "not_dispatcher": "Vous n'êtes pas opérateur",
+    "not_dispatcher_description": "Seuls les membres autorisés à se connecter à l'application Dispatch peuvent utiliser le poste opérateur.",
+    "offer": {
+      "accept": "Accepter",
+      "decline": "Refuser",
+      "expires_in": "Répondre sous {{time}}",
+      "more": "Autres propositions en attente : {{count}}",
+      "title": "Tâche qui vous est proposée"
+    },
+    "outcome": {
+      "call_created": "Intervention créée",
+      "closed": "Intervention clôturée",
+      "dispatched": "Engagée",
+      "duplicate": "Doublon",
+      "left_pending": "Laissée en attente",
+      "no_action_needed": "Aucune action nécessaire",
+      "none": "Aucun résultat",
+      "referred": "Orientée ailleurs"
+    },
+    "plan": {
+      "add_title": "Prévoir une pause",
+      "cancel": "Supprimer",
+      "cancelled": "Pause supprimée",
+      "edit": "Modifier",
+      "edit_title": "Modifier la pause",
+      "entry": "{{type}} · {{minutes}} min · {{start}}–{{end}}",
+      "length_hint": "Une pause est une durée : elle peut commencer plus tôt ou plus tard, et le retour est prévu une fois cette durée écoulée après son début.",
+      "none": "Aucune pause prévue aujourd'hui.",
+      "save": "Enregistrer la pause",
+      "saved": "Pause enregistrée",
+      "start": "Début prévu",
+      "start_now": "Commencer la pause maintenant",
+      "started_for": "{{name}} est en pause",
+      "title_for": "Pauses de {{name}}",
+      "title_mine": "Mes pauses"
+    },
+    "queue": {
+      "escalated": "Attente trop longue",
+      "held_by": "Prise par {{name}}",
+      "mine": "Mes tâches",
+      "mine_empty": "Aucune tâche ne vous est proposée ni prise par vous.",
+      "recent": "Récentes",
+      "recent_empty": "Aucune tâche récente sur cet appareil.",
+      "take": "Prendre",
+      "waited": "En attente depuis {{minutes}} min",
+      "waiting": "En attente",
+      "waiting_empty": "Rien n'attend dans la file d'attente."
+    },
+    "sign_in": {
+      "callback_hint": "Le poste appelle ce téléphone pour vous mettre en relation avec les appelants. Laissez vide pour utiliser le mobile de votre profil.",
+      "callback_number": "Numéro de rappel",
+      "callback_placeholder": "+1 555 555 0100",
+      "device": "Connexion sur : {{device}}",
+      "done": "Vous êtes connecté au poste.",
+      "no_shift": "Vous n'êtes pas de garde de régulation en ce moment, le poste peut donc refuser la connexion.",
+      "no_shift_unscheduled": "Vous n'êtes pas de garde de régulation en ce moment. Activez le service hors planning pour vous connecter quand même.",
+      "prompt": "Connectez-vous pour recevoir les tâches attribuées et les prendre lorsqu'elles vous sont proposées.",
+      "prompt_title": "Vous n'êtes pas connecté au poste",
+      "start_away": "Démarrer en mode absent",
+      "start_away_hint": "Ne recevoir aucune tâche attribuée tant que vous ne vous rendez pas disponible.",
+      "title": "Se connecter au poste",
+      "unscheduled": "Service hors planning",
+      "unscheduled_hint": "Prendre le service sans garde de régulation (événement, remplacement).",
+      "until": "En service jusqu'à (facultatif)"
+    },
+    "sign_off": {
+      "done": "Vous êtes déconnecté du poste.",
+      "message": "Vous ne recevez plus de tâches attribuées jusqu'à votre prochaine connexion.",
+      "message_holding": "Vous ne recevez plus de tâches attribuées, et celles que vous avez prises retournent dans la file d'attente (nombre : {{count}}).",
+      "title": "Se déconnecter du poste ?"
+    },
+    "state": {
+      "available": "Disponible",
+      "away": "Absent",
+      "busy": "Occupé",
+      "offline": "Déconnecté",
+      "on_break": "En pause",
+      "on_break_left": "En pause · reste {{time}}",
+      "on_break_overdue": "Pause dépassée de {{minutes}} min"
+    },
+    "status_bar": {
+      "counts": "Proposées {{offered}} · Prises {{held}} · En attente {{waiting}}",
+      "less": "Moins d'actions",
+      "more": "Plus d'actions",
+      "not_signed_in": "Non connecté au poste · En attente {{waiting}}"
+    },
+    "team": {
+      "break_ended": "{{name}} est de retour au poste",
+      "breaks": "Pauses",
+      "empty": "Aucun opérateur au poste.",
+      "end_break": "Terminer la pause",
+      "holding": "{{count}} prises sur {{capacity}}",
+      "next_break": "Prochaine : {{type}} à {{time}} ({{minutes}} min)",
+      "no_shift": "Pas de garde de régulation",
+      "offered": "Proposées : {{count}}",
+      "on_shift": "{{shift}} jusqu'à {{time}}",
+      "open": "déconnecté",
+      "summary": "Disponibles {{available}} · En pause {{onBreak}} · En service {{onDuty}} · Minimum {{minimum}}",
+      "supervisor": "Superviseur",
+      "title": "Équipe",
+      "unscheduled": "Service hors planning jusqu'à {{time}}",
+      "you": "vous"
+    },
+    "timeline": {
+      "coverage": "Couverture",
+      "empty": "Personne n'est de garde de régulation aujourd'hui.",
+      "hint": "Les gardes et pauses de chacun aujourd'hui. Le rouge signale une couverture sous le minimum.",
+      "hint_supervisor": "Les gardes et pauses de chacun aujourd'hui. Touchez un opérateur pour planifier ou modifier ses pauses.",
+      "legend_below": "Sous le minimum",
+      "legend_overdue": "Pause dépassée",
+      "legend_duty": "En service",
+      "legend_planned": "Pause prévue",
+      "legend_taken": "Pause prise",
+      "loading": "Chargement de la chronologie…",
+      "title": "Chronologie de l'équipe",
+      "unavailable": "Impossible de charger la chronologie"
+    },
+    "title": "Poste opérateur",
+    "transfer": {
+      "done": "Transférée",
+      "none": "Aucun autre opérateur n'est connecté et libre pour la prendre.",
+      "note": "Note pour le destinataire",
+      "title": "Transférer à"
+    },
+    "unsupported": "Le poste opérateur n'est pas encore disponible",
+    "unsupported_description": "Votre serveur Resgrid ne dispose pas du poste opérateur. Demandez à votre administrateur de le mettre à jour.",
+    "voice": {
+      "answer": "Répondre",
+      "call_back": "Rappeler",
+      "caller": "Appelant",
+      "caller_gone": "L'appelant a raccroché",
+      "caller_waiting": "Appelant en attente",
+      "ring_hint": "Le poste appelle ce téléphone et vous met en relation avec l'appelant lorsque vous appuyez sur 1.",
+      "ring_number": "Appeler ce numéro",
+      "ringing": "Votre téléphone va sonner. Appuyez sur 1 pour être mis en relation.",
+      "unavailable": "Le poste ne peut pas connecter d'appels téléphoniques pour ce service.",
+      "unknown_caller": "Numéro inconnu"
+    },
+    "warnings": {
+      "breaks_overlap": "Des pauses chevauchent celles d'un autre opérateur.",
+      "coverage_below_minimum": "La couverture passe sous le minimum : disponibles {{available}}, minimum {{minimum}}.",
+      "generic": "Le poste a relevé un point concernant cette modification.",
+      "no_coverage": "Personne ne serait disponible au poste.",
+      "outside_duty": "La pause tombe en dehors de la garde.",
+      "started_early": "La pause a commencé {{minutes}} min plus tôt que prévu.",
+      "started_late": "La pause a commencé {{minutes}} min plus tard que prévu.",
+      "work_returned": "Vos tâches ont été remises dans la file d'attente."
+    },
+    "intake": {
+      "title": "Conversation SMS",
+      "handler_assistant": "Enhanced AI pose des questions à l'expéditeur jusqu'à ce qu'un opérateur se connecte.",
+      "handler_unassisted": "L'expéditeur attend un opérateur.",
+      "handler_dispatcher": "En contact avec {{name}}.",
+      "closed": "Cette conversation SMS est terminée.",
+      "opted_out": "L'expéditeur s'est désabonné (STOP). Plus rien ne peut être envoyé.",
+      "reply_from": "Les réponses partent du {{number}}.",
+      "author_participant": "Expéditeur",
+      "author_assistant": "Enhanced AI",
+      "author_system": "Resgrid",
+      "failed": "Non remis"
+    }
   },
   "route_plans": {
     "duration_with_stops": "Avec arrêts",

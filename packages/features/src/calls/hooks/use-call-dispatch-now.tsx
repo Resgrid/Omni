@@ -2,7 +2,8 @@ import { buildDispatchList } from '@resgrid/api';
 import { useCallQueueActionsStore, useCallsStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import type { DispatchedEventResultData } from '@resgrid/models';
-import { useToast } from '@resgrid/ui';
+import { Checkbox, CheckboxIcon, CheckboxIndicator, CheckboxLabel, useToast } from '@resgrid/ui';
+import { CheckIcon } from '@resgrid/ui/icon';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 
 import { CallConfirmDialog } from '../components/call-confirm-dialog';
@@ -22,14 +23,14 @@ interface PickerTarget {
 type CallPoint = { latitude: number; longitude: number };
 
 interface ConfirmTarget {
-  kind: 'dispatch' | 'cancel';
+  kind: 'dispatch' | 'cancel' | 'spam';
   callId: string;
 }
 
 export interface UseCallDispatchNowOptions {
   /** After a call was dispatched (it is now Active) and the queues refreshed. */
   onDispatched?: (callId: string) => void;
-  /** After a pending call was cancelled. */
+  /** After a pending call was cancelled (or dismissed as spam). */
   onCancelled?: (callId: string) => void;
 }
 
@@ -40,6 +41,8 @@ export interface CallDispatchNowControls {
   confirmDispatchNow: (callId: string) => void;
   /** Asks, then closes a pending call as Cancelled (nobody was paged, so nobody is told). */
   confirmCancelPending: (callId: string) => void;
+  /** Asks (with "also block the sender", on by default), then cancels a pending intake call as spam (Core M0326). */
+  confirmDismissAsSpam: (callId: string) => void;
   /** The call an action (or the proposed-recipients lookup) is running for. */
   busyCallId: string | null;
   /** Render once in the screen that uses the hook. */
@@ -60,6 +63,7 @@ export function useCallDispatchNow({ onDispatched, onCancelled }: UseCallDispatc
   const [lookupCallId, setLookupCallId] = useState<string | null>(null);
   const [picker, setPicker] = useState<PickerTarget | null>(null);
   const [confirm, setConfirm] = useState<ConfirmTarget | null>(null);
+  const [blockSender, setBlockSender] = useState(true);
   const { recipients } = useDispatchRecipients(picker !== null);
   // The picker offers the recipient lists the department shows on its call forms; with none, only All Call.
   const policy = useNewCallFieldPolicy();
@@ -128,6 +132,19 @@ export function useCallDispatchNow({ onDispatched, onCancelled }: UseCallDispatc
       return;
     }
 
+    if (target.kind === 'spam') {
+      const outcome = await useCallQueueActionsStore.getState().dismissAsSpam(target.callId, blockSender);
+
+      if (outcome.ok) {
+        toast.success(t(blockSender ? 'pending_calls.dismiss_spam_blocked' : 'pending_calls.dismiss_spam_success'));
+        onCancelled?.(target.callId);
+      } else {
+        toast.error(t('pending_calls.dismiss_spam_error'));
+      }
+
+      return;
+    }
+
     const outcome = await useCallQueueActionsStore.getState().cancelPending(target.callId);
 
     if (outcome.ok) {
@@ -136,7 +153,10 @@ export function useCallDispatchNow({ onDispatched, onCancelled }: UseCallDispatc
     } else {
       toast.error(t('pending_calls.cancel_error'));
     }
-  }, [confirm, onCancelled, runDispatch, t, toast]);
+  }, [blockSender, confirm, onCancelled, runDispatch, t, toast]);
+
+  const confirmTitle = confirm?.kind === 'spam' ? t('pending_calls.dismiss_spam') : confirm?.kind === 'cancel' ? t('pending_calls.cancel_call') : t('call_queues.dispatch_now');
+  const confirmMessage = confirm?.kind === 'spam' ? t('pending_calls.dismiss_spam_confirm') : confirm?.kind === 'cancel' ? t('pending_calls.cancel_confirm') : t('call_queues.dispatch_now_confirm');
 
   const dialogs = (
     <>
@@ -157,15 +177,24 @@ export function useCallDispatchNow({ onDispatched, onCancelled }: UseCallDispatc
       />
       <CallConfirmDialog
         isOpen={confirm !== null}
-        title={confirm?.kind === 'cancel' ? t('pending_calls.cancel_call') : t('call_queues.dispatch_now')}
-        message={confirm?.kind === 'cancel' ? t('pending_calls.cancel_confirm') : t('call_queues.dispatch_now_confirm')}
-        confirmLabel={confirm?.kind === 'cancel' ? t('pending_calls.cancel_call') : t('call_queues.dispatch_now')}
+        title={confirmTitle}
+        message={confirmMessage}
+        confirmLabel={confirmTitle}
         cancelLabel={t('common.cancel')}
-        destructive={confirm?.kind === 'cancel'}
+        destructive={confirm?.kind === 'cancel' || confirm?.kind === 'spam'}
         onConfirm={() => void handleConfirm()}
         onCancel={() => setConfirm(null)}
         testID="call-queue-confirm"
-      />
+      >
+        {confirm?.kind === 'spam' ? (
+          <Checkbox value="block-sender" isChecked={blockSender} onChange={setBlockSender} aria-label={t('pending_calls.dismiss_spam_block')} testID="call-queue-confirm-block-sender">
+            <CheckboxIndicator>
+              <CheckboxIcon as={CheckIcon} />
+            </CheckboxIndicator>
+            <CheckboxLabel>{t('pending_calls.dismiss_spam_block')}</CheckboxLabel>
+          </Checkbox>
+        ) : null}
+      </CallConfirmDialog>
     </>
   );
 
@@ -173,6 +202,11 @@ export function useCallDispatchNow({ onDispatched, onCancelled }: UseCallDispatc
     openDispatchPicker,
     confirmDispatchNow: (callId) => setConfirm({ kind: 'dispatch', callId }),
     confirmCancelPending: (callId) => setConfirm({ kind: 'cancel', callId }),
+    confirmDismissAsSpam: (callId) => {
+      // Blocking is the default every time the dialog opens; the dispatcher unticks it for a sender who should still get through.
+      setBlockSender(true);
+      setConfirm({ kind: 'spam', callId });
+    },
     busyCallId: actionCallId ?? lookupCallId,
     dialogs,
   };

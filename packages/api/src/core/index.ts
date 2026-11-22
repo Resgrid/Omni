@@ -3,6 +3,7 @@ export {
   ApiErrorCodes,
   type ApiErrorInit,
   type ApiErrorKind,
+  errorBodyString,
   hasProblemType,
   isApiError,
   isNetworkError,

@@ -23,6 +23,8 @@ describe('parseEventCode', () => {
     ['NWO:88', 'workOrder', '88', {}],
     ['NA:approval-1', 'signInApproval', 'approval-1', {}],
     ['RCA:9b7c2d10-4e5f-4a6b-8c9d-0123456789ab', 'recurringCallAlert', '9b7c2d10-4e5f-4a6b-8c9d-0123456789ab', {}],
+    ['DQ:5f1c2d10-4e5f-4a6b-8c9d-0123456789ab', 'deskItem', '5f1c2d10-4e5f-4a6b-8c9d-0123456789ab', {}],
+    ['DB:7a2c2d10-4e5f-4a6b-8c9d-0123456789ab', 'deskBreak', '7a2c2d10-4e5f-4a6b-8c9d-0123456789ab', {}],
     ['W:9012', 'weatherAlert', '9012', {}],
     ['W15', 'weatherAlert', '15', {}],
   ])('reads %s as %s %s', (eventCode, kind, id, extra) => {
@@ -44,6 +46,10 @@ describe('parseEventCode', () => {
     // R alone is no kind: a recurring call alert is only its whole prefix.
     expect(parseEventCode('RCA:1').kind).toBe('recurringCallAlert');
     expect(parseEventCode('R:1').kind).toBe('unknown');
+    // Dispatcher desk codes exist only as whole prefixes (D alone is no kind).
+    expect(parseEventCode('dq:1').kind).toBe('deskItem');
+    expect(parseEventCode('DB:1').kind).toBe('deskBreak');
+    expect(parseEventCode('D:1').kind).toBe('unknown');
     expect(parseEventCode('NC:1').target?.closed).toBe(true);
   });
 
@@ -110,6 +116,8 @@ describe('first-letter rule (Core NovuProvider)', () => {
     ['NWO:1', 'notifications', false],
     ['NA:1', 'notifications', false],
     ['RCA:1', 'notifications', false],
+    ['DQ:1', 'notifications', false],
+    ['DB:1', 'notifications', false],
     ['t:1', 'chats', false],
     ['g:1', 'chats', false],
     ['W:1', 'notifications', false],

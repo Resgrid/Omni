@@ -17,6 +17,7 @@ import { countsEndpoints } from './endpoints/counts/counts';
 import { dataProtectionEndpoints } from './endpoints/data-protection/data-protection';
 import { devicesEndpoints } from './endpoints/devices/devices';
 import { dispatchEndpoints } from './endpoints/dispatch/dispatch';
+import { dispatcherDeskEndpoints } from './endpoints/dispatcher-desk/dispatcher-desk';
 import { featureFlagsEndpoints } from './endpoints/feature-flags/feature-flags';
 import { formsEndpoints } from './endpoints/forms/forms';
 import { geocodingEndpoints } from './endpoints/geocoding/geocoding';
@@ -24,6 +25,7 @@ import { groupsEndpoints } from './endpoints/groups/groups';
 import { healthEndpoints } from './endpoints/health/health';
 import { inboxEndpoints } from './endpoints/inbox/inbox';
 import { incidentCommandEndpoints } from './endpoints/incident-command/incident-command';
+import { intakeScreeningEndpoints } from './endpoints/intake-screening/intake-screening';
 import { inventoryEndpoints } from './endpoints/inventory/inventory';
 import { mappingEndpoints } from './endpoints/mapping/mapping';
 import { messagesEndpoints } from './endpoints/messages/messages';
@@ -66,6 +68,7 @@ export const endpointDomains = {
   'data-protection': dataProtectionEndpoints,
   devices: devicesEndpoints,
   dispatch: dispatchEndpoints,
+  'dispatcher-desk': dispatcherDeskEndpoints,
   'feature-flags': featureFlagsEndpoints,
   forms: formsEndpoints,
   geocoding: geocodingEndpoints,
@@ -73,6 +76,7 @@ export const endpointDomains = {
   health: healthEndpoints,
   inbox: inboxEndpoints,
   'incident-command': incidentCommandEndpoints,
+  'intake-screening': intakeScreeningEndpoints,
   inventory: inventoryEndpoints,
   mapping: mappingEndpoints,
   messages: messagesEndpoints,

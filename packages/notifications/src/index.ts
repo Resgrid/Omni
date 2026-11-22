@@ -19,16 +19,22 @@ import {
 } from './local-notification-data';
 import { cancelAllLocalNotifications, type ExactAlarmAccess, type ExactAlarmAccessView, getExactAlarmAccess, requestExactAlarmAccess, syncLocalNotifications, useExactAlarmAccess } from './local-notifications';
 
+export { type AlertChannel, type AlertDescriptor, type AlertSuppressor, clearAlertSuppressorsForTests, isAlertSuppressed, registerAlertSuppressor } from './alert-suppression';
+
+// Badge, channels and the rest stay alphabetical across this break (quiet alerts above: a dispatcher on break).
 export { clearBadgeCount, useClearBadgeOnForeground } from './badge';
 export {
   ANDROID_CHANNEL_IDS,
   ANDROID_CHANNELS,
+  type AndroidChannelOptions,
+  androidChannelsFor,
   type AndroidChannelSpec,
   buildIosCategories,
   CHANNEL_LIGHT_COLOR,
   CHANNEL_VIBRATION_PATTERN,
   type ChannelKind,
   CHECK_IN_ACTION_ID,
+  DESK_ANDROID_CHANNELS,
   IOS_CATEGORY_IDS,
   type IosCategoryId,
   type IosCategoryOptions,
@@ -41,6 +47,8 @@ export {
   configureNotifications,
   getNotificationsDependencies,
   getPushSubjectKind,
+  getSoundSet,
+  hasDeskSounds,
   hasStatusTimerNotifications,
   type NotificationsDependencies,
   type NotificationsSession,
@@ -86,14 +94,34 @@ export {
 export { NotificationsInboxProvider, type NotificationsInboxProviderProps, openInboxItem, useInboxUnreadCount, useNovuInboxConfig, type UseNovuInboxConfigInput, useUnitSubscriberHash } from './novu-provider';
 export { type ParsedNotification, parseNotificationData, type PushNotificationData, type PushNotificationModalState, type ShowNotificationOptions, usePushNotificationModalStore } from './push-modal-store';
 export { pushNotificationService, usePushNotifications } from './push-notification';
+
+// The push token the server took, for subscribers that follow it (the Dispatch desk); alphabetical across this break.
+export {
+  clearRegisteredPushToken,
+  getRegisteredPushToken,
+  notifyPushTokenRegistered,
+  onPushTokenRegistered,
+  type PushPlatformId,
+  type PushTokenListener,
+  type RegisteredPushToken,
+  resetPushTokenListenersForTests,
+} from './push-token-listeners';
 export type { PushNotificationService, PushRegistrationTrigger, RegisterOptions, UsePushNotificationsResult } from './push-types';
 export { createMemoryNotificationsKv, NATIVE_PUSH_REGISTRATION_KEY, NATIVE_PUSH_STALE_REGISTRATIONS_KEY, type NotificationsKv, type StoredNativePushRegistration } from './registration-storage';
 export {
   CUSTOM_TONE_COUNT,
   CUSTOM_TONES,
   type CustomTone,
+  DESK_EVENT_SOUNDS,
+  DESK_PUSH_SOUND_TYPES,
+  DESK_SOUND_FALLBACKS,
+  DESK_SOUNDS,
+  type DeskSound,
+  type DeskSoundEvent,
   EXTRA_CHANNEL_SOUNDS,
+  IOS_DESK_SOUND_ALIASES,
   IOS_SERVER_SOUND_ALIASES,
+  isDeskSound,
   MODERN_SOUNDS,
   type ModernSound,
   type NotificationSound,
@@ -101,7 +129,12 @@ export {
   PUSH_SOUND_TYPES,
   type PushSoundTypeName,
   type PushSoundTypeValue,
+  SOUND_SETS,
+  soundForDeskEvent,
+  soundForSet,
   soundForSoundType,
+  type SoundSet,
+  soundSetSounds,
 } from './sounds';
 
 // Notifications scheduled on the device itself (the unit's status timer)

@@ -95,7 +95,7 @@ export function useRecurringCallAlertsSync(enabledOverride?: boolean): void {
     if (count === 0) return;
     announcedAt.current = lastNewAt;
 
-    toast.warning(t('recurring_calls.alerts.new_toast', { count }), t('recurring_calls.alerts.title'));
+    toast.warning(t('recurring_calls.alerts.new_toast', { count }), t('recurring_calls.alerts.title'), { alert: true });
     void notificationSoundService.playForNotification({ kind: 'recurringCallAlert' });
   }, [enabled, lastNewAt, t, toast]);
 }

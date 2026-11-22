@@ -109,6 +109,17 @@ export interface CallFormScreenProps {
   mapSlot?: (location: CallFormLocation | null, onPick: (location: CallFormLocation) => void) => React.ReactNode;
   /** After a successful save (default: navigate back; a call saved as Pending opens the pending queue). */
   onDone?: () => void;
+  /** Create: what the blank form starts with (a call started from a dispatcher desk conversation: its text and sender). */
+  prefill?: Partial<CallFormValues>;
+  /** Create: told once the new call is saved (`callId` when it reached the server, null while it waits offline). */
+  onCreated?: (created: CallFormCreated) => void;
+}
+
+/** A call the create form saved: the outbox id, and the server's call id once it was sent. */
+export interface CallFormCreated {
+  localId: string;
+  callId: string | null;
+  outcome: 'sent' | 'queued';
 }
 
 const NO_WITHHELD_FIELDS = new Set<WithheldEditField>();
@@ -145,7 +156,7 @@ const mergeUdfValues = (initial: readonly UdfFieldValueInput[], current: readonl
  * yet" (no number, nobody paged) and sent on reconnect; a refused call stays in Pending sync and opens here for
  * correction under the same client GUID. Editing and the location lookups need a connection.
  */
-export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, onDone }: CallFormScreenProps) {
+export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, onDone, prefill, onCreated }: CallFormScreenProps) {
   const { t } = useTranslation();
   const router = useRouter();
   const toast = useToast();
@@ -183,7 +194,9 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
   const updateCall = useCallDetailStore((state) => state.updateCall);
 
   const priorities = useMemo(() => priorityOptions(callPriorities), [callPriorities]);
-  const [values, setValues] = useState<CallFormValues>(() => emptyCallFormValues(defaultPriorityId(callPriorities)));
+  const [values, setValues] = useState<CallFormValues>(() => ({ ...emptyCallFormValues(defaultPriorityId(callPriorities)), ...(mode === 'create' ? prefill : undefined) }));
+  // A prefilled name or nature is not the dispatcher's own typing: the department's default priority still applies.
+  const prefilledText = useRef({ name: mode === 'create' ? (prefill?.name ?? '') : '', nature: mode === 'create' ? (prefill?.nature ?? '') : '' });
   const [errors, setErrors] = useState<Partial<Record<CallFormErrorKey, string>>>({});
   const [missingUdf, setMissingUdf] = useState<string[]>([]);
   // "Suggest and fill" for this form's session: kept here, so a pick or clear by hand outlives the destination field
@@ -246,7 +259,9 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
       setValues(createRequestToFormValues(queuedCall.request));
       setStartedFrom('source');
     } else if (startedFrom === 'blank' && callPriorities.length > 0) {
-      setValues((current) => (current.name || current.nature ? current : { ...current, priority: defaultPriorityId(callPriorities) }));
+      setValues((current) =>
+        (current.name && current.name !== prefilledText.current.name) || (current.nature && current.nature !== prefilledText.current.nature) ? current : { ...current, priority: defaultPriorityId(callPriorities) }
+      );
     }
   }, [callPriorities, callTypes, detail, detailRead, isEdit, queuedCall, startedFrom]);
 
@@ -608,9 +623,11 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
 
       if (result.outcome === 'sent') {
         toast.success(t(values.isPending ? 'calls.pending_saved' : 'calls.create_success'));
+        onCreated?.({ localId: result.id, callId: useCallsStore.getState().syncedCalls[result.id]?.callId ?? null, outcome: 'sent' });
         done(values.isPending ? 'pending' : 'saved');
       } else if (result.outcome === 'queued') {
         toast.info(t('calls.queued.created_offline'));
+        onCreated?.({ localId: result.id, callId: null, outcome: 'queued' });
         done();
       } else {
         // Refused: it stays in Pending sync; keep the form open on it for correction.

@@ -4,7 +4,7 @@ import { useNetInfo } from '@react-native-community/netinfo';
 import { buildEditCallInput, type UpdateCallRequest } from '@resgrid/api';
 import { featureFlagsStore } from '@resgrid/auth';
 import { useAiDestinationAdviceStore, useCallDetailStore, useCallsStore, useCallVideoFeedsStore, useCheckInTimersStore, usePoisStore, useRoutesStore } from '@resgrid/data';
-import { type AiDestinationAdviceData, AiDestinationAdviceStates, CallSources, IntakeChannelTypes, type NewCallFieldRuleData, type PoiResultData } from '@resgrid/models';
+import { type AiDestinationAdviceData, AiDestinationAdviceStates, CallSources, IntakeChannelTypes, IntakeScreenings, type NewCallFieldRuleData, type PoiResultData } from '@resgrid/models';
 import { useToastStore } from '@resgrid/ui';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { useLocalSearchParams } from 'expo-router';
@@ -12,7 +12,7 @@ import React from 'react';
 
 import { CallCard } from '../components/call-card';
 import { resetCallFormHookPointsForTests } from '../hook-points';
-import { callIntakeSource, intakeSourceLabel } from '../lib/call-source';
+import { callIntakeSource, intakeScreeningLabelKey, intakeSourceLabel } from '../lib/call-source';
 import { createFieldPolicy } from '../lib/field-policy';
 import CallDetailScreen from '../screens/call-detail';
 import CallFormScreen from '../screens/call-form';
@@ -105,6 +105,16 @@ describe('intake source', () => {
   it('is not on a call a person logged, nor from an older server', async () => {
     await render(<CallCard call={makeCall('6', { CallSource: CallSources.User })} />);
     expect(screen.queryByTestId('call-card-6-intake-source', q)).toBeNull();
+  });
+
+  it('labels a screened intake call (Core M0326) and nothing else', () => {
+    expect(intakeScreeningLabelKey({ CallSource: CallSources.Intake, IntakeScreening: IntakeScreenings.LikelyNotIncident })).toBe('calls.intake_screening.likely_not_incident');
+    expect(intakeScreeningLabelKey({ CallSource: CallSources.VoiceIntake, IntakeScreening: IntakeScreenings.RepeatSender })).toBe('calls.intake_screening.repeat_sender');
+    expect(intakeScreeningLabelKey({ CallSource: CallSources.Intake, IntakeScreening: IntakeScreenings.DismissedAsSpam })).toBe('calls.intake_screening.dismissed_as_spam');
+    expect(intakeScreeningLabelKey({ CallSource: CallSources.Intake, IntakeScreening: IntakeScreenings.None })).toBeNull();
+    expect(intakeScreeningLabelKey({ CallSource: CallSources.Intake, IntakeScreening: 42 })).toBeNull();
+    expect(intakeScreeningLabelKey({ CallSource: CallSources.Intake, IntakeScreening: undefined })).toBeNull();
+    expect(intakeScreeningLabelKey({ CallSource: CallSources.User, IntakeScreening: IntakeScreenings.LikelyNotIncident })).toBeNull();
   });
 });
 

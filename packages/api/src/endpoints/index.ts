@@ -21,6 +21,9 @@ export * from './counts';
 export * from './data-protection';
 export * from './devices';
 export * from './dispatch';
+
+// The dispatcher desk (Core M0324); the domains stay alphabetical across this break.
+export * from './dispatcher-desk';
 export * from './feature-flags';
 export * from './forms';
 export * from './geocoding';
@@ -28,6 +31,9 @@ export * from './groups';
 export * from './health';
 export * from './inbox';
 export * from './incident-command';
+
+// Enhanced AI intake screening and spam dismissal (Core M0326); the domains stay alphabetical across this break.
+export * from './intake-screening';
 export * from './inventory';
 export * from './mapping';
 export * from './messages';

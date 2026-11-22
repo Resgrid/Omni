@@ -38,6 +38,9 @@ describe('resolveRealtimeFeatures (per-variant event sets)', () => {
       'checkInUpdated',
       'outstandingRequirementsUpdated',
       'recurringCallAlertsUpdated',
+      'dispatcherDeskUpdated',
+      'dispatcherQueueUpdated',
+      'intakeConversationUpdated',
       'unitStatusAlertUpdated',
       'unitNavigationUpdated',
     ]);

@@ -96,7 +96,10 @@ describe('useHref', () => {
 
 describe('resolveNotificationRoute (deep links)', () => {
   it('maps push targets to declared routes', () => {
-    const href = createHrefBuilders(defineRoutes(['home', 'callDetail', 'chatChannel', 'chatbot', 'weatherAlertDetail', 'messageDetail', 'workOrderDetail', 'approveSignIn', 'unitConsole', 'recurringCallAlerts']));
+    const href = createHrefBuilders(
+      defineRoutes(['home', 'callDetail', 'chatChannel', 'chatbot', 'weatherAlertDetail', 'messageDetail', 'workOrderDetail', 'approveSignIn', 'unitConsole', 'recurringCallAlerts', 'dispatcherDesk'])
+    );
+
     expect(resolveNotificationRoute({ kind: 'call', id: '42' }, href)).toBe('/call/42');
     expect(resolveNotificationRoute({ kind: 'call', id: '42', closed: true }, href)).toBe('/call/42');
     expect(resolveNotificationRoute({ kind: 'chat', id: 'abc', chatType: 'direct' }, href)).toBe('/chat/abc');
@@ -109,6 +112,9 @@ describe('resolveNotificationRoute (deep links)', () => {
     expect(resolveNotificationRoute({ kind: 'unitStatusTimer', id: '12' }, href)).toBe('/console');
     // A recurring call alert (Dispatch) opens the alerts list with that alert picked out.
     expect(resolveNotificationRoute({ kind: 'recurringCallAlert', id: 'a-1' }, href)).toBe('/recurring-call-alerts?alertId=a-1');
+    // Dispatcher desk work and break pushes (Dispatch) open the desk with the item / the breaks.
+    expect(resolveNotificationRoute({ kind: 'deskItem', id: 'i-1' }, href)).toBe('/desk?itemId=i-1');
+    expect(resolveNotificationRoute({ kind: 'deskBreak', id: 'b-1' }, href)).toBe('/desk?breakId=b-1');
   });
 
   it('returns null (push modal fallback) when the variant has no screen for the target', () => {
@@ -118,6 +124,7 @@ describe('resolveNotificationRoute (deep links)', () => {
     expect(resolveNotificationRoute({ kind: 'communicationTest', id: 't' }, getHrefBuilders())).toBeNull();
     expect(resolveNotificationRoute({ kind: 'unitStatusTimer', id: '12' }, getHrefBuilders())).toBeNull();
     expect(resolveNotificationRoute({ kind: 'recurringCallAlert', id: 'a-1' }, getHrefBuilders())).toBeNull();
+    expect(resolveNotificationRoute({ kind: 'deskItem', id: 'i-1' }, getHrefBuilders())).toBeNull();
   });
 });
 
@@ -140,6 +147,8 @@ describe('canonical route gates', () => {
     expect(isRouteAvailableFor('callNew', manifest('bigboard'))).toBe(false);
     expect(isRouteAvailableFor('recurringCallAlerts', manifest('dispatch'))).toBe(true);
     expect(isRouteAvailableFor('recurringCalls', manifest('ic'))).toBe(false);
+    expect(isRouteAvailableFor('dispatcherDesk', manifest('dispatch'))).toBe(true);
+    expect(isRouteAvailableFor('dispatcherDeskItem', manifest('responder'))).toBe(false);
     expect(isRouteAvailableFor('home', manifest('bigboard'))).toBe(true);
   });
 

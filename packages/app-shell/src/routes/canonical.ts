@@ -45,6 +45,9 @@ const customIndoorMaps = { requires: (m: VariantManifest) => m.capabilities.maps
 /** Recurring call schedules, their calendar and the dispatcher alerts (`features/recurring-calls`). */
 const recurringCalls = { requires: (m: VariantManifest) => m.capabilities.calls.recurringCalls } as const;
 
+/** The dispatcher desk: routed work, an item's conversation or call, breaks and the team timeline (`features/dispatcher-desk`). */
+const dispatcherDesk = { requires: (m: VariantManifest) => m.capabilities.calls.dispatcherDesk } as const;
+
 /** Route plan previews and the department's routes (`features/route-plans`, `features/routes-overview`; Core M0322). */
 const routesPreview = { requires: (m: VariantManifest) => m.capabilities.routes.preview } as const;
 
@@ -154,6 +157,12 @@ export const CANONICAL_ROUTES = {
   recurringCallDetail: route('/recurring-calls/[id]', ['id'], recurringCalls),
   recurringCallEdit: route('/recurring-calls/[id]/edit', ['id'], recurringCalls),
   recurringCallAlerts: route('/recurring-call-alerts', [], recurringCalls),
+  // Dispatch: the dispatcher desk — the queue (`?itemId=` opens an item, `?breakId=` the breaks), one item, a call created
+  // from an item's conversation, and the breaks with the team's coverage timeline.
+  dispatcherDesk: route('/desk', [], dispatcherDesk),
+  dispatcherDeskItem: route('/desk/item/[id]', ['id'], dispatcherDesk),
+  dispatcherDeskItemCall: route('/desk/item/[id]/call', ['id'], dispatcherDesk),
+  dispatcherDeskBreaks: route('/desk/breaks', [], dispatcherDesk),
   // Route plans (Core M0322): a plan preview any app that picks or runs routes opens (call form and detail, Unit routes),
   // and the department's routes with its running routes, read only (Dispatch's routes area).
   routePlans: route('/route-plans', [], routesPreview),

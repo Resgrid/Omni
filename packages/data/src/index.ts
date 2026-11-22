@@ -326,3 +326,6 @@ export * from './navigation';
 
 // Nearest-unit board for a call location (Dispatch): the dispatch picker's ranking and the location picker's map
 export * from './dispatch-board';
+
+// The dispatcher desk (Dispatch): routed work, presence, breaks and coverage
+export * from './dispatcher-desk';

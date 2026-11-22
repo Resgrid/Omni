@@ -47,6 +47,12 @@ export interface RealtimeEventMap {
   outstandingRequirementsUpdated: [id: string | null, payload: unknown, ...rest: unknown[]];
   /** The schedule id, then the payload `{ alertId, kind, raised }` (JSON): reload the recurring call alerts. */
   recurringCallAlertsUpdated: IdEventArgs;
+  /** The dispatcher's user id, then the payload `{ userId, state }`: reload the desk. */
+  dispatcherDeskUpdated: IdEventArgs;
+  /** The routed item's id, then the payload `{ itemId, state, assignedUserId, kind }`: reload the desk (and that item). */
+  dispatcherQueueUpdated: IdEventArgs;
+  /** The call id of an intake text thread, then `{ conversationId, state, handler }`: reload the desk item linked to it. */
+  intakeConversationUpdated: IdEventArgs;
   unitStatusAlertUpdated: IdEventArgs;
   /**
    * Two hub arguments: the unit id and a camel-cased JSON payload `{ unitId, callId, routeInstanceId, state }` (ids and

@@ -187,7 +187,8 @@ const styles = StyleSheet.create({
   numberCell: { width: 90, paddingRight: 8 },
   nameCell: { flex: 2, paddingRight: 8 },
   cell: { paddingRight: 8 },
-  actionsCell: { width: 240, justifyContent: 'flex-end' },
+  // Wraps when a row has more actions than fit (intake calls add Dismiss as Spam) instead of spilling over the Received column.
+  actionsCell: { width: 240, justifyContent: 'flex-end', flexWrap: 'wrap', rowGap: 6 },
   phoneList: { padding: 8, paddingBottom: 24 },
   tableList: { paddingBottom: 24 },
 });

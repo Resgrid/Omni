@@ -36,6 +36,7 @@ import {
 } from './configure';
 import { openNotification } from './deep-links';
 import { type PushNotificationData, usePushNotificationModalStore } from './push-modal-store';
+import { clearRegisteredPushToken, notifyPushTokenRegistered } from './push-token-listeners';
 import type { PushNotificationService, PushRegistrationTrigger, RegisterOptions, UsePushNotificationsResult } from './push-types';
 
 /** One push as the service worker or the Electron main process hands it over (Core's webPush data block). */
@@ -341,6 +342,8 @@ async function runSync(): Promise<void> {
 
   const current = readRegistration();
   if (current && current.key === keyOf(identity) && current.token === token && Date.now() - current.registeredAt < REREGISTER_AFTER_MS) {
+    notifyPushTokenRegistered({ token, platform: WEB_PUSH_PLATFORM });
+
     return;
   }
   if (current && current.token !== token) {
@@ -382,6 +385,8 @@ async function runSync(): Promise<void> {
     return;
   }
   writeRegistration(registration);
+  // Subscribers that follow this registration (the Dispatch desk's own subscriber) take the same token.
+  notifyPushTokenRegistered({ token, platform: WEB_PUSH_PLATFORM });
   notifyStatus();
 }
 
@@ -581,6 +586,7 @@ export const pushNotificationService: PushNotificationService & { resetForTests(
   unregisterAtSignOut: (accessToken: string | null): Promise<void> => unregisterWebPushAtSignOut(accessToken),
   // The sign-out cleanup already took the token off the server and killed it here.
   clearLocalState: async (): Promise<void> => {
+    clearRegisteredPushToken();
     usePushNotificationModalStore.getState().hideNotificationModal();
     await clearWebBadge();
   },

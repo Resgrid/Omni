@@ -149,6 +149,14 @@ export const capabilitiesSchema = z.object({
      * their badge and banner. The dispatch desk's module, beside the pending and scheduled call queues: Dispatch.
      */
     recurringCalls: z.boolean(),
+    /**
+     * The dispatcher desk ("Dispatchers on duty", `/DispatcherDesk/*`, Core M0324): dispatchers sign in to the desk, which
+     * routes pending and scheduled calls, texts, emails, chats and held phone calls to a free dispatcher (offer, accept,
+     * queue), plan and take breaks against the department's coverage minimum, and see the team's timeline. Brings the desk
+     * status bar, the offer alert, the desk pushes (`DQ:`/`DB:`, a Dispatch-only Novu subscriber the app registers on),
+     * the realtime desk events and quiet alerts while on break. Dispatch only.
+     */
+    dispatcherDesk: z.boolean(),
   }),
   /**
    * `holdToConfirm`: the app honours the department's "Hold to set status" (config `StatusHoldToConfirm`) — on its iOS
@@ -162,7 +170,20 @@ export const capabilitiesSchema = z.object({
   weatherAlerts: z.object({ admin: z.boolean() }),
   voice: z.object({ ptt: z.boolean(), callKeep: z.boolean(), bluetoothPtt: z.boolean(), headsetButtonPtt: z.boolean(), desktopPtt: z.boolean() }),
   location: z.object({ background: z.boolean(), transmission: z.enum(['person', 'unit', 'none']), geoHubDefault: z.boolean() }),
-  push: z.object({ subject: z.enum(['user', 'unit', 'icUser', 'none']), desktopPush: z.boolean(), liveActivity: z.boolean(), approveSignIns: z.boolean() }),
+  /**
+   * `soundSet`: the notification sounds the app ships (Android channel sounds, iOS push sounds, the in-app player on every
+   * platform). `shared`: the modern set in `apps/omni/assets/audio`. `dispatch`: the Dispatch set in
+   * `apps/omni/variants/dispatch/assets/audio` — every modern sound re-voiced in the Dispatch console timbre under the
+   * same names, so a dispatcher tells its alerts from a Responder or Unit app on the same desk, plus the dispatcher desk
+   * sounds (Core sound types 28–32), whose channels only an app with this set creates. Custom call tones stay shared.
+   */
+  push: z.object({
+    subject: z.enum(['user', 'unit', 'icUser', 'none']),
+    desktopPush: z.boolean(),
+    liveActivity: z.boolean(),
+    approveSignIns: z.boolean(),
+    soundSet: z.enum(['shared', 'dispatch']),
+  }),
   auth: z.object({
     mfa: z.boolean(),
     passkeys: z.boolean(),

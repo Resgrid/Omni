@@ -238,9 +238,6 @@
   "apps/omni/metro/maplibre-worker.js": {
     "anti-slop/require-readable-spacing": 7
   },
-  "apps/omni/notification-sounds.native.ts": {
-    "anti-slop/require-readable-spacing": 1
-  },
   "apps/omni/offline-maps-platform.native.ts": {
     "anti-slop/require-readable-spacing": 3
   },
@@ -1055,9 +1052,6 @@
   },
   "packages/config-plugins/__tests__/with-icon-badge.test.js": {
     "anti-slop/require-readable-spacing": 4
-  },
-  "packages/config-plugins/__tests__/with-notification-sounds.test.js": {
-    "anti-slop/require-readable-spacing": 14
   },
   "packages/config-plugins/plugins/custom-gradle.js": {
     "anti-slop/require-readable-spacing": 1

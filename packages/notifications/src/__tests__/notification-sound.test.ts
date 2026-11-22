@@ -1,6 +1,10 @@
-// In-app notification sounds (Unit/IC notification-sound.service), modern set only.
+// In-app notification sounds (Unit/IC notification-sound.service), modern set only; the desk sounds where the app's sound
+// set has them (Dispatch).
+import { resetActiveVariantForTests } from '@resgrid/config';
+
 import { KIND_SOUNDS, notificationSoundService, soundForNotification } from '../notification-sound';
-import { isModernSound } from '../sounds';
+import { isModernSound, soundForDeskEvent } from '../sounds';
+import { selectVariant } from './helpers';
 import * as audio from './mocks/expo-audio';
 import { mockAudioState, mockResetAudio } from './mocks/expo-audio';
 
@@ -71,5 +75,35 @@ describe('notificationSoundService', () => {
     await notificationSoundService.play('modernchat');
     notificationSoundService.cleanup();
     expect(mockAudioState.players[0].remove).toHaveBeenCalled();
+  });
+});
+
+describe('dispatcher desk sounds (types 28–32, the Dispatch sound set)', () => {
+  afterEach(() => {
+    resetActiveVariantForTests();
+  });
+
+  it('maps the desk sound types to the desk sounds', () => {
+    expect(soundForNotification({ kind: 'notification', soundType: '28' })).toBe('moderndeskoffer');
+    expect(soundForNotification({ kind: 'notification', soundType: 29 })).toBe('moderndeskqueuealert');
+    expect(soundForNotification({ kind: 'message', soundType: '30' })).toBe('moderndeskmessage');
+    expect(soundForNotification({ kind: 'notification', soundType: '31' })).toBe('modernbreakreminder');
+    expect(soundForNotification({ kind: 'notification', soundType: '32' })).toBe('modernbreakover');
+  });
+
+  it('plays the desk sound by name and for a desk push in the Dispatch app', async () => {
+    selectVariant('dispatch');
+    notificationSoundService.configure({ moderndeskoffer: 'file://desk-offer.wav', modernbreakover: 'file://break-over.wav', modernnotification: 'file://notification.wav' });
+    await notificationSoundService.play(soundForDeskEvent('offer'));
+    await notificationSoundService.playForNotification({ kind: 'notification', soundType: '32' });
+    expect(mockAudioState.played).toEqual(['file://desk-offer.wav', 'file://break-over.wav']);
+  });
+
+  it('plays the shared sound of the same meaning in an app without desk sounds', async () => {
+    selectVariant('responder');
+    notificationSoundService.configure({ modernnotification: 'file://notification.wav', modernmessage: 'file://message.wav' });
+    await notificationSoundService.play(soundForDeskEvent('queueAlert'));
+    await notificationSoundService.playForNotification({ kind: 'message', soundType: '30' });
+    expect(mockAudioState.played).toEqual(['file://notification.wav', 'file://message.wav']);
   });
 });

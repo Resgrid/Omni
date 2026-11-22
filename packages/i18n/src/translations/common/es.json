@@ -635,6 +635,11 @@
       "via_webhook_named": "Via webhook: {{name}}",
       "via_voice": "Via voice line",
       "via_voice_named": "Via voice line: {{name}}"
+    },
+    "intake_screening": {
+      "likely_not_incident": "Enhanced AI: likely not an incident",
+      "repeat_sender": "Repeat sender: over the hourly limit",
+      "dismissed_as_spam": "Dismissed as spam"
     }
   },
   "chat": {
@@ -2630,7 +2635,9 @@
       "sign_in_approval": "Sign-in Approval",
       "weather": "Alerta meteorológica",
       "work_order": "Orden de trabajo",
-      "recurring_call_alert": "Alerta de llamada recurrente"
+      "recurring_call_alert": "Alerta de llamada recurrente",
+      "desk_item": "Puesto de despacho",
+      "desk_break": "Descanso"
     },
     "unknown_type_warning": "Este tipo de notificación no se reconoce.",
     "view_call": "Ver llamada",
@@ -2667,7 +2674,12 @@
       "generic_call": "Generic Call",
       "general_notification": "Notifications",
       "general_message": "Messages",
-      "unit_status_timer": "Unit Status Timer"
+      "unit_status_timer": "Unit Status Timer",
+      "desk_offer": "Desk Offer",
+      "desk_queue_alert": "Desk Queue Alert",
+      "desk_message": "Desk Message",
+      "break_reminder": "Break Reminder",
+      "break_over": "Break Over"
     },
     "communication_test_confirmed": "Receipt confirmed",
     "communication_test_failed": "Could not confirm receipt. Please try again.",
@@ -2678,7 +2690,9 @@
     "view_chat": "Ver chat",
     "view_sign_in": "Review",
     "view_work_order": "Ver orden de trabajo",
-    "view_recurring_call_alerts": "Ver alertas"
+    "view_recurring_call_alerts": "Ver alertas",
+    "view_desk_break": "Ver descansos",
+    "view_desk_item": "Abrir puesto"
   },
   "records": {
     "add_row": "Añadir fila",
@@ -3807,7 +3821,13 @@
     "no_pending_calls_description": "No hay llamadas esperando a ser despachadas.",
     "search": "Buscar llamadas pendientes...",
     "table_received": "Recibida",
-    "title": "Llamadas pendientes"
+    "title": "Llamadas pendientes",
+    "dismiss_spam": "Dismiss as Spam",
+    "dismiss_spam_block": "Also block the sender from your intake channels",
+    "dismiss_spam_blocked": "Dismissed as spam; the sender is blocked",
+    "dismiss_spam_confirm": "Dismiss this call as spam? It is cancelled without notifying anyone, and nothing is sent back to the sender.",
+    "dismiss_spam_error": "Failed to dismiss the call as spam",
+    "dismiss_spam_success": "Dismissed as spam"
   },
   "scheduled_calls": {
     "loading": "Cargando llamadas programadas...",
@@ -5029,6 +5049,353 @@
     "field_destination_address": "Dirección de destino",
     "field_destination_location": "Ubicación de destino",
     "field_route": "Ruta"
+  },
+  "dispatcher_desk": {
+    "actions": {
+      "away": "Ausente",
+      "go_available": "Ponerse disponible",
+      "im_back": "Estoy de vuelta",
+      "im_back_done": "Bienvenido de nuevo. Vuelve a estar en el puesto.",
+      "sign_in": "Iniciar sesión en el puesto",
+      "sign_off": "Cerrar sesión",
+      "take_break": "Tomar descanso"
+    },
+    "alerts": {
+      "auto_returned": "Su descanso superó su duración, así que el puesto le devolvió al servicio automáticamente.",
+      "back_title": "De vuelta en el puesto",
+      "break_due": "Es la hora: {{type}}. Toque para empezar.",
+      "break_ended_for_you": "Se ha finalizado su descanso. Vuelve a estar en el puesto.",
+      "break_over": "Su descanso ha terminado. Toque «Estoy de vuelta» para volver al puesto.",
+      "break_over_title": "Su descanso ha terminado",
+      "break_reminder": "{{type}}: empieza en {{minutes}} min",
+      "break_title": "Descanso",
+      "escalated": "Esperando demasiado: {{count}} ({{kind}})",
+      "escalated_title": "Tareas en espera",
+      "new_message": "Nuevo mensaje de {{name}}",
+      "new_message_title": "Nuevo mensaje"
+    },
+    "break_state": {
+      "active": "En descanso",
+      "done": "Terminado",
+      "planned": "Planificado"
+    },
+    "break_type": {
+      "break": "Descanso",
+      "meal": "Comida",
+      "other": "Otro",
+      "personal": "Personal"
+    },
+    "breaks": {
+      "coverage_prevented": "Con este descanso, la disponibilidad quedaría en {{available}}, por debajo del mínimo de {{minimum}}. Su departamento no lo permite: pida a un supervisor que lo inicie.",
+      "coverage_refused": "La cobertura es demasiado baja para iniciar su descanso ahora. Un supervisor puede iniciarlo por usted.",
+      "coverage_warning": "Con este descanso, la disponibilidad queda en {{available}}, por debajo del mínimo de {{minimum}}.",
+      "due_back_at": "Regreso a las {{time}}",
+      "duty": "{{shift}} · {{start}}–{{end}}",
+      "left": "Quedan {{time}}",
+      "length": "Duración",
+      "minutes": "{{minutes}} min",
+      "my_breaks": "Mis descansos de hoy",
+      "my_duty": "Mi servicio",
+      "overdue_by": "Con {{time}} de retraso",
+      "plan_mine": "Planificar un descanso",
+      "plan_shift": "Planificar los descansos del turno",
+      "plan_shift_confirm": "Planificar descansos",
+      "plan_shift_done": "Descansos del turno planificados",
+      "plan_shift_message": "Escalonar el plan de descansos del turno entre los despachadores de hoy para que los descansos no se solapen.",
+      "plan_shift_replace": "Sustituir los descansos ya planificados",
+      "planned_at": "Planificado para las {{time}}",
+      "return_work": "Devolver mis tareas a la cola (tomadas: {{count}})",
+      "return_work_hint": "Un descanso solo empieza cuando sus tareas vuelven a la cola para otro despachador.",
+      "row": "{{type}} · {{minutes}} min",
+      "start_now": "Iniciar ahora",
+      "start_planned": "Planificado: {{type}} · {{minutes}} min · {{time}}",
+      "started": "Disfrute su descanso. Debe volver a las {{time}}.",
+      "started_at": "Iniciado a las {{time}}",
+      "take_anyway": "Tomar el descanso igualmente",
+      "take_new": "Un nuevo descanso ahora",
+      "take_now": "Tomar un descanso ahora",
+      "take_title": "Tomar un descanso",
+      "title": "Descansos",
+      "type": "Tipo"
+    },
+    "complete": {
+      "done": "Completada",
+      "note": "Nota",
+      "outcome": "¿Cómo terminó?",
+      "title": "Completar",
+      "notify_participant": "Avisar al remitente de que la conversación terminó",
+      "notify_participant_hint": "Envía un SMS de cierre desde el número de Resgrid."
+    },
+    "conversation": {
+      "add_note": "Añadir nota",
+      "empty": "Aún no hay mensajes.",
+      "note_by": "Nota · {{name}}",
+      "note_placeholder": "Escriba una nota para los despachadores (nunca se envía)…",
+      "reply": "Responder",
+      "reply_placeholder": "Escriba una respuesta…",
+      "save_note": "Guardar nota",
+      "send": "Enviar respuesta"
+    },
+    "create_call": {
+      "link_failed": "La llamada se guardó, pero no se pudo vincular a la conversación.",
+      "link_later": "La llamada se guardó en este dispositivo y se enviará cuando vuelva a tener conexión. Complete la conversación una vez enviada.",
+      "linked": "La llamada está vinculada a la conversación.",
+      "name": "{{kind}} de {{source}}"
+    },
+    "delivery": {
+      "failed": "No entregado",
+      "queued": "Enviando",
+      "received": "Recibido",
+      "sent": "Enviado"
+    },
+    "desk_off": "El puesto de despacho está desactivado",
+    "desk_off_description": "Su departamento no ha activado el puesto de despacho. Un administrador del departamento puede activarlo en Turnos > Configuración del puesto de despacho.",
+    "device": {
+      "desktop": "Escritorio",
+      "phone": "Teléfono",
+      "tablet": "Tableta"
+    },
+    "errors": {
+      "already_on_break": "Ya está en un descanso.",
+      "already_on_roster": "Ya está en la lista de despacho de ese día.",
+      "at_capacity": "Ya tiene tantas tareas como permite el puesto. Termine o libere alguna primero.",
+      "break_not_found": "Ese descanso ya no está planificado.",
+      "break_not_startable": "Ese descanso no se puede iniciar ahora.",
+      "break_overlaps": "Ese descanso se solapa con otro de sus descansos.",
+      "channel_unavailable": "Ese canal no puede enviar en este momento.",
+      "coverage_too_low": "La cobertura es demasiado baja para iniciar un descanso ahora. Un supervisor puede iniciarlo por usted.",
+      "desk_disabled": "Su departamento ha desactivado el puesto de despacho.",
+      "dispatchers_not_enabled": "Ese turno no tiene despachadores de servicio.",
+      "holding_work": "Tiene tareas tomadas. Devuélvalas a la cola para iniciar su descanso.",
+      "invalid_input": "Falta algo en la solicitud o no es válido.",
+      "item_not_available": "Esa tarea ya se ha tomado o terminado.",
+      "item_not_found": "Esa tarea ya no está en el puesto.",
+      "no_callback_number": "Introduzca el número al que debe llamar el puesto.",
+      "not_a_dispatcher": "Solo los despachadores pueden usar el puesto.",
+      "not_assigned_to_you": "Esa tarea la tiene otro despachador.",
+      "not_on_break": "No hay ningún descanso en curso que terminar.",
+      "not_on_duty": "No está en un turno de despacho en este momento.",
+      "not_permitted": "No tiene permiso para hacer eso en el puesto.",
+      "not_signed_in": "Inicie sesión en el puesto primero.",
+      "shift_not_found": "No se encontró ese turno.",
+      "title": "Puesto",
+      "unknown": "El puesto no pudo hacer eso. Vuelva a intentarlo."
+    },
+    "event": {
+      "accepted": "Aceptada",
+      "cancelled": "Cancelada",
+      "completed": "Completada",
+      "created": "Recibida",
+      "declined": "Rechazada",
+      "escalated": "Esperó demasiado",
+      "message_received": "Mensaje recibido",
+      "message_sent": "Mensaje enviado",
+      "offer_expired": "Oferta caducada",
+      "offered": "Ofrecida",
+      "overflowed": "Enviada a desbordamiento",
+      "released": "Devuelta a la cola",
+      "reopened": "Reabierta",
+      "transferred": "Transferida",
+      "voice_connected": "Llamada conectada",
+      "voice_connecting": "Conectando la llamada",
+      "voice_ended": "Llamada finalizada",
+      "conversation_closed": "Conversación por SMS terminada",
+      "held_for_review": "Held for review: screened intake call"
+    },
+    "item": {
+      "complete": "Completar",
+      "create_call": "Crear llamada",
+      "dispatch_now": "Despachar ahora",
+      "due_on": "Vence {{time}}",
+      "history": "Historial ({{count}})",
+      "loading": "Cargando…",
+      "not_found": "Esta tarea ya no está en el puesto",
+      "open_call": "Abrir llamada",
+      "release": "Devolver a la cola",
+      "released": "Devuelta a la cola",
+      "title": "Tarea",
+      "transfer": "Transferir"
+    },
+    "item_state": {
+      "accepted": "En curso",
+      "cancelled": "Cancelada",
+      "completed": "Completada",
+      "offered": "Ofrecida",
+      "overflowed": "Enviada a desbordamiento",
+      "queued": "En espera"
+    },
+    "kind": {
+      "chat": "Chat",
+      "email": "Correo electrónico",
+      "other": "Tarea",
+      "pending_call": "Llamada pendiente",
+      "scheduled_call": "Llamada programada",
+      "text": "Mensaje de texto",
+      "voice": "Llamada telefónica"
+    },
+    "loading": "Cargando el puesto…",
+    "not_available": "El puesto de despacho no está disponible en esta aplicación",
+    "not_dispatcher": "No es despachador",
+    "not_dispatcher_description": "Solo los miembros que pueden iniciar sesión en la aplicación Dispatch pueden usar el puesto de despacho.",
+    "offer": {
+      "accept": "Aceptar",
+      "decline": "Rechazar",
+      "expires_in": "Responda en {{time}}",
+      "more": "Más ofertas en espera: {{count}}",
+      "title": "Tarea que se le ofrece"
+    },
+    "outcome": {
+      "call_created": "Llamada creada",
+      "closed": "Llamada cerrada",
+      "dispatched": "Despachada",
+      "duplicate": "Duplicada",
+      "left_pending": "Dejada pendiente",
+      "no_action_needed": "No requiere acción",
+      "none": "Sin resultado",
+      "referred": "Derivada a otro servicio"
+    },
+    "plan": {
+      "add_title": "Planificar un descanso",
+      "cancel": "Eliminar",
+      "cancelled": "Descanso eliminado",
+      "edit": "Cambiar",
+      "edit_title": "Cambiar el descanso",
+      "entry": "{{type}} · {{minutes}} min · {{start}}–{{end}}",
+      "length_hint": "Un descanso es una duración: puede empezar antes o después, y el regreso vence esa duración después de que empiece.",
+      "none": "No hay descansos planificados hoy.",
+      "save": "Guardar descanso",
+      "saved": "Descanso guardado",
+      "start": "Inicio previsto",
+      "start_now": "Iniciar descanso ahora",
+      "started_for": "{{name}} está en descanso",
+      "title_for": "Descansos de {{name}}",
+      "title_mine": "Mis descansos"
+    },
+    "queue": {
+      "escalated": "Esperando demasiado",
+      "held_by": "Tomada por {{name}}",
+      "mine": "Mis tareas",
+      "mine_empty": "No tiene nada ofrecido ni tomado.",
+      "recent": "Recientes",
+      "recent_empty": "No hay tareas recientes en este dispositivo.",
+      "take": "Tomar",
+      "waited": "Esperando {{minutes}} min",
+      "waiting": "En espera",
+      "waiting_empty": "No hay nada esperando en la cola."
+    },
+    "sign_in": {
+      "callback_hint": "El puesto llama a este teléfono para conectar a los llamantes. Déjelo vacío para usar el móvil de su perfil.",
+      "callback_number": "Número de devolución de llamada",
+      "callback_placeholder": "+1 555 555 0100",
+      "device": "Iniciando sesión en: {{device}}",
+      "done": "Ha iniciado sesión en el puesto.",
+      "no_shift": "No está en un turno de despacho en este momento, así que el puesto podría rechazar el inicio de sesión.",
+      "no_shift_unscheduled": "No está en un turno de despacho en este momento. Active el servicio no programado para iniciar sesión de todos modos.",
+      "prompt": "Inicie sesión para que se le ofrezcan las tareas asignadas y pueda tomarlas.",
+      "prompt_title": "No ha iniciado sesión en el puesto",
+      "start_away": "Empezar como ausente",
+      "start_away_hint": "No recibir tareas asignadas hasta ponerse disponible.",
+      "title": "Iniciar sesión en el puesto",
+      "unscheduled": "Servicio no programado",
+      "unscheduled_hint": "Entrar de servicio sin turno de despacho (un evento, una cobertura).",
+      "until": "De servicio hasta (opcional)"
+    },
+    "sign_off": {
+      "done": "Ha cerrado sesión en el puesto.",
+      "message": "Dejará de recibir tareas asignadas hasta que vuelva a iniciar sesión.",
+      "message_holding": "Dejará de recibir tareas asignadas y las tareas que tiene tomadas volverán a la cola (cantidad: {{count}}).",
+      "title": "¿Cerrar sesión en el puesto?"
+    },
+    "state": {
+      "available": "Disponible",
+      "away": "Ausente",
+      "busy": "Ocupado",
+      "offline": "Desconectado",
+      "on_break": "En descanso",
+      "on_break_left": "En descanso · quedan {{time}}",
+      "on_break_overdue": "Descanso excedido en {{minutes}} min"
+    },
+    "status_bar": {
+      "counts": "Ofrecidas {{offered}} · Tomadas {{held}} · En espera {{waiting}}",
+      "less": "Menos acciones",
+      "more": "Más acciones",
+      "not_signed_in": "Sin sesión en el puesto · En espera {{waiting}}"
+    },
+    "team": {
+      "break_ended": "{{name}} ha vuelto al puesto",
+      "breaks": "Descansos",
+      "empty": "No hay despachadores en el puesto.",
+      "end_break": "Terminar descanso",
+      "holding": "{{count}} de {{capacity}} tomadas",
+      "next_break": "Próximo: {{type}} a las {{time}} ({{minutes}} min)",
+      "no_shift": "Sin turno de despacho",
+      "offered": "Ofrecidas: {{count}}",
+      "on_shift": "{{shift}} hasta las {{time}}",
+      "open": "desconectado",
+      "summary": "Disponibles {{available}} · En descanso {{onBreak}} · De servicio {{onDuty}} · Mínimo {{minimum}}",
+      "supervisor": "Supervisor",
+      "title": "Equipo",
+      "unscheduled": "Servicio no programado hasta las {{time}}",
+      "you": "usted"
+    },
+    "timeline": {
+      "coverage": "Cobertura",
+      "empty": "Hoy nadie está de servicio de despacho.",
+      "hint": "El servicio y los descansos de todos hoy. El rojo marca una cobertura por debajo del mínimo.",
+      "hint_supervisor": "El servicio y los descansos de todos hoy. Toque un despachador para planificar o cambiar sus descansos.",
+      "legend_below": "Bajo el mínimo",
+      "legend_overdue": "Descanso excedido",
+      "legend_duty": "De servicio",
+      "legend_planned": "Descanso planificado",
+      "legend_taken": "Descanso tomado",
+      "loading": "Cargando la línea de tiempo…",
+      "title": "Línea de tiempo del equipo",
+      "unavailable": "No se pudo cargar la línea de tiempo"
+    },
+    "title": "Puesto de despacho",
+    "transfer": {
+      "done": "Transferida",
+      "none": "No hay otro despachador con sesión iniciada y libre para tomarla.",
+      "note": "Nota para el destinatario",
+      "title": "Transferir a"
+    },
+    "unsupported": "El puesto de despacho aún no está disponible",
+    "unsupported_description": "Su servidor de Resgrid no tiene el puesto de despacho. Pida a su administrador que lo actualice.",
+    "voice": {
+      "answer": "Contestar",
+      "call_back": "Devolver llamada",
+      "caller": "Llamante",
+      "caller_gone": "El llamante colgó",
+      "caller_waiting": "Llamante en espera",
+      "ring_hint": "El puesto llama a este teléfono y conecta al llamante cuando usted pulsa 1.",
+      "ring_number": "Llamar a este número",
+      "ringing": "Su teléfono sonará. Pulse 1 para conectar.",
+      "unavailable": "El puesto no puede conectar llamadas telefónicas para este departamento.",
+      "unknown_caller": "Número desconocido"
+    },
+    "warnings": {
+      "breaks_overlap": "Los descansos se solapan con los de otro despachador.",
+      "coverage_below_minimum": "La cobertura baja del mínimo: disponibles {{available}}, mínimo {{minimum}}.",
+      "generic": "El puesto detectó algo sobre este cambio.",
+      "no_coverage": "No quedaría nadie disponible en el puesto.",
+      "outside_duty": "El descanso queda fuera del turno.",
+      "started_early": "El descanso empezó {{minutes}} min antes de lo previsto.",
+      "started_late": "El descanso empezó {{minutes}} min más tarde de lo previsto.",
+      "work_returned": "Sus tareas volvieron a la cola."
+    },
+    "intake": {
+      "title": "Conversación por SMS",
+      "handler_assistant": "Enhanced AI le hace preguntas al remitente hasta que se conecte un despachador.",
+      "handler_unassisted": "El remitente está esperando a un despachador.",
+      "handler_dispatcher": "Conectado con {{name}}.",
+      "closed": "Esta conversación por SMS ha terminado.",
+      "opted_out": "El remitente se dio de baja (STOP). No se puede enviar nada más.",
+      "reply_from": "Las respuestas se envían desde {{number}}.",
+      "author_participant": "Remitente",
+      "author_assistant": "Enhanced AI",
+      "author_system": "Resgrid",
+      "failed": "No entregado"
+    }
   },
   "route_plans": {
     "duration_with_stops": "Con paradas",
