@@ -6,11 +6,12 @@
  * `c1`–`c25`, and registered only the `calls` category, so types `4`, `5`, `6`–`26` landed on a channel that did not
  * exist (Android falls back to the miscellaneous channel and its default sound) and iOS `messages`/`notifications`/
  * `chats` pushes had no category. Omni creates EVERY channel id the server can send, each with the modern sound for
- * that type's meaning (D17), and registers all four categories.
+ * that type's meaning (D17), and registers all four categories. The dispatcher desk ids (28–32), which Core sends only to
+ * the Dispatch app, are created only by an app whose sound set has the desk sounds (`DESK_ANDROID_CHANNELS`).
  *
  * Pure data and builders, no native imports, so the set is testable and usable from the config plugin's tests.
  */
-import { CUSTOM_TONES, EXTRA_CHANNEL_SOUNDS, type NotificationSound, PUSH_SOUND_TYPE_SOUNDS, PUSH_SOUND_TYPES, type PushSoundTypeName, type PushSoundTypeValue } from './sounds';
+import { CUSTOM_TONES, DESK_PUSH_SOUND_TYPES, EXTRA_CHANNEL_SOUNDS, type NotificationSound, PUSH_SOUND_TYPE_SOUNDS, PUSH_SOUND_TYPES, type PushSoundTypeName, type PushSoundTypeValue } from './sounds';
 
 export type ChannelKind = 'call' | 'alert' | 'notification' | 'message' | 'chat' | 'status' | 'custom';
 
@@ -57,6 +58,11 @@ const SOUND_TYPE_CHANNELS: Record<PushSoundTypeName, { key: string; name: string
   ModernUnitNotice: { key: 'unit_notice', name: 'Unit Notice', kind: 'notification' },
   ModernResourceOrder: { key: 'resource_order', name: 'Resource Order', kind: 'notification' },
   ModernCallRenotify: { key: 'call_renotify', name: 'Call Reminder', kind: 'call' },
+  ModernDeskOffer: { key: 'desk_offer', name: 'Desk Offer', kind: 'alert' },
+  ModernDeskQueueAlert: { key: 'desk_queue_alert', name: 'Desk Queue Alert', kind: 'alert' },
+  ModernDeskMessage: { key: 'desk_message', name: 'Desk Message', kind: 'message' },
+  ModernBreakReminder: { key: 'break_reminder', name: 'Break Reminder', kind: 'notification' },
+  ModernBreakOver: { key: 'break_over', name: 'Break Over', kind: 'alert' },
 };
 
 /** Calls, alerts and custom call tones vibrate; routine notices do not (Unit baseline: `notif`/`message` silent-vibrate). */
@@ -76,14 +82,18 @@ const spec = (id: string, key: string, defaultName: string, sound: NotificationS
 
 const soundTypeEntries = Object.entries(PUSH_SOUND_TYPES) as [PushSoundTypeName, PushSoundTypeValue][];
 
-/** Every Android channel id the server can send, each with its modern sound (or the department's custom tone). */
+const DESK_TYPES: ReadonlySet<PushSoundTypeValue> = new Set(DESK_PUSH_SOUND_TYPES);
+
+const soundTypeChannel = (name: PushSoundTypeName, value: PushSoundTypeValue): AndroidChannelSpec => {
+  const channel = SOUND_TYPE_CHANNELS[name];
+
+  return spec(String(value), channel.key, channel.name, PUSH_SOUND_TYPE_SOUNDS[value], channel.kind);
+};
+
+/** Every Android channel id the server can send every app, each with its modern sound (or the department's custom tone). */
 export const ANDROID_CHANNELS: readonly AndroidChannelSpec[] = [
   spec('calls', 'generic_call', 'Generic Call', EXTRA_CHANNEL_SOUNDS.calls, 'call'),
-  ...soundTypeEntries.map(([name, value]) => {
-    const channel = SOUND_TYPE_CHANNELS[name];
-
-    return spec(String(value), channel.key, channel.name, PUSH_SOUND_TYPE_SOUNDS[value], channel.kind);
-  }),
+  ...soundTypeEntries.flatMap(([name, value]) => (DESK_TYPES.has(value) ? [] : [soundTypeChannel(name, value)])),
   ...CUSTOM_TONES.map((tone, index) => spec(tone, 'custom_tone', 'Custom Call Tone {{number}}', tone, 'custom', { number: index + 1 })),
   spec('notif', 'general_notification', 'Notifications', EXTRA_CHANNEL_SOUNDS.notif, 'notification'),
   spec('message', 'general_message', 'Messages', EXTRA_CHANNEL_SOUNDS.message, 'message'),
@@ -92,10 +102,31 @@ export const ANDROID_CHANNELS: readonly AndroidChannelSpec[] = [
 export const ANDROID_CHANNEL_IDS: readonly string[] = ANDROID_CHANNELS.map((channel) => channel.id);
 
 /**
+ * The dispatcher desk channels (Core sound types 28–32, sent only to the Dispatch app), each with its desk sound. Only an
+ * app whose sound set has the desk sounds creates them (`androidChannelsFor`), so no other app's system settings list
+ * channels it never receives, and no channel points at a sound the app does not bundle.
+ */
+export const DESK_ANDROID_CHANNELS: readonly AndroidChannelSpec[] = soundTypeEntries.flatMap(([name, value]) => (DESK_TYPES.has(value) ? [soundTypeChannel(name, value)] : []));
+
+/**
  * The unit's own status timer, a notification the app schedules on the device (local-notifications.ts), not one Core
  * sends: so it is not in ANDROID_CHANNELS, and only apps that schedule it (manifest module `unit-status`) create it.
  */
 export const STATUS_TIMER_CHANNEL: AndroidChannelSpec = spec('unit-status-timer', 'unit_status_timer', 'Unit Status Timer', 'modernunitnotice', 'alert');
+
+export interface AndroidChannelOptions {
+  /** The app's sound set has the dispatcher desk sounds (variant manifest `capabilities.push.soundSet`). */
+  deskSounds: boolean;
+  /** The app schedules the unit's own status timer notifications (manifest module `unit-status`). */
+  statusTimer: boolean;
+}
+
+/** The channels an app creates: every channel Core sends every app, plus the desk and status timer channels it has. */
+export const androidChannelsFor = (options: AndroidChannelOptions): AndroidChannelSpec[] => [
+  ...ANDROID_CHANNELS,
+  ...(options.deskSounds ? DESK_ANDROID_CHANNELS : []),
+  ...(options.statusTimer ? [STATUS_TIMER_CHANNEL] : []),
+];
 
 /** Vibration pattern for channels that vibrate (Unit baseline). */
 export const CHANNEL_VIBRATION_PATTERN: readonly number[] = [300, 500];

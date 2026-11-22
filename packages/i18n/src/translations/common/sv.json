@@ -635,6 +635,11 @@
       "via_webhook_named": "Via webhook: {{name}}",
       "via_voice": "Via voice line",
       "via_voice_named": "Via voice line: {{name}}"
+    },
+    "intake_screening": {
+      "likely_not_incident": "Enhanced AI: likely not an incident",
+      "repeat_sender": "Repeat sender: over the hourly limit",
+      "dismissed_as_spam": "Dismissed as spam"
     }
   },
   "chat": {
@@ -2630,7 +2635,9 @@
       "sign_in_approval": "Sign-in Approval",
       "weather": "Vädervarning",
       "work_order": "Arbetsorder",
-      "recurring_call_alert": "Avisering om återkommande larm"
+      "recurring_call_alert": "Avisering om återkommande larm",
+      "desk_item": "Larmoperatörsplats",
+      "desk_break": "Rast"
     },
     "unknown_type_warning": "Den här aviseringstypen känns inte igen.",
     "view_call": "Visa larm",
@@ -2667,7 +2674,12 @@
       "generic_call": "Generic Call",
       "general_notification": "Notifications",
       "general_message": "Messages",
-      "unit_status_timer": "Unit Status Timer"
+      "unit_status_timer": "Unit Status Timer",
+      "desk_offer": "Desk Offer",
+      "desk_queue_alert": "Desk Queue Alert",
+      "desk_message": "Desk Message",
+      "break_reminder": "Break Reminder",
+      "break_over": "Break Over"
     },
     "communication_test_confirmed": "Receipt confirmed",
     "communication_test_failed": "Could not confirm receipt. Please try again.",
@@ -2678,7 +2690,9 @@
     "view_chat": "Visa chatt",
     "view_sign_in": "Review",
     "view_work_order": "Visa arbetsorder",
-    "view_recurring_call_alerts": "Visa aviseringar"
+    "view_recurring_call_alerts": "Visa aviseringar",
+    "view_desk_break": "Visa raster",
+    "view_desk_item": "Öppna platsen"
   },
   "records": {
     "add_row": "Lägg till rad",
@@ -3807,7 +3821,13 @@
     "no_pending_calls_description": "Det finns inga larm som väntar på att larmas ut.",
     "search": "Sök väntande larm...",
     "table_received": "Mottaget",
-    "title": "Väntande larm"
+    "title": "Väntande larm",
+    "dismiss_spam": "Dismiss as Spam",
+    "dismiss_spam_block": "Also block the sender from your intake channels",
+    "dismiss_spam_blocked": "Dismissed as spam; the sender is blocked",
+    "dismiss_spam_confirm": "Dismiss this call as spam? It is cancelled without notifying anyone, and nothing is sent back to the sender.",
+    "dismiss_spam_error": "Failed to dismiss the call as spam",
+    "dismiss_spam_success": "Dismissed as spam"
   },
   "scheduled_calls": {
     "loading": "Läser in schemalagda larm...",
@@ -5029,6 +5049,354 @@
     "field_destination_address": "Destinationsadress",
     "field_destination_location": "Destinationsplats",
     "field_route": "Rutt"
+  },
+  "dispatcher_desk": {
+    "actions": {
+      "away": "Borta",
+      "go_available": "Bli tillgänglig",
+      "im_back": "Jag är tillbaka",
+      "im_back_done": "Välkommen tillbaka. Du är på operatörsplatsen igen.",
+      "sign_in": "Logga in på operatörsplatsen",
+      "sign_off": "Logga ut från operatörsplatsen",
+      "take_break": "Ta rast"
+    },
+    "alerts": {
+      "auto_returned": "Din rast överskred sin längd, så operatörsplatsen återförde dig automatiskt.",
+      "back_title": "Tillbaka på operatörsplatsen",
+      "break_due": "{{type}}: dags nu. Tryck för att börja.",
+      "break_ended_for_you": "Din rast avslutades. Du är tillbaka på operatörsplatsen.",
+      "break_over": "Din rast är slut. Tryck på ”Jag är tillbaka” för att återgå till operatörsplatsen.",
+      "break_over_title": "Din rast är slut",
+      "break_reminder": "{{type}}: börjar om {{minutes}} min",
+      "break_title": "Rast",
+      "escalated": "Väntat för länge: {{count}} ({{kind}})",
+      "escalated_title": "Uppgifter väntar",
+      "new_message": "Nytt meddelande från {{name}}",
+      "new_message_title": "Nytt meddelande"
+    },
+    "break_state": {
+      "active": "På rast",
+      "done": "Klar",
+      "planned": "Planerad"
+    },
+    "break_type": {
+      "break": "Rast",
+      "meal": "Måltid",
+      "other": "Annan",
+      "personal": "Personlig"
+    },
+    "breaks": {
+      "coverage_prevented": "Den här rasten skulle lämna {{available}} tillgängliga, under minimum på {{minimum}}. Din organisation tillåter inte det: be en arbetsledare att starta den.",
+      "coverage_refused": "Bemanningen är för låg för att starta din rast nu. En arbetsledare kan starta den åt dig.",
+      "coverage_warning": "Den här rasten lämnar {{available}} tillgängliga, under minimum på {{minimum}}.",
+      "due_back_at": "Åter kl. {{time}}",
+      "duty": "{{shift}} · {{start}}–{{end}}",
+      "left": "{{time}} kvar",
+      "length": "Längd",
+      "minutes": "{{minutes}} min",
+      "my_breaks": "Mina raster idag",
+      "my_duty": "Mitt pass",
+      "overdue_by": "Försenad med {{time}}",
+      "plan_mine": "Planera en rast",
+      "plan_shift": "Planera raster för passet",
+      "plan_shift_confirm": "Planera raster",
+      "plan_shift_done": "Raster planerade för passet",
+      "plan_shift_message": "Fördela passets rastplan över dagens larmoperatörer så att rasterna inte överlappar.",
+      "plan_shift_replace": "Ersätt raster som redan är planerade",
+      "planned_at": "Planerad till kl. {{time}}",
+      "return_work": "Lämna tillbaka mina uppgifter till kön (tagna: {{count}})",
+      "return_work_hint": "En rast startar först när dina uppgifter är tillbaka i kön för en annan larmoperatör.",
+      "row": "{{type}} · {{minutes}} min",
+      "start_now": "Starta nu",
+      "start_planned": "Planerad: {{type}} · {{minutes}} min · {{time}}",
+      "started": "Ha en skön rast. Du ska vara tillbaka kl. {{time}}.",
+      "started_at": "Startade kl. {{time}}",
+      "take_anyway": "Ta rast ändå",
+      "take_new": "En ny rast nu",
+      "take_now": "Ta en rast nu",
+      "take_title": "Ta en rast",
+      "title": "Raster",
+      "type": "Typ"
+    },
+    "complete": {
+      "done": "Slutförd",
+      "note": "Anteckning",
+      "outcome": "Hur slutade det?",
+      "title": "Slutför",
+      "notify_participant": "Meddela avsändaren att konversationen är slut",
+      "notify_participant_hint": "Skickar ett avslutande sms från Resgrid-numret."
+    },
+    "conversation": {
+      "add_note": "Lägg till anteckning",
+      "empty": "Inga meddelanden än.",
+      "note_by": "Anteckning · {{name}}",
+      "note_placeholder": "Skriv en anteckning för operatörsplatsen (skickas aldrig)…",
+      "reply": "Svara",
+      "reply_placeholder": "Skriv ett svar…",
+      "save_note": "Spara anteckning",
+      "send": "Skicka svar"
+    },
+    "create_call": {
+      "link_failed": "Larmet sparades men kunde inte kopplas till konversationen.",
+      "link_later": "Larmet sparades på den här enheten och skickas när du är online igen. Slutför konversationen när det har skickats.",
+      "linked": "Larmet är kopplat till konversationen.",
+      "name": "{{kind}} från {{source}}"
+    },
+    "delivery": {
+      "failed": "Inte levererat",
+      "queued": "Skickas",
+      "received": "Mottaget",
+      "sent": "Skickat"
+    },
+    "desk_off": "Larmoperatörsplatsen är avstängd",
+    "desk_off_description": "Din organisation har inte slagit på larmoperatörsplatsen. En administratör kan slå på den under Skift > Inställningar för operatörsplatsen.",
+    "device": {
+      "desktop": "Dator",
+      "phone": "Telefon",
+      "tablet": "Surfplatta"
+    },
+    "errors": {
+      "already_on_break": "Du har redan rast.",
+      "already_on_roster": "Du finns redan med på den dagens larmoperatörsschema.",
+      "at_capacity": "Du har redan så många uppgifter som operatörsplatsen tillåter. Slutför eller släpp något först.",
+      "break_not_found": "Den rasten är inte längre planerad.",
+      "break_not_startable": "Den rasten kan inte startas nu.",
+      "break_overlaps": "Den rasten överlappar en annan av dina raster.",
+      "channel_unavailable": "Den kanalen kan inte skicka just nu.",
+      "coverage_too_low": "Bemanningen är för låg för att starta en rast nu. En arbetsledare kan starta den åt dig.",
+      "desk_disabled": "Din organisation har stängt av larmoperatörsplatsen.",
+      "dispatchers_not_enabled": "Det passet har inga larmoperatörer i tjänst.",
+      "holding_work": "Du har uppgifter. Lämna tillbaka dem till kön för att starta din rast.",
+      "invalid_input": "Något i begäran saknas eller är ogiltigt.",
+      "item_not_available": "Den uppgiften har redan tagits eller slutförts.",
+      "item_not_found": "Den uppgiften finns inte längre på operatörsplatsen.",
+      "no_callback_number": "Ange numret som operatörsplatsen ska ringa.",
+      "not_a_dispatcher": "Endast larmoperatörer kan använda operatörsplatsen.",
+      "not_assigned_to_you": "Den uppgiften hålls av en annan larmoperatör.",
+      "not_on_break": "Det finns ingen pågående rast att avsluta.",
+      "not_on_duty": "Du är inte på ett larmoperatörspass just nu.",
+      "not_permitted": "Du får inte göra det på operatörsplatsen.",
+      "not_signed_in": "Logga in på operatörsplatsen först.",
+      "shift_not_found": "Passet kunde inte hittas.",
+      "title": "Operatörsplats",
+      "unknown": "Operatörsplatsen kunde inte göra det. Försök igen."
+    },
+    "event": {
+      "accepted": "Accepterad",
+      "cancelled": "Avbruten",
+      "completed": "Slutförd",
+      "created": "Kom in",
+      "declined": "Avböjd",
+      "escalated": "Väntade för länge",
+      "message_received": "Meddelande mottaget",
+      "message_sent": "Meddelande skickat",
+      "offer_expired": "Erbjudandet gick ut",
+      "offered": "Erbjuden",
+      "overflowed": "Skickad till överflöde",
+      "released": "Tillbaka i kön",
+      "reopened": "Öppnad igen",
+      "transferred": "Överlämnad",
+      "voice_connected": "Samtalet kopplat",
+      "voice_connecting": "Kopplar samtalet",
+      "voice_ended": "Samtalet avslutat",
+      "conversation_closed": "Sms-konversation avslutad",
+      "held_for_review": "Held for review: screened intake call"
+    },
+    "item": {
+      "complete": "Slutför",
+      "create_call": "Skapa larm",
+      "dispatch_now": "Larma ut nu",
+      "due_on": "Planerat {{time}}",
+      "history": "Historik ({{count}})",
+      "link_saved_call": "Koppla sparat larm",
+      "loading": "Läser in…",
+      "not_found": "Den här uppgiften finns inte längre på operatörsplatsen",
+      "open_call": "Öppna larm",
+      "release": "Lämna tillbaka till kön",
+      "released": "Tillbaka i kön",
+      "title": "Uppgift",
+      "transfer": "Överlämna"
+    },
+    "item_state": {
+      "accepted": "Pågår",
+      "cancelled": "Avbruten",
+      "completed": "Klar",
+      "offered": "Erbjuden",
+      "overflowed": "Skickad till överflöde",
+      "queued": "Väntar"
+    },
+    "kind": {
+      "chat": "Chatt",
+      "email": "E-post",
+      "other": "Övrig uppgift",
+      "pending_call": "Väntande larm",
+      "scheduled_call": "Schemalagt larm",
+      "text": "Sms",
+      "voice": "Telefonsamtal"
+    },
+    "loading": "Läser in operatörsplatsen…",
+    "not_available": "Larmoperatörsplatsen är inte tillgänglig i den här appen",
+    "not_dispatcher": "Du är inte larmoperatör",
+    "not_dispatcher_description": "Endast medlemmar som får logga in i Dispatch-appen kan använda larmoperatörsplatsen.",
+    "offer": {
+      "accept": "Acceptera",
+      "decline": "Avböj",
+      "expires_in": "Svara inom {{time}}",
+      "more": "Fler erbjudanden väntar: {{count}}",
+      "title": "Uppgift erbjuden till dig"
+    },
+    "outcome": {
+      "call_created": "Larm skapat",
+      "closed": "Larmet stängt",
+      "dispatched": "Utlarmat",
+      "duplicate": "Dubblett",
+      "left_pending": "Lämnat väntande",
+      "no_action_needed": "Ingen åtgärd behövs",
+      "none": "Inget utfall",
+      "referred": "Hänvisat vidare"
+    },
+    "plan": {
+      "add_title": "Planera en rast",
+      "cancel": "Ta bort",
+      "cancelled": "Rasten borttagen",
+      "edit": "Ändra",
+      "edit_title": "Ändra rasten",
+      "entry": "{{type}} · {{minutes}} min · {{start}}–{{end}}",
+      "length_hint": "En rast är en tidslängd: den kan börja tidigt eller sent, och du ska vara tillbaka när dess längd har gått sedan starten.",
+      "none": "Inga raster planerade idag.",
+      "save": "Spara rast",
+      "saved": "Rasten sparad",
+      "start": "Planerad start",
+      "start_now": "Starta rasten nu",
+      "started_for": "{{name}} har rast",
+      "title_for": "Raster för {{name}}",
+      "title_mine": "Mina raster"
+    },
+    "queue": {
+      "escalated": "Väntat för länge",
+      "held_by": "Hålls av {{name}}",
+      "mine": "Mina uppgifter",
+      "mine_empty": "Inget erbjudet till dig eller hållet av dig.",
+      "recent": "Senaste",
+      "recent_empty": "Inga senaste uppgifter på den här enheten.",
+      "take": "Ta",
+      "waited": "Väntat {{minutes}} min",
+      "waiting": "Väntar",
+      "waiting_empty": "Inget väntar i kön."
+    },
+    "sign_in": {
+      "callback_hint": "Operatörsplatsen ringer den här telefonen för att koppla in uppringare. Lämna tomt för att använda mobilnumret i din profil.",
+      "callback_number": "Återuppringningsnummer",
+      "callback_placeholder": "+1 555 555 0100",
+      "device": "Loggar in på: {{device}}",
+      "done": "Du är inloggad på operatörsplatsen.",
+      "no_shift": "Du är inte på ett larmoperatörspass just nu, så operatörsplatsen kan neka inloggningen.",
+      "no_shift_unscheduled": "Du är inte på ett larmoperatörspass just nu. Slå på oschemalagd tjänst för att logga in ändå.",
+      "prompt": "Logga in för att ta emot dirigerade uppgifter och se dem som erbjuds dig.",
+      "prompt_title": "Du är inte inloggad på operatörsplatsen",
+      "start_away": "Starta som borta",
+      "start_away_hint": "Ta inte emot dirigerade uppgifter förrän du blir tillgänglig.",
+      "title": "Logga in på operatörsplatsen",
+      "unscheduled": "Oschemalagd tjänst",
+      "unscheduled_hint": "Gå i tjänst utan ett larmoperatörspass (ett evenemang, en vikariering).",
+      "until": "I tjänst till (valfritt)"
+    },
+    "sign_off": {
+      "done": "Du är utloggad från operatörsplatsen.",
+      "message": "Du slutar få dirigerade uppgifter tills du loggar in igen.",
+      "message_holding": "Du slutar få dirigerade uppgifter, och uppgifterna du har går tillbaka till kön (antal: {{count}}).",
+      "title": "Logga ut från operatörsplatsen?"
+    },
+    "state": {
+      "available": "Tillgänglig",
+      "away": "Borta",
+      "busy": "Upptagen",
+      "offline": "Utloggad",
+      "on_break": "På rast",
+      "on_break_left": "På rast · {{time}} kvar",
+      "on_break_overdue": "Rasten försenad med {{minutes}} min"
+    },
+    "status_bar": {
+      "counts": "Erbjudna {{offered}} · Tagna {{held}} · Väntar {{waiting}}",
+      "less": "Färre åtgärder för operatörsplatsen",
+      "more": "Fler åtgärder för operatörsplatsen",
+      "not_signed_in": "Inte inloggad på operatörsplatsen · Väntar {{waiting}}"
+    },
+    "team": {
+      "break_ended": "{{name}} är tillbaka på operatörsplatsen",
+      "breaks": "Raster",
+      "empty": "Inga larmoperatörer på operatörsplatsen.",
+      "end_break": "Avsluta rast",
+      "holding": "Har {{count}} av {{capacity}}",
+      "next_break": "Nästa: {{type}} kl. {{time}} ({{minutes}} min)",
+      "no_shift": "Inte på ett larmoperatörspass",
+      "offered": "Erbjudna: {{count}}",
+      "on_shift": "{{shift}} till kl. {{time}}",
+      "open": "utloggad",
+      "summary": "Tillgängliga {{available}} · På rast {{onBreak}} · I tjänst {{onDuty}} · Minimum {{minimum}}",
+      "supervisor": "Arbetsledare",
+      "title": "Team",
+      "unscheduled": "Oschemalagd tjänst till kl. {{time}}",
+      "you": "du"
+    },
+    "timeline": {
+      "coverage": "Bemanning",
+      "empty": "Ingen har larmoperatörstjänst idag.",
+      "hint": "Allas tjänst och raster idag. Rött markerar bemanning under minimum.",
+      "hint_supervisor": "Allas tjänst och raster idag. Tryck på en larmoperatör för att planera eller ändra deras raster.",
+      "legend_below": "Under minimum",
+      "legend_overdue": "Försenad rast",
+      "legend_duty": "I tjänst",
+      "legend_planned": "Planerad rast",
+      "legend_taken": "Tagen rast",
+      "loading": "Läser in tidslinjen…",
+      "title": "Teamets tidslinje",
+      "unavailable": "Tidslinjen kunde inte läsas in"
+    },
+    "title": "Larmoperatörsplats",
+    "transfer": {
+      "done": "Överlämnad",
+      "none": "Ingen annan larmoperatör är inloggad och ledig att ta den.",
+      "note": "Anteckning till mottagaren",
+      "title": "Överlämna till"
+    },
+    "unsupported": "Larmoperatörsplatsen är inte tillgänglig än",
+    "unsupported_description": "Din Resgrid-server har inte larmoperatörsplatsen. Be din administratör att uppdatera den.",
+    "voice": {
+      "answer": "Svara",
+      "call_back": "Ring tillbaka",
+      "caller": "Uppringare",
+      "caller_gone": "Uppringaren lade på",
+      "caller_waiting": "Uppringare väntar",
+      "ring_hint": "Operatörsplatsen ringer den här telefonen och kopplar in uppringaren när du trycker 1.",
+      "ring_number": "Ring det här numret",
+      "ringing": "Din telefon kommer att ringa. Tryck 1 för att koppla.",
+      "unavailable": "Operatörsplatsen kan inte koppla telefonsamtal för den här organisationen.",
+      "unknown_caller": "Okänt nummer"
+    },
+    "warnings": {
+      "breaks_overlap": "Rasterna överlappar en annan larmoperatörs raster.",
+      "coverage_below_minimum": "Bemanningen sjunker under minimum: {{available}} tillgängliga, minimum {{minimum}}.",
+      "generic": "Operatörsplatsen upptäckte något med den här ändringen.",
+      "no_coverage": "Ingen skulle vara tillgänglig på operatörsplatsen.",
+      "outside_duty": "Rasten hamnar utanför passet.",
+      "started_early": "Rasten startade {{minutes}} min tidigare än planerat.",
+      "started_late": "Rasten startade {{minutes}} min senare än planerat.",
+      "work_returned": "Dina uppgifter gick tillbaka till kön."
+    },
+    "intake": {
+      "title": "Sms-konversation",
+      "handler_assistant": "Enhanced AI ställer frågor till avsändaren tills en larmoperatör ansluter.",
+      "handler_unassisted": "Avsändaren väntar på en larmoperatör.",
+      "handler_dispatcher": "Ansluten till {{name}}.",
+      "closed": "Den här sms-konversationen är avslutad.",
+      "opted_out": "Avsändaren har avregistrerat sig (STOP). Inget mer kan skickas.",
+      "reply_from": "Svar skickas från {{number}}.",
+      "author_participant": "Avsändare",
+      "author_assistant": "Enhanced AI",
+      "author_system": "Resgrid",
+      "failed": "Inte levererat"
+    }
   },
   "route_plans": {
     "duration_with_stops": "Med stopp",

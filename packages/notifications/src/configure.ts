@@ -8,6 +8,7 @@ import type { Href } from 'expo-router';
 
 import type { NotificationTarget } from './event-codes';
 import type { NotificationsKv } from './registration-storage';
+import { SOUND_SETS, type SoundSet } from './sounds';
 
 /** The signed-in session as the auth package exposes it. */
 export interface NotificationsSession {
@@ -105,6 +106,20 @@ export function isDesktopPushEnabled(): boolean {
   } catch {
     return false;
   }
+}
+
+/** Variant manifest `capabilities.push.soundSet`: which notification sound files this app ships (`shared` until set). */
+export function getSoundSet(): SoundSet {
+  try {
+    return getCapability('push').soundSet;
+  } catch {
+    return 'shared';
+  }
+}
+
+/** This app's sound set has the dispatcher desk sounds, so it creates the desk channels and plays the desk sounds. */
+export function hasDeskSounds(): boolean {
+  return SOUND_SETS[getSoundSet()].deskSounds;
 }
 
 /** Modules that show the unit's own status timer, so the app schedules its notifications (manifest `modules`). */

@@ -14,6 +14,8 @@ export interface ScrollRowProps extends Omit<ScrollViewProps, 'horizontal' | 'st
   showOverflowIndicators?: boolean;
   /** The row's box; the scroller adds `-scroll-view`, the chevrons `-left-overflow` and `-right-overflow`. */
   testID?: string;
+  /** Scrolls the row to this x once, when it first has both a width and content (a day timeline that opens at "now"). */
+  initialScrollX?: number;
 }
 
 /**
@@ -26,20 +28,36 @@ export interface ScrollRowProps extends Omit<ScrollViewProps, 'horizontal' | 'st
  * on one side only (a chip's `mb-2` kept for wrapping set the chevron low beside the chips): space around the row goes
  * on `style` or `className`.
  */
-export const ScrollRow: React.FC<ScrollRowProps> = ({ children, style, className, showOverflowIndicators = true, testID = 'scroll-row', onLayout, onContentSizeChange, onScroll, ...props }) => {
+export const ScrollRow: React.FC<ScrollRowProps> = ({ children, style, className, showOverflowIndicators = true, testID = 'scroll-row', initialScrollX, onLayout, onContentSizeChange, onScroll, ...props }) => {
   const { t } = useTranslation();
   const edge = useEdgeScroll();
+  const pendingScrollX = React.useRef(initialScrollX);
+  const sizes = React.useRef({ row: 0, content: 0 });
 
   // Web and Electron: a mouse wheel over the row scrolls it sideways too.
   useWheelScrollsSideways(edge.scrollViewRef, true);
 
+  // A scroll before the row has a width or content is lost, so it waits for both (whichever is measured last).
+  const scrollToInitial = () => {
+    const x = pendingScrollX.current;
+    const { row, content } = sizes.current;
+
+    if (x === undefined || x <= 0 || row <= 0 || content <= 0) return;
+    pendingScrollX.current = undefined;
+    edge.scrollViewRef.current?.scrollTo({ x: Math.min(x, Math.max(0, content - row)), animated: false });
+  };
+
   const handleLayout = (event: LayoutChangeEvent) => {
     edge.onLayout(event);
+    sizes.current.row = event.nativeEvent.layout.width;
+    scrollToInitial();
     onLayout?.(event);
   };
 
   const handleContentSizeChange = (width: number, height: number) => {
     edge.onContentSizeChange(width);
+    sizes.current.content = width;
+    scrollToInitial();
     onContentSizeChange?.(width, height);
   };
 

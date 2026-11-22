@@ -635,6 +635,11 @@
       "via_webhook_named": "Via webhook: {{name}}",
       "via_voice": "Via voice line",
       "via_voice_named": "Via voice line: {{name}}"
+    },
+    "intake_screening": {
+      "likely_not_incident": "Enhanced AI: likely not an incident",
+      "repeat_sender": "Repeat sender: over the hourly limit",
+      "dismissed_as_spam": "Dismissed as spam"
     }
   },
   "chat": {
@@ -2630,7 +2635,9 @@
       "sign_in_approval": "Sign-in Approval",
       "weather": "Alert pogodowy",
       "work_order": "Zlecenie pracy",
-      "recurring_call_alert": "Alert zgłoszenia cyklicznego"
+      "recurring_call_alert": "Alert zgłoszenia cyklicznego",
+      "desk_item": "Stanowisko dyspozytora",
+      "desk_break": "Przerwa"
     },
     "unknown_type_warning": "Ten typ powiadomienia nie jest rozpoznawany.",
     "view_call": "Wyświetl zgłoszenie",
@@ -2667,7 +2674,12 @@
       "generic_call": "Generic Call",
       "general_notification": "Notifications",
       "general_message": "Messages",
-      "unit_status_timer": "Unit Status Timer"
+      "unit_status_timer": "Unit Status Timer",
+      "desk_offer": "Desk Offer",
+      "desk_queue_alert": "Desk Queue Alert",
+      "desk_message": "Desk Message",
+      "break_reminder": "Break Reminder",
+      "break_over": "Break Over"
     },
     "communication_test_confirmed": "Receipt confirmed",
     "communication_test_failed": "Could not confirm receipt. Please try again.",
@@ -2678,7 +2690,9 @@
     "view_chat": "Zobacz czat",
     "view_sign_in": "Review",
     "view_work_order": "Wyświetl zlecenie pracy",
-    "view_recurring_call_alerts": "Zobacz alerty"
+    "view_recurring_call_alerts": "Zobacz alerty",
+    "view_desk_break": "Pokaż przerwy",
+    "view_desk_item": "Otwórz stanowisko"
   },
   "records": {
     "add_row": "Dodaj wiersz",
@@ -3807,7 +3821,13 @@
     "no_pending_calls_description": "Żadne zgłoszenie nie czeka na zadysponowanie.",
     "search": "Szukaj oczekujących zgłoszeń...",
     "table_received": "Przyjęto",
-    "title": "Oczekujące zgłoszenia"
+    "title": "Oczekujące zgłoszenia",
+    "dismiss_spam": "Dismiss as Spam",
+    "dismiss_spam_block": "Also block the sender from your intake channels",
+    "dismiss_spam_blocked": "Dismissed as spam; the sender is blocked",
+    "dismiss_spam_confirm": "Dismiss this call as spam? It is cancelled without notifying anyone, and nothing is sent back to the sender.",
+    "dismiss_spam_error": "Failed to dismiss the call as spam",
+    "dismiss_spam_success": "Dismissed as spam"
   },
   "scheduled_calls": {
     "loading": "Ładowanie zaplanowanych zgłoszeń...",
@@ -5029,6 +5049,354 @@
     "field_destination_address": "Adres miejsca docelowego",
     "field_destination_location": "Lokalizacja miejsca docelowego",
     "field_route": "Trasa"
+  },
+  "dispatcher_desk": {
+    "actions": {
+      "away": "Nieobecny",
+      "go_available": "Ustaw jako dostępny",
+      "im_back": "Jestem z powrotem",
+      "im_back_done": "Witaj z powrotem. Znów jesteś na stanowisku.",
+      "sign_in": "Zaloguj się na stanowisko",
+      "sign_off": "Wyloguj ze stanowiska",
+      "take_break": "Zrób przerwę"
+    },
+    "alerts": {
+      "auto_returned": "Przerwa przekroczyła swoją długość, więc stanowisko automatycznie przywróciło cię do pracy.",
+      "back_title": "Z powrotem na stanowisku",
+      "break_due": "Pora na przerwę: {{type}}. Dotknij, aby ją rozpocząć.",
+      "break_ended_for_you": "Twoja przerwa została zakończona. Znów jesteś na stanowisku.",
+      "break_over": "Twoja przerwa się skończyła. Dotknij „Jestem z powrotem”, aby wrócić na stanowisko.",
+      "break_over_title": "Twoja przerwa się skończyła",
+      "break_reminder": "Przerwa za {{minutes}} min: {{type}}",
+      "break_title": "Przerwa",
+      "escalated": "Czeka zbyt długo: {{count}} ({{kind}})",
+      "escalated_title": "Zadania czekają na stanowisku",
+      "new_message": "Nowa wiadomość od: {{name}}",
+      "new_message_title": "Nowa wiadomość"
+    },
+    "break_state": {
+      "active": "Na przerwie",
+      "done": "Zakończona",
+      "planned": "Zaplanowana"
+    },
+    "break_type": {
+      "break": "Przerwa",
+      "meal": "Posiłek",
+      "other": "Inna",
+      "personal": "Osobista"
+    },
+    "breaks": {
+      "coverage_prevented": "Po tej przerwie dostępnych zostałoby: {{available}}, poniżej minimum ({{minimum}}). Twoja jednostka organizacyjna na to nie pozwala: poproś kierownika zmiany o jej rozpoczęcie.",
+      "coverage_refused": "Obsada jest zbyt mała, aby teraz rozpocząć twoją przerwę. Kierownik zmiany może ją rozpocząć za ciebie.",
+      "coverage_warning": "Po tej przerwie dostępnych zostaje: {{available}}, poniżej minimum ({{minimum}}).",
+      "due_back_at": "Powrót o {{time}}",
+      "duty": "{{shift}} · {{start}}–{{end}}",
+      "left": "Pozostało: {{time}}",
+      "length": "Długość",
+      "minutes": "{{minutes}} min",
+      "my_breaks": "Moje przerwy dzisiaj",
+      "my_duty": "Moja służba",
+      "overdue_by": "Spóźnienie: {{time}}",
+      "plan_mine": "Zaplanuj przerwę",
+      "plan_shift": "Zaplanuj przerwy na zmianę",
+      "plan_shift_confirm": "Zaplanuj przerwy",
+      "plan_shift_done": "Przerwy na zmianę zaplanowane",
+      "plan_shift_message": "Rozłóż plan przerw zmiany między dzisiejszych dyspozytorów, aby przerwy się nie nakładały.",
+      "plan_shift_replace": "Zastąp już zaplanowane przerwy",
+      "planned_at": "Zaplanowana na {{time}}",
+      "return_work": "Zwróć moje zadania do kolejki (przejęte: {{count}})",
+      "return_work_hint": "Przerwa zaczyna się dopiero wtedy, gdy twoje zadania wrócą do kolejki dla innego dyspozytora.",
+      "row": "{{type}} · {{minutes}} min",
+      "start_now": "Rozpocznij teraz",
+      "start_planned": "Zaplanowana: {{type}} · {{minutes}} min · {{time}}",
+      "started": "Udanej przerwy. Powrót o {{time}}.",
+      "started_at": "Rozpoczęta o {{time}}",
+      "take_anyway": "Mimo to zrób przerwę",
+      "take_new": "Nowa przerwa teraz",
+      "take_now": "Zrób przerwę teraz",
+      "take_title": "Zrób przerwę",
+      "title": "Przerwy",
+      "type": "Typ"
+    },
+    "complete": {
+      "done": "Zakończono",
+      "note": "Notatka",
+      "outcome": "Jak się zakończyło?",
+      "title": "Zakończ",
+      "notify_participant": "Powiadom nadawcę o zakończeniu rozmowy",
+      "notify_participant_hint": "Wysyła wiadomość końcową z numeru Resgrid."
+    },
+    "conversation": {
+      "add_note": "Dodaj notatkę",
+      "empty": "Brak wiadomości.",
+      "note_by": "Notatka · {{name}}",
+      "note_placeholder": "Napisz notatkę dla stanowiska (nigdy nie jest wysyłana)…",
+      "reply": "Odpowiedz",
+      "reply_placeholder": "Napisz odpowiedź…",
+      "save_note": "Zapisz notatkę",
+      "send": "Wyślij odpowiedź"
+    },
+    "create_call": {
+      "link_failed": "Zgłoszenie zostało zapisane, ale nie udało się powiązać go z rozmową.",
+      "link_later": "Zgłoszenie zapisano na tym urządzeniu i zostanie wysłane, gdy znów będziesz online. Zakończ rozmowę po jego wysłaniu.",
+      "linked": "Zgłoszenie jest powiązane z rozmową.",
+      "name": "{{kind}} od {{source}}"
+    },
+    "delivery": {
+      "failed": "Nie dostarczono",
+      "queued": "Wysyłanie",
+      "received": "Odebrano",
+      "sent": "Wysłano"
+    },
+    "desk_off": "Stanowisko dyspozytora jest wyłączone",
+    "desk_off_description": "Twoja jednostka organizacyjna nie włączyła stanowiska dyspozytora. Administrator może je włączyć w Zmiany > Ustawienia stanowiska dyspozytorskiego.",
+    "device": {
+      "desktop": "Komputer",
+      "phone": "Telefon",
+      "tablet": "Tablet"
+    },
+    "errors": {
+      "already_on_break": "Jesteś już na przerwie.",
+      "already_on_roster": "Jesteś już w grafiku dyspozytorów na ten dzień.",
+      "at_capacity": "Masz już tyle zadań, ile pozwala stanowisko. Najpierw coś zakończ lub zwolnij.",
+      "break_not_found": "Ta przerwa nie jest już zaplanowana.",
+      "break_not_startable": "Tej przerwy nie można teraz rozpocząć.",
+      "break_overlaps": "Ta przerwa nakłada się na inną twoją przerwę.",
+      "channel_unavailable": "Ten kanał nie może teraz wysyłać.",
+      "coverage_too_low": "Obsada jest zbyt mała, aby teraz rozpocząć przerwę. Kierownik zmiany może ją rozpocząć za ciebie.",
+      "desk_disabled": "Twoja jednostka organizacyjna wyłączyła stanowisko dyspozytora.",
+      "dispatchers_not_enabled": "Ta zmiana nie ma dyspozytorów na służbie.",
+      "holding_work": "Masz przejęte zadania. Zwróć je do kolejki, aby rozpocząć przerwę.",
+      "invalid_input": "W żądaniu czegoś brakuje lub coś jest nieprawidłowe.",
+      "item_not_available": "To zadanie zostało już przejęte lub zakończone.",
+      "item_not_found": "Tego zadania nie ma już na stanowisku.",
+      "no_callback_number": "Wpisz numer, na który stanowisko ma dzwonić.",
+      "not_a_dispatcher": "Ze stanowiska mogą korzystać tylko dyspozytorzy.",
+      "not_assigned_to_you": "To zadanie przejął inny dyspozytor.",
+      "not_on_break": "Nie ma trwającej przerwy do zakończenia.",
+      "not_on_duty": "Nie jesteś teraz na zmianie dyspozytorskiej.",
+      "not_permitted": "Nie możesz tego zrobić na stanowisku.",
+      "not_signed_in": "Najpierw zaloguj się na stanowisko.",
+      "shift_not_found": "Nie znaleziono tej zmiany.",
+      "title": "Stanowisko",
+      "unknown": "Stanowisko nie mogło tego wykonać. Spróbuj ponownie."
+    },
+    "event": {
+      "accepted": "Przyjęte",
+      "cancelled": "Anulowane",
+      "completed": "Zakończone",
+      "created": "Wpłynęło",
+      "declined": "Odrzucone",
+      "escalated": "Czekało zbyt długo",
+      "message_received": "Odebrano wiadomość",
+      "message_sent": "Wysłano wiadomość",
+      "offer_expired": "Oferta wygasła",
+      "offered": "Zaoferowane",
+      "overflowed": "Przekazane dalej (przepełnienie)",
+      "released": "Zwrócone do kolejki",
+      "reopened": "Ponownie otwarte",
+      "transferred": "Przekazane",
+      "voice_connected": "Połączenie nawiązane",
+      "voice_connecting": "Nawiązywanie połączenia",
+      "voice_ended": "Połączenie zakończone",
+      "conversation_closed": "Rozmowa SMS zakończona",
+      "held_for_review": "Held for review: screened intake call"
+    },
+    "item": {
+      "complete": "Zakończ",
+      "create_call": "Utwórz zgłoszenie",
+      "dispatch_now": "Zadysponuj teraz",
+      "due_on": "Termin {{time}}",
+      "history": "Historia ({{count}})",
+      "link_saved_call": "Powiąż zapisane zgłoszenie",
+      "loading": "Wczytywanie…",
+      "not_found": "Tego zadania nie ma już na stanowisku",
+      "open_call": "Otwórz zgłoszenie",
+      "release": "Zwróć do kolejki",
+      "released": "Zwrócone do kolejki",
+      "title": "Zadanie stanowiska",
+      "transfer": "Przekaż"
+    },
+    "item_state": {
+      "accepted": "W toku",
+      "cancelled": "Anulowane",
+      "completed": "Zakończone",
+      "offered": "Zaoferowane",
+      "overflowed": "Przekazane dalej (przepełnienie)",
+      "queued": "Oczekuje"
+    },
+    "kind": {
+      "chat": "Czat",
+      "email": "E-mail",
+      "other": "Inne zadanie",
+      "pending_call": "Oczekujące zgłoszenie",
+      "scheduled_call": "Zaplanowane zgłoszenie",
+      "text": "SMS",
+      "voice": "Połączenie telefoniczne"
+    },
+    "loading": "Wczytywanie stanowiska…",
+    "not_available": "Stanowisko dyspozytora nie jest dostępne w tej aplikacji",
+    "not_dispatcher": "Nie jesteś dyspozytorem",
+    "not_dispatcher_description": "Ze stanowiska dyspozytora mogą korzystać tylko członkowie, którzy mogą logować się do aplikacji Dispatch.",
+    "offer": {
+      "accept": "Przyjmij",
+      "decline": "Odrzuć",
+      "expires_in": "Odpowiedz w ciągu {{time}}",
+      "more": "Kolejne oferty czekają: {{count}}",
+      "title": "Zadanie dla ciebie"
+    },
+    "outcome": {
+      "call_created": "Utworzono zgłoszenie",
+      "closed": "Zgłoszenie zamknięte",
+      "dispatched": "Zadysponowano",
+      "duplicate": "Duplikat",
+      "left_pending": "Pozostawione jako oczekujące",
+      "no_action_needed": "Nie wymaga działań",
+      "none": "Brak wyniku",
+      "referred": "Przekazane gdzie indziej"
+    },
+    "plan": {
+      "add_title": "Zaplanuj przerwę",
+      "cancel": "Usuń",
+      "cancelled": "Przerwa usunięta",
+      "edit": "Zmień",
+      "edit_title": "Zmień przerwę",
+      "entry": "{{type}} · {{minutes}} min · {{start}}–{{end}}",
+      "length_hint": "Przerwa to określony czas: może zacząć się wcześniej lub później, a powrót przypada po upływie jej długości od rozpoczęcia.",
+      "none": "Brak zaplanowanych przerw na dziś.",
+      "save": "Zapisz przerwę",
+      "saved": "Przerwa zapisana",
+      "start": "Planowany początek",
+      "start_now": "Rozpocznij przerwę teraz",
+      "started_for": "{{name}} jest na przerwie",
+      "title_for": "Przerwy: {{name}}",
+      "title_mine": "Moje przerwy"
+    },
+    "queue": {
+      "escalated": "Czeka zbyt długo",
+      "held_by": "Przejęte przez: {{name}}",
+      "mine": "Moje zadania",
+      "mine_empty": "Nic nie zostało ci zaoferowane ani przez ciebie przejęte.",
+      "recent": "Ostatnie",
+      "recent_empty": "Brak ostatnich zadań na tym urządzeniu.",
+      "take": "Przejmij",
+      "waited": "Czeka {{minutes}} min",
+      "waiting": "Oczekujące",
+      "waiting_empty": "W kolejce nic nie czeka."
+    },
+    "sign_in": {
+      "callback_hint": "Stanowisko dzwoni na ten telefon, aby łączyć cię z dzwoniącymi. Zostaw puste, aby użyć numeru komórkowego z profilu.",
+      "callback_number": "Numer do oddzwaniania",
+      "callback_placeholder": "+1 555 555 0100",
+      "device": "Logowanie na: {{device}}",
+      "done": "Zalogowano na stanowisko.",
+      "no_shift": "Nie jesteś teraz na zmianie dyspozytorskiej, więc stanowisko może odrzucić logowanie.",
+      "no_shift_unscheduled": "Nie jesteś teraz na zmianie dyspozytorskiej. Włącz służbę poza grafikiem, aby mimo to się zalogować.",
+      "prompt": "Zaloguj się, aby przyjmować kierowane zadania i widzieć te, które są ci oferowane.",
+      "prompt_title": "Nie zalogowano na stanowisko",
+      "start_away": "Zacznij jako nieobecny",
+      "start_away_hint": "Nie przyjmuj kierowanych zadań, dopóki nie ustawisz się jako dostępny.",
+      "title": "Logowanie na stanowisko",
+      "unscheduled": "Służba poza grafikiem",
+      "unscheduled_hint": "Rozpocznij służbę bez zmiany dyspozytorskiej (wydarzenie, zastępstwo).",
+      "until": "Na służbie do (opcjonalnie)"
+    },
+    "sign_off": {
+      "done": "Wylogowano ze stanowiska.",
+      "message": "Przestaniesz otrzymywać kierowane zadania, dopóki nie zalogujesz się ponownie.",
+      "message_holding": "Przestaniesz otrzymywać kierowane zadania, a przejęte przez ciebie zadania wrócą do kolejki (liczba: {{count}}).",
+      "title": "Wylogować ze stanowiska?"
+    },
+    "state": {
+      "available": "Dostępny",
+      "away": "Nieobecny",
+      "busy": "Zajęty",
+      "offline": "Wylogowany",
+      "on_break": "Na przerwie",
+      "on_break_left": "Na przerwie · pozostało: {{time}}",
+      "on_break_overdue": "Przerwa przekroczona o {{minutes}} min"
+    },
+    "status_bar": {
+      "counts": "Zaoferowane: {{offered}} · Przejęte: {{held}} · Oczekujące: {{waiting}}",
+      "less": "Mniej działań stanowiska",
+      "more": "Więcej działań stanowiska",
+      "not_signed_in": "Nie zalogowano na stanowisko · Oczekujące: {{waiting}}"
+    },
+    "team": {
+      "break_ended": "{{name}} jest z powrotem na stanowisku",
+      "breaks": "Przerwy",
+      "empty": "Brak dyspozytorów na stanowisku.",
+      "end_break": "Zakończ przerwę",
+      "holding": "Przejęte: {{count}} z {{capacity}}",
+      "next_break": "Następna: {{type}} o {{time}} ({{minutes}} min)",
+      "no_shift": "Poza zmianą dyspozytorską",
+      "offered": "Zaoferowane: {{count}}",
+      "on_shift": "{{shift}} do {{time}}",
+      "open": "wylogowany",
+      "summary": "Dostępni: {{available}} · Na przerwie: {{onBreak}} · Na służbie: {{onDuty}} · Minimum: {{minimum}}",
+      "supervisor": "Kierownik",
+      "title": "Zespół",
+      "unscheduled": "Służba poza grafikiem do {{time}}",
+      "you": "ty"
+    },
+    "timeline": {
+      "coverage": "Obsada",
+      "empty": "Dziś nikt nie ma służby dyspozytorskiej.",
+      "hint": "Dzisiejsza służba i przerwy wszystkich. Kolor czerwony oznacza obsadę poniżej minimum.",
+      "hint_supervisor": "Dzisiejsza służba i przerwy wszystkich. Dotknij dyspozytora, aby zaplanować lub zmienić jego przerwy.",
+      "legend_below": "Poniżej minimum",
+      "legend_overdue": "Przekroczona przerwa",
+      "legend_duty": "Na służbie",
+      "legend_planned": "Zaplanowana przerwa",
+      "legend_taken": "Wykorzystana przerwa",
+      "loading": "Wczytywanie osi czasu…",
+      "title": "Oś czasu zespołu",
+      "unavailable": "Nie udało się wczytać osi czasu"
+    },
+    "title": "Stanowisko dyspozytora",
+    "transfer": {
+      "done": "Przekazano",
+      "none": "Żaden inny dyspozytor nie jest zalogowany i wolny, aby to przejąć.",
+      "note": "Notatka dla odbiorcy",
+      "title": "Przekaż do"
+    },
+    "unsupported": "Stanowisko dyspozytora nie jest jeszcze dostępne",
+    "unsupported_description": "Twój serwer Resgrid nie ma stanowiska dyspozytora. Poproś administratora o jego aktualizację.",
+    "voice": {
+      "answer": "Odbierz",
+      "call_back": "Oddzwoń",
+      "caller": "Dzwoniący",
+      "caller_gone": "Dzwoniący się rozłączył",
+      "caller_waiting": "Dzwoniący czeka",
+      "ring_hint": "Stanowisko dzwoni na ten telefon i łączy cię z dzwoniącym, gdy naciśniesz 1.",
+      "ring_number": "Dzwoń na ten numer",
+      "ringing": "Twój telefon zadzwoni. Naciśnij 1, aby się połączyć.",
+      "unavailable": "Stanowisko nie może łączyć połączeń telefonicznych dla tej jednostki organizacyjnej.",
+      "unknown_caller": "Nieznany numer"
+    },
+    "warnings": {
+      "breaks_overlap": "Przerwy nakładają się na przerwy innego dyspozytora.",
+      "coverage_below_minimum": "Obsada spada poniżej minimum (dostępni: {{available}}, minimum: {{minimum}}).",
+      "generic": "Stanowisko zauważyło coś w związku z tą zmianą.",
+      "no_coverage": "Na stanowisku nikt nie byłby dostępny.",
+      "outside_duty": "Przerwa wypada poza zmianą.",
+      "started_early": "Przerwa zaczęła się {{minutes}} min wcześniej, niż planowano.",
+      "started_late": "Przerwa zaczęła się {{minutes}} min później, niż planowano.",
+      "work_returned": "Twoje zadania wróciły do kolejki."
+    },
+    "intake": {
+      "title": "Rozmowa SMS",
+      "handler_assistant": "Enhanced AI zadaje nadawcy pytania, dopóki nie połączy się dyspozytor.",
+      "handler_unassisted": "Nadawca czeka na dyspozytora.",
+      "handler_dispatcher": "Połączono z: {{name}}.",
+      "closed": "Ta rozmowa SMS została zakończona.",
+      "opted_out": "Nadawca zrezygnował (STOP). Nie można wysłać nic więcej.",
+      "reply_from": "Odpowiedzi są wysyłane z numeru {{number}}.",
+      "author_participant": "Nadawca",
+      "author_assistant": "Enhanced AI",
+      "author_system": "Resgrid",
+      "failed": "Nie dostarczono"
+    }
   },
   "route_plans": {
     "duration_with_stops": "Z postojami",

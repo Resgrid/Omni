@@ -12,6 +12,8 @@ import { destinationPoiLabel, filterDestinationPois } from './components/call-fo
 import { RoutePlanField, type RoutePlanFieldProps, RoutePlanPicker, type RoutePlanPickerProps } from './components/call-form/route-plan-picker';
 import { CallModalFrame, type CallModalFrameProps } from './components/call-modal-frame';
 import { CallSummaryModal, type CallSummaryModalProps } from './components/call-summary-modal';
+import { IntakeScreeningBadge, type IntakeScreeningBadgeProps } from './components/intake-screening-badge';
+import { IntakeSourceBadge, type IntakeSourceBadgeProps } from './components/intake-source-badge';
 import { type CallDispatchNowControls, useCallDispatchNow, type UseCallDispatchNowOptions } from './hooks/use-call-dispatch-now';
 import { useCallPermissions, useCallPermissionsResolver, useCallRights } from './hooks/use-call-permissions';
 import { type CallRelease, type ReleaseCall, type ReleaseFromCall, type ReleaseTarget, useReleaseFromCall, type UseReleaseFromCallOptions } from './hooks/use-release-from-call';
@@ -52,6 +54,7 @@ import {
   routeEndpointText,
 } from './lib/call-route';
 import { getScheduledDispatchPrefill, isDispatchTimeTooSoon, MIN_DISPATCH_LEAD_MINUTES, toDispatchOnUtc } from './lib/call-schedule';
+import { callIntakeSource, intakeScreeningLabelKey, type IntakeSource, intakeSourceLabel } from './lib/call-source';
 import {
   type BoardRank,
   boundsAround,
@@ -74,7 +77,7 @@ import { getMissingCallFieldsFromRefusal } from './lib/server-refusal';
 // Screens
 export { default as CallDetailScreen, type CallDetailScreenProps } from './screens/call-detail';
 export { default as CallEditScreen } from './screens/call-edit';
-export { type CallFormLocation, default as CallFormScreen, type CallFormScreenProps } from './screens/call-form';
+export { type CallFormCreated, type CallFormLocation, default as CallFormScreen, type CallFormScreenProps } from './screens/call-form';
 export { default as CallListScreen, type CallListScreenProps } from './screens/call-list';
 export { default as CallNewScreen } from './screens/call-new';
 
@@ -177,6 +180,7 @@ export {
   callFreeDestination,
   callHasDestination,
   callHasRoute,
+  callIntakeSource,
   callLocationOf,
   callLocationTarget,
   CallModalFrame,
@@ -216,6 +220,13 @@ export {
   getReleasedPersonnel,
   getReleasedUnits,
   getScheduledDispatchPrefill,
+  IntakeScreeningBadge,
+  type IntakeScreeningBadgeProps,
+  intakeScreeningLabelKey,
+  type IntakeSource,
+  IntakeSourceBadge,
+  type IntakeSourceBadgeProps,
+  intakeSourceLabel,
   isCallReporter,
   isCallRouteRunning,
   isDispatchSelectionEmpty,

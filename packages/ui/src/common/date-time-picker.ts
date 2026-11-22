@@ -1,3 +1,5 @@
+import { toZonedWallClock, zonedWallClockToUtc } from '@resgrid/core/utils/dates';
+
 export type PickerMode = 'date' | 'time' | 'datetime';
 
 const pad = (value: number) => String(value).padStart(2, '0');
@@ -29,3 +31,17 @@ export const parsePickerValue = (value: string, mode: PickerMode, now = new Date
 };
 
 export const serializePickerValue = (date: Date, mode: PickerMode) => (mode === 'date' ? pickerDate(date) : mode === 'time' ? pickerTime(date) : date.toISOString());
+
+/**
+ * A datetime picked as another zone's wall clock (the department's): the picker works on a device-local Date that holds
+ * that zone's clock reading of the instant...
+ */
+export const toZonedPickerDate = (instant: Date, timeZone: string): Date => {
+  const wall = toZonedWallClock(instant, timeZone);
+
+  return new Date(wall.year, wall.month - 1, wall.day, wall.hour, wall.minute, wall.second);
+};
+
+/** ...and the reading picked is turned back into the instant it names in that zone. */
+export const fromZonedPickerDate = (reading: Date, timeZone: string): Date =>
+  zonedWallClockToUtc({ year: reading.getFullYear(), month: reading.getMonth() + 1, day: reading.getDate(), hour: reading.getHours(), minute: reading.getMinutes(), second: reading.getSeconds() }, timeZone);

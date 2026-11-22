@@ -35,6 +35,8 @@ const EXPECTED_BADGES = new Map<string, NavBadge>([
   ['awaiting-resources', 'awaitingResources'],
   // Open recurring call alerts (Dispatch), counted from the recurring-call-alerts store.
   ['recurring-call-alerts', 'recurringCallAlerts'],
+  // Desk work offered to the member plus work waiting in the shared queue (Dispatch), counted from the dispatcher-desk store.
+  ['dispatcher-desk', 'deskQueue'],
 ]);
 
 describe('nav badges', () => {

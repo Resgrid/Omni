@@ -7,7 +7,7 @@ import { NativeModal } from '../native-modal';
 import { Text } from '../text';
 import { useThemeColors } from '../theme/use-theme-colors';
 import { useTranslation } from '../utils/i18n';
-import { parsePickerValue, pickerDate, type PickerMode, pickerTime, serializePickerValue } from './date-time-picker';
+import { fromZonedPickerDate, parsePickerValue, pickerDate, type PickerMode, pickerTime, serializePickerValue, toZonedPickerDate } from './date-time-picker';
 
 export type { PickerMode };
 
@@ -18,6 +18,11 @@ export interface DateTimeFieldProps {
   mode?: PickerMode;
   disabled?: boolean;
   clearable?: boolean;
+  /**
+   * Datetime mode: the zone (IANA or Windows id) whose wall clock is shown and picked, for wall-clock input in the
+   * department's time; the value stays a UTC instant. The device's zone when absent.
+   */
+  timeZone?: string | null;
   testID?: string;
 }
 
@@ -28,26 +33,44 @@ const LONG_DATE_TIME: Intl.DateTimeFormatOptions = { ...LONG_DATE, hour: '2-digi
 // Date-only and clock-only values keep their calendar day/clock across time zones.
 // The dialog is a raised card (lighter surface, strong border, shadow) over a heavy scrim, with a primary-coloured
 // header that shows the pending choice, so it never reads as part of the page beneath it, in dark mode above all.
-export const DateTimeField = ({ value, onChange, label, mode = 'date', disabled = false, clearable = true, testID = 'date-time-field' }: DateTimeFieldProps) => {
+export const DateTimeField = ({ value, onChange, label, mode = 'date', disabled = false, clearable = true, timeZone = null, testID = 'date-time-field' }: DateTimeFieldProps) => {
   const { t, i18n } = useTranslation();
   const colors = useThemeColors();
   const locale = i18n?.language ?? 'en';
+  // Another zone's wall clock: the calendar and clock show its reading, and Done turns the reading back into the instant.
+  const zone = mode === 'datetime' && timeZone ? timeZone : null;
+  const toPicker = (raw: string, inZone: string | null): Date => (inZone ? toZonedPickerDate(parsePickerValue(raw, mode), inZone) : parsePickerValue(raw, mode));
   const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState(() => parsePickerValue(value, mode));
+  // The draft is read and written back in the zone it was opened in, even if the zone given changes meanwhile (the
+  // department's arriving): a draft built in one zone and saved in another would move the instant.
+  const [draftZone, setDraftZone] = useState<string | null>(zone);
+  // The draft as opened: Done without a change keeps the stored instant (a repeated fall-back hour reads two ways).
+  const [openedMs, setOpenedMs] = useState<number | null>(null);
+  const [draft, setDraft] = useState(() => toPicker(value, zone));
   const [month, setMonth] = useState(draft.getMonth());
   const [year, setYear] = useState(draft.getFullYear());
   const [view, setView] = useState<'days' | 'months' | 'years'>('days');
   const [yearPage, setYearPage] = useState(year - 11);
-  const selected = parsePickerValue(value, mode);
+  const selected = toPicker(value, zone);
   const display = !value ? label : mode === 'time' ? pickerTime(selected) : mode === 'date' ? selected.toLocaleDateString(locale) : selected.toLocaleString(locale);
   const draftText = mode === 'time' ? pickerTime(draft) : mode === 'date' ? draft.toLocaleDateString(locale, LONG_DATE) : draft.toLocaleString(locale, LONG_DATE_TIME);
-  const today = new Date();
+  const calendarZone = open ? draftZone : zone;
+  const today = calendarZone ? toZonedPickerDate(new Date(), calendarZone) : new Date();
   const todayKey = pickerDate(today);
   const FieldIcon = mode === 'time' ? Clock : CalendarDays;
 
+  /** The value Done saves: the stored instant when the reading was not changed, else the reading in the zone it was opened in. */
+  const toValue = (picked: Date): string => {
+    if (!draftZone) return serializePickerValue(picked, mode);
+
+    return value && openedMs === picked.getTime() ? parsePickerValue(value, mode).toISOString() : fromZonedPickerDate(picked, draftZone).toISOString();
+  };
+
   const show = () => {
     if (disabled) return;
-    const next = parsePickerValue(value, mode);
+    const next = toPicker(value, zone);
+    setDraftZone(zone);
+    setOpenedMs(next.getTime());
     setDraft(next);
     setMonth(next.getMonth());
     setYear(next.getFullYear());
@@ -375,7 +398,7 @@ export const DateTimeField = ({ value, onChange, label, mode = 'date', disabled 
                   testID={`${testID}-done`}
                   accessibilityRole="button"
                   accessibilityLabel={t('common.done', { defaultValue: 'Done' })}
-                  onPress={() => commit(serializePickerValue(draft, mode))}
+                  onPress={() => commit(toValue(draft))}
                   className="ml-2 min-h-11 justify-center rounded-lg bg-primary-600 px-5"
                 >
                   <Text className="font-semibold text-typography-0">{t('common.done', { defaultValue: 'Done' })}</Text>

@@ -109,7 +109,7 @@ export const RescheduleCallSheet: React.FC<RescheduleCallSheetProps> = ({ isOpen
             </Button>
           ))}
         </View>
-        <DateTimeField mode="datetime" label={t('call_detail.reschedule_datetime')} value={value} onChange={setValue} clearable={false} testID="reschedule-datetime" />
+        <DateTimeField mode="datetime" label={t('call_detail.reschedule_datetime')} value={value} onChange={setValue} clearable={false} timeZone={timeZone} testID="reschedule-datetime" />
         {!picked ? (
           <Text size="sm" className="mt-2 text-center text-error-600">
             {t('call_detail.reschedule_invalid')}

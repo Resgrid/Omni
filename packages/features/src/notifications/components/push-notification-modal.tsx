@@ -2,7 +2,7 @@ import { recordPushResponse } from '@resgrid/api';
 import { useTranslation } from '@resgrid/i18n';
 import { getNotificationsDependencies, navigateToNotificationTarget, type NotificationKind, type NotificationTarget, usePushNotificationModalStore } from '@resgrid/notifications';
 import { Button, ButtonText, HStack, Modal, ModalBackdrop, ModalBody, ModalContent, ModalFooter, ModalHeader, Text, useToast, VStack } from '@resgrid/ui';
-import { AlertCircle, Bell, Bot, CloudLightning, KeyRound, Mail, MessageCircle, Phone, RadioTower, Repeat, Timer, Wrench } from 'lucide-react-native';
+import { AlertCircle, Bell, Bot, CloudLightning, Coffee, Headset, KeyRound, Mail, MessageCircle, Phone, RadioTower, Repeat, Timer, Wrench } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 
 type ModalKind = NotificationKind | 'unknown';
@@ -19,6 +19,8 @@ const ICONS: Record<ModalKind, React.ComponentType<{ size?: number; color?: stri
   communicationTest: RadioTower,
   unitStatusTimer: Timer,
   recurringCallAlert: Repeat,
+  deskItem: Headset,
+  deskBreak: Coffee,
   unknown: Bell,
 };
 
@@ -34,6 +36,8 @@ const COLORS: Record<ModalKind, string> = {
   communicationTest: '#0EA5E9',
   unitStatusTimer: '#D97706',
   recurringCallAlert: '#EA580C',
+  deskItem: '#2563EB',
+  deskBreak: '#0D9488',
   unknown: '#6B7280',
 };
 
@@ -49,6 +53,8 @@ const TYPE_KEYS: Record<ModalKind, string> = {
   communicationTest: 'push_notifications.types.communication_test',
   unitStatusTimer: 'unit_status.timer_title',
   recurringCallAlert: 'push_notifications.types.recurring_call_alert',
+  deskItem: 'push_notifications.types.desk_item',
+  deskBreak: 'push_notifications.types.desk_break',
   unknown: 'push_notifications.types.notification',
 };
 
@@ -62,6 +68,8 @@ const VIEW_KEYS: Partial<Record<NotificationKind, string>> = {
   signInApproval: 'push_notifications.view_sign_in',
   unitStatusTimer: 'unit_status.timer_update_status',
   recurringCallAlert: 'push_notifications.view_recurring_call_alerts',
+  deskItem: 'push_notifications.view_desk_item',
+  deskBreak: 'push_notifications.view_desk_break',
 };
 
 /** Whether this variant has a screen for the target (the variant's deep-link resolver decides; absent routes stay hidden). */

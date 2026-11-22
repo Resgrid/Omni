@@ -1,5 +1,6 @@
 import { OptionChips } from '@resgrid/features/calls';
 import { ProtectedLabel } from '@resgrid/features/data-protection';
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import { type RecordFieldSchema, type RecordValueInput, RmsFieldType } from '@resgrid/models';
 import { Badge, BadgeText, DateTimeField, Input, InputField, Text, Textarea, TextareaInput } from '@resgrid/ui';
@@ -33,6 +34,8 @@ const keyboardFor = (type: RmsFieldType): 'default' | 'numeric' | 'decimal-pad' 
 
 export const RecordField: React.FC<RecordFieldProps> = ({ field, value, required, disabled = false, invalid = false, withheld = false, onChange, testID }) => {
   const { t } = useTranslation();
+  // A date and time is shown and picked as department time (a date alone keeps its calendar day).
+  const timeZone = useDepartmentTimeZone();
   const text = value?.Value ?? '';
   const selected = value?.Values ?? [];
   const setText = useCallback((next: string) => onChange({ Value: next }), [onChange]);
@@ -87,7 +90,17 @@ export const RecordField: React.FC<RecordFieldProps> = ({ field, value, required
   switch (field.Type) {
     case RmsFieldType.Date:
     case RmsFieldType.DateTime:
-      return wrap(<DateTimeField value={text} onChange={setText} label={field.Label} mode={field.Type === RmsFieldType.Date ? 'date' : 'datetime'} disabled={disabled} testID={testID ? `${testID}-picker` : undefined} />);
+      return wrap(
+        <DateTimeField
+          value={text}
+          onChange={setText}
+          label={field.Label}
+          mode={field.Type === RmsFieldType.Date ? 'date' : 'datetime'}
+          timeZone={timeZone}
+          disabled={disabled}
+          testID={testID ? `${testID}-picker` : undefined}
+        />
+      );
 
     case RmsFieldType.LongText:
       return wrap(

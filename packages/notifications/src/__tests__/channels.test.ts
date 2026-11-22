@@ -1,11 +1,30 @@
 // Channel set (D17 + §10.2a): every Android channel id Core can send exists, each with a modern sound (or the custom
 // tone) for its meaning; the four iOS categories are built. Core's sound types are read from a verbatim copy of
-// PushSoundTypes.cs, so a new server sound type fails here until Omni creates its channel.
+// PushSoundTypes.cs, so a new server sound type fails here until Omni creates its channel. The dispatcher desk types
+// (28–32, Dispatch only) have their own channels, created only by an app whose sound set has the desk sounds.
 import * as fs from 'fs';
 import * as path from 'path';
 
-import { ANDROID_CHANNEL_IDS, ANDROID_CHANNELS, buildIosCategories, CHECK_IN_ACTION_ID, IOS_CATEGORY_IDS, STATUS_TIMER_CATEGORY_ID, STATUS_TIMER_CHANNEL } from '../channels';
-import { CUSTOM_TONE_COUNT, IOS_SERVER_SOUND_ALIASES, isCustomTone, isModernSound, MODERN_SOUNDS, PUSH_SOUND_TYPE_SOUNDS, PUSH_SOUND_TYPES, soundForSoundType } from '../sounds';
+import { ANDROID_CHANNEL_IDS, ANDROID_CHANNELS, androidChannelsFor, buildIosCategories, CHECK_IN_ACTION_ID, DESK_ANDROID_CHANNELS, IOS_CATEGORY_IDS, STATUS_TIMER_CATEGORY_ID, STATUS_TIMER_CHANNEL } from '../channels';
+import {
+  CUSTOM_TONE_COUNT,
+  DESK_EVENT_SOUNDS,
+  DESK_PUSH_SOUND_TYPES,
+  DESK_SOUND_FALLBACKS,
+  DESK_SOUNDS,
+  IOS_DESK_SOUND_ALIASES,
+  IOS_SERVER_SOUND_ALIASES,
+  isCustomTone,
+  isDeskSound,
+  isModernSound,
+  MODERN_SOUNDS,
+  PUSH_SOUND_TYPE_SOUNDS,
+  PUSH_SOUND_TYPES,
+  soundForDeskEvent,
+  soundForSet,
+  soundForSoundType,
+  soundSetSounds,
+} from '../sounds';
 import { REPO_ROOT } from './helpers';
 
 const fixture = fs.readFileSync(path.join(__dirname, 'fixtures', 'PushSoundTypes.cs'), 'utf8');
@@ -42,13 +61,20 @@ const EXPECTED_SOUND_BY_TYPE: Record<number, string> = {
   25: 'modernunitnotice',
   26: 'modernresourceorder',
   27: 'moderncallrenotify',
+  28: 'moderndeskoffer',
+  29: 'moderndeskqueuealert',
+  30: 'moderndeskmessage',
+  31: 'modernbreakreminder',
+  32: 'modernbreakover',
 };
 
 const audioDir = path.join(REPO_ROOT, 'apps', 'omni', 'assets', 'audio');
+const dispatchAudioDir = path.join(REPO_ROOT, 'apps', 'omni', 'variants', 'dispatch', 'assets', 'audio');
+const DESK_TYPES = new Set<number>([28, 29, 30, 31, 32]);
 
 describe('Core sound types', () => {
   it('reads the fixture', () => {
-    expect(coreSoundTypes.length).toBeGreaterThanOrEqual(27);
+    expect(coreSoundTypes.length).toBeGreaterThanOrEqual(33);
     expect(coreSoundTypes[0]).toEqual({ name: 'CallEmergency', value: 0 });
   });
 
@@ -66,9 +92,9 @@ describe('Core sound types', () => {
 });
 
 describe('Android channels', () => {
-  const expectedIds = ['calls', ...coreSoundTypes.map(({ value }) => String(value)), ...Array.from({ length: 25 }, (_, i) => `c${i + 1}`), 'notif', 'message'];
+  const expectedIds = ['calls', ...coreSoundTypes.flatMap(({ value }) => (DESK_TYPES.has(value) ? [] : [String(value)])), ...Array.from({ length: 25 }, (_, i) => `c${i + 1}`), 'notif', 'message'];
 
-  it('equals Core sound types + calls + c1–c25 + notif + message', () => {
+  it('equals Core sound types (the desk types aside) + calls + c1–c25 + notif + message', () => {
     expect([...ANDROID_CHANNEL_IDS].sort()).toEqual([...expectedIds].sort());
     expect(new Set(ANDROID_CHANNEL_IDS).size).toBe(ANDROID_CHANNEL_IDS.length);
   });
@@ -152,7 +178,7 @@ describe('modern sound set', () => {
     }
   });
 
-  it.each(['c0', 'c26', 'c01', 'calls1', '28', '-1', '07', 'callemergency', ''])('knows no sound for %p', (type) => {
+  it.each(['c0', 'c26', 'c01', 'calls1', '33', '-1', '07', '028', 'callemergency', 'moderndeskoffer', ''])('knows no sound for %p', (type) => {
     expect(soundForSoundType(type)).toBeNull();
   });
 });
@@ -162,6 +188,86 @@ describe('dispatch re-notification sound (ModernCallRenotify, 27)', () => {
   it('has its own call channel, named Call Reminder, that vibrates', () => {
     const channel = ANDROID_CHANNELS.find((spec) => spec.id === '27');
     expect(channel).toMatchObject({ sound: 'moderncallrenotify', kind: 'call', vibration: true, nameKey: 'push_notifications.channels.call_renotify', defaultName: 'Call Reminder' });
+  });
+});
+
+describe('dispatcher desk sounds (Core types 28–32, Dispatch only)', () => {
+  it('are the desk sound types, each with its own desk sound', () => {
+    expect([...DESK_PUSH_SOUND_TYPES]).toEqual([28, 29, 30, 31, 32]);
+    expect(DESK_PUSH_SOUND_TYPES.map((type) => PUSH_SOUND_TYPE_SOUNDS[type]).sort()).toEqual([...DESK_SOUNDS].sort());
+
+    for (const sound of DESK_SOUNDS) {
+      expect(isDeskSound(sound)).toBe(true);
+      expect(isModernSound(sound)).toBe(false);
+    }
+  });
+
+  it('have a channel each, with the desk sound, a translated name and the documented kind', () => {
+    expect(DESK_ANDROID_CHANNELS.map((channel) => channel.id)).toEqual(['28', '29', '30', '31', '32']);
+
+    for (const channel of DESK_ANDROID_CHANNELS) {
+      expect(isDeskSound(channel.sound)).toBe(true);
+      expect(soundForSoundType(channel.id)).toBe(channel.sound);
+      expect(channel.nameKey).toMatch(/^push_notifications\.channels\.[a-z_]+$/);
+      expect(fs.existsSync(path.join(dispatchAudioDir, `${channel.sound}.wav`))).toBe(true);
+      expect(fs.existsSync(path.join(audioDir, `${channel.sound}.wav`))).toBe(false);
+    }
+
+    const byId = new Map(DESK_ANDROID_CHANNELS.map((channel) => [channel.id, channel]));
+
+    expect(byId.get('28')).toMatchObject({ defaultName: 'Desk Offer', kind: 'alert', vibration: true });
+    expect(byId.get('29')).toMatchObject({ defaultName: 'Desk Queue Alert', kind: 'alert', vibration: true });
+    expect(byId.get('30')).toMatchObject({ defaultName: 'Desk Message', kind: 'message', vibration: false });
+    expect(byId.get('31')).toMatchObject({ defaultName: 'Break Reminder', kind: 'notification', vibration: false });
+    expect(byId.get('32')).toMatchObject({ defaultName: 'Break Over', kind: 'alert', vibration: true });
+  });
+
+  it('are created only by an app whose sound set has them', () => {
+    const ids = (deskSounds: boolean, statusTimer: boolean) => androidChannelsFor({ deskSounds, statusTimer }).map((channel) => channel.id);
+
+    expect(ids(false, false)).toEqual([...ANDROID_CHANNEL_IDS]);
+    expect(ids(true, false)).toEqual([...ANDROID_CHANNEL_IDS, '28', '29', '30', '31', '32']);
+    expect(ids(false, true)).toEqual([...ANDROID_CHANNEL_IDS, STATUS_TIMER_CHANNEL.id]);
+    expect(new Set(ids(true, true)).size).toBe(ids(true, true).length);
+  });
+
+  it('fall back to the shared sound of the same meaning in an app without them', () => {
+    expect(DESK_SOUND_FALLBACKS).toEqual({
+      moderndeskoffer: 'modernnotification',
+      moderndeskqueuealert: 'modernnotification',
+      moderndeskmessage: 'modernmessage',
+      modernbreakreminder: 'modernnotification',
+      modernbreakover: 'modernnotification',
+    });
+
+    for (const sound of DESK_SOUNDS) {
+      expect(soundForSet(sound, 'dispatch')).toBe(sound);
+      expect(isModernSound(soundForSet(sound, 'shared'))).toBe(true);
+    }
+
+    expect(soundForSet('moderncallemergency', 'shared')).toBe('moderncallemergency');
+    expect(soundForSet('c7', 'dispatch')).toBe('c7');
+  });
+
+  it('name the files each sound set ships', () => {
+    expect(soundSetSounds('shared')).toEqual(MODERN_SOUNDS);
+    expect(soundSetSounds('dispatch')).toEqual([...MODERN_SOUNDS, ...DESK_SOUNDS]);
+  });
+
+  it('give every in-app desk event the sound of its push type', () => {
+    expect(DESK_EVENT_SOUNDS).toEqual({
+      offer: PUSH_SOUND_TYPE_SOUNDS[28],
+      queueAlert: PUSH_SOUND_TYPE_SOUNDS[29],
+      message: PUSH_SOUND_TYPE_SOUNDS[30],
+      breakReminder: PUSH_SOUND_TYPE_SOUNDS[31],
+      breakOver: PUSH_SOUND_TYPE_SOUNDS[32],
+    });
+    expect(soundForDeskEvent('offer')).toBe('moderndeskoffer');
+    expect(soundForDeskEvent('breakOver')).toBe('modernbreakover');
+  });
+
+  it('are also bundled on iOS under the {type}.wav name Core falls back to', () => {
+    expect(IOS_DESK_SOUND_ALIASES).toEqual({ '28': 'moderndeskoffer', '29': 'moderndeskqueuealert', '30': 'moderndeskmessage', '31': 'modernbreakreminder', '32': 'modernbreakover' });
   });
 });
 

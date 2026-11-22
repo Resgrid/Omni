@@ -1,3 +1,4 @@
+import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import { IncidentContentVisibility, IncidentRoleType } from '@resgrid/models';
 import { Button, ButtonText, DateTimeField } from '@resgrid/ui';
@@ -213,6 +214,8 @@ export interface CommandDetailsSheetProps {
 /** Details every resource sees (Core UpdateCommandDetails): important information and the estimated end. */
 export const CommandDetailsSheet: React.FC<CommandDetailsSheetProps> = ({ isOpen, onClose, estimatedEndOn, importantInformation, onSave }) => {
   const { t } = useTranslation();
+  // The estimated end is picked as department time, the time the command header shows.
+  const timeZone = useDepartmentTimeZone();
   const [info, setInfo] = useState('');
   const [endOn, setEndOn] = useState('');
 
@@ -236,7 +239,7 @@ export const CommandDetailsSheet: React.FC<CommandDetailsSheetProps> = ({ isOpen
       <TextField label={t('incident_command.important_information')} value={info} onChangeText={setInfo} optional multiline testID="details-sheet-info" />
       <FieldLabel text={t('incident_command.estimated_end')} optional />
       <View>
-        <DateTimeField value={endOn} onChange={setEndOn} label={t('incident_command.estimated_end')} mode="datetime" testID="details-sheet-end" />
+        <DateTimeField value={endOn} onChange={setEndOn} label={t('incident_command.estimated_end')} mode="datetime" timeZone={timeZone} testID="details-sheet-end" />
       </View>
     </SheetForm>
   );

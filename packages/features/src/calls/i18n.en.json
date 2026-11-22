@@ -242,5 +242,8 @@
   "calls.intake_source.via_webhook": "Via webhook",
   "calls.intake_source.via_webhook_named": "Via webhook: {{name}}",
   "calls.intake_source.via_voice": "Via voice line",
-  "calls.intake_source.via_voice_named": "Via voice line: {{name}}"
+  "calls.intake_source.via_voice_named": "Via voice line: {{name}}",
+  "calls.intake_screening.likely_not_incident": "Enhanced AI: likely not an incident",
+  "calls.intake_screening.repeat_sender": "Repeat sender: over the hourly limit",
+  "calls.intake_screening.dismissed_as_spam": "Dismissed as spam"
 }

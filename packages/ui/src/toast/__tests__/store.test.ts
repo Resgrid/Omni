@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react-native';
 
-import { DEFAULT_TOAST_DURATION_MS, removeToast, showToast, useToastStore } from '../store';
+import { DEFAULT_TOAST_DURATION_MS, removeToast, setToastAlertGate, showToast, useToastStore } from '../store';
 import { useToast } from '../use-toast';
 
 describe('toast store (IC API)', () => {
@@ -13,6 +13,29 @@ describe('toast store (IC API)', () => {
   afterEach(() => {
     useToastStore.getState().clearToasts();
     jest.useRealTimers();
+  });
+
+  it('drops alert toasts while the alert gate holds them back, never feedback toasts', () => {
+    let quiet = true;
+    setToastAlertGate(() => quiet);
+
+    try {
+      showToast('info', 'New message', undefined, { alert: true });
+      showToast('success', 'Saved');
+      expect(useToastStore.getState().toasts.map((toast) => toast.message)).toEqual(['Saved']);
+
+      quiet = false;
+      showToast('info', 'New message', undefined, { alert: true });
+      expect(useToastStore.getState().toasts.map((toast) => toast.message)).toEqual(['Saved', 'New message']);
+
+      setToastAlertGate(() => {
+        throw new Error('broken gate');
+      });
+      showToast('warning', 'Offer', undefined, { alert: true });
+      expect(useToastStore.getState().toasts).toHaveLength(3);
+    } finally {
+      setToastAlertGate(null);
+    }
   });
 
   it('returns a unique id for every toast and queues them in order', () => {

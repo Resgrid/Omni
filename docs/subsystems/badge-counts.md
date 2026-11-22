@@ -17,6 +17,7 @@ Counts beside menu entries, on tabs and on the Responder home's number cards, in
 | `shiftTrades`    | Trade requests awaiting the member's answer, plus their own still open (breakdown)   | Shifts, summed with `shifts`                                    |
 | `workOrders`     | Open work orders assigned to the member or a role they hold                          | Work orders (Responder)                                         |
 | `notifications`  | Unread Novu inbox items (device only)                                                | Notifications; the app bar bell                                 |
+| `deskQueue`      | Desk work offered to the member plus work waiting in the shared queue (device only)  | Dispatcher Desk (Dispatch)                                      |
 
 BigBoard shows none (its entries are hidden). A count the member cannot see (no permission, module switched off, feature flag off) is left out of the answer and shows no badge.
 

@@ -3,7 +3,7 @@
     "source": "Core develop f3b2fd24 + 34949e2d (RG-T152, MapLibre plan v1.7 §23); not on the QA API as of 2026-11-02",
     "addedAt": "2026-11-01",
     "checkedAt": "2026-11-02",
-    "note": "Core v4 routes and parameters Omni calls before they reach the QA Swagger snapshot. Counts/GetBadgeCounts: Core develop working tree, 2026-11-07 (Web/Resgrid.Web.Services/Controllers/v4/CountsController.cs). Mapping/GetMapDataAndMarkers fullSizeIcons: Core develop working tree, 2026-11-11 (MappingController.cs, LegacyOmniPinIcons). Mapping/GetNearestDestinations, GetPoiCapabilities, SetPoiAvailability: Core develop working tree, 2026-11-13 (MappingController.cs, destination capabilities M0315). Mapping/GetDestinationRules, GetSuggestedDestinations: Core develop working tree, 2026-11-19 (MappingController.cs, destination rules M0317). The contract test overlays these on swagger-v4.json and fails once the snapshot has an entry, so remove each entry after refreshing the snapshot. Hand-written from Web/Resgrid.Web.Services/Controllers/v4/{RoutingController,RoutesController,MappingController}.cs. Calls/ReleaseUnit and Calls/ReleasePersonnel: Core develop working tree, 2026-11-16 (CallsController.cs, releasing a unit or person from an open call; ReleasePersonnel built in parallel with Omni RO-T152). RecurringCalls/*: Core develop working tree, 2026-11-17 (RecurringCallsController.cs, recurring calls and their dispatcher alerts, M0319/M0320). Routes/GetCallRoutePlans, StartCallRoute, ReachRouteStart and GetInstanceDirections includeStart: Core develop working tree, 2026-11-19 (RoutesController.cs, call start/destination locations and call routes, M0322; coded against the contract before Core landed). AiDestinations/GetAdvice, RequestAdvice, ApplyAdvice, DismissAdvice: Core develop working tree, 2026-11-19 (AiDestinationsController.cs, Enhanced AI destination advice, M0323; call-intake-and-ai-destinations-plan.md §7). CallResultData CallSource, IntakeChannelName and IntakeChannelType (components below; GetCall, GetActiveCalls, GetPendingCalls, GetCalls): Core develop working tree, 2026-11-19 (Models/v4/Calls/CallResult.cs, M0323). The contract test reads only paths; the components entry records the response fields Omni reads, for the next snapshot refresh to confirm."
+    "note": "Core v4 routes and parameters Omni calls before they reach the QA Swagger snapshot. Counts/GetBadgeCounts: Core develop working tree, 2026-11-07 (Web/Resgrid.Web.Services/Controllers/v4/CountsController.cs). Mapping/GetMapDataAndMarkers fullSizeIcons: Core develop working tree, 2026-11-11 (MappingController.cs, LegacyOmniPinIcons). Mapping/GetNearestDestinations, GetPoiCapabilities, SetPoiAvailability: Core develop working tree, 2026-11-13 (MappingController.cs, destination capabilities M0315). Mapping/GetDestinationRules, GetSuggestedDestinations: Core develop working tree, 2026-11-19 (MappingController.cs, destination rules M0317). The contract test overlays these on swagger-v4.json and fails once the snapshot has an entry, so remove each entry after refreshing the snapshot. Hand-written from Web/Resgrid.Web.Services/Controllers/v4/{RoutingController,RoutesController,MappingController}.cs. Calls/ReleaseUnit and Calls/ReleasePersonnel: Core develop working tree, 2026-11-16 (CallsController.cs, releasing a unit or person from an open call; ReleasePersonnel built in parallel with Omni RO-T152). RecurringCalls/*: Core develop working tree, 2026-11-17 (RecurringCallsController.cs, recurring calls and their dispatcher alerts, M0319/M0320). Routes/GetCallRoutePlans, StartCallRoute, ReachRouteStart and GetInstanceDirections includeStart: Core develop working tree, 2026-11-19 (RoutesController.cs, call start/destination locations and call routes, M0322; coded against the contract before Core landed). AiDestinations/GetAdvice, RequestAdvice, ApplyAdvice, DismissAdvice: Core develop working tree, 2026-11-19 (AiDestinationsController.cs, Enhanced AI destination advice, M0323; call-intake-and-ai-destinations-plan.md §7). CallResultData CallSource, IntakeChannelName and IntakeChannelType (components below; GetCall, GetActiveCalls, GetPendingCalls, GetCalls): Core develop working tree, 2026-11-19 (Models/v4/Calls/CallResult.cs, M0323). IntakeScreening/DismissAsSpam and CallResultData IntakeScreening: Core develop working tree, 2026-11-20 (IntakeScreeningController.cs, Models/v4/Calls/CallResult.cs; intake spam screening, M0326, plan §9). The contract test reads only paths; the components entry records the response fields Omni reads, for the next snapshot refresh to confirm. DispatcherDesk/*: Core dispatcher desk (dispatchers-on-duty-plan.md §4, M0324; hand-written from Models/v4/DispatcherDesk/DispatcherDeskModels.cs; SignOff, Heartbeat and SetAvailable take no body)."
   },
   "paths": {
     "/api/v{VersionId}/Counts/GetBadgeCounts": {
@@ -278,6 +278,231 @@
         "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
         "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DismissAiDestinationAdviceInput" } } } }
       }
+    },
+    "/api/v{VersionId}/IntakeScreening/DismissAsSpam": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DismissIntakeCallInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/DispatcherDesk/GetDesk": {
+      "get": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }]
+      }
+    },
+    "/api/v{VersionId}/DispatcherDesk/GetQueue": {
+      "get": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }]
+      }
+    },
+    "/api/v{VersionId}/DispatcherDesk/GetItem": {
+      "get": {
+        "parameters": [
+          { "name": "itemId", "in": "query", "schema": { "type": "string" } },
+          { "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ]
+      }
+    },
+    "/api/v{VersionId}/DispatcherDesk/GetCoverage": {
+      "get": {
+        "parameters": [
+          { "name": "from", "in": "query", "schema": { "type": "string" } },
+          { "name": "to", "in": "query", "schema": { "type": "string" } },
+          { "name": "slotMinutes", "in": "query", "schema": { "type": "integer", "format": "int32" } },
+          { "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ]
+      }
+    },
+    "/api/v{VersionId}/DispatcherDesk/GetBreaks": {
+      "get": {
+        "parameters": [
+          { "name": "from", "in": "query", "schema": { "type": "string" } },
+          { "name": "to", "in": "query", "schema": { "type": "string" } },
+          { "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ]
+      }
+    },
+    "/api/v{VersionId}/DispatcherDesk/GetShiftDispatchers": {
+      "get": {
+        "parameters": [
+          { "name": "shiftId", "in": "query", "schema": { "type": "integer", "format": "int32" } },
+          { "name": "shiftDayId", "in": "query", "schema": { "type": "integer", "format": "int32" } },
+          { "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ]
+      }
+    },
+    "/api/v{VersionId}/DispatcherDesk/GetStats": {
+      "get": {
+        "parameters": [
+          { "name": "from", "in": "query", "schema": { "type": "string" } },
+          { "name": "to", "in": "query", "schema": { "type": "string" } },
+          { "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ]
+      }
+    },
+    "/api/v{VersionId}/DispatcherDesk/GetConfig": {
+      "get": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }]
+      }
+    },
+    "/api/v{VersionId}/DispatcherDesk/SignIn": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DispatcherSignInInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/DispatcherDesk/SignOff": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }]
+      }
+    },
+    "/api/v{VersionId}/DispatcherDesk/Heartbeat": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }]
+      }
+    },
+    "/api/v{VersionId}/DispatcherDesk/SetAvailable": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }]
+      }
+    },
+    "/api/v{VersionId}/DispatcherDesk/SetAway": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DispatcherAwayInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/DispatcherDesk/SetCallbackNumber": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DispatcherCallbackNumberInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/DispatcherDesk/RegisterDevice": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DispatcherDeviceInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/DispatcherDesk/UnregisterDevice": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DispatcherDeviceInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/DispatcherDesk/AcceptItem": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DispatcherItemInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/DispatcherDesk/DeclineItem": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DispatcherDeclineInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/DispatcherDesk/ReleaseItem": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DispatcherItemInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/DispatcherDesk/TransferItem": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DispatcherTransferInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/DispatcherDesk/CompleteItem": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DispatcherCompleteInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/DispatcherDesk/LinkCall": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DispatcherLinkCallInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/DispatcherDesk/SendMessage": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DispatcherMessageInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/DispatcherDesk/AddNote": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DispatcherMessageInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/DispatcherDesk/ConnectVoice": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DispatcherVoiceInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/DispatcherDesk/CallBack": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DispatcherVoiceInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/DispatcherDesk/SaveBreak": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DispatcherSaveBreakInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/DispatcherDesk/CancelBreak": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DispatcherBreakIdInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/DispatcherDesk/StartBreak": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DispatcherStartBreakInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/DispatcherDesk/EndBreak": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DispatcherEndBreakInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/DispatcherDesk/PlanBreaks": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DispatcherPlanBreaksInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/DispatcherDesk/SignupForDay": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ShiftDayDispatcherInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/DispatcherDesk/WithdrawFromDay": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ShiftDayDispatcherInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/DispatcherDesk/AssignToDay": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ShiftDayDispatcherInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/DispatcherDesk/RemoveFromDay": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ShiftDayDispatcherInput" } } } }
+      }
     }
   },
   "components": {
@@ -286,7 +511,8 @@
         "properties": {
           "CallSource": { "type": "integer", "format": "int32" },
           "IntakeChannelName": { "type": "string", "nullable": true },
-          "IntakeChannelType": { "type": "integer", "format": "int32", "nullable": true }
+          "IntakeChannelType": { "type": "integer", "format": "int32", "nullable": true },
+          "IntakeScreening": { "type": "integer", "format": "int32", "nullable": true }
         }
       }
     }

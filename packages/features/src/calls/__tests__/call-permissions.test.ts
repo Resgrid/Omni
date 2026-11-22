@@ -11,6 +11,7 @@ const ALL_CALLS: CallsCapability = {
   releaseResources: true,
   releaseOwnUnit: false,
   recurringCalls: true,
+  dispatcherDesk: true,
 };
 
 const MEMBER: CallRights = { isAdmin: false, canCreateCalls: true, canCloseCalls: true, canDeleteCalls: true };

@@ -3,16 +3,19 @@
  * nothing: foreground web/desktop pushes and SignalR-driven desktop notices. Native foreground pushes already play
  * their channel sound through the OS.
  *
- * The package never imports app assets: the app shell passes the bundled files once
- * (`configureNotificationSounds({ modernnotification: require('…/modernnotification.wav'), … })`).
+ * The package never imports app assets: the app passes the bundled files of its sound set once
+ * (`configureNotificationSounds({ modernnotification: require('…/modernnotification.wav'), … })`, from each variant's
+ * root layout through apps/omni/sound-sets/<variant>.ts): the Dispatch app passes its own files, desk sounds included.
  */
 import { logger } from '@resgrid/core';
 import { Asset } from 'expo-asset';
 import { type AudioPlayer, createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { Platform } from 'react-native';
 
+import { isAlertSuppressed } from './alert-suppression';
+import { getSoundSet } from './configure';
 import type { NotificationKind } from './event-codes';
-import { type NotificationSound, soundForSoundType } from './sounds';
+import { type NotificationSound, soundForSet, soundForSoundType } from './sounds';
 
 /** A `require()`d asset module id or a URI, per sound. */
 export type NotificationSoundAssets = Partial<Record<NotificationSound, number | string>>;
@@ -38,6 +41,9 @@ export const KIND_SOUNDS: Readonly<Record<NotificationKind | 'unknown', Notifica
   communicationTest: 'modernnotification',
   unitStatusTimer: 'modernunitnotice',
   recurringCallAlert: 'modernnotification',
+  // Desk pushes always name their sound type (28-32, resolved above); this is only the fallback for a push without one.
+  deskItem: 'modernnotification',
+  deskBreak: 'modernnotification',
   unknown: 'modernnotification',
 };
 
@@ -115,11 +121,14 @@ class NotificationSoundService {
     return task;
   }
 
-  /** Plays one sound from the start. Never throws. */
+  /**
+   * Plays one sound from the start. Never throws. A desk sound (`soundForDeskEvent`) plays where the app's sound set has
+   * it (Dispatch) and its shared fallback anywhere else.
+   */
   async play(sound: NotificationSound): Promise<void> {
     try {
       await this.ensureAudioMode();
-      const player = await this.load(sound);
+      const player = await this.load(soundForSet(sound, getSoundSet()));
       if (!player) return;
       if (player.isLoaded) {
         await player.seekTo(0);
@@ -132,6 +141,8 @@ class NotificationSoundService {
 
   /** Plays the sound for a notification (server sound type first, then its meaning). */
   async playForNotification(request: NotificationSoundRequest): Promise<void> {
+    // Alerts held back (a dispatcher on break, `alert-suppression.ts`); `play()` itself (the Settings sound test) never is.
+    if (isAlertSuppressed({ channel: 'sound', kind: request.kind })) return;
     await this.play(soundForNotification(request));
   }
 

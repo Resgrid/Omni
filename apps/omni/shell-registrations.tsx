@@ -16,6 +16,7 @@ import { createDataChecklistRunWriter, registerChecklistRunWriter } from '@resgr
 import { setDashboardStorage } from '@resgrid/features/dashboard';
 import { StepUpPromptHost } from '@resgrid/features/data-protection';
 import { setDepartmentConfig } from '@resgrid/features/department-config';
+import { DeskStatusBar, DispatcherDeskHost, registerDispatcherDeskSignOut } from '@resgrid/features/dispatcher-desk';
 import { createIncidentCommandCallTab } from '@resgrid/features/incident-command';
 import { DispatchBoardLayers } from '@resgrid/features/map';
 import { registerOfflineMapsSettings } from '@resgrid/features/offline-maps';
@@ -26,7 +27,6 @@ import { configureSettings } from '@resgrid/features/settings';
 import { CallRouteLauncher, registerUnitStatusCallDetailAction, StatusTimerBanner, StatusTimerNotifications, unitStatusRoutes, UnitStatusSidebar } from '@resgrid/features/unit-status';
 import { AudioStreamSheet, VoiceChannelSheet, VoiceMenuButtons } from '@resgrid/features/voice';
 import { FullScreenLocationPicker, StaticMap } from '@resgrid/maps';
-import { configureNotificationSounds } from '@resgrid/notifications';
 import { playAudioClip } from '@resgrid/voice';
 import { usePathname } from 'expo-router';
 
@@ -34,7 +34,6 @@ import { appUpdatesModule } from './app-updates';
 import { ACTIVE_UNIT_ADAPTER, clearActiveCall, ShellChatIdentityProvider, ShellMapProvider, ShellNavigationHandoffProvider, ShellRouteMapProvider, ShellStatusProvider, storageSyncServices } from './feature-providers';
 import { registerMapConfigRefreshStep } from './map-config-refresh';
 import { registerNavigationSteps } from './navigation-wiring';
-import { NOTIFICATION_SOUNDS } from './notification-sounds';
 import { registerOfflineMapsSteps } from './offline-maps-wiring';
 import { useCommandRecordsContext } from './records-context';
 
@@ -131,6 +130,15 @@ registerShellOverlay('recurring-call-alerts', RecurringCallAlertsHost);
 
 registerShellBanner('recurring-call-alerts', RecurringAlertsBanner);
 
+// Dispatch's dispatcher desk: the board, realtime, heartbeat, desk push subscriber, offer alert, break alerts and quiet
+// alerts on break, the desk sheets, the status bar under the app bar, and the desk subscriber taken off at sign-out
+// (all inert without calls.dispatcherDesk).
+registerShellOverlay('dispatcher-desk', DispatcherDeskHost);
+
+registerShellBanner('dispatcher-desk', DeskStatusBar);
+
+registerDispatcherDeskSignOut();
+
 // Unit's own status timer strip (inert without the unit-status module and an active unit).
 registerShellBanner('unit-status-timer', UnitTimerBanner);
 
@@ -201,9 +209,8 @@ registerNavigationSteps();
 // shell's init steps check after sign-in and on foreground; Settings → App updates checks on demand.
 configureAppUpdates({ module: appUpdatesModule });
 
-// In-app notification sounds (foreground web/desktop pushes and desktop notices, the Settings sound tests): web and
-// Electron load the bundled files, iOS/Android play the copies in the native project (notification-sounds.native.ts).
-configureNotificationSounds(NOTIFICATION_SOUNDS);
+// In-app notification sounds are configured by each variant's root layout from its sound set (sound-sets/<variant>.ts):
+// the Dispatch app has its own files, and a web export must bundle only its own app's set.
 
 // Once storage is open, before any screen mounts: Storage & sync (and Unit's unit choice), the Records outbox controls
 // and BigBoard's dashboard storage read the offline runtime; a variant that commands incidents authors records against

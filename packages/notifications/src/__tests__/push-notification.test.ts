@@ -4,7 +4,7 @@
 // channel/deep-link tests, adapted to the injected resolver.
 import type { NotificationBehavior } from 'expo-notifications';
 
-import { ANDROID_CHANNELS, CHECK_IN_ACTION_ID, STATUS_TIMER_CATEGORY_ID, STATUS_TIMER_CHANNEL } from '../channels';
+import { ANDROID_CHANNELS, CHECK_IN_ACTION_ID, DESK_ANDROID_CHANNELS, STATUS_TIMER_CATEGORY_ID, STATUS_TIMER_CHANNEL } from '../channels';
 import { syncLocalNotifications } from '../local-notifications';
 import { usePushNotificationModalStore } from '../push-modal-store';
 import { HANDLED_RESPONSE_LIMIT, pushNotificationService } from '../push-notification';
@@ -124,6 +124,25 @@ describe('Android channels', () => {
     selectVariant('ic');
     await initialize();
     expect(mockNotifeeState.channels.map((channel) => channel.id)).toEqual(ANDROID_CHANNELS.map((channel) => channel.id));
+  });
+
+  it('creates the desk channels (28–32) with their desk sounds only in the app with the Dispatch sound set', async () => {
+    selectVariant('dispatch');
+    await initialize();
+    expect(mockNotifeeState.channels.map((channel) => channel.id)).toEqual([...ANDROID_CHANNELS, ...DESK_ANDROID_CHANNELS].map((channel) => channel.id));
+    expect(mockNotifeeState.channels.find((channel) => channel.id === '28')).toMatchObject({ name: 'Desk Offer', sound: 'moderndeskoffer', vibration: true });
+    expect(mockNotifeeState.channels.find((channel) => channel.id === '32')).toMatchObject({ name: 'Break Over', sound: 'modernbreakover' });
+  });
+
+  it('keeps the channels an installed Dispatch app has: its own sound set uses the same sound names', async () => {
+    selectVariant('dispatch');
+    mockNotifeeState.existingChannels = [
+      { id: '7', sound: 'moderncallemergency', blocked: false },
+      { id: '12', sound: 'modernmessage', blocked: false },
+      { id: 'c4', sound: 'c4', blocked: false },
+    ];
+    await initialize();
+    expect(mockNotifeeState.deleted).toEqual([]);
   });
 
   it('recreates channels a legacy build created with a classic or default sound, and leaves matching ones alone', async () => {

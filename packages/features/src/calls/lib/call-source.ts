@@ -4,7 +4,7 @@
  * dispatcher to review. Core fills the channel's type and name on the call lists and GetCall; older servers send no
  * `CallSource`, and nothing is said.
  */
-import { type CallResultData, CallSources, IntakeChannelTypes } from '@resgrid/models';
+import { type CallResultData, CallSources, IntakeChannelTypes, IntakeScreenings } from '@resgrid/models';
 
 export type IntakeSourceKind = 'intake' | 'voice';
 
@@ -57,4 +57,25 @@ export const intakeSourceLabel = (source: IntakeSource): { key: string; name?: s
   const base = source.channelType !== null ? (CHANNEL_LABEL_KEYS.get(source.channelType) ?? generic) : generic;
 
   return source.channelName ? { key: `${base}_named`, name: source.channelName } : { key: base };
+};
+
+/** The i18n key of an intake call's screening (Core M0326), keyed by `IntakeScreenings`. */
+const SCREENING_LABEL_KEYS: ReadonlyMap<number, string> = new Map([
+  [IntakeScreenings.LikelyNotIncident, 'calls.intake_screening.likely_not_incident'],
+  [IntakeScreenings.RepeatSender, 'calls.intake_screening.repeat_sender'],
+  [IntakeScreenings.DismissedAsSpam, 'calls.intake_screening.dismissed_as_spam'],
+]);
+
+/**
+ * Why an intake call is badged ("Enhanced AI: likely not an incident", "Repeat sender", "Dismissed as spam"), or null when it is not
+ * screened, is not an intake call, or the server predates M0326 (or sends a screening this build does not know).
+ */
+export const intakeScreeningLabelKey = (call: Pick<CallResultData, 'CallSource' | 'IntakeScreening'> | null | undefined): string | null => {
+  const source = Number(call?.CallSource);
+
+  if (source !== CallSources.Intake && source !== CallSources.VoiceIntake) return null;
+
+  if (call?.IntakeScreening === null || call?.IntakeScreening === undefined) return null;
+
+  return SCREENING_LABEL_KEYS.get(Number(call.IntakeScreening)) ?? null;
 };

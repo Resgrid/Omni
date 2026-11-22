@@ -136,3 +136,45 @@ it('preserves a record timestamp when confirming its date and time without chang
   expect(onChange).toHaveBeenCalledWith('2026-09-26T21:15:00.000Z');
   await screen.unmount();
 });
+
+it('shows and picks another zone’s wall clock when given one, keeping the value a UTC instant', async () => {
+  const onChange = jest.fn();
+  // 03:30Z is 09:00 in Kolkata (UTC+5:30), whatever zone the device is in.
+  const screen = await render(<DateTimeField mode="datetime" value="2026-09-26T03:30:00.000Z" label="Start" onChange={onChange} timeZone="Asia/Kolkata" testID="date" />);
+  await fireEvent.press(screen.getByTestId('date'));
+  expect(screen.getByTestId('date-hour-9').props.accessibilityState).toMatchObject({ selected: true });
+  await fireEvent.press(screen.getByTestId('date-done'));
+  expect(onChange).toHaveBeenLastCalledWith('2026-09-26T03:30:00.000Z');
+
+  await fireEvent.press(screen.getByTestId('date'));
+  await fireEvent.press(screen.getByTestId('date-hour-10'));
+  await fireEvent.press(screen.getByTestId('date-minute-15'));
+  await fireEvent.press(screen.getByTestId('date-done'));
+  expect(onChange).toHaveBeenLastCalledWith('2026-09-26T04:45:00.000Z');
+  await screen.unmount();
+});
+
+it('reads the draft back in the zone it was opened in, even when the zone given changes while it is open', async () => {
+  const onChange = jest.fn();
+  const field = (timeZone: string) => <DateTimeField mode="datetime" value="2026-09-26T03:30:00.000Z" label="Start" onChange={onChange} timeZone={timeZone} testID="date" />;
+  const screen = await render(field('Asia/Kolkata'));
+  await fireEvent.press(screen.getByTestId('date'));
+
+  // The department's zone arrives (or changes) with the dialog open.
+  await screen.rerender(field('America/New_York'));
+  await fireEvent.press(screen.getByTestId('date-hour-10'));
+  await fireEvent.press(screen.getByTestId('date-minute-15'));
+  await fireEvent.press(screen.getByTestId('date-done'));
+  expect(onChange).toHaveBeenLastCalledWith('2026-09-26T04:45:00.000Z');
+  await screen.unmount();
+});
+
+it('keeps the stored instant when Done changes nothing, in an hour the zone repeats', async () => {
+  const onChange = jest.fn();
+  // 06:30Z on 5 November 2017 is the second 01:30 in New York (clocks went back at 02:00 EDT).
+  const screen = await render(<DateTimeField mode="datetime" value="2017-11-05T06:30:00.000Z" label="Start" onChange={onChange} timeZone="America/New_York" testID="date" />);
+  await fireEvent.press(screen.getByTestId('date'));
+  await fireEvent.press(screen.getByTestId('date-done'));
+  expect(onChange).toHaveBeenLastCalledWith('2017-11-05T06:30:00.000Z');
+  await screen.unmount();
+});

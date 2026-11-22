@@ -7,6 +7,11 @@ export interface ToastOptions {
   duration?: number;
   /** Makes the toast pressable: runs this and dismisses it. */
   onPress?: () => void;
+  /**
+   * An unsolicited alert (a push or realtime cue: a new alert, an offer, a message), not feedback on something the member
+   * did. Alert toasts are dropped while the alert gate says so (a dispatcher on break, `setToastAlertGate`).
+   */
+  alert?: boolean;
 }
 
 export interface ToastItem {
@@ -36,6 +41,23 @@ interface ToastStore {
 }
 
 const toastTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+/** Returns true while alert toasts are held back. Set once by the app shell; null shows every toast. */
+let alertGate: (() => boolean) | null = null;
+
+/** Installs (or with null removes) the check alert toasts pass before they show. A gate that throws holds nothing back. */
+export const setToastAlertGate = (gate: (() => boolean) | null): void => {
+  alertGate = gate;
+};
+
+const isAlertHeldBack = (): boolean => {
+  try {
+    return alertGate?.() === true;
+  } catch {
+    return false;
+  }
+};
+
 let toastSequence = 0;
 
 const nextToastId = (): string => {
@@ -56,6 +78,9 @@ export const useToastStore = create<ToastStore>((set) => ({
   modalHosts: [],
   showToast: (type, message, title, options) => {
     const id = nextToastId();
+
+    // Held back: nothing shows, and the id refers to no toast (removing it is a no-op).
+    if (options?.alert && isAlertHeldBack()) return id;
     const toast: ToastItem = { id, type, message };
     if (title !== undefined) {
       toast.title = title;

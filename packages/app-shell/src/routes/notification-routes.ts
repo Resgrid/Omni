@@ -27,6 +27,12 @@ export function resolveNotificationRoute(target: NotificationTarget, href: HrefB
     case 'recurringCallAlert':
       // A recurring call alert (Dispatch, `calls.recurringCalls`): the alerts list, with the tapped alert picked out.
       return href.build('recurringCallAlerts', {}, { alertId: target.id });
+    case 'deskItem':
+      // Dispatcher desk work (Dispatch, `calls.dispatcherDesk`): the desk with the item picked (opened on a phone).
+      return href.build('dispatcherDesk', {}, { itemId: target.id });
+    case 'deskBreak':
+      // A break reminder or "break over": the desk's breaks screen.
+      return href.build('dispatcherDesk', {}, { breakId: target.id });
     case 'unitStatusTimer':
       // The unit's own status timer (a notification the app scheduled): its status console, where the crew updates it.
       return href.unitConsole();

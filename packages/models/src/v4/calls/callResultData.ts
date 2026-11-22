@@ -107,6 +107,11 @@ export class CallResultData {
   public IntakeChannelName?: string | null;
   /** The intake channel's type (`IntakeChannelTypes`) for calls with CallSource Intake or VoiceIntake; null otherwise, undefined from older servers. */
   public IntakeChannelType?: number | null;
+  /**
+   * Why the intake call is badged (`IntakeScreenings`: 1 Enhanced AI read it as likely not an incident, 2 repeat sender over the hourly
+   * limit, 3 dismissed as spam; Core M0326); null when not screened or not an intake call, undefined from older servers.
+   */
+  public IntakeScreening?: number | null;
   public LoggedOnUtc: string = '';
   /**
    * The user who logged the call; null when none did (an email or API import), undefined from older servers. Core lets a

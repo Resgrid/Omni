@@ -635,6 +635,11 @@
       "via_webhook_named": "Via webhook: {{name}}",
       "via_voice": "Via voice line",
       "via_voice_named": "Via voice line: {{name}}"
+    },
+    "intake_screening": {
+      "likely_not_incident": "Enhanced AI: likely not an incident",
+      "repeat_sender": "Repeat sender: over the hourly limit",
+      "dismissed_as_spam": "Dismissed as spam"
     }
   },
   "chat": {
@@ -2630,7 +2635,9 @@
       "sign_in_approval": "Sign-in Approval",
       "weather": "Allerta meteo",
       "work_order": "Ordine di lavoro",
-      "recurring_call_alert": "Avviso di chiamata ricorrente"
+      "recurring_call_alert": "Avviso di chiamata ricorrente",
+      "desk_item": "Postazione di centrale",
+      "desk_break": "Pausa"
     },
     "unknown_type_warning": "Questo tipo di notifica non è riconosciuto.",
     "view_call": "Visualizza chiamata",
@@ -2667,7 +2674,12 @@
       "generic_call": "Generic Call",
       "general_notification": "Notifications",
       "general_message": "Messages",
-      "unit_status_timer": "Unit Status Timer"
+      "unit_status_timer": "Unit Status Timer",
+      "desk_offer": "Desk Offer",
+      "desk_queue_alert": "Desk Queue Alert",
+      "desk_message": "Desk Message",
+      "break_reminder": "Break Reminder",
+      "break_over": "Break Over"
     },
     "communication_test_confirmed": "Receipt confirmed",
     "communication_test_failed": "Could not confirm receipt. Please try again.",
@@ -2678,7 +2690,9 @@
     "view_chat": "Visualizza chat",
     "view_sign_in": "Review",
     "view_work_order": "Visualizza ordine di lavoro",
-    "view_recurring_call_alerts": "Vedi avvisi"
+    "view_recurring_call_alerts": "Vedi avvisi",
+    "view_desk_break": "Visualizza pause",
+    "view_desk_item": "Apri postazione"
   },
   "records": {
     "add_row": "Aggiungi riga",
@@ -3807,7 +3821,13 @@
     "no_pending_calls_description": "Non ci sono chiamate in attesa di essere inviate.",
     "search": "Cerca chiamate in attesa...",
     "table_received": "Ricevuta",
-    "title": "Chiamate in attesa"
+    "title": "Chiamate in attesa",
+    "dismiss_spam": "Dismiss as Spam",
+    "dismiss_spam_block": "Also block the sender from your intake channels",
+    "dismiss_spam_blocked": "Dismissed as spam; the sender is blocked",
+    "dismiss_spam_confirm": "Dismiss this call as spam? It is cancelled without notifying anyone, and nothing is sent back to the sender.",
+    "dismiss_spam_error": "Failed to dismiss the call as spam",
+    "dismiss_spam_success": "Dismissed as spam"
   },
   "scheduled_calls": {
     "loading": "Caricamento delle chiamate programmate...",
@@ -5029,6 +5049,354 @@
     "field_destination_address": "Indirizzo di destinazione",
     "field_destination_location": "Posizione di destinazione",
     "field_route": "Percorso"
+  },
+  "dispatcher_desk": {
+    "actions": {
+      "away": "Assente",
+      "go_available": "Imposta disponibile",
+      "im_back": "Sono di ritorno",
+      "im_back_done": "Ti diamo il bentornato. Sei di nuovo in postazione.",
+      "sign_in": "Accedi alla postazione",
+      "sign_off": "Lascia la postazione",
+      "take_break": "Vai in pausa"
+    },
+    "alerts": {
+      "auto_returned": "La pausa ha superato la sua durata, quindi la postazione ti ha fatto rientrare automaticamente.",
+      "back_title": "Di nuovo in postazione",
+      "break_due": "{{type}}: è il momento. Tocca per iniziare.",
+      "break_ended_for_you": "La tua pausa è stata terminata. Sei di nuovo in postazione.",
+      "break_over": "La pausa è finita. Tocca «Sono di ritorno» per rientrare in postazione.",
+      "break_over_title": "La pausa è finita",
+      "break_reminder": "{{type}}: inizia tra {{minutes}} min",
+      "break_title": "Pausa",
+      "escalated": "In attesa da troppo tempo: {{count}} ({{kind}})",
+      "escalated_title": "Attività in attesa",
+      "new_message": "Nuovo messaggio da {{name}}",
+      "new_message_title": "Nuovo messaggio"
+    },
+    "break_state": {
+      "active": "In pausa",
+      "done": "Conclusa",
+      "planned": "Pianificata"
+    },
+    "break_type": {
+      "break": "Pausa",
+      "meal": "Pasto",
+      "other": "Altro",
+      "personal": "Personale"
+    },
+    "breaks": {
+      "coverage_prevented": "Questa pausa lascerebbe {{available}} disponibili, sotto il minimo di {{minimum}}. Il tuo dipartimento non lo consente: chiedi a un supervisore della postazione di avviarla.",
+      "coverage_refused": "La copertura è troppo bassa per iniziare ora la pausa. Un supervisore della postazione può avviarla per te.",
+      "coverage_warning": "Questa pausa lascia {{available}} disponibili, sotto il minimo di {{minimum}}.",
+      "due_back_at": "Rientro previsto alle {{time}}",
+      "duty": "{{shift}} · {{start}}–{{end}}",
+      "left": "{{time}} rimanenti",
+      "length": "Durata",
+      "minutes": "{{minutes}} min",
+      "my_breaks": "Le mie pause di oggi",
+      "my_duty": "Il mio servizio",
+      "overdue_by": "In ritardo di {{time}}",
+      "plan_mine": "Pianifica una pausa",
+      "plan_shift": "Pianifica le pause del turno",
+      "plan_shift_confirm": "Pianifica pause",
+      "plan_shift_done": "Pause pianificate per il turno",
+      "plan_shift_message": "Distribuisci il piano pause del turno tra gli operatori di oggi, in modo che le pause non si sovrappongano.",
+      "plan_shift_replace": "Sostituisci le pause già pianificate",
+      "planned_at": "Pianificata per le {{time}}",
+      "return_work": "Rimetti in coda le mie attività (in carico: {{count}})",
+      "return_work_hint": "La pausa inizia solo quando le tue attività sono di nuovo in coda per un altro operatore.",
+      "row": "{{type}} · {{minutes}} min",
+      "start_now": "Inizia ora",
+      "start_planned": "In programma: {{type}} · {{minutes}} min · {{time}}",
+      "started": "Buona pausa. Rientro previsto alle {{time}}.",
+      "started_at": "Iniziata alle {{time}}",
+      "take_anyway": "Vai in pausa comunque",
+      "take_new": "Una nuova pausa ora",
+      "take_now": "Fai una pausa ora",
+      "take_title": "Fai una pausa",
+      "title": "Pause",
+      "type": "Tipo"
+    },
+    "complete": {
+      "done": "Completata",
+      "note": "Nota",
+      "outcome": "Com'è andata a finire?",
+      "title": "Completa",
+      "notify_participant": "Avvisa il mittente che la conversazione è terminata",
+      "notify_participant_hint": "Invia un SMS di chiusura dal numero Resgrid."
+    },
+    "conversation": {
+      "add_note": "Aggiungi nota",
+      "empty": "Ancora nessun messaggio.",
+      "note_by": "Nota · {{name}}",
+      "note_placeholder": "Scrivi una nota per la postazione (mai inviata)…",
+      "reply": "Rispondi",
+      "reply_placeholder": "Scrivi una risposta…",
+      "save_note": "Salva nota",
+      "send": "Invia risposta"
+    },
+    "create_call": {
+      "link_failed": "La chiamata è stata salvata, ma non è stato possibile collegarla alla conversazione.",
+      "link_later": "La chiamata è stata salvata su questo dispositivo e verrà inviata quando tornerai online. Completa la conversazione dopo l'invio.",
+      "linked": "La chiamata è collegata alla conversazione.",
+      "name": "{{kind}} da {{source}}"
+    },
+    "delivery": {
+      "failed": "Non consegnato",
+      "queued": "Invio in corso",
+      "received": "Ricevuto",
+      "sent": "Inviato"
+    },
+    "desk_off": "La postazione operatori è disattivata",
+    "desk_off_description": "Il tuo dipartimento non ha attivato la postazione operatori. Un amministratore del dipartimento può attivarla in Turni > Impostazioni della postazione di centrale.",
+    "device": {
+      "desktop": "Computer",
+      "phone": "Telefono",
+      "tablet": "Tablet"
+    },
+    "errors": {
+      "already_on_break": "Sei già in pausa.",
+      "already_on_roster": "Sei già nell'elenco operatori di quel giorno.",
+      "at_capacity": "Hai già in carico tutte le attività consentite dalla postazione. Prima completane o rilasciane una.",
+      "break_not_found": "Quella pausa non è più pianificata.",
+      "break_not_startable": "Quella pausa non può essere iniziata ora.",
+      "break_overlaps": "Quella pausa si sovrappone a un'altra delle tue pause.",
+      "channel_unavailable": "Quel canale non può inviare in questo momento.",
+      "coverage_too_low": "La copertura è troppo bassa per iniziare una pausa ora. Un supervisore della postazione può avviarla per te.",
+      "desk_disabled": "Il tuo dipartimento ha disattivato la postazione operatori.",
+      "dispatchers_not_enabled": "Quel turno non ha operatori in servizio.",
+      "holding_work": "Hai attività in carico. Rimettile in coda per iniziare la pausa.",
+      "invalid_input": "Qualcosa nella richiesta manca o non è valido.",
+      "item_not_available": "Quell'attività è già stata presa o completata.",
+      "item_not_found": "Quell'attività non è più nella postazione.",
+      "no_callback_number": "Inserisci il numero che la postazione deve chiamare.",
+      "not_a_dispatcher": "Solo gli operatori possono usare la postazione.",
+      "not_assigned_to_you": "Quell'attività è in carico a un altro operatore.",
+      "not_on_break": "Non c'è nessuna pausa in corso da terminare.",
+      "not_on_duty": "Al momento non sei in un turno di centrale.",
+      "not_permitted": "Non hai il permesso di farlo nella postazione.",
+      "not_signed_in": "Accedi prima alla postazione.",
+      "shift_not_found": "Impossibile trovare quel turno.",
+      "title": "Postazione",
+      "unknown": "La postazione non è riuscita a completare l'operazione. Riprova."
+    },
+    "event": {
+      "accepted": "Accettata",
+      "cancelled": "Annullata",
+      "completed": "Completata",
+      "created": "Arrivata",
+      "declined": "Rifiutata",
+      "escalated": "Attesa troppo lunga",
+      "message_received": "Messaggio ricevuto",
+      "message_sent": "Messaggio inviato",
+      "offer_expired": "Offerta scaduta",
+      "offered": "Offerta",
+      "overflowed": "Inoltrata in overflow",
+      "released": "Rimessa in coda",
+      "reopened": "Riaperta",
+      "transferred": "Trasferita",
+      "voice_connected": "Telefonata connessa",
+      "voice_connecting": "Connessione della telefonata",
+      "voice_ended": "Telefonata terminata",
+      "conversation_closed": "Conversazione SMS terminata",
+      "held_for_review": "Held for review: screened intake call"
+    },
+    "item": {
+      "complete": "Completa",
+      "create_call": "Crea chiamata",
+      "dispatch_now": "Invia ora",
+      "due_on": "Prevista {{time}}",
+      "history": "Cronologia ({{count}})",
+      "link_saved_call": "Collega chiamata salvata",
+      "loading": "Caricamento…",
+      "not_found": "Questa attività non è più nella postazione",
+      "open_call": "Apri chiamata",
+      "release": "Rimetti in coda",
+      "released": "Rimessa in coda",
+      "title": "Attività della postazione",
+      "transfer": "Trasferisci"
+    },
+    "item_state": {
+      "accepted": "In corso",
+      "cancelled": "Annullata",
+      "completed": "Conclusa",
+      "offered": "Offerta",
+      "overflowed": "Inoltrata in overflow",
+      "queued": "In attesa"
+    },
+    "kind": {
+      "chat": "Chat",
+      "email": "Email",
+      "other": "Altra attività",
+      "pending_call": "Chiamata in attesa",
+      "scheduled_call": "Chiamata programmata",
+      "text": "SMS",
+      "voice": "Telefonata"
+    },
+    "loading": "Caricamento della postazione…",
+    "not_available": "La postazione operatori non è disponibile in questa app",
+    "not_dispatcher": "Non sei un operatore",
+    "not_dispatcher_description": "Solo i membri che possono accedere all'app Dispatch possono usare la postazione operatori.",
+    "offer": {
+      "accept": "Accetta",
+      "decline": "Rifiuta",
+      "expires_in": "Rispondi entro {{time}}",
+      "more": "Altre offerte in attesa: {{count}}",
+      "title": "Attività offerta a te"
+    },
+    "outcome": {
+      "call_created": "Chiamata creata",
+      "closed": "Chiamata chiusa",
+      "dispatched": "Inviata",
+      "duplicate": "Duplicato",
+      "left_pending": "Lasciata in attesa",
+      "no_action_needed": "Nessuna azione necessaria",
+      "none": "Nessun esito",
+      "referred": "Indirizzata altrove"
+    },
+    "plan": {
+      "add_title": "Pianifica una pausa",
+      "cancel": "Rimuovi",
+      "cancelled": "Pausa rimossa",
+      "edit": "Modifica",
+      "edit_title": "Modifica la pausa",
+      "entry": "{{type}} · {{minutes}} min · {{start}}–{{end}}",
+      "length_hint": "Una pausa è una durata: può iniziare prima o dopo, e il rientro è previsto quando, dall'inizio, è trascorsa la sua durata.",
+      "none": "Nessuna pausa pianificata oggi.",
+      "save": "Salva pausa",
+      "saved": "Pausa salvata",
+      "start": "Inizio previsto",
+      "start_now": "Inizia la pausa ora",
+      "started_for": "{{name}} è in pausa",
+      "title_for": "Pause di {{name}}",
+      "title_mine": "Le mie pause"
+    },
+    "queue": {
+      "escalated": "In attesa da troppo tempo",
+      "held_by": "In carico a {{name}}",
+      "mine": "Le mie attività",
+      "mine_empty": "Niente di offerto a te o in carico a te.",
+      "recent": "Recenti",
+      "recent_empty": "Nessuna attività recente su questo dispositivo.",
+      "take": "Prendi",
+      "waited": "In attesa da {{minutes}} min",
+      "waiting": "In attesa",
+      "waiting_empty": "Nessuna attività in attesa in coda."
+    },
+    "sign_in": {
+      "callback_hint": "La postazione chiama questo telefono per metterti in contatto con i chiamanti. Lascialo vuoto per usare il cellulare del tuo profilo.",
+      "callback_number": "Numero di richiamata",
+      "callback_placeholder": "+1 555 555 0100",
+      "device": "Accesso da: {{device}}",
+      "done": "Hai effettuato l'accesso alla postazione.",
+      "no_shift": "Al momento non sei in un turno di centrale, quindi la postazione potrebbe rifiutare l'accesso.",
+      "no_shift_unscheduled": "Al momento non sei in un turno di centrale. Attiva il servizio non programmato per accedere comunque.",
+      "prompt": "Accedi per prendere le attività instradate e vedere quelle offerte a te.",
+      "prompt_title": "Non hai effettuato l'accesso alla postazione",
+      "start_away": "Inizia come assente",
+      "start_away_hint": "Non ricevere attività instradate finché non ti imposti come disponibile.",
+      "title": "Accedi alla postazione",
+      "unscheduled": "Servizio non programmato",
+      "unscheduled_hint": "Entra in servizio senza un turno di centrale (un evento, una sostituzione).",
+      "until": "In servizio fino a (facoltativo)"
+    },
+    "sign_off": {
+      "done": "Hai lasciato la postazione.",
+      "message": "Non riceverai più attività instradate finché non accedi di nuovo.",
+      "message_holding": "Non riceverai più attività instradate e le attività in carico tornano in coda (attività: {{count}}).",
+      "title": "Lasciare la postazione?"
+    },
+    "state": {
+      "available": "Disponibile",
+      "away": "Assente",
+      "busy": "Occupato",
+      "offline": "Fuori postazione",
+      "on_break": "In pausa",
+      "on_break_left": "In pausa · {{time}} rimanenti",
+      "on_break_overdue": "Pausa in ritardo di {{minutes}} min"
+    },
+    "status_bar": {
+      "counts": "Offerte {{offered}} · In carico {{held}} · In attesa {{waiting}}",
+      "less": "Meno azioni della postazione",
+      "more": "Altre azioni della postazione",
+      "not_signed_in": "Accesso alla postazione non effettuato · In attesa {{waiting}}"
+    },
+    "team": {
+      "break_ended": "{{name}} è di nuovo in postazione",
+      "breaks": "Pause",
+      "empty": "Nessun operatore in postazione.",
+      "end_break": "Termina pausa",
+      "holding": "In carico {{count}} di {{capacity}}",
+      "next_break": "Prossima: {{type}} alle {{time}} ({{minutes}} min)",
+      "no_shift": "Non in un turno di centrale",
+      "offered": "Offerte: {{count}}",
+      "on_shift": "{{shift}} fino alle {{time}}",
+      "open": "fuori postazione",
+      "summary": "Disponibili {{available}} · In pausa {{onBreak}} · In servizio {{onDuty}} · Minimo {{minimum}}",
+      "supervisor": "Supervisore",
+      "title": "Squadra",
+      "unscheduled": "Servizio non programmato fino alle {{time}}",
+      "you": "tu"
+    },
+    "timeline": {
+      "coverage": "Copertura",
+      "empty": "Oggi nessuno è in servizio in centrale.",
+      "hint": "Servizio e pause di tutti per oggi. Il rosso indica una copertura sotto il minimo.",
+      "hint_supervisor": "Servizio e pause di tutti per oggi. Tocca un operatore per pianificare o modificare le sue pause.",
+      "legend_below": "Sotto il minimo",
+      "legend_overdue": "Pausa in ritardo",
+      "legend_duty": "In servizio",
+      "legend_planned": "Pausa pianificata",
+      "legend_taken": "Pausa effettuata",
+      "loading": "Caricamento della linea temporale…",
+      "title": "Linea temporale della squadra",
+      "unavailable": "Impossibile caricare la linea temporale"
+    },
+    "title": "Postazione operatori",
+    "transfer": {
+      "done": "Trasferita",
+      "none": "Nessun altro operatore ha effettuato l'accesso ed è libero di prenderla.",
+      "note": "Nota per il destinatario",
+      "title": "Trasferisci a"
+    },
+    "unsupported": "La postazione operatori non è ancora disponibile",
+    "unsupported_description": "Il tuo server Resgrid non ha la postazione operatori. Chiedi al tuo amministratore di aggiornarlo.",
+    "voice": {
+      "answer": "Rispondi",
+      "call_back": "Richiama",
+      "caller": "Chiamante",
+      "caller_gone": "Il chiamante ha riattaccato",
+      "caller_waiting": "Chiamante in attesa",
+      "ring_hint": "La postazione chiama questo telefono e ti collega al chiamante quando premi 1.",
+      "ring_number": "Chiama questo numero",
+      "ringing": "Il tuo telefono squillerà. Premi 1 per collegarti.",
+      "unavailable": "La postazione non può collegare telefonate per questo dipartimento.",
+      "unknown_caller": "Numero sconosciuto"
+    },
+    "warnings": {
+      "breaks_overlap": "Le pause si sovrappongono a quelle di un altro operatore.",
+      "coverage_below_minimum": "La copertura scende sotto il minimo: {{available}} disponibili, minimo {{minimum}}.",
+      "generic": "La postazione ha rilevato qualcosa su questa modifica.",
+      "no_coverage": "Nessuno sarebbe disponibile in postazione.",
+      "outside_duty": "La pausa cade fuori dal turno.",
+      "started_early": "La pausa è iniziata {{minutes}} min prima del previsto.",
+      "started_late": "La pausa è iniziata {{minutes}} min dopo il previsto.",
+      "work_returned": "Le tue attività sono tornate in coda."
+    },
+    "intake": {
+      "title": "Conversazione SMS",
+      "handler_assistant": "Enhanced AI pone domande al mittente finché non si collega un operatore.",
+      "handler_unassisted": "Il mittente sta aspettando un operatore.",
+      "handler_dispatcher": "In contatto con {{name}}.",
+      "closed": "Questa conversazione SMS è terminata.",
+      "opted_out": "Il mittente ha disattivato i messaggi (STOP). Non si può inviare altro.",
+      "reply_from": "Le risposte partono dal {{number}}.",
+      "author_participant": "Mittente",
+      "author_assistant": "Enhanced AI",
+      "author_system": "Resgrid",
+      "failed": "Non consegnato"
+    }
   },
   "route_plans": {
     "duration_with_stops": "Con fermate",

@@ -40,6 +40,7 @@ import { CloseCallSheet } from '../components/close-call-sheet';
 import { CallMapSection } from '../components/detail/call-map-section';
 import { CallQueueBanner } from '../components/detail/call-queue-banner';
 import { ProtectedRevealBar } from '../components/detail/protected-reveal-bar';
+import { IntakeScreeningBadge } from '../components/intake-screening-badge';
 import { IntakeSourceBadge } from '../components/intake-source-badge';
 import { QueuedCallBadge } from '../components/queued-call-badge';
 import { RescheduleCallSheet } from '../components/reschedule-call-sheet';
@@ -294,6 +295,8 @@ function ServerCallDetail({ callId, mapSlot, menuItems, onMenuAction, onClosed, 
         {callIntakeSource(call) ? (
           <View style={styles.source}>
             <IntakeSourceBadge call={call} testID="call-detail-intake-source" />
+            {/* Core M0326: why the call is flagged (likely not an incident, repeat sender, dismissed as spam). */}
+            <IntakeScreeningBadge call={call} testID="call-detail-intake-screening" />
           </View>
         ) : null}
         {nature === null ? (
@@ -432,7 +435,7 @@ const styles = StyleSheet.create({
   card: { borderRadius: 12, padding: 12, marginBottom: 12 },
   titleRow: { flexDirection: 'row', alignItems: 'center' },
   priority: { alignSelf: 'flex-start', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 2, marginTop: 6 },
-  source: { marginTop: 6 },
+  source: { marginTop: 6, gap: 4 },
   nature: { height: 132, marginTop: 8 },
   map: { height: 200, borderRadius: 12, overflow: 'hidden', marginBottom: 12 },
   actions: { flexDirection: 'row', flexWrap: 'wrap', borderRadius: 12, padding: 8, marginBottom: 12 },

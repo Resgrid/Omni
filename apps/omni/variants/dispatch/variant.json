@@ -52,7 +52,8 @@
       "destinationAvailability": true,
       "releaseResources": true,
       "releaseOwnUnit": false,
-      "recurringCalls": true
+      "recurringCalls": true,
+      "dispatcherDesk": true
     },
     "status": {
       "subject": "personnel",
@@ -86,7 +87,8 @@
       "subject": "user",
       "desktopPush": true,
       "liveActivity": false,
-      "approveSignIns": false
+      "approveSignIns": false,
+      "soundSet": "dispatch"
     },
     "auth": {
       "mfa": true,

@@ -162,7 +162,9 @@ function createAppConfig({ variant, appEnv, runNumber, projectRoot, env = proces
 
   plugins.push(plugin('withRestrictedBootReceivers.js'));
   if (!backgroundLocation) plugins.push(plugin('withoutBackgroundLocation.js'));
-  if (has('notifee')) plugins.push(plugin('withNotificationSounds.js'));
+  // The app's notification sound set (manifest `push.soundSet`): Dispatch ships its own files under the shared names. The
+  // shared set passes no options, so the other apps' config (and fingerprint runtime version) stays exactly as it was.
+  if (has('notifee')) plugins.push(caps.push.soundSet === 'shared' ? plugin('withNotificationSounds.js') : [plugin('withNotificationSounds.js'), { soundSet: caps.push.soundSet }]);
   if (has('media-button')) plugins.push(plugin('withMediaButtonModule.js'));
   if (has('in-call-audio')) plugins.push(plugin('withInCallAudioModule.js'));
   if (has('live-activity')) plugins.push([plugin('with-live-activities.js'), { appGroupId: liveActivityAppGroup }]);

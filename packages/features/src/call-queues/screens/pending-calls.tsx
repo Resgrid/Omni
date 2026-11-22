@@ -1,15 +1,14 @@
 import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { formatUtcInDepartmentTime } from '@resgrid/core/utils/dates';
 import { useCallsStore } from '@resgrid/data';
-import { CALL_LIST_REFRESH_EVENTS, callPoint, callRoutes, useCallPermissionsResolver, useCallRights } from '@resgrid/features/calls';
-import { IntakeSourceBadge } from '@resgrid/features/calls/components/intake-source-badge';
+import { CALL_LIST_REFRESH_EVENTS, callIntakeSource, callPoint, callRoutes, IntakeScreeningBadge, IntakeSourceBadge, useCallPermissionsResolver, useCallRights } from '@resgrid/features/calls';
 import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import type { CallResultData } from '@resgrid/models';
 import { useRealtimeRefetch } from '@resgrid/realtime';
 import { Loading, Text, VStack, ZeroState } from '@resgrid/ui';
 import { useRouter } from 'expo-router';
-import { Hourglass, Send, XCircle } from 'lucide-react-native';
+import { Ban, Hourglass, Send, XCircle } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
 
@@ -40,7 +39,7 @@ export default function PendingCallsScreen({ showHeader = true, realtime = true 
   const error = useCallsStore((state) => state.errors.pending ?? null);
   const [query, setQuery] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const { openDispatchPicker, confirmCancelPending, busyCallId, dialogs } = useCallDispatchNow();
+  const { openDispatchPicker, confirmCancelPending, confirmDismissAsSpam, busyCallId, dialogs } = useCallDispatchNow();
 
   useEffect(() => {
     void useCallsStore.getState().fetchCallPriorities();
@@ -72,6 +71,8 @@ export default function PendingCallsScreen({ showHeader = true, realtime = true 
           <VStack space="xs">
             <TextCell value={formatUtcInDepartmentTime(call.LoggedOnUtc, timeZone)} />
             <IntakeSourceBadge call={call} testID={`pending-call-intake-source-${call.CallId}`} />
+            {/* Core M0326: why the call is flagged (likely not an incident, repeat sender). */}
+            <IntakeScreeningBadge call={call} testID={`pending-call-intake-screening-${call.CallId}`} />
           </VStack>
         ),
       },
@@ -109,10 +110,22 @@ export default function PendingCallsScreen({ showHeader = true, realtime = true 
               testID={`pending-call-cancel-${call.CallId}`}
             />
           ) : null}
+          {/* Intake calls only (Core M0326): cancel as spam and block the sender; needs the same Close Call right. */}
+          {canClose && callIntakeSource(call) ? (
+            <QueueActionButton
+              label={t('pending_calls.dismiss_spam')}
+              icon={Ban}
+              tone="negative"
+              isBusy={isBusy}
+              onPress={() => confirmDismissAsSpam(call.CallId)}
+              accessibilityLabel={`${t('pending_calls.dismiss_spam')} ${label}`}
+              testID={`pending-call-dismiss-spam-${call.CallId}`}
+            />
+          ) : null}
         </>
       );
     },
-    [busyCallId, confirmCancelPending, openDispatchPicker, permissionsFor, t]
+    [busyCallId, confirmCancelPending, confirmDismissAsSpam, openDispatchPicker, permissionsFor, t]
   );
 
   const renderContent = () => {

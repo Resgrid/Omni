@@ -5,6 +5,7 @@
 import { configureNotificationSounds } from '../notification-sound';
 import { usePushNotificationModalStore } from '../push-modal-store';
 import * as web from '../push-notification.web';
+import { onPushTokenRegistered, resetPushTokenListenersForTests } from '../push-token-listeners';
 import { BASE_API_URL, configureForTest, flush, flushAll, selectVariant, type TestContext } from './helpers';
 import { routerPushWithRetry } from './mocks/core';
 import * as audio from './mocks/expo-audio';
@@ -264,6 +265,25 @@ describe('browser', () => {
     expect(fetchMock).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ body: JSON.stringify({ Token: 'browser-token', Prefix: 'DEPT', UnitId: '12' }) }));
     expect(mockFirebaseDeleteToken).toHaveBeenCalledTimes(1);
     expect(web.pushNotificationService.getPushToken()).toBeNull();
+  });
+
+  it('neither keeps nor hands out a registration Core answered but refused, and tries it again on the next sync', async () => {
+    permission = 'granted';
+    resetPushTokenListenersForTests();
+    const heard = jest.fn();
+    const stop = onPushTokenRegistered(heard);
+    ctx.api.respond.mockImplementationOnce(async () => ({ Status: 'Failure' }));
+
+    try {
+      await web.syncWebPush();
+      expect(heard).not.toHaveBeenCalled();
+
+      await web.syncWebPush();
+      expect(registrations()).toHaveLength(2);
+      expect(heard).toHaveBeenCalledWith({ token: 'browser-token', platform: 3 });
+    } finally {
+      stop();
+    }
   });
 
   it('retries a failed registration instead of treating its cleanup record as registered', async () => {

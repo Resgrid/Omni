@@ -8,20 +8,21 @@
  * Web and Electron resolve `push-notification.web.ts` instead (same exported surface).
  */
 import notifee, { type AndroidChannel, AndroidImportance, AndroidVisibility, AuthorizationStatus, type Event as NotifeeEvent, EventType } from '@notifee/react-native';
-import { IC_PUSH_SOURCE, type PushSubject, registerPushDevice, unregisterPushToken } from '@resgrid/api';
+import { IC_PUSH_SOURCE, isPushRegistrationAccepted, type PushSubject, registerPushDevice, unregisterPushToken } from '@resgrid/api';
 import { logger, useAppLifecycle } from '@resgrid/core';
 import { translate } from '@resgrid/i18n';
-import type { PushRegistrationResult } from '@resgrid/models';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 
-import { ANDROID_CHANNELS, type AndroidChannelSpec, buildIosCategories, CHANNEL_LIGHT_COLOR, CHANNEL_VIBRATION_PATTERN, type ChannelTranslate, CHECK_IN_ACTION_ID, STATUS_TIMER_CHANNEL } from './channels';
+import { isAlertSuppressed } from './alert-suppression';
+import { androidChannelsFor, type AndroidChannelSpec, buildIosCategories, CHANNEL_LIGHT_COLOR, CHANNEL_VIBRATION_PATTERN, type ChannelTranslate, CHECK_IN_ACTION_ID } from './channels';
 import {
   getOptionalNotificationsDependencies,
   getPushSubjectKind,
   hasCheckInActions,
+  hasDeskSounds,
   hasStatusTimerNotifications,
   type NotificationsDependencies,
   type PushSubjectKind,
@@ -34,6 +35,7 @@ import { extractPushNotificationData } from './event-codes';
 import { openLocalNotification, readLocalNotificationData } from './local-notification-data';
 import { cancelAllLocalNotifications } from './local-notifications';
 import { type PushNotificationData, usePushNotificationModalStore } from './push-modal-store';
+import { clearRegisteredPushToken, notifyPushTokenRegistered } from './push-token-listeners';
 import type { PushNotificationService, PushRegistrationTrigger, RegisterOptions, UsePushNotificationsResult } from './push-types';
 import { createMemoryNotificationsKv, isSameRegistration, isSameSubscriber, type NotificationsKv, RegistrationStore, type StoredNativePushRegistration } from './registration-storage';
 
@@ -41,8 +43,6 @@ import { createMemoryNotificationsKv, isSameRegistration, isSameSubscriber, type
 export const PUSH_PLATFORM_IOS = 1;
 export const PUSH_PLATFORM_ANDROID = 2;
 
-/** RegisterDevice answers 200 even when it fails; only these statuses mean the server took the registration. */
-const REGISTERED_STATUSES = ['queued', 'success'];
 /** Request identifiers remembered for the cold-start dedupe (one entry per tap). */
 export const HANDLED_RESPONSE_LIMIT = 200;
 /** A stalled sign-out call must not hold sign-out up. */
@@ -93,7 +93,14 @@ const FOREGROUND_PRESENTATION: Notifications.NotificationBehavior = { shouldShow
 /** The app's own local notifications (the status timer) stay quiet in the foreground: the app shows them on screen. */
 const LOCAL_FOREGROUND_PRESENTATION: Notifications.NotificationBehavior = { shouldShowBanner: false, shouldShowList: false, shouldPlaySound: false, shouldSetBadge: false };
 
-const isAccepted = (result: PushRegistrationResult | null | undefined): boolean => REGISTERED_STATUSES.includes((result?.Status ?? '').toLowerCase());
+/** A push while alerts are held back (a dispatcher on break, `alert-suppression.ts`): into the list, no banner, no sound. */
+const QUIET_FOREGROUND_PRESENTATION: Notifications.NotificationBehavior = { shouldShowBanner: false, shouldShowList: true, shouldPlaySound: false, shouldSetBadge: true };
+
+const foregroundPresentation = (request: Notifications.NotificationRequest): Notifications.NotificationBehavior => {
+  if (readLocalNotificationData(request.content.data)) return LOCAL_FOREGROUND_PRESENTATION;
+
+  return isAlertSuppressed({ channel: 'presentation', eventCode: extractPushNotificationData(request).eventCode ?? null }) ? QUIET_FOREGROUND_PRESENTATION : FOREGROUND_PRESENTATION;
+};
 
 const errorContext = (error: unknown): { errorName: string; errorMessage: string } => ({
   errorName: error instanceof Error ? error.name : 'UnknownError',
@@ -182,7 +189,7 @@ class NativePushNotificationService implements PushNotificationService {
 
     // Foreground presentation: expo-notifications owns the UNUserNotificationCenter delegate.
     Notifications.setNotificationHandler({
-      handleNotification: async (notification) => (readLocalNotificationData(notification.request.content.data) ? LOCAL_FOREGROUND_PRESENTATION : FOREGROUND_PRESENTATION),
+      handleNotification: async (notification) => foregroundPresentation(notification.request),
     });
 
     // Listeners first, synchronously, so receipts and taps during startup are not missed.
@@ -230,8 +237,10 @@ class NativePushNotificationService implements PushNotificationService {
     try {
       // A channel's sound is fixed once created. Channels a legacy build created with a classic (or the default) sound
       // are deleted and created again with the modern one — best effort: some Android versions restore a re-created
-      // channel's previous user settings.
-      const channels = hasStatusTimerNotifications() ? [...ANDROID_CHANNELS, STATUS_TIMER_CHANNEL] : ANDROID_CHANNELS;
+      // channel's previous user settings. The Dispatch sound set keeps the shared file names, so a channel plays the
+      // Dispatch file under its existing sound (notifee stores `android.resource://<package>/raw/<name>`) and needs no
+      // re-creation; the desk channels exist only where the sound set has the desk sounds.
+      const channels = androidChannelsFor({ deskSounds: hasDeskSounds(), statusTimer: hasStatusTimerNotifications() });
       const existing = await notifee.getChannels().catch(() => []);
       const existingSounds = new Map(existing.map((channel) => [channel.id, channel.sound]));
       const outdated = channels.filter((spec) => existingSounds.has(spec.id) && existingSounds.get(spec.id) !== spec.sound);
@@ -445,6 +454,9 @@ class NativePushNotificationService implements PushNotificationService {
       const apiUrl = deps.getBaseApiUrl();
       const key = [apiUrl, identityKey(identity), token].join('|');
       if (key === this.registeredKey) {
+        // Already registered: the followers hear it again (as on the web), so one whose own registration failed (the
+        // Dispatch desk subscriber) tries again on this check instead of waiting for a new token or a restart.
+        notifyPushTokenRegistered({ token, platform: Platform.OS === 'ios' ? PUSH_PLATFORM_IOS : PUSH_PLATFORM_ANDROID });
         return token;
       }
 
@@ -477,7 +489,7 @@ class NativePushNotificationService implements PushNotificationService {
         return null;
       }
 
-      if (!isAccepted(result)) {
+      if (!isPushRegistrationAccepted(result)) {
         logger.warn({ message: 'Push registration was not accepted by the server', context: { status: result?.Status, subject: identity.kind } });
         return null;
       }
@@ -485,6 +497,8 @@ class NativePushNotificationService implements PushNotificationService {
       const previous = this.getRegistration();
       this.setRegistration(registration);
       this.registeredKey = key;
+      // Subscribers that follow this registration (the Dispatch desk's own subscriber) take the same token.
+      notifyPushTokenRegistered({ token, platform: Platform.OS === 'ios' ? PUSH_PLATFORM_IOS : PUSH_PLATFORM_ANDROID });
 
       // Switching unit or department: take the token off the subscriber the device left, after the new registration is
       // in (a failure never leaves the device on no subscriber). A removal that fails stays pending and is retried.
@@ -590,6 +604,7 @@ class NativePushNotificationService implements PushNotificationService {
 
   async clearLocalState(): Promise<void> {
     this.pushToken = null;
+    clearRegisteredPushToken();
     this.setRegistration(null);
     this.getStore().setStale([]);
     this.registeredKey = null;

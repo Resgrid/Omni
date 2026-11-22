@@ -8,6 +8,7 @@ import { chatNav } from '@resgrid/features/chat/nav';
 import { contactsNav } from '@resgrid/features/contacts/nav';
 import { customMapsNav } from '@resgrid/features/custom-maps/nav';
 import { dispatchConsoleNav } from '@resgrid/features/dispatch-console/nav';
+import { dispatcherDeskNav } from '@resgrid/features/dispatcher-desk/nav';
 import { mapNav } from '@resgrid/features/map/nav';
 import { notesNav } from '@resgrid/features/notes/nav';
 import { notificationsNav } from '@resgrid/features/notifications/nav';
@@ -50,6 +51,10 @@ export const routes = defineRoutes([
   'recurringCallDetail',
   'recurringCallEdit',
   'recurringCallAlerts',
+  'dispatcherDesk',
+  'dispatcherDeskItem',
+  'dispatcherDeskItemCall',
+  'dispatcherDeskBreaks',
   'pois',
   'poiDetail',
   'destinations',
@@ -102,8 +107,9 @@ export const routes = defineRoutes([
 ]);
 
 export const nav = defineNav([
-  // The console is the home (shell.homeRoute '/').
+  // The console is the home (shell.homeRoute '/'); the dispatcher desk (routed work, breaks) sits right under it.
   ...featureNav(dispatchConsoleNav, 'sidebar', { order: 0 }),
+  ...featureNav(dispatcherDeskNav, 'sidebar', { order: 5 }),
   // Legacy order: calls, pending, awaiting resources, scheduled, archived, new call; the recurring call alerts sit beside
   // awaiting resources and the recurring calls beside the scheduled calls.
   ...featureNav(callsNav, 'sidebar', { order: 10, overrides: { 'call-new': { order: 15 } } }),

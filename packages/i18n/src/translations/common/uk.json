@@ -635,6 +635,11 @@
       "via_webhook_named": "Via webhook: {{name}}",
       "via_voice": "Via voice line",
       "via_voice_named": "Via voice line: {{name}}"
+    },
+    "intake_screening": {
+      "likely_not_incident": "Enhanced AI: likely not an incident",
+      "repeat_sender": "Repeat sender: over the hourly limit",
+      "dismissed_as_spam": "Dismissed as spam"
     }
   },
   "chat": {
@@ -2630,7 +2635,9 @@
       "sign_in_approval": "Sign-in Approval",
       "weather": "Погодне попередження",
       "work_order": "Наряд на роботу",
-      "recurring_call_alert": "Сповіщення про повторюваний виклик"
+      "recurring_call_alert": "Сповіщення про повторюваний виклик",
+      "desk_item": "Пульт диспетчера",
+      "desk_break": "Перерва"
     },
     "unknown_type_warning": "Цей тип сповіщення не розпізнано.",
     "view_call": "Переглянути виклик",
@@ -2667,7 +2674,12 @@
       "generic_call": "Generic Call",
       "general_notification": "Notifications",
       "general_message": "Messages",
-      "unit_status_timer": "Unit Status Timer"
+      "unit_status_timer": "Unit Status Timer",
+      "desk_offer": "Desk Offer",
+      "desk_queue_alert": "Desk Queue Alert",
+      "desk_message": "Desk Message",
+      "break_reminder": "Break Reminder",
+      "break_over": "Break Over"
     },
     "communication_test_confirmed": "Receipt confirmed",
     "communication_test_failed": "Could not confirm receipt. Please try again.",
@@ -2678,7 +2690,9 @@
     "view_chat": "Переглянути чат",
     "view_sign_in": "Review",
     "view_work_order": "Переглянути наряд",
-    "view_recurring_call_alerts": "Переглянути сповіщення"
+    "view_recurring_call_alerts": "Переглянути сповіщення",
+    "view_desk_break": "Переглянути перерви",
+    "view_desk_item": "Відкрити пульт"
   },
   "records": {
     "add_row": "Додати рядок",
@@ -3807,7 +3821,13 @@
     "no_pending_calls_description": "Немає викликів, що очікують на диспетчеризацію.",
     "search": "Пошук викликів в очікуванні...",
     "table_received": "Отримано",
-    "title": "Виклики в очікуванні"
+    "title": "Виклики в очікуванні",
+    "dismiss_spam": "Dismiss as Spam",
+    "dismiss_spam_block": "Also block the sender from your intake channels",
+    "dismiss_spam_blocked": "Dismissed as spam; the sender is blocked",
+    "dismiss_spam_confirm": "Dismiss this call as spam? It is cancelled without notifying anyone, and nothing is sent back to the sender.",
+    "dismiss_spam_error": "Failed to dismiss the call as spam",
+    "dismiss_spam_success": "Dismissed as spam"
   },
   "scheduled_calls": {
     "loading": "Завантаження запланованих викликів...",
@@ -5029,6 +5049,354 @@
     "field_destination_address": "Адреса пункту призначення",
     "field_destination_location": "Розташування пункту призначення",
     "field_route": "Маршрут"
+  },
+  "dispatcher_desk": {
+    "actions": {
+      "away": "Не на місці",
+      "go_available": "Стати доступним",
+      "im_back": "Я на місці",
+      "im_back_done": "З поверненням. Ви знову на пульті.",
+      "sign_in": "Увійти на пульт",
+      "sign_off": "Вийти",
+      "take_break": "Піти на перерву"
+    },
+    "alerts": {
+      "auto_returned": "Ваша перерва тривала довше встановленого, тому пульт автоматично повернув вас до роботи.",
+      "back_title": "Знову на пульті",
+      "break_due": "Настав час: {{type}}. Торкніться, щоб розпочати.",
+      "break_ended_for_you": "Вашу перерву завершено. Ви знову на пульті.",
+      "break_over": "Ваша перерва закінчилася. Торкніться «Я на місці», щоб повернутися на пульт.",
+      "break_over_title": "Ваша перерва закінчилася",
+      "break_reminder": "{{type}}: початок через {{minutes}} хв",
+      "break_title": "Перерва",
+      "escalated": "Задовго очікують: {{count}} ({{kind}})",
+      "escalated_title": "Завдання пульта очікують",
+      "new_message": "Нове повідомлення від {{name}}",
+      "new_message_title": "Нове повідомлення"
+    },
+    "break_state": {
+      "active": "На перерві",
+      "done": "Завершено",
+      "planned": "Заплановано"
+    },
+    "break_type": {
+      "break": "Перерва",
+      "meal": "Прийом їжі",
+      "other": "Інше",
+      "personal": "Особисті справи"
+    },
+    "breaks": {
+      "coverage_prevented": "Після цієї перерви кількість доступних становитиме {{available}}, що менше за мінімум {{minimum}}. Ваш підрозділ цього не дозволяє: попросіть старшого диспетчера розпочати її.",
+      "coverage_refused": "Покриття надто низьке, щоб почати вашу перерву зараз. Старший диспетчер може розпочати її за вас.",
+      "coverage_warning": "Після цієї перерви кількість доступних становитиме {{available}}, що менше за мінімум {{minimum}}.",
+      "due_back_at": "Повернення о {{time}}",
+      "duty": "{{shift}} · {{start}}–{{end}}",
+      "left": "Залишилось {{time}}",
+      "length": "Тривалість",
+      "minutes": "{{minutes}} хв",
+      "my_breaks": "Мої перерви сьогодні",
+      "my_duty": "Моє чергування",
+      "overdue_by": "Прострочено на {{time}}",
+      "plan_mine": "Запланувати перерву",
+      "plan_shift": "Запланувати перерви для зміни",
+      "plan_shift_confirm": "Запланувати перерви",
+      "plan_shift_done": "Перерви для зміни заплановано",
+      "plan_shift_message": "Розподілити перерви зміни між сьогоднішніми диспетчерами так, щоб вони не перетиналися.",
+      "plan_shift_replace": "Замінити вже заплановані перерви",
+      "planned_at": "Заплановано на {{time}}",
+      "return_work": "Повернути мої завдання в чергу (у роботі: {{count}})",
+      "return_work_hint": "Перерва почнеться лише після того, як ваші завдання повернуться в чергу для іншого диспетчера.",
+      "row": "{{type}} · {{minutes}} хв",
+      "start_now": "Почати зараз",
+      "start_planned": "Заплановано: {{type}} · {{minutes}} хв · {{time}}",
+      "started": "Гарного відпочинку. Ви маєте повернутися о {{time}}.",
+      "started_at": "Початок о {{time}}",
+      "take_anyway": "Усе одно піти на перерву",
+      "take_new": "Нова перерва зараз",
+      "take_now": "Піти на перерву зараз",
+      "take_title": "Піти на перерву",
+      "title": "Перерви",
+      "type": "Тип"
+    },
+    "complete": {
+      "done": "Завершено",
+      "note": "Примітка",
+      "outcome": "Чим завершилося?",
+      "title": "Завершити",
+      "notify_participant": "Повідомити відправника про завершення розмови",
+      "notify_participant_hint": "Надсилає завершальне повідомлення з номера Resgrid."
+    },
+    "conversation": {
+      "add_note": "Додати примітку",
+      "empty": "Повідомлень ще немає.",
+      "note_by": "Примітка · {{name}}",
+      "note_placeholder": "Напишіть примітку для пульта (ніколи не надсилається)…",
+      "reply": "Відповісти",
+      "reply_placeholder": "Напишіть відповідь…",
+      "save_note": "Зберегти примітку",
+      "send": "Надіслати відповідь"
+    },
+    "create_call": {
+      "link_failed": "Виклик збережено, але не вдалося пов’язати його з розмовою.",
+      "link_later": "Виклик збережено на цьому пристрої, його буде надіслано, коли ви знову будете в мережі. Завершіть розмову, щойно його буде надіслано.",
+      "linked": "Виклик пов’язано з розмовою.",
+      "name": "{{kind}} від {{source}}"
+    },
+    "delivery": {
+      "failed": "Не доставлено",
+      "queued": "Надсилається",
+      "received": "Отримано",
+      "sent": "Надіслано"
+    },
+    "desk_off": "Диспетчерський пульт вимкнено",
+    "desk_off_description": "Ваш підрозділ не ввімкнув диспетчерський пульт. Адміністратор підрозділу може ввімкнути його в розділі Зміни > Налаштування диспетчерського пульта.",
+    "device": {
+      "desktop": "Комп’ютер",
+      "phone": "Телефон",
+      "tablet": "Планшет"
+    },
+    "errors": {
+      "already_on_break": "Ви вже на перерві.",
+      "already_on_roster": "Ви вже є в диспетчерському графіку на цей день.",
+      "at_capacity": "У вас уже стільки завдань, скільки дозволяє пульт. Спершу завершіть або поверніть якесь із них.",
+      "break_not_found": "Цю перерву більше не заплановано.",
+      "break_not_startable": "Цю перерву зараз не можна почати.",
+      "break_overlaps": "Ця перерва перетинається з іншою вашою перервою.",
+      "channel_unavailable": "Цей канал зараз не може надсилати.",
+      "coverage_too_low": "Покриття надто низьке, щоб почати перерву зараз. Старший диспетчер може розпочати її за вас.",
+      "desk_disabled": "Ваш підрозділ вимкнув диспетчерський пульт.",
+      "dispatchers_not_enabled": "На цій зміні немає диспетчерів на чергуванні.",
+      "holding_work": "У вас є завдання. Поверніть їх у чергу, щоб почати перерву.",
+      "invalid_input": "У запиті чогось бракує або щось недійсне.",
+      "item_not_available": "Це завдання вже взято або завершено.",
+      "item_not_found": "Цього завдання більше немає на пульті.",
+      "no_callback_number": "Введіть номер, на який має телефонувати пульт.",
+      "not_a_dispatcher": "Користуватися пультом можуть лише диспетчери.",
+      "not_assigned_to_you": "Це завдання опрацьовує інший диспетчер.",
+      "not_on_break": "Немає перерви, яку можна завершити.",
+      "not_on_duty": "Зараз ви не на диспетчерській зміні.",
+      "not_permitted": "Вам не дозволено робити це на пульті.",
+      "not_signed_in": "Спершу увійдіть на пульт.",
+      "shift_not_found": "Не вдалося знайти цю зміну.",
+      "title": "Пульт",
+      "unknown": "Пульту не вдалося це виконати. Спробуйте ще раз."
+    },
+    "event": {
+      "accepted": "Прийнято",
+      "cancelled": "Скасовано",
+      "completed": "Завершено",
+      "created": "Надійшло",
+      "declined": "Відхилено",
+      "escalated": "Задовго очікувало",
+      "message_received": "Отримано повідомлення",
+      "message_sent": "Надіслано повідомлення",
+      "offer_expired": "Час пропозиції минув",
+      "offered": "Запропоновано",
+      "overflowed": "Передано в резерв",
+      "released": "Повернуто в чергу",
+      "reopened": "Відкрито знову",
+      "transferred": "Передано",
+      "voice_connected": "Дзвінок з’єднано",
+      "voice_connecting": "З’єднання дзвінка",
+      "voice_ended": "Дзвінок завершено",
+      "conversation_closed": "SMS-розмову завершено",
+      "held_for_review": "Held for review: screened intake call"
+    },
+    "item": {
+      "complete": "Завершити",
+      "create_call": "Створити виклик",
+      "dispatch_now": "Направити зараз",
+      "due_on": "Термін: {{time}}",
+      "history": "Історія ({{count}})",
+      "link_saved_call": "Пов’язати збережений виклик",
+      "loading": "Завантаження…",
+      "not_found": "Цього завдання більше немає на пульті",
+      "open_call": "Відкрити виклик",
+      "release": "Повернути в чергу",
+      "released": "Повернуто в чергу",
+      "title": "Завдання пульта",
+      "transfer": "Передати"
+    },
+    "item_state": {
+      "accepted": "У роботі",
+      "cancelled": "Скасовано",
+      "completed": "Завершено",
+      "offered": "Запропоновано",
+      "overflowed": "Передано в резерв",
+      "queued": "Очікує"
+    },
+    "kind": {
+      "chat": "Чат",
+      "email": "Ел. пошта",
+      "other": "Завдання пульта",
+      "pending_call": "Виклик в очікуванні",
+      "scheduled_call": "Запланований виклик",
+      "text": "Текстове повідомлення",
+      "voice": "Телефонний дзвінок"
+    },
+    "loading": "Завантаження пульта…",
+    "not_available": "Диспетчерський пульт недоступний у цьому застосунку",
+    "not_dispatcher": "Ви не диспетчер",
+    "not_dispatcher_description": "Користуватися диспетчерським пультом можуть лише учасники, яким дозволено входити в застосунок Dispatch.",
+    "offer": {
+      "accept": "Прийняти",
+      "decline": "Відхилити",
+      "expires_in": "Дайте відповідь протягом {{time}}",
+      "more": "Інші пропозиції в очікуванні: {{count}}",
+      "title": "Вам запропоновано завдання"
+    },
+    "outcome": {
+      "call_created": "Виклик створено",
+      "closed": "Виклик закрито",
+      "dispatched": "Направлено",
+      "duplicate": "Дублікат",
+      "left_pending": "Залишено в очікуванні",
+      "no_action_needed": "Дії не потрібні",
+      "none": "Без результату",
+      "referred": "Передано іншій службі"
+    },
+    "plan": {
+      "add_title": "Запланувати перерву",
+      "cancel": "Видалити",
+      "cancelled": "Перерву видалено",
+      "edit": "Змінити",
+      "edit_title": "Змінити перерву",
+      "entry": "{{type}} · {{minutes}} хв · {{start}}–{{end}}",
+      "length_hint": "Перерва — це тривалість: вона може початися раніше чи пізніше, а повернутися треба, щойно мине її тривалість від початку.",
+      "none": "На сьогодні перерв не заплановано.",
+      "save": "Зберегти перерву",
+      "saved": "Перерву збережено",
+      "start": "Запланований початок",
+      "start_now": "Почати перерву зараз",
+      "started_for": "{{name}} на перерві",
+      "title_for": "Перерви: {{name}}",
+      "title_mine": "Мої перерви"
+    },
+    "queue": {
+      "escalated": "Задовго очікують",
+      "held_by": "Опрацьовує: {{name}}",
+      "mine": "Мої завдання",
+      "mine_empty": "Вам нічого не запропоновано, і у вас немає завдань.",
+      "recent": "Нещодавні",
+      "recent_empty": "На цьому пристрої немає нещодавніх завдань.",
+      "take": "Взяти",
+      "waited": "Очікує {{minutes}} хв",
+      "waiting": "Очікують",
+      "waiting_empty": "У черзі нічого не очікує."
+    },
+    "sign_in": {
+      "callback_hint": "Пульт телефонує на цей номер, щоб з’єднати вас з абонентами. Залиште поле порожнім, щоб використовувати мобільний номер із профілю.",
+      "callback_number": "Номер для зворотного дзвінка",
+      "callback_placeholder": "+1 555 555 0100",
+      "device": "Вхід із пристрою: {{device}}",
+      "done": "Ви увійшли на пульт.",
+      "no_shift": "Зараз ви не на диспетчерській зміні, тому пульт може відмовити у вході.",
+      "no_shift_unscheduled": "Зараз ви не на диспетчерській зміні. Увімкніть позапланове чергування, щоб усе одно увійти.",
+      "prompt": "Увійдіть, щоб отримувати розподілені завдання й бачити пропозиції для вас.",
+      "prompt_title": "Ви не ввійшли на пульт",
+      "start_away": "Почати як «Не на місці»",
+      "start_away_hint": "Не отримувати розподілених завдань, доки не станете доступними.",
+      "title": "Вхід на пульт",
+      "unscheduled": "Позапланове чергування",
+      "unscheduled_hint": "Заступити на чергування без диспетчерської зміни (захід, підміна).",
+      "until": "На чергуванні до (необов’язково)"
+    },
+    "sign_off": {
+      "done": "Ви вийшли з пульта.",
+      "message": "Ви не отримуватимете розподілених завдань, доки знову не ввійдете.",
+      "message_holding": "Ви не отримуватимете розподілених завдань, а ваші завдання повернуться в чергу (кількість: {{count}}).",
+      "title": "Вийти з пульта?"
+    },
+    "state": {
+      "available": "Доступний",
+      "away": "Не на місці",
+      "busy": "Зайнятий",
+      "offline": "Поза пультом",
+      "on_break": "На перерві",
+      "on_break_left": "На перерві · залишилось {{time}}",
+      "on_break_overdue": "Перерву прострочено на {{minutes}} хв"
+    },
+    "status_bar": {
+      "counts": "Запропоновано {{offered}} · У роботі {{held}} · В очікуванні {{waiting}}",
+      "less": "Менше дій пульта",
+      "more": "Більше дій пульта",
+      "not_signed_in": "Ви не ввійшли на пульт · В очікуванні {{waiting}}"
+    },
+    "team": {
+      "break_ended": "{{name}} знову на пульті",
+      "breaks": "Перерви",
+      "empty": "На пульті немає диспетчерів.",
+      "end_break": "Завершити перерву",
+      "holding": "У роботі {{count}} з {{capacity}}",
+      "next_break": "Далі: {{type}} о {{time}} ({{minutes}} хв)",
+      "no_shift": "Не на диспетчерській зміні",
+      "offered": "Запропоновано: {{count}}",
+      "on_shift": "{{shift}} до {{time}}",
+      "open": "поза пультом",
+      "summary": "Доступно {{available}} · На перерві {{onBreak}} · На чергуванні {{onDuty}} · Мінімум {{minimum}}",
+      "supervisor": "Старший диспетчер",
+      "title": "Команда",
+      "unscheduled": "Позапланове чергування до {{time}}",
+      "you": "ви"
+    },
+    "timeline": {
+      "coverage": "Покриття",
+      "empty": "Сьогодні ніхто не на диспетчерському чергуванні.",
+      "hint": "Чергування й перерви всіх на сьогодні. Червоним позначено покриття нижче мінімуму.",
+      "hint_supervisor": "Чергування й перерви всіх на сьогодні. Торкніться диспетчера, щоб запланувати або змінити його перерви.",
+      "legend_below": "Нижче мінімуму",
+      "legend_overdue": "Прострочена перерва",
+      "legend_duty": "На чергуванні",
+      "legend_planned": "Запланована перерва",
+      "legend_taken": "Використана перерва",
+      "loading": "Завантаження часової шкали…",
+      "title": "Часова шкала команди",
+      "unavailable": "Не вдалося завантажити часову шкалу"
+    },
+    "title": "Диспетчерський пульт",
+    "transfer": {
+      "done": "Передано",
+      "none": "Немає іншого диспетчера на пульті, який вільний і може це взяти.",
+      "note": "Примітка для отримувача",
+      "title": "Кому передати"
+    },
+    "unsupported": "Диспетчерський пульт поки що недоступний",
+    "unsupported_description": "На вашому сервері Resgrid немає диспетчерського пульта. Попросіть адміністратора оновити його.",
+    "voice": {
+      "answer": "Відповісти",
+      "call_back": "Передзвонити",
+      "caller": "Абонент",
+      "caller_gone": "Абонент поклав слухавку",
+      "caller_waiting": "Абонент очікує",
+      "ring_hint": "Пульт телефонує на цей номер і з’єднує з абонентом, коли ви натискаєте 1.",
+      "ring_number": "Телефонувати на цей номер",
+      "ringing": "Ваш телефон задзвонить. Натисніть 1, щоб з’єднатися.",
+      "unavailable": "Пульт не може з’єднувати телефонні дзвінки для цього підрозділу.",
+      "unknown_caller": "Невідомий номер"
+    },
+    "warnings": {
+      "breaks_overlap": "Перерви перетинаються з перервами іншого диспетчера.",
+      "coverage_below_minimum": "Покриття падає нижче мінімуму: доступно {{available}}, мінімум {{minimum}}.",
+      "generic": "Пульт має зауваження щодо цього редагування.",
+      "no_coverage": "На пульті не залишиться жодного доступного диспетчера.",
+      "outside_duty": "Перерва виходить за межі зміни.",
+      "started_early": "Перерва почалася на {{minutes}} хв раніше, ніж заплановано.",
+      "started_late": "Перерва почалася на {{minutes}} хв пізніше, ніж заплановано.",
+      "work_returned": "Ваші завдання повернуто в чергу."
+    },
+    "intake": {
+      "title": "SMS-розмова",
+      "handler_assistant": "Enhanced AI ставить відправнику запитання, доки не під'єднається диспетчер.",
+      "handler_unassisted": "Відправник чекає на диспетчера.",
+      "handler_dispatcher": "З'єднано з {{name}}.",
+      "closed": "Цю SMS-розмову завершено.",
+      "opted_out": "Відправник відмовився (STOP). Більше нічого надіслати не можна.",
+      "reply_from": "Відповіді надсилаються з номера {{number}}.",
+      "author_participant": "Відправник",
+      "author_assistant": "Enhanced AI",
+      "author_system": "Resgrid",
+      "failed": "Не доставлено"
+    }
   },
   "route_plans": {
     "duration_with_stops": "З зупинками",

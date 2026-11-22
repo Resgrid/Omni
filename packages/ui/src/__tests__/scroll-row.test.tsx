@@ -89,6 +89,26 @@ describe('ScrollRow', () => {
     expect(screen.queryByTestId('quiet-right-overflow')).toBeNull();
   });
 
+  // The desk's day timeline starts at midnight; it opens near now instead of on an empty night.
+  it('scrolls once to the caller’s starting point after it has both a width and content, kept inside the content', async () => {
+    const scrollTo = jest.spyOn(ScrollView.prototype, 'scrollTo').mockImplementation(() => undefined);
+    await render(
+      <ScrollRow initialScrollX={420} testID="timeline">
+        {chips}
+      </ScrollRow>
+    );
+    const scrollView = screen.getByTestId('timeline-scroll-view');
+
+    await fireEvent(scrollView, 'layout', { nativeEvent: { layout: { width: 200 } } });
+    expect(scrollTo).not.toHaveBeenCalled();
+    await fireEvent(scrollView, 'contentSizeChange', 500, 36);
+    expect(scrollTo).toHaveBeenCalledWith({ x: 300, animated: false });
+
+    await fireEvent(scrollView, 'contentSizeChange', 900, 36);
+    expect(scrollTo).toHaveBeenCalledTimes(1);
+    scrollTo.mockRestore();
+  });
+
   it('still reports layout, size and scroll to the caller', async () => {
     const onLayout = jest.fn();
     const onContentSizeChange = jest.fn();
@@ -149,6 +169,20 @@ describe('sideways row source rule', () => {
           return ONE_SIDED.test(className) ? [`${file}: ${className}`] : [];
         })
       );
+    });
+
+    expect(offenders).toEqual([]);
+  });
+
+  // The row's own content-height style wins over a class: `className="flex-1"` left the desk's team timeline 0 px wide
+  // beside its names (found 2026-11-21). A row that fills what is left takes `style={{ flexGrow: 1, flexShrink: 1 }}`.
+  it('never sizes a ScrollRow with a flex class', () => {
+    const OPENING = /<ScrollRow\b[^>]*\bclassName=\{?[`'"]([^`'"]*)/g;
+
+    const offenders = ROOTS.flatMap(walk).flatMap((absolute) => {
+      const file = path.relative(REPO, absolute).replace(/\\/g, '/');
+
+      return [...fs.readFileSync(absolute, 'utf8').matchAll(OPENING)].flatMap((match) => (/(^|\s)(flex-1|flex-grow|grow)(\s|$)/.test(match[1] ?? '') ? [`${file}: ${match[1]}`] : []));
     });
 
     expect(offenders).toEqual([]);

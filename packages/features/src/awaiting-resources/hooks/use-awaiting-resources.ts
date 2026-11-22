@@ -41,7 +41,7 @@ export function useAwaitingResourcesSync(enabledOverride?: boolean): void {
     (id, payload) => {
       const alert = useAwaitingResourcesStore.getState().handleOutstandingRequirementsUpdated(id, payload);
       if (alert?.kind === OutstandingRequirementsAlertKind.AutoDispatched) {
-        toast.info(alert.message || t('awaiting_resources.auto_dispatched_fallback'), t('awaiting_resources.auto_dispatched_title'), { duration: AUTO_DISPATCH_TOAST_MS });
+        toast.info(alert.message || t('awaiting_resources.auto_dispatched_fallback'), t('awaiting_resources.auto_dispatched_title'), { duration: AUTO_DISPATCH_TOAST_MS, alert: true });
       }
     },
     enabled

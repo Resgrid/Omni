@@ -34,6 +34,15 @@ export const DISPATCH_EVENTING_EVENTS = ['unitActiveRolesUpdated', 'checkInUpdat
  */
 export const RECURRING_CALL_EVENTING_EVENTS = ['recurringCallAlertsUpdated'] as const;
 
+/**
+ * The dispatcher desk changed (`calls.dispatcherDesk`, Core M0324, EventingTypes 19/20), sent to the department group:
+ * `dispatcherDeskUpdated` — a dispatcher's presence (the user id, then `{ userId, state }`); `dispatcherQueueUpdated` — a
+ * routed item (the item id, then `{ itemId, state, assignedUserId, kind }`); `intakeConversationUpdated` — an intake text
+ * thread (Core M0325, EventingTypes 21: the call id, then `{ conversationId, state, handler }`), which the desk shows on the
+ * item linked to it. Ids and states only, never message content: consumers reload the desk or the item.
+ */
+export const DISPATCHER_DESK_EVENTING_EVENTS = ['dispatcherDeskUpdated', 'dispatcherQueueUpdated', 'intakeConversationUpdated'] as const;
+
 /** Unit status timer acknowledgements (one unit acknowledged, muted or cleared). */
 export const UNIT_STATUS_ALERT_EVENTING_EVENTS = ['unitStatusAlertUpdated'] as const;
 
@@ -55,7 +64,14 @@ export const NAVIGATION_ETA_MODULES: readonly FeatureModuleId[] = ['dispatch-con
 /** Whether an app with these modules shows live ETAs (and so subscribes `unitNavigationUpdated`). */
 export const showsNavigationEtas = (modules: readonly FeatureModuleId[]): boolean => modules.some((module) => NAVIGATION_ETA_MODULES.includes(module));
 
-export const ALL_EVENTING_EVENTS = [...COMMON_EVENTING_EVENTS, ...DISPATCH_EVENTING_EVENTS, ...RECURRING_CALL_EVENTING_EVENTS, ...UNIT_STATUS_ALERT_EVENTING_EVENTS, ...NAVIGATION_EVENTING_EVENTS] as const;
+export const ALL_EVENTING_EVENTS = [
+  ...COMMON_EVENTING_EVENTS,
+  ...DISPATCH_EVENTING_EVENTS,
+  ...RECURRING_CALL_EVENTING_EVENTS,
+  ...DISPATCHER_DESK_EVENTING_EVENTS,
+  ...UNIT_STATUS_ALERT_EVENTING_EVENTS,
+  ...NAVIGATION_EVENTING_EVENTS,
+] as const;
 export type EventingEventName = (typeof ALL_EVENTING_EVENTS)[number];
 
 export const CHAT_EVENTS = [
@@ -117,6 +133,7 @@ export interface RealtimeFeatures {
  * - `checkInUpdated` — apps that watch other people's check-ins (`checkIn.others`: Dispatch, IC);
  * - `outstandingRequirementsUpdated` — conditional run cards (`calls.runCards`);
  * - `recurringCallAlertsUpdated` — recurring calls (`calls.recurringCalls`);
+ * - `dispatcherDeskUpdated`, `dispatcherQueueUpdated`, `intakeConversationUpdated` — the dispatcher desk (`calls.dispatcherDesk`);
  * - `unitStatusAlertUpdated` — modules that show unit status timers ({@link UNIT_STATUS_ALERT_MODULES}: BigBoard, Dispatch, Unit);
  * - `unitNavigationUpdated` — modules that show live ETAs ({@link NAVIGATION_ETA_MODULES}: Dispatch, BigBoard);
  * - chat events only with `realtime.chatHub`.
@@ -129,6 +146,8 @@ export function resolveRealtimeFeatures(variant: RealtimeVariantInput): Realtime
   if (capabilities.calls.runCards) eventingEvents.push('outstandingRequirementsUpdated');
 
   if (capabilities.calls.recurringCalls) eventingEvents.push('recurringCallAlertsUpdated');
+
+  if (capabilities.calls.dispatcherDesk) eventingEvents.push(...DISPATCHER_DESK_EVENTING_EVENTS);
   if (showsUnitStatusAlerts(modules)) eventingEvents.push('unitStatusAlertUpdated');
   if (showsNavigationEtas(modules)) eventingEvents.push('unitNavigationUpdated');
 

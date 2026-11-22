@@ -16,7 +16,7 @@
  * previous token. Nothing registered outlives its session: sign-out takes the token off the server and kills it on
  * this device (queued behind any sync in flight), and a different subject/department rotates the token first.
  */
-import { IC_PUSH_SOURCE, type PushSubject, registerPushDevice, unregisterPushToken } from '@resgrid/api';
+import { IC_PUSH_SOURCE, isPushRegistrationAccepted, type PushSubject, registerPushDevice, unregisterPushToken } from '@resgrid/api';
 import { isElectron, logger } from '@resgrid/core';
 import { toDevProxyUrl } from '@resgrid/core/env/dev-proxy';
 import { getApps, initializeApp } from 'firebase/app';
@@ -36,6 +36,7 @@ import {
 } from './configure';
 import { openNotification } from './deep-links';
 import { type PushNotificationData, usePushNotificationModalStore } from './push-modal-store';
+import { clearRegisteredPushToken, notifyPushTokenRegistered } from './push-token-listeners';
 import type { PushNotificationService, PushRegistrationTrigger, RegisterOptions, UsePushNotificationsResult } from './push-types';
 
 /** One push as the service worker or the Electron main process hands it over (Core's webPush data block). */
@@ -341,6 +342,8 @@ async function runSync(): Promise<void> {
 
   const current = readRegistration();
   if (current && current.key === keyOf(identity) && current.token === token && Date.now() - current.registeredAt < REREGISTER_AFTER_MS) {
+    notifyPushTokenRegistered({ token, platform: WEB_PUSH_PLATFORM });
+
     return;
   }
   if (current && current.token !== token) {
@@ -358,10 +361,15 @@ async function runSync(): Promise<void> {
     ...(identity.unitId ? { unitId: identity.unitId } : {}),
     registeredAt: Date.now(),
   };
+
+  let accepted: boolean;
+
   try {
-    await withPushTimeout('register device', (signal) =>
+    const result = await withPushTimeout('register device', (signal) =>
       registerPushDevice(deps.getApiContext(), identity.subject, { token, platform: WEB_PUSH_PLATFORM, deviceUuid: deps.getDeviceUuid(), prefix: identity.prefix }, { signal })
     );
+
+    accepted = isPushRegistrationAccepted(result);
   } catch (error) {
     // A timed-out request may have reached Core: keep the token for the queued sign-out cleanup, but not as registered.
     writeRegistration({ ...registration, registeredAt: 0 });
@@ -381,7 +389,20 @@ async function runSync(): Promise<void> {
     }
     return;
   }
+
+  if (!accepted) {
+    // RegisterDevice answers 200 when it refuses: not registered, so nobody follows this token and the next sync tries
+    // again. The record stays unmarked for the sign-out cleanup, as after a timeout.
+    logger.warn({ message: 'Web push: the registration was not accepted by the server', context: { subject: identity.kind } });
+    writeRegistration({ ...registration, registeredAt: 0 });
+    notifyStatus();
+
+    return;
+  }
+
   writeRegistration(registration);
+  // Subscribers that follow this registration (the Dispatch desk's own subscriber) take the same token.
+  notifyPushTokenRegistered({ token, platform: WEB_PUSH_PLATFORM });
   notifyStatus();
 }
 
@@ -581,6 +602,7 @@ export const pushNotificationService: PushNotificationService & { resetForTests(
   unregisterAtSignOut: (accessToken: string | null): Promise<void> => unregisterWebPushAtSignOut(accessToken),
   // The sign-out cleanup already took the token off the server and killed it here.
   clearLocalState: async (): Promise<void> => {
+    clearRegisteredPushToken();
     usePushNotificationModalStore.getState().hideNotificationModal();
     await clearWebBadge();
   },

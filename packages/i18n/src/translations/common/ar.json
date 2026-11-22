@@ -635,6 +635,11 @@
       "via_webhook_named": "Via webhook: {{name}}",
       "via_voice": "Via voice line",
       "via_voice_named": "Via voice line: {{name}}"
+    },
+    "intake_screening": {
+      "likely_not_incident": "Enhanced AI: likely not an incident",
+      "repeat_sender": "Repeat sender: over the hourly limit",
+      "dismissed_as_spam": "Dismissed as spam"
     }
   },
   "chat": {
@@ -2630,7 +2635,9 @@
       "sign_in_approval": "Sign-in Approval",
       "weather": "تنبيه الطقس",
       "work_order": "أمر عمل",
-      "recurring_call_alert": "تنبيه مكالمة متكررة"
+      "recurring_call_alert": "تنبيه مكالمة متكررة",
+      "desk_item": "مكتب المرسل",
+      "desk_break": "استراحة"
     },
     "unknown_type_warning": "نوع الإشعار هذا غير معروف.",
     "view_call": "عرض المكالمة",
@@ -2667,7 +2674,12 @@
       "generic_call": "Generic Call",
       "general_notification": "Notifications",
       "general_message": "Messages",
-      "unit_status_timer": "Unit Status Timer"
+      "unit_status_timer": "Unit Status Timer",
+      "desk_offer": "Desk Offer",
+      "desk_queue_alert": "Desk Queue Alert",
+      "desk_message": "Desk Message",
+      "break_reminder": "Break Reminder",
+      "break_over": "Break Over"
     },
     "communication_test_confirmed": "Receipt confirmed",
     "communication_test_failed": "Could not confirm receipt. Please try again.",
@@ -2678,7 +2690,9 @@
     "view_chat": "عرض المحادثة",
     "view_sign_in": "Review",
     "view_work_order": "عرض أمر العمل",
-    "view_recurring_call_alerts": "عرض التنبيهات"
+    "view_recurring_call_alerts": "عرض التنبيهات",
+    "view_desk_break": "عرض الاستراحات",
+    "view_desk_item": "فتح المكتب"
   },
   "records": {
     "add_row": "إضافة صف",
@@ -3807,7 +3821,13 @@
     "no_pending_calls_description": "لا توجد مكالمات بانتظار الإرسال.",
     "search": "البحث في المكالمات المعلقة...",
     "table_received": "وقت الاستلام",
-    "title": "المكالمات المعلقة"
+    "title": "المكالمات المعلقة",
+    "dismiss_spam": "Dismiss as Spam",
+    "dismiss_spam_block": "Also block the sender from your intake channels",
+    "dismiss_spam_blocked": "Dismissed as spam; the sender is blocked",
+    "dismiss_spam_confirm": "Dismiss this call as spam? It is cancelled without notifying anyone, and nothing is sent back to the sender.",
+    "dismiss_spam_error": "Failed to dismiss the call as spam",
+    "dismiss_spam_success": "Dismissed as spam"
   },
   "scheduled_calls": {
     "loading": "تحميل المكالمات المجدولة...",
@@ -5029,6 +5049,354 @@
     "field_destination_address": "عنوان الوجهة",
     "field_destination_location": "موقع الوجهة",
     "field_route": "المسار"
+  },
+  "dispatcher_desk": {
+    "actions": {
+      "away": "غير متواجد",
+      "go_available": "اجعلني متاحًا",
+      "im_back": "لقد عدت",
+      "im_back_done": "مرحبًا بعودتك. أنت في المكتب مجددًا.",
+      "sign_in": "تسجيل الدخول إلى المكتب",
+      "sign_off": "تسجيل الخروج",
+      "take_break": "أخذ استراحة"
+    },
+    "alerts": {
+      "auto_returned": "تجاوزت استراحتك مدتها، لذا أعادك المكتب تلقائيًا.",
+      "back_title": "العودة إلى المكتب",
+      "break_due": "حان موعد: {{type}}. اضغط لبدئها.",
+      "break_ended_for_you": "تم إنهاء استراحتك. أنت في المكتب مجددًا.",
+      "break_over": "انتهت استراحتك. اضغط على «لقد عدت» للعودة إلى المكتب.",
+      "break_over_title": "انتهت استراحتك",
+      "break_reminder": "{{type}}: تبدأ بعد {{minutes}} دقيقة",
+      "break_title": "استراحة",
+      "escalated": "انتظار طويل: {{count}} ({{kind}})",
+      "escalated_title": "مهام المكتب في الانتظار",
+      "new_message": "رسالة جديدة من {{name}}",
+      "new_message_title": "رسالة جديدة"
+    },
+    "break_state": {
+      "active": "في استراحة",
+      "done": "منتهية",
+      "planned": "مخطط لها"
+    },
+    "break_type": {
+      "break": "استراحة",
+      "meal": "وجبة",
+      "other": "أخرى",
+      "personal": "شخصية"
+    },
+    "breaks": {
+      "coverage_prevented": "ستترك هذه الاستراحة عدد المتاحين عند {{available}}، أي أقل من الحد الأدنى البالغ {{minimum}}. لا يسمح قسمك بذلك: اطلب من مشرف المكتب بدءها.",
+      "coverage_refused": "التغطية منخفضة جدًا لبدء استراحتك الآن. يمكن لمشرف المكتب بدءها نيابةً عنك.",
+      "coverage_warning": "ستترك هذه الاستراحة عدد المتاحين عند {{available}}، أي أقل من الحد الأدنى البالغ {{minimum}}.",
+      "due_back_at": "موعد العودة: {{time}}",
+      "duty": "{{shift}} · {{start}}–{{end}}",
+      "left": "المتبقي: {{time}}",
+      "length": "المدة",
+      "minutes": "{{minutes}} دقيقة",
+      "my_breaks": "استراحاتي اليوم",
+      "my_duty": "مناوبتي",
+      "overdue_by": "متأخرة بمقدار {{time}}",
+      "plan_mine": "تخطيط استراحة",
+      "plan_shift": "تخطيط استراحات المناوبة",
+      "plan_shift_confirm": "تخطيط الاستراحات",
+      "plan_shift_done": "تم تخطيط استراحات المناوبة",
+      "plan_shift_message": "توزيع خطة استراحات المناوبة على مرسلي اليوم بحيث لا تتداخل الاستراحات.",
+      "plan_shift_replace": "استبدال الاستراحات المخطط لها مسبقًا",
+      "planned_at": "مخطط لها في {{time}}",
+      "return_work": "إعادة مهامي إلى قائمة الانتظار (بحوزتي: {{count}})",
+      "return_work_hint": "لا تبدأ الاستراحة إلا بعد عودة مهامك إلى قائمة الانتظار لمرسل آخر.",
+      "row": "{{type}} · {{minutes}} دقيقة",
+      "start_now": "البدء الآن",
+      "start_planned": "مخطط لها: {{type}} · {{minutes}} دقيقة · {{time}}",
+      "started": "استمتع باستراحتك. موعد عودتك {{time}}.",
+      "started_at": "بدأت في {{time}}",
+      "take_anyway": "أخذ الاستراحة على أي حال",
+      "take_new": "استراحة جديدة الآن",
+      "take_now": "أخذ استراحة الآن",
+      "take_title": "أخذ استراحة",
+      "title": "الاستراحات",
+      "type": "النوع"
+    },
+    "complete": {
+      "done": "مكتملة",
+      "note": "ملاحظة",
+      "outcome": "كيف انتهت؟",
+      "title": "إكمال",
+      "notify_participant": "إبلاغ صاحب الرسالة بانتهاء المحادثة",
+      "notify_participant_hint": "يرسل رسالة ختامية من رقم Resgrid."
+    },
+    "conversation": {
+      "add_note": "إضافة ملاحظة",
+      "empty": "لا توجد رسائل بعد.",
+      "note_by": "ملاحظة · {{name}}",
+      "note_placeholder": "اكتب ملاحظة للمكتب (لا تُرسل أبدًا)…",
+      "reply": "رد",
+      "reply_placeholder": "اكتب ردًا…",
+      "save_note": "حفظ الملاحظة",
+      "send": "إرسال الرد"
+    },
+    "create_call": {
+      "link_failed": "تم حفظ المكالمة لكن تعذر ربطها بالمحادثة.",
+      "link_later": "تم حفظ المكالمة على هذا الجهاز وستُرسل عند عودتك إلى الاتصال. أكمل المحادثة بعد إرسالها.",
+      "linked": "تم ربط المكالمة بالمحادثة.",
+      "name": "{{kind}} من {{source}}"
+    },
+    "delivery": {
+      "failed": "لم تُسلَّم",
+      "queued": "جارٍ الإرسال",
+      "received": "مستلمة",
+      "sent": "مرسلة"
+    },
+    "desk_off": "مكتب المرسلين متوقف",
+    "desk_off_description": "لم يُفعّل قسمك مكتب المرسلين. يمكن لمسؤول القسم تفعيله من الورديات > إعدادات مكتب الإرسال.",
+    "device": {
+      "desktop": "حاسوب مكتبي",
+      "phone": "هاتف",
+      "tablet": "جهاز لوحي"
+    },
+    "errors": {
+      "already_on_break": "أنت في استراحة بالفعل.",
+      "already_on_roster": "أنت مدرج بالفعل في جدول الإرسال لذلك اليوم.",
+      "at_capacity": "بحوزتك بالفعل أقصى عدد من المهام يسمح به المكتب. أنهِ مهمة أو أعدها أولًا.",
+      "break_not_found": "لم تعد هذه الاستراحة مخططًا لها.",
+      "break_not_startable": "لا يمكن بدء هذه الاستراحة الآن.",
+      "break_overlaps": "تتداخل هذه الاستراحة مع استراحة أخرى لك.",
+      "channel_unavailable": "لا يمكن لهذه القناة الإرسال حاليًا.",
+      "coverage_too_low": "التغطية منخفضة جدًا لبدء استراحة الآن. يمكن لمشرف المكتب بدءها نيابةً عنك.",
+      "desk_disabled": "أوقف قسمك مكتب المرسلين.",
+      "dispatchers_not_enabled": "لا يوجد مرسلون في الخدمة في هذه المناوبة.",
+      "holding_work": "بحوزتك مهام. أعدها إلى قائمة الانتظار لبدء استراحتك.",
+      "invalid_input": "هناك شيء مفقود أو غير صالح في الطلب.",
+      "item_not_available": "تم أخذ هذه المهمة أو إنهاؤها بالفعل.",
+      "item_not_found": "لم تعد هذه المهمة في المكتب.",
+      "no_callback_number": "أدخل الرقم الذي يجب أن يتصل به المكتب.",
+      "not_a_dispatcher": "يمكن للمرسلين فقط استخدام المكتب.",
+      "not_assigned_to_you": "هذه المهمة بحوزة مرسل آخر.",
+      "not_on_break": "لا توجد استراحة جارية لإنهائها.",
+      "not_on_duty": "لست في مناوبة إرسال حاليًا.",
+      "not_permitted": "غير مسموح لك بالقيام بذلك في المكتب.",
+      "not_signed_in": "سجّل الدخول إلى المكتب أولًا.",
+      "shift_not_found": "تعذر العثور على هذه المناوبة.",
+      "title": "المكتب",
+      "unknown": "تعذر على المكتب تنفيذ ذلك. يرجى المحاولة مرة أخرى."
+    },
+    "event": {
+      "accepted": "قُبلت",
+      "cancelled": "أُلغيت",
+      "completed": "اكتملت",
+      "created": "وردت",
+      "declined": "رُفضت",
+      "escalated": "طال انتظارها",
+      "message_received": "تم استلام رسالة",
+      "message_sent": "تم إرسال رسالة",
+      "offer_expired": "انتهت مهلة العرض",
+      "offered": "عُرضت",
+      "overflowed": "حُوِّلت إلى الاحتياط",
+      "released": "أُعيدت إلى قائمة الانتظار",
+      "reopened": "أُعيد فتحها",
+      "transferred": "سُلِّمت",
+      "voice_connected": "تم توصيل المكالمة",
+      "voice_connecting": "جارٍ توصيل المكالمة",
+      "voice_ended": "انتهت المكالمة",
+      "conversation_closed": "انتهت المحادثة النصية",
+      "held_for_review": "Held for review: screened intake call"
+    },
+    "item": {
+      "complete": "إكمال",
+      "create_call": "إنشاء مكالمة",
+      "dispatch_now": "إرسال الآن",
+      "due_on": "الموعد: {{time}}",
+      "history": "السجل ({{count}})",
+      "link_saved_call": "ربط المكالمة المحفوظة",
+      "loading": "جارٍ التحميل…",
+      "not_found": "لم تعد هذه المهمة في المكتب",
+      "open_call": "فتح المكالمة",
+      "release": "إعادة إلى قائمة الانتظار",
+      "released": "أُعيدت إلى قائمة الانتظار",
+      "title": "مهمة المكتب",
+      "transfer": "تسليم"
+    },
+    "item_state": {
+      "accepted": "قيد التنفيذ",
+      "cancelled": "ملغاة",
+      "completed": "منتهية",
+      "offered": "معروضة",
+      "overflowed": "محوّلة إلى الاحتياط",
+      "queued": "في الانتظار"
+    },
+    "kind": {
+      "chat": "دردشة",
+      "email": "بريد إلكتروني",
+      "other": "مهمة المكتب",
+      "pending_call": "مكالمة معلقة",
+      "scheduled_call": "مكالمة مجدولة",
+      "text": "رسالة نصية",
+      "voice": "مكالمة هاتفية"
+    },
+    "loading": "جارٍ تحميل المكتب…",
+    "not_available": "مكتب المرسلين غير متاح في هذا التطبيق",
+    "not_dispatcher": "لست مرسلًا",
+    "not_dispatcher_description": "لا يمكن استخدام مكتب المرسلين إلا للأعضاء المسموح لهم بتسجيل الدخول إلى تطبيق Dispatch.",
+    "offer": {
+      "accept": "قبول",
+      "decline": "رفض",
+      "expires_in": "أجب خلال {{time}}",
+      "more": "عروض أخرى في الانتظار: {{count}}",
+      "title": "مهمة معروضة عليك"
+    },
+    "outcome": {
+      "call_created": "تم إنشاء مكالمة",
+      "closed": "تم إغلاق المكالمة",
+      "dispatched": "تم الإرسال",
+      "duplicate": "مكررة",
+      "left_pending": "تُركت معلقة",
+      "no_action_needed": "لا يلزم أي إجراء",
+      "none": "بلا نتيجة",
+      "referred": "أُحيلت إلى جهة أخرى"
+    },
+    "plan": {
+      "add_title": "تخطيط استراحة",
+      "cancel": "إزالة",
+      "cancelled": "تمت إزالة الاستراحة",
+      "edit": "تغيير",
+      "edit_title": "تغيير الاستراحة",
+      "entry": "{{type}} · {{minutes}} دقيقة · {{start}}–{{end}}",
+      "length_hint": "الاستراحة مدة زمنية: يمكن أن تبدأ مبكرًا أو متأخرًا، وموعد العودة بعد انقضاء مدتها من بدايتها.",
+      "none": "لا توجد استراحات مخطط لها اليوم.",
+      "save": "حفظ الاستراحة",
+      "saved": "تم حفظ الاستراحة",
+      "start": "البداية المخططة",
+      "start_now": "بدء الاستراحة الآن",
+      "started_for": "{{name}} في استراحة",
+      "title_for": "استراحات {{name}}",
+      "title_mine": "استراحاتي"
+    },
+    "queue": {
+      "escalated": "انتظار طويل",
+      "held_by": "بحوزة {{name}}",
+      "mine": "مهامي",
+      "mine_empty": "لا شيء معروض عليك أو بحوزتك.",
+      "recent": "الأخيرة",
+      "recent_empty": "لا توجد مهام حديثة على هذا الجهاز.",
+      "take": "أخذ",
+      "waited": "بانتظار منذ {{minutes}} دقيقة",
+      "waiting": "في الانتظار",
+      "waiting_empty": "لا شيء في قائمة الانتظار."
+    },
+    "sign_in": {
+      "callback_hint": "يتصل المكتب بهذا الهاتف لتوصيلك بالمتصلين. اتركه فارغًا لاستخدام رقم الجوال في ملفك الشخصي.",
+      "callback_number": "رقم معاودة الاتصال",
+      "callback_placeholder": "+1 555 555 0100",
+      "device": "تسجيل الدخول على: {{device}}",
+      "done": "لقد سجّلت الدخول إلى المكتب.",
+      "no_shift": "لست في مناوبة إرسال حاليًا، لذا قد يرفض المكتب تسجيل الدخول.",
+      "no_shift_unscheduled": "لست في مناوبة إرسال حاليًا. فعّل الخدمة غير المجدولة لتسجيل الدخول على أي حال.",
+      "prompt": "سجّل الدخول لتلقي المهام الموجهة ورؤية ما يُعرض عليك.",
+      "prompt_title": "لم تسجّل الدخول إلى المكتب",
+      "start_away": "البدء كغير متواجد",
+      "start_away_hint": "لا تتلقَّ أي مهام موجهة حتى تصبح متاحًا.",
+      "title": "تسجيل الدخول إلى المكتب",
+      "unscheduled": "خدمة غير مجدولة",
+      "unscheduled_hint": "ابدأ الخدمة دون مناوبة إرسال (فعالية، تغطية بديلة).",
+      "until": "في الخدمة حتى (اختياري)"
+    },
+    "sign_off": {
+      "done": "لقد سجّلت الخروج من المكتب.",
+      "message": "ستتوقف عن تلقي المهام الموجهة حتى تسجّل الدخول مجددًا.",
+      "message_holding": "ستتوقف عن تلقي المهام الموجهة، وستعود المهام التي بحوزتك إلى قائمة الانتظار (العدد: {{count}}).",
+      "title": "تسجيل الخروج من المكتب؟"
+    },
+    "state": {
+      "available": "متاح",
+      "away": "غير متواجد",
+      "busy": "مشغول",
+      "offline": "مسجّل الخروج",
+      "on_break": "في استراحة",
+      "on_break_left": "في استراحة · المتبقي: {{time}}",
+      "on_break_overdue": "تجاوز الاستراحة بمقدار {{minutes}} دقيقة"
+    },
+    "status_bar": {
+      "counts": "معروضة: {{offered}} · بحوزتك: {{held}} · في الانتظار: {{waiting}}",
+      "less": "إجراءات أقل للمكتب",
+      "more": "إجراءات أكثر للمكتب",
+      "not_signed_in": "غير مسجّل الدخول إلى المكتب · في الانتظار: {{waiting}}"
+    },
+    "team": {
+      "break_ended": "عاد {{name}} إلى المكتب",
+      "breaks": "الاستراحات",
+      "empty": "لا يوجد مرسلون في المكتب.",
+      "end_break": "إنهاء الاستراحة",
+      "holding": "المهام: {{count}} من {{capacity}}",
+      "next_break": "التالية: {{type}} في {{time}} ({{minutes}} دقيقة)",
+      "no_shift": "ليس في مناوبة إرسال",
+      "offered": "معروضة: {{count}}",
+      "on_shift": "{{shift}} حتى {{time}}",
+      "open": "مسجّل الخروج",
+      "summary": "المتاحون: {{available}} · في استراحة: {{onBreak}} · في الخدمة: {{onDuty}} · الحد الأدنى: {{minimum}}",
+      "supervisor": "مشرف",
+      "title": "الفريق",
+      "unscheduled": "خدمة غير مجدولة حتى {{time}}",
+      "you": "أنت"
+    },
+    "timeline": {
+      "coverage": "التغطية",
+      "empty": "لا أحد في خدمة الإرسال اليوم.",
+      "hint": "خدمة الجميع واستراحاتهم اليوم. يشير اللون الأحمر إلى تغطية أقل من الحد الأدنى.",
+      "hint_supervisor": "خدمة الجميع واستراحاتهم اليوم. اضغط على مرسل لتخطيط استراحاته أو تغييرها.",
+      "legend_below": "أقل من الحد الأدنى",
+      "legend_overdue": "استراحة متأخرة",
+      "legend_duty": "في الخدمة",
+      "legend_planned": "استراحة مخطط لها",
+      "legend_taken": "استراحة مأخوذة",
+      "loading": "جارٍ تحميل الجدول الزمني…",
+      "title": "الجدول الزمني للفريق",
+      "unavailable": "تعذر تحميل الجدول الزمني"
+    },
+    "title": "مكتب المرسلين",
+    "transfer": {
+      "done": "تم التسليم",
+      "none": "لا يوجد مرسل آخر مسجّل الدخول ومتفرغ لأخذها.",
+      "note": "ملاحظة للمستلم",
+      "title": "تسليم إلى"
+    },
+    "unsupported": "مكتب المرسلين غير متاح بعد",
+    "unsupported_description": "لا يحتوي خادم Resgrid الخاص بك على مكتب المرسلين. اطلب من المسؤول تحديثه.",
+    "voice": {
+      "answer": "إجابة",
+      "call_back": "معاودة الاتصال",
+      "caller": "المتصل",
+      "caller_gone": "أنهى المتصل المكالمة",
+      "caller_waiting": "متصل في الانتظار",
+      "ring_hint": "يتصل المكتب بهذا الهاتف ويوصلك بالمتصل عند الضغط على 1.",
+      "ring_number": "الاتصال بهذا الرقم",
+      "ringing": "سيرن هاتفك. اضغط 1 للتوصيل.",
+      "unavailable": "لا يمكن للمكتب توصيل المكالمات الهاتفية لهذا القسم.",
+      "unknown_caller": "رقم غير معروف"
+    },
+    "warnings": {
+      "breaks_overlap": "تتداخل الاستراحات مع استراحات مرسل آخر.",
+      "coverage_below_minimum": "تنخفض التغطية عن الحد الأدنى: المتاحون {{available}}، الحد الأدنى {{minimum}}.",
+      "generic": "لاحظ المكتب أمرًا بخصوص هذا التغيير.",
+      "no_coverage": "لن يكون أحد متاحًا في المكتب.",
+      "outside_duty": "تقع الاستراحة خارج المناوبة.",
+      "started_early": "بدأت الاستراحة قبل الموعد المخطط بـ {{minutes}} دقيقة.",
+      "started_late": "بدأت الاستراحة بعد الموعد المخطط بـ {{minutes}} دقيقة.",
+      "work_returned": "عادت مهامك إلى قائمة الانتظار."
+    },
+    "intake": {
+      "title": "محادثة نصية",
+      "handler_assistant": "يطرح Enhanced AI أسئلة على صاحب الرسالة حتى يتصل أحد المرسلين.",
+      "handler_unassisted": "صاحب الرسالة بانتظار أحد المرسلين.",
+      "handler_dispatcher": "متصل مع {{name}}.",
+      "closed": "انتهت هذه المحادثة النصية.",
+      "opted_out": "ألغى صاحب الرسالة الاشتراك (STOP). لا يمكن إرسال المزيد.",
+      "reply_from": "تُرسل الردود من {{number}}.",
+      "author_participant": "صاحب الرسالة",
+      "author_assistant": "Enhanced AI",
+      "author_system": "Resgrid",
+      "failed": "لم تُسلَّم"
+    }
   },
   "route_plans": {
     "duration_with_stops": "مع التوقفات",

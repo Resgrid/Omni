@@ -1,8 +1,10 @@
 import type { NotificationSoundAssets } from '@resgrid/notifications';
 
-// Web and Electron: the notification sounds (apps/omni/assets/audio), keyed by sound, for configureNotificationSounds. A
-// foreground push or desktop notice plays the sound its server type names, custom tones included; each file is fetched
-// on first play. Native builds get notification-sounds.native.ts, which plays the copies already in the native project.
+// Web and Electron: the shared notification sounds (apps/omni/assets/audio), keyed by sound, for
+// configureNotificationSounds. A foreground push or desktop notice plays the sound its server type names, custom tones
+// included; each file is fetched on first play. Native builds get notification-sounds.native.ts, which plays the copies
+// already in the native project. The apps with the shared sound set reach this through sound-sets/<variant>.ts; Dispatch
+// has its own files (sound-sets/dispatch.ts), so a web export bundles only its app's set.
 export const NOTIFICATION_SOUNDS: NotificationSoundAssets = {
   modernavailabilityalert: require('./assets/audio/modernavailabilityalert.wav'),
   moderncalendar: require('./assets/audio/moderncalendar.wav'),
