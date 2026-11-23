@@ -75,6 +75,11 @@ interface StoredRegistration {
   kind?: Exclude<PushSubjectKind, 'none'>;
   unitId?: string;
   userId?: string;
+  /**
+   * The `Source` a `user` registration was made with (Dispatch's `Dispatch`). Removal sends this one, never the app's
+   * current one: a record from before the app had a Source has none, and is taken off without one.
+   */
+  source?: string;
 }
 
 /** Platforms.Web on the server. */
@@ -196,9 +201,11 @@ const subjectOfStored = (stored: StoredRegistration): PushSubject => {
   if (kind === 'unit' && stored.unitId) return { kind: 'unit', unitId: stored.unitId };
   if (kind === 'icUser') return { kind: 'icUser' };
 
-  // The app's own Source (Dispatch's) is fixed per app, so the stored token was registered with today's.
-  return { kind: 'user', source: getPushSource() };
+  return stored.source ? { kind: 'user', source: stored.source } : { kind: 'user' };
 };
+
+/** The `Source` a `user` registration for `identity` is made with now (none for unit and IC subjects). */
+const sourceOf = (identity: WebIdentity): string | undefined => (identity.subject.kind === 'user' ? identity.subject.source : undefined);
 
 // --- Browser (Firebase JS SDK) ---
 
@@ -344,12 +351,15 @@ async function runSync(): Promise<void> {
   }
 
   const current = readRegistration();
-  if (current && current.key === keyOf(identity) && current.token === token && Date.now() - current.registeredAt < REREGISTER_AFTER_MS) {
+  const source = sourceOf(identity);
+  if (current && current.key === keyOf(identity) && current.token === token && current.source === source && Date.now() - current.registeredAt < REREGISTER_AFTER_MS) {
     notifyPushTokenRegistered({ token, platform: WEB_PUSH_PLATFORM });
 
     return;
   }
-  if (current && current.token !== token) {
+  // A new token, or the same token under another Source (a record from before the app had one): take the old
+  // registration off as it was made, so it does not outlive the one that replaces it.
+  if (current && (current.token !== token || current.source !== source)) {
     await unregisterQuietly(deps, current);
   }
 
@@ -364,6 +374,8 @@ async function runSync(): Promise<void> {
     ...(identity.unitId ? { unitId: identity.unitId } : {}),
     registeredAt: Date.now(),
   };
+
+  if (source) registration.source = source;
 
   let accepted: boolean;
 

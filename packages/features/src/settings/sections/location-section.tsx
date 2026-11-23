@@ -2,7 +2,7 @@ import { useCapability } from '@resgrid/config';
 import { logger } from '@resgrid/core';
 import { ConfirmDialog } from '@resgrid/features/auth-ui';
 import { useTranslation } from '@resgrid/i18n';
-import { getLocationPermissionRationale, getLocationTransmitter } from '@resgrid/location';
+import { getLocationPermissionRationale, getLocationTransmitter, type LocationPermissionFlowResult, runLocationPermissionFlow } from '@resgrid/location';
 import { useRealtimeStore } from '@resgrid/realtime';
 import { Text, VStack } from '@resgrid/ui';
 import React, { useCallback, useState } from 'react';
@@ -31,6 +31,7 @@ export const LocationSection: React.FC = () => {
 
   const toggleRealtime = useCallback(async (enabled: boolean) => {
     setRealtimeGeolocationPreference(enabled);
+
     try {
       const realtime = useRealtimeStore.getState();
       await (enabled ? realtime.connectGeolocationHub() : realtime.disconnectGeolocationHub());
@@ -41,23 +42,39 @@ export const LocationSection: React.FC = () => {
 
   const toggleBackground = useCallback((enabled: boolean) => {
     setMessage(null);
+
     if (!enabled) {
       setBackgroundGeolocationPreference(false);
+
       return;
     }
+
     setDisclosureOpen(true);
   }, []);
 
-  // The member accepted the disclosure: now the OS prompt. The switch only stays on when "always" is granted;
-  // otherwise the OS setting is the way forward.
+  // The member accepted the disclosure: now the OS prompt. The switch goes on only when "always" is granted; any other
+  // answer leaves it off with the way forward, and a request that fails leaves it off with a failure message. Before the
+  // transmitter is configured the OS is asked directly: the transmitter reads the saved switch when it starts.
   const acceptDisclosure = useCallback(async () => {
     setDisclosureOpen(false);
     const transmitter = getLocationTransmitter();
-    const result = transmitter ? await transmitter.requestBackgroundTracking().catch(() => null) : null;
-    if (!result || result.outcome === 'granted') {
-      setBackgroundGeolocationPreference(true);
+    let result: LocationPermissionFlowResult;
+
+    try {
+      result = transmitter ? await transmitter.requestBackgroundTracking() : await runLocationPermissionFlow({ background: true, prompt: true });
+    } catch (error) {
+      logger.warn({ message: 'Background location permission request failed', context: { error } });
+      setMessage(t('settings.background_geolocation_failed'));
+
       return;
     }
+
+    if (result.outcome === 'granted') {
+      setBackgroundGeolocationPreference(true);
+
+      return;
+    }
+
     setMessage(result.outcome === 'blocked' ? t('location.permission_blocked_message') : t('settings.background_geolocation_denied'));
   }, [t]);
 

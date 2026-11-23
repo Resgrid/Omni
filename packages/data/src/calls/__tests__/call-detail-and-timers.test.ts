@@ -65,6 +65,20 @@ describe('call detail', () => {
     expect((blob?.state.details as Record<string, Record<string, unknown>>)['5']).not.toHaveProperty('siteInfo');
   });
 
+  // The composer unmounts with its sheet or the console's phone tab; the typed note is still there when it comes back.
+  it('keeps an unsent note per call in memory only, and drops it when emptied or at sign-out', async () => {
+    useCallDetailStore.getState().setNoteDraft('5', 'Second line charged');
+    useCallDetailStore.getState().setNoteDraft('6', 'Hydrant out');
+    useCallDetailStore.getState().setNoteDraft('6', '');
+    expect(useCallDetailStore.getState().noteDrafts).toEqual({ '5': 'Second line charged' });
+
+    await useCallDetailStore.getState().fetchCallDetail('5');
+    expect(persisted(runtime.kv, 'omni-call-detail-storage')?.state).not.toHaveProperty('noteDrafts');
+
+    await defaultResetRegistry.getStoreResets().get('data.call-detail')?.('logout');
+    expect(useCallDetailStore.getState().noteDrafts).toEqual({});
+  });
+
   it('records an error code on failure and an empty answer for not_found', async () => {
     jest.mocked(getCall).mockRejectedValue(httpError(404));
     await useCallDetailStore.getState().fetchCallDetail('5');

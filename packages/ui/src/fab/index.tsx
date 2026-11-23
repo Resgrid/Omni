@@ -108,6 +108,17 @@ type IFabProps = Omit<React.ComponentPropsWithoutRef<typeof UIFab>, 'context' | 
 /** The gap between a FAB and the edges of its screen (`*-4`). */
 export const FAB_EDGE = 16;
 
+/** The room a list leaves below its last row for a bottom FAB: the `lg` FAB (56), FAB_EDGE under it and 24 above it. */
+export const FAB_LIST_CLEARANCE = 96;
+
+/**
+ * The bottom padding of a list that a bottom FAB floats over. The FAB sits the bottom safe-area inset higher (see Fab),
+ * so the list's last row scrolls clear of it by the same inset.
+ */
+export function useFabListPadding(): number {
+  return FAB_LIST_CLEARANCE + useBottomSafeAreaInset();
+}
+
 /**
  * A floating action button. At the bottom of a screen it keeps FAB_EDGE above the home indicator or the Android
  * navigation bar, unless a bottom tab bar under the screen already does (`useBottomSafeAreaInset`). A caller's style

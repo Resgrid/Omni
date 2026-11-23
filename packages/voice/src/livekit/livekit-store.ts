@@ -28,11 +28,18 @@ export type VoiceChannel = DepartmentVoiceChannelResultData;
 /**
  * A connect is abandoned (isConnecting reset) when it has not committed a room this long after the microphone answer,
  * so the UI never sticks on "Connecting…". The member's answer is not timed by it (`PERMISSION_TIMEOUT_MS` is), nor is
- * anything after the commit (the phone-permission prompt). An automatic rejoin is timed from its start: it may run with
- * the app in the background, where the microphone wait never times out.
+ * anything after the commit (`POST_CONNECT_STEP_TIMEOUT_MS` bounds those steps). An automatic rejoin is timed from its
+ * start: it may run with the app in the background, where the microphone wait never times out.
  */
 export const CONNECT_OVERALL_TIMEOUT_MS = 30_000;
 export const ROOM_CONNECT_TIMEOUT_MS = 15_000;
+
+/**
+ * How long each native step after the commit (initial mute, audio routing, connect sound, foreground service, the
+ * CallKeep call) may take: one that never settles is logged and passed over, so the join cannot stay pending on it.
+ * The phone-permission prompt is the member's to answer and is not bounded by it (CallKeep caps it while in front).
+ */
+export const POST_CONNECT_STEP_TIMEOUT_MS = 5_000;
 
 /**
  * Counts only while the app is in front (`settleWithinForeground`): Android's microphone prompt puts the app in the
@@ -194,6 +201,9 @@ const quietly = async (label: string, work: () => Promise<unknown> | unknown): P
     logger.warn({ message: `${label} failed`, context: { error } });
   }
 };
+
+/** `quietly` for a post-connect native step: one that has not settled after POST_CONNECT_STEP_TIMEOUT_MS is passed over. */
+const boundedQuietly = <T>(label: string, work: () => Promise<T> | T): Promise<void> => quietly(label, () => withTimeout(Promise.resolve().then(work), POST_CONNECT_STEP_TIMEOUT_MS, label));
 
 const microphoneError = (error: unknown): VoiceError => {
   const name = errorName(error) ?? '';
@@ -436,13 +446,16 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => {
     });
   };
 
-  /** Everything after the room is live. Each step is guarded: a failure must not report a connected room as failed. */
+  /**
+   * Everything after the room is live. Each step is guarded: a failure must not report a connected room as failed, and
+   * a native step that never settles must not keep the join pending (`POST_CONNECT_STEP_TIMEOUT_MS`).
+   */
   const afterConnect = async (room: Room, roomInfo: VoiceChannel, rejoin: boolean): Promise<void> => {
     const capabilities = getVoiceCapabilities();
     const callKeep = getCallKeepService();
     const runtime = getVoiceRuntime();
 
-    await quietly('Initial mute', async () => {
+    await boundedQuietly('Initial mute', async () => {
       await room.localParticipant.setMicrophoneEnabled(false);
       await room.localParticipant.setCameraEnabled(false);
     });
@@ -464,11 +477,12 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => {
       });
     }
 
-    await quietly('Audio routing', () => applyAudioRouting(routeTarget()));
-    await quietly('Connect sound', () => voiceSounds.play('connectedToAudioRoom'));
+    await boundedQuietly('Audio routing', () => applyAudioRouting(routeTarget()));
+    await boundedQuietly('Connect sound', () => voiceSounds.play('connectedToAudioRoom'));
 
     if (Platform.OS === 'android' && runtime.foregroundService && currentRoomIs(room) && !foregroundServiceRunning) {
-      await quietly('Start voice foreground service', async () => {
+      // A start that outlasts its bound still marks the service up once it lands.
+      await boundedQuietly('Start voice foreground service', async () => {
         await runtime.foregroundService?.start();
         foregroundServiceRunning = true;
       });
@@ -476,16 +490,29 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => {
 
     if (callKeep.isEnabled && currentRoomIs(room) && rejoin && callKeep.isCallActiveNow()) {
       // Rejoined under the call kept up through the drop: just sync its mute state.
-      await quietly('CallKeep setMuted after rejoin', () => callKeep.setMuted(!room.localParticipant.isMicrophoneEnabled));
+      await boundedQuietly('CallKeep setMuted after rejoin', () => callKeep.setMuted(!room.localParticipant.isMicrophoneEnabled));
     } else if (callKeep.isEnabled && currentRoomIs(room)) {
-      await quietly('Start CallKeep call', async () => {
-        if (Platform.OS === 'android' && !(await callKeep.requestPhonePermissions())) return;
-        await callKeep.startCall(roomInfo.Name || 'Voice Channel');
+      // The phone-permission prompt waits for the member, unbounded here; the call itself is a bounded step.
+      let hasPhonePermission = true;
 
-        // The user may have left while CallKit was registering the call: never leave a dangling system call.
-        if (!currentRoomIs(room)) await callKeep.endCall();
-        else await callKeep.setMuted(!room.localParticipant.isMicrophoneEnabled);
-      });
+      if (Platform.OS === 'android') {
+        try {
+          hasPhonePermission = await callKeep.requestPhonePermissions();
+        } catch (error) {
+          logger.warn({ message: 'CallKeep phone permissions failed', context: { error } });
+          hasPhonePermission = false;
+        }
+      }
+
+      if (hasPhonePermission && currentRoomIs(room)) {
+        await boundedQuietly('Start CallKeep call', async () => {
+          await callKeep.startCall(roomInfo.Name || 'Voice Channel');
+
+          // The user may have left while CallKit was registering the call: never leave a dangling system call.
+          if (!currentRoomIs(room)) await callKeep.endCall();
+          else await callKeep.setMuted(!room.localParticipant.isMicrophoneEnabled);
+        });
+      }
     }
 
     if (capabilities.headsetButtonPtt && currentRoomIs(room)) getHeadsetButtonService().startMonitoring('livekit');

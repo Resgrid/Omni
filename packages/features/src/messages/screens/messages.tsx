@@ -19,6 +19,7 @@ import {
   TabBar,
   type TabBarItem,
   Text,
+  useFabListPadding,
   useThemeColors,
   useToast,
   View,
@@ -54,6 +55,7 @@ export default function MessagesScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const colors = useThemeColors();
+  const fabListPadding = useFabListPadding();
   const toast = useToast();
   const { canUserCreateMessages } = useSecurity();
   const inbox = useMessagesStore((state) => state.inboxMessages);
@@ -203,7 +205,7 @@ export default function MessagesScreen() {
               <MessageCard item={row.item} isRead={isRead(row.item)} selectionMode={selection !== null} isSelected={selection?.includes(row.item.message.MessageId) ?? false} onPress={press} onLongPress={longPress} />
             )
           }
-          contentContainerStyle={styles.list}
+          contentContainerStyle={StyleSheet.flatten([styles.list, { paddingBottom: fabListPadding }])}
           refreshControl={<RefreshControl refreshing={false} onRefresh={() => void reload()} />}
           ListEmptyComponent={
             <ZeroState icon={Mail} heading={t('messages.no_messages')} description={canUserCreateMessages ? t('messages.no_messages_description') : undefined} onRetry={reload} testID="messages-empty">
@@ -238,5 +240,5 @@ export default function MessagesScreen() {
 }
 
 const styles = StyleSheet.create({
-  list: { paddingTop: 8, paddingBottom: 96 },
+  list: { paddingTop: 8 },
 });

@@ -19,6 +19,17 @@ export const ConsolePanelPlacementContext = createContext<{ isTab: boolean }>({ 
  */
 export const useConsoleTouchTargets = (): boolean => !useFormFactor().isDesktop;
 
+/**
+ * Whether a card is collapsed as the console shows it: its saved flag, except in a phone tab, which always shows its
+ * panel. Anything gated on a card being open (its polling) reads this, not the saved flag.
+ */
+export const useIsPanelCollapsed = (cardKey: DashboardCardKey): boolean => {
+  const { isTab } = useContext(ConsolePanelPlacementContext);
+  const isCollapsedOnDevice = useDashboardViewStore(selectCardCollapsed(cardKey));
+
+  return isTab ? false : isCollapsedOnDevice;
+};
+
 export interface PanelFrameProps {
   title: string;
   icon: LucideIcon;
@@ -44,9 +55,8 @@ export const PanelFrame: React.FC<PanelFrameProps> = ({ title, icon: Icon, iconC
   const colors = useThemeColors();
   const { isTab } = useContext(ConsolePanelPlacementContext);
   const isTouch = useConsoleTouchTargets();
-  const isCollapsedOnDevice = useDashboardViewStore(selectCardCollapsed(cardKey));
+  const isCollapsed = useIsPanelCollapsed(cardKey);
   const setCardCollapsed = useDashboardViewStore((state) => state.setCardCollapsed);
-  const isCollapsed = isTab ? false : isCollapsedOnDevice;
   const sizing = isTab ? styles.fill : isCollapsed ? null : flex !== undefined ? { flex } : maxHeight !== undefined ? { maxHeight, minHeight: Math.min(200, maxHeight) } : null;
   const toggle = () => setCardCollapsed(cardKey, !isCollapsed);
 

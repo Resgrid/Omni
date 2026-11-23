@@ -14,7 +14,7 @@ import { getLocationPreferences, getThemeMode } from '../lib/preferences';
 import { registerSettingsSection, resetSettingsSectionsForTests } from '../registry';
 import { configureSettings, resetSettingsRuntimeForTests } from '../runtime';
 import { SettingsScreen } from '../screens/settings-screen';
-import { mockExactAlarms, mockRealtimeStore, mockSoundService, mockTransmitter } from './native-mocks';
+import { mockExactAlarms, mockLocationState, mockRealtimeStore, mockRunLocationPermissionFlow, mockSoundService, mockTransmitter } from './native-mocks';
 import { activateTestVariant } from './variant';
 
 jest.mock('@resgrid/auth', () => require('../../auth-ui/__tests__/auth-fake').buildAuthMock(jest.requireActual('@resgrid/auth')));
@@ -137,6 +137,39 @@ describe('SettingsScreen', () => {
     await fireEvent(screen.getByTestId('settings-background-geolocation'), 'onValueChange', true);
     await fireEvent.press(screen.getByTestId('settings-background-disclosure-confirm'));
     await waitFor(() => expect(getLocationPreferences().backgroundGeolocation).toBe(true));
+  });
+
+  // A failed request is not a grant: the switch showed on without the OS allowing "always".
+  it('keeps background geolocation off and says so when the permission request fails', async () => {
+    activateTestVariant('responder');
+    mockTransmitter.requestBackgroundTracking.mockRejectedValueOnce(new Error('permission module unavailable'));
+    await render(<SettingsScreen />);
+    await fireEvent(screen.getByTestId('settings-background-geolocation'), 'onValueChange', true);
+    await fireEvent.press(screen.getByTestId('settings-background-disclosure-confirm'));
+    expect(await screen.findByTestId('settings-location-message')).toHaveTextContent('settings.background_geolocation_failed');
+    expect(getLocationPreferences().backgroundGeolocation).toBe(false);
+  });
+
+  it('asks the OS itself before location is configured, and turns the switch on only for a grant', async () => {
+    activateTestVariant('responder');
+    mockLocationState.hasTransmitter = false;
+
+    try {
+      mockRunLocationPermissionFlow.mockResolvedValueOnce({ outcome: 'foreground-only', foreground: 'granted', background: 'denied' });
+      await render(<SettingsScreen />);
+      await fireEvent(screen.getByTestId('settings-background-geolocation'), 'onValueChange', true);
+      await fireEvent.press(screen.getByTestId('settings-background-disclosure-confirm'));
+      expect(await screen.findByTestId('settings-location-message')).toHaveTextContent('settings.background_geolocation_denied');
+      expect(mockRunLocationPermissionFlow).toHaveBeenLastCalledWith({ background: true, prompt: true });
+      expect(getLocationPreferences().backgroundGeolocation).toBe(false);
+
+      mockRunLocationPermissionFlow.mockResolvedValueOnce({ outcome: 'granted', foreground: 'granted', background: 'granted' });
+      await fireEvent(screen.getByTestId('settings-background-geolocation'), 'onValueChange', true);
+      await fireEvent.press(screen.getByTestId('settings-background-disclosure-confirm'));
+      await waitFor(() => expect(getLocationPreferences().backgroundGeolocation).toBe(true));
+    } finally {
+      mockLocationState.hasTransmitter = true;
+    }
   });
 
   it("shows Google Play's background-location disclosure before the system prompt, and asks nothing when it is declined", async () => {

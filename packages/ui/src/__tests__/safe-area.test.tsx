@@ -3,7 +3,7 @@ import React, { type ReactNode } from 'react';
 import { StyleSheet, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Fab, FAB_EDGE } from '../fab';
+import { Fab, FAB_EDGE, FAB_LIST_CLEARANCE, useFabListPadding } from '../fab';
 import { NativeModal } from '../native-modal';
 import { BottomInsetConsumedContext, useBottomSafeAreaInset } from '../safe-area-view';
 
@@ -75,5 +75,20 @@ describe('Fab', () => {
     await render(<Fab testID="fab" style={{ bottom: 80 }} />);
 
     expect(styleOf('fab')).toMatchObject({ bottom: 80 });
+  });
+});
+
+// The Fab is lifted by the inset, so the list under it needs the same extra room for its last row to scroll clear.
+describe('useFabListPadding', () => {
+  it('adds the bottom inset the Fab is lifted by', async () => {
+    const { result } = await renderHook(() => useFabListPadding());
+
+    expect(result.current).toBe(FAB_LIST_CLEARANCE + 34);
+  });
+
+  it('is the bare clearance above a bottom tab bar', async () => {
+    const { result } = await renderHook(() => useFabListPadding(), { wrapper: consumed });
+
+    expect(result.current).toBe(FAB_LIST_CLEARANCE);
   });
 });

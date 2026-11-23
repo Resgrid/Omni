@@ -1,15 +1,15 @@
 import { registerDataStoreReset } from '@resgrid/data';
 import { create } from 'zustand';
 
-import type { ActivityLogEntry, ConsoleTab, RadioLogEntry } from '../lib/console-types';
+import type { ActivityLogEntry, ConsoleTab, DashboardCardKey, RadioLogEntry } from '../lib/console-types';
 
 /** Entries kept in the activity and radio logs (newest first). */
 export const MAX_LOG_ENTRIES = 100;
 
 /**
  * Dispatch console view state (Dispatch baseline `dispatch-console-store` + `unit-bulk-actions-store` selection): the
- * call the console is filtered to, the selected unit or person, the multi-unit selection, the activity tab, and the
- * in-memory activity and radio logs. Never persisted; cleared on sign-out.
+ * call the console is filtered to, the selected unit or person, the multi-unit selection, the activity tab, each
+ * panel's search text and the in-memory activity and radio logs. Never persisted; cleared on sign-out.
  */
 interface ConsoleData {
   selectedCallId: string | null;
@@ -27,6 +27,8 @@ interface ConsoleData {
    * multi-unit selection): a layout that does not show the activity panel (the phone's tabs) brings it into view.
    */
   actionsRequest: number;
+  /** Each panel's search text, kept while the panel is not mounted (another phone tab, "Single list" moving it). */
+  panelQueries: Partial<Record<DashboardCardKey, string>>;
   activityLog: ActivityLogEntry[];
   radioLog: RadioLogEntry[];
 }
@@ -42,6 +44,7 @@ export interface ConsoleState extends ConsoleData {
   setActiveTab: (tab: ConsoleTab) => void;
   /** Opens the Actions tab and asks the layout to show it (`actionsRequest`). */
   showActions: () => void;
+  setPanelQuery: (card: DashboardCardKey, query: string) => void;
   addActivity: (entry: Omit<ActivityLogEntry, 'id' | 'timestamp'>) => void;
   clearActivity: () => void;
   startRadioTransmission: (participantId: string, participantName: string) => void;
@@ -70,6 +73,7 @@ const initialData = (): ConsoleData => ({
   selectionAnchorId: null,
   activeTab: 'activity',
   actionsRequest: 0,
+  panelQueries: {},
   activityLog: [],
   radioLog: [],
 });
@@ -130,6 +134,8 @@ export const useConsoleStore = create<ConsoleState>()((set, get) => ({
   setActiveTab: (activeTab) => set({ activeTab }),
 
   showActions: () => set({ activeTab: 'actions', actionsRequest: get().actionsRequest + 1 }),
+
+  setPanelQuery: (card, query) => set((state) => ({ panelQueries: { ...state.panelQueries, [card]: query } })),
 
   addActivity: (entry) => set((state) => ({ activityLog: [{ ...entry, id: nextId(), timestamp: Date.now() }, ...state.activityLog].slice(0, MAX_LOG_ENTRIES) })),
 

@@ -182,7 +182,7 @@ beforeEach(() => {
   useWeatherAlertsStore.setState({ alerts: [{ WeatherAlertId: 'w1', Severity: 0, Event: 'Tornado Warning' } as never], fetchActiveAlerts: jest.fn(async () => undefined) });
   useMapMarkersStore.setState({ markers: [{ Id: 'm1', Latitude: 40, Longitude: -105 } as never], centerLatitude: 40, centerLongitude: -105, zoomLevel: 11, fetchMarkers: mocks.fetchMarkers });
   useCheckInTimersStore.setState({ statusesByCall: {}, fetchTimerStatusesForCalls: jest.fn(async () => undefined) });
-  useCallDetailStore.setState({ details: {}, fetchCallDetail: mocks.fetchCallDetail, fetchCallNotes: jest.fn(async () => undefined) });
+  useCallDetailStore.setState({ details: {}, noteDrafts: {}, fetchCallDetail: mocks.fetchCallDetail, fetchCallNotes: jest.fn(async () => undefined) });
   Object.assign(mockPtt, { isConnected: false, isTransmitting: false, currentChannel: null });
 });
 
@@ -313,6 +313,32 @@ describe('DispatchConsoleScreen on a phone', () => {
     await fireEvent.press(screen.getByTestId('active-calls-panel-header'));
     expect(screen.getByTestId('console-call-9')).toBeTruthy();
     expect(useDashboardViewStore.getState().collapsedCards['active-calls']).toBe(true);
+  });
+
+  // The overdue badges show in the tab, so they are kept fresh there even though the card was collapsed on a desk.
+  it('polls the check-in timers for the calls tab even when the calls card is saved collapsed', async () => {
+    useDashboardViewStore.setState({ collapsedCards: { 'active-calls': true } });
+    useCallsStore.setState({ calls: [makeCall('9', { Name: 'Kitchen fire', CheckInTimersEnabled: true })] });
+    await setWindow(390, 844);
+    await renderConsole();
+    expect(useCheckInTimersStore.getState().fetchTimerStatusesForCalls).toHaveBeenCalledWith([9], { silent: true });
+  });
+
+  it('keeps an unsent call note and the search text across tab switches', async () => {
+    await setWindow(390, 844);
+    await renderConsole();
+    await fireEvent.changeText(screen.getByTestId('active-calls-search'), 'kitchen');
+    await fireEvent.press(screen.getByTestId('console-call-9'));
+    await fireEvent.press(screen.getByTestId('console-phone-tabs-tab-notes'));
+    await fireEvent.changeText(screen.getByTestId('call-notes-input'), 'Second line charged');
+
+    await fireEvent.press(screen.getByTestId('console-phone-tabs-tab-units'));
+    expect(screen.queryByTestId('call-notes-input')).toBeNull();
+    await fireEvent.press(screen.getByTestId('console-phone-tabs-tab-notes'));
+    expect(screen.getByTestId('call-notes-input').props.value).toBe('Second line charged');
+
+    await fireEvent.press(screen.getByTestId('console-phone-tabs-tab-calls'));
+    expect(screen.getByTestId('active-calls-search').props.value).toBe('kitchen');
   });
 
   it('opens the actions when a call is picked to filter to, and keeps the filter on the other tabs', async () => {

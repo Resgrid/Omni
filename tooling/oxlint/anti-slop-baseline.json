@@ -3208,9 +3208,6 @@
     "anti-slop/no-unsafe-dictionary-type": 1,
     "anti-slop/require-readable-spacing": 4
   },
-  "packages/features/src/settings/sections/location-section.tsx": {
-    "anti-slop/require-readable-spacing": 7
-  },
   "packages/features/src/settings/sections/notifications-section.tsx": {
     "anti-slop/require-readable-spacing": 1
   },

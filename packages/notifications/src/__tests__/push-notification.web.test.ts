@@ -231,6 +231,34 @@ describe('browser', () => {
     expect(fetchMock).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ body: JSON.stringify({ Token: 'browser-token', Prefix: 'DEPT', Source: 'Dispatch' }) }));
   });
 
+  describe('a Dispatch registration stored before Dispatch had its own Source', () => {
+    const storeWithoutSource = (): void => {
+      expect(JSON.parse(storage.get(web.WEB_PUSH_REGISTRATION_KEY) ?? '{}')).toMatchObject({ source: 'Dispatch' });
+      // JSON.stringify leaves out an undefined field: the record as a build from before the Source wrote it.
+      storage.set(web.WEB_PUSH_REGISTRATION_KEY, JSON.stringify({ ...JSON.parse(storage.get(web.WEB_PUSH_REGISTRATION_KEY) ?? '{}'), source: undefined }));
+    };
+
+    beforeEach(async () => {
+      selectVariant('dispatch');
+      permission = 'granted';
+      await web.syncWebPush();
+      storeWithoutSource();
+    });
+
+    it('is taken off at sign-out as it was made, without a Source', async () => {
+      await web.pushNotificationService.unregisterAtSignOut('access-token');
+      expect(fetchMock).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ body: JSON.stringify({ Token: 'browser-token', Prefix: 'DEPT' }) }));
+    });
+
+    it('is moved onto the Source at the next sync: taken off without one, then registered with it', async () => {
+      await web.syncWebPush();
+      expect(webUnregistrations()).toEqual([expect.objectContaining({ data: { Token: 'browser-token', Prefix: 'DEPT' } })]);
+      expect(registrations()).toHaveLength(2);
+      expect(registrations()[1].data).toMatchObject({ Token: 'browser-token', Source: 'Dispatch' });
+      expect(JSON.parse(storage.get(web.WEB_PUSH_REGISTRATION_KEY) ?? '{}')).toMatchObject({ source: 'Dispatch' });
+    });
+  });
+
   it('still kills the token when the sign-out call fails', async () => {
     permission = 'granted';
     await web.syncWebPush();

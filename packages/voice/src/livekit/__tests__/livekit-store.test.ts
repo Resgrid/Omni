@@ -19,7 +19,16 @@ import { getHeadsetButtonService, resetHeadsetButtonServiceForTests } from '../.
 import { getMicrophoneController } from '../../ptt/microphone-controller';
 import { configureVoice, resetVoiceRuntimeForTests } from '../../runtime';
 import * as livekitClient from '../livekit-client';
-import { CONNECT_OVERALL_TIMEOUT_MS, createInitialLiveKitState, MAX_REJOIN_ATTEMPTS, PERMISSION_TIMEOUT_MS, resetLiveKitSessionForTests, SYSTEM_CALL_END_SETTLE_MS, useLiveKitStore } from '../livekit-store';
+import {
+  CONNECT_OVERALL_TIMEOUT_MS,
+  createInitialLiveKitState,
+  MAX_REJOIN_ATTEMPTS,
+  PERMISSION_TIMEOUT_MS,
+  POST_CONNECT_STEP_TIMEOUT_MS,
+  resetLiveKitSessionForTests,
+  SYSTEM_CALL_END_SETTLE_MS,
+  useLiveKitStore,
+} from '../livekit-store';
 import * as microphonePermission from '../microphone-permission';
 
 jest.mock('@resgrid/api', () => ({ getDepartmentVoiceSettings: jest.fn(), canConnectToVoiceSession: jest.fn(), getDepartmentAudioStreams: jest.fn() }));
@@ -301,6 +310,29 @@ describe('OS permission prompts', () => {
 
     prompt.answer();
     setAppState('active');
+
+    await expect(join).resolves.toEqual({ ok: true });
+    expect(RNCallKeep.startCall).toHaveBeenCalledWith(expect.any(String), 'Fireground', 'Fireground', 'generic', false);
+    expect(useLiveKitStore.getState()).toMatchObject({ isConnected: true, lastError: null });
+  });
+});
+
+describe('post-connect steps', () => {
+  beforeEach(() => jest.useFakeTimers({ doNotFake: ['setImmediate'] }));
+
+  afterEach(() => jest.useRealTimers());
+
+  // A native call that never settles after the room is committed would leave the channel sheet on "joining".
+  it('passes over a native step that never settles, so the join completes and the CallKeep call still starts', async () => {
+    foregroundService.start.mockImplementationOnce(neverAnswered);
+
+    const join = useLiveKitStore.getState().connectToRoom(channel('1', 'Fireground'));
+    await flush(10);
+    expect(useLiveKitStore.getState()).toMatchObject({ isConnected: true, isConnecting: false });
+    expect(foregroundService.start).toHaveBeenCalled();
+    expect(RNCallKeep.startCall).not.toHaveBeenCalled();
+
+    await jest.advanceTimersByTimeAsync(POST_CONNECT_STEP_TIMEOUT_MS);
 
     await expect(join).resolves.toEqual({ ok: true });
     expect(RNCallKeep.startCall).toHaveBeenCalledWith(expect.any(String), 'Fireground', 'Fireground', 'generic', false);

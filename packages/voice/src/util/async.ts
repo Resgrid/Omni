@@ -5,7 +5,7 @@ export const withTimeout = <T>(promise: Promise<T>, ms: number, label: string): 
     timer = setTimeout(() => reject(new VoiceTimeoutError(label, ms)), ms);
   });
   return Promise.race([promise, timeout]).finally(() => {
-    if (timer) clearTimeout(timer);
+    if (timer !== undefined) clearTimeout(timer);
   });
 };
 
@@ -38,7 +38,7 @@ export const createDeadline = (ms: number, label: string): Deadline => {
     stop: () => {
       phase = 'stopped';
 
-      if (timer) clearTimeout(timer);
+      if (timer !== null) clearTimeout(timer);
       timer = null;
     },
   };

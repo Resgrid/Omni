@@ -6,7 +6,7 @@ import { useTranslation } from '@resgrid/i18n';
 import type { UnitInfoResultData } from '@resgrid/models';
 import { FlatList, HStack, Pressable, Text } from '@resgrid/ui';
 import { ListChecks, RefreshCw, Truck } from 'lucide-react-native';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { type GestureResponderEvent, StyleSheet, View } from 'react-native';
 
 import { useConsoleStore } from '../hooks/use-console-store';
@@ -16,7 +16,7 @@ import { type ConsoleCallFilter, filterConsoleUnits, isUnitOnCall } from '../lib
 import { isUnitAvailable } from '../lib/console-stats';
 import { indexCallsById, unitTransportDestinationMismatch } from '../lib/transport-destination';
 import { PanelFrame, PanelIconButton } from './panel-frame';
-import { PanelSearch } from './panel-search';
+import { PanelSearch, usePanelQuery } from './panel-search';
 import { ConsoleUnitRow, readPressModifiers } from './resource-rows';
 
 export interface UnitsPanelProps {
@@ -81,7 +81,7 @@ export const UnitsPanel: React.FC<UnitsPanelProps> = ({ callFilter, onSelectUnit
   const timers = useUnitAlertsByUnit();
   const calls = useCallsStore((state) => state.calls);
   const callsById = useMemo(() => indexCallsById(calls), [calls]);
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = usePanelQuery('units');
 
   const visible = useMemo(() => filterConsoleUnits(units, { query, availableOnly, callFilter }), [availableOnly, callFilter, query, units]);
   const selectedSet = useMemo(() => new Set(selectedUnitIds), [selectedUnitIds]);

@@ -3161,6 +3161,7 @@
     "advanced": "Advanced",
     "audio": "Audio",
     "background_geolocation_denied": "Background location needs the \"Allow all the time\" permission. Allow it in your device settings, then turn this on again.",
+    "background_geolocation_failed": "Background location could not be turned on. Try again.",
     "location": "Location",
     "login_info_description": "Sign in again, for example after changing your password or to switch to another account.",
     "no_units_available_help": "Вам не призначено жодного підрозділу. Попросіть адміністратора вашого відділу додати вас до групи станції підрозділу.",

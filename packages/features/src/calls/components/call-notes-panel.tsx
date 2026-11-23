@@ -5,7 +5,7 @@ import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
 import type { CallNoteResultData } from '@resgrid/models';
 import { Button, ButtonText, Card, Input, InputField, Text, Textarea, TextareaInput, useToast } from '@resgrid/ui';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 export interface CallNotesPanelProps {
@@ -30,8 +30,11 @@ export const CallNotesPanel: React.FC<CallNotesPanelProps> = ({ callId, showSear
   const isLoading = useCallDetailStore((state) => state.loading.notes === true);
   const fetchCallNotes = useCallDetailStore((state) => state.fetchCallNotes);
   const addNote = useCallDetailStore((state) => state.addNote);
+  // The unsent note lives in the store: closing the sheet or switching the console's phone tab keeps what was typed.
+  const draft = useCallDetailStore((state) => state.noteDrafts[callId] ?? '');
+  const setNoteDraft = useCallDetailStore((state) => state.setNoteDraft);
+  const setDraft = useCallback((note: string) => setNoteDraft(callId, note), [callId, setNoteDraft]);
   const [query, setQuery] = useState('');
-  const [draft, setDraft] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {

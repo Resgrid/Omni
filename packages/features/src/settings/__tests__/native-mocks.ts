@@ -62,6 +62,11 @@ export const realtimeModule = () => ({ useRealtimeStore: mockRealtimeStore });
 
 export const mockTransmitter = { requestBackgroundTracking: jest.fn() };
 
+/** `hasTransmitter: false` stands for location not configured yet: the section asks the OS through `runLocationPermissionFlow`. */
+export const mockLocationState = { hasTransmitter: true };
+
+export const mockRunLocationPermissionFlow = jest.fn();
+
 /** The background rationale as keys, so tests can tell the person and unit disclosures apart. */
 const mockRationale = (step: string, options: { target?: string } = {}) => ({
   title: `location.permission_${step}_title`,
@@ -70,4 +75,9 @@ const mockRationale = (step: string, options: { target?: string } = {}) => ({
   cancelLabel: 'location.permission_not_now',
 });
 
-export const locationModule = () => ({ getLocationTransmitter: () => mockTransmitter, getRecentLocation: () => null, getLocationPermissionRationale: mockRationale });
+export const locationModule = () => ({
+  getLocationTransmitter: () => (mockLocationState.hasTransmitter ? mockTransmitter : null),
+  getRecentLocation: () => null,
+  getLocationPermissionRationale: mockRationale,
+  runLocationPermissionFlow: mockRunLocationPermissionFlow,
+});

@@ -1,8 +1,23 @@
 import { useTranslation } from '@resgrid/i18n';
 import { HStack, Input, InputField, Pressable } from '@resgrid/ui';
 import { Search, X } from 'lucide-react-native';
-import React from 'react';
+import React, { useCallback } from 'react';
 import { View } from 'react-native';
+
+import { useConsoleStore } from '../hooks/use-console-store';
+import type { DashboardCardKey } from '../lib/console-types';
+
+/**
+ * A panel's search text, held by the console store rather than the panel: a phone shows one panel at a time, so the
+ * text typed into a panel is still there when its tab is picked again.
+ */
+export const usePanelQuery = (card: DashboardCardKey): [string, (query: string) => void] => {
+  const query = useConsoleStore((state) => state.panelQueries[card] ?? '');
+  const setPanelQuery = useConsoleStore((state) => state.setPanelQuery);
+  const setQuery = useCallback((next: string) => setPanelQuery(card, next), [card, setPanelQuery]);
+
+  return [query, setQuery];
+};
 
 /** The search row under a console panel header. */
 export const PanelSearch: React.FC<{ value: string; onChange: (value: string) => void; placeholder: string; testID: string }> = ({ value, onChange, placeholder, testID }) => {

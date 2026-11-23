@@ -4,7 +4,7 @@ import { OptionChips } from '@resgrid/features/calls';
 import { useTranslation } from '@resgrid/i18n';
 import type { RecurringCallResultData } from '@resgrid/models';
 import { useRealtimeRefetch } from '@resgrid/realtime';
-import { Fab, FlatList, Loading, RefreshControl, Text, useThemeColors, ZeroState } from '@resgrid/ui';
+import { Fab, FlatList, Loading, RefreshControl, Text, useFabListPadding, useThemeColors, ZeroState } from '@resgrid/ui';
 import { useRouter } from 'expo-router';
 import { CalendarDays, Plus, Repeat } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -37,6 +37,7 @@ export default function RecurringCallsScreen({ showHeader = false }: RecurringCa
   const { t } = useTranslation();
   const router = useRouter();
   const colors = useThemeColors();
+  const fabListPadding = useFabListPadding();
   const isEnabled = useIsRecurringCallsEnabled();
   const schedules = useRecurringCallsStore((state) => state.schedules);
   const isLoading = useRecurringCallsStore((state) => state.loading.list === true);
@@ -98,7 +99,7 @@ export default function RecurringCallsScreen({ showHeader = false }: RecurringCa
         keyExtractor={(item: RecurringCallResultData) => String(item.RecurringCallId)}
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
         // The New button floats over the list's bottom right: the last row scrolls clear of it.
-        contentContainerStyle={canCreate ? styles.listAboveFab : styles.list}
+        contentContainerStyle={canCreate ? { paddingBottom: fabListPadding } : styles.list}
       />
     );
   };
@@ -137,4 +138,4 @@ export default function RecurringCallsScreen({ showHeader = false }: RecurringCa
   );
 }
 
-const styles = StyleSheet.create({ list: { paddingBottom: 24 }, listAboveFab: { paddingBottom: 96 } });
+const styles = StyleSheet.create({ list: { paddingBottom: 24 } });

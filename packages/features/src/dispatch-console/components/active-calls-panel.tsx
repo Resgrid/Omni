@@ -5,14 +5,13 @@ import { useTranslation } from '@resgrid/i18n';
 import type { CallResultData, DispatchedEventResultData } from '@resgrid/models';
 import { FlatList, Text } from '@resgrid/ui';
 import { AlertTriangle, Plus, RefreshCw } from 'lucide-react-native';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { selectCardCollapsed, useDashboardViewStore } from '../hooks/use-dashboard-view-store';
 import { filterConsoleCalls } from '../lib/console-filters';
 import { ConsoleCallCard } from './console-call-card';
-import { PanelFrame, PanelIconButton } from './panel-frame';
-import { PanelSearch } from './panel-search';
+import { PanelFrame, PanelIconButton, useIsPanelCollapsed } from './panel-frame';
+import { PanelSearch, usePanelQuery } from './panel-search';
 
 /** How often check-in timers are re-read while the panel is open (the overdue badges). */
 export const CHECK_IN_POLL_MS = 30 * 1000;
@@ -47,8 +46,9 @@ export const ActiveCallsPanel: React.FC<ActiveCallsPanelProps> = ({ selectedCall
   const isLoading = useCallsStore((state) => state.loading.calls === true);
   const hasError = useCallsStore((state) => !!state.errors.calls);
   const timerStatuses = useCheckInTimersStore((state) => state.statusesByCall);
-  const isCollapsed = useDashboardViewStore(selectCardCollapsed('active-calls'));
-  const [query, setQuery] = useState('');
+  // As shown: a phone tab never collapses its panel, whatever the saved flag says.
+  const isCollapsed = useIsPanelCollapsed('active-calls');
+  const [query, setQuery] = usePanelQuery('active-calls');
 
   const visible = useMemo(() => filterConsoleCalls(calls, query, now()), [calls, now, query]);
   const idsKey = visible.map((call) => call.CallId).join(',');
