@@ -5151,7 +5151,7 @@
       "sent": "Sent"
     },
     "desk_off": "The dispatcher desk is turned off",
-    "desk_off_description": "Your department has not turned on the dispatcher desk. A department administrator can turn it on under Shifts > Dispatcher Desk Settings.",
+    "desk_off_description": "Your department has not turned on the dispatcher desk. A department administrator can turn it on under Shifts > Dispatcher Desk > Dispatcher Desk Settings.",
     "device": {
       "desktop": "Desktop",
       "phone": "Phone",

@@ -74,6 +74,9 @@ export const SHIFT_SERVER_ERROR_CODES = [
   'already_on_roster',
   'invalid_request',
   'not_eligible',
+  // Sign-up only: every slot the group offers for the member's roles is taken, or the member holds none of its roles.
+  'group_full',
+  'role_required',
 ] as const;
 
 export type ShiftServerErrorCode = (typeof SHIFT_SERVER_ERROR_CODES)[number];

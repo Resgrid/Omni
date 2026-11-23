@@ -458,6 +458,7 @@
       "already_on_roster": "Cette personne est déjà inscrite ce jour-là.",
       "already_signed_up": "Vous êtes déjà inscrit pour ce jour.",
       "day_in_past": "Ce jour de quart est déjà passé.",
+      "group_full": "Toutes les places de ce groupe pour vos rôles sont prises.",
       "invalid_group": "Ce groupe ne fait pas partie de ce quart.",
       "invalid_offer": "Cette offre n'est plus valide.",
       "invalid_request": "La demande n'était pas valide. Veuillez réessayer.",
@@ -468,6 +469,7 @@
       "not_found": "Ce quart, cette inscription ou cet échange n'existe plus.",
       "not_on_shift": "Vous n'êtes pas inscrit à ce jour de quart.",
       "not_pending": "Cette demande n'est plus en attente.",
+      "role_required": "Vous devez avoir l’un des rôles demandés par ce groupe pour vous inscrire.",
       "trade_exists": "Un échange est déjà ouvert pour ce jour.",
       "unknown": "Une erreur s'est produite. Veuillez réessayer."
     },

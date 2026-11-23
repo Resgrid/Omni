@@ -5151,7 +5151,7 @@
       "sent": "Gesendet"
     },
     "desk_off": "Der Disponentenplatz ist deaktiviert",
-    "desk_off_description": "Ihre Organisation hat den Disponentenplatz nicht aktiviert. Ein Administrator Ihrer Organisation kann ihn unter Schichten > Einstellungen Dispositionsplatz aktivieren.",
+    "desk_off_description": "Ihre Organisation hat den Disponentenplatz nicht aktiviert. Ein Administrator Ihrer Organisation kann ihn unter Schichten > Dispositionsplatz > Einstellungen Dispositionsplatz aktivieren.",
     "device": {
       "desktop": "Desktop",
       "phone": "Telefon",

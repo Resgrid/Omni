@@ -458,6 +458,7 @@
       "already_on_roster": "Ta osoba jest już zapisana na ten dzień.",
       "already_signed_up": "Jesteś już zapisany na ten dzień.",
       "day_in_past": "Ten dzień zmiany już minął.",
+      "group_full": "Wszystkie miejsca w tej grupie dla Twoich ról są zajęte.",
       "invalid_group": "Ta grupa nie należy do tej zmiany.",
       "invalid_offer": "Ta oferta nie jest już aktualna.",
       "invalid_request": "Żądanie było nieprawidłowe. Spróbuj ponownie.",
@@ -468,6 +469,7 @@
       "not_found": "Ta zmiana, zapis lub zamiana już nie istnieje.",
       "not_on_shift": "Nie jesteś na tej zmianie w tym dniu.",
       "not_pending": "Ta prośba nie oczekuje już na decyzję.",
+      "role_required": "Aby się zapisać, potrzebujesz jednej z ról wymaganych przez tę grupę.",
       "trade_exists": "Na ten dzień istnieje już otwarta zamiana.",
       "unknown": "Coś poszło nie tak. Spróbuj ponownie."
     },

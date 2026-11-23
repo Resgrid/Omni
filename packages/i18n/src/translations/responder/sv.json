@@ -458,6 +458,7 @@
       "already_on_roster": "Den personen är redan schemalagd den här dagen.",
       "already_signed_up": "Du är redan anmäld till den här dagen.",
       "day_in_past": "Den här skiftdagen har redan passerat.",
+      "group_full": "Alla platser i den här gruppen för dina roller är tagna.",
       "invalid_group": "Den gruppen ingår inte i det här skiftet.",
       "invalid_offer": "Erbjudandet gäller inte längre.",
       "invalid_request": "Begäran var ogiltig. Försök igen.",
@@ -468,6 +469,7 @@
       "not_found": "Skiftet, anmälan eller bytet finns inte längre.",
       "not_on_shift": "Du är inte schemalagd den här skiftdagen.",
       "not_pending": "Förfrågan väntar inte längre på beslut.",
+      "role_required": "Du behöver en av de roller som gruppen kräver för att anmäla dig.",
       "trade_exists": "Det finns redan ett öppet byte för den här dagen.",
       "unknown": "Något gick fel. Försök igen."
     },

@@ -5151,7 +5151,7 @@
       "sent": "Envoyé"
     },
     "desk_off": "Le poste opérateur est désactivé",
-    "desk_off_description": "Votre service n'a pas activé le poste opérateur. Un administrateur du service peut l'activer dans Quarts > Paramètres du poste de répartition.",
+    "desk_off_description": "Votre service n'a pas activé le poste opérateur. Un administrateur du service peut l'activer dans Quarts > Poste de répartition > Paramètres du poste de répartition.",
     "device": {
       "desktop": "Ordinateur",
       "phone": "Téléphone",

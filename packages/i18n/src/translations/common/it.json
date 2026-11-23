@@ -5151,7 +5151,7 @@
       "sent": "Inviato"
     },
     "desk_off": "La postazione operatori è disattivata",
-    "desk_off_description": "Il tuo dipartimento non ha attivato la postazione operatori. Un amministratore del dipartimento può attivarla in Turni > Impostazioni della postazione di centrale.",
+    "desk_off_description": "Il tuo dipartimento non ha attivato la postazione operatori. Un amministratore del dipartimento può attivarla in Turni > Postazione di centrale > Impostazioni della postazione di centrale.",
     "device": {
       "desktop": "Computer",
       "phone": "Telefono",

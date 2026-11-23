@@ -5151,7 +5151,7 @@
       "sent": "Skickat"
     },
     "desk_off": "Larmoperatörsplatsen är avstängd",
-    "desk_off_description": "Din organisation har inte slagit på larmoperatörsplatsen. En administratör kan slå på den under Skift > Inställningar för operatörsplatsen.",
+    "desk_off_description": "Din organisation har inte slagit på larmoperatörsplatsen. En administratör kan slå på den under Skift > Operatörsplats > Inställningar för operatörsplatsen.",
     "device": {
       "desktop": "Dator",
       "phone": "Telefon",

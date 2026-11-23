@@ -5151,7 +5151,7 @@
       "sent": "Enviado"
     },
     "desk_off": "El puesto de despacho está desactivado",
-    "desk_off_description": "Su departamento no ha activado el puesto de despacho. Un administrador del departamento puede activarlo en Turnos > Configuración del puesto de despacho.",
+    "desk_off_description": "Su departamento no ha activado el puesto de despacho. Un administrador del departamento puede activarlo en Turnos > Puesto de despacho > Configuración del puesto de despacho.",
     "device": {
       "desktop": "Escritorio",
       "phone": "Teléfono",

@@ -458,6 +458,7 @@
       "already_on_roster": "That person is already on this day.",
       "already_signed_up": "You are already signed up for this day.",
       "day_in_past": "This shift day has already passed.",
+      "group_full": "Every slot in this group for your roles is taken.",
       "invalid_group": "That group is not part of this shift.",
       "invalid_offer": "That offer is no longer valid.",
       "invalid_request": "The request was not valid. Please try again.",
@@ -468,6 +469,7 @@
       "not_found": "This shift, sign-up or trade no longer exists.",
       "not_on_shift": "You are not on this shift day.",
       "not_pending": "This request is no longer pending.",
+      "role_required": "You need one of the roles this group asks for to sign up.",
       "trade_exists": "There is already an open trade for this day.",
       "unknown": "Something went wrong. Please try again."
     },

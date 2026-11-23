@@ -5151,7 +5151,7 @@
       "sent": "Wysłano"
     },
     "desk_off": "Stanowisko dyspozytora jest wyłączone",
-    "desk_off_description": "Twoja jednostka organizacyjna nie włączyła stanowiska dyspozytora. Administrator może je włączyć w Zmiany > Ustawienia stanowiska dyspozytorskiego.",
+    "desk_off_description": "Twoja jednostka organizacyjna nie włączyła stanowiska dyspozytora. Administrator może je włączyć w Zmiany > Stanowisko dyspozytorskie > Ustawienia stanowiska dyspozytorskiego.",
     "device": {
       "desktop": "Komputer",
       "phone": "Telefon",
