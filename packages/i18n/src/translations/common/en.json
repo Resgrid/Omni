@@ -640,7 +640,15 @@
       "likely_not_incident": "Enhanced AI: likely not an incident",
       "repeat_sender": "Repeat sender: over the hourly limit",
       "dismissed_as_spam": "Dismissed as spam"
-    }
+    },
+    "indoor_location_select": "Choose a room or area",
+    "indoor_location_search": "Search rooms and areas",
+    "indoor_location_search_hint": "Type the name of a room, area or building",
+    "indoor_location_none_found": "No rooms or areas found",
+    "indoor_location_offline": "Searching rooms needs a connection. You can still pick one on a facility map.",
+    "indoor_location_pick_on_map": "Pick a room on a facility map",
+    "indoor_location_clear": "Clear the indoor location",
+    "indoor_location_unnamed": "Room on a facility map"
   },
   "chat": {
     "ack_pending_count": "You have {{count}} urgent messages to acknowledge",
@@ -1951,6 +1959,14 @@
       "category": "Category",
       "no_details": "No details for this layer.",
       "source_file": "Imported from {{name}}"
+    },
+    "facility": {
+      "title": "Facility maps",
+      "choose_level": "Floor or layer of {{name}}",
+      "all_layers": "All layers",
+      "none": "No facility map",
+      "pick_hint": "Show a facility map, then tap a room or area to place the call there",
+      "feature_address": "{{name}}, {{map}}"
     }
   },
   "mfa": {
@@ -4025,7 +4041,17 @@
     "visible_columns": "Visible Columns",
     "visible_pins": "Visible Pins",
     "widget_size": "Widget Size",
-    "zoom_out_show_all": "Zoom Out to Show All Pins"
+    "zoom_out_show_all": "Zoom Out to Show All Pins",
+    "map_view": "Map view",
+    "map_view_hint": "Fit every pin, hold a fixed spot, or frame a facility map.",
+    "map_view_fixed": "Fixed spot",
+    "map_view_facility": "Frame the facility map",
+    "map_lock_view": "Lock the view so the board cannot drift away",
+    "facility_map": "Facility map",
+    "facility_map_hint": "A site or building map drawn on the board under the pins.",
+    "facility_level": "Floor or layer",
+    "no_facility_maps": "Your department has no facility maps yet.",
+    "map_use_current_view": "Use the current map view"
   },
   "dashboard": {
     "add_named_widget": "Add {{name}}",

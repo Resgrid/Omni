@@ -1,11 +1,30 @@
 // @resgrid/features/map — the department map shared by Responder, Unit, Dispatch and BigBoard (omni-plan §7.10 "Maps"):
-// pins, live positions, department layers, legend, pin details with actions, recenter/follow, `/map?callId=` focus.
+// pins, live positions, department layers, facility (custom and indoor) maps, legend, pin details with actions,
+// recenter/follow, `/map?callId=` focus.
 //
-// The map lock (Unit's sidebar "Lock map to unit") and the shared department layers are re-exported through one statement
-// at the end: Oxlint's readable spacing wants a blank line between top-level statements, which the export sorter removes.
+// The map lock (Unit's sidebar "Lock map to unit"), the shared department layers and the facility maps are re-exported
+// through one statement at the end: Oxlint's readable spacing wants a blank line between top-level statements, which the
+// export sorter removes.
 import { DepartmentLayers, DepartmentLayersOverlay, type DepartmentLayersOverlayProps, type DepartmentLayersProps } from './components/department-layers';
 import { DispatchBoardLayers, type DispatchBoardLayersProps } from './components/dispatch-board-layers';
+import { FacilityLocationPicker, type FacilityLocationPickerProps, type FacilityLocationPickerResult, type PickedFacilityLocation } from './components/facility-location-picker';
+import { FacilityFeatureCard, type FacilityFeatureCardProps, facilityFeaturePlace, FacilityMapsOverlay, type FacilityMapsOverlayProps } from './components/facility-maps-overlay';
+import { MapLayersControl, type MapLayersControlProps, MapOverlayControls, type MapOverlayControlsProps } from './components/map-layers-control';
+import { type FacilityMapsState, type FacilitySelection, facilitySheetSection, type ResolvedFacilityMap, useFacilityFocus, useFacilityMapLayers, useFacilityMapListings, useFacilityMaps } from './hooks/use-facility-maps';
 import { LEGACY_LOCATION_STORE_NAME, MAP_LOCK_STORE_NAME, type MapLockState, useMapLock, useMapLockStore } from './hooks/use-map-lock';
+import { type MapOverlays, useMapOverlays } from './hooks/use-map-overlays';
+import {
+  type FacilityBounds,
+  type FacilityFeature,
+  facilityFeatureOf,
+  facilityMapKey,
+  type FacilityMapKind,
+  type FacilityMapListing,
+  facilityMapListings,
+  type FacilityOverlayLayer,
+  lockedViewBounds,
+  parseFacilityMapKey,
+} from './lib/facility-maps';
 
 export { ActiveRouteOverlay, type ActiveRouteOverlayProps, activeRouteShapes } from './components/active-route-overlay';
 export { MapHighlights, type MapHighlightsProps } from './components/map-highlights';
@@ -29,9 +48,42 @@ export {
   type DepartmentLayersProps,
   DispatchBoardLayers,
   type DispatchBoardLayersProps,
+  type FacilityBounds,
+  type FacilityFeature,
+  FacilityFeatureCard,
+  type FacilityFeatureCardProps,
+  facilityFeatureOf,
+  facilityFeaturePlace,
+  FacilityLocationPicker,
+  type FacilityLocationPickerProps,
+  type FacilityLocationPickerResult,
+  facilityMapKey,
+  type FacilityMapKind,
+  type FacilityMapListing,
+  facilityMapListings,
+  FacilityMapsOverlay,
+  type FacilityMapsOverlayProps,
+  type FacilityMapsState,
+  type FacilityOverlayLayer,
+  type FacilitySelection,
+  facilitySheetSection,
   LEGACY_LOCATION_STORE_NAME,
+  lockedViewBounds,
   MAP_LOCK_STORE_NAME,
+  MapLayersControl,
+  type MapLayersControlProps,
   type MapLockState,
+  MapOverlayControls,
+  type MapOverlayControlsProps,
+  type MapOverlays,
+  parseFacilityMapKey,
+  type PickedFacilityLocation,
+  type ResolvedFacilityMap,
+  useFacilityFocus,
+  useFacilityMapLayers,
+  useFacilityMapListings,
+  useFacilityMaps,
   useMapLock,
   useMapLockStore,
+  useMapOverlays,
 };

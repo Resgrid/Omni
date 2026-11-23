@@ -8,7 +8,10 @@
  * - Settings no widget ever read (`showUser`, `showEta`, `sortOrders`) are dropped.
  * - The calls widget is BigBoard's dense column list only: call cards are for the apps a person works from, a wall board
  *   needs every call on one line. A stored `display` choice from earlier Omni builds is ignored.
+ * - The map widget's `showAllMarkers` switch became a view mode (fit the pins, a fixed spot, or a facility map), read from
+ *   the old switch when a board has no mode yet.
  */
+import { isSafeRouteId } from '@resgrid/core/utils/route-ids';
 
 export const FONT_SIZE_MIN = 8;
 export const FONT_SIZE_MAX = 30;
@@ -64,10 +67,28 @@ export interface CallsWidgetSettings {
   columnOrder: CallsColumnKey[];
 }
 
+/**
+ * Where the map widget looks: `fitPins` frames every pin shown (BigBoard's "zoom out to show all markers"), `fixed` holds
+ * `latitude`/`longitude`/`zoomLevel`, `customMap` frames the chosen facility map (a board for one part of a site).
+ */
+export type MapWidgetViewMode = 'fitPins' | 'fixed' | 'customMap';
+
+export const MAP_WIDGET_VIEW_MODES: readonly MapWidgetViewMode[] = ['fitPins', 'fixed', 'customMap'];
+
+/** A facility map's kind: a custom map (site plan) or an indoor map (floor plans). */
+export type MapWidgetCustomMapKind = 'custom' | 'indoor';
+
 export interface MapWidgetSettings {
   zoomLevel: number;
-  /** Fit the camera to every pin instead of the fixed centre and zoom. */
-  showAllMarkers: boolean;
+  /** Replaces BigBoard's `showAllMarkers` (true → `fitPins`, false → `fixed`; migrated by `normalizeWidgetSettings`). */
+  viewMode: MapWidgetViewMode;
+  /** The facility map drawn on the widget ('' = none); `customMap` frames it. */
+  customMapId: string;
+  customMapKind: MapWidgetCustomMapKind;
+  /** Its floor or layer ('' = the map's default: an indoor map's default floor, every layer of a custom map). */
+  customMapLayerId: string;
+  /** Keep the camera on the fixed spot or the facility map (`maxBounds`), so the board cannot drift away. */
+  lockView: boolean;
   hideLabels: boolean;
   showCalls: boolean;
   showLinkedCalls: boolean;
@@ -210,7 +231,22 @@ export const DEFAULT_WIDGET_SETTINGS: Readonly<WidgetSettings> = {
     fontSize: 14,
     columnOrder: [...CALLS_COLUMNS],
   },
-  map: { zoomLevel: 12, showAllMarkers: true, hideLabels: false, showCalls: true, showLinkedCalls: true, showStations: true, showUnits: true, showPersonnel: true, latitude: 0, longitude: 0 },
+  map: {
+    zoomLevel: 12,
+    viewMode: 'fitPins',
+    customMapId: '',
+    customMapKind: 'custom',
+    customMapLayerId: '',
+    lockView: false,
+    hideLabels: false,
+    showCalls: true,
+    showLinkedCalls: true,
+    showStations: true,
+    showUnits: true,
+    showPersonnel: true,
+    latitude: 0,
+    longitude: 0,
+  },
   weather: { units: 'imperial', latitude: 0, longitude: 0 },
   notes: { category: '', includeUncategorized: true },
   time: { format24Hour: false, showSeconds: true },
@@ -328,6 +364,17 @@ export function normalizeWidgetSettings(raw: unknown): WidgetSettings {
   map.zoomLevel = clampNumber(map.zoomLevel, 1, 20, d.map.zoomLevel);
   map.latitude = coordinate(section('map').latitude, 90);
   map.longitude = coordinate(section('map').longitude, 180);
+  // Ids go into request paths: anything that is not a plain id is dropped.
+  const safeId = (value: string): string => (isSafeRouteId(value.trim()) ? value.trim() : '');
+  map.customMapId = safeId(map.customMapId);
+  map.customMapKind = map.customMapKind === 'indoor' ? 'indoor' : 'custom';
+  map.customMapLayerId = map.customMapId ? safeId(map.customMapLayerId) : '';
+  // Boards from before the view modes kept one switch: "zoom out to show all markers" (on by default).
+  const storedMode = MAP_WIDGET_VIEW_MODES.find((mode) => mode === mapRaw.viewMode);
+  map.viewMode = storedMode ?? (mapRaw.showAllMarkers === false ? 'fixed' : 'fitPins');
+
+  // Framing a facility map needs one.
+  if (map.viewMode === 'customMap' && !map.customMapId) map.viewMode = 'fitPins';
 
   const weather = mergeScalars(d.weather, section('weather'));
   weather.units = weather.units === 'metric' || weather.units === 'standard' ? weather.units : 'imperial';

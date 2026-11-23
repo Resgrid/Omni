@@ -103,6 +103,67 @@ describe('signed department map resources (D12)', () => {
     expect(screen.getByTestId('mlrn-image-source-indoor-floor-F1-image').props.url).toBe(`${url}?sig=2`);
   });
 
+  it('draws a facility map under every app layer when asked (below the labels anchor), and on top otherwise', async () => {
+    const { signer } = fakeSigner(10 * 60 * 1000);
+
+    const outline = JSON.stringify({
+      type: 'Polygon',
+      coordinates: [
+        [
+          [3, 1],
+          [4, 1],
+          [4, 2],
+          [3, 1],
+        ],
+      ],
+    });
+
+    const floor: IndoorMapFloorResultData = {
+      IndoorMapFloorId: 'F2',
+      IndoorMapId: 'M2',
+      Name: 'Ground floor',
+      FloorOrder: 1,
+      HasImage: true,
+      BoundsNELat: 2,
+      BoundsNELon: 4,
+      BoundsSWLat: 1,
+      BoundsSWLon: 3,
+      Opacity: 1,
+      Zones: [
+        {
+          IndoorMapZoneId: 'Z1',
+          IndoorMapFloorId: 'F2',
+          Name: 'Control room',
+          Description: null,
+          ZoneType: 0,
+          PixelGeometry: null,
+          GeoGeometry: outline,
+          CenterPixelX: 0,
+          CenterPixelY: 0,
+          CenterLatitude: 1.5,
+          CenterLongitude: 3.5,
+          Color: '#22c55e',
+          Metadata: null,
+          IsSearchable: true,
+        },
+      ],
+    };
+
+    await render(
+      <MapProvider config={config} colorScheme="light" services={services(signer)}>
+        <MapView testID="map">
+          <IndoorMapFloorLayer floor={floor} belowLabels />
+          <CustomMapRasterLayer layer={layer({ IndoorMapFloorId: 'L9' })} />
+        </MapView>
+      </MapProvider>
+    );
+    await act(async () => undefined);
+    expect(screen.getByTestId('mlrn-layer-indoor-floor-F2-image-layer').props.beforeId).toBe('rg-overlay-anchor');
+    expect(screen.getByTestId('mlrn-layer-indoor-floor-F2-zones-fill').props.beforeId).toBe('rg-overlay-anchor');
+    expect(screen.getByTestId('mlrn-layer-indoor-floor-F2-zones-label').props.beforeId).toBe('rg-overlay-anchor');
+    expect(screen.getByTestId('mlrn-layer-custom-map-L9-image-layer').props.beforeId).toBeUndefined();
+  });
+
   it('useSignedMapUrl returns null for no URL and draws a still-fresh cached signature on the first render', async () => {
     // The request never answers: only the cache can supply the URL.
     const signer: MapUrlSigner = { sign: jest.fn(() => new Promise<SignedMapUrl>(() => undefined)), peek: (url) => ({ url: `${url}?sig=cached`, refreshAt: Number.POSITIVE_INFINITY }), clear: jest.fn() };

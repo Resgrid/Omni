@@ -110,7 +110,7 @@
     },
     "maps": {
       "layers": true,
-      "customIndoor": false,
+      "customIndoor": true,
       "navigationInApp": false
     },
     "routes": {

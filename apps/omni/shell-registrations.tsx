@@ -18,7 +18,7 @@ import { StepUpPromptHost } from '@resgrid/features/data-protection';
 import { setDepartmentConfig } from '@resgrid/features/department-config';
 import { DeskStatusBar, DispatcherDeskHost, registerDispatcherDeskSignOut } from '@resgrid/features/dispatcher-desk';
 import { createIncidentCommandCallTab } from '@resgrid/features/incident-command';
-import { DispatchBoardLayers } from '@resgrid/features/map';
+import { DispatchBoardLayers, FacilityLocationPicker } from '@resgrid/features/map';
 import { registerOfflineMapsSettings } from '@resgrid/features/offline-maps';
 import { CALL_RECORDS_TAB, configureRecords, registerRecordsContextHook } from '@resgrid/features/records';
 import { RecurringCallAlertsBanner, RecurringCallAlertsHost, recurringCallsRoutes, registerRecurringCallsHookPoints } from '@resgrid/features/recurring-calls';
@@ -26,7 +26,7 @@ import { registerRunCardCallDetailTab, registerRunCardHookPoints } from '@resgri
 import { configureSettings } from '@resgrid/features/settings';
 import { CallRouteLauncher, registerUnitStatusCallDetailAction, StatusTimerBanner, StatusTimerNotifications, unitStatusRoutes, UnitStatusSidebar } from '@resgrid/features/unit-status';
 import { AudioStreamSheet, VoiceChannelSheet, VoiceMenuButtons } from '@resgrid/features/voice';
-import { FullScreenLocationPicker, StaticMap } from '@resgrid/maps';
+import { StaticMap } from '@resgrid/maps';
 import { playAudioClip } from '@resgrid/voice';
 import { usePathname } from 'expo-router';
 
@@ -75,9 +75,22 @@ function MemberMenu({ nav, onNavigate }: SidebarContentProps) {
   return <NavMenu nav={nav} onNavigate={onNavigate} actions={<VoiceMenuButtons />} />;
 }
 
-/** The call form's full-screen map picker (the address of the picked point comes from the server), with the nearest-unit board drawn on it in Dispatch. */
-function CallLocationPicker({ isOpen, onClose, initial, onSelect, overlay }: LocationPickerProps) {
-  return <FullScreenLocationPicker isOpen={isOpen} initialLocation={initial} onClose={onClose} onLocationSelected={onSelect} overlay={overlay ? <DispatchBoardLayers overlay={overlay} /> : undefined} />;
+/**
+ * The call form's full-screen map picker (the address of the picked point comes from the server), with the department's
+ * facility maps for the call location (a tapped room sets the indoor location) and the nearest-unit board drawn on it in Dispatch.
+ */
+function CallLocationPicker({ isOpen, onClose, initial, onSelect, overlay, facilityMaps, initialIndoor }: LocationPickerProps) {
+  return (
+    <FacilityLocationPicker
+      isOpen={isOpen}
+      initial={initial}
+      onClose={onClose}
+      onSelect={onSelect}
+      facilityMaps={facilityMaps}
+      initialIndoor={initialIndoor}
+      overlay={overlay ? <DispatchBoardLayers overlay={overlay} /> : undefined}
+    />
+  );
 }
 
 /** The map of a call (detail) or of the location being entered (form). */

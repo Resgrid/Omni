@@ -39,6 +39,11 @@ export interface CustomMapRasterLayerProps {
   layer: CustomMapLayerResultData;
   /** Draw below this style layer (e.g. the pins). */
   belowLayerID?: string;
+  /**
+   * Draw under the base map's labels, so every layer the app adds — department layers, routes, pins — stays above, also
+   * when this map is switched on after them (a facility map over another map).
+   */
+  belowLabels?: boolean;
   showRegions?: boolean;
   /** A region was tapped (its `IndoorMapZoneId`). */
   onRegionPress?: (regionId: string) => void;
@@ -46,7 +51,7 @@ export interface CustomMapRasterLayerProps {
   selectedRegionId?: string | null;
 }
 
-export const CustomMapRasterLayer: React.FC<CustomMapRasterLayerProps> = ({ layer, belowLayerID, showRegions = true, onRegionPress, selectedRegionId = null }) => {
+export const CustomMapRasterLayer: React.FC<CustomMapRasterLayerProps> = ({ layer, belowLayerID, belowLabels = false, showRegions = true, onRegionPress, selectedRegionId = null }) => {
   const services = useMapServices();
   const rendering = useMemo(() => resolveCustomMapLayerRendering(layer, services.getApiBaseUrl()), [layer, services]);
   const offlineSource = useOfflineRasterSource(layer.IndoorMapFloorId, CUSTOM_MAP_OFFLINE_KINDS);
@@ -72,15 +77,15 @@ export const CustomMapRasterLayer: React.FC<CustomMapRasterLayerProps> = ({ laye
 
   return (
     <>
-      {offlineSource ? <RasterLayer id={`${id}-offline-layer`} sourceID={offlineSource} belowLayerID={belowLayerID} style={{ rasterOpacity: opacity }} /> : null}
+      {offlineSource ? <RasterLayer id={`${id}-offline-layer`} sourceID={offlineSource} belowLayerID={belowLayerID} belowLabels={belowLabels} style={{ rasterOpacity: opacity }} /> : null}
       {!offlineSource && rendering.kind === 'tiles' && signedUrl ? (
         <RasterSource id={`${id}-tiles`} tileUrlTemplates={[signedUrl]} tileSize={256}>
-          <RasterLayer id={`${id}-tiles-layer`} belowLayerID={belowLayerID} style={{ rasterOpacity: rendering.opacity }} />
+          <RasterLayer id={`${id}-tiles-layer`} belowLayerID={belowLayerID} belowLabels={belowLabels} style={{ rasterOpacity: rendering.opacity }} />
         </RasterSource>
       ) : null}
       {!offlineSource && rendering.kind === 'image' && signedUrl ? (
         <ImageSource id={`${id}-image`} url={signedUrl} coordinates={rendering.coordinates}>
-          <RasterLayer id={`${id}-image-layer`} belowLayerID={belowLayerID} style={{ rasterOpacity: rendering.opacity }} />
+          <RasterLayer id={`${id}-image-layer`} belowLayerID={belowLayerID} belowLabels={belowLabels} style={{ rasterOpacity: rendering.opacity }} />
         </ImageSource>
       ) : null}
       {showRegions && regions.features.length > 0 ? (
@@ -96,8 +101,8 @@ export const CustomMapRasterLayer: React.FC<CustomMapRasterLayerProps> = ({ laye
               : undefined
           }
         >
-          <FillLayer id={`${id}-regions-fill`} style={{ fillColor: ['get', 'color'], fillOpacity: ['case', ['==', ['get', 'regionId'], selectedRegionId ?? ''], 0.4, 0.15] }} />
-          <LineLayer id={`${id}-regions-line`} style={{ lineColor: ['get', 'color'], lineWidth: ['case', ['==', ['get', 'regionId'], selectedRegionId ?? ''], 3, 2] }} />
+          <FillLayer id={`${id}-regions-fill`} belowLabels={belowLabels} style={{ fillColor: ['get', 'color'], fillOpacity: ['case', ['==', ['get', 'regionId'], selectedRegionId ?? ''], 0.4, 0.15] }} />
+          <LineLayer id={`${id}-regions-line`} belowLabels={belowLabels} style={{ lineColor: ['get', 'color'], lineWidth: ['case', ['==', ['get', 'regionId'], selectedRegionId ?? ''], 3, 2] }} />
         </ShapeSource>
       ) : null}
     </>
@@ -110,10 +115,12 @@ export interface IndoorMapFloorLayerProps {
   showZoneLabels?: boolean;
   /** Highlighted zone. */
   selectedZoneId?: string | null;
+  /** Draw under the base map's labels (and so under every layer the app adds), as `CustomMapRasterLayer`. */
+  belowLabels?: boolean;
 }
 
 /** An indoor floor image over its bounds plus its zones (baseline Unit/IC indoor map screens). */
-export const IndoorMapFloorLayer: React.FC<IndoorMapFloorLayerProps> = ({ floor, onZonePress, showZoneLabels = true, selectedZoneId = null }) => {
+export const IndoorMapFloorLayer: React.FC<IndoorMapFloorLayerProps> = ({ floor, onZonePress, showZoneLabels = true, selectedZoneId = null, belowLabels = false }) => {
   const services = useMapServices();
   const { colors } = useMapTheme();
   const coordinates = boundsToImageCoordinates(floor);
@@ -129,17 +136,19 @@ export const IndoorMapFloorLayer: React.FC<IndoorMapFloorLayerProps> = ({ floor,
 
   return (
     <>
-      {offlineSource ? <RasterLayer id={`${id}-offline-layer`} sourceID={offlineSource} style={{ rasterOpacity: opacity }} /> : null}
+      {offlineSource ? <RasterLayer id={`${id}-offline-layer`} sourceID={offlineSource} belowLabels={belowLabels} style={{ rasterOpacity: opacity }} /> : null}
       {!offlineSource && coordinates && imageUrl ? (
         <ImageSource id={`${id}-image`} url={imageUrl} coordinates={coordinates}>
-          <RasterLayer id={`${id}-image-layer`} style={{ rasterOpacity: opacity }} />
+          <RasterLayer id={`${id}-image-layer`} belowLabels={belowLabels} style={{ rasterOpacity: opacity }} />
         </ImageSource>
       ) : null}
       {zones.features.length > 0 ? (
         <ShapeSource id={`${id}-zones`} shape={zones} onPress={onZonePress ? handlePress : undefined}>
-          <FillLayer id={`${id}-zones-fill`} style={{ fillColor: ['get', 'color'], fillOpacity: ['case', ['==', ['get', 'zoneId'], selectedZoneId ?? ''], 0.45, 0.2] }} />
-          <LineLayer id={`${id}-zones-line`} style={{ lineColor: ['get', 'color'], lineWidth: ['case', ['==', ['get', 'zoneId'], selectedZoneId ?? ''], 3, 1.5] }} />
-          {showZoneLabels ? <SymbolLayer id={`${id}-zones-label`} style={{ textField: ['get', 'name'], textSize: 12, textColor: colors.text, textHaloColor: colors.background, textHaloWidth: 1 }} /> : null}
+          <FillLayer id={`${id}-zones-fill`} belowLabels={belowLabels} style={{ fillColor: ['get', 'color'], fillOpacity: ['case', ['==', ['get', 'zoneId'], selectedZoneId ?? ''], 0.45, 0.2] }} />
+          <LineLayer id={`${id}-zones-line`} belowLabels={belowLabels} style={{ lineColor: ['get', 'color'], lineWidth: ['case', ['==', ['get', 'zoneId'], selectedZoneId ?? ''], 3, 1.5] }} />
+          {showZoneLabels ? (
+            <SymbolLayer id={`${id}-zones-label`} belowLabels={belowLabels} style={{ textField: ['get', 'name'], textSize: 12, textColor: colors.text, textHaloColor: colors.background, textHaloWidth: 1 }} />
+          ) : null}
         </ShapeSource>
       ) : null}
     </>

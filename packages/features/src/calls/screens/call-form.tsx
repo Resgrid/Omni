@@ -1,7 +1,7 @@
 import { isApiError } from '@resgrid/api';
 import { REDACTION_VALUE, useFeatureFlag } from '@resgrid/auth';
 import { useCapability } from '@resgrid/config';
-import { useCallDetailStore, useCallsStore, usePoisStore, useRoutesStore, useRunCardsStore } from '@resgrid/data';
+import { useCallDetailStore, useCallsStore, useCustomMapsStore, usePoisStore, useRoutesStore, useRunCardsStore } from '@resgrid/data';
 import { goBackOr, homeHref } from '@resgrid/features/auth-ui/lib/navigation';
 import { ProtectedLabel, ProtectedRevealBar } from '@resgrid/features/data-protection';
 import { useDepartmentTimeZone } from '@resgrid/features/department-config';
@@ -30,7 +30,7 @@ import {
   ZeroState,
 } from '@resgrid/ui';
 import { useRouter } from 'expo-router';
-import { ChevronDown, LocateFixed, MapPin, Search, X } from 'lucide-react-native';
+import { Building2, ChevronDown, LocateFixed, MapPin, Search, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -38,6 +38,7 @@ import { CallContactPicker } from '../components/call-form/contact-picker';
 import { CallDestinationFields } from '../components/call-form/destination-fields';
 import { destinationPoiLabel, DestinationPoiPicker } from '../components/call-form/destination-poi-picker';
 import { CallTemplatesModal, LinkedCallModal, ProtocolSelectorModal } from '../components/call-form/form-pickers';
+import { IndoorLocationPicker } from '../components/call-form/indoor-location-picker';
 import { LocationPoiPicker } from '../components/call-form/location-poi-picker';
 import { RoutePlanField } from '../components/call-form/route-plan-picker';
 import { UdfFields } from '../components/call-form/udf-fields';
@@ -54,6 +55,7 @@ import { useIsOnline } from '../hooks/use-connectivity';
 import { useDispatchBoardOverlay } from '../hooks/use-dispatch-board-overlay';
 import {
   applyCallTemplate,
+  applyIndoorLocation,
   applyLocationPoi,
   applyRoutePlan,
   callDispatchSelection,
@@ -71,10 +73,12 @@ import {
   hasFreeDestination,
   locationLookupKey,
   type LocationPoiRef,
+  NO_INDOOR_LOCATION,
   parseCoordinateFields,
   parseCoordinates,
   parseLatitude,
   parseLongitude,
+  type PickedIndoorLocation,
   syncWithheldEditFields,
   toCoordinateFields,
   toCreateCallRequest,
@@ -93,6 +97,7 @@ import { MIN_DISPATCH_LEAD_MINUTES } from '../lib/call-schedule';
 import { CallState } from '../lib/call-time';
 import { shownDispatchLists } from '../lib/dispatch-selection';
 import { areAllDispatchListsHidden, describeCallFields } from '../lib/field-policy';
+import { type IndoorLocationNames, indoorLocationNames } from '../lib/indoor-location';
 import { getMissingCallFieldsFromRefusal } from '../lib/server-refusal';
 import { PENDING_CALLS_ROUTE } from '../routes';
 
@@ -186,6 +191,7 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
   const allPoisLoading = usePoisStore((state) => state.loading.pois === true);
   const allPoisFailed = usePoisStore((state) => !!state.errors.pois);
   const callRoutePlans = useRoutesStore((state) => state.callRoutePlans);
+  const hasFacilityMaps = useCustomMapsStore((state) => state.customMaps.length > 0 || state.indoorMaps.length > 0);
   const fetchCallFormData = useCallsStore((state) => state.fetchCallFormData);
   const createCall = useCallsStore((state) => state.createCall);
   const correctQueuedCall = useCallsStore((state) => state.correctQueuedCall);
@@ -216,7 +222,7 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
   }, [values]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [lookup, setLookup] = useState<LookupKind | null>(null);
-  const [open, setOpen] = useState<null | 'dispatch' | 'templates' | 'linked' | 'protocols' | 'contact' | 'location' | 'destination' | 'locationPoi' | 'destinationMap'>(null);
+  const [open, setOpen] = useState<null | 'dispatch' | 'templates' | 'linked' | 'protocols' | 'contact' | 'location' | 'destination' | 'locationPoi' | 'destinationMap' | 'indoor'>(null);
   // Set once the form holds what it starts from (the call, the refused request, or a blank form).
   const [startedFrom, setStartedFrom] = useState<'blank' | 'source' | null>(() => (!isEdit && !correctLocalId ? 'blank' : null));
   const [initialDispatchOnUtc, setInitialDispatchOnUtc] = useState('');
@@ -343,6 +349,10 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
 
   const destinationShown = show(NewCallFieldKeys.DestinationPoi);
   const routeShown = isFull && (callRoutePlans.length > 0 || values.routePlanId !== null || callHadRoute);
+  // The indoor location (a room of an indoor map or a region of a custom map) follows the policy, and shows once the
+  // department has facility maps, the call has one, or the department requires it.
+  const indoorAllowed = show(NewCallFieldKeys.IndoorLocation);
+  const indoorShown = indoorAllowed && (hasFacilityMaps || values.indoorMapZoneId !== null || (isEdit && !!detailCall?.IndoorMapZoneId) || policy.isRequired(NewCallFieldKeys.IndoorLocation));
 
   const pickers: CallFormPickers = {
     protocols: show(NewCallFieldKeys.Protocols),
@@ -355,7 +365,44 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
     locationPoi: locationPoiShown,
     freeDestination: destinationShown,
     route: routeShown,
+    indoorLocation: indoorShown,
   };
+
+  // The department's facility maps are read when the form may offer the indoor location (cached copies answer at once).
+  useEffect(() => {
+    if (!indoorAllowed) return;
+    const store = useCustomMapsStore.getState();
+
+    void store.fetchCustomMaps();
+    void store.fetchIndoorMaps();
+  }, [indoorAllowed]);
+
+  // A stored indoor location is named from the department's maps: its floor's (or custom map layer's) zones.
+  const indoorSnapshot = {
+    floorById: useCustomMapsStore((state) => state.floorById),
+    indoorMapById: useCustomMapsStore((state) => state.indoorMapById),
+    customMapById: useCustomMapsStore((state) => state.customMapById),
+    customMapLayerById: useCustomMapsStore((state) => state.customMapLayerById),
+    indoorMaps: useCustomMapsStore((state) => state.indoorMaps),
+    customMaps: useCustomMapsStore((state) => state.customMaps),
+  };
+
+  const storedIndoorNames = values.indoorMapZoneId && !values.indoorLocationName ? indoorLocationNames(indoorSnapshot, values.indoorMapZoneId, values.indoorMapFloorId) : null;
+  const indoorToName = indoorShown && values.indoorMapZoneId && !values.indoorLocationName && !storedIndoorNames ? (values.indoorMapFloorId ?? '') : '';
+
+  useEffect(() => {
+    if (!indoorToName || !isOnline) return;
+
+    void (async () => {
+      await useCustomMapsStore.getState().fetchIndoorFloor(indoorToName);
+
+      // Not an indoor floor: a custom map layer, whose regions are the zones.
+      if (!useCustomMapsStore.getState().floorById[indoorToName]) await useCustomMapsStore.getState().fetchCustomMapLayer(indoorToName);
+    })();
+  }, [indoorToName, isOnline]);
+
+  const formatIndoorName = useCallback(({ zone, map }: IndoorLocationNames): string => (map ? t('maps.facility.feature_address', { name: zone || t('maps.zone'), map }) : zone || t('maps.zone')), [t]);
+  const indoorLabel = values.indoorLocationName || (storedIndoorNames ? formatIndoorName(storedIndoorNames) : values.indoorMapZoneId ? t('calls.indoor_location_unnamed') : '');
 
   // The point the latitude and longitude fields give (what the save sends).
   const location = useMemo<CallFormLocation | null>(() => {
@@ -450,6 +497,16 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
       if (!picked.address) void fillBlankAddress(picked);
     },
     [clearCoordinateErrors, fillBlankAddress]
+  );
+
+  /** A room picked (search or map): the call's indoor location, and the call goes to the room. */
+  const pickIndoorLocation = useCallback(
+    (picked: PickedIndoorLocation) => {
+      setValues((current) => applyIndoorLocation(current, picked));
+      clearErrors([...COORDINATE_ERROR_KEYS, NewCallFieldKeys.Address, NewCallFieldKeys.IndoorLocation]);
+      setHeldMapPoint(null);
+    },
+    [clearErrors]
   );
 
   /** An address, what3words or plus code lookup: the place it found replaces the address, as the dispatcher asked. */
@@ -1039,6 +1096,55 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
               </>
             ) : null}
             {show(NewCallFieldKeys.MapPage) ? textField('mapPage', `${t('calls.map_page')}${req(NewCallFieldKeys.MapPage)}`, { errorKey: NewCallFieldKeys.MapPage, testID: 'call-form-map-page' }) : null}
+            {indoorShown ? (
+              <View style={styles.field} testID="call-form-indoor-location-field">
+                <Text size="sm" className="mb-1 text-typography-700">
+                  {`${t('calls.indoor_location')}${req(NewCallFieldKeys.IndoorLocation)}`}
+                </Text>
+                <View style={styles.inputRow}>
+                  <Pressable
+                    onPress={() => setOpen('indoor')}
+                    accessibilityRole="button"
+                    accessibilityLabel={indoorLabel ? `${t('calls.indoor_location')}: ${indoorLabel}` : t('calls.indoor_location_select')}
+                    testID="call-form-indoor-location"
+                    className="flex-1 flex-row items-center rounded border border-outline-300 px-3 py-2"
+                  >
+                    <Text className={indoorLabel ? 'flex-1 text-typography-900' : 'flex-1 text-typography-400'} numberOfLines={1}>
+                      {indoorLabel || t('calls.indoor_location_select')}
+                    </Text>
+                    <View>
+                      <Search size={16} color={colors.icon} />
+                    </View>
+                  </Pressable>
+                  {LocationPicker && !isWithheld('latitude') ? (
+                    <Button variant="outline" size="sm" className="ml-2" onPress={() => setOpen('location')} accessibilityLabel={t('calls.indoor_location_pick_on_map')} testID="call-form-indoor-location-map">
+                      <View>
+                        <Building2 size={16} color={colors.icon} />
+                      </View>
+                    </Button>
+                  ) : null}
+                  {values.indoorMapZoneId ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="ml-2"
+                      onPress={() => setValues((current) => ({ ...current, ...NO_INDOOR_LOCATION }))}
+                      accessibilityLabel={t('calls.indoor_location_clear')}
+                      testID="call-form-indoor-location-clear"
+                    >
+                      <View>
+                        <X size={16} color={colors.icon} />
+                      </View>
+                    </Button>
+                  ) : null}
+                </View>
+                {errors[NewCallFieldKeys.IndoorLocation] ? (
+                  <Text size="xs" className="mt-1 text-error-600" testID="call-form-indoor-location-error">
+                    {t('calls.validation.required')}
+                  </Text>
+                ) : null}
+              </View>
+            ) : null}
             {!isOnline ? (
               <Text size="xs" className="text-typography-500">
                 {t('calls.offline.no_geocoding')}
@@ -1427,15 +1533,32 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
           onRetry={() => void usePoisStore.getState().fetchPois({ bypassCache: true })}
         />
       ) : null}
+      {indoorShown ? (
+        <IndoorLocationPicker
+          isOpen={open === 'indoor'}
+          onClose={() => setOpen(null)}
+          selectedZoneId={values.indoorMapZoneId}
+          isOnline={isOnline}
+          formatName={formatIndoorName}
+          onSelect={(picked) => {
+            pickIndoorLocation(picked);
+            setOpen(null);
+          }}
+        />
+      ) : null}
       {LocationPicker ? (
-        // One map picker: the call location (with Dispatch's nearest-unit board) or the free destination.
+        // One map picker: the call location (with Dispatch's nearest-unit board and the department's facility maps, whose
+        // rooms set the indoor location) or the free destination.
         <LocationPicker
           isOpen={open === 'location' || open === 'destinationMap'}
           onClose={() => setOpen(null)}
           initial={open === 'destinationMap' ? (freeDestinationPoint(values) ?? location) : location}
           overlay={open === 'destinationMap' ? null : boardOverlay}
+          facilityMaps={open === 'location'}
+          initialIndoor={open === 'location' && values.indoorMapZoneId ? { zoneId: values.indoorMapZoneId, floorId: values.indoorMapFloorId } : null}
           onSelect={(picked) => {
             if (open === 'destinationMap') pickDestination(picked);
+            else if (picked.indoor && indoorShown) pickIndoorLocation({ ...picked.indoor, point: picked });
             else pickLocation(picked);
             setOpen(null);
           }}

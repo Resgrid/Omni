@@ -1,5 +1,27 @@
-import { getAllActiveLayers, getCustomMap, getCustomMaps, getIndoorMap, getIndoorMapFloor, getIndoorMaps, getIndoorMapZonesGeoJSON, getMapLayerGeoJSON, getMapLayers, searchAllMapFeatures } from '@resgrid/api';
-import type { ActiveLayerResultData, CustomMapResultData, GetCustomMapResultData, GetIndoorMapResultData, GetMapLayersData, IndoorMapFloorResultData, IndoorMapResultData, MapFeatureResultData } from '@resgrid/models';
+import {
+  getAllActiveLayers,
+  getCustomMap,
+  getCustomMapLayer,
+  getCustomMaps,
+  getIndoorMap,
+  getIndoorMapFloor,
+  getIndoorMaps,
+  getIndoorMapZonesGeoJSON,
+  getMapLayerGeoJSON,
+  getMapLayers,
+  searchAllMapFeatures,
+} from '@resgrid/api';
+import type {
+  ActiveLayerResultData,
+  CustomMapLayerResultData,
+  CustomMapResultData,
+  GetCustomMapResultData,
+  GetIndoorMapResultData,
+  GetMapLayersData,
+  IndoorMapFloorResultData,
+  IndoorMapResultData,
+  MapFeatureResultData,
+} from '@resgrid/models';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
@@ -9,7 +31,7 @@ import { registerDataStoreReset } from '../core/reset';
 import { getDataApiContext } from '../core/runtime';
 import { cacheOptions, createSliceRunner, emptySliceMeta, type FetchOptions, isSliceFresh, type SliceMeta, type SliceRunner } from '../core/slices';
 
-type MapsSlice = 'activeLayers' | 'mapLayers' | 'layerGeoJSON' | 'indoorMaps' | 'indoorMap' | 'floor' | 'zones' | 'customMaps' | 'customMap' | 'search';
+type MapsSlice = 'activeLayers' | 'mapLayers' | 'layerGeoJSON' | 'indoorMaps' | 'indoorMap' | 'floor' | 'zones' | 'customMaps' | 'customMap' | 'customMapLayer' | 'search';
 
 /** A department map layer's details from `Mapping/GetMayLayers`, without its geometry (that comes per layer, on demand). */
 export type MapLayerInfo = Omit<GetMapLayersData, 'Data'>;
@@ -42,6 +64,8 @@ interface CustomMapsData extends SliceMeta<MapsSlice> {
   zonesGeoJSONByFloor: Record<string, unknown>;
   customMaps: CustomMapResultData[];
   customMapById: Record<string, GetCustomMapResultData>;
+  /** Single custom map layers with their regions (`Mapping/GetCustomMapLayer/{layerId}`), e.g. to name a call's indoor location. */
+  customMapLayerById: Record<string, CustomMapLayerResultData>;
   /** The latest map feature search (online only, never persisted). */
   searchResults: MapFeatureResultData[];
   searchTerm: string;
@@ -58,6 +82,8 @@ export interface CustomMapsState extends CustomMapsData {
   fetchFloorZones: (floorId: string, options?: FetchOptions) => Promise<unknown>;
   fetchCustomMaps: (type?: number, options?: FetchOptions) => Promise<void>;
   fetchCustomMap: (mapId: string, options?: FetchOptions) => Promise<void>;
+  /** One custom map layer with its regions (a call's indoor location on a custom map). */
+  fetchCustomMapLayer: (layerId: string, options?: FetchOptions) => Promise<void>;
   /** Indoor zones and custom map regions by name (`Mapping/SearchAllMapFeatures`); a blank term clears the results. */
   searchMapFeatures: (term: string, scope?: MapFeatureSearchScope) => Promise<void>;
   clearMapSearch: () => void;
@@ -74,6 +100,7 @@ const initialData = (): CustomMapsData => ({
   zonesGeoJSONByFloor: {},
   customMaps: [],
   customMapById: {},
+  customMapLayerById: {},
   searchResults: [],
   searchTerm: '',
 });
@@ -171,12 +198,24 @@ export const useCustomMapsStore = create<CustomMapsState>()(
           );
         },
 
+        fetchCustomMapLayer: async (layerId) => {
+          await runner.run(
+            'customMapLayer',
+            async () => unwrapItem(await getCustomMapLayer(getDataApiContext(), { layerId })),
+            (layer, state) => (layer ? { customMapLayerById: { ...state.customMapLayerById, [layerId]: layer } } : {}),
+            { flightKey: `customMapLayer:${layerId}` }
+          );
+        },
+
         searchMapFeatures: async (term, scope = 'all') => {
           const trimmed = term.trim();
+
           if (!trimmed) {
             set({ searchResults: [], searchTerm: '' });
+
             return;
           }
+
           set({ searchTerm: trimmed });
           await runner.run(
             'search',
@@ -201,6 +240,7 @@ export const useCustomMapsStore = create<CustomMapsState>()(
         floorById: state.floorById,
         customMaps: state.customMaps,
         customMapById: state.customMapById,
+        customMapLayerById: state.customMapLayerById,
         fetchedAt: state.fetchedAt,
       }),
     })

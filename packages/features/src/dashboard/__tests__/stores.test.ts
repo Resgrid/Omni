@@ -13,6 +13,7 @@ import { defaultWidgetSettings } from '../lib/widget-settings';
 
 const desktop = computeGridConfig(1440, 'desktop');
 const widget = (id: string, type: DashboardWidget['type'], x: number, y: number, w: number, h: number): DashboardWidget => ({ id, type, x, y, w, h });
+
 const flush = async (): Promise<void> => {
   for (let i = 0; i < 5; i++) await Promise.resolve();
 };
@@ -129,6 +130,27 @@ describe('widget settings store', () => {
     const { calls } = useWidgetSettingsStore.getState();
     expect(calls).toMatchObject({ showId: false, fontSize: 18 });
     expect(calls).not.toHaveProperty('display');
+  });
+
+  it('keeps a board’s map from before the view modes where it was: "show all pins" off means a fixed spot', async () => {
+    kv.set(WIDGET_SETTINGS_STORE_NAME, JSON.stringify({ state: { map: { showAllMarkers: false, zoomLevel: 15, latitude: 35.1, longitude: -106.6 } }, version: 1 }));
+    await useWidgetSettingsStore.persist.rehydrate();
+    expect(useWidgetSettingsStore.getState().map).toMatchObject({ viewMode: 'fixed', zoomLevel: 15, latitude: 35.1, longitude: -106.6, customMapId: '', lockView: false });
+    expect(useWidgetSettingsStore.getState().map).not.toHaveProperty('showAllMarkers');
+
+    // Legacy BigBoard (version 0) boards migrate the same way; "show all pins" on (or unset) fits the pins.
+    kv.set(WIDGET_SETTINGS_STORE_NAME, JSON.stringify({ state: { map: { showAllMarkers: true, zoomLevel: 9 } }, version: 0 }));
+    await useWidgetSettingsStore.persist.rehydrate();
+    expect(useWidgetSettingsStore.getState().map).toMatchObject({ viewMode: 'fitPins', zoomLevel: 9 });
+  });
+
+  it('saves a board set to a facility map under the same store name', async () => {
+    useWidgetSettingsStore.getState().updateSettings('map', { viewMode: 'customMap', customMapId: 'bldg-a', customMapKind: 'indoor', customMapLayerId: 'floor-2', lockView: true });
+    await flush();
+    const stored: unknown = JSON.parse(kv.getString(WIDGET_SETTINGS_STORE_NAME) ?? '{}');
+    expect(stored).toMatchObject({ state: { map: { viewMode: 'customMap', customMapId: 'bldg-a', customMapKind: 'indoor', customMapLayerId: 'floor-2', lockView: true } } });
+    await useWidgetSettingsStore.persist.rehydrate();
+    expect(useWidgetSettingsStore.getState().map).toMatchObject({ viewMode: 'customMap', customMapId: 'bldg-a', customMapLayerId: 'floor-2' });
   });
 });
 

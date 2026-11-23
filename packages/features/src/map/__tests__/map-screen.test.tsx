@@ -15,6 +15,7 @@ import { Dimensions, Linking } from 'react-native';
 import { activateVariant, hidden, setRights } from '../../calls/__tests__/test-utils';
 import { useMapViewStore } from '../hooks/use-map-view-store';
 import MapScreen, { type MapScreenLinks } from '../screens/map-screen';
+import { facilityMapsState } from './facility-fixtures';
 import { pin } from './fixtures';
 
 const { mockCamera, mockMapStyle, mockMapView, useFollowCamera } = jest.requireMock('@resgrid/maps') as {
@@ -43,6 +44,7 @@ const ALL_LINKS: MapScreenLinks = {
   customMaps: () => null,
   searchMaps: () => null,
 };
+
 const UNIT_LINKS: MapScreenLinks = { ...ALL_LINKS, unitDetail: () => null, personnelDetail: () => null, poiDetail: () => null, customMaps: () => '/maps' };
 
 const mocks = {
@@ -69,6 +71,7 @@ interface RenderOptions {
 
 const renderMap = async ({ variant = 'dispatch', links = ALL_LINKS, activeCallId = null, activeUnitId = null, realtime = false }: RenderOptions = {}) => {
   activateVariant(variant);
+
   return render(
     <NavigationHandoffProvider value={{ navigateTo: mocks.navigateTo }}>
       <StatusProvider activeCallId={activeCallId} activeUnitId={activeUnitId} onActiveCallChange={mocks.onActiveCallChange}>
@@ -468,5 +471,58 @@ describe('MapScreen focus links', () => {
     await renderMap();
     expect(screen.getByTestId('mock-focus-title')).toHaveTextContent('map.focus_not_found');
     expect(screen.queryByText('Pat Doe')).toBeNull();
+  });
+});
+
+describe('MapScreen facility maps', () => {
+  const facilityMocks = {
+    fetchCustomMaps: jest.fn(async () => undefined),
+    fetchIndoorMaps: jest.fn(async () => undefined),
+    fetchCustomMap: jest.fn(async () => undefined),
+    fetchIndoorMap: jest.fn(async () => undefined),
+    fetchIndoorFloor: jest.fn(async () => undefined),
+  };
+
+  beforeEach(() => useCustomMapsStore.setState({ ...facilityMapsState(), ...facilityMocks }));
+
+  it('lists the department’s custom and indoor maps in the Layers sheet and draws one switched on, in every app', async () => {
+    await renderMap({ variant: 'responder' });
+    expect(facilityMocks.fetchCustomMaps).toHaveBeenCalled();
+    expect(facilityMocks.fetchIndoorMaps).toHaveBeenCalled();
+    expect(screen.queryByTestId('mock-indoor-floor-floor-1')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('map-screen-layers-button'));
+    expect(screen.getByTestId('facility-toggle-custom:site')).toHaveTextContent('Site emergency plan|maps.outdoor:off|level:all');
+    expect(screen.getByTestId('facility-toggle-indoor:bldg-a')).toHaveTextContent('Building A|maps.indoor:off|level:all');
+
+    await fireEvent.press(screen.getByTestId('facility-toggle-indoor:bldg-a'));
+    expect(screen.getByTestId('mock-indoor-floor-floor-1')).toBeTruthy();
+    // The floor chooser offers the map's floors, the default one shown.
+    expect(screen.getByTestId('facility-toggle-indoor:bldg-a')).toHaveTextContent('Building A|maps.indoor:on|level:floor-1');
+    expect(screen.queryByTestId('facility-level-indoor:bldg-a-all')).toBeNull();
+    await fireEvent.press(screen.getByTestId('facility-level-indoor:bldg-a-floor-2'));
+    expect(screen.getByTestId('mock-indoor-floor-floor-2')).toBeTruthy();
+    expect(facilityMocks.fetchIndoorFloor).toHaveBeenCalledWith('floor-2');
+
+    // The choice is the session's: the console and the IC maps follow it.
+    expect(useMapViewStore.getState().facilityMaps).toEqual({ 'indoor:bldg-a': 'floor-2' });
+  });
+
+  it('names a tapped room in the details panel and highlights it', async () => {
+    useMapViewStore.getState().toggleFacilityMap('custom:site');
+    await renderMap();
+    expect(screen.getByTestId('mock-custom-map-site-evac')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('mock-zone-yard'));
+    await act(async () => undefined);
+    expect(screen.getByTestId('layer-feature-title', hidden)).toHaveTextContent('Tank yard');
+    expect(screen.getByTestId('layer-feature-layer', hidden)).toHaveTextContent('Site emergency plan · Site plan');
+    expect(screen.getByTestId('mock-custom-map-site-base').props.accessibilityLabel).toBe('selected:yard');
+  });
+
+  it('offers them on BigBoard too, which has no custom maps browser', async () => {
+    await renderMap({ variant: 'bigboard' });
+    await fireEvent.press(screen.getByTestId('map-screen-layers-button'));
+    expect(screen.getByTestId('facility-toggle-indoor:bldg-a')).toBeTruthy();
+    expect(screen.queryByTestId('layers-browse-maps')).toBeNull();
   });
 });

@@ -337,13 +337,15 @@ describe('CallFormScreen: create', () => {
     expect(lastToast().message).toBe('calls.dispatch_on_too_soon:15');
   });
 
-  it('never blocks a call on indoor location, which the form cannot pick', async () => {
+  it('holds a call back until a required indoor location is picked (the field shows even without facility maps on the device)', async () => {
     mockRules = [{ Key: 'indoorLocation', Visible: true, Required: true }];
     activateVariant('responder');
     await render(<CallFormScreen mode="create" />);
     await fillBasics();
+    expect(screen.getByTestId('call-form-indoor-location-field')).toBeTruthy();
     await act(async () => fireEvent.press(screen.getByTestId('call-form-submit')));
-    expect(mockCreateCall).toHaveBeenCalled();
+    expect(mockCreateCall).not.toHaveBeenCalled();
+    expect(screen.getByTestId('call-form-indoor-location-error')).toBeTruthy();
   });
 
   it('looks an address up on the server and fills a blank address for typed coordinates', async () => {

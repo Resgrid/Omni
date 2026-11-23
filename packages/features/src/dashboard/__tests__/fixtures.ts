@@ -32,8 +32,14 @@ export function stubDataStores() {
     fetchActiveLayers: noop(),
     fetchMapLayers: noop(),
     fetchLayerGeoJSON: jest.fn(async () => null),
+    fetchCustomMaps: noop(),
+    fetchIndoorMaps: noop(),
+    fetchCustomMap: noop(),
+    fetchIndoorMap: noop(),
+    fetchIndoorFloor: noop(),
     loadConfig: noop(),
   };
+
   useCallsStore.setState({
     calls: [],
     callPriorities: [],
@@ -71,6 +77,16 @@ export function stubDataStores() {
     fetchActiveLayers: mocks.fetchActiveLayers,
     fetchMapLayers: mocks.fetchMapLayers,
     fetchLayerGeoJSON: mocks.fetchLayerGeoJSON,
+    customMaps: [],
+    indoorMaps: [],
+    customMapById: {},
+    indoorMapById: {},
+    floorById: {},
+    fetchCustomMaps: mocks.fetchCustomMaps,
+    fetchIndoorMaps: mocks.fetchIndoorMaps,
+    fetchCustomMap: mocks.fetchCustomMap,
+    fetchIndoorMap: mocks.fetchIndoorMap,
+    fetchIndoorFloor: mocks.fetchIndoorFloor,
   });
   useMapViewStore.getState().reset();
   useDepartmentConfigStore.setState({ config: null, isLoading: false, hasError: false, load: mocks.loadConfig });
@@ -78,6 +94,7 @@ export function stubDataStores() {
   useDashboardViewStore.setState({ isEditMode: false, showAddMenu: false });
   useWidgetSettingsStore.getState().resetAllSettings();
   setRights({ CanCreateCalls: true, CanViewPII: true });
+
   return mocks;
 }
 
@@ -90,5 +107,6 @@ export function setConfig(config: Partial<GetConfigResultData>): void {
 }
 
 export const NOW = Date.now();
+
 /** A UTC wire value `seconds` ago, without "Z" (as some Core fields arrive). */
 export const utcAgo = (seconds: number): string => new Date(Date.now() - seconds * 1000).toISOString().replace('Z', '');

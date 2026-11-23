@@ -1,4 +1,4 @@
-// @resgrid/features/custom-maps — the department's custom and indoor maps (Unit/IC `app/maps`, capability
+// @resgrid/features/custom-maps — the department's custom and indoor maps (Responder, Unit, IC and Dispatch `app/maps`, capability
 // `maps.customIndoor`): the list, the search over zones and regions, a custom map with its layers and an indoor map with
 // its floors. Georeferenced layers and floors draw on the department map (signed Mercator tiles or images, offline from
 // the downloaded packs); layers and floors with no geographic bounds use the pixel-space viewer (MapLibre plan D21).

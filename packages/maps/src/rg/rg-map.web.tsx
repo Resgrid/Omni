@@ -549,11 +549,22 @@ export const Camera = forwardRef<CameraRef, CameraProps>(function Camera(props, 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, targetKey]);
 
+  // Bounds this camera set are lifted again when the prop goes away (a board unlocks its view), as on native.
+  const appliedMaxBounds = useRef(false);
   useEffect(() => {
     if (!map) return;
+
     if (typeof props.minZoomLevel === 'number') map.setMinZoom(props.minZoomLevel);
+
     if (typeof props.maxZoomLevel === 'number') map.setMaxZoom(props.maxZoomLevel);
-    if (props.maxBounds) map.setMaxBounds([props.maxBounds.sw, props.maxBounds.ne]);
+
+    if (props.maxBounds) {
+      map.setMaxBounds([props.maxBounds.sw, props.maxBounds.ne]);
+      appliedMaxBounds.current = true;
+    } else if (appliedMaxBounds.current) {
+      map.setMaxBounds(null);
+      appliedMaxBounds.current = false;
+    }
   }, [map, props.minZoomLevel, props.maxZoomLevel, props.maxBounds]);
 
   // Follow the user through the GeolocateControl (the web equivalent of trackUserLocation).

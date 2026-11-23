@@ -134,6 +134,15 @@ interface CallRequestBase {
   unitResponseCodes?: string;
   /** Custom field values; undefined omits them (the server then does not check required fields). */
   udfValues?: UdfFieldValueInput[];
+  /**
+   * The indoor location: an indoor map zone or a custom map region (`IndoorMapZoneId`), with the floor or layer it is on.
+   * Undefined leaves both out — the form has no indoor picker, so the server does not enforce the department's indoor
+   * location requirement, and an edit keeps the stored one. Null or blank is sent as "": a new call has none (and the
+   * requirement applies), an edit clears it.
+   */
+  indoorMapZoneId?: string | null;
+  /** The indoor floor or custom map layer of `indoorMapZoneId`; sent with it. */
+  indoorMapFloorId?: string | null;
 }
 
 export interface CreateCallRequest extends CallRequestBase {
@@ -192,6 +201,16 @@ const commonFields = (request: CallRequestBase) => ({
   ...(Array.isArray(request.udfValues) ? { UdfValues: request.udfValues.map((value) => ({ UdfFieldId: value.UdfFieldId, Value: value.Value })) } : {}),
 });
 
+type IndoorLocationInput = Pick<NewCallInput, 'IndoorMapZoneId' | 'IndoorMapFloorId'>;
+
+/** The indoor location, when the form shows its picker: the zone and its floor, or "" for both (none / cleared). */
+const indoorLocationFields = (request: CallRequestBase): IndoorLocationInput => {
+  if (request.indoorMapZoneId === undefined) return {};
+  const zoneId = request.indoorMapZoneId?.trim() ?? '';
+
+  return { IndoorMapZoneId: zoneId, IndoorMapFloorId: zoneId ? (request.indoorMapFloorId?.trim() ?? '') : '' };
+};
+
 type CallLocationInput = Pick<NewCallInput, 'LocationPoiId' | 'DestinationAddress' | 'DestinationGeolocation' | 'DestinationWhat3Words' | 'RoutePlanId'>;
 
 /** A value the form shows: trimmed; blank is left out of a new call (undefined) and clears the stored value on an edit (""). */
@@ -238,6 +257,7 @@ const callLocationFields = (request: CallRequestBase, isEdit: boolean): CallLoca
 export const buildNewCallInput = (request: CreateCallRequest): NewCallInput => ({
   ...commonFields(request),
   ...callLocationFields(request, false),
+  ...indoorLocationFields(request),
   // Only when a time was picked; a pending call has no dispatch time.
   ...(!request.isPending && request.dispatchOnUtc ? { DispatchOnUtc: request.dispatchOnUtc } : {}),
   IsPending: request.isPending === true,
@@ -248,6 +268,7 @@ export const buildEditCallInput = (request: UpdateCallRequest): EditCallInput =>
   Id: request.callId,
   ...commonFields(request),
   ...callLocationFields(request, true),
+  ...indoorLocationFields(request),
   // Only when a new time was picked: leaving it out keeps the schedule.
   ...(request.dispatchOnUtc ? { DispatchOnUtc: request.dispatchOnUtc } : {}),
   RebroadcastCall: request.rebroadcastCall ?? false,

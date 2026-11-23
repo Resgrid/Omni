@@ -1,12 +1,16 @@
 import { isSafeRouteId } from '@resgrid/core/utils/route-ids';
 import { selectCallById, useCallsStore, useCommandStore, useUnitsStore } from '@resgrid/data';
+import { DepartmentLayers } from '@resgrid/features/map/components/department-layers';
+import { FacilityMapsOverlay } from '@resgrid/features/map/components/facility-maps-overlay';
+import { MapOverlayControls } from '@resgrid/features/map/components/map-layers-control';
+import { useMapOverlays } from '@resgrid/features/map/hooks/use-map-overlays';
 import { useTranslation } from '@resgrid/i18n';
-import { Camera, FillLayer, LineLayer, MapView, MarkerView, ShapeSource } from '@resgrid/maps';
+import { Camera, type CameraRef, FillLayer, LineLayer, MapView, MarkerView, ShapeSource } from '@resgrid/maps';
 import { HStack, ScreenHeader, Text, View, ZeroState } from '@resgrid/ui';
 import { router, useLocalSearchParams } from 'expo-router';
 import type { LucideIcon } from 'lucide-react-native';
 import { Flag, HeartPulse, MapPin, ParkingSquare, Truck } from 'lucide-react-native';
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { StyleSheet } from 'react-native';
 
 import { resolveResourcePosition } from '../hooks/resource-position';
@@ -29,7 +33,8 @@ type ShapeProp = React.ComponentProps<typeof ShapeSource>['shape'];
 
 /**
  * The incident's command map (`/command-map/[callId]`, IC; MapLibre through @resgrid/maps): the call, command post,
- * staging and rehab, units on the incident coloured by lane, and the board's map annotations (read-only here).
+ * staging and rehab, units on the incident coloured by lane, and the board's map annotations (read-only here), over the
+ * department layers and the facility maps (a site's floor plans) switched on from its Layers button.
  */
 export default function CommandMapScreen({ callId: callIdProp }: CommandMapScreenProps) {
   const { t } = useTranslation();
@@ -53,6 +58,9 @@ export default function CommandMapScreen({ callId: callIdProp }: CommandMapScree
   const resources = useMemo(() => resourceMarkers(board, (assignment) => resolveResourcePosition(assignment, { units, unitCurrentStatuses })), [board, units, unitCurrentStatuses]);
   const annotations = useMemo(() => annotationShapes(board?.Annotations), [board?.Annotations]);
   const start = useMemo(() => initialMapCenter(board, sites, resources), [board, resources, sites]);
+  // The department layers and the facility maps (a site's floor plans) switched on, from the map's Layers button.
+  const cameraRef = useRef<CameraRef>(null);
+  const overlays = useMapOverlays(cameraRef);
 
   const back = () => (router.canGoBack() ? router.back() : router.replace('/command' as never));
   const header = <ScreenHeader title={t('incident_command.command_map')} onBack={back} />;
@@ -91,7 +99,9 @@ export default function CommandMapScreen({ callId: callIdProp }: CommandMapScree
     <View className="flex-1" testID="command-map-screen">
       {header}
       <MapView style={styles.map} compassEnabled testID="command-map-view">
-        <Camera defaultSettings={{ centerCoordinate: start.center, zoomLevel: start.zoom }} />
+        <Camera ref={cameraRef} defaultSettings={{ centerCoordinate: start.center, zoomLevel: start.zoom }} />
+        <FacilityMapsOverlay layers={overlays.facility.layers} selectedFeatureId={overlays.tappedFeature?.featureId ?? null} onFeaturePress={overlays.setTappedFeature} />
+        <DepartmentLayers layers={overlays.departmentLayers} enabled={overlays.enabled} layerIdPrefix="command-map-layer" offlineIdPrefix="command-map-offline-layers" />
         {annotations.shapes.features.length > 0 ? (
           <ShapeSource id="command-annotations" shape={annotations.shapes as unknown as ShapeProp}>
             <FillLayer id="command-annotations-fill" filter={['==', ['get', 'kind'], 'polygon']} style={{ fillColor: '#f97316', fillOpacity: 0.2 }} />
@@ -101,6 +111,7 @@ export default function CommandMapScreen({ callId: callIdProp }: CommandMapScree
         {sites.map((site) => {
           const config = SITE_ICONS[site.kind];
           const Icon = config.icon;
+
           return (
             <MarkerView key={site.kind} id={`command-site-${site.kind}`} coordinate={site.coordinate} anchor={{ x: 0.5, y: 0.5 }} testID={`command-map-site-${site.kind}`}>
               <View style={StyleSheet.flatten([styles.badge, { backgroundColor: config.color }])} accessibilityLabel={site.label ? `${t(config.labelKey)}: ${site.label}` : t(config.labelKey)}>
@@ -133,6 +144,7 @@ export default function CommandMapScreen({ callId: callIdProp }: CommandMapScree
           </MarkerView>
         ))}
       </MapView>
+      <MapOverlayControls overlays={overlays} side="right" testID="command-map" />
     </View>
   );
 }

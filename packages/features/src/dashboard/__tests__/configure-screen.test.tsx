@@ -1,12 +1,14 @@
 import './test-setup';
 
-import { usePersonnelStore } from '@resgrid/data';
+import { useCustomMapsStore, usePersonnelStore } from '@resgrid/data';
 import type { GroupResultData } from '@resgrid/models';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import React from 'react';
 
+import { facilityMapsState } from '../../map/__tests__/facility-fixtures';
 import { useDashboardStore } from '../hooks/use-dashboard-store';
+import { useMapWidgetViewStore } from '../hooks/use-map-widget-view-store';
 import { useWidgetSettingsStore } from '../hooks/use-widget-settings-store';
 import ConfigureDashboardScreen from '../screens/configure-dashboard';
 import { stubDataStores } from './fixtures';
@@ -103,6 +105,51 @@ describe('ConfigureDashboardScreen', () => {
     expect(useWidgetSettingsStore.getState().weather.latitude).toBe(39.74);
     await fireEvent.press(screen.getByTestId('setting-weather-units-metric'));
     expect(useWidgetSettingsStore.getState().weather.units).toBe('metric');
+  });
+
+  it('sets the map widget to a facility map and floor, frames it or holds a fixed spot', async () => {
+    useCustomMapsStore.setState(facilityMapsState());
+    useMapWidgetViewStore.setState({ lastView: null });
+    jest.mocked(useLocalSearchParams).mockReturnValue({ widget: 'map' });
+    await render(<ConfigureDashboardScreen />);
+    expect(mocks.fetchCustomMaps).toHaveBeenCalled();
+    expect(mocks.fetchIndoorMaps).toHaveBeenCalled();
+    // Framing a facility map is offered once one is chosen; the fixed spot's fields only in that mode.
+    expect(screen.queryByTestId('setting-map-viewMode-customMap')).toBeNull();
+    expect(screen.queryByTestId('setting-map-latitude')).toBeNull();
+    expect(screen.queryByTestId('setting-map-lockView')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('setting-map-customMap-indoor:bldg-a'));
+    expect(useWidgetSettingsStore.getState().map).toMatchObject({ customMapId: 'bldg-a', customMapKind: 'indoor', customMapLayerId: '' });
+    expect(screen.getByTestId('setting-map-customMapLayer-floor-1').props.accessibilityState).toEqual({ selected: true });
+    await fireEvent.press(screen.getByTestId('setting-map-customMapLayer-floor-2'));
+    expect(useWidgetSettingsStore.getState().map.customMapLayerId).toBe('floor-2');
+
+    await fireEvent.press(screen.getByTestId('setting-map-viewMode-customMap'));
+    await fireEvent(screen.getByTestId('setting-map-lockView'), 'valueChange', true);
+    expect(useWidgetSettingsStore.getState().map).toMatchObject({ viewMode: 'customMap', lockView: true });
+
+    // A custom map offers every layer at once.
+    await fireEvent.press(screen.getByTestId('setting-map-customMap-custom:site'));
+    expect(screen.getByTestId('setting-map-customMapLayer-').props.accessibilityState).toEqual({ selected: true });
+
+    // A fixed spot, taken from where someone last moved the board's map.
+    await act(() => useMapWidgetViewStore.getState().setLastView({ latitude: 35.004, longitude: -106.497, zoom: 17.6 }));
+    await fireEvent.press(screen.getByTestId('setting-map-viewMode-fixed'));
+    await fireEvent.press(screen.getByTestId('setting-map-useCurrentView'));
+    expect(useWidgetSettingsStore.getState().map).toMatchObject({ viewMode: 'fixed', latitude: 35.004, longitude: -106.497, zoomLevel: 18 });
+
+    // No facility map: framing one is no longer a choice and the board fits its pins again.
+    await fireEvent.press(screen.getByTestId('setting-map-viewMode-customMap'));
+    await fireEvent.press(screen.getByTestId('setting-map-customMap-'));
+    expect(useWidgetSettingsStore.getState().map).toMatchObject({ customMapId: '', viewMode: 'fitPins' });
+    expect(screen.queryByTestId('setting-map-viewMode-customMap')).toBeNull();
+  });
+
+  it('says when the department has no facility maps', async () => {
+    jest.mocked(useLocalSearchParams).mockReturnValue({ widget: 'map' });
+    await render(<ConfigureDashboardScreen />);
+    expect(screen.getByTestId('setting-map-no-facility-maps')).toBeTruthy();
   });
 
   it('loads picker data for the scheduled-calls filters and explains the unit alerts tab', async () => {

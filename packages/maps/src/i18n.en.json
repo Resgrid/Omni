@@ -40,5 +40,11 @@
   "maps.layer_info.email": "Email",
   "maps.layer_info.category": "Category",
   "maps.layer_info.no_details": "No details for this layer.",
-  "maps.layer_info.source_file": "Imported from {{name}}"
+  "maps.layer_info.source_file": "Imported from {{name}}",
+  "maps.facility.title": "Facility maps",
+  "maps.facility.choose_level": "Floor or layer of {{name}}",
+  "maps.facility.all_layers": "All layers",
+  "maps.facility.none": "No facility map",
+  "maps.facility.pick_hint": "Show a facility map, then tap a room or area to place the call there",
+  "maps.facility.feature_address": "{{name}}, {{map}}"
 }

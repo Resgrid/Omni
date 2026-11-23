@@ -1,7 +1,9 @@
 import type { MapMakerInfoData } from '@resgrid/models';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import React from 'react';
+import { Pressable, Text } from 'react-native';
 
+import { FullScreenLocationPicker, useLocationPickerContext } from '../components/full-screen-location-picker';
 import { LocationPicker } from '../components/location-picker';
 import { MapLayersSheet } from '../components/map-controls';
 import { MapLegendSheet } from '../components/map-legend-sheet';
@@ -207,5 +209,106 @@ describe('sheets', () => {
     await waitFor(() => expect(screen.getByTestId('map-legend-content')).toBeTruthy());
     expect(screen.getByTestId('map-legend-station-icon-bundled').props.source).toBe(2);
     expect(screen.queryByTestId('map-legend-station-icon-upload')).toBeNull();
+  });
+});
+
+describe('facility maps', () => {
+  const Sheet = ({ isOpen, children }: { isOpen: boolean; children: React.ReactNode }) => (isOpen ? <>{children}</> : null);
+
+  it('lists the facility maps in the Layers sheet with a switch each and, while one is on, its floors or layers', async () => {
+    const onToggle = jest.fn();
+    const onSelectLevel = jest.fn();
+    await renderWithProvider(
+      <MapLayersSheet
+        isOpen={true}
+        onClose={jest.fn()}
+        layers={[]}
+        toggles={{}}
+        onToggle={jest.fn()}
+        facilityMaps={{
+          items: [
+            {
+              Id: 'custom:site',
+              Name: 'Site plan',
+              TypeLabel: 'Outdoor',
+              Levels: [
+                { Id: 'base', Name: 'Base' },
+                { Id: 'evac', Name: 'Evacuation' },
+              ],
+              LevelId: null,
+              AllLevelsLabel: 'All layers',
+            },
+            {
+              Id: 'indoor:bldg',
+              Name: 'Building A',
+              Levels: [
+                { Id: 'f1', Name: 'Ground' },
+                { Id: 'f2', Name: 'Upper' },
+              ],
+              LevelId: 'f1',
+            },
+          ],
+          toggles: { 'indoor:bldg': true },
+          onToggle,
+          onSelectLevel,
+        }}
+      />,
+      { overlays: { Sheet } }
+    );
+    expect(screen.queryByTestId('map-layers-empty')).toBeNull();
+    expect(screen.getByTestId('facility-row-custom:site')).toHaveTextContent(/Site plan.*Outdoor/);
+    // Levels only for a map that is on; an indoor map has no "every floor" choice.
+    expect(screen.queryByTestId('facility-levels-custom:site')).toBeNull();
+    expect(screen.queryByTestId('facility-level-indoor:bldg-all')).toBeNull();
+    expect(screen.getByTestId('facility-level-indoor:bldg-f1').props.accessibilityState).toEqual({ selected: true });
+    await fireEvent.press(screen.getByTestId('facility-level-indoor:bldg-f2'));
+    expect(onSelectLevel).toHaveBeenCalledWith('indoor:bldg', 'f2');
+    await fireEvent(screen.getByTestId('facility-toggle-custom:site'), 'valueChange', true);
+    expect(onToggle).toHaveBeenCalledWith('custom:site');
+  });
+
+  it('lets the location picker’s overlay move the pin, ignoring the map’s own press for that tap', async () => {
+    const now = jest.spyOn(Date, 'now').mockReturnValue(1000);
+
+    const RoomButton = () => {
+      const picker = useLocationPickerContext();
+
+      return <Pressable testID="room" onPress={() => picker?.selectLocation({ latitude: 51.3, longitude: 4.5 })} />;
+    };
+
+    const onLocationSelected = jest.fn();
+    const onLocationChange = jest.fn();
+
+    try {
+      await renderWithProvider(
+        <FullScreenLocationPicker
+          isOpen={true}
+          initialLocation={{ latitude: 51.2, longitude: 4.4 }}
+          onLocationSelected={onLocationSelected}
+          onLocationChange={onLocationChange}
+          onClose={jest.fn()}
+          overlay={<RoomButton />}
+          toolbar={<Text testID="facility-toolbar">maps</Text>}
+          selectionLabel="Control room, Building A"
+          reverseGeocode={false}
+        />
+      );
+      expect(screen.getByTestId('facility-toolbar')).toBeTruthy();
+      await fireEvent.press(screen.getByTestId('room'));
+      now.mockReturnValue(1100);
+      await act(() => screen.getByTestId('full-screen-location-picker-map').props.onPress({ nativeEvent: { lngLat: [9, 9], point: [1, 1] } }));
+      expect(screen.getByTestId('mlrn-marker-picked-location').props.lngLat).toEqual([4.5, 51.3]);
+      expect(onLocationChange).toHaveBeenLastCalledWith({ latitude: 51.3, longitude: 4.5 });
+      expect(screen.getByTestId('full-screen-location-picker-address')).toHaveTextContent('Control room, Building A');
+
+      // A later tap on the map is the member's own pick again.
+      now.mockReturnValue(2000);
+      await act(() => screen.getByTestId('full-screen-location-picker-map').props.onPress({ nativeEvent: { lngLat: [4.6, 51.4], point: [1, 1] } }));
+      expect(screen.getByTestId('mlrn-marker-picked-location').props.lngLat).toEqual([4.6, 51.4]);
+      await fireEvent.press(screen.getByTestId('full-screen-location-picker-confirm'));
+      expect(onLocationSelected).toHaveBeenCalledWith({ latitude: 51.4, longitude: 4.6, address: undefined });
+    } finally {
+      now.mockRestore();
+    }
   });
 });

@@ -78,13 +78,27 @@ jest.mock('@resgrid/maps', () => {
   const mockReact = require('react');
   const { View, Text } = require('react-native');
   const context = { hasProvider: false, center: { latitude: 39.1, longitude: -119.7, zoomLevel: 9 }, style: { status: 'ready', isAvailable: true } };
+
+  type MockLevel = { IndoorMapFloorId: string };
+
+  // The camera's placement as JSON (`mock-camera`): what the widget asks the map to show and to stay within.
+  // React 19 hands a function component its `ref` as a prop, so the widget's camera ref needs no forwardRef here.
+  const MockCamera = ({ centerCoordinate, zoomLevel, bounds, maxBounds }: { centerCoordinate?: number[]; zoomLevel?: number; bounds?: object; maxBounds?: object }) =>
+    mockReact.createElement(Text, { testID: 'mock-camera' }, JSON.stringify({ centerCoordinate: centerCoordinate ?? null, zoomLevel: zoomLevel ?? null, bounds: bounds ?? null, maxBounds: maxBounds ?? null }));
+
   return {
     __esModule: true,
+    ...jest.requireActual('@resgrid/maps/lib/pixel-frame'),
+    isSafeMapUrl: jest.requireActual('@resgrid/maps/provider/url-safety').isSafeMapUrl,
     mockMapContext: context,
     useMapProviderContext: () => context,
     MapProvider: ({ children }: { children: unknown }) => mockReact.createElement(View, { testID: 'mock-map-provider' }, children),
     MapView: ({ children, testID }: { children: unknown; testID?: string }) => mockReact.createElement(View, { testID }, children),
-    Camera: mockReact.forwardRef(() => null),
+    Camera: MockCamera,
+    CustomMapRasterLayer: ({ layer, onRegionPress }: { layer: MockLevel; onRegionPress?: unknown }) =>
+      mockReact.createElement(Text, { testID: `mock-custom-map-${layer.IndoorMapFloorId}` }, onRegionPress ? 'pressable' : 'static'),
+    IndoorMapFloorLayer: ({ floor, showZoneLabels }: { floor: MockLevel; showZoneLabels?: boolean }) =>
+      mockReact.createElement(Text, { testID: `mock-indoor-floor-${floor.IndoorMapFloorId}` }, showZoneLabels === false ? 'no-labels' : 'labels'),
     MapPins: ({ pins }: { pins: { Id: string }[] }) => mockReact.createElement(Text, { testID: 'mock-map-pins' }, pins.map((pin) => pin.Id).join(',')),
     GeoJsonMapLayer: ({ id, showLabels }: { id: string; showLabels?: boolean }) => mockReact.createElement(Text, { testID: `mock-${id}` }, showLabels ? 'labels' : 'no-labels'),
     OfflineDepartmentLayers: ({ idPrefix }: { idPrefix?: string }) => mockReact.createElement(View, { testID: `mock-${idPrefix}` }),

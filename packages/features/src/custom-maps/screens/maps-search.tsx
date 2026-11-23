@@ -4,9 +4,10 @@ import type { MapFeatureResultData } from '@resgrid/models';
 import { HStack, Input, InputField, InputIcon, InputSlot, Loading, Pressable, ScreenHeader, ScrollView, Text, View, VStack, ZeroState } from '@resgrid/ui';
 import { router } from 'expo-router';
 import { Building2, Map as MapIcon, Search } from 'lucide-react-native';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet } from 'react-native';
 
+import { uniqueMapFeatures } from '../lib/map-features';
 import { searchResultRoute } from '../lib/map-viewer';
 import { customMapsRoutes } from '../routes';
 
@@ -25,7 +26,9 @@ const SCOPES: { value: MapFeatureSearchScope; labelKey: string }[] = [
  */
 export default function MapsSearchScreen() {
   const { t } = useTranslation();
-  const results = useCustomMapsStore((state) => state.searchResults);
+  const found = useCustomMapsStore((state) => state.searchResults);
+  const customMaps = useCustomMapsStore((state) => state.customMaps);
+  const results = useMemo(() => uniqueMapFeatures(found, customMaps), [customMaps, found]);
   const isLoading = useCustomMapsStore((state) => state.loading.search === true);
   const hasError = useCustomMapsStore((state) => !!state.errors.search);
   const [query, setQuery] = useState('');

@@ -8,7 +8,7 @@ import { Building2, Map as MapIcon, Search } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet } from 'react-native';
 
-import { CUSTOM_MAP_TYPE_KEYS, listedCustomMaps } from '../lib/map-viewer';
+import { CUSTOM_MAP_TYPE_KEYS, listedCustomMaps, listedIndoorMaps } from '../lib/map-viewer';
 import { customMapsRoutes } from '../routes';
 
 /**
@@ -43,7 +43,7 @@ export default function MapsHomeScreen() {
   }, [load]);
 
   const custom = useMemo(() => listedCustomMaps(customMaps), [customMaps]);
-  const indoor = useMemo(() => [...indoorMaps].sort((a, b) => a.Name.localeCompare(b.Name)), [indoorMaps]);
+  const indoor = useMemo(() => listedIndoorMaps(indoorMaps, customMaps), [customMaps, indoorMaps]);
   const isEmpty = custom.length === 0 && indoor.length === 0;
 
   const renderCustom = (map: CustomMapResultData) => (

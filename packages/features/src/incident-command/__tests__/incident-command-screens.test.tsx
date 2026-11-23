@@ -1,7 +1,7 @@
 import './test-setup';
 
 import { securityStore } from '@resgrid/auth';
-import { useCommandStore, useUnitsStore } from '@resgrid/data';
+import { useCommandStore, useCustomMapsStore, useUnitsStore } from '@resgrid/data';
 import type { DepartmentRightsResultData, IncidentCommandSummary } from '@resgrid/models';
 import { IncidentCommandStatus } from '@resgrid/models';
 import { useToastStore } from '@resgrid/ui';
@@ -11,6 +11,8 @@ import React from 'react';
 import { ScrollView } from 'react-native';
 
 import { activateVariant } from '../../calls/__tests__/test-utils';
+import { facilityMapsState } from '../../map/__tests__/facility-fixtures';
+import { useMapViewStore } from '../../map/hooks/use-map-view-store';
 import CallCommandScreen from '../screens/call-command';
 import CommandBoardScreen from '../screens/command-board';
 import CommandLogScreen from '../screens/command-log';
@@ -175,6 +177,34 @@ describe('CommandMapScreen', () => {
   it('says when there is nothing to place on the map', async () => {
     await render(<CommandMapScreen callId="7" />);
     expect(screen.getByTestId('command-map-no-positions')).toBeTruthy();
+  });
+
+  it('draws the facility maps switched on and offers them from its Layers button', async () => {
+    // SAFETY: test-setup's @resgrid/maps mock exports `mockMapCapabilities`.
+    const { mockMapCapabilities } = jest.requireMock('@resgrid/maps') as { mockMapCapabilities: { layers: boolean } };
+    mockMapCapabilities.layers = true;
+    useCustomMapsStore.setState({
+      ...facilityMapsState(),
+      activeLayers: [],
+      mapLayers: [],
+      fetchActiveLayers: jest.fn(async () => undefined),
+      fetchMapLayers: jest.fn(async () => undefined),
+      fetchCustomMaps: jest.fn(async () => undefined),
+      fetchIndoorMaps: jest.fn(async () => undefined),
+    });
+    useMapViewStore.getState().reset();
+    useMapViewStore.getState().toggleFacilityMap('indoor:bldg-a');
+    seedBoard('7', makeBoard({ Command: { ...makeBoard().Command, CommandPostLatitude: '39.6', CommandPostLongitude: '-104.8' } }));
+
+    try {
+      await render(<CommandMapScreen callId="7" />);
+      expect(screen.getByTestId('mock-indoor-floor-floor-1')).toBeTruthy();
+      await fireEvent.press(screen.getByTestId('command-map-layers-button'));
+      expect(screen.getByTestId('mock-layers-sheet')).toHaveTextContent('Site emergency plan,Building A');
+    } finally {
+      mockMapCapabilities.layers = false;
+      useMapViewStore.getState().reset();
+    }
   });
 });
 

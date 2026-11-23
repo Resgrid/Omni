@@ -3,11 +3,12 @@ import './test-setup';
 import { useNetInfo } from '@react-native-community/netinfo';
 import { useCallsStore, useCustomMapsStore, useMapMarkersStore, useNotesStore, usePersonnelStore, useUnitsStore, useWeatherAlertsStore } from '@resgrid/data';
 import type { CallPriorityResultData, CallResultData, MapMakerInfoData, NoteResultData, PersonnelInfoResultData, StatusesResultData, UnitInfoResultData, WeatherAlertResultData } from '@resgrid/models';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { router } from 'expo-router';
 import React from 'react';
 import { StyleSheet } from 'react-native';
 
+import { facilityMapsState } from '../../map/__tests__/facility-fixtures';
 import { WIDGET_COMPONENTS, WidgetRenderer } from '../components/widget-renderer';
 import { CallsSummaryWidget } from '../components/widgets/calls-summary-widget';
 import { CallsWidget } from '../components/widgets/calls-widget';
@@ -26,6 +27,7 @@ import { WIDGET_TYPES } from '../lib/widget-types';
 import { setConfig, stubDataStores, utcAgo } from './fixtures';
 
 const props = { isEditMode: false, width: 600, height: 400 };
+
 const person = (UserId: string, extra: Partial<PersonnelInfoResultData> = {}): PersonnelInfoResultData =>
   ({
     UserId,
@@ -40,8 +42,10 @@ const person = (UserId: string, extra: Partial<PersonnelInfoResultData> = {}): P
     StaffingColor: '#0000aa',
     ...extra,
   }) as PersonnelInfoResultData;
+
 const call = (CallId: string, extra: Partial<CallResultData> = {}): CallResultData =>
   ({ CallId, Number: CallId, Name: `Call ${CallId}`, Address: '1 Main St', Priority: 1, State: 0, LoggedOnUtc: utcAgo(300), ...extra }) as CallResultData;
+
 const priority = (Id: number, Name: string): CallPriorityResultData => ({ Id, Name, Color: '#ff0000', Sort: Id, BaseType: Id, IsDeleted: false, IsDefault: false }) as CallPriorityResultData;
 
 let mocks: ReturnType<typeof stubDataStores>;
@@ -222,6 +226,7 @@ describe('WeatherAlertsWidget', () => {
         AreaDescription: 'County',
         ExpiresUtc: new Date(Date.now() + 7200000).toISOString(),
       }) as WeatherAlertResultData;
+
     useWeatherAlertsStore.setState({ alerts: [alert('a', 3), alert('b', 0), alert('c', 1)] });
     useWidgetSettingsStore.getState().updateSettings('weatherAlerts', { showMinor: false, maxAlertsInWidget: 1 });
     await render(<WeatherAlertsWidget {...props} />);
@@ -308,5 +313,63 @@ describe('MapWidget', () => {
     useWidgetSettingsStore.getState().updateSettings('map', { hideLabels: true });
     await render(<MapWidget {...props} />);
     expect(screen.getByTestId('mock-dashboard-layer-E1')).toHaveTextContent('no-labels');
+  });
+
+  interface CameraJson {
+    centerCoordinate: number[] | null;
+    zoomLevel: number | null;
+    bounds: { ne: number[]; sw: number[]; paddingTop?: number } | null;
+    maxBounds: { ne: number[]; sw: number[] } | null;
+  }
+
+  const camera = (): CameraJson => JSON.parse(String(screen.getByTestId('mock-camera').props.children));
+
+  it('fits the pins by default and leaves the camera free', async () => {
+    await render(<MapWidget {...props} />);
+    expect(camera()).toEqual({ centerCoordinate: null, zoomLevel: null, bounds: null, maxBounds: null });
+    expect(screen.queryByTestId(/^mock-(custom-map|indoor-floor)-/)).toBeNull();
+  });
+
+  it('draws the facility map the board is set to and frames its floor, locked when asked', async () => {
+    useCustomMapsStore.setState(facilityMapsState());
+    useWidgetSettingsStore.getState().updateSettings('map', { customMapId: 'bldg-a', customMapKind: 'indoor', customMapLayerId: 'floor-2', viewMode: 'customMap', hideLabels: true });
+    await render(<MapWidget {...props} />);
+    expect(screen.getByTestId('mock-indoor-floor-floor-2')).toHaveTextContent('no-labels');
+    expect(screen.queryByTestId('mock-indoor-floor-floor-1')).toBeNull();
+    // The upper floor is read for its rooms.
+    expect(mocks.fetchIndoorFloor).toHaveBeenCalledWith('floor-2');
+    expect(camera()).toMatchObject({ centerCoordinate: null, bounds: { ne: [-106.49, 35.01], sw: [-106.5, 35.0] }, maxBounds: null });
+
+    await act(() => useWidgetSettingsStore.getState().updateSettings('map', { lockView: true }));
+    const locked = camera().maxBounds;
+    expect(locked?.sw[0]).toBeLessThan(-106.5);
+    expect(locked?.ne[1]).toBeGreaterThan(35.01);
+  });
+
+  it('draws a custom map site plan under the pins while fitting the pins, and reads a map not on the device', async () => {
+    useWidgetSettingsStore.getState().updateSettings('map', { customMapId: 'site', customMapKind: 'custom' });
+    await render(<MapWidget {...props} />);
+    expect(mocks.fetchCustomMap).toHaveBeenCalledWith('site');
+    await act(() => useCustomMapsStore.setState(facilityMapsState()));
+    expect(screen.getByTestId('mock-custom-map-site-base')).toHaveTextContent('pressable');
+    expect(screen.getByTestId('mock-custom-map-site-evac')).toBeTruthy();
+    expect(camera().bounds).toBeNull();
+  });
+
+  it('holds a fixed spot, kept there when the view is locked', async () => {
+    useWidgetSettingsStore.getState().updateSettings('map', { viewMode: 'fixed', latitude: 35.005, longitude: -106.495, zoomLevel: 17, lockView: true });
+    await render(<MapWidget {...props} />);
+    const view = camera();
+    expect(view).toMatchObject({ centerCoordinate: [-106.495, 35.005], zoomLevel: 17, bounds: null });
+    expect(view.maxBounds?.sw[0]).toBeLessThan(-106.495);
+    expect(view.maxBounds?.ne[0]).toBeGreaterThan(-106.495);
+  });
+
+  it('takes no taps on the facility map while the board is edited', async () => {
+    useCustomMapsStore.setState(facilityMapsState());
+    useWidgetSettingsStore.getState().updateSettings('map', { customMapId: 'site', customMapKind: 'custom', customMapLayerId: 'site-base' });
+    await render(<MapWidget {...props} isEditMode={true} />);
+    expect(screen.getByTestId('mock-custom-map-site-base')).toHaveTextContent('static');
+    expect(screen.queryByTestId('mock-custom-map-site-evac')).toBeNull();
   });
 });

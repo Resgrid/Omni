@@ -414,18 +414,18 @@ describe('call form', () => {
     const call = makeCall('9', { Note: 'Stored note' });
     const base = { ...emptyCallFormValues(1), name: 'A', nature: 'B', type: 'Fire' };
     // A blank note keeps the stored one; the dispatch time and linked call are never required on an edit; protocols are not
-    // judged when the attached ones could not be read; indoor location is never enforced.
+    // judged when the attached ones could not be read.
     expect(missingPolicyFields(base, policy, { call, storedProtocolCount: null, initialDispatchOnUtc: '' })).toEqual(['dispatchList']);
     expect(missingPolicyFields(base, policy, { call, storedProtocolCount: 0, initialDispatchOnUtc: '' })).toEqual(['protocols', 'dispatchList']);
     // A pending call's recipients are decided when it is dispatched.
     expect(missingPolicyFields(base, policy, { call: makeCall('9', { Note: 'n', State: 8 }), storedProtocolCount: 2, initialDispatchOnUtc: '' })).toEqual([]);
   });
 
-  it('applies the create rules: a pending call needs no dispatch list or time, indoor location is never enforced', () => {
+  it('applies the create rules: a pending call needs no dispatch list or time; a required indoor location needs a room', () => {
     const policy = createFieldPolicy([rule('dispatchOn', true, true), rule('dispatchList', true, true), rule('indoorLocation', true, true)]);
     const base = { ...emptyCallFormValues(1), name: 'A', nature: 'B' };
-    expect(missingPolicyFields(base, policy)).toEqual(['dispatchOn', 'dispatchList']);
-    expect(missingPolicyFields({ ...base, isPending: true }, policy)).toEqual([]);
+    expect(missingPolicyFields(base, policy)).toEqual(['dispatchOn', 'dispatchList', 'indoorLocation']);
+    expect(missingPolicyFields({ ...base, isPending: true, indoorMapZoneId: 'control' }, policy)).toEqual([]);
   });
 
   it('requires a type when the department has types, and a scheduled dispatch at least 15 minutes ahead', () => {
