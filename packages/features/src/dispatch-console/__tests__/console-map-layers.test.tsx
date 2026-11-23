@@ -181,6 +181,30 @@ describe('ConsoleMap facility maps', () => {
     expect(screen.queryByTestId('console-map-facility-feature')).toBeNull();
   });
 
+  it('closes a room’s card with its floor or its map, and does not bring it back with them', async () => {
+    useMapViewStore.getState().toggleFacilityMap('indoor:bldg-a');
+    await render(<ConsoleMap />);
+    await fireEvent.press(screen.getByTestId('mock-zone-control'));
+    expect(screen.getByTestId('console-map-facility-feature-name')).toHaveTextContent('Control room');
+
+    // Another floor: the room is not drawn, and choosing its floor again leaves the card closed.
+    await fireEvent.press(screen.getByTestId('console-map-layers-button'));
+    await fireEvent.press(screen.getByTestId('facility-level-indoor:bldg-a-floor-2'));
+    expect(screen.queryByTestId('console-map-facility-feature')).toBeNull();
+    await fireEvent.press(screen.getByTestId('facility-level-indoor:bldg-a-floor-1'));
+    expect(screen.getByTestId('mock-indoor-floor-floor-1').props.accessibilityLabel).toBe('selected:');
+    expect(screen.queryByTestId('console-map-facility-feature')).toBeNull();
+
+    // The map switched off and on again.
+    await fireEvent.press(screen.getByTestId('mock-zone-control'));
+    expect(screen.getByTestId('console-map-facility-feature')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('facility-toggle-indoor:bldg-a'));
+    expect(screen.queryByTestId('console-map-facility-feature')).toBeNull();
+    await fireEvent.press(screen.getByTestId('facility-toggle-indoor:bldg-a'));
+    expect(screen.getByTestId('mock-indoor-floor-floor-1')).toBeTruthy();
+    expect(screen.queryByTestId('console-map-facility-feature')).toBeNull();
+  });
+
   it('switches facility maps and their floor or layer from its Layers button', async () => {
     await render(<ConsoleMap />);
     expect(screen.queryByTestId('mock-layers-sheet')).toBeNull();

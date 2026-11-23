@@ -138,7 +138,8 @@ interface CallRequestBase {
    * The indoor location: an indoor map zone or a custom map region (`IndoorMapZoneId`), with the floor or layer it is on.
    * Undefined leaves both out — the form has no indoor picker, so the server does not enforce the department's indoor
    * location requirement, and an edit keeps the stored one. Null or blank is sent as "": a new call has none (and the
-   * requirement applies), an edit clears it.
+   * requirement applies), an edit clears it (Core `CallsController.EditCall` clears the zone and floor on a blank zone; the
+   * `EditCallInput.IndoorMapZoneId` summary, "Blank keeps the stored zone", is out of date).
    */
   indoorMapZoneId?: string | null;
   /** The indoor floor or custom map layer of `indoorMapZoneId`; sent with it. */

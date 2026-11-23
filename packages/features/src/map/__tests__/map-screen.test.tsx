@@ -1,5 +1,6 @@
 import './test-setup';
 
+import { useNetInfo } from '@react-native-community/netinfo';
 import type { VariantId } from '@resgrid/config';
 import { useCustomMapsStore, useMapMarkersStore } from '@resgrid/data';
 import { NavigationHandoffProvider } from '@resgrid/features/contacts';
@@ -26,6 +27,14 @@ const { mockCamera, mockMapStyle, mockMapView, useFollowCamera } = jest.requireM
 };
 
 const { mockCurrentLocation } = jest.requireMock('@resgrid/location') as { mockCurrentLocation: { value: unknown } };
+
+// NetInfo is the calls test setup's mock (connected); a test switches it and re-renders.
+const setConnected = (isConnected: boolean) => {
+  // SAFETY: test-setup (through the calls test setup) mocks `useNetInfo` with a jest.fn.
+  const mockUseNetInfo = useNetInfo as jest.Mock;
+
+  mockUseNetInfo.mockReturnValue({ isConnected, isInternetReachable: isConnected });
+};
 
 const PINS = [
   pin('c12', 0, { Title: 'Structure fire', Address: '12 Main St' }),
@@ -483,7 +492,10 @@ describe('MapScreen facility maps', () => {
     fetchIndoorFloor: jest.fn(async () => undefined),
   };
 
-  beforeEach(() => useCustomMapsStore.setState({ ...facilityMapsState(), ...facilityMocks }));
+  beforeEach(() => {
+    useCustomMapsStore.setState({ ...facilityMapsState(), ...facilityMocks });
+    setConnected(true);
+  });
 
   it('lists the department’s custom and indoor maps in the Layers sheet and draws one switched on, in every app', async () => {
     await renderMap({ variant: 'responder' });
@@ -517,6 +529,45 @@ describe('MapScreen facility maps', () => {
     expect(screen.getByTestId('layer-feature-title', hidden)).toHaveTextContent('Tank yard');
     expect(screen.getByTestId('layer-feature-layer', hidden)).toHaveTextContent('Site emergency plan · Site plan');
     expect(screen.getByTestId('mock-custom-map-site-base').props.accessibilityLabel).toBe('selected:yard');
+  });
+
+  it('closes a room’s details once its layer is not drawn, and does not bring them back with it', async () => {
+    useMapViewStore.getState().toggleFacilityMap('custom:site');
+    await renderMap();
+    await fireEvent.press(screen.getByTestId('mock-zone-yard'));
+    await act(async () => undefined);
+    expect(screen.getByTestId('layer-feature-title', hidden)).toHaveTextContent('Tank yard');
+
+    // Another layer chosen: the room's layer is no longer drawn.
+    await fireEvent.press(screen.getByTestId('map-screen-layers-button'));
+    await fireEvent.press(screen.getByTestId('facility-level-custom:site-site-evac'));
+    expect(screen.queryByTestId('mock-custom-map-site-base')).toBeNull();
+    expect(screen.queryByTestId('layer-feature-title', hidden)).toBeNull();
+
+    // Every layer again: the room is drawn, its details stay closed.
+    await fireEvent.press(screen.getByTestId('facility-level-custom:site-all'));
+    expect(screen.getByTestId('mock-custom-map-site-base').props.accessibilityLabel).toBe('selected:');
+    expect(screen.queryByTestId('layer-feature-title', hidden)).toBeNull();
+
+    // Switching the map off closes them too.
+    await fireEvent.press(screen.getByTestId('mock-zone-yard'));
+    await act(async () => undefined);
+    expect(screen.getByTestId('layer-feature-title', hidden)).toHaveTextContent('Tank yard');
+    await fireEvent.press(screen.getByTestId('facility-toggle-custom:site'));
+    expect(screen.queryByTestId('layer-feature-title', hidden)).toBeNull();
+  });
+
+  it('reads a facility map the device does not have once it is back online, not while it is offline', async () => {
+    setConnected(false);
+    useCustomMapsStore.setState({ customMapById: {} });
+    useMapViewStore.getState().toggleFacilityMap('custom:site');
+    await renderMap();
+    expect(facilityMocks.fetchCustomMap).not.toHaveBeenCalled();
+
+    // Back online (NetInfo re-renders the screen).
+    setConnected(true);
+    await act(async () => useCustomMapsStore.setState({ customMaps: [...useCustomMapsStore.getState().customMaps] }));
+    expect(facilityMocks.fetchCustomMap).toHaveBeenCalledWith('site');
   });
 
   it('offers them on BigBoard too, which has no custom maps browser', async () => {

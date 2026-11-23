@@ -3,7 +3,7 @@ import { getDataApiContext, hasDataApiContext, useMapMarkersStore } from '@resgr
 import { useDepartmentConfig } from '@resgrid/features/department-config';
 import { DepartmentLayersOverlay } from '@resgrid/features/map/components/department-layers';
 import { FacilityFeatureCard, FacilityMapsOverlay } from '@resgrid/features/map/components/facility-maps-overlay';
-import { type FacilitySelection, useFacilityMapLayers } from '@resgrid/features/map/hooks/use-facility-maps';
+import { type FacilitySelection, useDrawnFacilityFeature, useFacilityMapLayers } from '@resgrid/features/map/hooks/use-facility-maps';
 import { type FacilityFeature, facilityMapKey, lockedViewBounds } from '@resgrid/features/map/lib/facility-maps';
 import { useNavigationEtaPins } from '@resgrid/features/navigation-eta';
 import { useTranslation } from '@resgrid/i18n';
@@ -96,7 +96,10 @@ const DepartmentMap: React.FC<{ isEditMode: boolean }> = ({ isEditMode }) => {
   const selections = useMemo<FacilitySelection[]>(() => (facilityKey ? [{ key: facilityKey, levelId: settings.customMapLayerId || null }] : NO_SELECTIONS), [facilityKey, settings.customMapLayerId]);
   const facility = useFacilityMapLayers(selections);
   const facilityBounds = facilityKey ? (facility.maps[facilityKey]?.bounds ?? null) : null;
-  const [tappedFeature, setTappedFeature] = useState<FacilityFeature | null>(null);
+  const [tapped, setTappedFeature] = useState<FacilityFeature | null>(null);
+  const clearTapped = useCallback(() => setTappedFeature(null), []);
+  // A room's card closes when the board shows another floor or layer, or another map.
+  const tappedFeature = useDrawnFacilityFeature(tapped, tapped?.featureId, facility.layers, clearTapped);
 
   const viewMode = settings.viewMode;
   const framesFacility = viewMode === 'customMap' && facilityBounds !== null;
@@ -112,11 +115,17 @@ const DepartmentMap: React.FC<{ isEditMode: boolean }> = ({ isEditMode }) => {
   }, [center, facilityBounds, framesFacility, settings.lockView, settings.zoomLevel, viewMode]);
 
   // Fit once per load and whenever the pin kinds change — never on every live position update (that would yank the
-  // camera, and any pan, around all day).
+  // camera, and any pan, around all day). Another view forgets the fit, so coming back to fitting the pins fits them again.
   const fitKey = `${hasLoaded}|${viewMode}|${settings.showCalls}|${settings.showLinkedCalls}|${settings.showUnits}|${settings.showStations}|${settings.showPersonnel}`;
   const fittedKeyRef = useRef('');
   useEffect(() => {
-    if (!hasLoaded || viewMode !== 'fitPins' || fittedKeyRef.current === fitKey || visiblePins.length === 0) return;
+    if (viewMode !== 'fitPins') {
+      fittedKeyRef.current = '';
+
+      return;
+    }
+
+    if (!hasLoaded || fittedKeyRef.current === fitKey || visiblePins.length === 0) return;
 
     if (fitBounds(visiblePins.map((pin) => [pin.Longitude, pin.Latitude]))) fittedKeyRef.current = fitKey;
   }, [fitBounds, fitKey, hasLoaded, viewMode, visiblePins]);
@@ -153,7 +162,7 @@ const DepartmentMap: React.FC<{ isEditMode: boolean }> = ({ isEditMode }) => {
         <DepartmentLayersOverlay idPrefix="dashboard" showLabels={!settings.hideLabels} />
         <MapPins pins={etaPins} canViewPersonnel={canUserViewPII} showLabels={!settings.hideLabels} idPrefix="dashboard-pins" />
       </MapView>
-      {tappedFeature && facility.layers.length > 0 ? <FacilityFeatureCard feature={tappedFeature} onClose={() => setTappedFeature(null)} testID="map-widget-facility-feature" /> : null}
+      {tappedFeature ? <FacilityFeatureCard feature={tappedFeature} onClose={() => setTappedFeature(null)} testID="map-widget-facility-feature" /> : null}
     </View>
   );
 };

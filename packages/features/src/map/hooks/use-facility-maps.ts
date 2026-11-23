@@ -1,12 +1,15 @@
+import { useNetInfo } from '@react-native-community/netinfo';
 import { useCustomMapsStore } from '@resgrid/data';
 import { mapBounds } from '@resgrid/features/custom-maps/lib/map-viewer';
 import type { CameraRef, MapFacilitySectionProps } from '@resgrid/maps';
-import type { CustomMapResultData, IndoorMapResultData } from '@resgrid/models';
+import type { CustomMapLayerResultData, CustomMapResultData, IndoorMapResultData } from '@resgrid/models';
+import { isNetInfoOnline } from '@resgrid/offline';
 import { type RefObject, useCallback, useEffect, useMemo, useState } from 'react';
 
 import {
   type FacilityBounds,
   facilityBounds,
+  facilityFeatureOf,
   type FacilityLevel,
   facilityLevels,
   type FacilityMapDetail,
@@ -21,6 +24,21 @@ import { useMapViewStore } from './use-map-view-store';
 
 const EMPTY_CUSTOM: CustomMapResultData[] = [];
 const EMPTY_INDOOR: IndoorMapResultData[] = [];
+
+/** Room around a facility map framed on the camera, in pixels, and how long the camera takes to get there. */
+const FOCUS_PADDING_PX = 40;
+const FOCUS_ANIMATION_MS = 800;
+
+type CustomOverlayLayer = Extract<FacilityOverlayLayer, { kind: 'custom' }>;
+
+const isCustomOverlayLayer = (entry: FacilityOverlayLayer): entry is CustomOverlayLayer => entry.kind === 'custom';
+
+/** The read tokens (`layer:<id>`) for a custom map's drawn layers whose regions the device has not read yet. */
+const unreadCustomLayers = (layers: readonly FacilityOverlayLayer[], layerById: Readonly<Record<string, CustomMapLayerResultData>>): string[] => {
+  const unread = layers.filter(isCustomOverlayLayer).filter((entry) => !layerById[entry.layer.IndoorMapFloorId]);
+
+  return unread.map((entry) => `layer:${entry.layer.IndoorMapFloorId}`);
+};
 
 /**
  * The department's facility maps to choose from. The lists are kept on the device (they open offline) and read again
@@ -119,11 +137,7 @@ export function useFacilityMapLayers(selections: readonly FacilitySelection[]): 
 
       if (!ref) return [];
 
-      if (ref.kind === 'custom') {
-        if (!customMapById[ref.mapId]) return [`custom:${ref.mapId}`];
-
-        return (maps[selection.key]?.layers ?? []).flatMap((entry) => (entry.kind === 'custom' && !layerById[entry.layer.IndoorMapFloorId] ? [`layer:${entry.layer.IndoorMapFloorId}`] : []));
-      }
+      if (ref.kind === 'custom') return customMapById[ref.mapId] ? unreadCustomLayers(maps[selection.key]?.layers ?? [], layerById) : [`custom:${ref.mapId}`];
 
       if (!indoorMapById[ref.mapId]) return [`indoor:${ref.mapId}`];
       const floorId = maps[selection.key]?.levelId;
@@ -132,8 +146,12 @@ export function useFacilityMapLayers(selections: readonly FacilitySelection[]): 
     })
     .join('|');
 
+  // A read that failed offline (the cache stays empty, so `missing` does not change) is made again once the device is back
+  // online; none is tried while it is offline.
+  const isOnline = isNetInfoOnline(useNetInfo());
+
   useEffect(() => {
-    if (!missing) return;
+    if (!missing || !isOnline) return;
     const store = useCustomMapsStore.getState();
 
     for (const entry of missing.split('|')) {
@@ -146,7 +164,7 @@ export function useFacilityMapLayers(selections: readonly FacilitySelection[]): 
       else if (kind === 'indoor') void store.fetchIndoorMap(id);
       else void store.fetchIndoorFloor(id);
     }
-  }, [missing]);
+  }, [isOnline, missing]);
 
   const layers = useMemo(() => Object.values(maps).flatMap((map) => map.layers), [maps]);
 
@@ -221,8 +239,23 @@ export function useFacilityFocus(cameraRef: RefObject<CameraRef | null>, facilit
 
     if (!enabled || !camera) return;
     onFramed?.();
-    camera.fitBounds(focus.ne, focus.sw, 40, 800);
+    camera.fitBounds(focus.ne, focus.sw, FOCUS_PADDING_PX, FOCUS_ANIMATION_MS);
   }, [cameraRef, clearFocus, enabled, focus, onFramed]);
+}
+
+/**
+ * A tapped room or region (`featureId`: its zone or region id) while it is drawn. Once its floor or layer is not — another
+ * floor chosen, its map switched off — it reads as null and `clear` drops it, so its card closes and does not come back
+ * when the map is switched on again. A selection with no `featureId` (a department layer's shape) is kept.
+ */
+export function useDrawnFacilityFeature<T>(selected: T | null, featureId: string | null | undefined, layers: readonly FacilityOverlayLayer[], clear: () => void): T | null {
+  const hidden = selected !== null && !!featureId && facilityFeatureOf(layers, featureId) === null;
+
+  useEffect(() => {
+    if (hidden) clear();
+  }, [clear, hidden]);
+
+  return hidden ? null : selected;
 }
 
 /** The Layers sheet's facility maps section for `useFacilityMaps`; none when the department has no facility maps. */

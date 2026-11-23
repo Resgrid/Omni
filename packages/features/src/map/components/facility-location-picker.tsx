@@ -102,7 +102,9 @@ export const FacilityLocationPicker: React.FC<FacilityLocationPickerProps> = ({ 
   const effective = picked && isAt(picked.center, pin) ? picked : null;
   const highlighted = effective?.featureId ?? initialIndoor?.zoneId ?? null;
 
+  // The member's own choice: the call's map, read later, no longer replaces it.
   const choose = useCallback((key: string | null) => {
+    appliedInitial.current = true;
     setPicked(null);
     setChosen(key ? { key, levelId: null } : null);
   }, []);

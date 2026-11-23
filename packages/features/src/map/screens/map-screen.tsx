@@ -47,7 +47,7 @@ import { MapHighlights } from '../components/map-highlights';
 import { type MapPinAction, MapPinPanel } from '../components/map-pin-details';
 import { useActiveRouteOverlay } from '../hooks/use-active-route-overlay';
 import { type DepartmentMapLayer, useDepartmentLayers } from '../hooks/use-department-layers';
-import { facilitySheetSection, useFacilityFocus, useFacilityMaps } from '../hooks/use-facility-maps';
+import { facilitySheetSection, useDrawnFacilityFeature, useFacilityFocus, useFacilityMaps } from '../hooks/use-facility-maps';
 import { useLiveMapPins } from '../hooks/use-live-map-pins';
 import { useMapLockStore } from '../hooks/use-map-lock';
 import { useMapViewStore } from '../hooks/use-map-view-store';
@@ -180,9 +180,11 @@ export default function MapScreen({ links = NO_LINKS, realtime = true }: MapScre
   const closePin = useCallback(() => setSelectedPinId(null), []);
   // A tapped layer shape (vendor, stop, zone) with a name or description. One panel at a time: a pin wins over a shape
   // under the same tap (the web map reports both; the native map only the topmost source).
-  const [selectedFeature, setSelectedFeature] = useState<MapFeatureSelection | null>(null);
+  const [featureSelection, setSelectedFeature] = useState<MapFeatureSelection | null>(null);
   const [tapPriority] = useState(createTapPriority);
   const closeFeature = useCallback(() => setSelectedFeature(null), []);
+  // A room's details close with its floor or its map (another floor chosen, the map switched off in the Layers sheet).
+  const selectedFeature = useDrawnFacilityFeature(featureSelection, featureSelection?.facilityFeatureId, facility.layers, closeFeature);
 
   const handlePinPress = useCallback(
     (pin: MapMakerInfoData) => {

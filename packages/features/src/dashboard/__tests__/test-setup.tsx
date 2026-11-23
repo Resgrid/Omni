@@ -76,7 +76,7 @@ jest.mock('react-native-gesture-handler', () => {
 
 jest.mock('@resgrid/maps', () => {
   const mockReact = require('react');
-  const { View, Text } = require('react-native');
+  const { Pressable, View, Text } = require('react-native');
   const context = { hasProvider: false, center: { latitude: 39.1, longitude: -119.7, zoomLevel: 9 }, style: { status: 'ready', isAvailable: true } };
 
   type MockLevel = { IndoorMapFloorId: string };
@@ -85,6 +85,9 @@ jest.mock('@resgrid/maps', () => {
   // React 19 hands a function component its `ref` as a prop, so the widget's camera ref needs no forwardRef here.
   const MockCamera = ({ centerCoordinate, zoomLevel, bounds, maxBounds }: { centerCoordinate?: number[]; zoomLevel?: number; bounds?: object; maxBounds?: object }) =>
     mockReact.createElement(Text, { testID: 'mock-camera' }, JSON.stringify({ centerCoordinate: centerCoordinate ?? null, zoomLevel: zoomLevel ?? null, bounds: bounds ?? null, maxBounds: maxBounds ?? null }));
+
+  // The widget's pin fit (`useFitBounds`): records each fit and reports it done.
+  const mockFitPins = jest.fn(() => true);
 
   return {
     __esModule: true,
@@ -97,13 +100,22 @@ jest.mock('@resgrid/maps', () => {
     Camera: MockCamera,
     CustomMapRasterLayer: ({ layer, onRegionPress }: { layer: MockLevel; onRegionPress?: unknown }) =>
       mockReact.createElement(Text, { testID: `mock-custom-map-${layer.IndoorMapFloorId}` }, onRegionPress ? 'pressable' : 'static'),
-    IndoorMapFloorLayer: ({ floor, showZoneLabels }: { floor: MockLevel; showZoneLabels?: boolean }) =>
-      mockReact.createElement(Text, { testID: `mock-indoor-floor-${floor.IndoorMapFloorId}` }, showZoneLabels === false ? 'no-labels' : 'labels'),
+    // A floor, with one pressable per room (`mock-zone-<id>`) when the widget takes taps.
+    IndoorMapFloorLayer: ({ floor, showZoneLabels, onZonePress }: { floor: MockLevel & { Zones?: { IndoorMapZoneId: string }[] }; showZoneLabels?: boolean; onZonePress?: (id: string) => void }) =>
+      mockReact.createElement(
+        mockReact.Fragment,
+        null,
+        mockReact.createElement(Text, { testID: `mock-indoor-floor-${floor.IndoorMapFloorId}` }, showZoneLabels === false ? 'no-labels' : 'labels'),
+        onZonePress
+          ? (floor.Zones ?? []).map((zone) => mockReact.createElement(Pressable, { key: zone.IndoorMapZoneId, testID: `mock-zone-${zone.IndoorMapZoneId}`, onPress: () => onZonePress(zone.IndoorMapZoneId) }))
+          : null
+      ),
     MapPins: ({ pins }: { pins: { Id: string }[] }) => mockReact.createElement(Text, { testID: 'mock-map-pins' }, pins.map((pin) => pin.Id).join(',')),
     GeoJsonMapLayer: ({ id, showLabels }: { id: string; showLabels?: boolean }) => mockReact.createElement(Text, { testID: `mock-${id}` }, showLabels ? 'labels' : 'no-labels'),
     OfflineDepartmentLayers: ({ idPrefix }: { idPrefix?: string }) => mockReact.createElement(View, { testID: `mock-${idPrefix}` }),
     useMapCapabilities: () => ({ layers: true, customIndoor: false, navigationInApp: false }),
-    useFitBounds: () => () => true,
+    mockFitPins,
+    useFitBounds: () => mockFitPins,
   };
 });
 

@@ -9,6 +9,7 @@ import React from 'react';
 import { StyleSheet } from 'react-native';
 
 import { facilityMapsState } from '../../map/__tests__/facility-fixtures';
+import { pin } from '../../map/__tests__/fixtures';
 import { WIDGET_COMPONENTS, WidgetRenderer } from '../components/widget-renderer';
 import { CallsSummaryWidget } from '../components/widgets/calls-summary-widget';
 import { CallsWidget } from '../components/widgets/calls-widget';
@@ -328,6 +329,33 @@ describe('MapWidget', () => {
     await render(<MapWidget {...props} />);
     expect(camera()).toEqual({ centerCoordinate: null, zoomLevel: null, bounds: null, maxBounds: null });
     expect(screen.queryByTestId(/^mock-(custom-map|indoor-floor)-/)).toBeNull();
+  });
+
+  it('fits the pins again when the board comes back to fitting them from another view', async () => {
+    // SAFETY: the @resgrid/maps mock in test-setup exports `mockFitPins`.
+    const { mockFitPins } = jest.requireMock('@resgrid/maps') as { mockFitPins: jest.Mock };
+
+    useMapMarkersStore.setState({ markers: [pin('c1', 0)], fetchedAt: { markers: Date.now() } });
+    await render(<MapWidget {...props} />);
+    expect(mockFitPins).toHaveBeenCalledTimes(1);
+
+    await act(() => useWidgetSettingsStore.getState().updateSettings('map', { viewMode: 'fixed', latitude: 39.7, longitude: -104.9 }));
+    await act(() => useWidgetSettingsStore.getState().updateSettings('map', { viewMode: 'fitPins' }));
+    expect(mockFitPins).toHaveBeenCalledTimes(2);
+  });
+
+  it('closes a room’s card when the board shows another floor, and does not bring it back with the floor', async () => {
+    useCustomMapsStore.setState(facilityMapsState());
+    useWidgetSettingsStore.getState().updateSettings('map', { customMapId: 'bldg-a', customMapKind: 'indoor', customMapLayerId: 'floor-1', viewMode: 'customMap' });
+    await render(<MapWidget {...props} />);
+    await fireEvent.press(screen.getByTestId('mock-zone-control'));
+    expect(screen.getByTestId('map-widget-facility-feature')).toBeTruthy();
+
+    await act(() => useWidgetSettingsStore.getState().updateSettings('map', { customMapLayerId: 'floor-2' }));
+    expect(screen.queryByTestId('map-widget-facility-feature')).toBeNull();
+    await act(() => useWidgetSettingsStore.getState().updateSettings('map', { customMapLayerId: 'floor-1' }));
+    expect(screen.getByTestId('mock-indoor-floor-floor-1')).toBeTruthy();
+    expect(screen.queryByTestId('map-widget-facility-feature')).toBeNull();
   });
 
   it('draws the facility map the board is set to and frames its floor, locked when asked', async () => {

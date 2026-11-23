@@ -156,6 +156,19 @@ describe('FacilityLocationPicker', () => {
     expect(screen.getByTestId('mock-indoor-floor-floor-1').props.accessibilityLabel).toBe('selected:control');
   });
 
+  it('keeps a map the member chose while the call’s room was still being read', async () => {
+    // The call's floor is not on the device yet: the picker cannot open on its map.
+    useCustomMapsStore.setState({ indoorMapById: {}, floorById: {} });
+    await renderPicker({ initialIndoor: { zoneId: 'control', floorId: 'floor-1' } });
+    await fireEvent.press(screen.getByTestId('facility-picker-map-custom:site'));
+
+    // The read lands: the member's choice stays.
+    await act(async () => useCustomMapsStore.setState({ indoorMapById: facilityMapsState().indoorMapById, floorById: facilityMapsState().floorById }));
+    expect(screen.getByTestId('facility-picker-map-custom:site').props.accessibilityState).toEqual({ selected: true });
+    expect(screen.getByTestId('facility-picker-map-indoor:bldg-a').props.accessibilityState).toEqual({ selected: false });
+    expect(screen.getByTestId('mock-custom-map-site-base')).toBeTruthy();
+  });
+
   it('offers no facility maps for the destination, or when the department has none', async () => {
     await renderPicker({ facilityMaps: false });
     expect(screen.queryByTestId('facility-picker-toolbar')).toBeNull();

@@ -1,9 +1,9 @@
 import { type CameraRef, useMapCapabilities } from '@resgrid/maps';
-import { type RefObject, useState } from 'react';
+import { type RefObject, useCallback, useState } from 'react';
 
-import { type FacilityFeature, facilityMapKey } from '../lib/facility-maps';
+import type { FacilityFeature } from '../lib/facility-maps';
 import { type DepartmentMapLayer, useDepartmentLayers } from './use-department-layers';
-import { type FacilityMapsState, useFacilityFocus, useFacilityMaps } from './use-facility-maps';
+import { type FacilityMapsState, useDrawnFacilityFeature, useFacilityFocus, useFacilityMaps } from './use-facility-maps';
 
 const NO_CAMERA: RefObject<CameraRef | null> = { current: null };
 
@@ -14,7 +14,7 @@ export interface MapOverlays {
   departmentLayers: DepartmentMapLayer[];
   toggleLayer: (layerId: string) => void;
   facility: FacilityMapsState;
-  /** The room or region tapped, while its map is still shown. */
+  /** The room or region tapped, while its floor or layer is still drawn. */
   tappedFeature: FacilityFeature | null;
   setTappedFeature: (feature: FacilityFeature | null) => void;
 }
@@ -30,8 +30,9 @@ export function useMapOverlays(cameraRef?: RefObject<CameraRef | null>): MapOver
   const facility = useFacilityMaps(enabled);
   useFacilityFocus(cameraRef ?? NO_CAMERA, facility);
   const [tapped, setTappedFeature] = useState<FacilityFeature | null>(null);
-  // A room's card closes with its map (switched off in the Layers sheet).
-  const tappedFeature = tapped && facility.layers.some((layer) => layer.key === facilityMapKey(tapped.kind, tapped.mapId)) ? tapped : null;
+  const clearTapped = useCallback(() => setTappedFeature(null), []);
+  // A room's card closes with its floor or its map (another floor chosen, the map switched off in the Layers sheet).
+  const tappedFeature = useDrawnFacilityFeature(tapped, tapped?.featureId, facility.layers, clearTapped);
 
   return { enabled, departmentLayers, toggleLayer, facility, tappedFeature, setTappedFeature };
 }
