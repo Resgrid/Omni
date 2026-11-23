@@ -15,6 +15,8 @@ export const LOCATION_I18N_KEYS = {
   permissionForegroundMessage: 'location.permission_foreground_message',
   permissionBackgroundTitle: 'location.permission_background_title',
   permissionBackgroundMessage: 'location.permission_background_message',
+  permissionBackgroundDisclosurePerson: 'location.permission_background_disclosure_person',
+  permissionBackgroundDisclosureUnit: 'location.permission_background_disclosure_unit',
   permissionBlockedMessage: 'location.permission_blocked_message',
   permissionOpenSettings: 'location.permission_open_settings',
   permissionContinue: 'location.permission_continue',
@@ -35,6 +37,10 @@ export const LOCATION_I18N_FALLBACKS: Record<LocationI18nKey, string> = {
   'location.permission_background_title': 'Allow location all the time',
   'location.permission_background_message':
     'To keep your department updated while {{appName}} is in the background or the screen is off, allow location access "All the time" (Android: "Allow all the time"; iOS: "Always") in the next prompt or in Settings.',
+  'location.permission_background_disclosure_person':
+    '{{appName}} collects location data to share your position with your department while you respond, so they can see who is closest to a call, even when the app is closed or not in use. Your location is shared only with your department.',
+  'location.permission_background_disclosure_unit':
+    "{{appName}} collects location data to send this unit's position to your department's dispatchers and to keep turn-by-turn navigation going, even when the app is closed or not in use. The location is shared only with your department.",
   'location.permission_blocked_message': 'Location access is turned off for {{appName}}. Open Settings to allow it.',
   'location.permission_open_settings': 'Open Settings',
   'location.permission_continue': 'Continue',

@@ -68,7 +68,7 @@ export const CallInfoPanel: React.FC<CallInfoPanelProps> = ({ call }) => {
       ) : (
         <DetailRow label={t('call_detail.info.dispatched_on')} value={formatUtcInDepartmentTime(call.DispatchedOnUtc, timeZone)} />
       )}
-      {/* The whole nature as text: the summary card shows it in a fixed-height box. */}
+      {/* The whole nature as text: the summary card's renderer stops growing at 60% of the window and scrolls inside past that. */}
       <DetailRow label={t('call_detail.nature')} value={callDisplayText(call, 'Nature', protectedLabel)} isProtected={revealedCallText(call, 'Nature') === null} testID="call-info-nature" />
       {noteProtected ? (
         <DetailRow label={t('call_detail.note')} value={null} isProtected />
@@ -77,7 +77,7 @@ export const CallInfoPanel: React.FC<CallInfoPanelProps> = ({ call }) => {
           <Text size="sm" className="mb-1 text-typography-500">
             {t('call_detail.note')}
           </Text>
-          <HtmlRenderer html={call.Note} scrollEnabled showsVerticalScrollIndicator style={styles.html} testID="call-info-note-html" />
+          <HtmlRenderer html={call.Note} autoHeight style={styles.html} testID="call-info-note-html" />
         </View>
       ) : null}
     </View>
@@ -87,5 +87,6 @@ export const CallInfoPanel: React.FC<CallInfoPanelProps> = ({ call }) => {
 const styles = StyleSheet.create({
   panel: { padding: 16 },
   note: { paddingVertical: 6 },
-  html: { minHeight: 120 },
+  // Grows with the note (autoHeight); a floor in case a document reports no height.
+  html: { minHeight: 48 },
 });

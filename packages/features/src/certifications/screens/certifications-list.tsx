@@ -2,7 +2,7 @@ import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { useCertificationsStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import type { Certification } from '@resgrid/models';
-import { Button, ButtonText, Fab, FabIcon, FlatList, HStack, Loading, RefreshControl, Text, View, VStack, ZeroState } from '@resgrid/ui';
+import { Button, ButtonText, Fab, FabIcon, FlatList, HStack, Loading, RefreshControl, Text, useFabListPadding, View, VStack, ZeroState } from '@resgrid/ui';
 import { router } from 'expo-router';
 import { Award, Plus } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -29,6 +29,7 @@ export default function CertificationsListScreen({ onOpenCertification }: Certif
   const error = useCertificationsStore((state) => state.errors.mine ?? null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const items = useMemo(() => sortCertifications(certifications), [certifications]);
+  const fabListPadding = useFabListPadding();
   const summary = useMemo(() => summarize(items), [items]);
 
   const load = useCallback(async (bypassCache: boolean) => {
@@ -83,7 +84,7 @@ export default function CertificationsListScreen({ onOpenCertification }: Certif
               </Button>
             </ZeroState>
           }
-          contentContainerStyle={items.length === 0 ? styles.emptyList : styles.list}
+          contentContainerStyle={items.length === 0 ? styles.emptyList : StyleSheet.flatten([styles.list, { paddingBottom: fabListPadding }])}
           testID="certifications-list"
         />
       )}
@@ -114,6 +115,6 @@ const SummaryTile: React.FC<{ value: number; label: string; tone: keyof typeof T
 );
 
 const styles = StyleSheet.create({
-  list: { padding: 16, paddingBottom: 96 },
+  list: { padding: 16 },
   emptyList: { flexGrow: 1, padding: 16 },
 });

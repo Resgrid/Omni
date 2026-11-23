@@ -458,6 +458,7 @@
       "already_on_roster": "Esa persona ya está en este día.",
       "already_signed_up": "Ya está inscrito en este día.",
       "day_in_past": "Este día de turno ya pasó.",
+      "group_full": "Todos los puestos de este grupo para sus funciones están ocupados.",
       "invalid_group": "Ese grupo no forma parte de este turno.",
       "invalid_offer": "Esa oferta ya no es válida.",
       "invalid_request": "La solicitud no es válida. Inténtelo de nuevo.",
@@ -468,6 +469,7 @@
       "not_found": "Este turno, inscripción o cambio ya no existe.",
       "not_on_shift": "No está en este día de turno.",
       "not_pending": "Esta solicitud ya no está pendiente.",
+      "role_required": "Necesita una de las funciones que pide este grupo para inscribirse.",
       "trade_exists": "Ya existe un cambio abierto para este día.",
       "unknown": "Algo salió mal. Inténtelo de nuevo."
     },

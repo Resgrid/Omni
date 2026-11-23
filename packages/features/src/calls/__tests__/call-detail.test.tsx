@@ -8,7 +8,7 @@ import { useToastStore } from '@resgrid/ui';
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import React from 'react';
-import { Dimensions, Text } from 'react-native';
+import { Dimensions, StyleSheet, Text } from 'react-native';
 
 import { CallDispatchedPanel } from '../components/detail/call-dispatched-panel';
 import { BUILT_IN_CALL_DETAIL_TABS, registerBuiltInCallDetailTabs } from '../detail-tabs/built-in-tabs';
@@ -155,7 +155,10 @@ describe('CallDetailScreen', () => {
     expect(screen.getByTestId('call-detail-title').props.children).toBe('House fire (#C-10)');
     const html = String(screen.getAllByTestId('webview-html')[0].props.children);
     expect(html).toContain('Flames visible');
-    expect(html).not.toContain('<script');
+    // The server's script is stripped; the only script is the renderer's own nonce-carrying height reporter (autoHeight).
+    expect(html).not.toContain('alert(1)');
+    expect(html.match(/<script/g)).toHaveLength(1);
+    expect(html).toMatch(/<script nonce="[a-z0-9]+">/i);
     expect(screen.getByText('call_detail.tabs.info')).toBeTruthy();
     expect(screen.getByText('call_detail.tabs.dispatched')).toBeTruthy();
     expect(screen.queryByText('check_in.tab_title')).toBeNull();
@@ -244,6 +247,7 @@ describe('CallDetailScreen', () => {
     setCall({ Nature: '<p>Smoke showing</p><p>Second floor &amp; attic</p>', Note: '<p>Gate code 1234</p>' });
     await render(<CallDetailScreen />);
 
+    // Until the document reports its height, the box scrolls, so the text can be read even if no height ever arrives.
     const summaryNature = screen.getByTestId('call-detail-nature');
     expect(summaryNature.props.scrollEnabled).toBe(true);
     expect(summaryNature.props.nestedScrollEnabled).toBe(true);
@@ -254,6 +258,30 @@ describe('CallDetailScreen', () => {
     // Directly above the note, which scrolls too when it is long.
     expect(panel.getAllByTestId(/^call-info-(nature|note-html)$/).map((element) => element.props.testID)).toEqual(['call-info-nature', 'call-info-note-html']);
     expect(screen.getByTestId('call-info-note-html').props.nestedScrollEnabled).toBe(true);
+  });
+
+  // A pending call's email, text or voicemail body was read through a 132 pt box: it now reads in the page's own scroll.
+  it('grows the nature with its text, keeps a floor, and scrolls inside only past 60% of the window', async () => {
+    activateVariant('dispatch');
+    setCall({ Nature: '<p>Caller reports smoke from the kitchen.</p>', CallSource: 7 });
+    await render(<CallDetailScreen />);
+
+    const reportHeight = async (height: number) => fireEvent(screen.getByTestId('call-detail-nature'), 'message', { nativeEvent: { data: `html-renderer-height:${height}` } });
+    const nature = () => screen.getByTestId('call-detail-nature');
+
+    await reportHeight(420);
+    expect(StyleSheet.flatten(nature().props.style)).toMatchObject({ height: 420, minHeight: 48 });
+    expect(nature().props.scrollEnabled).toBe(false);
+
+    // A one-line body: the box follows it, with a floor in case a document reports nothing usable.
+    await reportHeight(1);
+    expect(StyleSheet.flatten(nature().props.style)).toMatchObject({ height: 1, minHeight: 48 });
+
+    // A very long body stops at 60% of the window and scrolls inside, so it never pushes the rest of the call off the page.
+    await reportHeight(20000);
+    expect(StyleSheet.flatten(nature().props.style).height).toBe(Math.round(Dimensions.get('window').height * 0.6));
+    expect(nature().props.scrollEnabled).toBe(true);
+    expect(nature().props.nestedScrollEnabled).toBe(true);
   });
 
   it('shows the protected label for a withheld nature on the Info tab, never the sentinel', async () => {

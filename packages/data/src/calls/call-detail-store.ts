@@ -84,6 +84,11 @@ interface CallDetailData extends SliceMeta<DetailSlice> {
   details: Record<string, CallDetailRecord>;
   queuedNotes: Record<string, QueuedCallNote>;
   queuedFiles: Record<string, QueuedCallFile>;
+  /**
+   * A call's unsent note, by call id: the composer is unmounted when its sheet closes or the console's phone tab changes,
+   * and the text typed so far is still there when it comes back. Kept in memory only (never persisted); cleared on sign-out.
+   */
+  noteDrafts: Record<string, string>;
   /** Last refused online write (update/close/delete/reschedule); the loaded call stays usable. */
   writeError: DataError | null;
   isWriting: boolean;
@@ -138,6 +143,8 @@ export interface CallDetailState extends CallDetailData {
   fetchCallLocationHistory: (callId: string, options?: FetchOptions) => Promise<void>;
   /** Offline-capable: queued through the outbox, shown immediately with a queued marker. */
   addNote: (input: AddCallNoteInput) => Promise<WriteResult>;
+  /** Keeps the call's unsent note text (`noteDrafts`); an empty text drops it. */
+  setNoteDraft: (callId: string, note: string) => void;
   /** Offline-capable: queues upload metadata; the bytes are read when the upload is sent. */
   uploadCallFile: (input: QueueCallFileInput) => Promise<WriteResult>;
   updateCall: (request: UpdateCallRequest) => Promise<void>;
@@ -158,7 +165,7 @@ export interface CallDetailState extends CallDetailData {
   setQueuedFileState: (localId: string, state: QueuedWriteState | null) => void;
 }
 
-const initialData = (): CallDetailData => ({ ...emptySliceMeta<DetailSlice>(), details: {}, queuedNotes: {}, queuedFiles: {}, writeError: null, isWriting: false });
+const initialData = (): CallDetailData => ({ ...emptySliceMeta<DetailSlice>(), details: {}, queuedNotes: {}, queuedFiles: {}, noteDrafts: {}, writeError: null, isWriting: false });
 
 const emptyRecord = (): CallDetailRecord => ({ call: null, extraData: null, notes: [], images: null, files: null, audio: null, fetchedAt: 0 });
 
@@ -306,6 +313,16 @@ export const useCallDetailStore = create<CallDetailState>()(
         },
 
         addNote: async (input) => submitWrite<CallNotePayload>({ type: CALL_NOTE_ADD_EVENT, payload: { callId: input.callId, note: input.note, latitude: input.latitude ?? null, longitude: input.longitude ?? null } }),
+
+        setNoteDraft: (callId, note) =>
+          set((state) => {
+            const noteDrafts = { ...state.noteDrafts };
+
+            if (note) noteDrafts[callId] = note;
+            else delete noteDrafts[callId];
+
+            return { noteDrafts };
+          }),
 
         uploadCallFile: async (input) =>
           submitWrite<CallFilePayload>({

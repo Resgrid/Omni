@@ -1,10 +1,13 @@
 'use client';
+
 import { createFab } from '@gluestack-ui/core/fab/creator';
 import { UIIcon } from '@gluestack-ui/core/icon/creator';
 import { tva, useStyleContext, type VariantProps, withStyleContext } from '@gluestack-ui/utils/nativewind-utils';
 import { styled } from 'nativewind';
 import React from 'react';
-import { Pressable, Text } from 'react-native';
+import { Pressable, type StyleProp, StyleSheet, Text, type ViewStyle } from 'react-native';
+
+import { useBottomSafeAreaInset } from '../safe-area-view';
 
 const SCOPE = 'FAB';
 
@@ -26,13 +29,14 @@ const fabStyle = tva({
       md: 'px-3 py-3',
       lg: 'px-4 py-4',
     },
+    // A bottom placement's `bottom` is set inline (FAB_EDGE plus the bottom safe-area inset): see Fab.
     placement: {
       'top right': 'top-4 right-4',
       'top left': 'top-4 left-4',
-      'bottom right': 'bottom-4 right-4',
-      'bottom left': 'bottom-4 left-4',
+      'bottom right': 'right-4',
+      'bottom left': 'left-4',
       'top center': 'top-4 self-center',
-      'bottom center': 'bottom-4 self-center',
+      'bottom center': 'self-center',
     },
   },
 });
@@ -98,17 +102,41 @@ const fabIconStyle = tva({
   },
 });
 
-type IFabProps = Omit<React.ComponentPropsWithoutRef<typeof UIFab>, 'context'> & VariantProps<typeof fabStyle>;
+// A plain style (not Pressable's state callback): the FAB puts its own bottom offset first.
+type IFabProps = Omit<React.ComponentPropsWithoutRef<typeof UIFab>, 'context' | 'style'> & VariantProps<typeof fabStyle> & { style?: StyleProp<ViewStyle> };
 
-const Fab = React.forwardRef<React.ElementRef<typeof UIFab>, IFabProps>(({ size = 'md', placement = 'bottom right', className, ...props }, ref) => {
+/** The gap between a FAB and the edges of its screen (`*-4`). */
+export const FAB_EDGE = 16;
+
+/** The room a list leaves below its last row for a bottom FAB: the `lg` FAB (56), FAB_EDGE under it and 24 above it. */
+export const FAB_LIST_CLEARANCE = 96;
+
+/**
+ * The bottom padding of a list that a bottom FAB floats over. The FAB sits the bottom safe-area inset higher (see Fab),
+ * so the list's last row scrolls clear of it by the same inset.
+ */
+export function useFabListPadding(): number {
+  return FAB_LIST_CLEARANCE + useBottomSafeAreaInset();
+}
+
+/**
+ * A floating action button. At the bottom of a screen it keeps FAB_EDGE above the home indicator or the Android
+ * navigation bar, unless a bottom tab bar under the screen already does (`useBottomSafeAreaInset`). A caller's style
+ * still wins.
+ */
+const Fab = React.forwardRef<React.ElementRef<typeof UIFab>, IFabProps>(({ size = 'md', placement = 'bottom right', className, style, ...props }, ref) => {
   const contextValue = React.useMemo(() => ({ size }), [size]);
-  return <UIFab ref={ref} {...props} className={fabStyle({ size, placement, class: className })} context={contextValue} />;
+  const bottomInset = useBottomSafeAreaInset();
+  const isBottom = placement.startsWith('bottom');
+
+  return <UIFab ref={ref} {...props} style={isBottom ? StyleSheet.flatten([{ bottom: FAB_EDGE + bottomInset }, style]) : style} className={fabStyle({ size, placement, class: className })} context={contextValue} />;
 });
 
 type IFabLabelProps = React.ComponentPropsWithoutRef<typeof UIFab.Label> & VariantProps<typeof fabLabelStyle>;
 
 const FabLabel = React.forwardRef<React.ElementRef<typeof UIFab.Label>, IFabLabelProps>(({ size, isTruncated = false, bold = false, underline = false, strikeThrough = false, className, ...props }, ref) => {
   const { size: parentSize } = useStyleContext(SCOPE);
+
   return (
     <UIFab.Label
       ref={ref}
@@ -142,6 +170,7 @@ const FabIcon = React.forwardRef<React.ElementRef<typeof UIFab.Icon>, IFabIconPr
   } else if ((props.height !== undefined || props.width !== undefined) && size === undefined) {
     return <UIFab.Icon ref={ref} {...props} className={fabIconStyle({ class: className })} />;
   }
+
   return (
     <UIFab.Icon
       ref={ref}
@@ -158,7 +187,9 @@ const FabIcon = React.forwardRef<React.ElementRef<typeof UIFab.Icon>, IFabIconPr
 });
 
 Fab.displayName = 'Fab';
+
 FabLabel.displayName = 'FabLabel';
+
 FabIcon.displayName = 'FabIcon';
 
 export { Fab, FabIcon, FabLabel };

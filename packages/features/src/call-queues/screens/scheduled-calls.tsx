@@ -18,6 +18,7 @@ import { useCallDispatchNow } from '../hooks/use-call-dispatch-now';
 import { matchesQueueQuery, scheduledDispatchUtc } from '../lib/queue-filters';
 
 export interface ScheduledCallsScreenProps {
+  /** In-content title (default false: the app bar titles the route from its nav entry). Pass true where the screen is embedded under another title. */
   showHeader?: boolean;
   realtime?: boolean;
 }
@@ -26,7 +27,7 @@ export interface ScheduledCallsScreenProps {
  * Calls scheduled to dispatch later (Dispatch baseline): Active with a future dispatch time. "Dispatch now" sends one
  * ahead of its time to the recipients already on it. Kept current by call pushes.
  */
-export default function ScheduledCallsScreen({ showHeader = true, realtime = true }: ScheduledCallsScreenProps) {
+export default function ScheduledCallsScreen({ showHeader = false, realtime = true }: ScheduledCallsScreenProps) {
   const { t } = useTranslation();
   const timeZone = useDepartmentTimeZone();
   const router = useRouter();

@@ -29,6 +29,12 @@ export function resolveSidebarMode(shell: Pick<VariantManifest['shell'], 'sideba
   return 'drawer';
 }
 
+/**
+ * Whether an inline sidebar is drawn at the left edge of the shell's body: the permanent column, or the Dispatch panel
+ * while it is open. That sidebar keeps itself clear of a landscape phone's cutout; otherwise the content has to.
+ */
+export const isInlineSidebarShown = (mode: SidebarMode, isMenuOpen: boolean): boolean => mode === 'permanent' || (mode === 'panel' && isMenuOpen);
+
 /** The Dispatch panel width. */
 export const PANEL_SIDEBAR_WIDTH = 280;
 

@@ -182,7 +182,7 @@ beforeEach(() => {
   useWeatherAlertsStore.setState({ alerts: [{ WeatherAlertId: 'w1', Severity: 0, Event: 'Tornado Warning' } as never], fetchActiveAlerts: jest.fn(async () => undefined) });
   useMapMarkersStore.setState({ markers: [{ Id: 'm1', Latitude: 40, Longitude: -105 } as never], centerLatitude: 40, centerLongitude: -105, zoomLevel: 11, fetchMarkers: mocks.fetchMarkers });
   useCheckInTimersStore.setState({ statusesByCall: {}, fetchTimerStatusesForCalls: jest.fn(async () => undefined) });
-  useCallDetailStore.setState({ details: {}, fetchCallDetail: mocks.fetchCallDetail, fetchCallNotes: jest.fn(async () => undefined) });
+  useCallDetailStore.setState({ details: {}, noteDrafts: {}, fetchCallDetail: mocks.fetchCallDetail, fetchCallNotes: jest.fn(async () => undefined) });
   Object.assign(mockPtt, { isConnected: false, isTransmitting: false, currentChannel: null });
 });
 
@@ -282,6 +282,98 @@ describe('DispatchConsoleScreen layout', () => {
     expect(screen.queryByTestId('notes-panel-chevron')).toBeNull();
     await fireEvent.press(screen.getByTestId('notes-panel-chevron', hidden));
     expect(useDashboardViewStore.getState().collapsedCards.notes).toBe(true);
+  });
+});
+
+// Dispatcher on the go: the console on a phone shows one full-height panel per tab, never panels nested in a page scroll.
+describe('DispatchConsoleScreen on a phone', () => {
+  it('shows the stats on one sideways line and one panel per tab, with push-to-talk under every tab', async () => {
+    await setWindow(390, 844);
+    await renderConsole();
+    expect(screen.getByTestId('console-stats-strip')).toBeTruthy();
+    expect(screen.queryByTestId('stat-clock')).toBeNull();
+    expect(screen.getByTestId('console-phone-panel-calls')).toBeTruthy();
+    expect(screen.getByTestId('active-calls-panel')).toBeTruthy();
+    expect(screen.queryByTestId('units-panel')).toBeNull();
+    expect(screen.getByTestId('ptt-panel')).toBeTruthy();
+    // The active calls count rides on the Calls tab.
+    expect(screen.getByTestId('console-phone-tabs-tab-calls-badge')).toHaveTextContent('1');
+
+    await fireEvent.press(screen.getByTestId('console-phone-tabs-tab-units'));
+    expect(screen.getByTestId('units-panel')).toBeTruthy();
+    expect(screen.queryByTestId('active-calls-panel')).toBeNull();
+    expect(screen.getByTestId('ptt-panel')).toBeTruthy();
+  });
+
+  it('cannot collapse a panel shown as a tab', async () => {
+    useDashboardViewStore.setState({ collapsedCards: { 'active-calls': true } });
+    await setWindow(390, 844);
+    await renderConsole();
+    expect(screen.queryByTestId('active-calls-panel-chevron', hidden)).toBeNull();
+    await fireEvent.press(screen.getByTestId('active-calls-panel-header'));
+    expect(screen.getByTestId('console-call-9')).toBeTruthy();
+    expect(useDashboardViewStore.getState().collapsedCards['active-calls']).toBe(true);
+  });
+
+  // The overdue badges show in the tab, so they are kept fresh there even though the card was collapsed on a desk.
+  it('polls the check-in timers for the calls tab even when the calls card is saved collapsed', async () => {
+    useDashboardViewStore.setState({ collapsedCards: { 'active-calls': true } });
+    useCallsStore.setState({ calls: [makeCall('9', { Name: 'Kitchen fire', CheckInTimersEnabled: true })] });
+    await setWindow(390, 844);
+    await renderConsole();
+    expect(useCheckInTimersStore.getState().fetchTimerStatusesForCalls).toHaveBeenCalledWith([9], { silent: true });
+  });
+
+  it('keeps an unsent call note and the search text across tab switches', async () => {
+    await setWindow(390, 844);
+    await renderConsole();
+    await fireEvent.changeText(screen.getByTestId('active-calls-search'), 'kitchen');
+    await fireEvent.press(screen.getByTestId('console-call-9'));
+    await fireEvent.press(screen.getByTestId('console-phone-tabs-tab-notes'));
+    await fireEvent.changeText(screen.getByTestId('call-notes-input'), 'Second line charged');
+
+    await fireEvent.press(screen.getByTestId('console-phone-tabs-tab-units'));
+    expect(screen.queryByTestId('call-notes-input')).toBeNull();
+    await fireEvent.press(screen.getByTestId('console-phone-tabs-tab-notes'));
+    expect(screen.getByTestId('call-notes-input').props.value).toBe('Second line charged');
+
+    await fireEvent.press(screen.getByTestId('console-phone-tabs-tab-calls'));
+    expect(screen.getByTestId('active-calls-search').props.value).toBe('kitchen');
+  });
+
+  it('opens the actions when a call is picked to filter to, and keeps the filter on the other tabs', async () => {
+    await setWindow(390, 844);
+    await renderConsole();
+    await fireEvent.press(screen.getByTestId('console-call-9'));
+    expect(screen.getByTestId('console-phone-panel-activity')).toBeTruthy();
+    expect(screen.getByTestId('activity-tab-actions').props.accessibilityState).toMatchObject({ selected: true });
+    await fireEvent.press(screen.getByTestId('console-phone-tabs-tab-units'));
+    // Filtered to the call: only the unit dispatched to it.
+    expect(screen.getByTestId('console-unit-2')).toBeTruthy();
+    expect(screen.queryByTestId('console-unit-1')).toBeNull();
+  });
+
+  it('keeps the units list up while several units are picked, and "Set status" opens the bulk form', async () => {
+    await setWindow(390, 844);
+    await renderConsole();
+    await fireEvent.press(screen.getByTestId('console-phone-tabs-tab-units'));
+    await fireEvent.press(screen.getByTestId('unit-multi-select-toggle'));
+    await fireEvent.press(screen.getByTestId('console-unit-1'));
+    await fireEvent.press(screen.getByTestId('console-unit-3'));
+    expect(screen.getByTestId('console-phone-panel-units')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('unit-select-set-status'));
+    expect(screen.getByTestId('console-phone-panel-activity')).toBeTruthy();
+    expect(screen.getByTestId('console-bulk-actions')).toBeTruthy();
+  });
+
+  it('turns the units and personnel tabs into one with "Single list"', async () => {
+    await setWindow(390, 844);
+    await renderConsole();
+    await fireEvent.press(screen.getByTestId('console-phone-tabs-tab-personnel'));
+    expect(screen.getByTestId('personnel-panel')).toBeTruthy();
+    await act(() => useDashboardViewStore.setState({ singleList: true }));
+    expect(screen.queryByTestId('console-phone-tabs-tab-personnel')).toBeNull();
+    expect(screen.getByTestId('resources-panel')).toBeTruthy();
   });
 });
 
@@ -619,6 +711,15 @@ describe('DispatchConsoleScreen unit status timers', () => {
     // A dispatcher acknowledges once contacted.
     await fireEvent.press(tab.getByTestId('unit-alert-row-2'));
     expect(screen.getByTestId('unit-alert-acknowledge-sheet', hidden)).toBeTruthy();
+  });
+
+  it('opens the Unit timers tab from its tile on a phone, where the activity panel is a tab of its own', async () => {
+    await setWindow(390, 844);
+    await renderConsole();
+    expect(screen.getByTestId('console-phone-panel-calls')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('stat-unit-timers-alert'));
+    expect(screen.getByTestId('console-phone-panel-activity')).toBeTruthy();
+    expect(within(screen.getByTestId('console-unit-timers')).getByTestId('unit-alert-row-2')).toBeTruthy();
   });
 
   it('counts only the units nobody has acknowledged and refetches acknowledgements on pushes', async () => {

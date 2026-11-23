@@ -1,3 +1,4 @@
+import { useTerm } from '@resgrid/auth';
 import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { personnelFullName, useCallsStore, usePersonnelStore, useUnitsStore, useWeatherAlertsStore } from '@resgrid/data';
 import { callQueuesRoutes } from '@resgrid/features/call-queues';
@@ -7,10 +8,10 @@ import { unitsRoutes } from '@resgrid/features/units';
 import { weatherAlertsRoutes } from '@resgrid/features/weather-alerts';
 import { useTranslation } from '@resgrid/i18n';
 import { type CallResultData, WeatherAlertSeverity } from '@resgrid/models';
-import { BottomAnchoredKeyboardView, useFormFactor, useKeepFocusedInputVisible } from '@resgrid/ui';
+import { BottomAnchoredKeyboardView, TabBar, type TabBarItem, useBottomSafeAreaInset, useFormFactor } from '@resgrid/ui';
 import { type Href, useRouter } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import type { ConsoleActionHandlers } from '../components/actions-panel';
 import { ActiveCallFilterBanner } from '../components/active-call-filter-banner';
@@ -21,6 +22,7 @@ import { AddResourcesSheet } from '../components/add-resources-sheet';
 import { ConsolePersonnelStatusSheet, ConsoleUnitStatusSheet } from '../components/console-status-sheets';
 import { MapPanel } from '../components/map-panel';
 import { NotesPanel } from '../components/notes-panel';
+import { ConsolePanelPlacementContext } from '../components/panel-frame';
 import { PersonnelPanel } from '../components/personnel-panel';
 import { PttPanel } from '../components/ptt-panel';
 import { ResourcesPanel } from '../components/resources-panel';
@@ -51,9 +53,27 @@ export interface DispatchConsoleScreenProps {
   now?: () => number;
 }
 
-/** Height caps of the phone column, so each panel's list stays virtualized inside the scrolling page. */
-const PHONE_PANEL_HEIGHT = 400;
-const PHONE_MAP_HEIGHT = 300;
+/**
+ * The phone's console tabs: one panel at a time at full height. Units and personnel share one tab with "Single list" on.
+ * Push-to-talk stays under every tab.
+ */
+type PhoneTab = 'calls' | 'units' | 'personnel' | 'resources' | 'map' | 'activity' | 'notes';
+
+const PHONE_TABS_SPLIT: readonly PhoneTab[] = ['calls', 'units', 'personnel', 'map', 'activity', 'notes'];
+const PHONE_TABS_SINGLE_LIST: readonly PhoneTab[] = ['calls', 'resources', 'map', 'activity', 'notes'];
+const PHONE_TAB_PLACEMENT = { isTab: true } as const;
+
+/** The console body's margin (`styles.body` padding), kept at the bottom too where there is no home indicator. */
+const BODY_MARGIN = 8;
+
+/** The tab to show from the one picked: a units or personnel tab becomes the merged list with "Single list", and back. */
+const resolvePhoneTab = (picked: PhoneTab, tabs: readonly PhoneTab[]): PhoneTab => {
+  if (tabs.includes(picked)) return picked;
+
+  if (picked === 'resources') return 'units';
+
+  return picked === 'units' || picked === 'personnel' ? 'resources' : 'calls';
+};
 
 type StatusTarget = { kind: 'unit'; unitId: string } | { kind: 'personnel'; userId: string } | null;
 
@@ -61,7 +81,9 @@ type StatusTarget = { kind: 'unit'; unitId: string } | { kind: 'personnel'; user
  * The Dispatch console (omni-plan §7.11; Dispatch baseline home / home.web): stats bar, the call filter banner and the
  * panels — active calls, units, personnel (or one resources list), notes, the live map, the tabbed activity card
  * (activity, radio, actions, check-ins, unit timers, weather) and push-to-talk — laid out in three columns on desktop,
- * Electron and landscape tablets, two on portrait tablets and one scrolling column on phones. Selecting a call filters
+ * Electron and landscape tablets, two on portrait tablets, and on phones as tabs (one full-height panel at a time, the
+ * stats on one sideways-scrolling line, push-to-talk under every tab; picking a call, unit or person to act on opens the
+ * Activity tab on its actions). Selecting a call filters
  * every panel to it; units support multi-select for one status change. Units over their status timer are flagged in
  * the stats bar, their rows and the Unit timers tab, and each crossing is logged. Writes in Dispatch's offline scope (statuses on behalf, call
  * notes, check-ins) go through the outbox; dispatching, releasing resources, closing and department notes are online.
@@ -85,8 +107,24 @@ export default function DispatchConsoleScreen({ realtime = true, mapHref = '/map
   const [closeCallId, setCloseCallId] = useState<string | null>(null);
   const [addResourcesCall, setAddResourcesCall] = useState<CallResultData | null>(null);
   const [statusTarget, setStatusTarget] = useState<StatusTarget>(null);
-  // The phone column: scrolls the notes card's composer into view once the keyboard is up.
-  const keepFocusedInputVisible = useKeepFocusedInputVisible(layout === 'single-column');
+  const bottomInset = useBottomSafeAreaInset();
+  const bottomPadding = Math.max(bottomInset, BODY_MARGIN);
+  const isPhone = layout === 'single-column';
+  const [pickedPhoneTab, setPickedPhoneTab] = useState<PhoneTab>('calls');
+  const actionsRequest = useConsoleStore((state) => state.actionsRequest);
+  const [seenActionsRequest, setSeenActionsRequest] = useState(actionsRequest);
+  const unitsTerm = useTerm('module.units', t('dispatch.units'));
+  const personnelTerm = useTerm('module.personnel', t('dispatch.personnel'));
+  const mapTerm = useTerm('module.mapping', t('dispatch.map'));
+  const notesTerm = useTerm('module.notes', t('dispatch.notes'));
+
+  // A call, unit or person picked to act on (or "Set status" for several units) opens the actions, which a phone shows
+  // in its Activity tab. Adjusted while rendering rather than in an effect, so the tab switches in the same pass.
+  if (seenActionsRequest !== actionsRequest) {
+    setSeenActionsRequest(actionsRequest);
+
+    if (isPhone) setPickedPhoneTab('activity');
+  }
 
   useConsoleData({ realtime });
   useRadioLog(realtime);
@@ -289,24 +327,51 @@ export default function DispatchConsoleScreen({ realtime = true, mapHref = '/map
       );
     }
 
+    const phoneTabs = singleList ? PHONE_TABS_SINGLE_LIST : PHONE_TABS_SPLIT;
+    const phoneTab = resolvePhoneTab(pickedPhoneTab, phoneTabs);
+
+    const phoneTabLabels: Record<PhoneTab, string> = {
+      calls: t('dispatch.active_calls'),
+      units: unitsTerm,
+      personnel: personnelTerm,
+      resources: t('dispatch_console.resources'),
+      map: mapTerm,
+      activity: t('dispatch.activity'),
+      notes: notesTerm,
+    };
+
+    // The active calls count rides on the Calls tab (a tab bar hides a badge of 0).
+    const tabItems: TabBarItem<PhoneTab>[] = phoneTabs.map((key) => ({ key, label: phoneTabLabels[key], badge: key === 'calls' ? stats.activeCalls : 0 }));
+    const fill = { flex: 1 };
+
+    const panels: Record<PhoneTab, () => React.ReactNode> = {
+      calls: () => callsPanel(fill),
+      units: () => unitsPanel(fill),
+      personnel: () => personnelPanel(fill),
+      resources: () => resourcesPanel(fill),
+      map: () => mapPanel(fill),
+      activity: () => activityPanel(fill),
+      notes: () => notesPanel(fill),
+    };
+
     return (
-      <ScrollView
-        ref={keepFocusedInputVisible.scrollRef}
-        onScroll={keepFocusedInputVisible.onScroll}
-        scrollEventThrottle={keepFocusedInputVisible.scrollEventThrottle}
-        contentContainerStyle={styles.scroll}
-        keyboardShouldPersistTaps="handled"
-        testID="console-layout-single-column"
-      >
-        {callsPanel({ maxHeight: PHONE_PANEL_HEIGHT })}
-        {singleList ? notesPanel({ maxHeight: PHONE_PANEL_HEIGHT }) : null}
-        {mapPanel({ maxHeight: PHONE_MAP_HEIGHT })}
-        {singleList ? resourcesPanel({ maxHeight: PHONE_PANEL_HEIGHT }) : unitsPanel({ maxHeight: PHONE_PANEL_HEIGHT })}
-        {singleList ? null : personnelPanel({ maxHeight: PHONE_PANEL_HEIGHT })}
+      <View style={styles.fill} testID="console-layout-single-column">
+        <TabBar
+          tabs={tabItems}
+          activeKey={phoneTab}
+          onChange={(key) => setPickedPhoneTab(key)}
+          variant="underlined"
+          tabStyle={styles.phoneTab}
+          accessibilityLabel={t('dispatch_console.title')}
+          testID="console-phone-tabs"
+        />
+        <ConsolePanelPlacementContext.Provider value={PHONE_TAB_PLACEMENT}>
+          <View style={styles.phonePanel} testID={`console-phone-panel-${phoneTab}`}>
+            {panels[phoneTab]()}
+          </View>
+        </ConsolePanelPlacementContext.Provider>
         <PttPanel />
-        {singleList ? null : notesPanel({ maxHeight: PHONE_PANEL_HEIGHT })}
-        {activityPanel({ maxHeight: PHONE_PANEL_HEIGHT })}
-      </ScrollView>
+      </View>
     );
   };
 
@@ -320,15 +385,23 @@ export default function DispatchConsoleScreen({ realtime = true, mapHref = '/map
         onPendingCallsPress={() => router.push(callQueuesRoutes.pending())}
         onScheduledCallsPress={() => router.push(callQueuesRoutes.scheduled())}
         onWeatherAlertsPress={() => router.push(weatherAlertsRoutes.list())}
-        onUnitTimersPress={() => useConsoleStore.getState().setActiveTab('unit-timers')}
+        onUnitTimersPress={() => {
+          useConsoleStore.getState().setActiveTab('unit-timers');
+
+          if (isPhone) setPickedPhoneTab('activity');
+        }}
         showClock={showClock}
+        compact={isPhone}
       />
       <UnitTimerActivity />
       {showViewToggles ? <ViewToggles /> : null}
       {filteredCall ? <ActiveCallFilterBanner call={filteredCall} onClearFilter={handleClearFilter} /> : null}
       {/* The console reaches the bottom of the screen (drawer shell), so while the keyboard is up its panels sit on top of
-          it: a call note typed in the notes card stays in view (the card and the phone column scroll it into view). */}
-      <BottomAnchoredKeyboardView style={styles.body}>{renderLayout()}</BottomAnchoredKeyboardView>
+          it: a call note typed in the notes card stays in view. The layout inside keeps clear of the home indicator (at
+          least the body's margin), and the keyboard view owes the keyboard only the rest. */}
+      <BottomAnchoredKeyboardView offset={bottomPadding} style={styles.body}>
+        <View style={StyleSheet.flatten([styles.fill, { paddingBottom: bottomPadding }])}>{renderLayout()}</View>
+      </BottomAnchoredKeyboardView>
 
       <AddNoteSheet isOpen={isAddNoteOpen} onClose={() => setIsAddNoteOpen(false)} onNoteAdded={() => log({ type: 'system', action: t('dispatch.note_created'), description: t('dispatch.note_added_to_console') })} />
       {notesCallId ? <CallNotesModal isOpen onClose={() => setNotesCallId(null)} callId={notesCallId} /> : null}
@@ -353,9 +426,12 @@ export default function DispatchConsoleScreen({ realtime = true, mapHref = '/map
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  body: { flex: 1, padding: 8 },
+  body: { flex: 1, padding: BODY_MARGIN },
   row: { flex: 1, flexDirection: 'row' },
   column: { flex: 1, minWidth: 0, marginHorizontal: 4 },
   center: { flex: 1.5 },
-  scroll: { paddingBottom: 24 },
+  fill: { flex: 1 },
+  phonePanel: { flex: 1, marginTop: 8, marginBottom: 8 },
+  // A 44 pt touch target for each tab.
+  phoneTab: { minHeight: 44 },
 });

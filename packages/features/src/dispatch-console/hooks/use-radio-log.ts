@@ -18,12 +18,14 @@ export function useRadioLog(enabled = true): void {
     const current = new Set(speakers);
     const store = useConsoleStore.getState();
     const roster = usePersonnelStore.getState().personnel;
+
     for (const identity of current) {
       if (!previous.current.has(identity)) {
         const person = roster.find((row) => row.UserId === identity);
         store.startRadioTransmission(identity, (person ? personnelFullName(person) : '') || identity);
       }
     }
+
     for (const identity of previous.current) if (!current.has(identity)) store.endRadioTransmission(identity);
     previous.current = current;
   }, [enabled, speakers]);

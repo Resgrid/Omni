@@ -1,6 +1,6 @@
 # Signs in through the login screen as a seeded QA persona (Core: Docker/qa-departments), past the first-launch
-# onboarding, and waits for the app shell. An MFA-enrolled persona gets QA_TOTP, which qa-regression.ts computes for a
-# fresh time step just before the flow starts.
+# onboarding, and waits for the app shell. An MFA-enrolled persona gets QA_TOTP from qa-regression.ts: a code for each
+# 30-second step from a fresh one on, of which totp-code.js types the current one when the prompt shows.
 # Variables: APP_ID, QA_USERNAME, QA_PASSWORD, QA_TOTP ('none' when the persona has no authenticator).
 appId: ${APP_ID}
 ---
@@ -109,7 +109,11 @@ appId: ${APP_ID}
     commands:
       - tapOn:
           id: 'login-otp-code|login-mfa-code'
-      - inputText: ${QA_TOTP}
+      - runScript:
+          file: totp-code.js
+          env:
+            QA_TOTP: ${QA_TOTP}
+      - inputText: ${output.qaTotp}
       # The sheet may submit by itself once the sixth digit is in.
       - tapOn:
           id: 'login-otp-submit|login-mfa-submit'

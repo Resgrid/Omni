@@ -32,6 +32,7 @@ import { usePathname } from 'expo-router';
 
 import { appUpdatesModule } from './app-updates';
 import { ACTIVE_UNIT_ADAPTER, clearActiveCall, ShellChatIdentityProvider, ShellMapProvider, ShellNavigationHandoffProvider, ShellRouteMapProvider, ShellStatusProvider, storageSyncServices } from './feature-providers';
+import { wireLocationSettings } from './location-settings-wiring';
 import { registerMapConfigRefreshStep } from './map-config-refresh';
 import { registerNavigationSteps } from './navigation-wiring';
 import { registerOfflineMapsSteps } from './offline-maps-wiring';
@@ -203,6 +204,10 @@ registerMapConfigRefreshStep();
 
 // In-app turn-by-turn (Unit, `maps.navigationInApp`): routes, prompts, live ETA reports and the navigation location profile.
 registerNavigationSteps();
+
+// Settings → Location applies at once: turning Background Geolocation on registers the background task while the app is
+// open, not at the next resume (Responder, Unit; inert where the variant sends no location).
+wireLocationSettings();
 
 // In-app OTA updates (docs/subsystems/app-updates.md): iOS/Android release builds hand @resgrid/core the expo-updates
 // module (app-updates.native.ts); web, Electron and development builds hand over nothing, so updates stay off there. The

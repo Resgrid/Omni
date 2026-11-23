@@ -1,10 +1,10 @@
 // Ported from Responder services/__tests__/callkeep-mute-handling.test.ts and Unit callkeep.service.ios.test.ts.
 import { RTCAudioSession } from '../../__tests__/fakes/livekit-react-native-webrtc';
-import { NativeModules, PermissionsAndroid, Platform, resetReactNativeFake } from '../../__tests__/fakes/react-native';
+import { NativeModules, PermissionsAndroid, Platform, resetReactNativeFake, setAppState } from '../../__tests__/fakes/react-native';
 import RNCallKeep, { emitCallKeepEvent, resetCallKeepFake } from '../../__tests__/fakes/react-native-callkeep';
 import { activateVariant } from '../../__tests__/helpers/variant';
 import { configureVoice, resetVoiceRuntimeForTests } from '../../runtime';
-import { NativeCallKeepService } from '../callkeep-native';
+import { NativeCallKeepService, PHONE_PERMISSION_TIMEOUT_MS } from '../callkeep-native';
 import { getCallKeepService, resetCallKeepServiceForTests } from '../callkeep-service';
 import { CallKeepMuteFilter } from '../mute-filter';
 import { noopCallKeepService } from '../types';
@@ -164,6 +164,53 @@ describe('NativeCallKeepService', () => {
 
     PermissionsAndroid.check.mockImplementation(async () => true);
     await expect(service.requestPhonePermissions()).resolves.toBe(true);
+  });
+
+  describe('phone-permission prompt', () => {
+    // The prompt puts the app in the background: only time back in front counts against the limit.
+    beforeEach(() => {
+      jest.useFakeTimers();
+      Platform.OS = 'android';
+    });
+
+    afterEach(() => jest.useRealTimers());
+
+    it('waits for a slow answer made behind the prompt', async () => {
+      let open: () => void = () => undefined;
+      let granted = false;
+
+      const answered = new Promise<void>((resolve) => {
+        open = resolve;
+      });
+
+      PermissionsAndroid.check.mockImplementation(async () => granted);
+
+      PermissionsAndroid.requestMultiple.mockImplementation(async () => {
+        await answered;
+        granted = true;
+
+        return {};
+      });
+
+      const request = new NativeCallKeepService().requestPhonePermissions();
+      await jest.advanceTimersByTimeAsync(0);
+      setAppState('background');
+      await jest.advanceTimersByTimeAsync(PHONE_PERMISSION_TIMEOUT_MS * 10);
+      open();
+      setAppState('active');
+
+      await expect(request).resolves.toBe(true);
+    });
+
+    it('still gives up on a request that hangs with the app in front', async () => {
+      PermissionsAndroid.check.mockImplementation(async () => false);
+      PermissionsAndroid.requestMultiple.mockImplementation(() => new Promise<never>(() => undefined));
+
+      const request = new NativeCallKeepService().requestPhonePermissions();
+      await jest.advanceTimersByTimeAsync(PHONE_PERMISSION_TIMEOUT_MS);
+
+      await expect(request).resolves.toBe(false);
+    });
   });
 
   it('cleans up listeners and ends the active call', async () => {

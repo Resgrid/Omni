@@ -16,7 +16,7 @@
  * previous token. Nothing registered outlives its session: sign-out takes the token off the server and kills it on
  * this device (queued behind any sync in flight), and a different subject/department rotates the token first.
  */
-import { IC_PUSH_SOURCE, isPushRegistrationAccepted, type PushSubject, registerPushDevice, unregisterPushToken } from '@resgrid/api';
+import { isPushRegistrationAccepted, pushSourceFor, type PushSubject, registerPushDevice, unregisterPushToken } from '@resgrid/api';
 import { isElectron, logger } from '@resgrid/core';
 import { toDevProxyUrl } from '@resgrid/core/env/dev-proxy';
 import { getApps, initializeApp } from 'firebase/app';
@@ -25,6 +25,7 @@ import { useEffect, useState } from 'react';
 
 import {
   getOptionalNotificationsDependencies,
+  getPushSource,
   getPushSubjectKind,
   isDesktopPushEnabled,
   type NotificationsDependencies,
@@ -74,6 +75,11 @@ interface StoredRegistration {
   kind?: Exclude<PushSubjectKind, 'none'>;
   unitId?: string;
   userId?: string;
+  /**
+   * The `Source` a `user` registration was made with (Dispatch's `Dispatch`). Removal sends this one, never the app's
+   * current one: a record from before the app had a Source has none, and is taken off without one.
+   */
+  source?: string;
 }
 
 /** Platforms.Web on the server. */
@@ -184,7 +190,7 @@ function currentIdentity(deps: NotificationsDependencies | null): WebIdentity | 
     const unitId = readActiveUnitId(deps);
     return unitId ? { kind, subject: { kind: 'unit', unitId }, userId: session.userId, prefix: session.departmentCode, unitId } : null;
   }
-  return { kind, subject: kind === 'icUser' ? { kind: 'icUser' } : { kind: 'user' }, userId: session.userId, prefix: session.departmentCode };
+  return { kind, subject: kind === 'icUser' ? { kind: 'icUser' } : { kind: 'user', source: getPushSource() }, userId: session.userId, prefix: session.departmentCode };
 }
 
 /** Unit keeps its legacy `unit:{unitId}:{prefix}` key; person subjects key on the user. */
@@ -194,8 +200,12 @@ const subjectOfStored = (stored: StoredRegistration): PushSubject => {
   const kind = stored.kind ?? (stored.unitId ? 'unit' : 'user');
   if (kind === 'unit' && stored.unitId) return { kind: 'unit', unitId: stored.unitId };
   if (kind === 'icUser') return { kind: 'icUser' };
-  return { kind: 'user' };
+
+  return stored.source ? { kind: 'user', source: stored.source } : { kind: 'user' };
 };
+
+/** The `Source` a `user` registration for `identity` is made with now (none for unit and IC subjects). */
+const sourceOf = (identity: WebIdentity): string | undefined => (identity.subject.kind === 'user' ? identity.subject.source : undefined);
 
 // --- Browser (Firebase JS SDK) ---
 
@@ -341,12 +351,15 @@ async function runSync(): Promise<void> {
   }
 
   const current = readRegistration();
-  if (current && current.key === keyOf(identity) && current.token === token && Date.now() - current.registeredAt < REREGISTER_AFTER_MS) {
+  const source = sourceOf(identity);
+  if (current && current.key === keyOf(identity) && current.token === token && current.source === source && Date.now() - current.registeredAt < REREGISTER_AFTER_MS) {
     notifyPushTokenRegistered({ token, platform: WEB_PUSH_PLATFORM });
 
     return;
   }
-  if (current && current.token !== token) {
+  // A new token, or the same token under another Source (a record from before the app had one): take the old
+  // registration off as it was made, so it does not outlive the one that replaces it.
+  if (current && (current.token !== token || current.source !== source)) {
     await unregisterQuietly(deps, current);
   }
 
@@ -361,6 +374,8 @@ async function runSync(): Promise<void> {
     ...(identity.unitId ? { unitId: identity.unitId } : {}),
     registeredAt: Date.now(),
   };
+
+  if (source) registration.source = source;
 
   let accepted: boolean;
 
@@ -466,7 +481,7 @@ async function unregisterAtServer(registration: StoredRegistration, accessToken:
           Token: registration.token,
           Prefix: registration.prefix,
           ...(subject.kind === 'unit' ? { UnitId: subject.unitId } : {}),
-          ...(subject.kind === 'icUser' ? { Source: IC_PUSH_SOURCE } : {}),
+          Source: pushSourceFor(subject),
         }),
         signal,
       })

@@ -1,5 +1,6 @@
 import type { VariantManifest } from '@resgrid/config';
 import { type AppBarScreenTitle, type AppBarTitleSlot, AppBarTitleSlotContext, type FormFactorInfo, useFormFactor } from '@resgrid/ui';
+import { useIsFocused } from 'expo-router';
 import React, { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 import { resolveSidebarMode, type SidebarMode } from './sidebar-mode';
@@ -55,19 +56,24 @@ export const useHeaderActionsNode = (): ReactNode | null => useContext(HeaderAct
  */
 export const useScreenTitle = (): AppBarScreenTitle | null => useContext(ScreenTitleContext);
 
-/** Shows `actions` in the header while the calling screen is mounted (BigBoard's gear, Dispatch's view toggles). */
+/**
+ * Shows `actions` in the header while the calling screen is focused (BigBoard's gear, Dispatch's view toggles). The
+ * drawer shells' stack keeps the home mounted under the screens opened from the menu, so mounted is not enough: its
+ * actions would stay in the app bar over every other screen.
+ */
 export function useHeaderActions(actions: ReactNode | null): void {
   const shell = useOptionalShell();
+  const isFocused = useIsFocused();
   const setHeaderActions = shell?.setHeaderActions;
   useEffect(() => {
-    if (!setHeaderActions) {
+    if (!setHeaderActions || !isFocused) {
       return undefined;
     }
 
     setHeaderActions(actions);
 
     return () => setHeaderActions(null);
-  }, [actions, setHeaderActions]);
+  }, [actions, isFocused, setHeaderActions]);
 }
 
 export interface ShellProviderProps {

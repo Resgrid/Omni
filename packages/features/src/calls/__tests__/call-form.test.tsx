@@ -78,6 +78,7 @@ beforeEach(() => {
   mockLookupAddressAt.mockReset().mockResolvedValue(null);
   jest.mocked(router.replace).mockClear();
   jest.mocked(router.back).mockClear();
+  jest.mocked(router.canGoBack).mockReturnValue(true);
   resetCallFormHookPointsForTests();
   useToastStore.getState().clearToasts();
   jest.mocked(useNetInfo).mockReturnValue({ isConnected: true, isInternetReachable: true } as never);
@@ -162,6 +163,21 @@ describe('CallFormScreen: create', () => {
     );
     expect(lastToast().message).toBe('calls.create_success');
     expect(router.back).toHaveBeenCalled();
+  });
+
+  // Dispatch's New Call is a menu entry, so the app bar shows the menu, not back: Cancel is the form's way out, and opened
+  // with no history (a deep link, a web reload) it goes home instead of doing nothing.
+  it('Cancel goes back where the form was opened from, or home when there is no history', async () => {
+    activateVariant('responder');
+    await render(<CallFormScreen mode="create" />);
+    await fireEvent.press(screen.getByTestId('call-form-cancel'));
+    expect(router.back).toHaveBeenCalledTimes(1);
+    expect(router.replace).not.toHaveBeenCalled();
+
+    jest.mocked(router.canGoBack).mockReturnValue(false);
+    await fireEvent.press(screen.getByTestId('call-form-cancel'));
+    expect(router.back).toHaveBeenCalledTimes(1);
+    expect(router.replace).toHaveBeenCalledWith('/home');
   });
 
   it('creates a call with no one picked as dispatched to nobody, not everyone', async () => {

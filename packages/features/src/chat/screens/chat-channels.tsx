@@ -3,7 +3,7 @@ import { useChatStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import { type ChatChannelResultData } from '@resgrid/models';
 import { useRealtimeEvent } from '@resgrid/realtime';
-import { Fab, FabIcon, Input, InputField, InputIcon, InputSlot, Loading, RefreshControl, ScrollView, Text, View, VStack, ZeroState } from '@resgrid/ui';
+import { Fab, FabIcon, Input, InputField, InputIcon, InputSlot, Loading, RefreshControl, ScrollView, Text, useFabListPadding, View, VStack, ZeroState } from '@resgrid/ui';
 import { router } from 'expo-router';
 import { MessageSquarePlus, MessagesSquare, Search, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -24,6 +24,7 @@ function ChatChannelsContent() {
   const [query, setQuery] = useState('');
   const [isNewOpen, setIsNewOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const fabListPadding = useFabListPadding();
 
   const load = useCallback((bypassCache: boolean) => useChatStore.getState().fetchChannels(asUnitId != null ? { activeUnitId: asUnitId } : undefined, { bypassCache }), [asUnitId]);
 
@@ -69,7 +70,7 @@ function ChatChannelsContent() {
       ) : sections.length === 0 ? (
         <ZeroState icon={MessagesSquare} heading={t('chat.title')} description={t('chat.empty')} onRetry={handleRefresh} testID="chat-empty" />
       ) : (
-        <ScrollView refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />} contentContainerStyle={{ paddingBottom: 96 }} testID="chat-channel-list">
+        <ScrollView refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />} contentContainerStyle={{ paddingBottom: fabListPadding }} testID="chat-channel-list">
           {sections.map(({ section, channels: sectionChannels }) => (
             <VStack key={section} testID={`chat-section-${section}`}>
               <Text className="px-4 pb-1 pt-3 text-xs font-semibold uppercase text-typography-500">{t(CHAT_SECTION_KEYS[section])}</Text>

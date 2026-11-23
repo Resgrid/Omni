@@ -9,7 +9,7 @@ import { useToastStore } from '@resgrid/ui';
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import React from 'react';
-import { Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 
 import { activateVariant, hidden, setRights } from '../../calls/__tests__/test-utils';
 import { registerCallFormHookPoints, resetCallFormHookPointsForTests } from '../../calls/hook-points';
@@ -164,8 +164,10 @@ describe('RecurringCallsScreen', () => {
     expect(router.push).toHaveBeenCalledWith('/recurring-calls/2');
   });
 
-  it('offers a new schedule only to those who can create calls', async () => {
+  it('offers a new schedule only to those who can create calls, with the last row scrolling clear of the button', async () => {
+    const listPadding = () => StyleSheet.flatten(screen.getByTestId('recurring-calls-list').props.contentContainerStyle).paddingBottom;
     const { unmount } = await render(<RecurringCallsScreen />);
+    expect(listPadding()).toBe(96);
     await fireEvent.press(screen.getByTestId('recurring-calls-new'));
     expect(router.push).toHaveBeenCalledWith('/recurring-calls/new');
     await unmount();
@@ -173,6 +175,18 @@ describe('RecurringCallsScreen', () => {
     useRecurringCallsStore.setState({ options: { ...OPTIONS, CanCreate: false } });
     await render(<RecurringCallsScreen />);
     expect(screen.queryByTestId('recurring-calls-new')).toBeNull();
+    expect(listPadding()).toBe(24);
+  });
+
+  it('leaves the title to the app bar, keeping what the list holds beside the calendar button', async () => {
+    const { unmount } = await render(<RecurringCallsScreen />);
+    expect(screen.queryByText('recurring_calls.title')).toBeNull();
+    expect(screen.getByText('recurring_calls.subtitle')).toBeTruthy();
+    expect(screen.getByTestId('recurring-calls-calendar')).toBeTruthy();
+    await unmount();
+
+    await render(<RecurringCallsScreen showHeader />);
+    expect(screen.getByText('recurring_calls.title')).toBeTruthy();
   });
 
   it('is unavailable where the app has no recurring calls', async () => {
@@ -487,6 +501,12 @@ describe('RecurringCallDetailScreen', () => {
     showDetail();
     await render(<RecurringCallDetailScreen />);
     await fireEvent.press(screen.getByTestId('recurring-call-pause'));
+    // A landscape phone leaves ~390 pt above the keyboard: the body scrolls inside a card that never outgrows that space.
+    const dialogScroll = screen.getByTestId('pause-recurring-call-dialog-scroll', hidden);
+    expect(within(dialogScroll).getByTestId('pause-recurring-call-dialog-resume-on', hidden)).toBeTruthy();
+    expect(within(dialogScroll).getByTestId('pause-recurring-call-dialog-confirm', hidden)).toBeTruthy();
+    expect(StyleSheet.flatten(dialogScroll.props.style)).toMatchObject({ flexGrow: 0, flexShrink: 1 });
+    expect(StyleSheet.flatten(screen.getByTestId('pause-recurring-call-dialog-card', hidden).props.style)).toMatchObject({ maxHeight: '100%', flexShrink: 1 });
     await fireEvent.changeText(screen.getByTestId('pause-recurring-call-dialog-reason', hidden), ' Holiday ');
     await act(async () => fireEvent.press(screen.getByTestId('pause-recurring-call-dialog-confirm', hidden)));
 

@@ -5,7 +5,7 @@ import { useTranslation } from '@resgrid/i18n';
 import type { PersonnelInfoResultData, UnitInfoResultData } from '@resgrid/models';
 import { FlatList, Text } from '@resgrid/ui';
 import { Layers, RefreshCw } from 'lucide-react-native';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { type GestureResponderEvent, StyleSheet, View } from 'react-native';
 
 import { useConsoleStore } from '../hooks/use-console-store';
@@ -14,7 +14,7 @@ import { usePendingPersonnelIds, usePendingUnitIds } from '../hooks/use-pending-
 import { type ConsoleCallFilter, filterConsolePersonnel, filterConsoleUnits, isPersonOnCall, isUnitOnCall } from '../lib/console-filters';
 import { indexCallsById, unitTransportDestinationMismatch } from '../lib/transport-destination';
 import { PanelFrame, PanelIconButton } from './panel-frame';
-import { PanelSearch } from './panel-search';
+import { PanelSearch, usePanelQuery } from './panel-search';
 import { ConsolePersonnelRow, ConsoleUnitRow, readPressModifiers } from './resource-rows';
 
 type ResourceRow = { kind: 'header'; key: string; title: string } | { kind: 'unit'; key: string; unit: UnitInfoResultData } | { kind: 'person'; key: string; person: PersonnelInfoResultData };
@@ -63,7 +63,7 @@ export const ResourcesPanel: React.FC<ResourcesPanelProps> = ({
   // A unit taking a patient somewhere other than its call's destination is flagged here as in the units panel.
   const calls = useCallsStore((state) => state.calls);
   const callsById = useMemo(() => indexCallsById(calls), [calls]);
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = usePanelQuery('resources');
 
   const rows = useMemo<ResourceRow[]>(() => {
     const options = { query, availableOnly, callFilter };

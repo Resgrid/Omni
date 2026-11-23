@@ -10,6 +10,8 @@ export type ConsoleLayout = 'three-column' | 'two-column' | 'single-column';
 
 export const resolveConsoleLayout = (info: Pick<FormFactorInfo, 'formFactor' | 'isLandscape'>): ConsoleLayout => {
   if (info.formFactor === 'desktop' || info.formFactor === 'wall') return 'three-column';
+
   if (info.formFactor === 'tablet') return info.isLandscape ? 'three-column' : 'two-column';
+
   return 'single-column';
 };

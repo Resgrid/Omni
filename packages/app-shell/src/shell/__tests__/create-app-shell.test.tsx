@@ -3,11 +3,12 @@ import type { VariantId } from '@resgrid/config';
 import { useBadgeCountsStore } from '@resgrid/data';
 import type { DepartmentRightsResultData } from '@resgrid/models';
 import { useInboxUnreadCount } from '@resgrid/notifications';
-import { ColorSchemeProvider, computeFormFactor, type FormFactorInfo, getThemeColors, ScreenHeader, SYNC_NOTICE_DELAY_MS, useFormFactor, useToastStore } from '@resgrid/ui';
+import { ColorSchemeProvider, computeFormFactor, type FormFactorInfo, getThemeColors, ScreenHeader, SYNC_NOTICE_DELAY_MS, useBottomSafeAreaInset, useFormFactor, useToastStore } from '@resgrid/ui';
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 import { MapIcon, MessageCircleIcon, SettingsIcon } from 'lucide-react-native';
 import React from 'react';
 import { StyleSheet, Text } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { activateVariant } from '../../__tests__/helpers/variants';
 import { mockNavigationState, resetMockNavigation, router } from '../../__tests__/mocks/expo-router';
@@ -17,10 +18,10 @@ import { defineRoutes } from '../../routes/define-routes';
 import { setRouteContract } from '../../routes/href';
 import { resetShellStateForTests, setShellState } from '../../runtime/shell-state';
 import { registerShellOverlay, registerShellProvider, registerSidebarContent, resetShellSlotsForTests, type SidebarContentProps } from '../../runtime/slots';
-import { createAppShell } from '../create-app-shell';
+import { createAppShell, shellSideInsets } from '../create-app-shell';
 import { findNavEntryForPath, isTopLevelScreen, resolveHeaderLeading, SESSION_INIT_INDICATOR_DELAY_MS } from '../header';
 import { NavMenu } from '../sidebar';
-import { permanentSidebarWidth, resolveSidebarMode } from '../sidebar-mode';
+import { isInlineSidebarShown, permanentSidebarWidth, resolveSidebarMode } from '../sidebar-mode';
 
 jest.mock('@resgrid/ui', () => ({ ...jest.requireActual('@resgrid/ui'), useFormFactor: jest.fn() }));
 
@@ -193,6 +194,90 @@ describe('createAppShell', () => {
 
     await fireEvent.press(screen.getByTestId('shell-menu-button'));
     expect(screen.queryByTestId('shell-sidebar-panel')).toBeNull();
+  });
+
+  describe('a landscape phone’s cutout (left and right safe-area insets)', () => {
+    const LANDSCAPE_INSETS = { top: 0, bottom: 21, left: 59, right: 59 };
+    const styleOf = (testID: string) => StyleSheet.flatten(screen.getByTestId(testID).props.style);
+
+    beforeEach(() => {
+      jest.mocked(useSafeAreaInsets).mockReturnValue(LANDSCAPE_INSETS);
+      setFormFactor('phoneLandscape');
+    });
+
+    afterEach(() => {
+      jest.mocked(useSafeAreaInsets).mockReturnValue({ top: 0, bottom: 0, left: 0, right: 0 });
+    });
+
+    // Dispatch, BigBoard and IC phones have no permanent sidebar: the menu button and every screen's left edge sat under the notch.
+    it.each(['dispatch', 'bigboard', 'ic'] as const)('%s: the app bar and the content keep clear of both sides', async (variantId) => {
+      await renderShell(variantId);
+
+      expect(screen.queryByTestId('shell-sidebar-permanent')).toBeNull();
+      expect(styleOf('shell-header')).toMatchObject({ paddingLeft: 8 + 59, paddingRight: 8 + 59 });
+      expect(styleOf('shell-content')).toMatchObject({ paddingLeft: 59, paddingRight: 59 });
+      expect(styleOf('shell-banners')).toMatchObject({ paddingLeft: 59, paddingRight: 59 });
+    });
+
+    it('Responder: the permanent sidebar pads the left edge itself, so the content pads only the right', async () => {
+      await renderShell('responder');
+
+      expect(screen.getByTestId('shell-sidebar-permanent')).toHaveStyle({ paddingLeft: 59, width: permanentSidebarWidth(844, 59) });
+      expect(styleOf('shell-header')).toMatchObject({ paddingLeft: 8 + 59, paddingRight: 8 + 59 });
+      expect(styleOf('shell-content')).toMatchObject({ paddingLeft: 0, paddingRight: 59 });
+    });
+
+    // The tab bar inside the padded content would otherwise pad max(left, right) a second time; its bottom inset stays the device's.
+    it('tabs (Unit): the tab bar pads only the bottom inset, and its screens know it does', async () => {
+      const probe = jest.fn();
+
+      function BottomInsetProbe() {
+        probe(useBottomSafeAreaInset());
+
+        return null;
+      }
+
+      mockNavigationState.slot = <BottomInsetProbe />;
+      await renderShell('unit');
+
+      expect(mockNavigationState.tabs?.safeAreaInsets).toEqual({ left: 0, right: 0 });
+      expect(styleOf('shell-content')).toMatchObject({ paddingLeft: 59, paddingRight: 59 });
+      // A FAB or composer on a tab screen sits on the tab bar, which already pads the home indicator.
+      expect(probe).toHaveBeenLastCalledWith(0);
+    });
+
+    it('drawer-slot (Dispatch): screens reach the bottom of the display and keep its inset', async () => {
+      const probe = jest.fn();
+
+      function BottomInsetProbe() {
+        probe(useBottomSafeAreaInset());
+
+        return null;
+      }
+
+      mockNavigationState.slot = <BottomInsetProbe />;
+      await renderShell('dispatch');
+
+      expect(probe).toHaveBeenLastCalledWith(21);
+    });
+
+    it('Dispatch desktop panel: the open panel takes the left edge from the content', () => {
+      expect(isInlineSidebarShown('panel', true)).toBe(true);
+      expect(isInlineSidebarShown('panel', false)).toBe(false);
+      expect(isInlineSidebarShown('permanent', false)).toBe(true);
+      expect(isInlineSidebarShown('drawer', true)).toBe(false);
+      expect(shellSideInsets({ left: 59, right: 40 }, true)).toEqual({ banners: { paddingLeft: 59, paddingRight: 40 }, content: { paddingLeft: 0, paddingRight: 40 } });
+      expect(shellSideInsets({ left: 59, right: 40 }, false).content).toEqual({ paddingLeft: 59, paddingRight: 40 });
+    });
+
+    it('portrait without side insets changes nothing', async () => {
+      jest.mocked(useSafeAreaInsets).mockReturnValue({ top: 47, bottom: 34, left: 0, right: 0 });
+      setFormFactor('phone');
+      await renderShell('dispatch');
+
+      expect(styleOf('shell-header')).toMatchObject({ paddingTop: 47, paddingLeft: 8, paddingRight: 8 });
+      expect(styleOf('shell-content')).toMatchObject({ paddingLeft: 0, paddingRight: 0 });
+    });
   });
 
   it('the menu lists available entries and navigates', async () => {

@@ -77,7 +77,7 @@
   "dispatcher_desk.delivery.received": "Received",
   "dispatcher_desk.delivery.sent": "Sent",
   "dispatcher_desk.desk_off": "The dispatcher desk is turned off",
-  "dispatcher_desk.desk_off_description": "Your department has not turned on the dispatcher desk. A department administrator can turn it on in the department settings.",
+  "dispatcher_desk.desk_off_description": "Your department has not turned on the dispatcher desk. A department administrator can turn it on under Shifts > Dispatcher Desk > Dispatcher Desk Settings.",
   "dispatcher_desk.device.desktop": "Desktop",
   "dispatcher_desk.device.phone": "Phone",
   "dispatcher_desk.device.tablet": "Tablet",

@@ -24,6 +24,7 @@ const EVENT_KEYS: Partial<Record<RealtimeEventName, { key: string; type: Activit
 /** Re-reads the call the console is filtered to (dispatches, activity), bypassing caches. */
 export const refreshSelectedCall = async (): Promise<void> => {
   const { isCallFilterActive, selectedCallId } = useConsoleStore.getState();
+
   if (isCallFilterActive && selectedCallId) await useCallDetailStore.getState().fetchCallDetail(selectedCallId, { bypassCache: true });
 };
 
@@ -84,6 +85,7 @@ export function useConsoleData({ realtime = true }: { realtime?: boolean } = {})
   const logEvent = useCallback(
     (name: RealtimeEventName) => {
       const entry = EVENT_KEYS[name];
+
       if (entry) useConsoleStore.getState().addActivity({ type: entry.type, action: t('dispatch.signalr_update'), description: t(entry.key) });
     },
     [t]

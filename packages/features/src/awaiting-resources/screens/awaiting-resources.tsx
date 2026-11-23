@@ -15,7 +15,7 @@ import { DismissRequirementDialog } from '../components/dismiss-requirement-dial
 import { useAwaitingResourceActions, useIsAwaitingResourcesEnabled } from '../hooks/use-awaiting-resources';
 
 export interface AwaitingResourcesScreenProps {
-  /** In-content title row (default true; off when the shell header already titles the screen). */
+  /** In-content title (default false: the app bar titles the route from its nav entry). Pass true where the screen is embedded under another title. */
   showHeader?: boolean;
   /** Clock for "minutes waiting" (tests). */
   now?: () => number;
@@ -32,7 +32,7 @@ interface DismissTarget {
  * one-step Dispatch (adds the unit, notifies only it) and Dismiss. Highest priority, then oldest, first; kept current by
  * the `outstandingRequirementsUpdated` push.
  */
-export default function AwaitingResourcesScreen({ showHeader = true, now = Date.now }: AwaitingResourcesScreenProps) {
+export default function AwaitingResourcesScreen({ showHeader = false, now = Date.now }: AwaitingResourcesScreenProps) {
   const { t } = useTranslation();
   const router = useRouter();
   const isEnabled = useIsAwaitingResourcesEnabled();
@@ -118,10 +118,11 @@ export default function AwaitingResourcesScreen({ showHeader = true, now = Date.
 
   return (
     <View className="flex-1 bg-background-50 px-4 pt-4" testID="awaiting-resources-screen">
-      {isEnabled && showHeader ? (
+      {/* The app bar titles the route; what the list holds and refresh (no pull to refresh on web) stay on one row. */}
+      {isEnabled ? (
         <HStack className="mb-3 items-center justify-between">
-          <VStack className="flex-1">
-            <Text className="text-lg font-bold">{t('awaiting_resources.title')}</Text>
+          <VStack className="mr-2 flex-1">
+            {showHeader ? <Text className="text-lg font-bold">{t('awaiting_resources.title')}</Text> : null}
             <Text className="text-xs text-typography-500">{t('awaiting_resources.subtitle')}</Text>
           </VStack>
           <Pressable onPress={handleRefresh} accessibilityRole="button" accessibilityLabel={t('common.refresh')} testID="awaiting-resources-refresh">

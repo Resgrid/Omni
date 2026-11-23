@@ -41,11 +41,15 @@ export interface ResourceFilterOptions {
 /** The units panel's rows: on the filtered call (when filtering), matching the search, available only when toggled. */
 export const filterConsoleUnits = (units: readonly UnitInfoResultData[], { query, availableOnly, callFilter }: ResourceFilterOptions): UnitInfoResultData[] => {
   const needle = query.trim().toLowerCase();
+
   return units.filter((unit) => {
     if (callFilter && !isUnitOnCall(unit, callFilter)) return false;
+
     if (availableOnly && !isUnitAvailable(unit)) return false;
+
     if (!needle) return true;
     const roles = (unit.Roles ?? []).map((role) => `${role.RoleName ?? ''} ${role.Name ?? ''}`).join(' ');
+
     return [unit.Name, unit.Type, unit.GroupName, unit.CurrentStatus, unit.Note, roles].some((value) => lower(value).includes(needle));
   });
 };
@@ -53,10 +57,14 @@ export const filterConsoleUnits = (units: readonly UnitInfoResultData[], { query
 /** The personnel panel's rows, filtered like the units. */
 export const filterConsolePersonnel = (personnel: readonly PersonnelInfoResultData[], { query, availableOnly, callFilter }: ResourceFilterOptions): PersonnelInfoResultData[] => {
   const needle = query.trim().toLowerCase();
+
   return personnel.filter((person) => {
     if (callFilter && !isPersonOnCall(person, callFilter)) return false;
+
     if (availableOnly && !isPersonAvailable(person)) return false;
+
     if (!needle) return true;
+
     return [person.FirstName, person.LastName, `${person.FirstName} ${person.LastName}`, person.GroupName, person.Status, person.Staffing, person.IdentificationNumber, ...(person.Roles ?? [])].some((value) =>
       lower(value).includes(needle)
     );
@@ -76,6 +84,7 @@ export interface UnitCrew {
 export const getUnitCrew = (unit: Pick<UnitInfoResultData, 'Roles'> | null | undefined): UnitCrew => {
   const roles = unit?.Roles ?? [];
   const filled = roles.filter((role) => !!role?.UserId);
+
   return { filled: filled.length, total: roles.length, names: filled.map((role) => (role.Name ?? '').trim()).filter(Boolean) };
 };
 

@@ -49,4 +49,16 @@ describe('new-item actions', () => {
   it('open a blank new form from a Fab, never a header button', () => {
     expect(screenFiles().flatMap(newItemButtonsIn)).toEqual([]);
   });
+
+  // The Fab floats over the list's bottom right: with the lists' usual 24 pt the last row stayed under it (recurring calls).
+  // A fixed 96 was not enough either where the Fab sits the home indicator's inset higher: the room comes from
+  // useFabListPadding, which adds that inset.
+  it('give the list under a Fab room to scroll its last row clear of it', () => {
+    const offenders = screenFiles()
+      .filter((file) => /<Fab\b/.test(fs.readFileSync(file, 'utf8')))
+      .filter((file) => !/useFabListPadding\(\)/.test(fs.readFileSync(file, 'utf8')) || /paddingBottom: 96\b/.test(fs.readFileSync(file, 'utf8')))
+      .map((file) => path.relative(FEATURES, file));
+
+    expect(offenders).toEqual([]);
+  });
 });

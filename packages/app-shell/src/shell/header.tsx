@@ -1,5 +1,5 @@
 import { useBadgeCount } from '@resgrid/data';
-import { contentOnFill, CountBadge, Spinner, SYNC_NOTICE_DELAY_MS, Text, useSettledFlag, useThemeColors } from '@resgrid/ui';
+import { type AppBarExit, contentOnFill, CountBadge, Spinner, SYNC_NOTICE_DELAY_MS, Text, useSettledFlag, useThemeColors } from '@resgrid/ui';
 import { type Href, usePathname, useRouter } from 'expo-router';
 import { ArrowLeft, Bell, Menu, RefreshCw, TriangleAlert, WifiOff } from 'lucide-react-native';
 import React, { useCallback } from 'react';
@@ -72,17 +72,33 @@ export function isTopLevelScreen(match: { entry: NavEntry; exact: boolean } | nu
 }
 
 /**
- * The header's leading control for the current route and the nav entry it matched. The shell frame reads it too, to
- * tell in-content headers (`AppBarBackContext`) when the app bar already shows back.
+ * What the app bar gives an in-content header (`ScreenHeader`, through `AppBarExitContext`): its back button; the menu
+ * of a top-level screen, which has nothing to go back to (Dispatch's New Call is a menu entry: the menu button, or the
+ * permanent sidebar, leads elsewhere and the form keeps its Cancel); or neither, below the top level with no history (a
+ * deep link, a web reload), where the screen keeps its own back. In the first two the screen titles the app bar instead
+ * of drawing a second header row.
  */
-export function useHeaderLeading(nav: NavRegistry): { leading: HeaderLeading; match: { entry: NavEntry; exact: boolean } | null } {
+export function resolveAppBarExit(input: { isTopLevel: boolean; leading: HeaderLeading }): AppBarExit {
+  if (input.leading === 'back') {
+    return 'back';
+  }
+
+  return input.isTopLevel ? 'menu' : 'none';
+}
+
+/**
+ * The header's leading control for the current route and the nav entry it matched. The shell frame reads it too, to
+ * tell in-content headers (`AppBarExitContext`) how the app bar lets the user leave the screen.
+ */
+export function useHeaderLeading(nav: NavRegistry): { leading: HeaderLeading; exit: AppBarExit; match: { entry: NavEntry; exact: boolean } | null } {
   const shell = useShell();
   const pathname = usePathname();
   const router = useRouter();
   const match = findNavEntryForPath(nav, pathname);
-  const leading = resolveHeaderLeading({ isTopLevel: isTopLevelScreen(match, pathname), canGoBack: router.canGoBack(), sidebarMode: shell.sidebarMode });
+  const isTopLevel = isTopLevelScreen(match, pathname);
+  const leading = resolveHeaderLeading({ isTopLevel, canGoBack: router.canGoBack(), sidebarMode: shell.sidebarMode });
 
-  return { leading, match };
+  return { leading, exit: resolveAppBarExit({ isTopLevel, leading }), match };
 }
 
 type SyncChipKind = 'attention' | 'offline' | 'waiting';
@@ -239,7 +255,8 @@ export function ShellHeader({ nav }: ShellHeaderProps) {
   const { t, tk } = useShellTranslation();
   const label = useNavLabel();
   const actions = useHeaderActionsNode();
-  // A detail screen's own header (ScreenHeader) titles the bar while the bar shows back, instead of a second row below.
+  // A screen's own header (ScreenHeader) titles the bar while the bar shows back or the screen is top level, instead of a
+  // second row below.
   const screenTitle = useScreenTitle();
 
   const { leading, match } = useHeaderLeading(nav);
@@ -259,7 +276,14 @@ export function ShellHeader({ nav }: ShellHeaderProps) {
   const onColor = colors.text;
 
   return (
-    <View style={StyleSheet.flatten([styles.header, { paddingTop: insets.top, backgroundColor: colors.surface, borderBottomColor: colors.border }])} testID="shell-header">
+    // The bar runs edge to edge; its buttons and title keep clear of the status bar and of a landscape phone's cutout.
+    <View
+      style={StyleSheet.flatten([
+        styles.header,
+        { paddingTop: insets.top, paddingLeft: HEADER_EDGE + insets.left, paddingRight: HEADER_EDGE + insets.right, backgroundColor: colors.surface, borderBottomColor: colors.border },
+      ])}
+      testID="shell-header"
+    >
       <View style={styles.side}>
         {leading === 'back' ? (
           <Pressable accessibilityRole="button" accessibilityLabel={t('shell.back')} onPress={goBack} style={styles.iconButton} testID="shell-back-button">
@@ -300,11 +324,13 @@ export function ShellHeader({ nav }: ShellHeaderProps) {
   );
 }
 
+/** The app bar's own padding at each side, inside the safe area. */
+const HEADER_EDGE = 8;
+
 const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
     minHeight: 56,
     borderBottomWidth: StyleSheet.hairlineWidth,
     shadowColor: '#000000',

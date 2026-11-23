@@ -24,7 +24,9 @@ const callPoint = (call: CallResultData | null): { latitude: number; longitude: 
   const [lat, lon] = call.Latitude && call.Longitude ? [call.Latitude, call.Longitude] : (call.Geolocation ?? '').split(',');
   const latitude = Number(lat);
   const longitude = Number(lon);
+
   if (!lat || !lon || !Number.isFinite(latitude) || !Number.isFinite(longitude) || (latitude === 0 && longitude === 0)) return null;
+
   return { latitude, longitude };
 };
 

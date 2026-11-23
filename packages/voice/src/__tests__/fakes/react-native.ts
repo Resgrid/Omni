@@ -69,7 +69,22 @@ export const PermissionsAndroid = {
   requestMultiple: jest.fn(async (permissions: string[]) => Object.fromEntries(permissions.map((p) => [p, 'granted']))),
 };
 
-export const AppState = { currentState: 'active', addEventListener: jest.fn(() => ({ remove: jest.fn() })) };
+const appStateListeners = new Set<(state: string) => void>();
+
+export const AppState = {
+  currentState: 'active',
+  addEventListener: jest.fn((_event: string, listener: (state: string) => void) => {
+    appStateListeners.add(listener);
+
+    return { remove: () => appStateListeners.delete(listener) };
+  }),
+};
+
+/** Moves the app as React Native does: `currentState` first, then the listeners (an OS prompt is `background` on Android). */
+export const setAppState = (state: 'active' | 'background' | 'inactive'): void => {
+  AppState.currentState = state;
+  [...appStateListeners].forEach((listener) => listener(state));
+};
 
 export type EmitterSubscription = { remove: () => void };
 export type NativeModule = Record<string, unknown>;
@@ -81,6 +96,8 @@ export const resetReactNativeFake = (): void => {
   for (const key of Object.keys(NativeModules)) delete NativeModules[key];
   DeviceEventEmitter.removeAllListeners();
   moduleEmitters.clear();
+  AppState.currentState = 'active';
+  appStateListeners.clear();
   PermissionsAndroid.check.mockImplementation(async () => true);
   PermissionsAndroid.request.mockImplementation(async () => 'granted');
   PermissionsAndroid.requestMultiple.mockImplementation(async (permissions: string[]) => Object.fromEntries(permissions.map((p) => [p, 'granted'])));

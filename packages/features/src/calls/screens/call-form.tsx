@@ -2,6 +2,7 @@ import { isApiError } from '@resgrid/api';
 import { REDACTION_VALUE, useFeatureFlag } from '@resgrid/auth';
 import { useCapability } from '@resgrid/config';
 import { useCallDetailStore, useCallsStore, usePoisStore, useRoutesStore, useRunCardsStore } from '@resgrid/data';
+import { goBackOr, homeHref } from '@resgrid/features/auth-ui/lib/navigation';
 import { ProtectedLabel, ProtectedRevealBar } from '@resgrid/features/data-protection';
 import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { AiDestinationAdviceCard } from '@resgrid/features/pois/components/ai-destination-advice-card';
@@ -544,11 +545,15 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
     toast.success(t('calls.templates.applied'));
   };
 
+  // Cancel, Escape and a save go back to where the form was opened from. Opened with no history (a deep link or a web
+  // reload — New Call is a Dispatch menu entry, so the app bar shows the menu, not back), they go home, not nowhere.
+  const leave = () => goBackOr(homeHref());
+
   const done = (outcome: 'saved' | 'pending' = 'saved') => {
     if (onDone) onDone();
     // Saved for later: show the queue it now waits in (Dispatch).
     else if (outcome === 'pending' && calls.queues) router.replace(PENDING_CALLS_ROUTE);
-    else router.back();
+    else leave();
   };
 
   const editContext = useMemo<CallFormEditContext | null>(
@@ -658,7 +663,7 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
 
   useCallShortcuts({
     onBack: () => {
-      if (open === null) router.back();
+      if (open === null) leave();
     },
     onSubmit: () => {
       if (open === null) void submit();
@@ -822,7 +827,7 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
 
   return (
     <View style={styles.screen} className="bg-background-50" testID="call-form-screen">
-      <ScreenHeader title={title} onBack={() => router.back()} />
+      <ScreenHeader title={title} onBack={leave} />
       {!isOnline ? isEdit ? <Text className="mx-3 my-2 text-warning-700">{t('calls.edit.offline')}</Text> : <OfflineCallBanner context="form" /> : null}
       {isEdit ? <ProtectedRevealBar onRefresh={() => readDetail({ bypassCache: true })} testID="call-form-reveal-bar" /> : null}
       <KeyboardAwareScrollView contentContainerStyle={StyleSheet.flatten([styles.content, isDesktop ? styles.desktop : null])} keyboardShouldPersistTaps="handled">
@@ -1320,7 +1325,7 @@ export default function CallFormScreen({ mode, callId, correctLocalId, mapSlot, 
           : null}
 
         <View style={styles.actions}>
-          <Button variant="outline" className="mr-2 flex-1" onPress={() => router.back()} isDisabled={isSubmitting} accessibilityLabel={t('common.cancel')}>
+          <Button variant="outline" className="mr-2 flex-1" onPress={leave} isDisabled={isSubmitting} accessibilityLabel={t('common.cancel')} testID="call-form-cancel">
             <ButtonText>{t('common.cancel')}</ButtonText>
           </Button>
           <Button className="flex-1" onPress={() => void submit()} isDisabled={isSubmitting || !policy.isLoaded} accessibilityLabel={submitLabel} testID="call-form-submit">

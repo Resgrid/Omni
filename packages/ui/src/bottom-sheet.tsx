@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Center } from './center';
 import { BottomAnchoredKeyboardView } from './keyboard-avoiding-view/bottom-anchored';
 import { useKeepFocusedInputVisible } from './keyboard-avoiding-view/keep-focused-input-visible';
-import { NativeModal } from './native-modal';
+import { modalScreenInsets, NativeModal } from './native-modal';
 import { Spinner } from './spinner';
 import { Text } from './text';
 import { useThemeColors } from './theme/use-theme-colors';
@@ -37,6 +37,18 @@ export const BOTTOM_SHEET_BACKDROP_ARM_DELAY_MS = 300;
 
 /** The least space kept above a sheet the keyboard has pushed up, on a window without a status bar inset. */
 export const BOTTOM_SHEET_TOP_GAP = 20;
+
+/** Space under a sheet's content on a window without a bottom inset, and above the keyboard while it is up. */
+export const BOTTOM_SHEET_BOTTOM_PADDING = 24;
+
+/** Space kept between a sheet's content and the home indicator or the Android navigation bar. */
+export const BOTTOM_SHEET_SAFE_AREA_GAP = 12;
+
+/**
+ * Padding under a sheet's content: clear of the home indicator or navigation bar (the sheet's background still runs to
+ * the bottom of the display), and never less than the padding of a window without one.
+ */
+export const getBottomSheetBottomPadding = (bottomInset: number): number => Math.max(BOTTOM_SHEET_BOTTOM_PADDING, bottomInset + BOTTOM_SHEET_SAFE_AREA_GAP);
 
 const OPEN_DURATION_MS = 250;
 const CLOSE_DURATION_MS = 200;
@@ -163,38 +175,40 @@ export function CustomBottomSheet({ children, isOpen, onClose, isLoading = false
         </Pressable>
 
         <SheetKeyboardFrame testID={testID ? `${testID}-keyboard-frame` : undefined}>
-          {/* Sheet content */}
-          <Animated.View style={sheetStyle} accessibilityViewIsModal testID={testID ? `${testID}-content` : undefined}>
-            {/* Drag indicator */}
-            <VStack className="w-full items-center py-2">
-              <Center className="h-1 w-16 rounded-full bg-gray-400" />
-            </VStack>
-
-            <ScrollView
-              ref={keepFocusedInputVisible.scrollRef}
-              onScroll={keepFocusedInputVisible.onScroll}
-              scrollEventThrottle={keepFocusedInputVisible.scrollEventThrottle}
-              bounces={false}
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-              nestedScrollEnabled={true}
-              contentContainerStyle={styles.scrollContent}
-              testID={testID ? `${testID}-sheet-scroll` : undefined}
-            >
-              <VStack className="w-full flex-1" space="md">
-                {isLoading ? (
-                  <Center className="h-32">
-                    <VStack space="sm" className="items-center">
-                      <Spinner size="large" />
-                      {loadingText ? <Text className="text-sm text-typography-500">{loadingText}</Text> : null}
-                    </VStack>
-                  </Center>
-                ) : (
-                  children
-                )}
+          {(paddingBottom) => (
+            /* Sheet content */
+            <Animated.View style={{ ...sheetStyle, paddingBottom }} accessibilityViewIsModal testID={testID ? `${testID}-content` : undefined}>
+              {/* Drag indicator */}
+              <VStack className="w-full items-center py-2">
+                <Center className="h-1 w-16 rounded-full bg-gray-400" />
               </VStack>
-            </ScrollView>
-          </Animated.View>
+
+              <ScrollView
+                ref={keepFocusedInputVisible.scrollRef}
+                onScroll={keepFocusedInputVisible.onScroll}
+                scrollEventThrottle={keepFocusedInputVisible.scrollEventThrottle}
+                bounces={false}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                nestedScrollEnabled={true}
+                contentContainerStyle={styles.scrollContent}
+                testID={testID ? `${testID}-sheet-scroll` : undefined}
+              >
+                <VStack className="w-full flex-1" space="md">
+                  {isLoading ? (
+                    <Center className="h-32">
+                      <VStack space="sm" className="items-center">
+                        <Spinner size="large" />
+                        {loadingText ? <Text className="text-sm text-typography-500">{loadingText}</Text> : null}
+                      </VStack>
+                    </Center>
+                  ) : (
+                    children
+                  )}
+                </VStack>
+              </ScrollView>
+            </Animated.View>
+          )}
         </SheetKeyboardFrame>
       </View>
     </NativeModal>
@@ -205,15 +219,20 @@ export function CustomBottomSheet({ children, isOpen, onClose, isLoading = false
  * Holds the sheet at the bottom of the modal window and, while the keyboard is up, on top of it. The sheet is laid out in
  * this column, not absolutely positioned: an absolute `bottom: 0` child ignores its parent's padding, which is how the
  * keyboard used to cover a status note. Taps on the empty space above the sheet fall through to the backdrop.
- * Rendered inside the modal so the safe-area inset is the modal window's.
+ * Rendered inside the modal so the safe-area insets are the modal window's.
+ *
+ * It hands the sheet the padding that keeps its content clear of the home indicator. The keyboard covers that inset, so
+ * the frame's `offset` takes back what the sheet pads beyond BOTTOM_SHEET_BOTTOM_PADDING: the content stays that far
+ * above the keyboard, as before.
  */
-function SheetKeyboardFrame({ children, testID }: { children: ReactNode; testID?: string }) {
+function SheetKeyboardFrame({ children, testID }: { children: (paddingBottom: number) => ReactNode; testID?: string }) {
   const insets = useSafeAreaInsets();
+  const paddingBottom = getBottomSheetBottomPadding(modalScreenInsets(insets).bottom);
   const frameStyle = useMemo(() => ({ ...styles.frame, paddingTop: Math.max(insets.top, BOTTOM_SHEET_TOP_GAP) }), [insets.top]);
 
   return (
-    <BottomAnchoredKeyboardView style={frameStyle} pointerEvents="box-none" testID={testID}>
-      {children}
+    <BottomAnchoredKeyboardView style={frameStyle} offset={paddingBottom - BOTTOM_SHEET_BOTTOM_PADDING} pointerEvents="box-none" testID={testID}>
+      {children(paddingBottom)}
     </BottomAnchoredKeyboardView>
   );
 }
@@ -224,6 +243,6 @@ const styles = StyleSheet.create({
   backdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#000' },
   frame: { justifyContent: 'flex-end' },
   // In the frame's column: as tall as its content up to maxHeight, and shorter when the keyboard leaves less room.
-  sheet: { flexShrink: 1, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 16, paddingBottom: 24 },
+  sheet: { flexShrink: 1, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 16 },
   scrollContent: { paddingBottom: 8 },
 });

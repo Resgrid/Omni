@@ -11,6 +11,7 @@ import { type GestureResponderEvent, Platform, StyleSheet, View } from 'react-na
 import { z } from 'zod';
 
 import { getUnitCrew } from '../lib/console-filters';
+import { useConsoleTouchTargets } from './panel-frame';
 
 const modifierFlagsSchema = z.object({ ctrlKey: z.boolean().optional(), metaKey: z.boolean().optional(), shiftKey: z.boolean().optional() });
 
@@ -66,14 +67,25 @@ type RowIconTone = 'neutral' | 'accent' | 'danger';
 const ROW_ICON_TOKENS = { neutral: 'typography-500', accent: 'primary-500', danger: 'error-600' } as const;
 
 /** A small square button beside a row (details, set status for the call, release from the call): never inside the row's own button. */
+const TOUCH_ROW_BUTTON_SLOP = { top: 2, bottom: 2, left: 8, right: 8 } as const;
+
 const RowIconButton: React.FC<{ icon: LucideIcon; tone: RowIconTone; onPress: () => void; accessibilityLabel: string; testID: string }> = ({ icon: Icon, tone, onPress, accessibilityLabel, testID }) => {
   const colors = useThemeColors();
+  const isTouch = useConsoleTouchTargets();
   const toneStyle = { neutral: styles.neutralButton, accent: styles.accentButton, danger: styles.dangerButton }[tone];
 
+  // Stacked 4 pt apart: on a touch screen each is a 30 pt square whose slop reaches 46 pt across without overlapping the next.
   return (
-    <Pressable onPress={onPress} hitSlop={8} accessibilityRole="button" accessibilityLabel={accessibilityLabel} style={StyleSheet.flatten([styles.iconButton, toneStyle])} testID={testID}>
+    <Pressable
+      onPress={onPress}
+      hitSlop={isTouch ? TOUCH_ROW_BUTTON_SLOP : 8}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      style={StyleSheet.flatten([isTouch ? styles.touchIconButton : styles.iconButton, toneStyle])}
+      testID={testID}
+    >
       <View>
-        <Icon size={12} color={colors.token(ROW_ICON_TOKENS[tone])} />
+        <Icon size={isTouch ? 14 : 12} color={colors.token(ROW_ICON_TOKENS[tone])} />
       </View>
     </Pressable>
   );
@@ -388,6 +400,7 @@ const styles = StyleSheet.create({
   typeIconBackdrop: { backgroundColor: '#ffffff', borderRadius: 4 },
   avatar: { width: 32, height: 32, borderRadius: 16, borderWidth: 2, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(139, 92, 246, 0.1)' },
   iconButton: { padding: 4, borderRadius: 4 },
+  touchIconButton: { padding: 8, borderRadius: 6 },
   neutralButton: { backgroundColor: 'rgba(107, 114, 128, 0.1)' },
   accentButton: { backgroundColor: 'rgba(99, 102, 241, 0.12)' },
   dangerButton: { backgroundColor: 'rgba(239, 68, 68, 0.1)' },

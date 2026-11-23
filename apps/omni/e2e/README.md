@@ -110,9 +110,9 @@ Each department runs, for its admin (and the member in `restricted`), on the web
 2. **Flags reach the app**: `FeatureToggles/GetAll` as the app received it matches the state the seed predicted for that department.
 3. **Flag-gated navigation**: entries gated on flags (`support/flag-gated-nav.json`, kept equal to each app's `nav.ts` by `packages/app-shell/src/__tests__/qa-flag-gated-nav.test.ts`) show in flags-on and are absent in flags-off.
 
-Plus: password sign-in is refused in the SSO-only department, and an unenrolled member is sent to MFA enrollment where MFA is required.
+Plus: password sign-in is refused in the SSO-only department, and an unenrolled member is sent to MFA enrollment where MFA is required. In Dispatch and IC, a persona the department's app-login permission (DispatchAppLogin, CommandAppLogin) keeps out — the member in `restricted` — is not swept: the app must turn them away with its access notice and sign them out (`mayUseApp` reads the permission the way Core does).
 
-Core answers are judged by `apiGuard`: any 5xx fails, and a 4xx fails unless `support/qa-expected-refusals.ts` explains it as a by-design refusal (with its reason). Keep that list short. MFA personas sign in with a fresh TOTP step each (`withTotpTime`): Core refuses a replayed step and counts the refusal toward the account lockout; after an interrupted run, `qa-stack.py unlock` clears lockouts on the local stack.
+Core answers are judged by `apiGuard`: any 5xx fails, and a 4xx fails unless `support/qa-expected-refusals.ts` explains it as a by-design refusal (with its reason). Keep that list short. MFA personas sign in with a fresh TOTP step each (`withTotpTime`): Core refuses a replayed step and counts the refusal toward the account lockout; after an interrupted run, `qa-stack.py unlock` clears lockouts on the local stack. A native flow reaches the code prompt minutes after it starts, so it gets a code for every step of the next 20 minutes (`flowTotpCodes`) and types the one for the step it is in (`maestro/qa/totp-code.js`); both kinds of sign-in share each persona's last used step.
 
 ## Native (Maestro)
 

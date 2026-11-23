@@ -5,12 +5,14 @@ import { registerDevice, registerUnitDevice, unRegisterNativePush, unRegisterWeb
 
 /**
  * Whose Novu subscriber a device registers on:
- * - `user`: the signed-in person (Responder, Dispatch, BigBoard) — `Devices/RegisterDevice`;
+ * - `user`: the signed-in person (Responder, Dispatch, BigBoard) — `Devices/RegisterDevice`, with the app's own `Source`
+ *   where its manifest names one (`capabilities.push.source`: Dispatch sends `Dispatch`, so Core can keep its tokens on
+ *   Dispatch's push integrations);
  * - `unit`: the active unit (Unit) — `Devices/RegisterUnitDevice` with `UnitId`;
  * - `icUser`: the person, on the IC channel set — `Devices/RegisterDevice` with `Source: 'IC'`.
  * Push `Source` values are permanent per app (AGENTS.md identity list).
  */
-export type PushSubject = { kind: 'user' } | { kind: 'unit'; unitId: string } | { kind: 'icUser' };
+export type PushSubject = { kind: 'user'; source?: string } | { kind: 'unit'; unitId: string } | { kind: 'icUser' };
 
 /** Push `Source` the IC app registers with. Never change it (old builds stay in the field). */
 export const IC_PUSH_SOURCE = 'IC';
@@ -24,16 +26,29 @@ export interface PushDevice {
   prefix: string;
 }
 
-const sourceFor = (subject: PushSubject): string | undefined => (subject.kind === 'icUser' ? IC_PUSH_SOURCE : undefined);
+/** The `Source` a registration for `subject` carries: IC's, a `user` app's own, or none. */
+export const pushSourceFor = (subject: PushSubject): string | undefined => {
+  if (subject.kind === 'icUser') return IC_PUSH_SOURCE;
 
-export const buildPushRegistrationInput = (subject: PushSubject, device: PushDevice): PushRegistrationInput => ({
-  Platform: device.platform,
-  Token: device.token,
-  DeviceUuid: device.deviceUuid,
-  Prefix: device.prefix,
-  ...(subject.kind === 'unit' ? { UnitId: subject.unitId } : {}),
-  ...(sourceFor(subject) ? { Source: sourceFor(subject) } : {}),
-});
+  return subject.kind === 'user' ? subject.source : undefined;
+};
+
+/** Adds the subject's `UnitId` (unit) and `Source` (IC, or a `user` app's own) to a registration or removal body. */
+const addSubjectFields = (body: { UnitId?: string; Source?: string }, subject: PushSubject): void => {
+  if (subject.kind === 'unit') body.UnitId = subject.unitId;
+
+  const source = pushSourceFor(subject);
+
+  if (source) body.Source = source;
+};
+
+export const buildPushRegistrationInput = (subject: PushSubject, device: PushDevice): PushRegistrationInput => {
+  const input: PushRegistrationInput = { Platform: device.platform, Token: device.token, DeviceUuid: device.deviceUuid, Prefix: device.prefix };
+
+  addSubjectFields(input, subject);
+
+  return input;
+};
 
 /** RegisterDevice answers 200 even when it fails; only these statuses mean the server took the registration. */
 const ACCEPTED_REGISTRATION_STATUSES: readonly string[] = ['queued', 'success'];
@@ -50,12 +65,9 @@ export const registerPushDevice = (ctx: ApiContext, subject: PushSubject, device
 
 /** Takes a token off the channels it was registered on (native: iOS/Android; web: browser/desktop). */
 export const unregisterPushToken = (ctx: ApiContext, subject: PushSubject, channel: 'native' | 'web', token: { token: string; prefix: string }, options?: RequestOptions): Promise<PushRegistrationResult> => {
-  const body: NativePushUnRegistrationInput & WebPushUnRegistrationInput = {
-    Token: token.token,
-    Prefix: token.prefix,
-    ...(subject.kind === 'unit' ? { UnitId: subject.unitId } : {}),
-    ...(sourceFor(subject) ? { Source: sourceFor(subject) } : {}),
-  };
+  const body: NativePushUnRegistrationInput & WebPushUnRegistrationInput = { Token: token.token, Prefix: token.prefix };
+
+  addSubjectFields(body, subject);
 
   return channel === 'native' ? unRegisterNativePush(ctx, body, options) : unRegisterWebPush(ctx, body, options);
 };

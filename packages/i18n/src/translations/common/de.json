@@ -1617,12 +1617,14 @@
     "tracking_notification_title": "Standortverfolgung",
     "permission_foreground_title": "Allow location access",
     "permission_foreground_message": "{{appName}} uses your location while the app is open to show where you are on the map and to share your position with your department.",
-    "permission_background_title": "Allow location all the time",
-    "permission_background_message": "To keep your department updated while {{appName}} is in the background or the screen is off, allow location access \"All the time\" (Android: \"Allow all the time\"; iOS: \"Always\") in the next prompt or in Settings.",
-    "permission_blocked_message": "Location access is turned off for {{appName}}. Open Settings to allow it.",
+    "permission_background_title": "Standortzugriff immer erlauben",
+    "permission_background_message": "Damit Ihre Abteilung auch dann informiert bleibt, wenn {{appName}} im Hintergrund läuft oder der Bildschirm aus ist, wählen Sie in der nächsten Abfrage oder in den Einstellungen „Immer zulassen“ (Android) bzw. „Immer“ (iOS).",
+    "permission_background_disclosure_person": "{{appName}} erfasst Standortdaten, um Ihre Position während eines Einsatzes mit Ihrer Abteilung zu teilen, damit sie sieht, wer einem Einsatz am nächsten ist – auch wenn die App geschlossen ist oder nicht verwendet wird. Ihr Standort wird nur mit Ihrer Abteilung geteilt.",
+    "permission_background_disclosure_unit": "{{appName}} erfasst Standortdaten, um die Position dieser Einheit an die Disponenten Ihrer Abteilung zu senden und die Navigation fortzusetzen – auch wenn die App geschlossen ist oder nicht verwendet wird. Der Standort wird nur mit Ihrer Abteilung geteilt.",
+    "permission_blocked_message": "Der Standortzugriff ist für {{appName}} deaktiviert. Öffnen Sie die Einstellungen, um ihn zu erlauben.",
     "permission_open_settings": "Open Settings",
-    "permission_continue": "Continue",
-    "permission_not_now": "Not now"
+    "permission_continue": "Weiter",
+    "permission_not_now": "Nicht jetzt"
   },
   "location_history": {
     "address_matching_off": "Für diese Abteilung ist Advanced Data Protection aktiv. Einsatzadressen sind verschlüsselt, daher werden nur über Kontakte verknüpfte Einsätze angezeigt.",
@@ -3159,6 +3161,7 @@
     "advanced": "Advanced",
     "audio": "Audio",
     "background_geolocation_denied": "Background location needs the \"Allow all the time\" permission. Allow it in your device settings, then turn this on again.",
+    "background_geolocation_failed": "Background location could not be turned on. Try again.",
     "location": "Location",
     "login_info_description": "Sign in again, for example after changing your password or to switch to another account.",
     "no_units_available_help": "Ihnen sind keine Einheiten zugewiesen. Bitten Sie Ihren Abteilungsadministrator, Sie der Stationsgruppe einer Einheit hinzuzufügen.",
@@ -5149,7 +5152,7 @@
       "sent": "Gesendet"
     },
     "desk_off": "Der Disponentenplatz ist deaktiviert",
-    "desk_off_description": "Ihre Organisation hat den Disponentenplatz nicht aktiviert. Ein Administrator Ihrer Organisation kann ihn unter Schichten > Einstellungen Dispositionsplatz aktivieren.",
+    "desk_off_description": "Ihre Organisation hat den Disponentenplatz nicht aktiviert. Ein Administrator Ihrer Organisation kann ihn unter Schichten > Dispositionsplatz > Einstellungen Dispositionsplatz aktivieren.",
     "device": {
       "desktop": "Desktop",
       "phone": "Telefon",

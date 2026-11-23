@@ -9,6 +9,7 @@ import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { plainText } from '../lib/console-filters';
+import { useConsoleTouchTargets } from './panel-frame';
 
 export interface ConsoleCallCardProps {
   call: CallResultData;
@@ -34,6 +35,7 @@ const TIME_AGO_KEYS = { just_now: 'dispatch_console.time_just_now', minutes: 'di
  */
 export const ConsoleCallCard: React.FC<ConsoleCallCardProps> = React.memo(({ call, priorityColor, dispatches, overdueNames, isSelected, now, onSelect, onOpenDetails, onAddResources }) => {
   const { t } = useTranslation();
+  const isTouch = useConsoleTouchTargets();
   const textColor = readableTextColor(priorityColor) ?? '#FFFFFF';
   const protectedLabel = t('data_protection.protected_value');
   const name = callDisplayName(call, protectedLabel);
@@ -53,7 +55,7 @@ export const ConsoleCallCard: React.FC<ConsoleCallCardProps> = React.memo(({ cal
         accessibilityRole="button"
         accessibilityState={{ selected: isSelected }}
         accessibilityLabel={`#${call.Number} ${name}`}
-        style={StyleSheet.flatten([styles.card, { backgroundColor: priorityColor }, isSelected ? styles.selected : null])}
+        style={StyleSheet.flatten([styles.card, isTouch ? styles.touchCard : null, { backgroundColor: priorityColor }, isSelected ? styles.selected : null])}
         testID={testID}
       >
         {isSelected ? (
@@ -124,15 +126,29 @@ export const ConsoleCallCard: React.FC<ConsoleCallCardProps> = React.memo(({ cal
       </Pressable>
       <View style={styles.cornerButtons}>
         {onAddResources ? (
-          <Pressable onPress={() => onAddResources(call)} hitSlop={8} accessibilityRole="button" accessibilityLabel={t('dispatch_console.add_resources')} style={styles.cornerButton} testID={`${testID}-add-resources`}>
+          <Pressable
+            onPress={() => onAddResources(call)}
+            hitSlop={isTouch ? 6 : 8}
+            accessibilityRole="button"
+            accessibilityLabel={t('dispatch_console.add_resources')}
+            style={isTouch ? StyleSheet.flatten([styles.cornerButton, styles.touchCornerButton]) : styles.cornerButton}
+            testID={`${testID}-add-resources`}
+          >
             <View>
-              <UserPlus size={12} color={textColor} />
+              <UserPlus size={isTouch ? 16 : 12} color={textColor} />
             </View>
           </Pressable>
         ) : null}
-        <Pressable onPress={() => onOpenDetails(call.CallId)} hitSlop={8} accessibilityRole="link" accessibilityLabel={t('dispatch.view_details')} style={styles.cornerButton} testID={`${testID}-details`}>
+        <Pressable
+          onPress={() => onOpenDetails(call.CallId)}
+          hitSlop={isTouch ? 6 : 8}
+          accessibilityRole="link"
+          accessibilityLabel={t('dispatch.view_details')}
+          style={isTouch ? StyleSheet.flatten([styles.cornerButton, styles.touchCornerButton]) : styles.cornerButton}
+          testID={`${testID}-details`}
+        >
           <View>
-            <ExternalLink size={12} color={textColor} />
+            <ExternalLink size={isTouch ? 16 : 12} color={textColor} />
           </View>
         </Pressable>
       </View>
@@ -145,9 +161,12 @@ ConsoleCallCard.displayName = 'ConsoleCallCard';
 const styles = StyleSheet.create({
   cardWrap: { marginBottom: 6 },
   card: { borderRadius: 8, padding: 8, paddingRight: 56 },
+  // Room for the two 32 pt corner buttons a touch screen gets (each reaches 44 pt with its slop).
+  touchCard: { paddingRight: 84 },
   selected: { borderWidth: 3, borderColor: '#6366f1' },
   divider: { height: StyleSheet.hairlineWidth, opacity: 0.4, marginVertical: 4 },
   overdue: { marginTop: 4, backgroundColor: '#dc2626', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 },
   cornerButtons: { position: 'absolute', top: 6, right: 6, flexDirection: 'row' },
   cornerButton: { marginLeft: 6, padding: 4, borderRadius: 4, backgroundColor: 'rgba(0,0,0,0.15)' },
+  touchCornerButton: { padding: 8, borderRadius: 6 },
 });

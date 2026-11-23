@@ -2,9 +2,9 @@ import fs from 'fs';
 import path from 'path';
 
 /**
- * On a phone the console stacks its panels in one vertical ScrollView, each panel capped in height. Android hands a drag
- * to a scroll view inside another one only with `nestedScrollEnabled`, so every list a panel scrolls must set it, or a
- * long list (units, notes, the activity log) cannot be scrolled by touch there.
+ * A panel's lists may sit inside another scroller (the activity panel's tab content, a sheet, an embedding screen).
+ * Android hands a drag to a scroll view inside another one only with `nestedScrollEnabled`, so every list a panel
+ * scrolls sets it, or a long list (units, notes, the activity log) could not be scrolled by touch there.
  */
 const COMPONENTS = path.resolve(__dirname, '..', 'components');
 
@@ -29,7 +29,7 @@ const openingTag = (text: string, start: number): string => {
 };
 
 describe('dispatch console panel scrolling', () => {
-  it('lets every panel list scroll inside the phone layout (nestedScrollEnabled)', () => {
+  it('lets every panel list scroll inside another scroller (nestedScrollEnabled)', () => {
     const scrollers = sources.flatMap(({ file, text }) => [...text.matchAll(/<(FlatList|FlashList|ScrollView|SectionList)\b/g)].map((match) => ({ file, tag: openingTag(text, match.index) })));
 
     expect(scrollers.length).toBeGreaterThan(0);

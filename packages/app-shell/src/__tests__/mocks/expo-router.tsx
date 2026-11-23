@@ -16,7 +16,9 @@ interface MockNavigationState {
   slot: ReactNode;
   /** The props the drawer shells' Stack was given (null until a Stack renders). */
   stack: { screenOptions: unknown } | null;
-  tabs: null | { screens: MockTabScreen[]; screenOptions: unknown; screenListeners?: (props: { route: { name: string } }) => unknown };
+  tabs: null | { screens: MockTabScreen[]; screenOptions: unknown; screenListeners?: (props: { route: { name: string } }) => unknown; safeAreaInsets?: unknown };
+  /** Whether the rendered screen is the focused one (false: another screen was pushed over it). */
+  isFocused: boolean;
 }
 
 export const mockNavigationState: MockNavigationState = {
@@ -26,6 +28,7 @@ export const mockNavigationState: MockNavigationState = {
   slot: null,
   stack: null,
   tabs: null,
+  isFocused: true,
 };
 
 export const router = {
@@ -42,8 +45,8 @@ export const useRouter = (): typeof router => router;
 export const usePathname = (): string => mockNavigationState.pathname;
 export const useSegments = (): string[] => mockNavigationState.segments;
 
-/** The one rendered screen is the focused one. */
-export const useIsFocused = (): boolean => true;
+/** The one rendered screen is the focused one unless a test pushed another over it. */
+export const useIsFocused = (): boolean => mockNavigationState.isFocused;
 
 const navigationRef = { isReady: jest.fn(() => true), current: null };
 export const useNavigationContainerRef = (): typeof navigationRef => navigationRef;
@@ -66,15 +69,27 @@ function TabsScreen(): null {
   return null;
 }
 
-export function Tabs({ children, screenOptions, screenListeners }: { children?: ReactNode; screenOptions?: unknown; screenListeners?: (props: { route: { name: string } }) => unknown }): ReactElement {
+export function Tabs({
+  children,
+  screenOptions,
+  screenListeners,
+  safeAreaInsets,
+}: {
+  children?: ReactNode;
+  screenOptions?: unknown;
+  screenListeners?: (props: { route: { name: string } }) => unknown;
+  safeAreaInsets?: unknown;
+}): ReactElement {
   const screens: MockTabScreen[] = React.Children.toArray(children).map((child) => {
     const element = child as ReactElement<{ name: string; options?: Record<string, unknown> }>;
     return { name: element.props.name, options: element.props.options ?? {} };
   });
-  mockNavigationState.tabs = { screens, screenOptions, screenListeners };
+  mockNavigationState.tabs = { screens, screenOptions, screenListeners, safeAreaInsets };
   screens.forEach((screen) => screenListeners?.({ route: { name: screen.name } }));
+  // The focused screen (the slot), so tests can render a screen inside the tab navigator, and a button per visible tab.
   return (
     <View testID="mock-tabs">
+      {mockNavigationState.slot}
       {screens
         .filter((screen) => screen.options.href !== null && screen.options.tabBarButton === undefined)
         .map((screen) => (
@@ -105,5 +120,6 @@ export function resetMockNavigation(): void {
   mockNavigationState.slot = null;
   mockNavigationState.stack = null;
   mockNavigationState.tabs = null;
+  mockNavigationState.isFocused = true;
   Object.values(router).forEach((fn) => fn.mockClear());
 }

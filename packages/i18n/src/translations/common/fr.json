@@ -1617,12 +1617,14 @@
     "tracking_notification_title": "Suivi de la position",
     "permission_foreground_title": "Allow location access",
     "permission_foreground_message": "{{appName}} uses your location while the app is open to show where you are on the map and to share your position with your department.",
-    "permission_background_title": "Allow location all the time",
-    "permission_background_message": "To keep your department updated while {{appName}} is in the background or the screen is off, allow location access \"All the time\" (Android: \"Allow all the time\"; iOS: \"Always\") in the next prompt or in Settings.",
-    "permission_blocked_message": "Location access is turned off for {{appName}}. Open Settings to allow it.",
+    "permission_background_title": "Autoriser la localisation en permanence",
+    "permission_background_message": "Pour que votre service reste informé lorsque {{appName}} est en arrière-plan ou que l'écran est éteint, choisissez « Toujours autoriser » (Android) ou « Toujours » (iOS) dans la prochaine demande ou dans les Réglages.",
+    "permission_background_disclosure_person": "{{appName}} collecte des données de localisation pour partager votre position avec votre service pendant une intervention, afin qu'il voie qui est le plus proche d'un appel, même lorsque l'application est fermée ou n'est pas utilisée. Votre position n'est partagée qu'avec votre service.",
+    "permission_background_disclosure_unit": "{{appName}} collecte des données de localisation pour envoyer la position de cette unité aux opérateurs de votre service et poursuivre la navigation guidée, même lorsque l'application est fermée ou n'est pas utilisée. La position n'est partagée qu'avec votre service.",
+    "permission_blocked_message": "L'accès à la position est désactivé pour {{appName}}. Ouvrez les Réglages pour l'autoriser.",
     "permission_open_settings": "Open Settings",
-    "permission_continue": "Continue",
-    "permission_not_now": "Not now"
+    "permission_continue": "Continuer",
+    "permission_not_now": "Pas maintenant"
   },
   "location_history": {
     "address_matching_off": "La protection avancée des données est activée pour ce service : les adresses des appels sont chiffrées et seuls les appels liés par contact sont affichés.",
@@ -3159,6 +3161,7 @@
     "advanced": "Advanced",
     "audio": "Audio",
     "background_geolocation_denied": "Background location needs the \"Allow all the time\" permission. Allow it in your device settings, then turn this on again.",
+    "background_geolocation_failed": "Background location could not be turned on. Try again.",
     "location": "Location",
     "login_info_description": "Sign in again, for example after changing your password or to switch to another account.",
     "no_units_available_help": "Aucune unité ne vous est attribuée. Demandez à votre administrateur de service de vous ajouter au groupe de caserne d'une unité.",
@@ -5149,7 +5152,7 @@
       "sent": "Envoyé"
     },
     "desk_off": "Le poste opérateur est désactivé",
-    "desk_off_description": "Votre service n'a pas activé le poste opérateur. Un administrateur du service peut l'activer dans Quarts > Paramètres du poste de répartition.",
+    "desk_off_description": "Votre service n'a pas activé le poste opérateur. Un administrateur du service peut l'activer dans Quarts > Poste de répartition > Paramètres du poste de répartition.",
     "device": {
       "desktop": "Ordinateur",
       "phone": "Téléphone",

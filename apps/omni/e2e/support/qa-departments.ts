@@ -240,6 +240,13 @@ const STEP_MS = 30_000;
 // Core accepts a code up to two steps ahead of the clock (and never the same step twice: replay protection).
 const MAX_STEPS_AHEAD = 2;
 
+// Each persona's newest used step, shared by every QA run on this machine (web, Electron and native sign-ins).
+const totpDir = (): string => path.join(os.tmpdir(), 'resgrid-qa-totp');
+
+const lastStepFile = (username: string): string => path.join(totpDir(), `${username}.step`);
+
+const readLastStep = (file: string): number => (fs.existsSync(file) ? Number(fs.readFileSync(file, 'utf8')) : -1);
+
 // A turn holds the lock for at most the wait for a free step (two steps) plus one sign-in (under a minute); a lock older
 // than this was left by a worker that was killed during its turn.
 const STALE_LOCK_MS = 3 * 60_000;
@@ -260,11 +267,11 @@ const isStaleLock = (lock: string): boolean => {
  * (up to two ahead of the clock) are used up, this waits for the next one.
  */
 export async function withTotpTime<T>(username: string, submit: (at: number) => Promise<T>): Promise<T> {
-  const dir = path.join(os.tmpdir(), 'resgrid-qa-totp');
+  const dir = totpDir();
 
   fs.mkdirSync(dir, { recursive: true });
   const lock = path.join(dir, `${username}.lock`);
-  const last = path.join(dir, `${username}.step`);
+  const last = lastStepFile(username);
 
   for (;;) {
     try {
@@ -294,7 +301,7 @@ export async function withTotpTime<T>(username: string, submit: (at: number) => 
   try {
     for (;;) {
       const now = Math.floor(Date.now() / STEP_MS);
-      const used = fs.existsSync(last) ? Number(fs.readFileSync(last, 'utf8')) : -1;
+      const used = readLastStep(last);
       const step = Math.max(now, used + 1);
 
       if (step - now <= MAX_STEPS_AHEAD) {
@@ -308,4 +315,78 @@ export async function withTotpTime<T>(username: string, submit: (at: number) => 
   } finally {
     fs.rmdirSync(lock);
   }
+}
+
+// A native sign-in flow (maestro/qa/sign-in.yaml) gets codes for this long: a cold first bundle, the onboarding and a
+// relaunch past a system sheet all fit well inside it.
+const FLOW_CODE_STEPS = 40;
+
+/** What a native sign-in flow gets as `QA_TOTP`, and the call that records its sign-in once the flow has ended. */
+export interface FlowTotpCodes {
+  /** `<first step>:<code>,<code>,…`: one code per 30 s step from the first. */
+  value: string;
+  /** Records the newest step the flow can have submitted, so the persona's next sign-in uses a newer one. */
+  done: (end?: number) => void;
+}
+
+/**
+ * TOTP codes for a native sign-in flow, from the first step no earlier sign-in of this persona used. A flow reaches the
+ * code prompt minutes after it starts (two on an Android emulator: the development client's launch, the onboarding),
+ * when a code made at its start is past the steps Core accepts, so it types the code for the step it is in at that
+ * moment (maestro/qa/totp-code.js picks it; Maestro runs scripts on this machine, on this clock).
+ */
+export function flowTotpCodes(username: string, secret: string, now: number = Date.now()): FlowTotpCodes {
+  fs.mkdirSync(totpDir(), { recursive: true });
+  const file = lastStepFile(username);
+  const first = Math.max(Math.floor(now / STEP_MS), readLastStep(file) + 1);
+  const codes = Array.from({ length: FLOW_CODE_STEPS }, (_, index) => totp(secret, (first + index) * STEP_MS));
+
+  return {
+    value: `${first}:${codes.join(',')}`,
+    // The flow submits the step it is in when the prompt shows, never before `first`: no newer than the step it ended in.
+    done: (end = Date.now()) => fs.writeFileSync(file, String(Math.max(readLastStep(file), first, Math.floor(end / STEP_MS)))),
+  };
+}
+
+// ---- App access --------------------------------------------------------------------------------------------------------
+
+/** The department permission (Core PermissionTypes) behind each app access right a variant can require. */
+const APP_LOGIN_PERMISSIONS = { CanLoginToDispatchApp: 'DispatchAppLogin', CanLoginToCommandApp: 'CommandAppLogin' } as const;
+
+export type AppAccessRight = keyof typeof APP_LOGIN_PERMISSIONS;
+
+/** Who a permission action (Core PermissionActions, as the seeder names them) lets in, given whether the persona has one of its roles. */
+const PERMISSION_ACTIONS = {
+  everyone: () => true,
+  departmentAdminsOnly: (user) => user.admin,
+  departmentAndGroupAdmins: (user) => user.admin || user.groupAdmin,
+  departmentAdminsAndSelectRoles: (user, hasRole) => user.admin || hasRole,
+  departmentAndGroupAdminsAndSelectRoles: (user, hasRole) => user.admin || user.groupAdmin || hasRole,
+} satisfies Record<string, (user: QaUser, hasRole: boolean) => boolean>;
+
+type PermissionAction = keyof typeof PERMISSION_ACTIONS;
+
+const isPermissionAction = (action: string): action is PermissionAction => Object.keys(PERMISSION_ACTIONS).includes(action);
+
+/** What `mayUseApp` reads of a department. */
+export interface AppLoginRules {
+  scenario: string;
+  features: { permissions: QaDepartment['features']['permissions'] };
+}
+
+/**
+ * Whether the department lets this persona sign in to an app that requires `right` (`capabilities.auth.appAccessRight`:
+ * Dispatch, IC), as Core decides it from the seeded DispatchAppLogin / CommandAppLogin permission. Without the right or
+ * the permission everyone is let in.
+ */
+export function mayUseApp(department: AppLoginRules, user: QaUser, right: AppAccessRight | null): boolean {
+  if (!right) return true;
+  const permission = department.features.permissions.find((entry) => entry.type === APP_LOGIN_PERMISSIONS[right]);
+
+  if (!permission) return true;
+
+  if (!isPermissionAction(permission.action)) throw new Error(`${department.scenario}: permission action ${permission.action} is new to the QA suite; add it to PERMISSION_ACTIONS.`);
+  const hasRole = (permission.roles ?? []).some((role) => user.roles.includes(role));
+
+  return PERMISSION_ACTIONS[permission.action](user, hasRole);
 }

@@ -12,6 +12,7 @@ import { ConsoleMap } from '../components/console-map';
 jest.mock('@resgrid/maps', () => {
   const { Pressable, View } = require('react-native');
   const mockReact = require('react');
+
   return {
     MapView: ({ children, testID }: { children?: unknown; testID?: string }) => mockReact.createElement(View, { testID }, children),
     Camera: () => null,

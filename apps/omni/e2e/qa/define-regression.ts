@@ -5,15 +5,19 @@
 // navigation shows in flags-on and hides in flags-off.
 import type { Page } from '@playwright/test';
 
-import { flagGatedNav, flagsExpected, loadQaManifest, persona, QA_DIVERSION_HOSPITAL, type QaDepartment, type QaUser, resolveRoute, selectedQaDepartments, signedInRoutes } from '../support/qa-departments';
-import { expect, shellRoot, type test as qaTest } from '../support/qa-fixtures';
-import { loadManifest } from '../support/variants';
+import { LoginPage } from '../pages/login-page';
+import { flagGatedNav, flagsExpected, loadQaManifest, mayUseApp, persona, QA_DIVERSION_HOSPITAL, type QaDepartment, type QaUser, resolveRoute, selectedQaDepartments, signedInRoutes } from '../support/qa-departments';
+import { accessDenied, expect, shellRoot, type test as qaTest } from '../support/qa-fixtures';
+import { loadManifest, type VariantId } from '../support/variants';
 
 const manifest = loadQaManifest();
 const departments = manifest ? selectedQaDepartments(manifest) : [];
 
 // Time for a screen's first requests to land before the next one opens (E2E_QA_SETTLE_MS).
 const SETTLE_MS = Number(process.env.E2E_QA_SETTLE_MS ?? 1500);
+
+/** Whether the department lets this persona sign in to the app under test (Dispatch and IC need an app-login permission). */
+const mayUse = (department: QaDepartment, user: QaUser, variantId: VariantId): boolean => mayUseApp(department, user, loadManifest(variantId).capabilities.auth.appAccessRight);
 
 /** The persona each department's sweep signs in as: the admin sees every screen; restricted also checks a member. */
 const sweepPersonas = (department: QaDepartment): QaUser[] =>
@@ -52,6 +56,7 @@ export function defineQaRegression(test: typeof qaTest): void {
 
         for (const user of sweepPersonas(department)) {
           test(`every screen renders for ${user.persona}`, async ({ page, signIn, variantId, appUrl }) => {
+            test.skip(!mayUse(department, user, variantId), `${department.scenario} keeps ${user.persona} out of this app: the access test checks that`);
             test.setTimeout(15 * 60_000);
             const { outcome } = await signIn(department, user);
 
@@ -79,6 +84,30 @@ export function defineQaRegression(test: typeof qaTest): void {
 
             if (skipped.length) test.info().annotations.push({ type: 'skipped routes', description: `${skipped.join(', ')}: no record in ${department.scenario} to open` });
           });
+
+          // The app-login permissions (DispatchAppLogin, CommandAppLogin): restricted lets only admins and dispatchers into
+          // Dispatch and only admins and officers into IC. The app turns anyone else away and signs them out.
+          if (user.persona !== 'admin') {
+            test(`${user.persona} is turned away and signed out where the department keeps them out of this app`, async ({ page, signIn, variantId, appUrl }) => {
+              test.skip(mayUse(department, user, variantId), `${department.scenario} lets ${user.persona} into this app`);
+
+              // The password is accepted, and the shell can show until the rights arrive; then the access gate takes over.
+              expect(['signed-in', 'access-denied'], `${user.username} signs in`).toContain((await signIn(department, user)).outcome);
+              await expect(accessDenied(page), `${user.username} is refused this app, with the notice saying why`).toBeVisible({ timeout: 45_000 });
+              await expect(shellRoot(page), 'no screen of the app shows').toHaveCount(0);
+
+              // No way back in: opening the app again shows the notice (the gate denies again from the stored rights while
+              // the sign-out completes) or the sign-in form, never a screen of the app; Back to sign in ends at the form.
+              const login = new LoginPage(page);
+
+              await page.goto(appUrl('/'));
+              await expect(accessDenied(page).or(login.screen).first(), 'reopening the app').toBeVisible({ timeout: 45_000 });
+              await expect(shellRoot(page), 'no screen of the app shows after a reload').toHaveCount(0);
+
+              if (await accessDenied(page).isVisible()) await page.getByTestId('access-denied-back').or(page.getByTestId('shell-access-denied-continue')).first().click();
+              await login.expectForm();
+            });
+          }
         }
 
         const admin = persona(department, 'admin');

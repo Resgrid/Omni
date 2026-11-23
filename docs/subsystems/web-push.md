@@ -8,11 +8,12 @@ Browser notifications for the web edition of all five apps (Responder, Unit, IC,
 2. After sign-in, the first click anywhere on the page opens the browser's permission prompt (browsers only allow it from a click). Dismissed, it asks again after 7 days. Denied, the person must re-allow notifications in the browser's site settings.
 3. With permission, the page (`packages/notifications/src/push-notification.web.ts`) registers `/service-worker.js` at scope `/`, gets an FCM token from the Firebase JS SDK with the VAPID key, and registers it with Core as Platform 3:
 
-   | App                           | Novu subscriber           | Endpoint                                       |
-   | ----------------------------- | ------------------------- | ---------------------------------------------- |
-   | Responder, Dispatch, BigBoard | `{code}_User_{userId}`    | `Devices/RegisterDevice`                       |
-   | Unit                          | `{code}_Unit_{unitId}`    | `Devices/RegisterUnitDevice` (with `UnitId`)   |
-   | IC                            | `{code}_IC_User_{userId}` | `Devices/RegisterDevice` (with `Source: 'IC'`) |
+   | App                 | Novu subscriber           | Endpoint                                             |
+   | ------------------- | ------------------------- | ---------------------------------------------------- |
+   | Responder, BigBoard | `{code}_User_{userId}`    | `Devices/RegisterDevice`                             |
+   | Dispatch            | `{code}_User_{userId}`    | `Devices/RegisterDevice` (with `Source: 'Dispatch'`) |
+   | Unit                | `{code}_Unit_{unitId}`    | `Devices/RegisterUnitDevice` (with `UnitId`)         |
+   | IC                  | `{code}_IC_User_{userId}` | `Devices/RegisterDevice` (with `Source: 'IC'`)       |
 
    Core adds the token to the subscriber's channel on the Novu web FCM integration (`resgrid-web-fcm`), next to that subscriber's other browsers (at most `WebPushConfig.MaxTokensPerSubscriber`, default 10). The token is re-registered daily, and moves when the person signs in to another department or Unit switches units.
 
@@ -23,6 +24,8 @@ Browser notifications for the web edition of all five apps (Responder, Unit, IC,
 The service worker is one file for all five apps. Expo copies `public/` into every export, and `scripts/web-export.mjs` writes the app's name into the copy (`packages/config-plugins/src/web-service-worker.js`) as the title of a push that arrives without one. The export fails if the worker is missing. It has no `fetch` handler, so it never touches the app's requests or caching.
 
 The desktop apps do not use the service worker: Electron's main process holds its own FCM connection (`apps/desktop/src/main/push-receiver.js`) with the same Firebase web app and registers its token the same way.
+
+On Windows, toasts show only for the AppUserModelID the NSIS installer registers with its Start menu shortcut (the app sets the same id, `main.js`). The portable `.exe` installs no shortcut, so it receives pushes but Windows shows no toast for them: desks that rely on push (a dispatch position, for one) use the installer. The desktop apps also receive pushes only while they run: closing the window quits the app on Windows and Linux.
 
 ## Setup
 

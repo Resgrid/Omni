@@ -5,7 +5,7 @@ import { useTranslation } from '@resgrid/i18n';
 import type { PersonnelInfoResultData } from '@resgrid/models';
 import { FlatList, Text } from '@resgrid/ui';
 import { RefreshCw, Users } from 'lucide-react-native';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { useConsoleStore } from '../hooks/use-console-store';
@@ -14,7 +14,7 @@ import { usePendingPersonnelIds } from '../hooks/use-pending-resource-ids';
 import { type ConsoleCallFilter, filterConsolePersonnel, isPersonOnCall } from '../lib/console-filters';
 import { isPersonAvailable } from '../lib/console-stats';
 import { PanelFrame, PanelIconButton } from './panel-frame';
-import { PanelSearch } from './panel-search';
+import { PanelSearch, usePanelQuery } from './panel-search';
 import { ConsolePersonnelRow } from './resource-rows';
 
 export interface PersonnelPanelProps {
@@ -38,7 +38,7 @@ export const PersonnelPanel: React.FC<PersonnelPanelProps> = ({ callFilter, onSe
   const availableOnly = useDashboardViewStore((state) => state.availableOnly);
   const selectedPersonnelId = useConsoleStore((state) => state.selectedPersonnelId);
   const pendingIds = usePendingPersonnelIds();
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = usePanelQuery('personnel');
 
   const visible = useMemo(() => filterConsolePersonnel(personnel, { query, availableOnly, callFilter }), [availableOnly, callFilter, personnel, query]);
   const availableCount = useMemo(() => visible.filter(isPersonAvailable).length, [visible]);

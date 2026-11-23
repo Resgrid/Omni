@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 /** Units with a status queued on this device (offline on-behalf writes waiting to sync). */
 export function usePendingUnitIds(): Set<string> {
   const queued = useUnitStatusStore((state) => state.queuedStatuses);
+
   return useMemo(
     () =>
       new Set(
@@ -18,6 +19,7 @@ export function usePendingUnitIds(): Set<string> {
 /** Members with a status queued on this device. */
 export function usePendingPersonnelIds(): Set<string> {
   const queued = usePersonnelStatusStore((state) => state.queuedWrites);
+
   return useMemo(
     () =>
       new Set(

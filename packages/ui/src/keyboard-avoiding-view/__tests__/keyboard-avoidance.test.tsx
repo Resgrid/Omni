@@ -5,7 +5,7 @@ import { KeyboardEvents, useReanimatedKeyboardAnimation } from 'react-native-key
 import { useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { BOTTOM_SHEET_TOP_GAP, CustomBottomSheet } from '../../bottom-sheet';
+import { BOTTOM_SHEET_BOTTOM_PADDING, BOTTOM_SHEET_SAFE_AREA_GAP, BOTTOM_SHEET_TOP_GAP, CustomBottomSheet, getBottomSheetBottomPadding } from '../../bottom-sheet';
 import { Modal, ModalBackdrop, ModalContent } from '../../modal';
 import { focusedInputScrollDelta, useKeepFocusedInputVisible } from '../keep-focused-input-visible';
 import { KEYBOARD_AWARE_BOTTOM_OFFSET, KeyboardAwareScrollView } from '../keyboard-aware-scroll-view';
@@ -155,6 +155,28 @@ describe('CustomBottomSheet and the keyboard', () => {
     await renderSheet();
 
     expect(styleOf('sheet-keyboard-frame')).toMatchObject({ paddingTop: BOTTOM_SHEET_TOP_GAP, paddingBottom: 0 });
+    expect(styleOf('sheet-content')).toMatchObject({ paddingBottom: BOTTOM_SHEET_BOTTOM_PADDING });
+  });
+
+  // The sheet's buttons sat 24 pt from the bottom of the display, on the home indicator (34 pt).
+  it('keeps its content clear of the home indicator, with its background running under it', async () => {
+    jest.mocked(useSafeAreaInsets).mockReturnValue({ top: 59, bottom: 34, left: 0, right: 0 });
+    await renderSheet();
+
+    expect(styleOf('sheet-content')).toMatchObject({ paddingBottom: 34 + BOTTOM_SHEET_SAFE_AREA_GAP });
+    expect(styleOf('sheet-keyboard-frame')).toMatchObject({ paddingBottom: 0 });
+    expect(getBottomSheetBottomPadding(0)).toBe(BOTTOM_SHEET_BOTTOM_PADDING);
+  });
+
+  // The keyboard covers the home indicator: the content stays BOTTOM_SHEET_BOTTOM_PADDING above the keyboard, as without an inset.
+  it('takes the home indicator back while the keyboard is up', async () => {
+    jest.mocked(useSafeAreaInsets).mockReturnValue({ top: 59, bottom: 34, left: 0, right: 0 });
+    await keyboardUp(320);
+    await renderSheet();
+
+    const contentPadding = 34 + BOTTOM_SHEET_SAFE_AREA_GAP;
+    expect(styleOf('sheet-keyboard-frame')).toMatchObject({ paddingBottom: 320 - (contentPadding - BOTTOM_SHEET_BOTTOM_PADDING) });
+    expect(Number(styleOf('sheet-keyboard-frame').paddingBottom) + contentPadding).toBe(320 + BOTTOM_SHEET_BOTTOM_PADDING);
   });
 
   it('tracks its scroll position so it can scroll the focused field into view', async () => {

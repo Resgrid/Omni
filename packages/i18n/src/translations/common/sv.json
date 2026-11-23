@@ -1617,12 +1617,14 @@
     "tracking_notification_title": "Platsspårning",
     "permission_foreground_title": "Allow location access",
     "permission_foreground_message": "{{appName}} uses your location while the app is open to show where you are on the map and to share your position with your department.",
-    "permission_background_title": "Allow location all the time",
-    "permission_background_message": "To keep your department updated while {{appName}} is in the background or the screen is off, allow location access \"All the time\" (Android: \"Allow all the time\"; iOS: \"Always\") in the next prompt or in Settings.",
-    "permission_blocked_message": "Location access is turned off for {{appName}}. Open Settings to allow it.",
+    "permission_background_title": "Tillåt plats hela tiden",
+    "permission_background_message": "För att din avdelning ska hållas uppdaterad medan {{appName}} körs i bakgrunden eller skärmen är avstängd, välj ”Tillåt hela tiden” (Android) eller ”Alltid” (iOS) i nästa fråga eller i Inställningar.",
+    "permission_background_disclosure_person": "{{appName}} samlar in platsdata för att dela din position med din avdelning medan du rycker ut, så att de ser vem som är närmast ett larm, även när appen är stängd eller inte används. Din plats delas bara med din avdelning.",
+    "permission_background_disclosure_unit": "{{appName}} samlar in platsdata för att skicka den här enhetens position till din avdelnings larmoperatörer och hålla vägbeskrivningen igång, även när appen är stängd eller inte används. Platsen delas bara med din avdelning.",
+    "permission_blocked_message": "Platsåtkomst är avstängd för {{appName}}. Öppna Inställningar för att tillåta den.",
     "permission_open_settings": "Open Settings",
-    "permission_continue": "Continue",
-    "permission_not_now": "Not now"
+    "permission_continue": "Fortsätt",
+    "permission_not_now": "Inte nu"
   },
   "location_history": {
     "address_matching_off": "Avancerat dataskydd är aktiverat för den här avdelningen, så larmadresser är krypterade och endast larm kopplade via kontakt visas.",
@@ -3159,6 +3161,7 @@
     "advanced": "Advanced",
     "audio": "Audio",
     "background_geolocation_denied": "Background location needs the \"Allow all the time\" permission. Allow it in your device settings, then turn this on again.",
+    "background_geolocation_failed": "Background location could not be turned on. Try again.",
     "location": "Location",
     "login_info_description": "Sign in again, for example after changing your password or to switch to another account.",
     "no_units_available_help": "Inga enheter är tilldelade dig. Be din avdelningsadministratör lägga till dig i en enhets stationsgrupp.",
@@ -5149,7 +5152,7 @@
       "sent": "Skickat"
     },
     "desk_off": "Larmoperatörsplatsen är avstängd",
-    "desk_off_description": "Din organisation har inte slagit på larmoperatörsplatsen. En administratör kan slå på den under Skift > Inställningar för operatörsplatsen.",
+    "desk_off_description": "Din organisation har inte slagit på larmoperatörsplatsen. En administratör kan slå på den under Skift > Operatörsplats > Inställningar för operatörsplatsen.",
     "device": {
       "desktop": "Dator",
       "phone": "Telefon",

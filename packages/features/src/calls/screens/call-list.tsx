@@ -3,7 +3,7 @@ import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { type CallListItem, useCallsStore, useCheckInTimersStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import type { DispatchedEventResultData } from '@resgrid/models';
-import { Fab, FlatList, Loading, RefreshControl, TabBar, type TabBarItem, useFormFactor, useThemeColors, ZeroState } from '@resgrid/ui';
+import { Fab, FlatList, Loading, RefreshControl, TabBar, type TabBarItem, useFabListPadding, useFormFactor, useThemeColors, ZeroState } from '@resgrid/ui';
 import { useRouter } from 'expo-router';
 import { Plus } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -40,6 +40,7 @@ const TAB_KEYS: Record<CallListTab, string> = { active: 'calls.tabs.active', pen
 export default function CallListScreen({ density, realtime = true, onOpenCall }: CallListScreenProps) {
   const { t } = useTranslation();
   const colors = useThemeColors();
+  const fabListPadding = useFabListPadding();
   const router = useRouter();
   const calls = useCapability('calls');
   const { canCreate } = useCallPermissions();
@@ -164,7 +165,7 @@ export default function CallListScreen({ density, realtime = true, onOpenCall }:
         data={visible}
         keyExtractor={(item: CallListItem) => item.CallId}
         renderItem={renderItem}
-        contentContainerStyle={canCreate ? styles.listAboveFab : styles.list}
+        contentContainerStyle={canCreate ? StyleSheet.flatten([styles.list, { paddingBottom: fabListPadding }]) : styles.list}
         ListEmptyComponent={emptyState}
         refreshControl={<RefreshControl refreshing={false} onRefresh={() => void refreshAll()} />}
         testID="call-list"
@@ -184,6 +185,4 @@ export default function CallListScreen({ density, realtime = true, onOpenCall }:
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   list: { paddingHorizontal: 12, paddingBottom: 24, paddingTop: 8 },
-  // Room for the New Call button over the last card.
-  listAboveFab: { paddingHorizontal: 12, paddingBottom: 96, paddingTop: 8 },
 });

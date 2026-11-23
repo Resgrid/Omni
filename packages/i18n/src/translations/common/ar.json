@@ -1617,12 +1617,14 @@
     "tracking_notification_title": "تتبع الموقع",
     "permission_foreground_title": "Allow location access",
     "permission_foreground_message": "{{appName}} uses your location while the app is open to show where you are on the map and to share your position with your department.",
-    "permission_background_title": "Allow location all the time",
-    "permission_background_message": "To keep your department updated while {{appName}} is in the background or the screen is off, allow location access \"All the time\" (Android: \"Allow all the time\"; iOS: \"Always\") in the next prompt or in Settings.",
-    "permission_blocked_message": "Location access is turned off for {{appName}}. Open Settings to allow it.",
+    "permission_background_title": "السماح بالوصول إلى الموقع طوال الوقت",
+    "permission_background_message": "لإبقاء إدارتك على اطلاع أثناء عمل {{appName}} في الخلفية أو عندما تكون الشاشة مطفأة، اختر \"السماح طوال الوقت\" (Android) أو \"دائمًا\" (iOS) في الطلب التالي أو في الإعدادات.",
+    "permission_background_disclosure_person": "يجمع {{appName}} بيانات الموقع لمشاركة موقعك مع إدارتك أثناء الاستجابة، حتى تتمكن من معرفة الأقرب إلى البلاغ، حتى عندما يكون التطبيق مغلقًا أو غير مستخدم. تتم مشاركة موقعك مع إدارتك فقط.",
+    "permission_background_disclosure_unit": "يجمع {{appName}} بيانات الموقع لإرسال موقع هذه الوحدة إلى مرسلي إدارتك وللإبقاء على الملاحة خطوة بخطوة، حتى عندما يكون التطبيق مغلقًا أو غير مستخدم. تتم مشاركة الموقع مع إدارتك فقط.",
+    "permission_blocked_message": "الوصول إلى الموقع متوقف لتطبيق {{appName}}. افتح الإعدادات للسماح به.",
     "permission_open_settings": "Open Settings",
-    "permission_continue": "Continue",
-    "permission_not_now": "Not now"
+    "permission_continue": "متابعة",
+    "permission_not_now": "ليس الآن"
   },
   "location_history": {
     "address_matching_off": "الحماية المتقدمة للبيانات مفعّلة لهذه الإدارة، لذلك عناوين المكالمات مشفرة ولا تظهر إلا المكالمات المرتبطة عبر جهة اتصال.",
@@ -3159,6 +3161,7 @@
     "advanced": "Advanced",
     "audio": "Audio",
     "background_geolocation_denied": "Background location needs the \"Allow all the time\" permission. Allow it in your device settings, then turn this on again.",
+    "background_geolocation_failed": "Background location could not be turned on. Try again.",
     "location": "Location",
     "login_info_description": "Sign in again, for example after changing your password or to switch to another account.",
     "no_units_available_help": "لم يتم تعيين أي وحدات لك. اطلب من مسؤول القسم إضافتك إلى مجموعة محطة إحدى الوحدات.",
@@ -5149,7 +5152,7 @@
       "sent": "مرسلة"
     },
     "desk_off": "مكتب المرسلين متوقف",
-    "desk_off_description": "لم يُفعّل قسمك مكتب المرسلين. يمكن لمسؤول القسم تفعيله من الورديات > إعدادات مكتب الإرسال.",
+    "desk_off_description": "لم يُفعّل قسمك مكتب المرسلين. يمكن لمسؤول القسم تفعيله من الورديات > مكتب الإرسال > إعدادات مكتب الإرسال.",
     "device": {
       "desktop": "حاسوب مكتبي",
       "phone": "هاتف",

@@ -1,4 +1,4 @@
-import { FormFactorProvider, GluestackUIProvider, ToastContainer, useResolvedColorScheme } from '@resgrid/ui';
+import { FormFactorProvider, GluestackUIProvider, ThemedStatusBar, ToastContainer, useResolvedColorScheme } from '@resgrid/ui';
 import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
 import React, { type ReactNode } from 'react';
 import { StyleSheet } from 'react-native';
@@ -37,6 +37,7 @@ export function RootProviders({ children }: { children?: ReactNode }) {
               <NavigationTheme>
                 <ShellInboxProvider>{children}</ShellInboxProvider>
               </NavigationTheme>
+              <ThemedStatusBar />
               <PushNotificationModalHost />
               <ToastContainer />
             </GluestackUIProvider>

@@ -1,6 +1,6 @@
 import { summarizeUnitAlerts, useUnitAlerts } from '@resgrid/features/unit-status-alerts';
 import { useTranslation } from '@resgrid/i18n';
-import { contentOnFill, HStack, Pressable, Text, useResolvedColorScheme, useThemeColors, VStack } from '@resgrid/ui';
+import { contentOnFill, HStack, Pressable, ScrollRow, Text, useResolvedColorScheme, useThemeColors, VStack } from '@resgrid/ui';
 import type { LucideIcon } from 'lucide-react-native';
 import { AlertTriangle, CalendarClock, Clock, CloudLightning, Phone, Timer, Truck, User, Users } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -29,6 +29,8 @@ const TONES = {
 } satisfies Record<string, TileTone>;
 
 interface StatTileProps {
+  /** One line of fixed-width tiles (the phone's scrolling strip) instead of tiles that wrap and grow. */
+  compact?: boolean;
   icon: LucideIcon;
   label: string;
   value: number | string;
@@ -41,7 +43,7 @@ interface StatTileProps {
 const LABEL_ON_LIGHT = '#4b5563';
 const LABEL_ON_DARK = '#d1d5db';
 
-const StatTile: React.FC<StatTileProps> = React.memo(({ icon: Icon, label, value, tone, onPress, testID }) => {
+const StatTile: React.FC<StatTileProps> = React.memo(({ compact = false, icon: Icon, label, value, tone, onPress, testID }) => {
   const isDark = useResolvedColorScheme() === 'dark';
   const background = isDark ? tone.darkBackground : tone.background;
   const isLightWash = contentOnFill(background) !== '#ffffff';
@@ -67,11 +69,11 @@ const StatTile: React.FC<StatTileProps> = React.memo(({ icon: Icon, label, value
 
   // Only the queue, timer and weather tiles open something; the others are plain tiles (a disabled Pressable is drawn dimmed).
   return onPress ? (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`${label}: ${value}`} style={styles.tile} testID={testID}>
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`${label}: ${value}`} style={compact ? styles.compactTile : styles.tile} testID={testID}>
       {content}
     </Pressable>
   ) : (
-    <View accessible accessibilityLabel={`${label}: ${value}`} style={styles.tile} testID={testID}>
+    <View accessible accessibilityLabel={`${label}: ${value}`} style={compact ? styles.compactTile : styles.tile} testID={testID}>
       {content}
     </View>
   );
@@ -99,7 +101,7 @@ LiveClock.displayName = 'LiveClock';
  * Units over their status timer that nobody has acknowledged yet, in the alert's red (amber while only warnings): the
  * dispatcher's cue to contact them. Its own leaf, since the timers re-evaluate on a tick. Hidden while there are none.
  */
-const UnitTimersTile: React.FC<{ onPress?: () => void }> = React.memo(({ onPress }) => {
+const UnitTimersTile: React.FC<{ compact: boolean; onPress?: () => void }> = React.memo(({ compact, onPress }) => {
   const { t } = useTranslation();
   const { annotated } = useUnitAlerts();
   const summary = useMemo(() => summarizeUnitAlerts(annotated), [annotated]);
@@ -108,6 +110,7 @@ const UnitTimersTile: React.FC<{ onPress?: () => void }> = React.memo(({ onPress
 
   return (
     <StatTile
+      compact={compact}
       icon={Timer}
       label={t('dispatch_console.unit_timers')}
       value={summary.unacknowledged}
@@ -133,6 +136,11 @@ export interface StatsHeaderProps {
   onUnitTimersPress?: () => void;
   /** Off in tests (the clock ticks every second). */
   showClock?: boolean;
+  /**
+   * Phones: the tiles on one line that scrolls sideways (wrapped, they took a third of the screen), without the clock
+   * (the phone's status bar has one).
+   */
+  compact?: boolean;
 }
 
 /**
@@ -140,23 +148,58 @@ export interface StatsHeaderProps {
  * personnel on duty, units over their status timers, extreme/severe weather alerts and a clock, each tile washed in its
  * own colour. The queue, timer and weather tiles open their screens or tab.
  */
-export const StatsHeader: React.FC<StatsHeaderProps> = ({ stats, pendingCalls, extremeAlerts, severeAlerts, onPendingCallsPress, onScheduledCallsPress, onWeatherAlertsPress, onUnitTimersPress, showClock = true }) => {
+export const StatsHeader: React.FC<StatsHeaderProps> = ({
+  stats,
+  pendingCalls,
+  extremeAlerts,
+  severeAlerts,
+  onPendingCallsPress,
+  onScheduledCallsPress,
+  onWeatherAlertsPress,
+  onUnitTimersPress,
+  showClock = true,
+  compact = false,
+}) => {
   const { t } = useTranslation();
   const colors = useThemeColors();
+
+  const tiles = (
+    <>
+      <StatTile compact={compact} icon={AlertTriangle} label={t('dispatch.active_calls')} value={stats.activeCalls} tone={TONES.active} testID="stat-active-calls" />
+      <StatTile compact={compact} icon={Phone} label={t('pending_calls.title')} value={pendingCalls} tone={TONES.pending} onPress={onPendingCallsPress} testID="stat-pending-calls" />
+      <StatTile compact={compact} icon={CalendarClock} label={t('scheduled_calls.title')} value={stats.scheduledCalls} tone={TONES.scheduled} onPress={onScheduledCallsPress} testID="stat-scheduled-calls" />
+      <StatTile compact={compact} icon={Truck} label={t('dispatch_console.units_available')} value={stats.unitsAvailable} tone={TONES.units} testID="stat-units-available" />
+      <StatTile compact={compact} icon={User} label={t('dispatch_console.personnel_available')} value={stats.personnelAvailable} tone={TONES.personnel} testID="stat-personnel-available" />
+      <StatTile compact={compact} icon={Users} label={t('dispatch_console.personnel_on_duty')} value={stats.personnelOnDuty} tone={TONES.onDuty} testID="stat-personnel-on-duty" />
+      <UnitTimersTile compact={compact} onPress={onUnitTimersPress} />
+      {extremeAlerts + severeAlerts > 0 ? (
+        <StatTile
+          compact={compact}
+          icon={CloudLightning}
+          label={t('dispatch_console.weather_alerts')}
+          value={`${extremeAlerts} / ${severeAlerts}`}
+          tone={TONES.weather}
+          onPress={onWeatherAlertsPress}
+          testID="stat-weather-alerts"
+        />
+      ) : null}
+    </>
+  );
+
+  if (compact) {
+    return (
+      <View className="border-b border-outline-200 bg-background-0 py-1" testID="console-stats-header">
+        <ScrollRow contentContainerStyle={styles.compactRow} testID="console-stats-strip">
+          {tiles}
+        </ScrollRow>
+      </View>
+    );
+  }
 
   return (
     <View className="border-b border-outline-200 bg-background-0 p-1" testID="console-stats-header">
       <HStack className="flex-wrap items-stretch">
-        <StatTile icon={AlertTriangle} label={t('dispatch.active_calls')} value={stats.activeCalls} tone={TONES.active} testID="stat-active-calls" />
-        <StatTile icon={Phone} label={t('pending_calls.title')} value={pendingCalls} tone={TONES.pending} onPress={onPendingCallsPress} testID="stat-pending-calls" />
-        <StatTile icon={CalendarClock} label={t('scheduled_calls.title')} value={stats.scheduledCalls} tone={TONES.scheduled} onPress={onScheduledCallsPress} testID="stat-scheduled-calls" />
-        <StatTile icon={Truck} label={t('dispatch_console.units_available')} value={stats.unitsAvailable} tone={TONES.units} testID="stat-units-available" />
-        <StatTile icon={User} label={t('dispatch_console.personnel_available')} value={stats.personnelAvailable} tone={TONES.personnel} testID="stat-personnel-available" />
-        <StatTile icon={Users} label={t('dispatch_console.personnel_on_duty')} value={stats.personnelOnDuty} tone={TONES.onDuty} testID="stat-personnel-on-duty" />
-        <UnitTimersTile onPress={onUnitTimersPress} />
-        {extremeAlerts + severeAlerts > 0 ? (
-          <StatTile icon={CloudLightning} label={t('dispatch_console.weather_alerts')} value={`${extremeAlerts} / ${severeAlerts}`} tone={TONES.weather} onPress={onWeatherAlertsPress} testID="stat-weather-alerts" />
-        ) : null}
+        {tiles}
         {showClock ? (
           <HStack space="xs" className="items-center justify-center rounded-lg bg-background-50 px-4 py-2" style={styles.tile} testID="stat-clock">
             <View>
@@ -172,5 +215,7 @@ export const StatsHeader: React.FC<StatsHeaderProps> = ({ stats, pendingCalls, e
 
 const styles = StyleSheet.create({
   tile: { flexGrow: 1, flexBasis: 120, margin: 4, minWidth: 120 },
+  compactTile: { width: 132, marginHorizontal: 3 },
+  compactRow: { paddingHorizontal: 4, alignItems: 'stretch' },
   icon: { width: 32, height: 32, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
 });

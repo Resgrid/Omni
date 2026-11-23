@@ -8,11 +8,11 @@ import type { NoteResultData } from '@resgrid/models';
 import { FlatList, ScrollView, Text, useKeepFocusedInputVisible } from '@resgrid/ui';
 import { router } from 'expo-router';
 import { FileText, Plus, RefreshCw } from 'lucide-react-native';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { PanelFrame, PanelIconButton } from './panel-frame';
-import { PanelSearch } from './panel-search';
+import { PanelSearch, usePanelQuery } from './panel-search';
 
 export interface NotesPanelProps {
   /** Filtered to a call: shows that call's notes with the (offline-capable) composer instead of department notes. */
@@ -32,7 +32,7 @@ export const NotesPanel: React.FC<NotesPanelProps> = ({ callId, onNewNote, flex,
   const title = useTerm('module.notes', t('dispatch.notes'));
   const notes = useNotesStore((state) => state.notes);
   const isLoading = useNotesStore((state) => state.loading.notes === true);
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = usePanelQuery('notes');
   const visible = useMemo(() => searchNotes(notes, query), [notes, query]);
 
   const openNote = useCallback((note: NoteResultData) => pushRoutePath(router, noteRoutes.noteDetail(note.NoteId)), []);

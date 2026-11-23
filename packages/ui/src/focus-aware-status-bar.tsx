@@ -70,3 +70,15 @@ export const FocusAwareStatusBar = ({ hidden = false }: Props) => {
   // edge-to-edge; the navigation bar is hidden through expo-navigation-bar above.
   return isFocused && (Platform.OS === 'android' || Platform.OS === 'ios') ? <ExpoStatusBar style={wantsLightContent ? 'light' : 'dark'} hidden={hidden} /> : null;
 };
+
+/**
+ * The app's status bar, following the app's own theme rather than the device's: dark icons over the light app bar,
+ * light icons over the dark one. Mounted once at the root (the app shell's providers) so a theme chosen in Settings that
+ * differs from the device's, or a development client's launcher, never leaves white icons on a light bar. A screen's
+ * own `FocusAwareStatusBar` still overrides it while focused.
+ */
+export const ThemedStatusBar: React.FC = () => {
+  const colorScheme = useResolvedColorScheme();
+
+  return Platform.OS === 'web' ? null : <ExpoStatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />;
+};

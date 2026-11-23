@@ -9,8 +9,8 @@ import { test as webTest } from './web-fixtures';
 /** The refusal code a Core error body carries: OAuth `error`, problem-details `type` or the v4 envelope `Status`. */
 const ErrorBodySchema = z.object({ error: z.string().optional(), type: z.string().optional(), Status: z.string().optional() });
 
-/** Where a sign-in attempt ended. */
-export type SignInOutcome = 'signed-in' | 'refused' | 'mfa-enrollment';
+/** Where a sign-in attempt ended: `access-denied` is the app-access gate turning away a member the app is not for. */
+export type SignInOutcome = 'signed-in' | 'refused' | 'mfa-enrollment' | 'access-denied';
 
 export interface SignedIn {
   outcome: SignInOutcome;
@@ -35,6 +35,12 @@ interface QaTestFixtures {
 
 /** The app shell is up: `app-shell-<shell kind>` wraps every signed-in screen. */
 export const shellRoot = (page: Page): Locator => page.locator('[data-testid^="app-shell-"]');
+
+/**
+ * The app-access gate's notice (Dispatch `CanLoginToDispatchApp`, IC `CanLoginToCommandApp`): the app's registered
+ * screen or the shell's fallback. The app has signed the member out by the time it shows.
+ */
+export const accessDenied = (page: Page): Locator => page.getByTestId('access-denied-screen').or(page.getByTestId('shell-gate-access-denied'));
 
 /**
  * QA regression fixtures: the web fixtures (static export, console-error guard) plus the seeded departments' manifest
@@ -115,7 +121,8 @@ export const test = webTest.extend<QaTestFixtures, QaWorkerFixtures>({
       const mfaCode = page.getByTestId('login-mfa-code').or(page.getByTestId('login-otp-code'));
       const refused = page.getByTestId('login-error-dialog').or(page.getByTestId('login-error-message'));
       const enrollment = page.getByTestId('mfa-setup-key').or(page.getByTestId('mfa-setup-shared-key'));
-      await expect(shellRoot(page).or(mfaCode).or(refused).or(enrollment).first(), `sign-in of ${user.username} (${department.scenario})`).toBeVisible({ timeout: 45_000 });
+      const denied = accessDenied(page);
+      await expect(shellRoot(page).or(mfaCode).or(refused).or(enrollment).or(denied).first(), `sign-in of ${user.username} (${department.scenario})`).toBeVisible({ timeout: 45_000 });
 
       if (user.totpSecret && (await mfaCode.isVisible())) {
         // A fresh time step per sign-in, submitted while this persona's turn is held: Core refuses a replayed or older step,
@@ -131,15 +138,19 @@ export const test = webTest.extend<QaTestFixtures, QaWorkerFixtures>({
             // The sheet may already have submitted the sixth digit by itself.
             .click({ timeout: 2_000 })
             .catch(() => undefined);
-          await expect(shellRoot(page).or(refused).first()).toBeVisible({ timeout: 45_000 });
+          await expect(shellRoot(page).or(refused).or(denied).first()).toBeVisible({ timeout: 45_000 });
         });
       }
 
-      const outcome: SignInOutcome = (await shellRoot(page).isVisible()) ? 'signed-in' : (await enrollment.isVisible()) ? 'mfa-enrollment' : 'refused';
-
-      if (outcome === 'signed-in') {
+      if (await shellRoot(page).isVisible()) {
         await expect(page.getByTestId('shell-init-loading')).toHaveCount(0, { timeout: 60_000 });
       }
+
+      // The access gate's notice replaces the shell once the rights arrive, which can be after the shell first shows:
+      // a test expecting a refusal waits for it (`accessDenied`).
+      if (await denied.isVisible()) return { outcome: 'access-denied', flags };
+
+      const outcome: SignInOutcome = (await shellRoot(page).isVisible()) ? 'signed-in' : (await enrollment.isVisible()) ? 'mfa-enrollment' : 'refused';
 
       return { outcome, flags };
     });

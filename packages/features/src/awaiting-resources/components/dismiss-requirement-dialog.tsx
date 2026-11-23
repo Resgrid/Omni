@@ -1,5 +1,5 @@
 import { useTranslation } from '@resgrid/i18n';
-import { BottomAnchoredKeyboardView, Box, Button, ButtonSpinner, ButtonText, Heading, HStack, Input, InputField, NativeModal, Text, VStack } from '@resgrid/ui';
+import { BottomAnchoredKeyboardView, Box, Button, ButtonSpinner, ButtonText, Heading, HStack, Input, InputField, NativeModal, ScrollView, Text, useKeepFocusedInputVisible, VStack } from '@resgrid/ui';
 import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 
@@ -23,6 +23,8 @@ export interface DismissRequirementDialogProps {
  */
 export const DismissRequirementDialog: React.FC<DismissRequirementDialogProps> = ({ isOpen, requirementLabel, isSubmitting, onConfirm, onClose }) => {
   const { t } = useTranslation();
+  // The dialog sits on top of the keyboard (BottomAnchoredKeyboardView): this scrolls the note back into what is left.
+  const keepFocusedInputVisible = useKeepFocusedInputVisible(isOpen);
   const [note, setNote] = useState('');
   const testID = 'dismiss-requirement-dialog';
 
@@ -38,31 +40,42 @@ export const DismissRequirementDialog: React.FC<DismissRequirementDialogProps> =
       {/* Centred in the space above the keyboard, so the field and the buttons stay in view while typing. */}
       <BottomAnchoredKeyboardView pointerEvents="box-none">
         <Box className="flex-1 items-center justify-center p-4" pointerEvents="box-none">
-          <Box className="w-full max-w-md rounded-2xl bg-background-0 p-5" accessibilityViewIsModal>
-            <VStack space="md">
-              <Heading size="md" accessibilityRole="header">
-                {t('awaiting_resources.dismiss_title')}
-              </Heading>
-              <Text>{t('awaiting_resources.dismiss_confirm', { label: requirementLabel ?? '' })}</Text>
-              <Input variant="outline" size="md" isDisabled={isSubmitting}>
-                <InputField
-                  testID="dismiss-requirement-note"
-                  value={note}
-                  onChangeText={setNote}
-                  placeholder={t('awaiting_resources.dismiss_note_placeholder')}
-                  maxLength={DISMISS_NOTE_MAX_LENGTH}
-                  accessibilityLabel={t('awaiting_resources.dismiss_note_placeholder')}
-                />
-              </Input>
-              <HStack space="sm" className="justify-end">
-                <Button variant="outline" action="secondary" onPress={onClose} isDisabled={isSubmitting} testID={`${testID}-cancel`}>
-                  <ButtonText>{t('common.cancel')}</ButtonText>
-                </Button>
-                <Button action="negative" onPress={() => onConfirm(note.trim())} isDisabled={isSubmitting} testID={`${testID}-confirm`}>
-                  {isSubmitting ? <ButtonSpinner /> : <ButtonText>{t('awaiting_resources.dismiss')}</ButtonText>}
-                </Button>
-              </HStack>
-            </VStack>
+          {/* Never taller than the space left above the keyboard (a landscape phone has ~390 pt): the body scrolls instead of clipping. */}
+          <Box className="w-full max-w-md rounded-2xl bg-background-0" style={styles.card} accessibilityViewIsModal testID={`${testID}-card`}>
+            <ScrollView
+              ref={keepFocusedInputVisible.scrollRef}
+              onScroll={keepFocusedInputVisible.onScroll}
+              scrollEventThrottle={keepFocusedInputVisible.scrollEventThrottle}
+              style={styles.scroll}
+              contentContainerStyle={styles.content}
+              keyboardShouldPersistTaps="handled"
+              testID={`${testID}-scroll`}
+            >
+              <VStack space="md">
+                <Heading size="md" accessibilityRole="header">
+                  {t('awaiting_resources.dismiss_title')}
+                </Heading>
+                <Text>{t('awaiting_resources.dismiss_confirm', { label: requirementLabel ?? '' })}</Text>
+                <Input variant="outline" size="md" isDisabled={isSubmitting}>
+                  <InputField
+                    testID="dismiss-requirement-note"
+                    value={note}
+                    onChangeText={setNote}
+                    placeholder={t('awaiting_resources.dismiss_note_placeholder')}
+                    maxLength={DISMISS_NOTE_MAX_LENGTH}
+                    accessibilityLabel={t('awaiting_resources.dismiss_note_placeholder')}
+                  />
+                </Input>
+                <HStack space="sm" className="justify-end">
+                  <Button variant="outline" action="secondary" onPress={onClose} isDisabled={isSubmitting} testID={`${testID}-cancel`}>
+                    <ButtonText>{t('common.cancel')}</ButtonText>
+                  </Button>
+                  <Button action="negative" onPress={() => onConfirm(note.trim())} isDisabled={isSubmitting} testID={`${testID}-confirm`}>
+                    {isSubmitting ? <ButtonSpinner /> : <ButtonText>{t('awaiting_resources.dismiss')}</ButtonText>}
+                  </Button>
+                </HStack>
+              </VStack>
+            </ScrollView>
           </Box>
         </Box>
       </BottomAnchoredKeyboardView>
@@ -72,4 +85,8 @@ export const DismissRequirementDialog: React.FC<DismissRequirementDialogProps> =
 
 const styles = StyleSheet.create({
   backdrop: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: 'rgba(0,0,0,0.5)' },
+  card: { maxHeight: '100%', flexShrink: 1, overflow: 'hidden' },
+  // As tall as its content until the card's cap, then it gives up height and scrolls.
+  scroll: { flexGrow: 0, flexShrink: 1 },
+  content: { padding: 20 },
 });

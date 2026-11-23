@@ -458,6 +458,7 @@
       "already_on_roster": "Diese Person ist an diesem Tag bereits eingetragen.",
       "already_signed_up": "Sie sind für diesen Tag bereits angemeldet.",
       "day_in_past": "Dieser Schichttag ist bereits vorbei.",
+      "group_full": "Alle Plätze in dieser Gruppe für Ihre Rollen sind belegt.",
       "invalid_group": "Diese Gruppe gehört nicht zu dieser Schicht.",
       "invalid_offer": "Dieses Angebot ist nicht mehr gültig.",
       "invalid_request": "Die Anfrage war ungültig. Bitte versuchen Sie es erneut.",
@@ -468,6 +469,7 @@
       "not_found": "Diese Schicht, Anmeldung oder dieser Tausch existiert nicht mehr.",
       "not_on_shift": "Sie sind an diesem Schichttag nicht eingeteilt.",
       "not_pending": "Diese Anfrage ist nicht mehr offen.",
+      "role_required": "Sie benötigen eine der Rollen, die diese Gruppe verlangt, um sich anzumelden.",
       "trade_exists": "Für diesen Tag gibt es bereits einen offenen Tausch.",
       "unknown": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut."
     },

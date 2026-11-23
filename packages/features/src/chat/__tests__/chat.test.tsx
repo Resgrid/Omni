@@ -5,11 +5,12 @@ import { featureFlagsStore, securityStore, useAuthStore } from '@resgrid/auth';
 import { setDataApiContext, useChatStore, usePersonnelStore } from '@resgrid/data';
 import { type ChatChannelResultData, ChatChannelType, type ChatMessageResultData, ChatMessageType, type DepartmentRightsResultData, type PersonnelInfoResultData } from '@resgrid/models';
 import { emitRealtimeEvent, signalRService, useRealtimeStore } from '@resgrid/realtime';
-import { GluestackUIProvider, useToastStore } from '@resgrid/ui';
+import { BottomInsetConsumedContext, GluestackUIProvider, useToastStore } from '@resgrid/ui';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { router, useFocusEffect } from 'expo-router';
 import React from 'react';
-import { Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ChatIdentityProvider } from '../chat-identity';
 import { ChatGate } from '../components/chat-gate';
@@ -302,6 +303,36 @@ describe('ChatConversationScreen', () => {
     await fireEvent.changeText(screen.getByTestId('chat-composer-input'), 'On scene');
     await fireEvent.press(screen.getByTestId('chat-composer-send'));
     await waitFor(() => expect(sendMessage).toHaveBeenCalledWith({ channelId: 'c1', body: 'On scene', priority: 0, asUnitId: 7 }));
+  });
+
+  describe('the home indicator', () => {
+    const composerPadding = () => StyleSheet.flatten(screen.getByTestId('chat-composer').props.style).paddingBottom;
+
+    beforeEach(() => {
+      jest.mocked(useSafeAreaInsets).mockReturnValue({ top: 59, bottom: 34, left: 0, right: 0 });
+    });
+
+    afterEach(() => {
+      jest.mocked(useSafeAreaInsets).mockReturnValue({ top: 0, bottom: 0, left: 0, right: 0 });
+    });
+
+    // Dispatch, IC's drawer… and Responder's pushed chat reach the bottom of the display: the send button sat on the home indicator.
+    it('keeps the composer clear of it where the screen reaches the bottom of the display', async () => {
+      await render(<ChatConversationScreen channelId="c1" />);
+
+      expect(composerPadding()).toBe(8 + 34);
+    });
+
+    // Unit and IC: the tab bar under the screen already clears it.
+    it('pads nothing extra above a bottom tab bar', async () => {
+      await render(
+        <BottomInsetConsumedContext.Provider value>
+          <ChatConversationScreen channelId="c1" />
+        </BottomInsetConsumedContext.Provider>
+      );
+
+      expect(composerPadding()).toBe(8);
+    });
   });
 
   it('queues a message offline without an error and clears the composer; urgent sets the priority', async () => {

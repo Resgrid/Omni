@@ -6,7 +6,7 @@ import { useTranslation } from '@resgrid/i18n';
 import type { UnitInfoResultData } from '@resgrid/models';
 import { FlatList, HStack, Pressable, Text } from '@resgrid/ui';
 import { ListChecks, RefreshCw, Truck } from 'lucide-react-native';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { type GestureResponderEvent, StyleSheet, View } from 'react-native';
 
 import { useConsoleStore } from '../hooks/use-console-store';
@@ -16,7 +16,7 @@ import { type ConsoleCallFilter, filterConsoleUnits, isUnitOnCall } from '../lib
 import { isUnitAvailable } from '../lib/console-stats';
 import { indexCallsById, unitTransportDestinationMismatch } from '../lib/transport-destination';
 import { PanelFrame, PanelIconButton } from './panel-frame';
-import { PanelSearch } from './panel-search';
+import { PanelSearch, usePanelQuery } from './panel-search';
 import { ConsoleUnitRow, readPressModifiers } from './resource-rows';
 
 export interface UnitsPanelProps {
@@ -33,7 +33,7 @@ export interface UnitsPanelProps {
   maxHeight?: number;
 }
 
-/** Bar under the search while multi-select is on: count, select all, clear, done. */
+/** Bar under the search while multi-select is on: count, select all, clear, set status, done. */
 const SelectionBar: React.FC<{ count: number; onSelectAll: () => void }> = ({ count, onSelectAll }) => {
   const { t } = useTranslation();
 
@@ -48,6 +48,12 @@ const SelectionBar: React.FC<{ count: number; onSelectAll: () => void }> = ({ co
       {count > 0 ? (
         <Pressable onPress={() => useConsoleStore.getState().clearSelection()} hitSlop={6} testID="unit-select-clear">
           <Text className="text-xs font-medium text-typography-600">{t('dispatch.bulk_unit_actions.clear')}</Text>
+        </Pressable>
+      ) : null}
+      {/* The bulk status form sits in the Actions tab, which a phone shows in place of the units. */}
+      {count > 0 ? (
+        <Pressable onPress={() => useConsoleStore.getState().showActions()} hitSlop={6} accessibilityRole="button" testID="unit-select-set-status">
+          <Text className="text-xs font-semibold text-primary-700">{t('dispatch.set_status')}</Text>
         </Pressable>
       ) : null}
       <Pressable onPress={() => useConsoleStore.getState().endSelection()} hitSlop={6} testID="unit-select-done">
@@ -75,7 +81,7 @@ export const UnitsPanel: React.FC<UnitsPanelProps> = ({ callFilter, onSelectUnit
   const timers = useUnitAlertsByUnit();
   const calls = useCallsStore((state) => state.calls);
   const callsById = useMemo(() => indexCallsById(calls), [calls]);
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = usePanelQuery('units');
 
   const visible = useMemo(() => filterConsoleUnits(units, { query, availableOnly, callFilter }), [availableOnly, callFilter, query, units]);
   const selectedSet = useMemo(() => new Set(selectedUnitIds), [selectedUnitIds]);

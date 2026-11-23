@@ -3,7 +3,7 @@ import { pushRoutePath } from '@resgrid/core/navigation/route-paths';
 import { selectOwnDrafts, selectReturnedRecords, useRecordDeploymentsStore, useRecordsStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import type { FieldRecordContextInput } from '@resgrid/models';
-import { Button, ButtonText, Fab, Loading, RefreshControl, Text, useFormFactor, ZeroState } from '@resgrid/ui';
+import { Button, ButtonText, Fab, Loading, RefreshControl, Text, useFabListPadding, useFormFactor, ZeroState } from '@resgrid/ui';
 import { useRouter } from 'expo-router';
 import { FileText, Globe, Plus, RadioTower } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo } from 'react';
@@ -35,6 +35,7 @@ export default function RecordsHomeScreen({ context: contextProp }: RecordsHomeS
   const { t } = useTranslation();
   const router = useRouter();
   const { isPhone, isLandscapeBoard, isDesktop } = useFormFactor();
+  const fabListPadding = useFabListPadding();
   const flagStatus = useRecordsFieldStatus();
   const defaultContext = useRecordsContext();
   const context = contextProp ?? defaultContext;
@@ -152,7 +153,7 @@ export default function RecordsHomeScreen({ context: contextProp }: RecordsHomeS
 
   return (
     <View style={styles.screen} className="bg-background-0" testID="records-home-screen">
-      <ScrollView refreshControl={<RefreshControl refreshing={isSyncing} onRefresh={() => void load()} />} contentContainerStyle={styles.content}>
+      <ScrollView refreshControl={<RefreshControl refreshing={isSyncing} onRefresh={() => void load()} />} contentContainerStyle={{ paddingBottom: fabListPadding }}>
         <ContentFrame maxWidth={twoColumns ? 1280 : undefined}>
           <Text className="px-4 pt-3 text-xl font-bold text-typography-900" accessibilityRole="header">
             {title}
@@ -214,7 +215,6 @@ export default function RecordsHomeScreen({ context: contextProp }: RecordsHomeS
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  content: { paddingBottom: 96 },
   columns: { flexDirection: 'row', alignItems: 'flex-start' },
   column: { flex: 1 },
 });

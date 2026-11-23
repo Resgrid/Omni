@@ -16,14 +16,23 @@ export interface MessageComposerProps {
   /** Opens the GIF picker; omit where GIFs cannot be sent (assistant). Hidden while editing. */
   onOpenGif?: () => void;
   maxLength?: number;
+  /**
+   * The bottom safe-area inset the composer pads while it is the bottom of the screen (`useBottomSafeAreaInset`): its
+   * background runs under the home indicator, its controls stay above it. The screen passes the same value as part of
+   * its BottomAnchoredKeyboardView `offset`, as the keyboard covers that inset.
+   */
+  bottomInset?: number;
 }
+
+/** Padding under the composer's controls (py-2). */
+const COMPOSER_PADDING_BOTTOM = 8;
 
 /**
  * The message composer (Responder baseline): multi-line input, urgent toggle, GIF picker, send. Sending clears the draft at once —
  * the message is queued through the outbox, so it shows as pending and is delivered when the connection allows.
  * Mounted inside a BottomAnchoredKeyboardView by the conversation screen.
  */
-export const MessageComposer: React.FC<MessageComposerProps> = ({ onSend, disabled = false, placeholder, initialValue = '', allowUrgent = true, onCancelEdit, onOpenGif, maxLength = 4000 }) => {
+export const MessageComposer: React.FC<MessageComposerProps> = ({ onSend, disabled = false, placeholder, initialValue = '', allowUrgent = true, onCancelEdit, onOpenGif, maxLength = 4000, bottomInset = 0 }) => {
   const { t } = useTranslation();
   const colors = useThemeColors();
   const [text, setText] = useState(initialValue);
@@ -38,7 +47,7 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({ onSend, disabl
   }, [canSend, onSend, text, urgent]);
 
   return (
-    <VStack className="border-t border-outline-200 bg-background-0 px-3 py-2" testID="chat-composer">
+    <VStack className="border-t border-outline-200 bg-background-0 px-3 pt-2" style={{ paddingBottom: COMPOSER_PADDING_BOTTOM + bottomInset }} testID="chat-composer">
       {urgent ? <Text className="mb-1 text-xs font-semibold text-error-600">{t('chat.urgent_will_send')}</Text> : null}
       {onCancelEdit ? (
         <HStack className="mb-1 items-center justify-between">

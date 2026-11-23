@@ -18,7 +18,7 @@ import { useCallDispatchNow } from '../hooks/use-call-dispatch-now';
 import { matchesQueueQuery } from '../lib/queue-filters';
 
 export interface PendingCallsScreenProps {
-  /** In-content title row (default true; off when the shell header already titles the screen). */
+  /** In-content title (default false: the app bar titles the route from its nav entry). Pass true where the screen is embedded under another title. */
   showHeader?: boolean;
   /** Subscribe to call pushes (default true). */
   realtime?: boolean;
@@ -28,7 +28,7 @@ export interface PendingCallsScreenProps {
  * Calls saved as Pending ("to be dispatched", Dispatch baseline): numbered, nobody notified, not on the field apps. A
  * dispatcher picks one up here, chooses who to send and dispatches it, or cancels it. Kept current by call pushes.
  */
-export default function PendingCallsScreen({ showHeader = true, realtime = true }: PendingCallsScreenProps) {
+export default function PendingCallsScreen({ showHeader = false, realtime = true }: PendingCallsScreenProps) {
   const { t } = useTranslation();
   const timeZone = useDepartmentTimeZone();
   const router = useRouter();

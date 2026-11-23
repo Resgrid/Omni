@@ -1,23 +1,35 @@
 // Ported and adapted from Unit stores/app/__tests__/livekit-store.test.ts + livekit-store-room-switch.test.ts and
 // Responder livekit-store tests: connect/transmit/release, room-switch race, drops, reconnect, routing, CallKeep sync.
 import { getDepartmentVoiceSettings } from '@resgrid/api';
+import { BROWSER_PROMPT_TIMEOUT_MS } from '@resgrid/core/lifecycle/foreground-timeout';
 import type { DepartmentVoiceChannelResultData } from '@resgrid/models';
 
 import { setAudioModeAsync } from '../../__tests__/fakes/expo-audio';
 import { DisconnectReason, Room as FakeRoom, RoomEvent } from '../../__tests__/fakes/livekit-client';
 import { AudioSession } from '../../__tests__/fakes/livekit-react-native';
-import { DeviceEventEmitter, NativeModules, PermissionsAndroid, Platform, resetReactNativeFake } from '../../__tests__/fakes/react-native';
+import { DeviceEventEmitter, NativeModules, PermissionsAndroid, Platform, resetReactNativeFake, setAppState } from '../../__tests__/fakes/react-native';
 import RNCallKeep, { emitCallKeepEvent, resetCallKeepFake } from '../../__tests__/fakes/react-native-callkeep';
 import { createTestConnectivity, type TestConnectivity } from '../../__tests__/helpers/connectivity';
 import { activateVariant } from '../../__tests__/helpers/variant';
 import { useBluetoothAudioStore } from '../../bluetooth/bluetooth-audio-store';
 import { resetBluetoothAudioServiceForTests } from '../../bluetooth/bluetooth-service';
+import { PHONE_PERMISSION_TIMEOUT_MS } from '../../callkeep/callkeep-native';
 import { getCallKeepService, resetCallKeepServiceForTests } from '../../callkeep/callkeep-service';
 import { getHeadsetButtonService, resetHeadsetButtonServiceForTests } from '../../headset/headset-button-service';
 import { getMicrophoneController } from '../../ptt/microphone-controller';
 import { configureVoice, resetVoiceRuntimeForTests } from '../../runtime';
 import * as livekitClient from '../livekit-client';
-import { createInitialLiveKitState, MAX_REJOIN_ATTEMPTS, resetLiveKitSessionForTests, SYSTEM_CALL_END_SETTLE_MS, useLiveKitStore } from '../livekit-store';
+import {
+  CONNECT_OVERALL_TIMEOUT_MS,
+  createInitialLiveKitState,
+  MAX_REJOIN_ATTEMPTS,
+  PERMISSION_TIMEOUT_MS,
+  POST_CONNECT_STEP_TIMEOUT_MS,
+  resetLiveKitSessionForTests,
+  SYSTEM_CALL_END_SETTLE_MS,
+  useLiveKitStore,
+} from '../livekit-store';
+import * as microphonePermission from '../microphone-permission';
 
 jest.mock('@resgrid/api', () => ({ getDepartmentVoiceSettings: jest.fn(), canConnectToVoiceSession: jest.fn(), getDepartmentAudioStreams: jest.fn() }));
 
@@ -35,6 +47,24 @@ const channel = (id: string, name: string, extra: Partial<DepartmentVoiceChannel
 const flush = async (times = 5): Promise<void> => {
   for (let i = 0; i < times; i++) await new Promise((resolve) => setImmediate(resolve));
 };
+
+/** The member's answer to an OS prompt, given when the test says so. */
+interface PendingAnswer {
+  answered: Promise<void>;
+  answer: () => void;
+}
+
+const answerLater = (): PendingAnswer => {
+  let answer: () => void = () => undefined;
+
+  const answered = new Promise<void>((resolve) => {
+    answer = resolve;
+  });
+
+  return { answered, answer };
+};
+
+const neverAnswered = (): Promise<never> => new Promise<never>(() => undefined);
 
 const inCallAudio = { setAudioRoute: jest.fn(async () => undefined), loadSound: jest.fn(), playSound: jest.fn(), initializeAudio: jest.fn(), cleanup: jest.fn(), isInPhoneCall: jest.fn(async () => false) };
 const foregroundService = { start: jest.fn(async () => undefined), stop: jest.fn(async () => undefined) };
@@ -203,6 +233,163 @@ describe('connect failures', () => {
     expect(await useLiveKitStore.getState().connectToRoom(channel('2', 'B'))).toMatchObject({ ok: false, error: { code: 'busy' } });
     lastRoom().resolveConnect();
     await expect(first).resolves.toEqual({ ok: true });
+  });
+});
+
+describe('OS permission prompts', () => {
+  // Android's prompts put the app in the background. Time spent there is the member's, never a request that hung.
+  beforeEach(() => jest.useFakeTimers({ doNotFake: ['setImmediate'] }));
+
+  afterEach(() => jest.useRealTimers());
+
+  it('waits for a slow microphone answer, past the permission and overall limits, and then joins', async () => {
+    const prompt = answerLater();
+    PermissionsAndroid.check.mockImplementation(async () => false);
+
+    PermissionsAndroid.request.mockImplementation(async () => {
+      await prompt.answered;
+
+      return 'granted';
+    });
+
+    const join = useLiveKitStore.getState().connectToRoom(channel('1', 'Fireground'));
+    await flush();
+    setAppState('background');
+    await jest.advanceTimersByTimeAsync(PERMISSION_TIMEOUT_MS + CONNECT_OVERALL_TIMEOUT_MS + 1_000);
+
+    expect(useLiveKitStore.getState()).toMatchObject({ isConnecting: true, isConnected: false, lastError: null });
+    expect(FakeRoom.instances).toHaveLength(0);
+
+    prompt.answer();
+    setAppState('active');
+
+    await expect(join).resolves.toEqual({ ok: true });
+    expect(lastRoom().connect).toHaveBeenCalledWith('wss://voice.example.com', 'token-1');
+    expect(useLiveKitStore.getState()).toMatchObject({ isConnected: true, isConnecting: false, lastError: null });
+  });
+
+  it('still times out a microphone request that hangs, counting only the time back in front', async () => {
+    PermissionsAndroid.check.mockImplementation(async () => false);
+    PermissionsAndroid.request.mockImplementation(neverAnswered);
+
+    const join = useLiveKitStore.getState().connectToRoom(channel('1', 'Fireground'));
+    await flush();
+    setAppState('background');
+    await jest.advanceTimersByTimeAsync(PERMISSION_TIMEOUT_MS * 6);
+    setAppState('active');
+    await jest.advanceTimersByTimeAsync(PERMISSION_TIMEOUT_MS - 1);
+    expect(useLiveKitStore.getState().isConnecting).toBe(true);
+
+    await jest.advanceTimersByTimeAsync(1);
+
+    await expect(join).resolves.toMatchObject({ ok: false, error: { code: 'timeout', roomName: 'Fireground' } });
+    expect(useLiveKitStore.getState()).toMatchObject({ isConnecting: false, isConnected: false, lastError: { code: 'timeout', roomName: 'Fireground' } });
+    expect(FakeRoom.instances).toHaveLength(0);
+  });
+
+  it('keeps the joined channel while the phone-permission prompt stays open past the overall limit, then starts the call', async () => {
+    const prompt = answerLater();
+    let phoneGranted = false;
+    PermissionsAndroid.check.mockImplementation(async () => phoneGranted);
+
+    PermissionsAndroid.requestMultiple.mockImplementation(async () => {
+      await prompt.answered;
+      phoneGranted = true;
+
+      return {};
+    });
+
+    const join = useLiveKitStore.getState().connectToRoom(channel('1', 'Fireground'));
+    await flush(10);
+    expect(PermissionsAndroid.requestMultiple).toHaveBeenCalled();
+    setAppState('background');
+    await jest.advanceTimersByTimeAsync(CONNECT_OVERALL_TIMEOUT_MS + PHONE_PERMISSION_TIMEOUT_MS + 1_000);
+
+    expect(useLiveKitStore.getState()).toMatchObject({ isConnected: true, isConnecting: false, lastError: null });
+    expect(RNCallKeep.startCall).not.toHaveBeenCalled();
+
+    prompt.answer();
+    setAppState('active');
+
+    await expect(join).resolves.toEqual({ ok: true });
+    expect(RNCallKeep.startCall).toHaveBeenCalledWith(expect.any(String), 'Fireground', 'Fireground', 'generic', false);
+    expect(useLiveKitStore.getState()).toMatchObject({ isConnected: true, lastError: null });
+  });
+});
+
+describe('post-connect steps', () => {
+  beforeEach(() => jest.useFakeTimers({ doNotFake: ['setImmediate'] }));
+
+  afterEach(() => jest.useRealTimers());
+
+  // A native call that never settles after the room is committed would leave the channel sheet on "joining".
+  it('passes over a native step that never settles, so the join completes and the CallKeep call still starts', async () => {
+    foregroundService.start.mockImplementationOnce(neverAnswered);
+
+    const join = useLiveKitStore.getState().connectToRoom(channel('1', 'Fireground'));
+    await flush(10);
+    expect(useLiveKitStore.getState()).toMatchObject({ isConnected: true, isConnecting: false });
+    expect(foregroundService.start).toHaveBeenCalled();
+    expect(RNCallKeep.startCall).not.toHaveBeenCalled();
+
+    await jest.advanceTimersByTimeAsync(POST_CONNECT_STEP_TIMEOUT_MS);
+
+    await expect(join).resolves.toEqual({ ok: true });
+    expect(RNCallKeep.startCall).toHaveBeenCalledWith(expect.any(String), 'Fireground', 'Fireground', 'generic', false);
+    expect(useLiveKitStore.getState()).toMatchObject({ isConnected: true, lastError: null });
+  });
+});
+
+describe('browser microphone prompt (web, Electron)', () => {
+  // The browser's prompt leaves the page in front: while the microphone is undecided the member may be reading it.
+  const originalNavigator = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+  const prompt = { state: 'prompt', addEventListener: jest.fn(), removeEventListener: jest.fn() };
+
+  beforeEach(() => {
+    jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+    Platform.OS = 'web';
+    resetCallKeepServiceForTests();
+    Object.defineProperty(globalThis, 'navigator', { value: { permissions: { query: jest.fn(async () => prompt) } }, configurable: true, writable: true });
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+    jest.restoreAllMocks();
+
+    if (originalNavigator) Object.defineProperty(globalThis, 'navigator', originalNavigator);
+    else Reflect.deleteProperty(globalThis, 'navigator');
+  });
+
+  it('waits for a slow answer, past the short and overall limits, and then joins', async () => {
+    const answer = answerLater();
+
+    jest.spyOn(microphonePermission, 'ensureMicrophonePermission').mockImplementation(async () => {
+      await answer.answered;
+
+      return { granted: true, canAskAgain: true };
+    });
+
+    const join = useLiveKitStore.getState().connectToRoom(channel('1', 'Fireground'));
+    await jest.advanceTimersByTimeAsync(PERMISSION_TIMEOUT_MS + CONNECT_OVERALL_TIMEOUT_MS);
+    expect(useLiveKitStore.getState()).toMatchObject({ isConnecting: true, isConnected: false, lastError: null });
+
+    answer.answer();
+
+    await expect(join).resolves.toEqual({ ok: true });
+    expect(useLiveKitStore.getState()).toMatchObject({ isConnected: true, isConnecting: false, lastError: null });
+  });
+
+  it('still reports a prompt left unanswered, after BROWSER_PROMPT_TIMEOUT_MS', async () => {
+    jest.spyOn(microphonePermission, 'ensureMicrophonePermission').mockImplementation(neverAnswered);
+
+    const join = useLiveKitStore.getState().connectToRoom(channel('1', 'Fireground'));
+    await jest.advanceTimersByTimeAsync(BROWSER_PROMPT_TIMEOUT_MS - 1);
+    expect(useLiveKitStore.getState().isConnecting).toBe(true);
+    await jest.advanceTimersByTimeAsync(1);
+
+    await expect(join).resolves.toMatchObject({ ok: false, error: { code: 'timeout', roomName: 'Fireground' } });
+    expect(useLiveKitStore.getState()).toMatchObject({ isConnecting: false, lastError: { code: 'timeout' } });
+    expect(FakeRoom.instances).toHaveLength(0);
   });
 });
 
@@ -398,6 +585,28 @@ describe('drops and reconnect', () => {
       expect(useLiveKitStore.getState()).toMatchObject({ isConnected: false, isReconnecting: false, lastError: { code: 'disconnected', roomName: 'Fireground' } });
       expect(RNCallKeep.endCall).toHaveBeenCalled();
       expect(foregroundService.stop).toHaveBeenCalled();
+    });
+
+    it('still times out a rejoin that stalls with the app in the background, so isConnecting never sticks', async () => {
+      await useLiveKitStore.getState().connectToRoom(channel('1', 'Fireground'));
+      setAppState('background');
+      // A microphone check that never answers: with the app in the background its own (foreground) limit never runs out.
+      PermissionsAndroid.check.mockImplementation(neverAnswered);
+
+      await dropAndAdvance(lastRoom(), 1_000);
+      expect(useLiveKitStore.getState()).toMatchObject({ isConnecting: true, isReconnecting: true });
+
+      await jest.advanceTimersByTimeAsync(CONNECT_OVERALL_TIMEOUT_MS);
+      await flush(10);
+      expect(useLiveKitStore.getState()).toMatchObject({ isConnecting: false, isConnected: false, isReconnecting: true, lastError: null });
+      expect(FakeRoom.instances).toHaveLength(1);
+
+      // The next attempt goes on as usual.
+      PermissionsAndroid.check.mockImplementation(async () => true);
+      await jest.advanceTimersByTimeAsync(2_000);
+      await flush(10);
+      expect(FakeRoom.instances).toHaveLength(2);
+      expect(useLiveKitStore.getState()).toMatchObject({ isConnected: true, isConnecting: false, isReconnecting: false });
     });
 
     it("ends the background session when the member's own join fails while a dropped channel waits to rejoin", async () => {

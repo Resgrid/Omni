@@ -6,7 +6,7 @@ import { useToastStore } from '../../toast/store';
 import { HeaderBackButton } from '../header-back-button';
 import { CardSkeleton, ListSkeleton, Loading, LoadingSkeleton } from '../loading';
 import { REALTIME_OUTAGE_GRACE_MS, RealtimeStatusBanner } from '../realtime-status-banner';
-import { AppBarBackContext, ScreenHeader } from '../screen-header';
+import { AppBarExitContext, ScreenHeader } from '../screen-header';
 import { SYNC_NOTICE_DELAY_MS, SyncAttentionToast } from '../sync-attention-toast';
 import { getTypeIconUrl, getTypeMapIcon, TypeIcon, TypeMapIconProvider } from '../type-icon';
 import { ZeroState } from '../zero-state';
@@ -209,9 +209,9 @@ describe('HeaderBackButton and ScreenHeader', () => {
 
   it('leaves its back button to an app bar that already shows one', async () => {
     await render(
-      <AppBarBackContext.Provider value>
+      <AppBarExitContext.Provider value="back">
         <ScreenHeader title="Unit 1" onBack={jest.fn()} right={<Text>Edit</Text>} />
-      </AppBarBackContext.Provider>
+      </AppBarExitContext.Provider>
     );
 
     expect(screen.getByRole('header', { name: 'Unit 1' })).toBeTruthy();

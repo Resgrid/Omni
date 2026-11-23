@@ -38,7 +38,7 @@ import { parseArgs } from 'node:util';
 
 import { z } from 'zod';
 
-import { loadQaManifest, persona, type QaDepartment, type QaManifest, selectedQaDepartments, totp } from './support/qa-departments';
+import { flowTotpCodes, loadQaManifest, persona, type QaDepartment, type QaManifest, selectedQaDepartments } from './support/qa-departments';
 import { nativeFlow, type NativeFormFactor } from './support/qa-native-flows';
 import { isVariantId, loadManifest, omniRoot, repoRoot, type VariantId, type VariantManifest } from './support/variants';
 
@@ -267,18 +267,6 @@ function writeFlow(dir: string, department: QaDepartment, formFactor: FormFactor
   return file;
 }
 
-// Core accepts each TOTP step once and only above the last it accepted: every sign-in of a persona gets a newer step,
-// one ahead of the clock so the code is still good when the flow reaches the prompt.
-const lastStep = new Map<string, number>();
-
-function freshTotp(username: string, secret: string): string {
-  const step = Math.max(Math.floor(Date.now() / 30_000) + 1, (lastStep.get(username) ?? 0) + 1);
-
-  lastStep.set(username, step);
-
-  return totp(secret, step * 30_000);
-}
-
 // Console errors of the native apps that the QA stack itself causes, with why. Everything else fails the leg.
 const EXPLAINED_APP_ERRORS: readonly { pattern: RegExp; why: string }[] = [
   {
@@ -333,6 +321,8 @@ async function maestroLeg(platform: 'ios' | 'android', formFactor: FormFactor, d
 
     if (!flow || !admin) continue;
     console.log(`  ${department.scenario} (${admin.username})`);
+    // Core accepts each TOTP step once and only above the last it accepted: codes from a step no sign-in used yet.
+    const codes = admin.totpSecret ? flowTotpCodes(admin.username, admin.totpSecret) : null;
 
     const status = run('node', [
       path.join(omniRoot, 'e2e', 'maestro', 'run-maestro.mjs'),
@@ -356,10 +346,12 @@ async function maestroLeg(platform: 'ios' | 'android', formFactor: FormFactor, d
       '-e',
       `QA_PASSWORD=${manifest.credentials.password}`,
       '-e',
-      `QA_TOTP=${admin.totpSecret ? freshTotp(admin.username, admin.totpSecret) : 'none'}`,
+      `QA_TOTP=${codes?.value ?? 'none'}`,
       '-e',
       `QA_SETTLE_MS=${settleMs}`,
     ]);
+
+    codes?.done();
 
     if (status !== 0) failures++;
   }

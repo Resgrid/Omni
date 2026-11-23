@@ -55,14 +55,41 @@ describe('registration per subject', () => {
     expect(registrations()).toEqual([{ method: 'POST', url: '/Devices/RegisterUnitDevice', data: { Platform: 1, Token: 'device-token', DeviceUuid: 'device-uuid', Prefix: 'DEPT', UnitId: '12' } }]);
   });
 
-  it('registers the person with no unit and no Source (Responder, Dispatch, BigBoard)', async () => {
-    for (const variant of ['responder', 'dispatch', 'bigboard'] as const) {
+  it('registers the person with no unit and no Source (Responder, BigBoard)', async () => {
+    for (const variant of ['responder', 'bigboard'] as const) {
       selectVariant(variant);
       pushNotificationService.resetForTests();
       ctx = configureForTest();
       await register();
       expect(registrations()).toEqual([{ method: 'POST', url: '/Devices/RegisterDevice', data: { Platform: 1, Token: 'device-token', DeviceUuid: 'device-uuid', Prefix: 'DEPT' } }]);
     }
+  });
+
+  // Dispatch's own Source (manifest capabilities.push.source) lets Core keep its tokens on Dispatch's push integrations.
+  it("registers the Dispatch user with Source 'Dispatch' and keeps it with the registration", async () => {
+    selectVariant('dispatch');
+    await register();
+    expect(registrations()).toEqual([{ method: 'POST', url: '/Devices/RegisterDevice', data: { Platform: 1, Token: 'device-token', DeviceUuid: 'device-uuid', Prefix: 'DEPT', Source: 'Dispatch' } }]);
+    expect(ctx.storage.getJSON(NATIVE_PUSH_REGISTRATION_KEY)).toEqual({ UserId: 'user-1', Token: 'device-token', Prefix: 'DEPT', Source: 'Dispatch' });
+  });
+
+  it("takes a Dispatch registration off at sign-out with Source 'Dispatch'", async () => {
+    selectVariant('dispatch');
+    await register();
+    await pushNotificationService.unregisterAtSignOut('access-token');
+    expect(signOutCalls().map((call) => call.body)).toEqual([{ Token: 'device-token', Prefix: 'DEPT', Source: 'Dispatch' }]);
+  });
+
+  // A build that sent no Source left this registration; Core files both on the same integration until it routes
+  // Dispatch's Source, so removing the old one as "previous" would take the new token off again.
+  it('keeps the token when Dispatch first registers with its Source over a registration made without one', async () => {
+    selectVariant('dispatch');
+    ctx.storage.setJSON(NATIVE_PUSH_REGISTRATION_KEY, { UserId: 'user-1', Token: 'device-token', Prefix: 'DEPT' });
+    await register();
+    await flushAll();
+    expect(registrations().map((request) => request.data?.Source)).toEqual(['Dispatch']);
+    expect(unregistrations()).toEqual([]);
+    expect(ctx.storage.getJSON(NATIVE_PUSH_STALE_REGISTRATIONS_KEY)).toBeNull();
   });
 
   it("registers the IC user with Source 'IC'", async () => {

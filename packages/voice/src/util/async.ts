@@ -5,8 +5,43 @@ export const withTimeout = <T>(promise: Promise<T>, ms: number, label: string): 
     timer = setTimeout(() => reject(new VoiceTimeoutError(label, ms)), ms);
   });
   return Promise.race([promise, timeout]).finally(() => {
-    if (timer) clearTimeout(timer);
+    if (timer !== undefined) clearTimeout(timer);
   });
+};
+
+export interface Deadline {
+  /** Rejects with a `VoiceTimeoutError` `ms` after `start()`, unless `stop()` came first; it never settles otherwise. */
+  expired: Promise<never>;
+  /** Starts the clock; a no-op once started or stopped. */
+  start: () => void;
+  /** Stops the clock for good. */
+  stop: () => void;
+}
+
+/** A timeout the caller starts and stops, for a flow where only part of the time counts (race the work against `expired`). */
+export const createDeadline = (ms: number, label: string): Deadline => {
+  let phase: 'waiting' | 'running' | 'stopped' = 'waiting';
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  let expire: (error: VoiceTimeoutError) => void = () => undefined;
+
+  const expired = new Promise<never>((_, reject) => {
+    expire = reject;
+  });
+
+  return {
+    expired,
+    start: () => {
+      if (phase !== 'waiting') return;
+      phase = 'running';
+      timer = setTimeout(() => expire(new VoiceTimeoutError(label, ms)), ms);
+    },
+    stop: () => {
+      phase = 'stopped';
+
+      if (timer !== null) clearTimeout(timer);
+      timer = null;
+    },
+  };
 };
 
 export class VoiceTimeoutError extends Error {
