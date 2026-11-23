@@ -188,5 +188,11 @@ catalog:
 
 # Carried from the legacy apps (identical in all five): gluestack ActionsheetContent uses a fixed
 # window height (broken in landscape). The react-native-webview iOS thread-safety fix is upstream since 14.0.1.
+# react-native-css: on native, NativeWind's Metro resolver swaps every `import … from 'react-native'` outside react-native
+# itself for react-native-css/components, whose fixed getter list has no AssetRegistry. expo-asset 58 reads AssetRegistry
+# from 'react-native', so every Asset.fromModule(require(...)) on iOS and Android threw ("getAssetByID of undefined") in
+# debug and release builds, and the iOS PTT and voice-room sounds never loaded. Still missing in 3.1.0-rc.1; drop the
+# patch once upstream has it. apps/omni/__tests__/react-native-css-exports.test.ts fails if an export goes missing again.
 patchedDependencies:
   '@gluestack-ui/core@5.0.15': patches/@gluestack-ui__core@5.0.15.patch
+  'react-native-css@3.1.0-rc.0': patches/react-native-css@3.1.0-rc.0.patch

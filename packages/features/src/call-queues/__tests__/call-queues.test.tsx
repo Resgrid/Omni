@@ -3,16 +3,17 @@ import '../../calls/__tests__/test-setup';
 import { useArchivedCallsStore, useCallQueueActionsStore, useCallsStore, usePersonnelStore, useUnitsStore } from '@resgrid/data';
 import { emitRealtimeEvent } from '@resgrid/realtime';
 import { useToastStore } from '@resgrid/ui';
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 import { router } from 'expo-router';
 import React from 'react';
+import { Dimensions, StyleSheet } from 'react-native';
 
 import { activateVariant, hidden, makeCall, setRights } from '../../calls/__tests__/test-utils';
 import { archivedCallStateLabelKey, archivedCallTypes, countActiveArchivedCallFilters, EMPTY_ARCHIVED_CALL_FILTERS, filterArchivedCalls, toggled } from '../lib/archived-calls';
 import { dispatchesToSelection, mergeDispatchSelections, selectionSize } from '../lib/dispatch-selection';
 import { matchesQueueQuery, scheduledDispatchUtc } from '../lib/queue-filters';
 import { callQueuesNav } from '../nav';
-import ArchivedCallsScreen from '../screens/archived-calls';
+import ArchivedCallsScreen, { ARCHIVED_FILTERS_MAX_SHARE } from '../screens/archived-calls';
 import PendingCallsScreen from '../screens/pending-calls';
 import ScheduledCallsScreen from '../screens/scheduled-calls';
 
@@ -110,13 +111,80 @@ describe('call queue helpers', () => {
   });
 });
 
+describe('queue screen titles', () => {
+  // The app bar titles each queue route from its nav entry: a second title under it cost a phone ~40 pt of list.
+  it('leaves the title to the app bar, and shows it only where a screen is embedded with showHeader', async () => {
+    for (const [Screen, title] of [
+      [PendingCallsScreen, 'pending_calls.title'],
+      [ScheduledCallsScreen, 'scheduled_calls.title'],
+      [ArchivedCallsScreen, 'archived_calls.title'],
+    ] as const) {
+      const { unmount } = await render(<Screen />);
+      expect(screen.queryByText(title)).toBeNull();
+      await unmount();
+    }
+
+    await render(<PendingCallsScreen realtime={false} showHeader />);
+    expect(screen.getByText('pending_calls.title')).toBeTruthy();
+  });
+});
+
+describe('QueueTable layout', () => {
+  const initial = { window: Dimensions.get('window'), screen: Dimensions.get('screen') };
+
+  const renderAt = async (width: number, height: number) => {
+    const metrics = { width, height, scale: 2, fontScale: 1 };
+    await act(() => Dimensions.set({ window: metrics, screen: metrics }));
+
+    return render(<PendingCallsScreen realtime={false} />);
+  };
+
+  afterEach(async () => {
+    await act(() => Dimensions.set(initial));
+  });
+
+  // Beside the fixed number (90) and actions (240) columns, a 744–834 pt portrait tablet left ~50 pt per flexible column:
+  // type, priority, received time and the intake channel were cut off.
+  it('stacks the calls as cards on phones and portrait tablets, each column labelled in the card', async () => {
+    useCallsStore.setState({ pendingCalls: [makeCall('p3', { Name: 'Transfer request', State: 8, Type: 'Transfer', CallSource: 6, IntakeChannelType: 1, IntakeChannelName: 'Hospital line' })] });
+
+    for (const [width, height] of [
+      [390, 844],
+      [844, 390],
+      [744, 1133],
+      [834, 1194],
+    ]) {
+      const { unmount } = await renderAt(width, height);
+      expect(screen.queryByTestId('pending-calls-table-header')).toBeNull();
+      const card = within(screen.getByTestId('pending-call-row-p3'));
+      expect(card.getByText('scheduled_calls.table_type')).toBeTruthy();
+      expect(card.getByText('Transfer')).toBeTruthy();
+      expect(card.getByTestId('pending-call-intake-source-p3')).toBeTruthy();
+      expect(card.getByTestId('pending-call-dispatch-p3')).toBeTruthy();
+      await unmount();
+    }
+  });
+
+  it('keeps the table on landscape tablets', async () => {
+    for (const [width, height] of [
+      [1133, 744],
+      [1194, 834],
+    ]) {
+      const { unmount } = await renderAt(width, height);
+      expect(screen.getByTestId('pending-calls-table-header')).toHaveTextContent(/scheduled_calls\.table_number/);
+      expect(within(screen.getByTestId('pending-call-row-p1')).queryByText('scheduled_calls.table_type')).toBeNull();
+      await unmount();
+    }
+  });
+});
+
 describe('PendingCallsScreen', () => {
   it('lists pending calls, searches and opens one', async () => {
     await render(<PendingCallsScreen realtime={false} />);
     expect(mockFetchPending).toHaveBeenCalledWith({ bypassCache: true });
-    expect(screen.getByText('Waiting fire')).toBeTruthy();
+    expect(screen.getByText(/Waiting fire/)).toBeTruthy();
     await fireEvent.changeText(screen.getByTestId('pending-calls-search'), '9 oak');
-    expect(screen.queryByText('Waiting fire')).toBeNull();
+    expect(screen.queryByText(/Waiting fire/)).toBeNull();
     await fireEvent.press(screen.getByTestId('pending-call-row-p2'));
     expect(router.push).toHaveBeenCalledWith('/call/p2');
   });
@@ -248,7 +316,7 @@ describe('ScheduledCallsScreen', () => {
 
   it('dispatches a scheduled call now after confirming, to the recipients already on it', async () => {
     await render(<ScheduledCallsScreen realtime={false} />);
-    expect(screen.getByText('Burn permit')).toBeTruthy();
+    expect(screen.getByText(/Burn permit/)).toBeTruthy();
     await fireEvent.press(screen.getByTestId('scheduled-call-dispatch-now-s1'));
     await act(async () => fireEvent.press(screen.getByTestId('call-queue-confirm-confirm', hidden)));
     expect(mockDispatchNow).toHaveBeenCalledWith('s1', {});
@@ -287,10 +355,10 @@ describe('ArchivedCallsScreen', () => {
     expect(selectYear).toHaveBeenCalledWith('2025');
     await fireEvent.press(screen.getByTestId('archived-calls-filters-toggle'));
     await fireEvent.press(screen.getByTestId('archived-filter-state-5'));
-    expect(screen.queryByText('Barn fire')).toBeNull();
-    expect(screen.getByText('Lift assist')).toBeTruthy();
+    expect(screen.queryByText(/Barn fire/)).toBeNull();
+    expect(screen.getByText(/Lift assist/)).toBeTruthy();
     await fireEvent.press(screen.getByTestId('archived-filters-clear'));
-    expect(screen.getByText('Barn fire')).toBeTruthy();
+    expect(screen.getByText(/Barn fire/)).toBeTruthy();
   });
 
   // A margin under a chip in a ScrollRow made the row taller than its chips and its centred edge chevron sat low.
@@ -299,6 +367,32 @@ describe('ArchivedCallsScreen', () => {
     expect(String(screen.getByTestId('archived-year-2026').props.className)).not.toMatch(/(^|\s)m[tby]-/);
     await fireEvent.press(screen.getByTestId('archived-calls-filters-toggle'));
     expect(String(screen.getByTestId('archived-filter-state-5').props.className)).toMatch(/(^|\s)mb-2(\s|$)/);
+  });
+
+  // With many call types the open filters pushed the list to nothing, and the dates and "Clear filters" ran off a phone.
+  it('keeps the filters closed until asked, then caps them at a share of the column and scrolls them, with Clear filters in view', async () => {
+    useArchivedCallsStore.setState({ archivedCalls: Array.from({ length: 40 }, (_, index) => makeCall(`a${index}`, { Name: `Call ${index}`, State: 1, Type: `Type ${index}` })) });
+    await render(<ArchivedCallsScreen now={() => Date.parse('2026-10-31T12:00:00Z')} />);
+    expect(screen.queryByTestId('archived-calls-filters')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('archived-calls-filters-toggle'));
+    const panel = screen.getByTestId('archived-calls-filters');
+    expect(StyleSheet.flatten(panel.props.style)).toMatchObject({ maxHeight: ARCHIVED_FILTERS_MAX_SHARE });
+    // The share is of the column the list also sits in (under the search and years), so the list keeps the rest.
+    const body = within(screen.getByTestId('archived-calls-body'));
+    expect(body.getByTestId('archived-calls-filters')).toBeTruthy();
+    expect(body.getByTestId('archived-calls-table')).toBeTruthy();
+
+    const scroll = screen.getByTestId('archived-calls-filters-scroll');
+    expect(StyleSheet.flatten(scroll.props.style)).toMatchObject({ flexGrow: 0, flexShrink: 1 });
+    expect(within(scroll).getByTestId('archived-filter-type-Type 39')).toBeTruthy();
+    expect(within(scroll).getByTestId('archived-filter-to')).toBeTruthy();
+
+    await fireEvent.press(screen.getByTestId('archived-filter-type-Type 3'));
+    // The toggle says how many filters are on, so it still shows once the panel is closed.
+    expect(screen.getByTestId('archived-calls-filters-toggle').props.accessibilityLabel).toBe('archived_calls.filters (1)');
+    expect(within(scroll).queryByTestId('archived-filters-clear')).toBeNull();
+    expect(within(panel).getByTestId('archived-filters-clear')).toBeTruthy();
   });
 
   it('reuses a year loaded a moment ago and shows the no-match state', async () => {

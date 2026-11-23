@@ -16,7 +16,7 @@
  * previous token. Nothing registered outlives its session: sign-out takes the token off the server and kills it on
  * this device (queued behind any sync in flight), and a different subject/department rotates the token first.
  */
-import { IC_PUSH_SOURCE, isPushRegistrationAccepted, type PushSubject, registerPushDevice, unregisterPushToken } from '@resgrid/api';
+import { isPushRegistrationAccepted, pushSourceFor, type PushSubject, registerPushDevice, unregisterPushToken } from '@resgrid/api';
 import { isElectron, logger } from '@resgrid/core';
 import { toDevProxyUrl } from '@resgrid/core/env/dev-proxy';
 import { getApps, initializeApp } from 'firebase/app';
@@ -25,6 +25,7 @@ import { useEffect, useState } from 'react';
 
 import {
   getOptionalNotificationsDependencies,
+  getPushSource,
   getPushSubjectKind,
   isDesktopPushEnabled,
   type NotificationsDependencies,
@@ -184,7 +185,7 @@ function currentIdentity(deps: NotificationsDependencies | null): WebIdentity | 
     const unitId = readActiveUnitId(deps);
     return unitId ? { kind, subject: { kind: 'unit', unitId }, userId: session.userId, prefix: session.departmentCode, unitId } : null;
   }
-  return { kind, subject: kind === 'icUser' ? { kind: 'icUser' } : { kind: 'user' }, userId: session.userId, prefix: session.departmentCode };
+  return { kind, subject: kind === 'icUser' ? { kind: 'icUser' } : { kind: 'user', source: getPushSource() }, userId: session.userId, prefix: session.departmentCode };
 }
 
 /** Unit keeps its legacy `unit:{unitId}:{prefix}` key; person subjects key on the user. */
@@ -194,7 +195,9 @@ const subjectOfStored = (stored: StoredRegistration): PushSubject => {
   const kind = stored.kind ?? (stored.unitId ? 'unit' : 'user');
   if (kind === 'unit' && stored.unitId) return { kind: 'unit', unitId: stored.unitId };
   if (kind === 'icUser') return { kind: 'icUser' };
-  return { kind: 'user' };
+
+  // The app's own Source (Dispatch's) is fixed per app, so the stored token was registered with today's.
+  return { kind: 'user', source: getPushSource() };
 };
 
 // --- Browser (Firebase JS SDK) ---
@@ -466,7 +469,7 @@ async function unregisterAtServer(registration: StoredRegistration, accessToken:
           Token: registration.token,
           Prefix: registration.prefix,
           ...(subject.kind === 'unit' ? { UnitId: subject.unitId } : {}),
-          ...(subject.kind === 'icUser' ? { Source: IC_PUSH_SOURCE } : {}),
+          Source: pushSourceFor(subject),
         }),
         signal,
       })

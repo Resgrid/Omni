@@ -17,7 +17,7 @@ import { type RecurringCallStatus, recurringCallStatus, STATUS_LABEL_KEYS } from
 import { recurringCallsRoutes } from '../routes';
 
 export interface RecurringCallsScreenProps {
-  /** In-content title row (default true; off when the shell header already titles the screen). */
+  /** In-content title (default false: the app bar titles the route from its nav entry). Pass true where the screen is embedded under another title. */
   showHeader?: boolean;
 }
 
@@ -33,7 +33,7 @@ const SCHEDULES_REFRESH_EVENTS = ['recurringCallAlertsUpdated'] as const;
  * facility, the next dispatch and the open alerts of each, filtered by status. New schedules and the occurrence calendar
  * open from here; creating needs call creation (`GetRecurringCallOptions.CanCreate`).
  */
-export default function RecurringCallsScreen({ showHeader = true }: RecurringCallsScreenProps) {
+export default function RecurringCallsScreen({ showHeader = false }: RecurringCallsScreenProps) {
   const { t } = useTranslation();
   const router = useRouter();
   const colors = useThemeColors();
@@ -97,7 +97,8 @@ export default function RecurringCallsScreen({ showHeader = true }: RecurringCal
         renderItem={({ item }: { item: RecurringCallResultData }) => <RecurringCallRow schedule={item} onPress={openSchedule} />}
         keyExtractor={(item: RecurringCallResultData) => String(item.RecurringCallId)}
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
-        contentContainerStyle={styles.list}
+        // The New button floats over the list's bottom right: the last row scrolls clear of it.
+        contentContainerStyle={canCreate ? styles.listAboveFab : styles.list}
       />
     );
   };
@@ -105,15 +106,12 @@ export default function RecurringCallsScreen({ showHeader = true }: RecurringCal
   return (
     <View className="flex-1 bg-background-50 px-4 pt-4" testID="recurring-calls-screen">
       {isEnabled ? (
+        // The app bar titles the route; what the list holds sits beside the calendar button.
         <View className="mb-3 flex-row flex-wrap items-center">
-          {showHeader ? (
-            <View className="mr-2 flex-1">
-              <Text className="text-lg font-bold">{t('recurring_calls.title')}</Text>
-              <Text className="text-xs text-typography-500">{t('recurring_calls.subtitle')}</Text>
-            </View>
-          ) : (
-            <View className="flex-1" />
-          )}
+          <View className="mr-2 flex-1">
+            {showHeader ? <Text className="text-lg font-bold">{t('recurring_calls.title')}</Text> : null}
+            <Text className="text-xs text-typography-500">{t('recurring_calls.subtitle')}</Text>
+          </View>
           <ActionButton label={t('recurring_calls.calendar.title')} icon={CalendarDays} tone="secondary" onPress={() => pushRoutePath(router, recurringCallsRoutes.calendar())} testID="recurring-calls-calendar" />
         </View>
       ) : null}
@@ -139,4 +137,4 @@ export default function RecurringCallsScreen({ showHeader = true }: RecurringCal
   );
 }
 
-const styles = StyleSheet.create({ list: { paddingBottom: 24 } });
+const styles = StyleSheet.create({ list: { paddingBottom: 24 }, listAboveFab: { paddingBottom: 96 } });

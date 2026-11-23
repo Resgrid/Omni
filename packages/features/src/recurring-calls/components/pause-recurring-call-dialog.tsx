@@ -1,5 +1,22 @@
 import { useTranslation } from '@resgrid/i18n';
-import { BottomAnchoredKeyboardView, Box, Button, ButtonSpinner, ButtonText, DateTimeField, Heading, HStack, Input, InputField, NativeModal, Switch, Text, VStack } from '@resgrid/ui';
+import {
+  BottomAnchoredKeyboardView,
+  Box,
+  Button,
+  ButtonSpinner,
+  ButtonText,
+  DateTimeField,
+  Heading,
+  HStack,
+  Input,
+  InputField,
+  NativeModal,
+  ScrollView,
+  Switch,
+  Text,
+  useKeepFocusedInputVisible,
+  VStack,
+} from '@resgrid/ui';
 import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -28,6 +45,8 @@ export interface PauseRecurringCallDialogProps {
  */
 export const PauseRecurringCallDialog: React.FC<PauseRecurringCallDialogProps> = ({ isOpen, isSubmitting, today = null, onConfirm, onClose }) => {
   const { t } = useTranslation();
+  // The dialog sits on top of the keyboard (BottomAnchoredKeyboardView): this scrolls the note back into what is left.
+  const keepFocusedInputVisible = useKeepFocusedInputVisible(isOpen);
   const [reason, setReason] = useState('');
   const [resumeOn, setResumeOn] = useState('');
   const [deleteUpcomingCalls, setDeleteUpcomingCalls] = useState(false);
@@ -48,41 +67,58 @@ export const PauseRecurringCallDialog: React.FC<PauseRecurringCallDialogProps> =
       <Pressable style={styles.backdrop} onPress={dismiss} accessibilityRole="button" accessibilityLabel={t('common.cancel')} testID={`${testID}-backdrop`} />
       <BottomAnchoredKeyboardView pointerEvents="box-none">
         <Box className="flex-1 items-center justify-center p-4" pointerEvents="box-none">
-          <Box className="w-full max-w-md rounded-2xl bg-background-0 p-5" accessibilityViewIsModal>
-            <VStack space="md">
-              <Heading size="md" accessibilityRole="header">
-                {t('recurring_calls.pause_title')}
-              </Heading>
-              <Text>{t('recurring_calls.pause_description')}</Text>
-              <Input variant="outline" size="md" isDisabled={isSubmitting}>
-                <InputField
-                  testID={`${testID}-reason`}
-                  value={reason}
-                  onChangeText={setReason}
-                  placeholder={t('recurring_calls.pause_reason_placeholder')}
-                  maxLength={PAUSE_REASON_MAX_LENGTH}
-                  accessibilityLabel={t('recurring_calls.pause_reason_placeholder')}
-                />
-              </Input>
-              <DateTimeField value={resumeOn} onChange={setResumeOn} label={t('recurring_calls.pause_resume_on')} mode="date" disabled={isSubmitting} testID={`${testID}-resume-on`} />
-              {resumeTooEarly ? (
-                <Text size="sm" className="text-error-700" testID={`${testID}-resume-error`}>
-                  {t('recurring_calls.pause_resume_on_future')}
-                </Text>
-              ) : null}
-              <View style={styles.switchRow}>
-                <Text className="flex-1 pr-3">{t('recurring_calls.delete_upcoming_calls')}</Text>
-                <Switch value={deleteUpcomingCalls} onValueChange={setDeleteUpcomingCalls} isDisabled={isSubmitting} accessibilityLabel={t('recurring_calls.delete_upcoming_calls')} testID={`${testID}-delete-upcoming`} />
-              </View>
-              <HStack space="sm" className="justify-end">
-                <Button variant="outline" action="secondary" onPress={onClose} isDisabled={isSubmitting} testID={`${testID}-cancel`}>
-                  <ButtonText>{t('common.cancel')}</ButtonText>
-                </Button>
-                <Button onPress={() => onConfirm({ reason: reason.trim(), resumeOn, deleteUpcomingCalls })} isDisabled={isSubmitting || resumeTooEarly} testID={`${testID}-confirm`}>
-                  {isSubmitting ? <ButtonSpinner /> : <ButtonText>{t('recurring_calls.pause')}</ButtonText>}
-                </Button>
-              </HStack>
-            </VStack>
+          {/* Never taller than the space left above the keyboard (a landscape phone has ~390 pt): the body scrolls instead of clipping. */}
+          <Box className="w-full max-w-md rounded-2xl bg-background-0" style={styles.card} accessibilityViewIsModal testID={`${testID}-card`}>
+            <ScrollView
+              ref={keepFocusedInputVisible.scrollRef}
+              onScroll={keepFocusedInputVisible.onScroll}
+              scrollEventThrottle={keepFocusedInputVisible.scrollEventThrottle}
+              style={styles.scroll}
+              contentContainerStyle={styles.content}
+              keyboardShouldPersistTaps="handled"
+              testID={`${testID}-scroll`}
+            >
+              <VStack space="md">
+                <Heading size="md" accessibilityRole="header">
+                  {t('recurring_calls.pause_title')}
+                </Heading>
+                <Text>{t('recurring_calls.pause_description')}</Text>
+                <Input variant="outline" size="md" isDisabled={isSubmitting}>
+                  <InputField
+                    testID={`${testID}-reason`}
+                    value={reason}
+                    onChangeText={setReason}
+                    placeholder={t('recurring_calls.pause_reason_placeholder')}
+                    maxLength={PAUSE_REASON_MAX_LENGTH}
+                    accessibilityLabel={t('recurring_calls.pause_reason_placeholder')}
+                  />
+                </Input>
+                <DateTimeField value={resumeOn} onChange={setResumeOn} label={t('recurring_calls.pause_resume_on')} mode="date" disabled={isSubmitting} testID={`${testID}-resume-on`} />
+                {resumeTooEarly ? (
+                  <Text size="sm" className="text-error-700" testID={`${testID}-resume-error`}>
+                    {t('recurring_calls.pause_resume_on_future')}
+                  </Text>
+                ) : null}
+                <View style={styles.switchRow}>
+                  <Text className="flex-1 pr-3">{t('recurring_calls.delete_upcoming_calls')}</Text>
+                  <Switch
+                    value={deleteUpcomingCalls}
+                    onValueChange={setDeleteUpcomingCalls}
+                    isDisabled={isSubmitting}
+                    accessibilityLabel={t('recurring_calls.delete_upcoming_calls')}
+                    testID={`${testID}-delete-upcoming`}
+                  />
+                </View>
+                <HStack space="sm" className="justify-end">
+                  <Button variant="outline" action="secondary" onPress={onClose} isDisabled={isSubmitting} testID={`${testID}-cancel`}>
+                    <ButtonText>{t('common.cancel')}</ButtonText>
+                  </Button>
+                  <Button onPress={() => onConfirm({ reason: reason.trim(), resumeOn, deleteUpcomingCalls })} isDisabled={isSubmitting || resumeTooEarly} testID={`${testID}-confirm`}>
+                    {isSubmitting ? <ButtonSpinner /> : <ButtonText>{t('recurring_calls.pause')}</ButtonText>}
+                  </Button>
+                </HStack>
+              </VStack>
+            </ScrollView>
           </Box>
         </Box>
       </BottomAnchoredKeyboardView>
@@ -92,5 +128,9 @@ export const PauseRecurringCallDialog: React.FC<PauseRecurringCallDialogProps> =
 
 const styles = StyleSheet.create({
   backdrop: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: 'rgba(0,0,0,0.5)' },
+  card: { maxHeight: '100%', flexShrink: 1, overflow: 'hidden' },
+  // As tall as its content until the card's cap, then it gives up height and scrolls.
+  scroll: { flexGrow: 0, flexShrink: 1 },
+  content: { padding: 20 },
   switchRow: { flexDirection: 'row', alignItems: 'center' },
 });

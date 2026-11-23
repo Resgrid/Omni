@@ -7,6 +7,7 @@ import { View } from 'react-native';
 /** The search row under a console panel header. */
 export const PanelSearch: React.FC<{ value: string; onChange: (value: string) => void; placeholder: string; testID: string }> = ({ value, onChange, placeholder, testID }) => {
   const { t } = useTranslation();
+
   return (
     <HStack space="sm" className="items-center border-b border-outline-200 px-2">
       <View>

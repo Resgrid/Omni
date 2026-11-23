@@ -1,5 +1,6 @@
 import { canConnectToVoiceSession, getDepartmentVoiceSettings } from '@resgrid/api';
 import { logger } from '@resgrid/core';
+import { FOREGROUND_TIMED_OUT, settleWithinForeground } from '@resgrid/core/lifecycle/foreground-timeout';
 import type { DepartmentVoiceChannelResultData } from '@resgrid/models';
 import type { DisconnectReason, Participant, Room } from 'livekit-client';
 import { Platform } from 'react-native';
@@ -15,7 +16,7 @@ import { getVoiceCapabilities } from '../capabilities';
 import { getHeadsetButtonService } from '../headset/headset-button-service';
 import { type PttInputSource, registerMicrophoneController } from '../ptt/microphone-controller';
 import { getVoiceRuntime } from '../runtime';
-import { delay, errorMessage, errorName, VoiceTimeoutError, withTimeout } from '../util/async';
+import { createDeadline, type Deadline, delay, errorMessage, errorName, VoiceTimeoutError, withTimeout } from '../util/async';
 import { isVoiceOnline, type NetworkEvent, reconnectDelayMs, subscribeNetworkEvents } from '../util/network';
 import { getLiveKitClient, loadLiveKitClient } from './livekit-client';
 import { ensureMicrophonePermission, type MicrophonePermissionResult } from './microphone-permission';
@@ -24,9 +25,21 @@ import { type VoiceError, voiceFail, voiceOk, type VoiceResult } from './types';
 
 export type VoiceChannel = DepartmentVoiceChannelResultData;
 
-/** The whole connect flow is abandoned (isConnecting reset) after this long, so the UI never sticks on "Connecting…". */
+/**
+ * A connect is abandoned (isConnecting reset) when it has not committed a room this long after the microphone answer,
+ * so the UI never sticks on "Connecting…". The member's answer is not timed by it (`PERMISSION_TIMEOUT_MS` is), nor is
+ * anything after the commit (the phone-permission prompt). An automatic rejoin is timed from its start: it may run with
+ * the app in the background, where the microphone wait never times out.
+ */
 export const CONNECT_OVERALL_TIMEOUT_MS = 30_000;
 export const ROOM_CONNECT_TIMEOUT_MS = 15_000;
+
+/**
+ * Counts only while the app is in front (`settleWithinForeground`): Android's microphone prompt puts the app in the
+ * background, so a member who takes their time answering is not told the join failed. On web the browser's prompt
+ * leaves the page in front: while the member may be answering it (microphone undecided, or the page without focus) the
+ * limit is `BROWSER_PROMPT_TIMEOUT_MS` instead. It exists for a request that never settles.
+ */
 export const PERMISSION_TIMEOUT_MS = 10_000;
 export const AUDIO_SESSION_TIMEOUT_MS = 10_000;
 
@@ -479,8 +492,11 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => {
     getBluetoothAudioService()?.ensurePttInputMonitoring('livekit connected');
   };
 
-  /** `rejoin`: an automatic rejoin under the kept background session (its audio session stays up; failures stay quiet). */
-  const runConnect = async (roomInfo: VoiceChannel, token: string, generation: number, rejoin: boolean): Promise<VoiceResult> => {
+  /**
+   * `rejoin`: an automatic rejoin under the kept background session (its audio session stays up; failures stay quiet).
+   * `overall` (`CONNECT_OVERALL_TIMEOUT_MS`) is started once the microphone is answered and stopped at the commit.
+   */
+  const runConnect = async (roomInfo: VoiceChannel, token: string, generation: number, rejoin: boolean, overall: Deadline): Promise<VoiceResult> => {
     const stale = (): boolean => generation !== connectGeneration;
     const cancelled = (): VoiceResult => voiceFail({ code: 'cancelled', roomName: roomInfo.Name });
 
@@ -512,7 +528,10 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => {
 
       if (!token) return failed({ code: 'no_token', roomName: roomInfo.Name });
 
-      const permission = await withTimeout(ensureMicrophonePermission(), PERMISSION_TIMEOUT_MS, 'microphone permission');
+      const permission = await settleWithinForeground(ensureMicrophonePermission(), PERMISSION_TIMEOUT_MS, 'microphone');
+
+      if (permission === FOREGROUND_TIMED_OUT) throw new VoiceTimeoutError('microphone permission', PERMISSION_TIMEOUT_MS);
+      overall.start();
 
       if (stale()) return cancelled();
 
@@ -558,6 +577,7 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => {
         return cancelled();
       }
 
+      overall.stop();
       detachRemoteAudio = detachAudio;
       set({
         currentRoom: room,
@@ -593,9 +613,12 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => {
   const connect = async (roomInfo: VoiceChannel, token: string, rejoin: boolean): Promise<VoiceResult> => {
     const generation = ++connectGeneration;
     set(rejoin ? { isConnecting: true, selectedRoomId: roomInfo.Id } : { isConnecting: true, lastError: null, selectedRoomId: roomInfo.Id });
+    const overall = createDeadline(CONNECT_OVERALL_TIMEOUT_MS, 'connectToRoom');
+
+    if (rejoin) overall.start();
 
     try {
-      return await withTimeout(runConnect(roomInfo, token, generation, rejoin), CONNECT_OVERALL_TIMEOUT_MS, 'connectToRoom');
+      return await Promise.race([runConnect(roomInfo, token, generation, rejoin, overall), overall.expired]);
     } catch (error) {
       // Overall timeout: invalidate the attempt so it discards its room whenever it resumes.
       logger.error({ message: 'Voice connect timed out', context: { roomName: roomInfo.Name, rejoin, error } });
@@ -610,6 +633,8 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => {
       if (!rejoin) set({ lastError: timeout });
 
       return voiceFail(timeout);
+    } finally {
+      overall.stop();
     }
   };
 

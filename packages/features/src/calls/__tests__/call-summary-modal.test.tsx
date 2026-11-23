@@ -60,7 +60,12 @@ describe('CallSummaryModal', () => {
     expect(screen.getByTestId('call-summary-modal-address', hidden)).toHaveTextContent('1 Main St');
     const html = String(screen.getByTestId('webview-html', hidden).props.children);
     expect(html).toContain('Flames visible');
-    expect(html).not.toContain('<script');
+    // The server's script is stripped; the only script is the renderer's own nonce-carrying height reporter (autoHeight).
+    expect(html).not.toContain('alert(1)');
+    expect(html.match(/<script/g)).toHaveLength(1);
+    expect(html).toMatch(/<script nonce="[a-z0-9]+">/i);
+    // As tall as its text in the modal's scroll, not a fixed 160 pt box.
+    expect(screen.getByTestId('call-summary-modal-nature', hidden).props.onMessage).toEqual(expect.any(Function));
     expect(useCallDetailStore.getState().fetchCallDetail).toHaveBeenCalledWith('10');
   });
 

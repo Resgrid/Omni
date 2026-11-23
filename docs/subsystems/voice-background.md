@@ -41,6 +41,7 @@ CallKeep's `VoiceConnectionService` is a `phoneCall` foreground service and self
 
 ## Not verified yet (needs devices)
 
+- The PTT and voice-room sounds are heard on an iOS device, also with the screen locked. Before 2026-11-20 they never loaded on iOS (`Failed to load voice sound` in the Metro log: react-native-css, which NativeWind puts in place of `react-native`, had no `AssetRegistry`; patched in `pnpm-workspace.yaml`).
 - A stream keeps playing for more than three minutes in the background, its lock-screen and notification controls pause and resume it, and it reconnects across a Wi-Fi ↔ cellular switch (iOS and Android).
 - Room audio is heard with the screen locked; a BLE handset press unmutes from the background — also while a stream plays.
 - Each row of the earbuds table on a locked phone: AirPods Pro / 3 / 4 single and double press, a Bluetooth headset, wired earbuds (short and long press on Android); talk starts within about a second of the press, and how the call coming back sounds and looks (a call-ended tone, the call notification redrawn) is acceptable.

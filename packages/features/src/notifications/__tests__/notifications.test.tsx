@@ -3,6 +3,7 @@ import '../../status/__tests__/test-setup';
 import { type NotificationTarget, usePushNotificationModalStore } from '@resgrid/notifications';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import React from 'react';
+import { Dimensions } from 'react-native';
 
 import { PushNotificationModal } from '../components/push-notification-modal';
 import { inboxTargetOf, toInboxItem } from '../lib/inbox-item';
@@ -195,6 +196,35 @@ describe('NotificationsInboxScreen', () => {
     expect(first.delete).not.toHaveBeenCalled();
     expect(mockDeleteAll).not.toHaveBeenCalled();
     expect(inbox.refetch).toHaveBeenCalled();
+  });
+
+  // At 360 pt (or in German) three labelled buttons pushed Delete off the screen: a phone shows Mark read and Delete as icons.
+  it('fits the selection bar on a phone with icon-only actions that keep their names', async () => {
+    const initial = { window: Dimensions.get('window'), screen: Dimensions.get('screen') };
+    const phone = { width: 360, height: 780, scale: 3, fontScale: 1 };
+    await act(() => Dimensions.set({ window: phone, screen: phone }));
+
+    try {
+      setInbox([novuItem('n1', 'C1')]);
+      await render(<NotificationsInboxScreen />);
+      await fireEvent(screen.getByTestId('notification-row-n1'), 'longPress');
+
+      expect(screen.getByRole('button', { name: 'notifications.mark_read' })).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'notifications.delete' })).toBeTruthy();
+      expect(screen.queryByText('notifications.mark_read')).toBeNull();
+      expect(screen.queryByText('notifications.delete')).toBeNull();
+    } finally {
+      await act(() => Dimensions.set(initial));
+    }
+  });
+
+  it('labels the selection actions where there is room (tablet)', async () => {
+    setInbox([novuItem('n1', 'C1')]);
+    await render(<NotificationsInboxScreen />);
+    await fireEvent(screen.getByTestId('notification-row-n1'), 'longPress');
+
+    expect(screen.getByText('notifications.mark_read')).toBeTruthy();
+    expect(screen.getByText('notifications.delete')).toBeTruthy();
   });
 
   it('select all deletes the whole inbox (pages not loaded yet included) and marks everything read in one call', async () => {

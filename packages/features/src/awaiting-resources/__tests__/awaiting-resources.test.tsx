@@ -6,9 +6,10 @@ import { getCallDetailTabs } from '@resgrid/features/calls';
 import { OutstandingRequirementsAlertKind } from '@resgrid/models';
 import { emitRealtimeEvent } from '@resgrid/realtime';
 import { useToastStore } from '@resgrid/ui';
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 import { router } from 'expo-router';
 import React from 'react';
+import { StyleSheet } from 'react-native';
 
 import { activateVariant, hidden, setRights } from '../../calls/__tests__/test-utils';
 import { AwaitingResourcesBanner } from '../components/awaiting-resources-banner';
@@ -101,6 +102,10 @@ describe('AwaitingResourcesScreen', () => {
     expect(screen.getByText('awaiting_resources.waiting_minutes:6')).toBeTruthy();
     expect(screen.getByText('awaiting_resources.response_time:4:05')).toBeTruthy();
     expect(screen.getByTestId('awaiting-requirement-51-code')).toBeTruthy();
+    // The app bar titles the route: no second title, but what the list holds and a refresh (web has no pull to refresh).
+    expect(screen.queryByText('awaiting_resources.title')).toBeNull();
+    expect(screen.getByText('awaiting_resources.subtitle')).toBeTruthy();
+    expect(screen.getByTestId('awaiting-resources-refresh')).toBeTruthy();
     await act(async () => fireEvent.press(screen.getByTestId('awaiting-requirement-51-unit-7-dispatch')));
     expect(mockDispatchUnit).toHaveBeenCalledWith(1, 7);
     expect(useToastStore.getState().toasts[0]).toMatchObject({ type: 'success', message: 'M-7 added' });
@@ -109,6 +114,12 @@ describe('AwaitingResourcesScreen', () => {
   it('dismisses a requirement with a note after confirming', async () => {
     await render(<AwaitingResourcesScreen now={() => NOW} />);
     await fireEvent.press(screen.getByTestId('awaiting-requirement-51-dismiss'));
+    // A landscape phone leaves ~390 pt above the keyboard: the body scrolls inside a card that never outgrows that space.
+    const dialogScroll = screen.getByTestId('dismiss-requirement-dialog-scroll', hidden);
+    expect(within(dialogScroll).getByTestId('dismiss-requirement-note', hidden)).toBeTruthy();
+    expect(within(dialogScroll).getByTestId('dismiss-requirement-dialog-confirm', hidden)).toBeTruthy();
+    expect(StyleSheet.flatten(dialogScroll.props.style)).toMatchObject({ flexGrow: 0, flexShrink: 1 });
+    expect(StyleSheet.flatten(screen.getByTestId('dismiss-requirement-dialog-card', hidden).props.style)).toMatchObject({ maxHeight: '100%', flexShrink: 1 });
     await fireEvent.changeText(screen.getByTestId('dismiss-requirement-note', hidden), '  covered by mutual aid ');
     await act(async () => fireEvent.press(screen.getByTestId('dismiss-requirement-dialog-confirm', hidden)));
     expect(mockDismiss).toHaveBeenCalledWith(1, 51, 'covered by mutual aid');

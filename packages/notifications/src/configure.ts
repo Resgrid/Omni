@@ -99,6 +99,18 @@ export function getPushSubjectKind(): PushSubjectKind {
   }
 }
 
+/**
+ * The push `Source` a `user`-subject app registers with (variant manifest `capabilities.push.source`: Dispatch's
+ * `Dispatch`), or undefined for none. IC's `IC` comes with its `icUser` subject instead.
+ */
+export function getPushSource(): string | undefined {
+  try {
+    return getCapability('push').source;
+  } catch {
+    return undefined;
+  }
+}
+
 /** Variant manifest `capabilities.push.desktopPush`. */
 export function isDesktopPushEnabled(): boolean {
   try {

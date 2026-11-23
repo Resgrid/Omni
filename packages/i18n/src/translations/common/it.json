@@ -1617,12 +1617,14 @@
     "tracking_notification_title": "Tracciamento della posizione",
     "permission_foreground_title": "Allow location access",
     "permission_foreground_message": "{{appName}} uses your location while the app is open to show where you are on the map and to share your position with your department.",
-    "permission_background_title": "Allow location all the time",
-    "permission_background_message": "To keep your department updated while {{appName}} is in the background or the screen is off, allow location access \"All the time\" (Android: \"Allow all the time\"; iOS: \"Always\") in the next prompt or in Settings.",
-    "permission_blocked_message": "Location access is turned off for {{appName}}. Open Settings to allow it.",
+    "permission_background_title": "Consenti sempre l'accesso alla posizione",
+    "permission_background_message": "Per tenere aggiornato il tuo reparto mentre {{appName}} è in background o lo schermo è spento, scegli \"Consenti sempre\" (Android) o \"Sempre\" (iOS) nella prossima richiesta o nelle Impostazioni.",
+    "permission_background_disclosure_person": "{{appName}} raccoglie dati sulla posizione per condividere la tua posizione con il tuo reparto mentre intervieni, così può vedere chi è più vicino a una chiamata, anche quando l'app è chiusa o non in uso. La tua posizione viene condivisa solo con il tuo reparto.",
+    "permission_background_disclosure_unit": "{{appName}} raccoglie dati sulla posizione per inviare la posizione di questa unità agli operatori del tuo reparto e mantenere attiva la navigazione passo passo, anche quando l'app è chiusa o non in uso. La posizione viene condivisa solo con il tuo reparto.",
+    "permission_blocked_message": "L'accesso alla posizione è disattivato per {{appName}}. Apri le Impostazioni per consentirlo.",
     "permission_open_settings": "Open Settings",
-    "permission_continue": "Continue",
-    "permission_not_now": "Not now"
+    "permission_continue": "Continua",
+    "permission_not_now": "Non ora"
   },
   "location_history": {
     "address_matching_off": "La protezione avanzata dei dati è attiva per questo dipartimento: gli indirizzi delle chiamate sono cifrati e vengono mostrate solo le chiamate collegate tramite contatto.",

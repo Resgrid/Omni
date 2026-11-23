@@ -41,6 +41,9 @@ coverage/
 junit.xml
 *.log
 
+# App store listings and marketing art live in the private int-Coordination repo (docs/store-listings)
+/store/
+
 # Agent tooling
 .agents/skills/
 .claude/settings.local.json

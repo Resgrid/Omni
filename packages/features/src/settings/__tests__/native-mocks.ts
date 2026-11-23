@@ -62,4 +62,12 @@ export const realtimeModule = () => ({ useRealtimeStore: mockRealtimeStore });
 
 export const mockTransmitter = { requestBackgroundTracking: jest.fn() };
 
-export const locationModule = () => ({ getLocationTransmitter: () => mockTransmitter, getRecentLocation: () => null });
+/** The background rationale as keys, so tests can tell the person and unit disclosures apart. */
+const mockRationale = (step: string, options: { target?: string } = {}) => ({
+  title: `location.permission_${step}_title`,
+  message: step === 'background' ? `location.permission_background_disclosure_${options.target === 'unit' ? 'unit' : 'person'}` : `location.permission_${step}_message`,
+  confirmLabel: 'location.permission_continue',
+  cancelLabel: 'location.permission_not_now',
+});
+
+export const locationModule = () => ({ getLocationTransmitter: () => mockTransmitter, getRecentLocation: () => null, getLocationPermissionRationale: mockRationale });

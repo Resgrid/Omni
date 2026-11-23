@@ -8,7 +8,7 @@
  * Web and Electron resolve `push-notification.web.ts` instead (same exported surface).
  */
 import notifee, { type AndroidChannel, AndroidImportance, AndroidVisibility, AuthorizationStatus, type Event as NotifeeEvent, EventType } from '@notifee/react-native';
-import { IC_PUSH_SOURCE, isPushRegistrationAccepted, type PushSubject, registerPushDevice, unregisterPushToken } from '@resgrid/api';
+import { IC_PUSH_SOURCE, isPushRegistrationAccepted, pushSourceFor, type PushSubject, registerPushDevice, unregisterPushToken } from '@resgrid/api';
 import { logger, useAppLifecycle } from '@resgrid/core';
 import { translate } from '@resgrid/i18n';
 import * as Device from 'expo-device';
@@ -20,6 +20,7 @@ import { isAlertSuppressed } from './alert-suppression';
 import { androidChannelsFor, type AndroidChannelSpec, buildIosCategories, CHANNEL_LIGHT_COLOR, CHANNEL_VIBRATION_PATTERN, type ChannelTranslate, CHECK_IN_ACTION_ID } from './channels';
 import {
   getOptionalNotificationsDependencies,
+  getPushSource,
   getPushSubjectKind,
   hasCheckInActions,
   hasDeskSounds,
@@ -74,17 +75,18 @@ const currentIdentity = (deps: NotificationsDependencies): RegistrationIdentity 
     const unitId = readActiveUnitId(deps);
     return unitId ? { kind, subject: { kind: 'unit', unitId }, userId: session.userId, departmentCode: session.departmentCode, unitId } : null;
   }
-  if (kind === 'icUser') {
-    return { kind, subject: { kind: 'icUser' }, userId: session.userId, departmentCode: session.departmentCode, source: IC_PUSH_SOURCE };
-  }
-  return { kind, subject: { kind: 'user' }, userId: session.userId, departmentCode: session.departmentCode };
+  const subject: PushSubject = kind === 'icUser' ? { kind: 'icUser' } : { kind: 'user', source: getPushSource() };
+
+  return { kind, subject, userId: session.userId, departmentCode: session.departmentCode, source: pushSourceFor(subject) };
 };
 
 /** The subject a stored registration was made for (to take it off again). */
 const subjectOf = (registration: StoredNativePushRegistration): PushSubject => {
   if (registration.UnitId) return { kind: 'unit', unitId: registration.UnitId };
   if (registration.Source === IC_PUSH_SOURCE) return { kind: 'icUser' };
-  return { kind: 'user' };
+
+  // A user app's own Source (Dispatch's), taken off with the Source it was registered with.
+  return registration.Source ? { kind: 'user', source: registration.Source } : { kind: 'user' };
 };
 
 /** How a notification arriving in the foreground is shown: pushes as usual. */

@@ -64,6 +64,7 @@ export {
   type LocationPermissionFlowResult,
   type LocationPermissionOutcome,
   type LocationPermissionRationale,
+  type LocationPermissionRationaleOptions,
   type LocationPermissionSnapshot,
   type LocationRationaleStep,
   type PermissionAnswer,

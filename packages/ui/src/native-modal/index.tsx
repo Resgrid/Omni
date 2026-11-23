@@ -3,6 +3,7 @@ import React from 'react';
 import { Modal, type ModalProps, Platform, StyleSheet, View, type ViewProps } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { BottomInsetConsumedContext } from '../safe-area-view';
 import { ModalToastHost } from '../toast/toast-container';
 
 /** iOS defaults a Modal to portrait-only, which rotates a landscape iPad/board back to portrait. */
@@ -20,13 +21,16 @@ export type NativeModalProps = ModalProps;
  *
  * The modal gets its own SafeAreaProvider, so safe-area insets inside it describe the modal's window
  * rather than the app's: none at the top of an iOS page sheet, the status bar and cutout on Android
- * (where every modal is drawn edge to edge).
+ * (where every modal is drawn edge to edge). The window covers any tab bar of the screen that opened it, so the bottom
+ * inset is never consumed inside it (`useBottomSafeAreaInset`).
  */
 export const NativeModal: React.FC<NativeModalProps> = ({ children, supportedOrientations = ALL_ORIENTATIONS, ...props }) => (
   <Modal supportedOrientations={supportedOrientations} {...props}>
     <SafeAreaProvider>
-      {children}
-      <ModalToastHost />
+      <BottomInsetConsumedContext.Provider value={false}>
+        {children}
+        <ModalToastHost />
+      </BottomInsetConsumedContext.Provider>
     </SafeAreaProvider>
   </Modal>
 );

@@ -88,7 +88,8 @@
       "desktopPush": true,
       "liveActivity": false,
       "approveSignIns": false,
-      "soundSet": "dispatch"
+      "soundSet": "dispatch",
+      "source": "Dispatch"
     },
     "auth": {
       "mfa": true,

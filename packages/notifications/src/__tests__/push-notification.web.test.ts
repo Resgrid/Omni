@@ -135,6 +135,7 @@ describe('browser', () => {
   it.each([
     ['responder', '/Devices/RegisterDevice', { Platform: 3, Token: 'browser-token', DeviceUuid: 'device-uuid', Prefix: 'DEPT' }],
     ['ic', '/Devices/RegisterDevice', { Platform: 3, Token: 'browser-token', DeviceUuid: 'device-uuid', Prefix: 'DEPT', Source: 'IC' }],
+    ['dispatch', '/Devices/RegisterDevice', { Platform: 3, Token: 'browser-token', DeviceUuid: 'device-uuid', Prefix: 'DEPT', Source: 'Dispatch' }],
   ] as const)('registers the %s subject', async (variant, url, data) => {
     selectVariant(variant);
     permission = 'granted';
@@ -220,6 +221,14 @@ describe('browser', () => {
     await web.syncWebPush();
     await web.pushNotificationService.unregisterAtSignOut('access-token');
     expect(fetchMock).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ body: JSON.stringify({ Token: 'browser-token', Prefix: 'DEPT', Source: 'IC' }) }));
+  });
+
+  it("sends Dispatch's Source when taking a Dispatch browser or desktop off", async () => {
+    selectVariant('dispatch');
+    permission = 'granted';
+    await web.syncWebPush();
+    await web.pushNotificationService.unregisterAtSignOut('access-token');
+    expect(fetchMock).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ body: JSON.stringify({ Token: 'browser-token', Prefix: 'DEPT', Source: 'Dispatch' }) }));
   });
 
   it('still kills the token when the sign-out call fails', async () => {

@@ -1,7 +1,8 @@
 import { useCapability } from '@resgrid/config';
 import { logger } from '@resgrid/core';
+import { ConfirmDialog } from '@resgrid/features/auth-ui';
 import { useTranslation } from '@resgrid/i18n';
-import { getLocationTransmitter } from '@resgrid/location';
+import { getLocationPermissionRationale, getLocationTransmitter } from '@resgrid/location';
 import { useRealtimeStore } from '@resgrid/realtime';
 import { Text, VStack } from '@resgrid/ui';
 import React, { useCallback, useState } from 'react';
@@ -13,8 +14,10 @@ import { getLocationPreferences, setBackgroundGeolocationPreference, setRealtime
 /**
  * Location (Responder/Unit geolocation items; `capabilities.location`). Realtime Geolocation sends this person's or unit's
  * position while the app is open and joins the geolocation hub for everyone else's; Background Geolocation keeps sending
- * with the app in the background and needs "always" permission, asked for only when the member turns it on. The location
- * transmitter re-reads these switches (`subscribePreferences`).
+ * with the app in the background and needs "always" permission, asked for only when the member turns it on. Turning it on
+ * first shows Google Play's prominent disclosure (what is collected, for which feature, even when the app is closed); the
+ * OS prompt follows only when the member accepts it. The location transmitter re-reads these switches
+ * (`subscribePreferences`).
  */
 export const LocationSection: React.FC = () => {
   const { t } = useTranslation();
@@ -23,6 +26,7 @@ export const LocationSection: React.FC = () => {
   const preferences = getLocationPreferences();
   const hubJoined = useRealtimeStore((state) => state.hubs.geolocation.joined);
   const [message, setMessage] = useState<string | null>(null);
+  const [disclosureOpen, setDisclosureOpen] = useState(false);
   const backgroundAvailable = location.background && (Platform.OS === 'ios' || Platform.OS === 'android');
 
   const toggleRealtime = useCallback(async (enabled: boolean) => {
@@ -35,24 +39,29 @@ export const LocationSection: React.FC = () => {
     }
   }, []);
 
-  const toggleBackground = useCallback(
-    async (enabled: boolean) => {
-      setMessage(null);
-      if (!enabled) {
-        setBackgroundGeolocationPreference(false);
-        return;
-      }
-      // The switch only stays on when "always" is granted; otherwise the OS setting is the way forward.
-      const transmitter = getLocationTransmitter();
-      const result = transmitter ? await transmitter.requestBackgroundTracking().catch(() => null) : null;
-      if (!result || result.outcome === 'granted') {
-        setBackgroundGeolocationPreference(true);
-        return;
-      }
-      setMessage(result.outcome === 'blocked' ? t('location.permission_blocked_message') : t('settings.background_geolocation_denied'));
-    },
-    [t]
-  );
+  const toggleBackground = useCallback((enabled: boolean) => {
+    setMessage(null);
+    if (!enabled) {
+      setBackgroundGeolocationPreference(false);
+      return;
+    }
+    setDisclosureOpen(true);
+  }, []);
+
+  // The member accepted the disclosure: now the OS prompt. The switch only stays on when "always" is granted;
+  // otherwise the OS setting is the way forward.
+  const acceptDisclosure = useCallback(async () => {
+    setDisclosureOpen(false);
+    const transmitter = getLocationTransmitter();
+    const result = transmitter ? await transmitter.requestBackgroundTracking().catch(() => null) : null;
+    if (!result || result.outcome === 'granted') {
+      setBackgroundGeolocationPreference(true);
+      return;
+    }
+    setMessage(result.outcome === 'blocked' ? t('location.permission_blocked_message') : t('settings.background_geolocation_denied'));
+  }, [t]);
+
+  const disclosure = getLocationPermissionRationale('background', { target: location.transmission });
 
   return (
     <VStack space="sm">
@@ -68,10 +77,20 @@ export const LocationSection: React.FC = () => {
           label={t('settings.background_geolocation')}
           value={preferences.backgroundGeolocation}
           note={t('settings.background_geolocation_warning')}
-          onValueChange={(enabled) => void toggleBackground(enabled)}
+          onValueChange={toggleBackground}
           testID="settings-background-geolocation"
         />
       ) : null}
+      <ConfirmDialog
+        isOpen={disclosureOpen}
+        title={disclosure.title}
+        message={disclosure.message}
+        confirmLabel={disclosure.confirmLabel}
+        cancelLabel={disclosure.cancelLabel}
+        onConfirm={() => void acceptDisclosure()}
+        onCancel={() => setDisclosureOpen(false)}
+        testID="settings-background-disclosure"
+      />
       {message ? (
         <Text size="sm" className="px-1 text-warning-700" accessibilityLiveRegion="polite" testID="settings-location-message">
           {message}

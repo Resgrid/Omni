@@ -1,17 +1,20 @@
+import { FOREGROUND_TIMED_OUT, settleWithinForeground } from '@resgrid/core/lifecycle/foreground-timeout';
 import * as Location from 'expo-location';
 import { Platform } from 'react-native';
 
 import { LOCATION_I18N_KEYS, translateOr } from './i18n-keys';
 import { describeError, getLocationLogger } from './logger';
-import { settleWithin, TIMED_OUT } from './timeouts';
-import type { LocationPermissionStatus } from './types';
+import type { LocationPermissionStatus, TransmissionTarget } from './types';
 import { BROWSER_PERMISSION_DENIED, getBrowserGeolocation, getBrowserPosition, queryBrowserPermission } from './web-geolocation';
 
 /**
- * Generous, because it covers the user reading the OS prompt. It exists for the request that never settles: on
- * Android a permission request made outside Expo that overlaps an Expo one takes the activity's single result callback
- * and Expo holds every later request behind it until the process restarts. Reporting that as denied points the user at
- * Settings, where a grant is read back without a prompt (Responder).
+ * Counts only while the app is in front (`settleWithinForeground`): the OS prompt and Android's "Allow all the time"
+ * Settings page put the app behind them, so a member who takes their time there is never reported as refusing. It
+ * exists for the request that never settles: on Android a permission request made outside Expo that overlaps an Expo
+ * one takes the activity's single result callback and Expo holds every later request behind it until the process
+ * restarts. Reporting that as denied points the user at Settings, where a grant is read back without a prompt
+ * (Responder). On web, while the member may be answering the browser's location prompt, the limit is
+ * `BROWSER_PROMPT_TIMEOUT_MS` instead.
  */
 export const PERMISSION_TIMEOUT_MS = 30_000;
 
@@ -34,12 +37,14 @@ const isWebPlatform = (): boolean => Platform.OS === 'web';
 const toAnswer = (response: { status: unknown; granted?: boolean; canAskAgain?: boolean }): PermissionAnswer => {
   const raw = String(response.status);
   const status: LocationPermissionStatus = response.granted === true || raw === 'granted' ? 'granted' : raw === 'denied' ? 'denied' : 'undetermined';
+
   return { status, canAskAgain: response.canAskAgain !== false };
 };
 
 const browserAnswer = async (): Promise<PermissionAnswer> => {
   if (!getBrowserGeolocation()) return UNSUPPORTED;
   const status = (await queryBrowserPermission()) ?? 'undetermined';
+
   return { status, canAskAgain: status !== 'denied' };
 };
 
@@ -47,29 +52,40 @@ const browserAnswer = async (): Promise<PermissionAnswer> => {
 export async function getLocationPermissions(): Promise<LocationPermissionSnapshot> {
   if (isWebPlatform()) return { foreground: await browserAnswer(), background: UNSUPPORTED };
   const [foreground, background] = await Promise.all([Location.getForegroundPermissionsAsync(), Location.getBackgroundPermissionsAsync()]);
+
   return { foreground: toAnswer(foreground), background: toAnswer(background) };
 }
 
 export async function getForegroundLocationPermission(): Promise<PermissionAnswer> {
   if (isWebPlatform()) return browserAnswer();
+
   return toAnswer(await Location.getForegroundPermissionsAsync());
 }
 
 export async function getBackgroundLocationPermission(): Promise<PermissionAnswer> {
   if (isWebPlatform()) return UNSUPPORTED;
+
   return toAnswer(await Location.getBackgroundPermissionsAsync());
 }
 
-const timedRequest = async (request: () => Promise<PermissionAnswer>, label: string): Promise<PermissionAnswer> => {
+/**
+ * `readBack` reads the grant without prompting. When the request hangs, a grant the member made anyway (in Settings,
+ * say) still counts; anything else is reported as denied for good, since a hung request blocks every later prompt.
+ */
+const timedRequest = async (request: () => Promise<PermissionAnswer>, readBack: () => Promise<PermissionAnswer>, label: string): Promise<PermissionAnswer> => {
   try {
-    const answer = await settleWithin(request(), PERMISSION_TIMEOUT_MS);
-    if (answer === TIMED_OUT) {
-      getLocationLogger().warn({ message: 'Location permission request did not settle; reporting it as denied', context: { step: label } });
-      return { status: 'denied', canAskAgain: false };
-    }
-    return answer;
+    const answer = await settleWithinForeground(request(), PERMISSION_TIMEOUT_MS, 'geolocation');
+
+    if (answer !== FOREGROUND_TIMED_OUT) return answer;
+    const current = await readBack().catch(() => null);
+
+    if (current?.status === 'granted') return current;
+    getLocationLogger().warn({ message: 'Location permission request did not settle; reporting it as denied', context: { step: label } });
+
+    return { status: 'denied', canAskAgain: false };
   } catch (error) {
     getLocationLogger().warn({ message: 'Location permission request failed', context: { step: label, error: describeError(error) } });
+
     return { status: 'denied', canAskAgain: false };
   }
 };
@@ -81,26 +97,43 @@ const timedRequest = async (request: () => Promise<PermissionAnswer>, label: str
 export async function requestForegroundLocationPermission(): Promise<PermissionAnswer> {
   if (isWebPlatform()) {
     const geolocation = getBrowserGeolocation();
+
     if (!geolocation) return UNSUPPORTED;
     const current = await browserAnswer();
+
     if (current.status !== 'undetermined') return current;
-    return timedRequest(async () => {
-      try {
-        await getBrowserPosition(geolocation, { enableHighAccuracy: false, maximumAge: 60_000, timeout: PERMISSION_TIMEOUT_MS });
-        return { status: 'granted', canAskAgain: true };
-      } catch (error) {
-        const code = typeof error === 'object' && error !== null ? (error as { code?: unknown }).code : undefined;
-        if (code === BROWSER_PERMISSION_DENIED) return { status: 'denied', canAskAgain: false };
-        // Timeout or unavailable position: the permission itself may well be granted.
-        return (await queryBrowserPermission()) === 'granted' ? { status: 'granted', canAskAgain: true } : { status: 'undetermined', canAskAgain: true };
-      }
-    }, 'foreground');
+
+    return timedRequest(
+      async () => {
+        try {
+          await getBrowserPosition(geolocation, { enableHighAccuracy: false, maximumAge: 60_000, timeout: PERMISSION_TIMEOUT_MS });
+
+          return { status: 'granted', canAskAgain: true };
+        } catch (error) {
+          const code = typeof error === 'object' && error !== null ? (error as { code?: unknown }).code : undefined;
+
+          if (code === BROWSER_PERMISSION_DENIED) return { status: 'denied', canAskAgain: false };
+
+          // Timeout or unavailable position: the permission itself may well be granted.
+          return (await queryBrowserPermission()) === 'granted' ? { status: 'granted', canAskAgain: true } : { status: 'undetermined', canAskAgain: true };
+        }
+      },
+      browserAnswer,
+      'foreground'
+    );
   }
-  return timedRequest(async () => {
-    const current = toAnswer(await Location.getForegroundPermissionsAsync());
-    if (current.status === 'granted' || !current.canAskAgain) return current;
-    return toAnswer(await Location.requestForegroundPermissionsAsync());
-  }, 'foreground');
+
+  return timedRequest(
+    async () => {
+      const current = toAnswer(await Location.getForegroundPermissionsAsync());
+
+      if (current.status === 'granted' || !current.canAskAgain) return current;
+
+      return toAnswer(await Location.requestForegroundPermissionsAsync());
+    },
+    getForegroundLocationPermission,
+    'foreground'
+  );
 }
 
 /**
@@ -110,12 +143,20 @@ export async function requestForegroundLocationPermission(): Promise<PermissionA
 export async function requestBackgroundLocationPermission(): Promise<PermissionAnswer> {
   if (isWebPlatform()) return UNSUPPORTED;
   const foreground = toAnswer(await Location.getForegroundPermissionsAsync());
+
   if (foreground.status !== 'granted') return { status: 'denied', canAskAgain: foreground.canAskAgain };
-  return timedRequest(async () => {
-    const current = toAnswer(await Location.getBackgroundPermissionsAsync());
-    if (current.status === 'granted' || !current.canAskAgain) return current;
-    return toAnswer(await Location.requestBackgroundPermissionsAsync());
-  }, 'background');
+
+  return timedRequest(
+    async () => {
+      const current = toAnswer(await Location.getBackgroundPermissionsAsync());
+
+      if (current.status === 'granted' || !current.canAskAgain) return current;
+
+      return toAnswer(await Location.requestBackgroundPermissionsAsync());
+    },
+    getBackgroundLocationPermission,
+    'background'
+  );
 }
 
 /**
@@ -143,16 +184,21 @@ export interface LocationPermissionFlowOptions {
 /** The two-step flow: "when in use" first, then — only if granted and wanted — "always". */
 export async function runLocationPermissionFlow(options: LocationPermissionFlowOptions): Promise<LocationPermissionFlowResult> {
   const prompt = options.prompt !== false;
+
   if (isWebPlatform() && !getBrowserGeolocation()) return { outcome: 'unsupported', foreground: UNSUPPORTED, background: null };
 
   const foreground = prompt ? await requestForegroundLocationPermission() : await getForegroundLocationPermission();
+
   if (foreground.status !== 'granted') {
     return { outcome: foreground.canAskAgain ? 'denied' : 'blocked', foreground, background: null };
   }
+
   if (!options.background) return { outcome: 'granted', foreground, background: null };
+
   if (isWebPlatform()) return { outcome: 'foreground-only', foreground, background: UNSUPPORTED };
 
   const background = prompt ? await requestBackgroundLocationPermission() : await getBackgroundLocationPermission();
+
   return { outcome: background.status === 'granted' ? 'granted' : 'foreground-only', foreground, background };
 }
 
@@ -166,20 +212,33 @@ export interface LocationPermissionRationale {
   cancelLabel: string;
 }
 
+export interface LocationPermissionRationaleOptions {
+  /** Whose position the app sends (`capabilities.location.transmission`): picks the background disclosure. */
+  target?: TransmissionTarget;
+}
+
 /**
  * Text for the in-app explanation shown before each OS prompt (and when the OS will not prompt any more). The UI shows
  * it with `@resgrid/ui` primitives; opening Settings is the caller's job (`Linking.openSettings()`).
+ *
+ * The background text opens with Google Play's prominent disclosure for background location (what is collected, for
+ * which feature, "even when the app is closed or not in use"), so it must be shown, and accepted, before
+ * `requestBackgroundTracking` reaches the "Allow all the time" prompt.
  */
-export function getLocationPermissionRationale(step: LocationRationaleStep): LocationPermissionRationale {
+export function getLocationPermissionRationale(step: LocationRationaleStep, options: LocationPermissionRationaleOptions = {}): LocationPermissionRationale {
   const notNow = translateOr(LOCATION_I18N_KEYS.permissionNotNow);
+
   if (step === 'background') {
+    const disclosure = translateOr(options.target === 'unit' ? LOCATION_I18N_KEYS.permissionBackgroundDisclosureUnit : LOCATION_I18N_KEYS.permissionBackgroundDisclosurePerson);
+
     return {
       title: translateOr(LOCATION_I18N_KEYS.permissionBackgroundTitle),
-      message: translateOr(LOCATION_I18N_KEYS.permissionBackgroundMessage),
+      message: `${disclosure}\n\n${translateOr(LOCATION_I18N_KEYS.permissionBackgroundMessage)}`,
       confirmLabel: translateOr(LOCATION_I18N_KEYS.permissionContinue),
       cancelLabel: notNow,
     };
   }
+
   if (step === 'blocked') {
     return {
       title: translateOr(LOCATION_I18N_KEYS.permissionForegroundTitle),
@@ -188,6 +247,7 @@ export function getLocationPermissionRationale(step: LocationRationaleStep): Loc
       cancelLabel: notNow,
     };
   }
+
   return {
     title: translateOr(LOCATION_I18N_KEYS.permissionForegroundTitle),
     message: translateOr(LOCATION_I18N_KEYS.permissionForegroundMessage),

@@ -1617,12 +1617,14 @@
     "tracking_notification_title": "Śledzenie lokalizacji",
     "permission_foreground_title": "Allow location access",
     "permission_foreground_message": "{{appName}} uses your location while the app is open to show where you are on the map and to share your position with your department.",
-    "permission_background_title": "Allow location all the time",
-    "permission_background_message": "To keep your department updated while {{appName}} is in the background or the screen is off, allow location access \"All the time\" (Android: \"Allow all the time\"; iOS: \"Always\") in the next prompt or in Settings.",
-    "permission_blocked_message": "Location access is turned off for {{appName}}. Open Settings to allow it.",
+    "permission_background_title": "Zezwalaj na lokalizację przez cały czas",
+    "permission_background_message": "Aby Twoja jednostka organizacyjna otrzymywała aktualizacje, gdy {{appName}} działa w tle lub ekran jest wyłączony, wybierz „Zezwalaj zawsze” (Android) lub „Zawsze” (iOS) w następnym oknie lub w Ustawieniach.",
+    "permission_background_disclosure_person": "{{appName}} zbiera dane o lokalizacji, aby udostępniać Twoją pozycję Twojej jednostce organizacyjnej podczas działań, dzięki czemu widać, kto jest najbliżej zgłoszenia, nawet gdy aplikacja jest zamknięta lub nieużywana. Twoja lokalizacja jest udostępniana wyłącznie Twojej jednostce organizacyjnej.",
+    "permission_background_disclosure_unit": "{{appName}} zbiera dane o lokalizacji, aby wysyłać pozycję tej jednostki dyspozytorom Twojej jednostki organizacyjnej i podtrzymywać nawigację krok po kroku, nawet gdy aplikacja jest zamknięta lub nieużywana. Lokalizacja jest udostępniana wyłącznie Twojej jednostce organizacyjnej.",
+    "permission_blocked_message": "Dostęp do lokalizacji jest wyłączony dla {{appName}}. Otwórz Ustawienia, aby na niego zezwolić.",
     "permission_open_settings": "Open Settings",
-    "permission_continue": "Continue",
-    "permission_not_now": "Not now"
+    "permission_continue": "Dalej",
+    "permission_not_now": "Nie teraz"
   },
   "location_history": {
     "address_matching_off": "W tym departamencie włączona jest zaawansowana ochrona danych, dlatego adresy zgłoszeń są zaszyfrowane i wyświetlane są tylko zgłoszenia powiązane przez kontakt.",

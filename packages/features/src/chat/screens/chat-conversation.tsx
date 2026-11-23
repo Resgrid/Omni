@@ -4,7 +4,7 @@ import { parseChatEventPayload, useChatStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import { ChatChannelType, ChatMessagePriority, type ChatMessageResultData, ChatMessageType, type GifResultData } from '@resgrid/models';
 import { useRealtimeEvent } from '@resgrid/realtime';
-import { BottomAnchoredKeyboardView, FlatList, Loading, ScreenHeader, useToast, View, ZeroState } from '@resgrid/ui';
+import { BottomAnchoredKeyboardView, FlatList, Loading, ScreenHeader, useBottomSafeAreaInset, useToast, View, ZeroState } from '@resgrid/ui';
 import * as Clipboard from 'expo-clipboard';
 import { router, useLocalSearchParams } from 'expo-router';
 import { MessagesSquare } from 'lucide-react-native';
@@ -38,6 +38,8 @@ function ChatConversationContent({ channelId, keyboardOffset = 0 }: { channelId:
   const userId = useAuthStore((state) => state.userId);
   const { isUserDepartmentAdmin } = useSecurity();
   const channel = useChatStore((state) => state.channels.find((item) => item.ChatChannelId === channelId));
+  // The composer pads the home indicator while it is the bottom of the screen; the keyboard covers both (see offset).
+  const bottomInset = useBottomSafeAreaInset();
   const messages = useChatStore((state) => state.messagesByChannel[channelId] ?? NO_MESSAGES);
   const isLoading = useChatStore((state) => state.loading.messages === true);
   const [resolveAttempted, setResolveAttempted] = useState(false);
@@ -136,7 +138,7 @@ function ChatConversationContent({ channelId, keyboardOffset = 0 }: { channelId:
   return (
     <View className="flex-1 bg-background-50" testID="chat-conversation-screen">
       <ScreenHeader title={channel?.Name ?? t('chat.title')} onBack={back} />
-      <BottomAnchoredKeyboardView offset={keyboardOffset}>
+      <BottomAnchoredKeyboardView offset={keyboardOffset + bottomInset}>
         {isLoading && ordered.length === 0 ? (
           <Loading />
         ) : ordered.length === 0 ? (
@@ -159,6 +161,7 @@ function ChatConversationContent({ channelId, keyboardOffset = 0 }: { channelId:
           placeholder={isReadOnly ? t('chat.read_only') : undefined}
           initialValue={editing?.Body ?? ''}
           allowUrgent={!editing}
+          bottomInset={bottomInset}
           {...(editing ? { onCancelEdit: () => setEditing(null) } : {})}
           {...(!isChatbot ? { onOpenGif: () => setGifPickerOpen(true) } : {})}
         />

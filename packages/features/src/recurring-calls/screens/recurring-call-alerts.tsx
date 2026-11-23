@@ -15,7 +15,7 @@ import { useIsRecurringCallsEnabled, useOccurrenceActions } from '../hooks/use-r
 import { recurringCallsRoutes } from '../routes';
 
 export interface RecurringCallAlertsScreenProps {
-  /** In-content title row (default true; off when the shell header already titles the screen). */
+  /** In-content title (default false: the app bar titles the route from its nav entry). Pass true where the screen is embedded under another title. */
   showHeader?: boolean;
 }
 
@@ -26,7 +26,7 @@ export interface RecurringCallAlertsScreenProps {
  * acknowledges or dismisses the alert. New alerts stay highlighted until the dispatcher leaves the screen; a push tap
  * (`?alertId=`) highlights its alert. Kept current by the `recurringCallAlertsUpdated` push.
  */
-export default function RecurringCallAlertsScreen({ showHeader = true }: RecurringCallAlertsScreenProps) {
+export default function RecurringCallAlertsScreen({ showHeader = false }: RecurringCallAlertsScreenProps) {
   const { t } = useTranslation();
   const router = useRouter();
   const toast = useToast();
@@ -146,10 +146,11 @@ export default function RecurringCallAlertsScreen({ showHeader = true }: Recurri
 
   return (
     <View className="flex-1 bg-background-50 px-4 pt-4" testID="recurring-call-alerts-screen">
-      {isEnabled && showHeader ? (
+      {/* The app bar titles the route; what the list holds and refresh (no pull to refresh on web) stay on one row. */}
+      {isEnabled ? (
         <HStack className="mb-3 items-center justify-between">
-          <VStack className="flex-1">
-            <Text className="text-lg font-bold">{t('recurring_calls.alerts.title')}</Text>
+          <VStack className="mr-2 flex-1">
+            {showHeader ? <Text className="text-lg font-bold">{t('recurring_calls.alerts.title')}</Text> : null}
             <Text className="text-xs text-typography-500">{t('recurring_calls.alerts.subtitle')}</Text>
           </VStack>
           <Pressable onPress={() => void handleRefresh()} accessibilityRole="button" accessibilityLabel={t('common.refresh')} testID="recurring-call-alerts-refresh">

@@ -4,7 +4,7 @@ import { UIIcon } from '@gluestack-ui/core/icon/creator';
 import { tva, useStyleContext, type VariantProps, withStyleContext } from '@gluestack-ui/utils/nativewind-utils';
 import { styled } from 'nativewind';
 import React from 'react';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, type Insets, Platform, Pressable, Text, View } from 'react-native';
 
 const SCOPE = 'BUTTON';
 
@@ -114,8 +114,9 @@ const buttonTextStyle = tva({
       outline: '',
       solid: 'text-typography-0 data-[hover=true]:text-typography-0 data-[active=true]:text-typography-0',
     },
+    // Never below 12 px: `xs` is the row action of Dispatch's queues and lists (text-2xs was 10 px).
     size: {
-      xs: 'text-2xs',
+      xs: 'text-xs',
       sm: 'text-xs',
       md: 'text-sm',
       lg: 'text-base',
@@ -240,9 +241,33 @@ const buttonGroupStyle = tva({
 
 type IButtonProps = Omit<React.ComponentPropsWithoutRef<typeof UIButton>, 'context'> & VariantProps<typeof buttonStyle> & { className?: string };
 
-const Button = React.forwardRef<React.ComponentRef<typeof UIButton>, IButtonProps>(function Button({ className, variant = 'solid', size = 'md', action = 'primary', ...props }, ref) {
+type ButtonSize = NonNullable<IButtonProps['size']>;
+
+/** The smallest touch target on a touch screen (Apple HIG and Material both ask for 44 pt / 48 dp). */
+export const MIN_TOUCH_TARGET = 44;
+
+/** The drawn heights of the sizes below MIN_TOUCH_TARGET (`h-8`, `h-9`). */
+const SMALL_BUTTON_HEIGHTS: Partial<Record<ButtonSize, number>> = { xs: 32, sm: 36 };
+
+/**
+ * The touch area a small button gets beyond what it draws on a touch screen, so `xs` (32) and `sm` (36) are still 44 pt
+ * tall to a finger. Web and Electron have a precise pointer and get none; neither does a size already tall enough.
+ */
+export const buttonHitSlop = (size: ButtonSize, platform: typeof Platform.OS = Platform.OS): Insets | undefined => {
+  const height = SMALL_BUTTON_HEIGHTS[size];
+
+  if (platform === 'web' || height === undefined) {
+    return undefined;
+  }
+
+  const slop = (MIN_TOUCH_TARGET - height) / 2;
+
+  return { top: slop, bottom: slop };
+};
+
+const Button = React.forwardRef<React.ComponentRef<typeof UIButton>, IButtonProps>(function Button({ className, variant = 'solid', size = 'md', action = 'primary', hitSlop, ...props }, ref) {
   const contextValue = React.useMemo(() => ({ variant, size, action }), [variant, size, action]);
-  return <UIButton ref={ref} {...props} className={buttonStyle({ variant, size, action, class: className })} context={contextValue} />;
+  return <UIButton ref={ref} {...props} hitSlop={hitSlop ?? buttonHitSlop(size)} className={buttonStyle({ variant, size, action, class: className })} context={contextValue} />;
 });
 
 type IButtonTextProps = React.ComponentPropsWithoutRef<typeof UIButton.Text> & VariantProps<typeof buttonTextStyle> & { className?: string };

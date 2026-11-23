@@ -4,7 +4,7 @@ import { useArchivedCallsStore, useCallsStore } from '@resgrid/data';
 import { callRoutes, priorityOptions } from '@resgrid/features/calls';
 import { useDepartmentTimeZone } from '@resgrid/features/department-config';
 import { useTranslation } from '@resgrid/i18n';
-import { DateTimeField, HStack, Loading, Pressable, ScrollRow, Text, ZeroState } from '@resgrid/ui';
+import { DateTimeField, HStack, Loading, Pressable, ScrollRow, ScrollView, Text, ZeroState } from '@resgrid/ui';
 import { useRouter } from 'expo-router';
 import { Archive, Filter, Search } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -27,6 +27,7 @@ import {
 export const ARCHIVED_CALLS_FRESH_MS = 60 * 1000;
 
 export interface ArchivedCallsScreenProps {
+  /** In-content title (default false: the app bar titles the route from its nav entry). Pass true where the screen is embedded under another title. */
   showHeader?: boolean;
   /** Clock for the freshness check (tests). */
   now?: () => number;
@@ -37,7 +38,7 @@ export interface ArchivedCallsScreenProps {
  * priority, type and logged-date filters. Rows open the call. (Entering a past call, "Add Archived Call", needs Core's
  * `SaveArchivedCall`, which is not on Core develop yet.)
  */
-export default function ArchivedCallsScreen({ showHeader = true, now = Date.now }: ArchivedCallsScreenProps) {
+export default function ArchivedCallsScreen({ showHeader = false, now = Date.now }: ArchivedCallsScreenProps) {
   const { t } = useTranslation();
   const timeZone = useDepartmentTimeZone();
   const router = useRouter();
@@ -71,6 +72,8 @@ export default function ArchivedCallsScreen({ showHeader = true, now = Date.now 
   const callTypes = useMemo(() => archivedCallTypes(archivedCalls), [archivedCalls]);
   const visible = useMemo(() => filterArchivedCalls(archivedCalls, filters), [archivedCalls, filters]);
   const activeFilterCount = countActiveArchivedCallFilters(filters);
+  // How many filters are on shows while the panel is closed, and is read out with the toggle.
+  const filtersLabel = activeFilterCount > 0 ? `${t('archived_calls.filters')} (${activeFilterCount})` : t('archived_calls.filters');
   const update = (changes: Partial<ArchivedCallFilters>) => setFilters((current) => ({ ...current, ...changes }));
 
   const columns = useMemo<QueueColumn[]>(
@@ -94,58 +97,63 @@ export default function ArchivedCallsScreen({ showHeader = true, now = Date.now 
     [t, timeZone]
   );
 
+  // The open filters never take more than ARCHIVED_FILTERS_MAX_SHARE of the space under the search and years, and scroll past
+  // that: with many call types, or a phone in landscape, the list keeps the rest instead of shrinking to nothing, and
+  // "Clear filters" stays in view under the scrolling part.
   const renderFilters = () => (
-    <View className="mb-3 rounded-lg border border-outline-200 bg-background-0 p-3" testID="archived-calls-filters">
-      <Text className="mb-1 text-xs font-semibold uppercase text-typography-500">{t('archived_calls.table_state')}</Text>
-      <View style={styles.chipRow}>
-        {ARCHIVED_CALL_STATES.map((state) => (
-          <FilterChip
-            key={state.value}
-            label={t(state.labelKey)}
-            active={filters.states.includes(state.value)}
-            onPress={() => update({ states: toggled(filters.states, state.value) })}
-            testID={`archived-filter-state-${state.value}`}
-          />
-        ))}
-      </View>
-      {priorities.length > 0 ? (
-        <>
-          <Text className="mb-1 text-xs font-semibold uppercase text-typography-500">{t('scheduled_calls.table_priority')}</Text>
-          <View style={styles.chipRow}>
-            {priorities.map((priority) => (
-              <FilterChip
-                key={priority.id}
-                label={priority.isLabelKey ? t(priority.label) : priority.label}
-                color={priority.color}
-                active={filters.priorities.includes(priority.id)}
-                onPress={() => update({ priorities: toggled(filters.priorities, priority.id) })}
-                testID={`archived-filter-priority-${priority.id}`}
-              />
-            ))}
-          </View>
-        </>
-      ) : null}
-      {callTypes.length > 0 ? (
-        <>
-          <Text className="mb-1 text-xs font-semibold uppercase text-typography-500">{t('scheduled_calls.table_type')}</Text>
-          <View style={styles.chipRow}>
-            {callTypes.map((type) => (
-              <FilterChip key={type} label={type} active={filters.types.includes(type)} onPress={() => update({ types: toggled(filters.types, type) })} testID={`archived-filter-type-${type}`} />
-            ))}
-          </View>
-        </>
-      ) : null}
-      <Text className="mb-1 text-xs font-semibold uppercase text-typography-500">{t('archived_calls.logged_between')}</Text>
-      <HStack space="sm">
-        <View className="flex-1">
-          <DateTimeField value={filters.fromDate} onChange={(fromDate) => update({ fromDate })} label={t('archived_calls.from_date')} mode="date" testID="archived-filter-from" />
+    <View style={styles.filters} className="mb-3 rounded-lg border border-outline-200 bg-background-0" testID="archived-calls-filters">
+      <ScrollView style={styles.filtersScroll} contentContainerStyle={styles.filtersContent} nestedScrollEnabled testID="archived-calls-filters-scroll">
+        <Text className="mb-1 text-xs font-semibold uppercase text-typography-500">{t('archived_calls.table_state')}</Text>
+        <View style={styles.chipRow}>
+          {ARCHIVED_CALL_STATES.map((state) => (
+            <FilterChip
+              key={state.value}
+              label={t(state.labelKey)}
+              active={filters.states.includes(state.value)}
+              onPress={() => update({ states: toggled(filters.states, state.value) })}
+              testID={`archived-filter-state-${state.value}`}
+            />
+          ))}
         </View>
-        <View className="flex-1">
-          <DateTimeField value={filters.toDate} onChange={(toDate) => update({ toDate })} label={t('archived_calls.to_date')} mode="date" testID="archived-filter-to" />
-        </View>
-      </HStack>
+        {priorities.length > 0 ? (
+          <>
+            <Text className="mb-1 text-xs font-semibold uppercase text-typography-500">{t('scheduled_calls.table_priority')}</Text>
+            <View style={styles.chipRow}>
+              {priorities.map((priority) => (
+                <FilterChip
+                  key={priority.id}
+                  label={priority.isLabelKey ? t(priority.label) : priority.label}
+                  color={priority.color}
+                  active={filters.priorities.includes(priority.id)}
+                  onPress={() => update({ priorities: toggled(filters.priorities, priority.id) })}
+                  testID={`archived-filter-priority-${priority.id}`}
+                />
+              ))}
+            </View>
+          </>
+        ) : null}
+        {callTypes.length > 0 ? (
+          <>
+            <Text className="mb-1 text-xs font-semibold uppercase text-typography-500">{t('scheduled_calls.table_type')}</Text>
+            <View style={styles.chipRow}>
+              {callTypes.map((type) => (
+                <FilterChip key={type} label={type} active={filters.types.includes(type)} onPress={() => update({ types: toggled(filters.types, type) })} testID={`archived-filter-type-${type}`} />
+              ))}
+            </View>
+          </>
+        ) : null}
+        <Text className="mb-1 text-xs font-semibold uppercase text-typography-500">{t('archived_calls.logged_between')}</Text>
+        <HStack space="sm">
+          <View className="flex-1">
+            <DateTimeField value={filters.fromDate} onChange={(fromDate) => update({ fromDate })} label={t('archived_calls.from_date')} mode="date" testID="archived-filter-from" />
+          </View>
+          <View className="flex-1">
+            <DateTimeField value={filters.toDate} onChange={(toDate) => update({ toDate })} label={t('archived_calls.to_date')} mode="date" testID="archived-filter-to" />
+          </View>
+        </HStack>
+      </ScrollView>
       {activeFilterCount > 0 ? (
-        <Pressable onPress={() => setFilters((current) => ({ ...EMPTY_ARCHIVED_CALL_FILTERS, query: current.query }))} accessibilityRole="button" className="mt-2 self-start" testID="archived-filters-clear">
+        <Pressable onPress={() => setFilters((current) => ({ ...EMPTY_ARCHIVED_CALL_FILTERS, query: current.query }))} accessibilityRole="button" className="self-start px-3 pb-3 pt-1" testID="archived-filters-clear">
           <Text className="text-sm font-medium text-primary-600">{t('archived_calls.clear_filters')}</Text>
         </Pressable>
       ) : null}
@@ -185,14 +193,14 @@ export default function ArchivedCallsScreen({ showHeader = true, now = Date.now 
           onPress={() => setShowFilters((shown) => !shown)}
           accessibilityRole="button"
           accessibilityState={{ expanded: showFilters }}
-          accessibilityLabel={t('archived_calls.filters')}
+          accessibilityLabel={filtersLabel}
           className={`ml-2 flex-row items-center rounded-lg border border-outline-200 px-3 py-2 ${showFilters || activeFilterCount > 0 ? 'bg-primary-50' : 'bg-background-0'}`}
           testID="archived-calls-filters-toggle"
         >
           <View>
             <Filter size={16} color="#4b5563" />
           </View>
-          <Text className="ml-1 text-sm text-typography-700">{activeFilterCount > 0 ? `${t('archived_calls.filters')} (${activeFilterCount})` : t('archived_calls.filters')}</Text>
+          <Text className="ml-1 text-sm text-typography-700">{filtersLabel}</Text>
         </Pressable>
       </View>
       {years.length > 0 ? (
@@ -202,10 +210,22 @@ export default function ArchivedCallsScreen({ showHeader = true, now = Date.now 
           ))}
         </ScrollRow>
       ) : null}
-      {showFilters ? renderFilters() : null}
-      <View className="flex-1">{renderContent()}</View>
+      {/* The filters' share is measured against this column, so the list below always keeps the larger part of it. */}
+      <View className="flex-1" testID="archived-calls-body">
+        {showFilters ? renderFilters() : null}
+        <View className="flex-1">{renderContent()}</View>
+      </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({ chipRow: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 4 } });
+/** The most of the space under the search and years the open filters take; past it they scroll. */
+export const ARCHIVED_FILTERS_MAX_SHARE = '40%';
+
+const styles = StyleSheet.create({
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 4 },
+  filters: { maxHeight: ARCHIVED_FILTERS_MAX_SHARE, overflow: 'hidden' },
+  // As tall as its chips until the panel's cap, then it gives up height and scrolls (React Native's default would grow).
+  filtersScroll: { flexGrow: 0, flexShrink: 1 },
+  filtersContent: { padding: 12 },
+});

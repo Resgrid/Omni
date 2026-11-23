@@ -105,6 +105,11 @@ export default [
     languageOptions: { globals: { ...globals.serviceworker } },
   },
   {
+    // Maestro runScript files (run by the Maestro CLI): a flow's `env` values are globals, results go on `output`.
+    files: ['apps/omni/e2e/maestro/**/*.js'],
+    languageOptions: { sourceType: 'script', globals: { output: 'writable', QA_TOTP: 'readonly' } },
+  },
+  {
     // A standalone package (pnpm install --ignore-workspace), installed only when the artwork is regenerated, so CI lints
     // it without its dependencies. An ignore rather than a disable comment: that would be reported unused once installed.
     files: ['scripts/brand-assets/**'],

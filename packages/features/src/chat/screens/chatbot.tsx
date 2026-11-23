@@ -3,7 +3,7 @@ import { PENDING_SEQ_BASE, useChatStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
 import { type ChatMessageResultData } from '@resgrid/models';
 import { useRealtimeEvent } from '@resgrid/realtime';
-import { BottomAnchoredKeyboardView, FlatList, HStack, Loading, Pressable, Text, useThemeColors, useToast, View, ZeroState } from '@resgrid/ui';
+import { BottomAnchoredKeyboardView, FlatList, HStack, Loading, Pressable, Text, useBottomSafeAreaInset, useThemeColors, useToast, View, ZeroState } from '@resgrid/ui';
 import * as Clipboard from 'expo-clipboard';
 import { useFocusEffect } from 'expo-router';
 import { RefreshCw, Sparkles } from 'lucide-react-native';
@@ -38,6 +38,8 @@ function ChatbotContent({ keyboardOffset = 0 }: ChatbotScreenProps) {
   const userId = useAuthStore((state) => state.userId);
   const { isUserDepartmentAdmin } = useSecurity();
   const channelId = useChatStore((state) => state.chatbotChannelId);
+  // The composer pads the home indicator while it is the bottom of the screen; the keyboard covers both (see offset).
+  const bottomInset = useBottomSafeAreaInset();
   const isTyping = useChatStore((state) => state.chatbotTyping);
   const initError = useChatStore((state) => state.errors.chatbot ?? null);
   const initFetchedAt = useChatStore((state) => state.fetchedAt.chatbot ?? 0);
@@ -169,7 +171,7 @@ function ChatbotContent({ keyboardOffset = 0 }: ChatbotScreenProps) {
         </Pressable>
       </HStack>
 
-      <BottomAnchoredKeyboardView offset={keyboardOffset}>
+      <BottomAnchoredKeyboardView offset={keyboardOffset + bottomInset}>
         {isLoadingMessages && ordered.length === 0 ? (
           <Loading />
         ) : ordered.length === 0 ? (
@@ -194,7 +196,7 @@ function ChatbotContent({ keyboardOffset = 0 }: ChatbotScreenProps) {
             <TypingDots color={ASSISTANT_ACCENT} />
           </HStack>
         ) : null}
-        <MessageComposer onSend={(body) => void send(body)} allowUrgent={false} placeholder={t('chatbot.ask_placeholder')} />
+        <MessageComposer onSend={(body) => void send(body)} allowUrgent={false} placeholder={t('chatbot.ask_placeholder')} bottomInset={bottomInset} />
       </BottomAnchoredKeyboardView>
 
       {/* Assistant messages: copy, pin (moderator) and report only — no reactions, edits or deletes. */}

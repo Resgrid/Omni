@@ -65,8 +65,10 @@ Done right in this codebase:
   and stays `segmented` (owner decision). A source rule (`ui/src/__tests__/tab-bar.test.tsx`) rejects a hand-made tab row.
   Chip and filter rows are `ScrollRow` (round edge chevrons, same `useEdgeScroll` tracking); a source rule
   (`ui/src/__tests__/scroll-row.test.tsx`) rejects any other horizontal `ScrollView` in a screen.
-- `ScreenHeader` drops its own back arrow when the app bar shows one (`AppBarBackContext` from the shell): one change,
-  every detail screen in every app.
+- `ScreenHeader` titles the app bar instead of drawing a second row whenever the bar covers leaving the screen
+  (`AppBarExitContext` from the shell: its back button, or the menu of a top-level screen such as Dispatch's New Call);
+  it keeps its own row and back only below the top level with no history, or outside the shell. One change, every
+  screen in every app.
 - `ZeroState` fills the space its column has left (`w-full flex-1`), not a full screen height that ran past the bottom
   under a header or search field. Seven list screens had overridden it one at a time; the default now covers all 110 uses.
 - Every empty, not-found or error `ZeroState` passes `onRetry` (a Retry / Refresh button that loads it again): the state

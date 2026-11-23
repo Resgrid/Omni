@@ -33,7 +33,7 @@ export interface UnitsPanelProps {
   maxHeight?: number;
 }
 
-/** Bar under the search while multi-select is on: count, select all, clear, done. */
+/** Bar under the search while multi-select is on: count, select all, clear, set status, done. */
 const SelectionBar: React.FC<{ count: number; onSelectAll: () => void }> = ({ count, onSelectAll }) => {
   const { t } = useTranslation();
 
@@ -48,6 +48,12 @@ const SelectionBar: React.FC<{ count: number; onSelectAll: () => void }> = ({ co
       {count > 0 ? (
         <Pressable onPress={() => useConsoleStore.getState().clearSelection()} hitSlop={6} testID="unit-select-clear">
           <Text className="text-xs font-medium text-typography-600">{t('dispatch.bulk_unit_actions.clear')}</Text>
+        </Pressable>
+      ) : null}
+      {/* The bulk status form sits in the Actions tab, which a phone shows in place of the units. */}
+      {count > 0 ? (
+        <Pressable onPress={() => useConsoleStore.getState().showActions()} hitSlop={6} accessibilityRole="button" testID="unit-select-set-status">
+          <Text className="text-xs font-semibold text-primary-700">{t('dispatch.set_status')}</Text>
         </Pressable>
       ) : null}
       <Pressable onPress={() => useConsoleStore.getState().endSelection()} hitSlop={6} testID="unit-select-done">

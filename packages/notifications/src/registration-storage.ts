@@ -5,6 +5,7 @@
  * `nativePushRegistration` is the key IC's store builds write (JSON). It is part of the frozen storage contract
  * (AGENTS.md): never rename it, or the first Omni sign-out after an IC upgrade leaves the old token live.
  */
+import { IC_PUSH_SOURCE } from '@resgrid/api';
 
 export const NATIVE_PUSH_REGISTRATION_KEY = 'nativePushRegistration';
 /** Units/departments the device left whose removal the server has not confirmed (Unit's in-memory list, now durable). */
@@ -103,6 +104,16 @@ export class RegistrationStore {
 export const isSameRegistration = (a: StoredNativePushRegistration, b: StoredNativePushRegistration): boolean =>
   a.Token === b.Token && a.Prefix === b.Prefix && (a.UnitId ?? null) === (b.UnitId ?? null) && (a.Source ?? null) === (b.Source ?? null);
 
-/** Same Novu subscriber (department, unit, source, user) regardless of token. */
+/**
+ * Whether a registration is on IC's subscriber (`{code}_IC_User_{userId}`). Any other `Source` (Dispatch's) only picks
+ * the push integration on the same `{code}_User_{userId}` subscriber.
+ */
+const isIcSubscriber = (registration: StoredNativePushRegistration): boolean => registration.Source === IC_PUSH_SOURCE;
+
+/**
+ * Same Novu subscriber (department, unit, user, IC or not) regardless of token or a user app's own `Source`: a build
+ * that starts sending its `Source` keeps its token on the subscriber, rather than registering it and then removing it as
+ * the "previous" registration (Core files both on the same integration until it routes that `Source`).
+ */
 export const isSameSubscriber = (a: StoredNativePushRegistration, b: StoredNativePushRegistration): boolean =>
-  a.UserId === b.UserId && a.Prefix === b.Prefix && (a.UnitId ?? null) === (b.UnitId ?? null) && (a.Source ?? null) === (b.Source ?? null);
+  a.UserId === b.UserId && a.Prefix === b.Prefix && (a.UnitId ?? null) === (b.UnitId ?? null) && isIcSubscriber(a) === isIcSubscriber(b);

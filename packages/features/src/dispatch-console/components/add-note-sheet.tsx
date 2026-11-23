@@ -32,17 +32,21 @@ export const AddNoteSheet: React.FC<AddNoteSheetProps> = ({ isOpen, onClose, onN
     setBody('');
     setCategory('');
     setShowErrors(false);
+
     if (useNotesStore.getState().categories.length === 0) void useNotesStore.getState().fetchCategories();
   }, [isOpen]);
 
   const save = async () => {
     if (!title.trim() || !body.trim()) {
       setShowErrors(true);
+
       return;
     }
+
     setIsSaving(true);
     const saved = await useNotesStore.getState().saveNote({ Title: title.trim(), Body: body.trim(), Category: category || null, IsAdminOnly: false });
     setIsSaving(false);
+
     if (saved) {
       toast.success(t('dispatch_console.note_saved'));
       onNoteAdded?.();

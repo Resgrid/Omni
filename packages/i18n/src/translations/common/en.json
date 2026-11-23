@@ -1619,6 +1619,8 @@
     "permission_foreground_message": "{{appName}} uses your location while the app is open to show where you are on the map and to share your position with your department.",
     "permission_background_title": "Allow location all the time",
     "permission_background_message": "To keep your department updated while {{appName}} is in the background or the screen is off, allow location access \"All the time\" (Android: \"Allow all the time\"; iOS: \"Always\") in the next prompt or in Settings.",
+    "permission_background_disclosure_person": "{{appName}} collects location data to share your position with your department while you respond, so they can see who is closest to a call, even when the app is closed or not in use. Your location is shared only with your department.",
+    "permission_background_disclosure_unit": "{{appName}} collects location data to send this unit's position to your department's dispatchers and to keep turn-by-turn navigation going, even when the app is closed or not in use. The location is shared only with your department.",
     "permission_blocked_message": "Location access is turned off for {{appName}}. Open Settings to allow it.",
     "permission_open_settings": "Open Settings",
     "permission_continue": "Continue",

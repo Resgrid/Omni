@@ -81,6 +81,46 @@ describe('Button', () => {
 
     expect(screen.getByRole('button', { name: 'Save call' })).toBeTruthy();
   });
+
+  // `xs` (32 pt) is the row action of Dispatch's queues and lists; `sm` is 36. A finger needs 44 without the row growing.
+  it.each([
+    ['xs', 32, 6],
+    ['sm', 36, 4],
+  ] as const)('a %s button (%i pt) is 44 pt tall to a finger without drawing taller', async (size, height, slop) => {
+    await render(
+      <Button size={size} testID="dispatch">
+        <ButtonText>Dispatch</ButtonText>
+      </Button>
+    );
+
+    expect(screen.getByTestId('dispatch').props.hitSlop).toEqual({ top: slop, bottom: slop });
+    expect(ui.buttonHitSlop(size, 'android')).toEqual({ top: slop, bottom: slop });
+    expect(height + 2 * slop).toBe(ui.MIN_TOUCH_TARGET);
+  });
+
+  it('adds no touch area to a size already 44 tall, on the web (precise pointer), or over a caller hitSlop', async () => {
+    expect(ui.buttonHitSlop('md', 'ios')).toBeUndefined();
+    expect(ui.buttonHitSlop('xs', 'web')).toBeUndefined();
+
+    await render(
+      <Button size="xs" hitSlop={12} testID="own">
+        <ButtonText>Own</ButtonText>
+      </Button>
+    );
+
+    expect(screen.getByTestId('own').props.hitSlop).toBe(12);
+  });
+
+  it('never draws a button label below 12 px (text-xs)', async () => {
+    await render(
+      <Button size="xs">
+        <ButtonText>Cancel</ButtonText>
+      </Button>
+    );
+
+    expect(screen.getByText('Cancel').props.className).toContain('text-xs');
+    expect(screen.getByText('Cancel').props.className).not.toContain('text-2xs');
+  });
 });
 
 /** The rendered subtree whose root carries `testID`. */

@@ -129,12 +129,35 @@ describe('SettingsScreen', () => {
     mockTransmitter.requestBackgroundTracking.mockResolvedValueOnce({ outcome: 'foreground-only', foreground: 'granted', background: 'denied' });
     await render(<SettingsScreen />);
     await fireEvent(screen.getByTestId('settings-background-geolocation'), 'onValueChange', true);
+    await fireEvent.press(screen.getByTestId('settings-background-disclosure-confirm'));
     expect(await screen.findByTestId('settings-location-message')).toHaveTextContent('settings.background_geolocation_denied');
     expect(getLocationPreferences().backgroundGeolocation).toBe(false);
 
     mockTransmitter.requestBackgroundTracking.mockResolvedValueOnce({ outcome: 'granted', foreground: 'granted', background: 'granted' });
     await fireEvent(screen.getByTestId('settings-background-geolocation'), 'onValueChange', true);
+    await fireEvent.press(screen.getByTestId('settings-background-disclosure-confirm'));
     await waitFor(() => expect(getLocationPreferences().backgroundGeolocation).toBe(true));
+  });
+
+  it("shows Google Play's background-location disclosure before the system prompt, and asks nothing when it is declined", async () => {
+    activateTestVariant('responder');
+    mockTransmitter.requestBackgroundTracking.mockClear();
+    await render(<SettingsScreen />);
+    await fireEvent(screen.getByTestId('settings-background-geolocation'), 'onValueChange', true);
+    expect(screen.getByTestId('settings-background-disclosure-message')).toHaveTextContent('location.permission_background_disclosure_person');
+    expect(mockTransmitter.requestBackgroundTracking).not.toHaveBeenCalled();
+
+    await fireEvent.press(screen.getByTestId('settings-background-disclosure-cancel'));
+    expect(screen.queryByTestId('settings-background-disclosure-message')).toBeNull();
+    expect(mockTransmitter.requestBackgroundTracking).not.toHaveBeenCalled();
+    expect(getLocationPreferences().backgroundGeolocation).toBe(false);
+  });
+
+  it("discloses the unit's position in Unit", async () => {
+    activateTestVariant('unit');
+    await render(<SettingsScreen />);
+    await fireEvent(screen.getByTestId('settings-background-geolocation'), 'onValueChange', true);
+    expect(screen.getByTestId('settings-background-disclosure-message')).toHaveTextContent('location.permission_background_disclosure_unit');
   });
 
   it('plays the modern alert sounds', async () => {

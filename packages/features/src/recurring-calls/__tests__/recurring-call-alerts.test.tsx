@@ -6,10 +6,10 @@ import type { RecurringCallAlertResultData } from '@resgrid/models';
 import { notificationSoundService } from '@resgrid/notifications';
 import { emitRealtimeEvent } from '@resgrid/realtime';
 import { useToastStore } from '@resgrid/ui';
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import React from 'react';
-import { AppState, type AppStateStatus } from 'react-native';
+import { AppState, type AppStateStatus, StyleSheet } from 'react-native';
 
 import { activateVariant, hidden, makeCall, setRights } from '../../calls/__tests__/test-utils';
 import { RecurringCallAlertsBanner } from '../components/recurring-call-alerts-banner';
@@ -94,6 +94,10 @@ describe('RecurringCallAlertsScreen', () => {
     const { unmount } = await render(<RecurringCallAlertsScreen />);
 
     expect(fetchAlerts).toHaveBeenCalledWith({ bypassCache: true });
+    // The app bar titles the route: no second title, but what the list holds and a refresh (web has no pull to refresh).
+    expect(screen.queryByText('recurring_calls.alerts.title')).toBeNull();
+    expect(screen.getByText('recurring_calls.alerts.subtitle')).toBeTruthy();
+    expect(screen.getByTestId('recurring-call-alerts-refresh')).toBeTruthy();
     expect(screen.getByText('recurring_calls.alerts.kind_missed')).toBeTruthy();
     expect(screen.getByTestId('recurring-alert-a1-when')).toHaveTextContent(/^recurring_calls\.alerts\.occurrence_at:.*08:00$/);
     expect(screen.getByTestId('recurring-alert-a2-call')).toHaveTextContent('recurring_calls.alerts.call_held:26-55');
@@ -133,6 +137,12 @@ describe('RecurringCallAlertsScreen', () => {
     expect(useToastStore.getState().toasts[0]).toMatchObject({ type: 'success', message: 'recurring_calls.alerts.acknowledge_success' });
 
     await fireEvent.press(screen.getByTestId('recurring-alert-a2-dismiss'));
+    // A landscape phone leaves ~390 pt above the keyboard: the body scrolls inside a card that never outgrows that space.
+    const dialogScroll = screen.getByTestId('dismiss-alert-dialog-scroll', hidden);
+    expect(within(dialogScroll).getByTestId('dismiss-alert-note', hidden)).toBeTruthy();
+    expect(within(dialogScroll).getByTestId('dismiss-alert-dialog-confirm', hidden)).toBeTruthy();
+    expect(StyleSheet.flatten(dialogScroll.props.style)).toMatchObject({ flexGrow: 0, flexShrink: 1 });
+    expect(StyleSheet.flatten(screen.getByTestId('dismiss-alert-dialog-card', hidden).props.style)).toMatchObject({ maxHeight: '100%', flexShrink: 1 });
     await fireEvent.changeText(screen.getByTestId('dismiss-alert-note', hidden), ' covered by mutual aid ');
     await act(async () => fireEvent.press(screen.getByTestId('dismiss-alert-dialog-confirm', hidden)));
     expect(dismissAlert).toHaveBeenCalledWith('a2', 'covered by mutual aid');

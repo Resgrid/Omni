@@ -1,7 +1,7 @@
 import { type Notification, useNotifications, useNovu } from '@novu/react-native';
 import { useTranslation } from '@resgrid/i18n';
 import { openInboxItem } from '@resgrid/notifications';
-import { Button, ButtonText, FlatList, HStack, Loading, Pressable, RefreshControl, Text, useThemeColors, useToast, View, ZeroState } from '@resgrid/ui';
+import { Button, ButtonText, FlatList, HStack, Loading, Pressable, RefreshControl, Text, useFormFactor, useThemeColors, useToast, View, ZeroState } from '@resgrid/ui';
 import { Bell, CheckCheck, Trash2, X } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
 import { View as RNView } from 'react-native';
@@ -25,6 +25,8 @@ function InboxContent() {
   const { t } = useTranslation();
   const toast = useToast();
   const colors = useThemeColors();
+  // A phone's selection bar has no room for three labelled buttons (360 pt, or German): Mark read and Delete go icon-only.
+  const { isPhone } = useFormFactor();
   const novu = useNovu();
   const { notifications, isLoading, isFetching, hasMore, fetchMore, refetch, readAll, error } = useNotifications({ archived: false });
   const [selected, setSelected] = useState<InboxItem | null>(null);
@@ -149,21 +151,35 @@ function InboxContent() {
               {t('notifications.selected_count', { count: selection.all ? Math.max(selectedIds.length, items.length) : selectedIds.length })}
             </Text>
           </HStack>
-          <HStack space="xs" className="items-center">
+          <HStack space="xs" className="shrink-0 items-center">
             <Button size="sm" variant="link" onPress={() => setSelection(allLoadedSelected ? { ids: [], all: false } : selectAllInboxItems(items))} testID="notifications-select-all">
               <ButtonText>{allLoadedSelected ? t('notifications.deselect_all') : t('notifications.select_all')}</ButtonText>
             </Button>
-            <Button size="sm" variant="outline" onPress={() => void readSelected()} isDisabled={isWorking || (selection.all ? !hasUnread : selectedUnread.length === 0)} testID="notifications-read-selected">
+            <Button
+              size="sm"
+              variant="outline"
+              onPress={() => void readSelected()}
+              isDisabled={isWorking || (selection.all ? !hasUnread : selectedUnread.length === 0)}
+              accessibilityLabel={t('notifications.mark_read')}
+              testID="notifications-read-selected"
+            >
               <RNView>
                 <CheckCheck size={16} color={colors.primary} />
               </RNView>
-              <ButtonText>{t('notifications.mark_read')}</ButtonText>
+              {isPhone ? null : <ButtonText>{t('notifications.mark_read')}</ButtonText>}
             </Button>
-            <Button size="sm" action="negative" onPress={() => setIsConfirmOpen(true)} isDisabled={isWorking || selectedIds.length === 0} testID="notifications-delete-selected">
+            <Button
+              size="sm"
+              action="negative"
+              onPress={() => setIsConfirmOpen(true)}
+              isDisabled={isWorking || selectedIds.length === 0}
+              accessibilityLabel={t('notifications.delete')}
+              testID="notifications-delete-selected"
+            >
               <RNView>
                 <Trash2 size={16} color={colors.textInverse} />
               </RNView>
-              <ButtonText>{t('notifications.delete')}</ButtonText>
+              {isPhone ? null : <ButtonText>{t('notifications.delete')}</ButtonText>}
             </Button>
           </HStack>
         </HStack>

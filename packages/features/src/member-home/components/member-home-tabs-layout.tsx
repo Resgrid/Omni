@@ -1,7 +1,7 @@
 import { useTerm } from '@resgrid/auth';
 import { type NavBadgeKey, useBadgeCountLookup, useBadgeCountsStore } from '@resgrid/data';
 import { useTranslation } from '@resgrid/i18n';
-import { contentOnFill, formatBadgeCount, useAppBarTitle, useFormFactor, useThemeColors } from '@resgrid/ui';
+import { BottomInsetConsumedContext, contentOnFill, formatBadgeCount, TAB_BAR_SAFE_AREA_INSETS, useAppBarTitle, useBottomSafeAreaInset, useFormFactor, useThemeColors } from '@resgrid/ui';
 import { Tabs, usePathname } from 'expo-router';
 import type { LucideIcon } from 'lucide-react-native';
 import { Car, House, Phone, User } from 'lucide-react-native';
@@ -48,15 +48,23 @@ const TabIcon: React.FC<{ icon: LucideIcon; color: ColorValue }> = ({ icon: Icon
   </View>
 );
 
+/** The tab bar's height above the bottom safe-area inset, and the padding above and below its items. */
+const TAB_BAR_HEIGHT = { portrait: 60, landscape: 65 } as const;
+const TAB_BAR_PADDING = 5;
+
 /**
  * The `home` folder's layout (`variants/responder/app/(app)/home/_layout.tsx` re-exports it): bottom tabs for the member
  * home and the shared personnel, units and calls lists. The parent shell owns the header; the personnel, units and calls
  * tabs give it their title (the home tab keeps the shell's).
+ *
+ * The bar's fixed height replaces the navigator's own, which included the bottom safe-area inset, so the bar adds that
+ * inset itself (its items stayed over the home indicator), and its screens' FABs leave it to the bar.
  */
 export function MemberHomeTabsLayout() {
   const { t } = useTranslation();
   const { isLandscape } = useFormFactor();
   const colors = useThemeColors();
+  const bottomInset = useBottomSafeAreaInset();
   // Open calls on the Calls tab, as Unit and IC show them on theirs.
   const badgeCount = useBadgeCountLookup();
 
@@ -74,33 +82,36 @@ export function MemberHomeTabsLayout() {
   useAppBarTitle(focusedTab ? titles[focusedTab.name] : null);
 
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarShowLabel: true,
-        tabBarLabelStyle: { fontSize: isLandscape ? 12 : 10, fontWeight: '500' },
-        tabBarStyle: { paddingBottom: 5, paddingTop: 5, height: isLandscape ? 65 : 60 },
-      }}
-    >
-      {MEMBER_HOME_TABS.map((tab) => {
-        const badge = badgeCount(tab.badge);
+    <BottomInsetConsumedContext.Provider value>
+      <Tabs
+        safeAreaInsets={TAB_BAR_SAFE_AREA_INSETS}
+        screenOptions={{
+          headerShown: false,
+          tabBarShowLabel: true,
+          tabBarLabelStyle: { fontSize: isLandscape ? 12 : 10, fontWeight: '500' },
+          tabBarStyle: { paddingBottom: TAB_BAR_PADDING + bottomInset, paddingTop: TAB_BAR_PADDING, height: (isLandscape ? TAB_BAR_HEIGHT.landscape : TAB_BAR_HEIGHT.portrait) + bottomInset },
+        }}
+      >
+        {MEMBER_HOME_TABS.map((tab) => {
+          const badge = badgeCount(tab.badge);
 
-        return (
-          <Tabs.Screen
-            key={tab.name}
-            name={tab.name}
-            options={{
-              title: titles[tab.name],
-              tabBarIcon: ({ color }) => <TabIcon icon={tab.icon} color={color} />,
-              tabBarButtonTestID: tab.testID,
-              tabBarBadge: badge ? formatBadgeCount(badge) : undefined,
-              tabBarBadgeStyle: { backgroundColor: colors.error, color: contentOnFill(colors.error) },
-              tabBarAccessibilityLabel: badge ? t('shell.nav_item_with_count', { label: titles[tab.name], count: badge }) : titles[tab.name],
-            }}
-          />
-        );
-      })}
-    </Tabs>
+          return (
+            <Tabs.Screen
+              key={tab.name}
+              name={tab.name}
+              options={{
+                title: titles[tab.name],
+                tabBarIcon: ({ color }) => <TabIcon icon={tab.icon} color={color} />,
+                tabBarButtonTestID: tab.testID,
+                tabBarBadge: badge ? formatBadgeCount(badge) : undefined,
+                tabBarBadgeStyle: { backgroundColor: colors.error, color: contentOnFill(colors.error) },
+                tabBarAccessibilityLabel: badge ? t('shell.nav_item_with_count', { label: titles[tab.name], count: badge }) : titles[tab.name],
+              }}
+            />
+          );
+        })}
+      </Tabs>
+    </BottomInsetConsumedContext.Provider>
   );
 }
 

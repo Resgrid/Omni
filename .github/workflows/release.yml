@@ -347,6 +347,18 @@ jobs:
           # Each Gradle worker can drive its own CMake/ninja build; cap workers to keep clang within memory.
           echo "org.gradle.workers.max=2" >> ~/.gradle/gradle.properties
 
+      # Without google-services.json the app builds but never gets an FCM token, so the store build would receive no push
+      # at all (the token error is only logged on the device). Stop here instead of shipping it.
+      - name: Require the Firebase config for push
+        env:
+          VARIANT: ${{ matrix.variant }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GOOGLE_SERVICES_FILE:-}" ] || [ ! -s "$GOOGLE_SERVICES_FILE" ]; then
+            echo "::error::GOOGLE_SERVICES_JSON_BASE64 is not set for the $VARIANT environment: an Android build without google-services.json receives no push notifications."
+            exit 1
+          fi
+
       - name: Build AAB (eas build --local)
         working-directory: apps/omni
         env:

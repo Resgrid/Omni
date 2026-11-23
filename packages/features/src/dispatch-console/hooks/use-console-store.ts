@@ -22,6 +22,11 @@ interface ConsoleData {
   /** The unit a Shift-click range starts from: the last unit toggled into or out of the selection. */
   selectionAnchorId: string | null;
   activeTab: ConsoleTab;
+  /**
+   * Bumped when the dispatcher picks something to act on (a call to filter to, one unit or person, "Set status" for a
+   * multi-unit selection): a layout that does not show the activity panel (the phone's tabs) brings it into view.
+   */
+  actionsRequest: number;
   activityLog: ActivityLogEntry[];
   radioLog: RadioLogEntry[];
 }
@@ -35,6 +40,8 @@ export interface ConsoleState extends ConsoleData {
   /** Toggles the selected person (clears a selected unit). Returns true when they are now selected. */
   selectPersonnel: (userId: string) => boolean;
   setActiveTab: (tab: ConsoleTab) => void;
+  /** Opens the Actions tab and asks the layout to show it (`actionsRequest`). */
+  showActions: () => void;
   addActivity: (entry: Omit<ActivityLogEntry, 'id' | 'timestamp'>) => void;
   clearActivity: () => void;
   startRadioTransmission: (participantId: string, participantName: string) => void;
@@ -62,6 +69,7 @@ const initialData = (): ConsoleData => ({
   selectedUnitIds: [],
   selectionAnchorId: null,
   activeTab: 'activity',
+  actionsRequest: 0,
   activityLog: [],
   radioLog: [],
 });
@@ -87,7 +95,7 @@ export const useConsoleStore = create<ConsoleState>()((set, get) => ({
     }
 
     // A call picked for filtering surfaces its quick actions (note, close, add resources).
-    set({ selectedCallId: callId, isCallFilterActive: true, activeTab: 'actions' });
+    set({ selectedCallId: callId, isCallFilterActive: true, activeTab: 'actions', actionsRequest: get().actionsRequest + 1 });
 
     return true;
   },
@@ -102,7 +110,7 @@ export const useConsoleStore = create<ConsoleState>()((set, get) => ({
     }
 
     // A single unit selected ends a multi-unit selection; its actions take the tab.
-    set({ selectedUnitId: unitId, selectedPersonnelId: null, isSelectionMode: false, selectedUnitIds: [], selectionAnchorId: null, activeTab: 'actions' });
+    set({ selectedUnitId: unitId, selectedPersonnelId: null, isSelectionMode: false, selectedUnitIds: [], selectionAnchorId: null, activeTab: 'actions', actionsRequest: get().actionsRequest + 1 });
 
     return true;
   },
@@ -114,12 +122,14 @@ export const useConsoleStore = create<ConsoleState>()((set, get) => ({
       return false;
     }
 
-    set({ selectedPersonnelId: userId, selectedUnitId: null, isSelectionMode: false, selectedUnitIds: [], selectionAnchorId: null, activeTab: 'actions' });
+    set({ selectedPersonnelId: userId, selectedUnitId: null, isSelectionMode: false, selectedUnitIds: [], selectionAnchorId: null, activeTab: 'actions', actionsRequest: get().actionsRequest + 1 });
 
     return true;
   },
 
   setActiveTab: (activeTab) => set({ activeTab }),
+
+  showActions: () => set({ activeTab: 'actions', actionsRequest: get().actionsRequest + 1 }),
 
   addActivity: (entry) => set((state) => ({ activityLog: [{ ...entry, id: nextId(), timestamp: Date.now() }, ...state.activityLog].slice(0, MAX_LOG_ENTRIES) })),
 

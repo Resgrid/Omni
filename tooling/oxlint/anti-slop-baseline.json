@@ -433,9 +433,6 @@
   "packages/api/src/endpoints/devices/index.ts": {
     "anti-slop/require-readable-spacing": 1
   },
-  "packages/api/src/endpoints/devices/push-registration.ts": {
-    "anti-slop/no-conditional-empty-object-spread": 4
-  },
   "packages/api/src/endpoints/index.ts": {
     "anti-slop/require-readable-spacing": 42
   },
@@ -632,8 +629,7 @@
   },
   "packages/app-shell/src/shell/create-app-shell.tsx": {
     "anti-slop/no-conditional-empty-object-spread": 2,
-    "anti-slop/no-runtime-typeof": 1,
-    "anti-slop/require-readable-spacing": 9
+    "anti-slop/no-runtime-typeof": 1
   },
   "packages/app-shell/src/shell/header.tsx": {
     "anti-slop/no-known-value-widening": 1,
@@ -1816,9 +1812,6 @@
   "packages/features/src/awaiting-resources/components/call-outstanding-requirements.tsx": {
     "anti-slop/require-readable-spacing": 2
   },
-  "packages/features/src/awaiting-resources/components/unit-available-alert-host.tsx": {
-    "anti-slop/require-readable-spacing": 3
-  },
   "packages/features/src/awaiting-resources/hooks/use-awaiting-resources.ts": {
     "anti-slop/no-known-value-widening": 1,
     "anti-slop/require-readable-spacing": 5
@@ -2487,64 +2480,32 @@
     "anti-slop/no-unsafe-dictionary-type": 2,
     "anti-slop/require-safety-comment-for-type-assertion": 4
   },
-  "packages/features/src/dispatch-console/__tests__/console-map-traffic.test.tsx": {
-    "anti-slop/require-readable-spacing": 1
-  },
   "packages/features/src/dispatch-console/__tests__/dispatch-console.test.tsx": {
     "anti-slop/no-object-parameters": 1,
     "anti-slop/no-unsafe-dictionary-type": 2,
     "anti-slop/require-safety-comment-for-type-assertion": 11
   },
-  "packages/features/src/dispatch-console/components/active-calls-panel.tsx": {
-    "anti-slop/require-readable-spacing": 4
-  },
   "packages/features/src/dispatch-console/components/activity-panel.tsx": {
     "anti-slop/require-safety-comment-for-type-assertion": 1
   },
-  "packages/features/src/dispatch-console/components/add-note-sheet.tsx": {
-    "anti-slop/require-readable-spacing": 4
-  },
   "packages/features/src/dispatch-console/components/console-map.tsx": {
-    "anti-slop/require-readable-spacing": 2,
     "anti-slop/require-safety-comment-for-type-assertion": 3
   },
   "packages/features/src/dispatch-console/components/console-status-sheets.tsx": {
     "anti-slop/no-known-value-widening": 1
   },
-  "packages/features/src/dispatch-console/components/map-panel.tsx": {
-    "anti-slop/require-readable-spacing": 2
-  },
   "packages/features/src/dispatch-console/components/panel-frame.tsx": {
     "anti-slop/no-runtime-typeof": 1
   },
-  "packages/features/src/dispatch-console/components/panel-search.tsx": {
-    "anti-slop/require-readable-spacing": 1
-  },
   "packages/features/src/dispatch-console/hooks/use-console-data.ts": {
-    "anti-slop/no-known-value-widening": 1,
-    "anti-slop/require-readable-spacing": 2
+    "anti-slop/no-known-value-widening": 1
   },
   "packages/features/src/dispatch-console/hooks/use-console-store.ts": {
     "anti-slop/no-conditional-empty-object-spread": 2,
     "anti-slop/require-safety-comment-for-type-assertion": 2
   },
-  "packages/features/src/dispatch-console/hooks/use-pending-resource-ids.ts": {
-    "anti-slop/require-readable-spacing": 2
-  },
-  "packages/features/src/dispatch-console/hooks/use-radio-log.ts": {
-    "anti-slop/require-readable-spacing": 2
-  },
   "packages/features/src/dispatch-console/index.ts": {
     "anti-slop/require-readable-spacing": 28
-  },
-  "packages/features/src/dispatch-console/lib/console-filters.ts": {
-    "anti-slop/require-readable-spacing": 9
-  },
-  "packages/features/src/dispatch-console/lib/console-layout.ts": {
-    "anti-slop/require-readable-spacing": 2
-  },
-  "packages/features/src/dispatch-console/lib/console-stats.ts": {
-    "anti-slop/require-readable-spacing": 1
   },
   "packages/features/src/dispatch-console/screens/dispatch-console.tsx": {
     "anti-slop/no-conditional-empty-object-spread": 1,
@@ -3730,8 +3691,7 @@
     "anti-slop/require-safety-comment-for-type-assertion": 4
   },
   "packages/location/src/__tests__/permissions-and-fix.test.ts": {
-    "anti-slop/no-unknown-parameters": 5,
-    "anti-slop/require-readable-spacing": 1
+    "anti-slop/no-unknown-parameters": 5
   },
   "packages/location/src/__tests__/transmitter.test.ts": {
     "anti-slop/no-chained-type-assertions": 1,
@@ -3811,7 +3771,6 @@
   },
   "packages/location/src/permissions.ts": {
     "anti-slop/no-runtime-typeof": 1,
-    "anti-slop/require-readable-spacing": 30,
     "anti-slop/require-safety-comment-for-type-assertion": 1
   },
   "packages/location/src/task-options.ts": {
@@ -4855,16 +4814,16 @@
     "anti-slop/no-runtime-typeof": 2,
     "anti-slop/no-unknown-parameters": 2,
     "anti-slop/no-unsafe-dictionary-type": 1,
-    "anti-slop/require-readable-spacing": 70,
+    "anti-slop/require-readable-spacing": 68,
     "anti-slop/require-safety-comment-for-type-assertion": 1
   },
   "packages/notifications/src/push-notification.web.ts": {
     "anti-slop/no-chained-type-assertions": 1,
-    "anti-slop/no-conditional-empty-object-spread": 5,
+    "anti-slop/no-conditional-empty-object-spread": 4,
     "anti-slop/no-runtime-typeof": 6,
     "anti-slop/no-unknown-parameters": 4,
     "anti-slop/no-unsafe-dictionary-type": 1,
-    "anti-slop/require-readable-spacing": 75,
+    "anti-slop/require-readable-spacing": 74,
     "anti-slop/require-safety-comment-for-type-assertion": 8
   },
   "packages/notifications/src/registration-storage.ts": {
@@ -5302,8 +5261,7 @@
     "anti-slop/require-readable-spacing": 8
   },
   "packages/ui/src/fab/index.tsx": {
-    "anti-slop/no-runtime-typeof": 1,
-    "anti-slop/require-readable-spacing": 6
+    "anti-slop/no-runtime-typeof": 1
   },
   "packages/ui/src/flat-list/__tests__/flat-list.test.tsx": {
     "anti-slop/no-unsafe-dictionary-type": 2,

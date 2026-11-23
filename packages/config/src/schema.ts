@@ -176,14 +176,25 @@ export const capabilitiesSchema = z.object({
    * `apps/omni/variants/dispatch/assets/audio` — every modern sound re-voiced in the Dispatch console timbre under the
    * same names, so a dispatcher tells its alerts from a Responder or Unit app on the same desk, plus the dispatcher desk
    * sounds (Core sound types 28–32), whose channels only an app with this set creates. Custom call tones stay shared.
+   *
+   * `source`: the push `Source` a `user`-subject app sends with every device registration and removal, so Core can keep
+   * the app's tokens on its own Novu push integrations (APNs topic, Firebase project) instead of Responder's. Permanent
+   * once shipped (AGENTS.md identity list; identifier registry): Dispatch sends `Dispatch`; Responder and BigBoard send
+   * none; IC's `IC` comes with its `icUser` subject. Core treats a `Source` it does not know as none.
    */
-  push: z.object({
-    subject: z.enum(['user', 'unit', 'icUser', 'none']),
-    desktopPush: z.boolean(),
-    liveActivity: z.boolean(),
-    approveSignIns: z.boolean(),
-    soundSet: z.enum(['shared', 'dispatch']),
-  }),
+  push: z
+    .object({
+      subject: z.enum(['user', 'unit', 'icUser', 'none']),
+      desktopPush: z.boolean(),
+      liveActivity: z.boolean(),
+      approveSignIns: z.boolean(),
+      soundSet: z.enum(['shared', 'dispatch']),
+      source: z
+        .string()
+        .regex(/^[A-Za-z][A-Za-z0-9]*$/)
+        .optional(),
+    })
+    .refine((push) => push.source === undefined || push.subject === 'user', { message: 'push.source is only for the user subject (IC sends its own Source)', path: ['source'] }),
   auth: z.object({
     mfa: z.boolean(),
     passkeys: z.boolean(),

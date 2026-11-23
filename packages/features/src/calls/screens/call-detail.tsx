@@ -302,7 +302,8 @@ function ServerCallDetail({ callId, mapSlot, menuItems, onMenuAction, onClosed, 
         {nature === null ? (
           <Text className="mt-2 italic text-typography-500">{protectedLabel}</Text>
         ) : nature ? (
-          <HtmlRenderer html={nature} scrollEnabled showsVerticalScrollIndicator style={styles.nature} rendererKey={`${call.CallId}-nature`} testID="call-detail-nature" />
+          // Grows with its text so an intake call's email, text or voicemail body reads in the page's own scroll; past 60% of the window it scrolls inside.
+          <HtmlRenderer html={nature} autoHeight style={styles.nature} rendererKey={`${call.CallId}-nature`} testID="call-detail-nature" />
         ) : null}
       </View>
       {isPending || isScheduled ? (
@@ -436,7 +437,8 @@ const styles = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'center' },
   priority: { alignSelf: 'flex-start', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 2, marginTop: 6 },
   source: { marginTop: 6, gap: 4 },
-  nature: { height: 132, marginTop: 8 },
+  // A floor in case a document reports no height: the text is never hidden in a 1 pt box.
+  nature: { minHeight: 48, marginTop: 8 },
   map: { height: 200, borderRadius: 12, overflow: 'hidden', marginBottom: 12 },
   actions: { flexDirection: 'row', flexWrap: 'wrap', borderRadius: 12, padding: 8, marginBottom: 12 },
   // A 44 dp touch target for each tab.

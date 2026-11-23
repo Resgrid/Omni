@@ -165,7 +165,8 @@ const SummaryBody: React.FC<SummaryBodyProps> = ({ call, priorities, tabs, tabIn
         {nature === null ? (
           <Text className="mt-1 italic text-typography-500">{protectedLabel}</Text>
         ) : nature ? (
-          <HtmlRenderer html={nature} scrollEnabled showsVerticalScrollIndicator style={styles.nature} rendererKey={`${call.CallId}-summary-nature`} testID={`${testID}-nature`} />
+          // As tall as its text, in the modal's own scroll (up to 60% of the window, then it scrolls inside).
+          <HtmlRenderer html={nature} autoHeight style={styles.nature} rendererKey={`${call.CallId}-summary-nature`} testID={`${testID}-nature`} />
         ) : (
           <Text className="mt-1 text-typography-500">{t('call_detail.no_additional_info')}</Text>
         )}
@@ -179,7 +180,8 @@ const styles = StyleSheet.create({
   summary: { padding: 16 },
   row: { flexDirection: 'row', alignItems: 'center' },
   priority: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 2, marginLeft: 8 },
-  nature: { height: 160, marginTop: 4 },
+  // A floor in case a document reports no height: the text is never hidden in a 1 pt box.
+  nature: { minHeight: 48, marginTop: 4 },
   footer: { borderTopWidth: 1, paddingHorizontal: 16, paddingVertical: 12 },
   // A 44 dp touch target for each tab.
   tab: { minHeight: 44 },

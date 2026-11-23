@@ -88,20 +88,31 @@ export const AddressCell: React.FC<{ call: CallResultData }> = ({ call }) => {
 };
 
 /**
- * The queue screens' list (Dispatch baseline tables): a striped table on tablets and desktop consoles — number, name,
- * then the screen's columns and actions — and stacked cards on phones. Rows open the call; actions inside a row never
- * also open it.
+ * Whether the queue shows stacked cards instead of the table: on phones, and on a portrait tablet, where the fixed
+ * number (90) and actions (240) columns leave a 744–834 pt window about 50 pt per flexible column, too little for the
+ * type, priority, received time or intake channel. Landscape tablets, desktop and wall boards keep the table.
+ */
+const useQueueCards = (): boolean => {
+  const { isPhone, isTablet, isLandscape } = useFormFactor();
+
+  return isPhone || (isTablet && !isLandscape);
+};
+
+/**
+ * The queue screens' list (Dispatch baseline tables): a striped table on landscape tablets and desktop consoles — number,
+ * name, then the screen's columns and actions — and stacked cards on phones and portrait tablets (`useQueueCards`). Rows
+ * open the call; actions inside a row never also open it.
  */
 export const QueueTable: React.FC<QueueTableProps> = ({ calls, columns, onOpenCall, renderActions, refreshing, onRefresh, testID, rowTestID }) => {
   const { t } = useTranslation();
-  const { isPhone } = useFormFactor();
+  const isCards = useQueueCards();
 
   const renderRow = useCallback(
     ({ item, index }: { item: CallResultData; index: number }) => {
       const actions = renderActions ? renderActions(item) : null;
       const name = callDisplayName(item, t('data_protection.protected_value'));
 
-      if (isPhone) {
+      if (isCards) {
         return (
           <Pressable onPress={() => onOpenCall(item)} className="mb-2 rounded-xl border border-outline-200 bg-background-0 p-3" testID={`${rowTestID}-${item.CallId}`}>
             <Text className="font-bold" numberOfLines={1}>
@@ -145,13 +156,13 @@ export const QueueTable: React.FC<QueueTableProps> = ({ calls, columns, onOpenCa
         </Pressable>
       );
     },
-    [columns, isPhone, onOpenCall, renderActions, rowTestID, t]
+    [columns, isCards, onOpenCall, renderActions, rowTestID, t]
   );
 
   return (
     <View className="flex-1 overflow-hidden rounded-lg border border-outline-200" testID={testID}>
-      {isPhone ? null : (
-        <View className="flex-row items-center border-b-2 border-outline-200 bg-background-50 px-3 py-2.5">
+      {isCards ? null : (
+        <View className="flex-row items-center border-b-2 border-outline-200 bg-background-50 px-3 py-2.5" testID={`${testID}-header`}>
           <Text style={styles.numberCell} className="text-xs font-bold uppercase text-typography-500">
             {t('scheduled_calls.table_number')}
           </Text>
@@ -176,7 +187,7 @@ export const QueueTable: React.FC<QueueTableProps> = ({ calls, columns, onOpenCa
         renderItem={renderRow}
         keyExtractor={(item: CallResultData) => item.CallId}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        contentContainerStyle={isPhone ? styles.phoneList : styles.tableList}
+        contentContainerStyle={isCards ? styles.cardList : styles.tableList}
       />
     </View>
   );
@@ -189,6 +200,6 @@ const styles = StyleSheet.create({
   cell: { paddingRight: 8 },
   // Wraps when a row has more actions than fit (intake calls add Dismiss as Spam) instead of spilling over the Received column.
   actionsCell: { width: 240, justifyContent: 'flex-end', flexWrap: 'wrap', rowGap: 6 },
-  phoneList: { padding: 8, paddingBottom: 24 },
+  cardList: { padding: 8, paddingBottom: 24 },
   tableList: { paddingBottom: 24 },
 });

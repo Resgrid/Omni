@@ -4,11 +4,12 @@ import { awaitingDispatchKey, type AwaitingUnitAlert, useAwaitingResourcesStore 
 import { callRoutes } from '@resgrid/features/calls';
 import { formatResponseSeconds } from '@resgrid/features/runcards';
 import { useTranslation } from '@resgrid/i18n';
-import { Button, ButtonSpinner, ButtonText, HStack, Pressable, Text, useFormFactor, VStack } from '@resgrid/ui';
+import { Button, ButtonSpinner, ButtonText, HStack, Pressable, Text, useBottomSafeAreaInset, useFormFactor, VStack } from '@resgrid/ui';
 import { useRouter } from 'expo-router';
 import { BellRing, ExternalLink, Send, X } from 'lucide-react-native';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAwaitingResourceActions, useIsAwaitingResourcesEnabled } from '../hooks/use-awaiting-resources';
 import { awaitingCallLabel, unitLabel } from '../lib/awaiting-format';
@@ -16,6 +17,11 @@ import { awaitingCallLabel, unitLabel } from '../lib/awaiting-format';
 /** Wider screens get a card in the corner; phones get it full width. */
 const CARD_MAX_WIDTH = 440;
 const ACCENT = '#ea580c';
+
+/** The host's distance from the bottom of the screen and from its sides (corner card / full-width phone card), inside the safe area. */
+const HOST_BOTTOM = 16;
+const HOST_SIDE = 16;
+const HOST_SIDE_PHONE = 12;
 
 const UnitAvailableAlertCard: React.FC<{ alert: AwaitingUnitAlert; canDispatch: boolean }> = ({ alert, canDispatch }) => {
   const { t } = useTranslation();
@@ -43,10 +49,13 @@ const UnitAvailableAlertCard: React.FC<{ alert: AwaitingUnitAlert; canDispatch: 
       {alert.calls.map((call) => {
         const callLabel = awaitingCallLabel({ CallId: call.callId, CallNumber: call.callNumber });
         const response = formatResponseSeconds(call.responseSeconds);
+
         const details = [call.label, response ? t('awaiting_resources.response_time', { time: response }) : null, t('awaiting_resources.waiting_minutes', { minutes: call.ageMinutes })].filter(
           (part): part is string => !!part
         );
+
         const isBusy = busyKey === awaitingDispatchKey(call.callId, alert.unitId);
+
         return (
           <VStack key={`alert-${alert.unitId}-call-${call.callId}`} className="mt-2 border-t border-outline-100 pt-2">
             <Text className="text-sm font-semibold" numberOfLines={1}>
@@ -93,11 +102,18 @@ export const UnitAvailableAlertHost: React.FC = () => {
   const alerts = useAwaitingResourcesStore((state) => state.unitAlerts);
   const { canUserCreateCalls } = useSecurity();
   const { width, isPhone } = useFormFactor();
+  // Drawn over the whole shell: clear of the home indicator, and of a landscape phone's cutout at either side.
+  const insets = useSafeAreaInsets();
+  const bottomInset = useBottomSafeAreaInset();
 
   if (!isEnabled || alerts.length === 0) return null;
 
+  const placement = isPhone
+    ? { left: HOST_SIDE_PHONE + insets.left, right: HOST_SIDE_PHONE + insets.right }
+    : { right: HOST_SIDE + insets.right, width: Math.min(CARD_MAX_WIDTH, width - 2 * HOST_SIDE - insets.left - insets.right) };
+
   return (
-    <View pointerEvents="box-none" style={StyleSheet.flatten([styles.host, isPhone ? styles.hostPhone : { right: 16, width: Math.min(CARD_MAX_WIDTH, width - 32) }])} testID="unit-available-alert-host">
+    <View pointerEvents="box-none" style={StyleSheet.flatten([styles.host, { bottom: HOST_BOTTOM + bottomInset }, placement])} testID="unit-available-alert-host">
       {alerts.map((alert) => (
         <UnitAvailableAlertCard key={alert.id} alert={alert} canDispatch={canUserCreateCalls} />
       ))}
@@ -106,8 +122,7 @@ export const UnitAvailableAlertHost: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  host: { position: 'absolute', bottom: 16, zIndex: 60 },
-  hostPhone: { left: 12, right: 12 },
+  host: { position: 'absolute', zIndex: 60 },
   card: {
     borderWidth: 2,
     borderRadius: 10,

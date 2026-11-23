@@ -25,6 +25,7 @@ export const isPersonOnDuty = (person: Pick<PersonnelInfoResultData, 'StaffingBa
 export function computeConsoleStats(calls: readonly CallResultData[], units: readonly UnitInfoResultData[], personnel: readonly PersonnelInfoResultData[], now: number): ConsoleStats {
   const open = calls.filter((call) => call.State === 0);
   const scheduledCalls = open.filter((call) => isScheduledCall(call, now)).length;
+
   return {
     activeCalls: open.length - scheduledCalls,
     scheduledCalls,

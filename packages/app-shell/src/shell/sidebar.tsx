@@ -11,7 +11,7 @@ import { type NavRegistry, normalizeHref } from '../nav/define-nav';
 import { type NavItem, useNavItems } from '../nav/use-nav-items';
 import { type SidebarContentProps, useSidebarContent } from '../runtime/slots';
 import { useShell } from './shell-context';
-import { PANEL_SIDEBAR_WIDTH, permanentSidebarWidth } from './sidebar-mode';
+import { isInlineSidebarShown, PANEL_SIDEBAR_WIDTH, permanentSidebarWidth } from './sidebar-mode';
 
 function MenuRow({ item, active, onPress }: { item: NavItem; active: boolean; onPress: (item: NavItem) => void }) {
   const colors = useThemeColors();
@@ -150,15 +150,15 @@ export function InlineSidebar({ nav }: { nav: NavRegistry }) {
   const insets = useSafeAreaInsets();
   const noop = useCallback(() => undefined, []);
   const isPermanent = shell.sidebarMode === 'permanent';
-  const visible = isPermanent || (shell.sidebarMode === 'panel' && shell.isMenuOpen);
 
-  if (!visible) {
+  if (!isInlineSidebarShown(shell.sidebarMode, shell.isMenuOpen)) {
     return null;
   }
 
-  // The permanent column is the left edge of the screen, so it keeps the menu clear of a landscape phone's cutout.
-  const width = isPermanent ? permanentSidebarWidth(shell.formFactor.width, insets.left) : PANEL_SIDEBAR_WIDTH;
-  const paddingLeft = isPermanent ? insets.left : 0;
+  // The sidebar is the left edge of the screen, so it keeps the menu clear of a landscape phone's cutout (the shell's
+  // content pads that inset only when no inline sidebar is showing).
+  const width = isPermanent ? permanentSidebarWidth(shell.formFactor.width, insets.left) : PANEL_SIDEBAR_WIDTH + insets.left;
+  const paddingLeft = insets.left;
 
   return (
     <View style={StyleSheet.flatten([styles.inline, { width, paddingLeft, backgroundColor: colors.canvas, borderRightColor: colors.border }])} testID={isPermanent ? 'shell-sidebar-permanent' : 'shell-sidebar-panel'}>

@@ -42,7 +42,9 @@ export const ConsoleMap: React.FC<ConsoleMapProps> = ({ focus = null, onPinPress
 
   const camera = useMemo(() => {
     if (focus) return { centerCoordinate: [focus.longitude, focus.latitude] as [number, number], zoomLevel: FOCUS_ZOOM };
+
     if (centerLatitude !== null && centerLongitude !== null) return { centerCoordinate: [centerLongitude, centerLatitude] as [number, number], zoomLevel: zoomLevel ?? DEFAULT_ZOOM };
+
     return { centerCoordinate: [providerCenter.longitude, providerCenter.latitude] as [number, number], zoomLevel: providerCenter.zoomLevel || DEFAULT_ZOOM };
   }, [centerLatitude, centerLongitude, focus, providerCenter, zoomLevel]);
 

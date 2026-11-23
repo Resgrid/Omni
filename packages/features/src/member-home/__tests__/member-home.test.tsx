@@ -5,11 +5,12 @@ import { useAuthStore } from '@resgrid/auth';
 import { setDataSessionScopeProvider, useBadgeCountsStore, useCallsStore, useCheckInTimersStore, usePersonnelStatusStore, usePersonnelStore, useUnitRolesStore, useWeatherAlertsStore } from '@resgrid/data';
 import { ActionBaseTypes, StaffingBaseTypes, StatusProvider } from '@resgrid/features/status';
 import { type CallResultData, type CheckInTimerStatusResultData, DispatchedEventResultData, type PersonnelInfoResultData, type StatusesResultData, type WeatherAlertResultData } from '@resgrid/models';
-import { AppBarTitleSlotContext } from '@resgrid/ui';
+import { AppBarTitleSlotContext, useBottomSafeAreaInset } from '@resgrid/ui';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { router, usePathname } from 'expo-router';
 import React from 'react';
 import { Text } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { activateTestVariant } from '../../settings/__tests__/variant';
 import { HomeStatusButtons } from '../components/home-status-buttons';
@@ -309,11 +310,39 @@ describe('HomeStatusButtons', () => {
 });
 
 describe('MemberHomeTabsLayout', () => {
+  /** What the navigator was given, and the bottom inset its screens see. */
+  const navigator = jest.fn();
+
+  function BottomInsetProbe() {
+    navigator({ screenInset: useBottomSafeAreaInset() });
+
+    return null;
+  }
+
   // Tabs stand-in: each screen renders `name:title` under its tab button's test id.
   beforeEach(() => {
     const expoRouter = jest.requireMock('expo-router') as Record<string, unknown>;
     const { View: RNView, Text: RNText } = require('react-native');
-    const MockTabs = ({ children }: { children: React.ReactNode }) => <RNView testID="tabs">{children}</RNView>;
+
+    const MockTabs = ({
+      children,
+      safeAreaInsets,
+      screenOptions,
+    }: {
+      children: React.ReactNode;
+      safeAreaInsets?: { left?: number; right?: number };
+      screenOptions?: { tabBarStyle?: { paddingBottom?: number; height?: number } };
+    }) => {
+      navigator({ safeAreaInsets, tabBarStyle: screenOptions?.tabBarStyle });
+
+      return (
+        <RNView testID="tabs">
+          <BottomInsetProbe />
+          {children}
+        </RNView>
+      );
+    };
+
     MockTabs.Screen = function MockTabScreen({ name, options }: { name: string; options: { title: string; tabBarButtonTestID: string; tabBarBadge?: string } }) {
       return (
         <>
@@ -338,6 +367,20 @@ describe('MemberHomeTabsLayout', () => {
     expect(request).toHaveBeenCalledWith(['calls']);
     request.mockRestore();
     useBadgeCountsStore.setState({ counts: {} });
+  });
+
+  // Its fixed height replaced the navigator's own, which held the bottom inset: the tab labels sat on the home indicator.
+  it('pads its tab bar for the home indicator, and tells the tabs’ FABs it does', async () => {
+    jest.mocked(useSafeAreaInsets).mockReturnValue({ top: 59, bottom: 34, left: 0, right: 0 });
+
+    try {
+      await render(<MemberHomeTabsLayout />);
+    } finally {
+      jest.mocked(useSafeAreaInsets).mockReturnValue({ top: 0, bottom: 0, left: 0, right: 0 });
+    }
+
+    expect(navigator).toHaveBeenCalledWith({ safeAreaInsets: { left: 0, right: 0 }, tabBarStyle: expect.objectContaining({ paddingBottom: 5 + 34, height: 60 + 34 }) });
+    expect(navigator).toHaveBeenCalledWith({ screenInset: 0 });
   });
 
   it('declares the four nested tabs with department terms', async () => {

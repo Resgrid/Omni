@@ -1,4 +1,5 @@
 import { logger } from '@resgrid/core';
+import { FOREGROUND_TIMED_OUT, settleWithinForeground } from '@resgrid/core/lifecycle/foreground-timeout';
 import { NativeModules, PermissionsAndroid, Platform } from 'react-native';
 import RNCallKeep, { AudioSessionCategoryOption, AudioSessionMode } from 'react-native-callkeep';
 
@@ -8,7 +9,12 @@ import type { CallKeepService, CallKeepSetupConfig } from './types';
 
 /** iOS needs CallKit to have registered the outgoing call before mute is synced (Responder: 800 ms). */
 export const IOS_CONNECTED_REPORT_DELAY_MS = 800;
-const PHONE_PERMISSION_TIMEOUT_MS = 5000;
+
+/**
+ * Counts only while the app is in front (`settleWithinForeground`): the phone-permission prompt puts the app in the
+ * background, so a member who takes their time answering still gets the call. It exists for a request that never settles.
+ */
+export const PHONE_PERMISSION_TIMEOUT_MS = 5000;
 
 interface RtcAudioSessionLike {
   audioSessionDidActivate?: () => void;
@@ -41,7 +47,7 @@ const hasTelephony = async (): Promise<boolean> => {
 /**
  * CallKeep for R/U/I/D (omni-plan §7.8). iOS: Responder's CallKit service (connected report after the call registers,
  * reverse mute sync, mute storm protection, WebRTC audio-session hand-off). Android: Responder's self-managed
- * ConnectionService plus Unit's phone-permission flow (both permissions, telephony check, once per process, 5 s cap).
+ * ConnectionService plus Unit's phone-permission flow (both permissions, telephony check, once per process, 5 s cap in front).
  */
 export class NativeCallKeepService implements CallKeepService {
   readonly isEnabled = true;
@@ -121,15 +127,8 @@ export class NativeCallKeepService implements CallKeepService {
         return check();
       };
 
-      let timer: ReturnType<typeof setTimeout> | undefined;
-
-      const timeout = new Promise<boolean>((resolve) => {
-        timer = setTimeout(() => resolve(false), PHONE_PERMISSION_TIMEOUT_MS);
-      });
-
-      const granted = await Promise.race([work(), timeout]).finally(() => {
-        if (timer) clearTimeout(timer);
-      });
+      const answer = await settleWithinForeground(work(), PHONE_PERMISSION_TIMEOUT_MS);
+      const granted = answer !== FOREGROUND_TIMED_OUT && answer;
 
       if (!granted) logger.warn({ message: 'Phone permissions not granted; CallKeep skipped (voice still works)' });
 
