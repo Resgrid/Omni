@@ -8,6 +8,7 @@ import { certificationsNav } from '@resgrid/features/certifications/nav';
 import { chatNav } from '@resgrid/features/chat/nav';
 import { checklistsNav } from '@resgrid/features/checklists/nav';
 import { contactsNav } from '@resgrid/features/contacts/nav';
+import { customMapsNav } from '@resgrid/features/custom-maps/nav';
 import { mapNav } from '@resgrid/features/map/nav';
 import { memberHomeNav } from '@resgrid/features/member-home/nav';
 import { messagesNav } from '@resgrid/features/messages/nav';
@@ -49,6 +50,10 @@ export const routes = defineRoutes([
   'contacts',
   'contactDetail',
   'map',
+  'maps',
+  'mapsSearch',
+  'customMap',
+  'indoorMap',
   'notes',
   'noteDetail',
   'protocols',
@@ -101,6 +106,7 @@ export const nav = defineNav([
   ...featureNav(chatNav, { chat: 'sidebar', chatbot: 'hidden' }, { order: 11 }),
   ...featureNav(contactsNav, 'sidebar', { order: 20 }),
   ...featureNav(mapNav, 'sidebar', { order: 25 }),
+  ...featureNav(customMapsNav, { maps: 'sidebar', 'maps-search': 'hidden' }, { order: 26 }),
   ...featureNav(notesNav, 'sidebar', { order: 30 }),
   ...featureNav(protocolsNav, 'sidebar', { order: 31 }),
   ...featureNav(calendarNav, 'sidebar', { order: 40 }),

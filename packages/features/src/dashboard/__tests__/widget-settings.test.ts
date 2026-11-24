@@ -4,11 +4,13 @@ import { dataSourcesFor, defaultWidgetSize, isWidgetType, WIDGET_DATA_SOURCES, W
 describe('widget types', () => {
   it('lists all 14 widget types with labels, sizes and data sources', () => {
     expect(WIDGET_TYPES).toHaveLength(14);
+
     for (const type of WIDGET_TYPES) {
       expect(WIDGET_LABEL_KEYS[type]).toMatch(/^widgets\./);
       expect(defaultWidgetSize(type, 'large').w).toBeGreaterThanOrEqual(defaultWidgetSize(type, 'compact').w);
       expect(Array.isArray(WIDGET_DATA_SOURCES[type])).toBe(true);
     }
+
     expect(isWidgetType('unit_alerts')).toBe(true);
     expect(isWidgetType('weather_radar')).toBe(false);
   });
@@ -30,6 +32,7 @@ describe('normalizeWidgetSettings', () => {
       scheduledCalls: { colorThresholdRedMinutes: 90, colorThresholdYellowMinutes: 30, colorThresholdGreenMinutes: 10, colorRedHex: 'red', sortBy: 'random', sortOrder: 'desc' },
       notes: { category: ' None ' },
     });
+
     expect(settings.personnel.fontSize).toBe(8);
     expect(settings.personnel.showGroup).toBe(true);
     expect(settings.personnel.hideGroups).toEqual(['1', '2']);
@@ -56,6 +59,24 @@ describe('normalizeWidgetSettings', () => {
   it('preserves call visibility on boards saved before the linked-call toggle', () => {
     expect(normalizeWidgetSettings({ map: { showCalls: false } }).map.showLinkedCalls).toBe(false);
     expect(normalizeWidgetSettings({ map: { showCalls: false, showLinkedCalls: true } }).map.showLinkedCalls).toBe(true);
+  });
+
+  it('turns the old "show all pins" switch into a view mode and checks the facility map fields', () => {
+    expect(defaultWidgetSettings().map).toMatchObject({ viewMode: 'fitPins', customMapId: '', customMapKind: 'custom', customMapLayerId: '', lockView: false });
+    expect(normalizeWidgetSettings({ map: { showAllMarkers: false } }).map.viewMode).toBe('fixed');
+    expect(normalizeWidgetSettings({ map: { showAllMarkers: true } }).map.viewMode).toBe('fitPins');
+    // A stored mode wins over the old switch; an unknown one falls back to it.
+    expect(normalizeWidgetSettings({ map: { showAllMarkers: false, viewMode: 'fitPins' } }).map.viewMode).toBe('fitPins');
+    expect(normalizeWidgetSettings({ map: { showAllMarkers: false, viewMode: 'orbit' } }).map.viewMode).toBe('fixed');
+    // Framing a facility map needs one; ids that are not plain ids are dropped, a layer goes with its map.
+    expect(normalizeWidgetSettings({ map: { viewMode: 'customMap' } }).map.viewMode).toBe('fitPins');
+    expect(normalizeWidgetSettings({ map: { viewMode: 'customMap', customMapId: ' bldg-a ', customMapKind: 'indoor', customMapLayerId: 'floor-2' } }).map).toMatchObject({
+      viewMode: 'customMap',
+      customMapId: 'bldg-a',
+      customMapKind: 'indoor',
+      customMapLayerId: 'floor-2',
+    });
+    expect(normalizeWidgetSettings({ map: { customMapId: '../x', customMapKind: 'space', customMapLayerId: 'floor-2' } }).map).toMatchObject({ customMapId: '', customMapKind: 'custom', customMapLayerId: '' });
   });
 
   it('completes column orders', () => {
@@ -90,6 +111,7 @@ describe('migrateLegacyWidgetSettings (BigBoard widget-settings v0)', () => {
       'scheduled-calls-widget-settings': JSON.stringify({ state: { settings: { filterUnitIds: ['7'], sortBy: 'priority', columnOrder: ['dispatched'] } } }),
       'units-widget-settings': 'not json',
     };
+
     const migrated = migrateLegacyWidgetSettings(legacyBlob, (key) => stores[key]);
     expect(migrated.personnel.columnOrder.slice(0, 2)).toEqual(['timestamp', 'name']);
     expect(migrated.personnel.showGroup).toBe(false);

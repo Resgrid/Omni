@@ -1,13 +1,16 @@
 import { useCallsStore, useMessagesStore, usePersonnelStore, useUnitsStore } from '@resgrid/data';
+import { useFacilityMapLayers, useFacilityMapListings } from '@resgrid/features/map/hooks/use-facility-maps';
+import { facilityMapKey, parseFacilityMapKey } from '@resgrid/features/map/lib/facility-maps';
 import { useTranslation } from '@resgrid/i18n';
-import { Text } from '@resgrid/ui';
+import { Button, ButtonText, Text } from '@resgrid/ui';
 import React, { useEffect, useMemo } from 'react';
 
+import { useMapWidgetViewStore } from '../../hooks/use-map-widget-view-store';
 import { useWidgetSettingsStore } from '../../hooks/use-widget-settings-store';
 import { CALLS_COLUMN_LABEL_KEYS, PERSONNEL_COLUMN_LABEL_KEYS, SCHEDULED_CALLS_COLUMN_LABEL_KEYS, UNITS_COLUMN_LABEL_KEYS } from '../../lib/column-labels';
-import { FONT_SIZE_MAX, FONT_SIZE_MIN, type WidgetSettings, type WidgetSettingsSection } from '../../lib/widget-settings';
+import { FONT_SIZE_MAX, FONT_SIZE_MIN, type MapWidgetViewMode, type WidgetSettings, type WidgetSettingsSection } from '../../lib/widget-settings';
 import type { WidgetType } from '../../lib/widget-types';
-import { ColumnOrderEditor, CoordinateInput, EntityMultiSelect, type MultiSelectOption, NumberStepper, SegmentedChoice, SettingsSection, SettingSwitch, TextSetting } from './setting-controls';
+import { type ChoiceOption, ColumnOrderEditor, CoordinateInput, EntityMultiSelect, type MultiSelectOption, NumberStepper, SegmentedChoice, SettingsSection, SettingSwitch, TextSetting } from './setting-controls';
 
 /** The settings section behind each widget type (unit alerts has none: its timers are department settings in Core). */
 export const WIDGET_SETTINGS_SECTION: Readonly<Record<WidgetType, WidgetSettingsSection | null>> = {
@@ -132,15 +135,61 @@ const CallsPanel: React.FC = () => {
   );
 };
 
+const NO_FACILITY = '';
+
 const MapPanel: React.FC = () => {
   const { t } = useTranslation();
   const [settings, update] = useSection('map');
+  // The department's facility maps (custom site plans and indoor floor plans) a board can be set to, and the chosen one's levels.
+  const listings = useFacilityMapListings(true);
+  const facilityKey = settings.customMapId ? facilityMapKey(settings.customMapKind, settings.customMapId) : null;
+  const selections = useMemo(() => (facilityKey ? [{ key: facilityKey, levelId: settings.customMapLayerId || null }] : []), [facilityKey, settings.customMapLayerId]);
+  const chosen = useFacilityMapLayers(selections).maps[facilityKey ?? ''];
+  const lastView = useMapWidgetViewStore((state) => state.lastView);
+
+  const viewModes: ChoiceOption<MapWidgetViewMode>[] = [
+    { value: 'fitPins', label: t('configure.zoom_out_show_all') },
+    { value: 'fixed', label: t('configure.map_view_fixed') },
+    ...(facilityKey ? [{ value: 'customMap' as const, label: t('configure.map_view_facility') }] : []),
+  ];
+
+  // A map the department no longer lists is still offered while the board is set to it (it can be cleared).
+  const facilityOptions: ChoiceOption<string>[] = [
+    { value: NO_FACILITY, label: t('maps.facility.none') },
+    ...listings.map((listing) => ({ value: listing.key, label: listing.name })),
+    ...(facilityKey && !listings.some((listing) => listing.key === facilityKey) ? [{ value: facilityKey, label: chosen?.name || settings.customMapId }] : []),
+  ];
+
+  const chooseFacility = (key: string) => {
+    const ref = parseFacilityMapKey(key);
+
+    update(ref ? { customMapId: ref.mapId, customMapKind: ref.kind, customMapLayerId: '' } : { customMapId: '', customMapLayerId: '', viewMode: settings.viewMode === 'customMap' ? 'fitPins' : settings.viewMode });
+  };
+
   return (
     <>
-      <SettingsSection title={t('configure.map_options')}>
-        <SettingSwitch label={t('configure.zoom_out_show_all')} value={settings.showAllMarkers} onChange={(showAllMarkers) => update({ showAllMarkers })} testID="setting-map-showAllMarkers" />
-        <NumberStepper label={t('dashboard.zoom_level')} value={settings.zoomLevel} min={1} max={20} onChange={(zoomLevel) => update({ zoomLevel })} testID="setting-map-zoomLevel" />
+      <SettingsSection title={t('configure.map_options')} description={t('configure.map_view_hint')}>
+        <SegmentedChoice label={t('configure.map_view')} options={viewModes} value={settings.viewMode} onChange={(viewMode) => update({ viewMode })} testID="setting-map-viewMode" />
+        {settings.viewMode === 'fitPins' ? null : <SettingSwitch label={t('configure.map_lock_view')} value={settings.lockView} onChange={(lockView) => update({ lockView })} testID="setting-map-lockView" />}
         <SettingSwitch label={t('configure.hide_labels')} value={settings.hideLabels} onChange={(hideLabels) => update({ hideLabels })} testID="setting-map-hideLabels" />
+      </SettingsSection>
+      <SettingsSection title={t('configure.facility_map')} description={t('configure.facility_map_hint')}>
+        {facilityOptions.length > 1 ? (
+          <SegmentedChoice label={t('configure.facility_map')} options={facilityOptions} value={facilityKey ?? NO_FACILITY} onChange={chooseFacility} testID="setting-map-customMap" />
+        ) : (
+          <Text className="text-sm text-typography-500" testID="setting-map-no-facility-maps">
+            {t('configure.no_facility_maps')}
+          </Text>
+        )}
+        {chosen && chosen.levels.length > 1 ? (
+          <SegmentedChoice
+            label={t('configure.facility_level')}
+            options={[...(chosen.allowsAllLevels ? [{ value: NO_FACILITY, label: t('maps.facility.all_layers') }] : []), ...chosen.levels.map((level) => ({ value: level.id, label: level.name }))]}
+            value={chosen.levelId ?? NO_FACILITY}
+            onChange={(customMapLayerId) => update({ customMapLayerId })}
+            testID="setting-map-customMapLayer"
+          />
+        ) : null}
       </SettingsSection>
       <SettingsSection title={t('configure.visible_pins')}>
         <SettingSwitch label={t('configure.show_calls')} value={settings.showCalls} onChange={(showCalls) => update({ showCalls })} testID="setting-map-showCalls" />
@@ -149,10 +198,24 @@ const MapPanel: React.FC = () => {
         <SettingSwitch label={t('configure.show_stations')} value={settings.showStations} onChange={(showStations) => update({ showStations })} testID="setting-map-showStations" />
         <SettingSwitch label={t('configure.show_personnel')} value={settings.showPersonnel} onChange={(showPersonnel) => update({ showPersonnel })} testID="setting-map-showPersonnel" />
       </SettingsSection>
-      <SettingsSection title={t('configure.map_center')} description={t('dashboard.center_hint')}>
-        <CoordinateInput label={t('configure.latitude')} value={settings.latitude} limit={90} onChange={(latitude) => update({ latitude })} testID="setting-map-latitude" />
-        <CoordinateInput label={t('configure.longitude')} value={settings.longitude} limit={180} onChange={(longitude) => update({ longitude })} testID="setting-map-longitude" />
-      </SettingsSection>
+      {settings.viewMode === 'fixed' ? (
+        <SettingsSection title={t('configure.map_center')} description={t('dashboard.center_hint')}>
+          <NumberStepper label={t('dashboard.zoom_level')} value={settings.zoomLevel} min={1} max={20} onChange={(zoomLevel) => update({ zoomLevel })} testID="setting-map-zoomLevel" />
+          <CoordinateInput label={t('configure.latitude')} value={settings.latitude} limit={90} onChange={(latitude) => update({ latitude })} testID="setting-map-latitude" />
+          <CoordinateInput label={t('configure.longitude')} value={settings.longitude} limit={180} onChange={(longitude) => update({ longitude })} testID="setting-map-longitude" />
+          {lastView ? (
+            <Button
+              size="sm"
+              variant="outline"
+              className="self-start"
+              onPress={() => update({ latitude: lastView.latitude, longitude: lastView.longitude, zoomLevel: Math.round(lastView.zoom) })}
+              testID="setting-map-useCurrentView"
+            >
+              <ButtonText>{t('configure.map_use_current_view')}</ButtonText>
+            </Button>
+          ) : null}
+        </SettingsSection>
+      ) : null}
     </>
   );
 };

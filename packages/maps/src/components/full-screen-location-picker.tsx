@@ -1,15 +1,36 @@
 import { useTranslation } from '@resgrid/i18n';
 import { LocateFixed } from 'lucide-react-native';
-import React, { type ReactNode, useCallback, useEffect, useState } from 'react';
+import React, { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useMapCenter, useMapServices, useMapTheme } from '../provider/context';
 import { MapModal } from '../provider/overlays';
 import { Camera, MapView, MarkerView } from '../rg';
-import type { MapPressEvent } from '../rg/types';
+import type { CameraRef, MapPressEvent } from '../rg/types';
+import type { CoordinateBounds } from '../types';
 import { type PickedLocation, PickerPin, usePickerState } from './location-picker';
 import { SheetButton, SheetHeader } from './sheet-parts';
+
+/**
+ * A press an overlay handled itself (a room or region tapped) owns the tap for this long: the map's own press for the same
+ * tap — reported after the source's on native, before it on the web — must not move the pin off the room's centre.
+ */
+const CLAIM_MS = 300;
+
+/** What the picker's overlay and toolbar can do: read the pin, move it as their own pick, frame the map. */
+export interface LocationPickerContextValue {
+  location: PickedLocation | null;
+  /** Moves the pin (a room or region picked on the map); the map's own press for the same tap is ignored. */
+  selectLocation: (location: PickedLocation) => void;
+  /** Frames the map on these bounds (a facility map was chosen). */
+  fitBounds: (bounds: CoordinateBounds) => void;
+}
+
+const LocationPickerContext = createContext<LocationPickerContextValue | null>(null);
+
+/** The surrounding `FullScreenLocationPicker`, for its overlay and toolbar; null outside one. */
+export const useLocationPickerContext = (): LocationPickerContextValue | null => useContext(LocationPickerContext);
 
 export interface FullScreenLocationPickerProps {
   isOpen: boolean;
@@ -17,6 +38,12 @@ export interface FullScreenLocationPickerProps {
   onLocationSelected: (location: PickedLocation) => void;
   onClose: () => void;
   overlay?: ReactNode;
+  /** Above the address in the footer (the call form's facility map chooser); rendered inside the picker's context. */
+  toolbar?: ReactNode;
+  /** Shown instead of the address (a picked room's name). */
+  selectionLabel?: string | null;
+  /** Told whenever the pin moves (a tap, "my location", an overlay's pick). */
+  onLocationChange?: (location: PickedLocation | null) => void;
   /** Look the address up through the server for the picked point (default true). */
   reverseGeocode?: boolean;
   title?: string;
@@ -24,9 +51,21 @@ export interface FullScreenLocationPickerProps {
 
 /**
  * Full-screen picker: tap to move the pin, "my location", and the address of the picked point from the server
- * (`Geocoding/ReverseGeocode` — never a provider called from the app; replaces Dispatch web's direct Mapbox call).
+ * (`Geocoding/ReverseGeocode` — never a provider called from the app; replaces Dispatch web's direct Mapbox call). An
+ * overlay that handles its own presses (a facility map's rooms) moves the pin through `useLocationPickerContext`.
  */
-export const FullScreenLocationPicker: React.FC<FullScreenLocationPickerProps> = ({ isOpen, initialLocation, onLocationSelected, onClose, overlay, reverseGeocode = true, title }) => {
+export const FullScreenLocationPicker: React.FC<FullScreenLocationPickerProps> = ({
+  isOpen,
+  initialLocation,
+  onLocationSelected,
+  onClose,
+  overlay,
+  toolbar,
+  selectionLabel = null,
+  onLocationChange,
+  reverseGeocode = true,
+  title,
+}) => {
   const { t } = useTranslation();
   const { colors } = useMapTheme();
   const insets = useSafeAreaInsets();
@@ -35,14 +74,27 @@ export const FullScreenLocationPicker: React.FC<FullScreenLocationPickerProps> =
   const { location, setLocation, locate, isLocating } = usePickerState(initialLocation, isOpen);
   const [address, setAddress] = useState<string | null>(null);
   const [isLookingUp, setIsLookingUp] = useState(false);
+  const cameraRef = useRef<CameraRef>(null);
+  const claimedUntil = useRef(0);
+  const onLocationChangeRef = useRef(onLocationChange);
+
+  useEffect(() => {
+    onLocationChangeRef.current = onLocationChange;
+  }, [onLocationChange]);
 
   const latitude = location?.latitude;
   const longitude = location?.longitude;
   useEffect(() => {
+    onLocationChangeRef.current?.(latitude === undefined || longitude === undefined ? null : { latitude, longitude });
+  }, [latitude, longitude]);
+
+  useEffect(() => {
     if (!reverseGeocode || latitude === undefined || longitude === undefined) {
       setAddress(null);
+
       return undefined;
     }
+
     const controller = new AbortController();
     setIsLookingUp(true);
     services
@@ -56,59 +108,83 @@ export const FullScreenLocationPicker: React.FC<FullScreenLocationPickerProps> =
       .finally(() => {
         if (!controller.signal.aborted) setIsLookingUp(false);
       });
+
     return () => controller.abort();
   }, [latitude, longitude, reverseGeocode, services]);
 
-  const handlePress = useCallback((event: MapPressEvent) => setLocation({ latitude: event.coordinates[1], longitude: event.coordinates[0] }), [setLocation]);
+  const handlePress = useCallback(
+    (event: MapPressEvent) => {
+      if (Date.now() < claimedUntil.current) return;
+      setLocation({ latitude: event.coordinates[1], longitude: event.coordinates[0] });
+    },
+    [setLocation]
+  );
+
   const handleConfirm = useCallback(() => {
     if (!location) return;
     onLocationSelected({ latitude: location.latitude, longitude: location.longitude, address: address ?? undefined });
     onClose();
   }, [location, address, onLocationSelected, onClose]);
 
+  const context = useMemo<LocationPickerContextValue>(
+    () => ({
+      location,
+      selectLocation: (picked) => {
+        claimedUntil.current = Date.now() + CLAIM_MS;
+        setLocation(picked);
+      },
+      fitBounds: (bounds) => cameraRef.current?.fitBounds(bounds.ne, bounds.sw, 40, 600),
+    }),
+    [location, setLocation]
+  );
+
   return (
     <MapModal visible={isOpen} onRequestClose={onClose} animationType="slide" presentationStyle="fullScreen" statusBarTranslucent={true} testID="full-screen-location-picker">
-      <View style={StyleSheet.flatten([styles.container, { backgroundColor: colors.background }])}>
-        <MapView style={styles.map} onPress={handlePress} compassEnabled={true} testID="full-screen-location-picker-map">
-          <Camera
-            defaultSettings={{ centerCoordinate: location ? [location.longitude, location.latitude] : [center.longitude, center.latitude], zoomLevel: location ? 15 : center.zoomLevel }}
-            centerCoordinate={location ? [location.longitude, location.latitude] : undefined}
-            animationMode="easeTo"
-            animationDuration={600}
-          />
-          {location ? (
-            <MarkerView id="picked-location" coordinate={[location.longitude, location.latitude]} anchor={{ x: 0.5, y: 1 }}>
-              <PickerPin />
-            </MarkerView>
-          ) : null}
-          {overlay}
-        </MapView>
-        <View style={StyleSheet.flatten([styles.header, { paddingTop: insets.top + 8, backgroundColor: colors.background }])}>
-          <SheetHeader title={title ?? t('calls.select_location')} onClose={onClose} closeLabel={t('common.close')} testID="full-screen-location-picker" />
+      <LocationPickerContext.Provider value={context}>
+        <View style={StyleSheet.flatten([styles.container, { backgroundColor: colors.background }])}>
+          <MapView style={styles.map} onPress={handlePress} compassEnabled={true} testID="full-screen-location-picker-map">
+            <Camera
+              ref={cameraRef}
+              defaultSettings={{ centerCoordinate: location ? [location.longitude, location.latitude] : [center.longitude, center.latitude], zoomLevel: location ? 15 : center.zoomLevel }}
+              centerCoordinate={location ? [location.longitude, location.latitude] : undefined}
+              animationMode="easeTo"
+              animationDuration={600}
+            />
+            {overlay}
+            {location ? (
+              <MarkerView id="picked-location" coordinate={[location.longitude, location.latitude]} anchor={{ x: 0.5, y: 1 }}>
+                <PickerPin />
+              </MarkerView>
+            ) : null}
+          </MapView>
+          <View style={StyleSheet.flatten([styles.header, { paddingTop: insets.top + 8, backgroundColor: colors.background }])}>
+            <SheetHeader title={title ?? t('calls.select_location')} onClose={onClose} closeLabel={t('common.close')} testID="full-screen-location-picker" />
+          </View>
+          <Pressable
+            onPress={() => void locate()}
+            disabled={isLocating}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.my_location')}
+            style={StyleSheet.flatten([styles.locate, { top: insets.top + 72, backgroundColor: colors.primary }])}
+            testID="full-screen-location-picker-locate"
+          >
+            {isLocating ? (
+              <ActivityIndicator color={colors.onPrimary} />
+            ) : (
+              <View>
+                <LocateFixed size={20} color={colors.onPrimary} />
+              </View>
+            )}
+          </Pressable>
+          <View style={StyleSheet.flatten([styles.footer, { paddingBottom: insets.bottom + 12, backgroundColor: colors.background, borderColor: colors.border }])}>
+            {toolbar}
+            <Text style={StyleSheet.flatten([styles.address, { color: colors.mutedText }])} numberOfLines={2} testID="full-screen-location-picker-address">
+              {location ? (selectionLabel ?? (isLookingUp ? t('maps.picker.looking_up_address') : (address ?? `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`))) : t('maps.picker.tap_to_select')}
+            </Text>
+            <SheetButton label={t('common.confirm_location')} onPress={handleConfirm} variant="solid" disabled={!location} testID="full-screen-location-picker-confirm" />
+          </View>
         </View>
-        <Pressable
-          onPress={() => void locate()}
-          disabled={isLocating}
-          accessibilityRole="button"
-          accessibilityLabel={t('common.my_location')}
-          style={StyleSheet.flatten([styles.locate, { top: insets.top + 72, backgroundColor: colors.primary }])}
-          testID="full-screen-location-picker-locate"
-        >
-          {isLocating ? (
-            <ActivityIndicator color={colors.onPrimary} />
-          ) : (
-            <View>
-              <LocateFixed size={20} color={colors.onPrimary} />
-            </View>
-          )}
-        </Pressable>
-        <View style={StyleSheet.flatten([styles.footer, { paddingBottom: insets.bottom + 12, backgroundColor: colors.background, borderColor: colors.border }])}>
-          <Text style={StyleSheet.flatten([styles.address, { color: colors.mutedText }])} numberOfLines={2} testID="full-screen-location-picker-address">
-            {location ? (isLookingUp ? t('maps.picker.looking_up_address') : (address ?? `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`)) : t('maps.picker.tap_to_select')}
-          </Text>
-          <SheetButton label={t('common.confirm_location')} onPress={handleConfirm} variant="solid" disabled={!location} testID="full-screen-location-picker-confirm" />
-        </View>
-      </View>
+      </LocationPickerContext.Provider>
     </MapModal>
   );
 };

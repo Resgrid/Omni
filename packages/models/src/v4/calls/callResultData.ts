@@ -79,6 +79,10 @@ export class CallResultData {
   public ReferenceId: string = '';
   /** The map book page for the call's location; blank when none was entered, undefined from older servers. */
   public MapPage?: string | null;
+  /** The indoor map zone or custom map region the call is in; null when none, undefined from older servers. */
+  public IndoorMapZoneId?: string | null;
+  /** The indoor floor or custom map layer that zone is on; null when none, undefined from older servers. */
+  public IndoorMapFloorId?: string | null;
   public ExternalId: string = '';
   public IncidentId: string = '';
   public AudioFileId: string = '';

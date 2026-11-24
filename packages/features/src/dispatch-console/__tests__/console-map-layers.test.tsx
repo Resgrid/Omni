@@ -2,29 +2,84 @@
 import '../../calls/__tests__/test-setup';
 
 import { useCustomMapsStore, useMapMarkersStore } from '@resgrid/data';
-import { render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 import React from 'react';
 
 import { activateVariant, setRights } from '../../calls/__tests__/test-utils';
+import { facilityMapsState } from '../../map/__tests__/facility-fixtures';
 import { ACTIVE_LAYERS_REFRESH_MS } from '../../map/hooks/use-department-layers';
 import { useMapViewStore } from '../../map/hooks/use-map-view-store';
 import { ConsoleMap } from '../components/console-map';
 
 const mockCapabilities = { layers: true, customIndoor: true, navigationInApp: false };
+const mockFitBounds = jest.fn();
 
 jest.mock('@resgrid/maps', () => {
-  const { Text, View } = require('react-native');
+  const { Pressable, Text, View } = require('react-native');
   const mockReact = require('react');
 
+  type MockZone = { IndoorMapZoneId: string };
+
   return {
+    ...jest.requireActual('@resgrid/maps/lib/pixel-frame'),
+    isSafeMapUrl: jest.requireActual('@resgrid/maps/provider/url-safety').isSafeMapUrl,
     MapView: ({ children, testID }: { children?: unknown; testID?: string }) => mockReact.createElement(View, { testID }, children),
-    Camera: () => null,
+    // Exposes the camera's fitBounds (a facility map switched on is framed).
+    Camera: mockReact.forwardRef((_props: Record<string, never>, ref: React.ForwardedRef<{ fitBounds: jest.Mock; setCamera: jest.Mock }>) => {
+      mockReact.useImperativeHandle(ref, () => ({ fitBounds: mockFitBounds, setCamera: jest.fn() }));
+
+      return null;
+    }),
     MapPins: () => null,
     TrafficLayer: () => null,
     MapTrafficButton: () => null,
     GeoJsonMapLayer: ({ id, color }: { id: string; color?: string | null }) => mockReact.createElement(Text, { testID: `mock-${id}` }, color ?? ''),
     OfflineDepartmentLayers: ({ visibleLayerIds, excludeLayerIds, idPrefix }: { visibleLayerIds?: string[] | null; excludeLayerIds?: string[]; idPrefix?: string }) =>
       mockReact.createElement(Text, { testID: `mock-${idPrefix}` }, JSON.stringify({ visible: visibleLayerIds ?? null, exclude: excludeLayerIds ?? [] })),
+    // A facility map's layer or floor, with one pressable per region or zone.
+    CustomMapRasterLayer: ({ layer, onRegionPress }: { layer: { IndoorMapFloorId: string; Regions?: MockZone[] }; onRegionPress?: (id: string) => void }) =>
+      mockReact.createElement(
+        View,
+        { testID: `mock-custom-map-${layer.IndoorMapFloorId}` },
+        (layer.Regions ?? []).map((region) => mockReact.createElement(Pressable, { key: region.IndoorMapZoneId, testID: `mock-region-${region.IndoorMapZoneId}`, onPress: () => onRegionPress?.(region.IndoorMapZoneId) }))
+      ),
+    IndoorMapFloorLayer: ({ floor, onZonePress, selectedZoneId }: { floor: { IndoorMapFloorId: string; Zones?: MockZone[] }; onZonePress?: (id: string) => void; selectedZoneId?: string | null }) =>
+      mockReact.createElement(
+        View,
+        { testID: `mock-indoor-floor-${floor.IndoorMapFloorId}`, accessibilityLabel: `selected:${selectedZoneId ?? ''}` },
+        (floor.Zones ?? []).map((zone) => mockReact.createElement(Pressable, { key: zone.IndoorMapZoneId, testID: `mock-zone-${zone.IndoorMapZoneId}`, onPress: () => onZonePress?.(zone.IndoorMapZoneId) }))
+      ),
+    MapLayersButton: ({ onPress, testID }: { onPress: () => void; testID?: string }) => mockReact.createElement(Pressable, { onPress, testID }),
+    MapLayersSheet: ({
+      isOpen,
+      facilityMaps,
+    }: {
+      isOpen: boolean;
+      facilityMaps?: {
+        items: { Id: string; Name: string; Levels?: { Id: string; Name: string }[]; LevelId?: string | null }[];
+        toggles: Record<string, boolean>;
+        onToggle: (id: string) => void;
+        onSelectLevel: (id: string, levelId: string | null) => void;
+      };
+    }) =>
+      isOpen
+        ? mockReact.createElement(
+            View,
+            { testID: 'mock-layers-sheet' },
+            (facilityMaps?.items ?? []).map((item) =>
+              mockReact.createElement(
+                View,
+                { key: item.Id },
+                mockReact.createElement(
+                  Pressable,
+                  { testID: `facility-toggle-${item.Id}`, onPress: () => facilityMaps?.onToggle(item.Id) },
+                  mockReact.createElement(Text, null, `${item.Name}:${facilityMaps?.toggles[item.Id] ? 'on' : 'off'}|level:${item.LevelId ?? 'all'}`)
+                ),
+                (item.Levels ?? []).map((level) => mockReact.createElement(Pressable, { key: level.Id, testID: `facility-level-${item.Id}-${level.Id}`, onPress: () => facilityMaps?.onSelectLevel(item.Id, level.Id) }))
+              )
+            )
+          )
+        : null,
     useMapCapabilities: () => mockCapabilities,
     useMapStyle: () => ({ isAvailable: true, status: 'ready' }),
     useMapCenter: () => ({ latitude: 39, longitude: -105, zoomLevel: 9 }),
@@ -52,6 +107,12 @@ const mocks = {
   fetchActiveLayers: jest.fn(async () => undefined),
   fetchMapLayers: jest.fn(async () => undefined),
   fetchLayerGeoJSON: jest.fn(async () => null),
+  fetchCustomMaps: jest.fn(async () => undefined),
+  fetchIndoorMaps: jest.fn(async () => undefined),
+  fetchCustomMap: jest.fn(async () => undefined),
+  fetchIndoorMap: jest.fn(async () => undefined),
+  fetchIndoorFloor: jest.fn(async () => undefined),
+  fetchCustomMapLayer: jest.fn(async () => undefined),
 };
 
 beforeEach(() => {
@@ -92,6 +153,117 @@ beforeEach(() => {
     fetchActiveLayers: mocks.fetchActiveLayers,
     fetchMapLayers: mocks.fetchMapLayers,
     fetchLayerGeoJSON: mocks.fetchLayerGeoJSON,
+    ...facilityMapsState(),
+    fetchCustomMaps: mocks.fetchCustomMaps,
+    fetchIndoorMaps: mocks.fetchIndoorMaps,
+    fetchCustomMap: mocks.fetchCustomMap,
+    fetchIndoorMap: mocks.fetchIndoorMap,
+    fetchIndoorFloor: mocks.fetchIndoorFloor,
+    fetchCustomMapLayer: mocks.fetchCustomMapLayer,
+  });
+});
+
+describe('ConsoleMap facility maps', () => {
+  it('draws a facility map switched on this session under the layers and names a tapped room', async () => {
+    useMapViewStore.getState().toggleFacilityMap('indoor:bldg-a');
+    await render(<ConsoleMap />);
+    // The default floor, from its own read (the map's floor list has no zones).
+    expect(screen.getByTestId('mock-indoor-floor-floor-1')).toBeTruthy();
+    expect(screen.queryByTestId('mock-custom-map-site-base')).toBeNull();
+    expect(mocks.fetchCustomMaps).toHaveBeenCalled();
+    expect(mocks.fetchIndoorMaps).toHaveBeenCalled();
+
+    await fireEvent.press(screen.getByTestId('mock-zone-control'));
+    expect(screen.getByTestId('console-map-facility-feature-name')).toHaveTextContent('Control room');
+    expect(screen.getByTestId('console-map-facility-feature-place')).toHaveTextContent('Building A · Ground floor');
+    expect(screen.getByTestId('mock-indoor-floor-floor-1').props.accessibilityLabel).toBe('selected:control');
+    await fireEvent.press(screen.getByTestId('console-map-facility-feature-close'));
+    expect(screen.queryByTestId('console-map-facility-feature')).toBeNull();
+  });
+
+  it('closes a room’s card with its floor or its map, and does not bring it back with them', async () => {
+    useMapViewStore.getState().toggleFacilityMap('indoor:bldg-a');
+    await render(<ConsoleMap />);
+    await fireEvent.press(screen.getByTestId('mock-zone-control'));
+    expect(screen.getByTestId('console-map-facility-feature-name')).toHaveTextContent('Control room');
+
+    // Another floor: the room is not drawn, and choosing its floor again leaves the card closed.
+    await fireEvent.press(screen.getByTestId('console-map-layers-button'));
+    await fireEvent.press(screen.getByTestId('facility-level-indoor:bldg-a-floor-2'));
+    expect(screen.queryByTestId('console-map-facility-feature')).toBeNull();
+    await fireEvent.press(screen.getByTestId('facility-level-indoor:bldg-a-floor-1'));
+    expect(screen.getByTestId('mock-indoor-floor-floor-1').props.accessibilityLabel).toBe('selected:');
+    expect(screen.queryByTestId('console-map-facility-feature')).toBeNull();
+
+    // The map switched off and on again.
+    await fireEvent.press(screen.getByTestId('mock-zone-control'));
+    expect(screen.getByTestId('console-map-facility-feature')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('facility-toggle-indoor:bldg-a'));
+    expect(screen.queryByTestId('console-map-facility-feature')).toBeNull();
+    await fireEvent.press(screen.getByTestId('facility-toggle-indoor:bldg-a'));
+    expect(screen.getByTestId('mock-indoor-floor-floor-1')).toBeTruthy();
+    expect(screen.queryByTestId('console-map-facility-feature')).toBeNull();
+  });
+
+  it('switches facility maps and their floor or layer from its Layers button', async () => {
+    await render(<ConsoleMap />);
+    expect(screen.queryByTestId('mock-layers-sheet')).toBeNull();
+    await fireEvent.press(screen.getByTestId('console-map-layers-button'));
+    expect(screen.getByTestId('facility-toggle-custom:site')).toHaveTextContent('Site emergency plan:off|level:all');
+
+    // A custom map shows every layer it can draw until one is chosen.
+    await fireEvent.press(screen.getByTestId('facility-toggle-custom:site'));
+    expect(screen.getByTestId('mock-custom-map-site-base')).toBeTruthy();
+    expect(screen.getByTestId('mock-custom-map-site-evac')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('facility-level-custom:site-site-base'));
+    expect(screen.queryByTestId('mock-custom-map-site-evac')).toBeNull();
+    expect(useMapViewStore.getState().facilityMaps).toEqual({ 'custom:site': 'site-base' });
+
+    // An indoor map shows one floor; a floor not read yet is fetched (it carries the rooms).
+    await fireEvent.press(screen.getByTestId('facility-toggle-indoor:bldg-a'));
+    expect(screen.getByTestId('facility-toggle-indoor:bldg-a')).toHaveTextContent('Building A:on|level:floor-1');
+    await fireEvent.press(screen.getByTestId('facility-level-indoor:bldg-a-floor-2'));
+    expect(screen.getByTestId('mock-indoor-floor-floor-2')).toBeTruthy();
+    expect(screen.queryByTestId('mock-indoor-floor-floor-1')).toBeNull();
+    expect(mocks.fetchIndoorFloor).toHaveBeenCalledWith('floor-2');
+
+    await fireEvent.press(screen.getByTestId('facility-toggle-custom:site'));
+    expect(screen.queryByTestId('mock-custom-map-site-base')).toBeNull();
+  });
+
+  it('frames a facility map switched on (or a floor chosen) and reads its layers for their regions', async () => {
+    await render(<ConsoleMap />);
+    expect(mockFitBounds).not.toHaveBeenCalled();
+    await fireEvent.press(screen.getByTestId('console-map-layers-button'));
+    await fireEvent.press(screen.getByTestId('facility-toggle-custom:site'));
+    expect(mockFitBounds).toHaveBeenCalledTimes(1);
+    expect(mockFitBounds).toHaveBeenLastCalledWith([-106.49, 35.01], [-106.5, 35.0], 40, 800);
+    expect(mocks.fetchCustomMapLayer).toHaveBeenCalledWith('site-base');
+    expect(mocks.fetchCustomMapLayer).toHaveBeenCalledWith('site-evac');
+
+    // Switching a map off frames nothing; choosing a floor frames it again.
+    await fireEvent.press(screen.getByTestId('facility-toggle-custom:site'));
+    expect(mockFitBounds).toHaveBeenCalledTimes(1);
+    await fireEvent.press(screen.getByTestId('facility-toggle-indoor:bldg-a'));
+    await fireEvent.press(screen.getByTestId('facility-level-indoor:bldg-a-floor-2'));
+    expect(mockFitBounds).toHaveBeenCalledTimes(3);
+  });
+
+  it('reads a map switched on that is not on the device yet', async () => {
+    useCustomMapsStore.setState({ customMapById: {} });
+    useMapViewStore.getState().toggleFacilityMap('custom:site');
+    await render(<ConsoleMap />);
+    expect(mocks.fetchCustomMap).toHaveBeenCalledWith('site');
+    expect(screen.queryByTestId('mock-custom-map-site-base')).toBeNull();
+  });
+
+  it('has no Layers button without the maps.layers capability', async () => {
+    mockCapabilities.layers = false;
+    useMapViewStore.getState().toggleFacilityMap('indoor:bldg-a');
+    await render(<ConsoleMap />);
+    expect(screen.queryByTestId('console-map-layers-button')).toBeNull();
+    expect(screen.queryByTestId('mock-indoor-floor-floor-1')).toBeNull();
+    expect(mocks.fetchCustomMaps).not.toHaveBeenCalled();
   });
 });
 

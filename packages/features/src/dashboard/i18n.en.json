@@ -164,5 +164,15 @@
   "widgets.units": "Units",
   "widgets.units_summary": "Units Summary",
   "widgets.weather": "Weather",
-  "widgets.weather_alerts": "Weather Alerts"
+  "widgets.weather_alerts": "Weather Alerts",
+  "configure.map_view": "Map view",
+  "configure.map_view_hint": "Fit every pin, hold a fixed spot, or frame a facility map.",
+  "configure.map_view_fixed": "Fixed spot",
+  "configure.map_view_facility": "Frame the facility map",
+  "configure.map_lock_view": "Lock the view so the board cannot drift away",
+  "configure.facility_map": "Facility map",
+  "configure.facility_map_hint": "A site or building map drawn on the board under the pins.",
+  "configure.facility_level": "Floor or layer",
+  "configure.no_facility_maps": "Your department has no facility maps yet.",
+  "configure.map_use_current_view": "Use the current map view"
 }

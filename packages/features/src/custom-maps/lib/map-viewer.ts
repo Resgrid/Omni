@@ -40,6 +40,16 @@ export const sortByOrder = <T extends { FloorOrder: number; Name: string }>(item
 /** Custom maps for the list: everything but indoor maps (they are listed from `GetIndoorMaps`). */
 export const listedCustomMaps = (maps: readonly CustomMapResultData[]): CustomMapResultData[] => maps.filter((map) => map.MapType !== CustomMapType.Indoor).sort((a, b) => a.Name.localeCompare(b.Name));
 
+/**
+ * Indoor maps for the list, by name. Core keeps every map in one table and `GetIndoorMaps` returns all of them, outdoor,
+ * event and general ones too, so a map the custom list already shows (any type but indoor) is left out here.
+ */
+export const listedIndoorMaps = <T extends { IndoorMapId: string; Name: string }>(indoorMaps: readonly T[], customMaps: readonly CustomMapResultData[]): T[] => {
+  const shownAsCustom = new Set(customMaps.flatMap((map) => (map.MapType === CustomMapType.Indoor ? [] : [map.IndoorMapId])));
+
+  return indoorMaps.filter((map) => !shownAsCustom.has(map.IndoorMapId)).sort((a, b) => a.Name.localeCompare(b.Name));
+};
+
 export const CUSTOM_MAP_TYPE_KEYS: Readonly<Record<number, string>> = {
   [CustomMapType.Outdoor]: 'maps.outdoor',
   [CustomMapType.Event]: 'maps.event',

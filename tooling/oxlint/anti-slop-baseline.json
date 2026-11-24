@@ -1519,7 +1519,7 @@
   "packages/data/src/mapping/custom-maps-store.ts": {
     "anti-slop/no-unknown-returns": 2,
     "anti-slop/no-unsafe-dictionary-type": 2,
-    "anti-slop/require-readable-spacing": 11
+    "anti-slop/require-readable-spacing": 8
   },
   "packages/data/src/messages/messages-store.ts": {
     "anti-slop/no-array-filter-map": 1
@@ -2283,7 +2283,6 @@
     "anti-slop/require-safety-comment-for-type-assertion": 2
   },
   "packages/features/src/dashboard/__tests__/fixtures.ts": {
-    "anti-slop/require-readable-spacing": 3,
     "anti-slop/require-safety-comment-for-type-assertion": 2
   },
   "packages/features/src/dashboard/__tests__/navigation-etas.test.tsx": {
@@ -2297,7 +2296,6 @@
   },
   "packages/features/src/dashboard/__tests__/stores.test.ts": {
     "anti-slop/no-chained-type-assertions": 1,
-    "anti-slop/require-readable-spacing": 1,
     "anti-slop/require-safety-comment-for-type-assertion": 3
   },
   "packages/features/src/dashboard/__tests__/test-setup.tsx": {
@@ -2307,7 +2305,7 @@
     "anti-slop/no-unknown-parameters": 10,
     "anti-slop/no-unknown-returns": 2,
     "anti-slop/no-unsafe-dictionary-type": 4,
-    "anti-slop/require-readable-spacing": 14,
+    "anti-slop/require-readable-spacing": 13,
     "anti-slop/require-safety-comment-for-type-assertion": 3
   },
   "packages/features/src/dashboard/__tests__/unit-alerts.test.tsx": {
@@ -2315,12 +2313,10 @@
     "anti-slop/require-safety-comment-for-type-assertion": 3
   },
   "packages/features/src/dashboard/__tests__/widget-settings.test.ts": {
-    "anti-slop/no-known-value-widening": 1,
-    "anti-slop/require-readable-spacing": 4
+    "anti-slop/no-known-value-widening": 1
   },
   "packages/features/src/dashboard/__tests__/widgets.test.tsx": {
     "anti-slop/no-chained-type-assertions": 1,
-    "anti-slop/require-readable-spacing": 4,
     "anti-slop/require-safety-comment-for-type-assertion": 21
   },
   "packages/features/src/dashboard/components/add-widget-menu.tsx": {
@@ -2331,7 +2327,7 @@
     "anti-slop/require-safety-comment-for-type-assertion": 2
   },
   "packages/features/src/dashboard/components/configure/widget-settings-panel.tsx": {
-    "anti-slop/require-readable-spacing": 17
+    "anti-slop/require-readable-spacing": 16
   },
   "packages/features/src/dashboard/components/dashboard-grid.tsx": {
     "anti-slop/require-readable-spacing": 2
@@ -2345,9 +2341,6 @@
   "packages/features/src/dashboard/components/widget-table.tsx": {
     "anti-slop/require-readable-spacing": 3,
     "anti-slop/require-safety-comment-for-type-assertion": 1
-  },
-  "packages/features/src/dashboard/components/widgets/map-widget.tsx": {
-    "anti-slop/require-readable-spacing": 6
   },
   "packages/features/src/dashboard/components/widgets/personnel-widget.tsx": {
     "anti-slop/require-readable-spacing": 3
@@ -2533,8 +2526,7 @@
     "anti-slop/require-safety-comment-for-type-assertion": 6
   },
   "packages/features/src/incident-command/__tests__/test-setup.tsx": {
-    "anti-slop/no-shape-in-symbol-names": 1,
-    "anti-slop/require-readable-spacing": 3
+    "anti-slop/no-shape-in-symbol-names": 1
   },
   "packages/features/src/incident-command/components/incident-chat-section.tsx": {
     "anti-slop/require-readable-spacing": 2,
@@ -2674,7 +2666,6 @@
   "packages/features/src/incident-command/screens/command-map.tsx": {
     "anti-slop/no-chained-type-assertions": 1,
     "anti-slop/no-shape-in-symbol-names": 11,
-    "anti-slop/require-readable-spacing": 1,
     "anti-slop/require-safety-comment-for-type-assertion": 3
   },
   "packages/features/src/incident-command/screens/incidents-list.tsx": {
@@ -2718,7 +2709,6 @@
     "anti-slop/require-safety-comment-for-type-assertion": 1
   },
   "packages/features/src/map/__tests__/map-screen.test.tsx": {
-    "anti-slop/require-readable-spacing": 2,
     "anti-slop/require-safety-comment-for-type-assertion": 7
   },
   "packages/features/src/map/__tests__/map-traffic-route.test.tsx": {
@@ -2729,8 +2719,7 @@
   "packages/features/src/map/__tests__/test-setup.tsx": {
     "anti-slop/no-known-value-widening": 1,
     "anti-slop/no-shape-in-symbol-names": 5,
-    "anti-slop/no-unknown-parameters": 2,
-    "anti-slop/require-readable-spacing": 4
+    "anti-slop/no-unknown-parameters": 2
   },
   "packages/features/src/map/components/active-route-overlay.tsx": {
     "anti-slop/no-shape-in-symbol-names": 20,
@@ -2785,7 +2774,6 @@
     "anti-slop/require-safety-comment-for-type-assertion": 1
   },
   "packages/features/src/map/screens/map-screen.tsx": {
-    "anti-slop/require-readable-spacing": 30,
     "anti-slop/require-safety-comment-for-type-assertion": 3
   },
   "packages/features/src/member-home/__tests__/member-home.test.tsx": {
@@ -3905,17 +3893,11 @@
     "anti-slop/require-readable-spacing": 15,
     "anti-slop/require-safety-comment-for-type-assertion": 5
   },
-  "packages/maps/src/components/full-screen-location-picker.tsx": {
-    "anti-slop/require-readable-spacing": 4
-  },
   "packages/maps/src/components/location-picker.tsx": {
     "anti-slop/require-readable-spacing": 5
   },
   "packages/maps/src/components/map-banners.tsx": {
     "anti-slop/require-readable-spacing": 3
-  },
-  "packages/maps/src/components/map-controls.tsx": {
-    "anti-slop/require-readable-spacing": 6
   },
   "packages/maps/src/components/map-legend-sheet.tsx": {
     "anti-slop/no-known-value-widening": 1,
@@ -4323,7 +4305,7 @@
     "anti-slop/no-shape-in-symbol-names": 13,
     "anti-slop/no-unknown-parameters": 3,
     "anti-slop/no-unsafe-dictionary-type": 1,
-    "anti-slop/require-readable-spacing": 114,
+    "anti-slop/require-readable-spacing": 111,
     "anti-slop/require-safety-comment-for-type-assertion": 13
   },
   "packages/maps/src/rg/route-layer.tsx": {

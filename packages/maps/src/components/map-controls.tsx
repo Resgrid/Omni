@@ -23,6 +23,7 @@ export interface MapControlButtonProps {
 export const MapControlButton: React.FC<MapControlButtonProps> = ({ icon: Icon, accessibilityLabel, onPress, bottomOffset = 20, side = 'right', active = false, testID }) => {
   const { colors, isDark } = useMapTheme();
   const insets = useSafeAreaInsets();
+
   return (
     <Pressable
       accessibilityRole="button"
@@ -45,16 +46,19 @@ export const MapControlButton: React.FC<MapControlButtonProps> = ({ icon: Icon, 
 
 export const MapLegendButton: React.FC<Omit<MapControlButtonProps, 'icon' | 'accessibilityLabel'>> = ({ testID = 'map-legend-button', ...props }) => {
   const { t } = useTranslation();
+
   return <MapControlButton icon={Info} accessibilityLabel={t('maps.legend.title')} testID={testID} {...props} />;
 };
 
 export const MapLayersButton: React.FC<Omit<MapControlButtonProps, 'icon' | 'accessibilityLabel'>> = ({ testID = 'map-layers-button', ...props }) => {
   const { t } = useTranslation();
+
   return <MapControlButton icon={Layers} accessibilityLabel={t('maps.map_layers')} testID={testID} {...props} />;
 };
 
 export const MapRecenterButton: React.FC<Omit<MapControlButtonProps, 'icon' | 'accessibilityLabel'>> = ({ testID = 'map-recenter-button', ...props }) => {
   const { t } = useTranslation();
+
   return <MapControlButton icon={LocateFixed} accessibilityLabel={t('map.recenter_map')} testID={testID} {...props} />;
 };
 
@@ -67,6 +71,7 @@ export interface MapTrafficButtonProps extends Omit<MapControlButtonProps, 'icon
 export const MapTrafficButton: React.FC<MapTrafficButtonProps> = ({ isOn, testID = 'map-traffic-button', ...props }) => {
   const { t } = useTranslation();
   const { available } = useMapTraffic();
+
   return available ? <MapControlButton icon={Car} accessibilityLabel={t('maps.traffic')} active={isOn} testID={testID} {...props} /> : null;
 };
 
@@ -87,6 +92,36 @@ export interface MapLayerToggleItem {
   HasDetails?: boolean;
 }
 
+/** A floor of an indoor map or a layer of a custom map, for the Layers sheet's facility map chooser. */
+export interface MapFacilityLevel {
+  Id: string;
+  Name: string;
+}
+
+/** One of the department's custom or indoor maps in the Layers sheet's facility maps section. */
+export interface MapFacilityItem {
+  Id: string;
+  Name: string;
+  /** What kind of map it is (indoor, outdoor, event…), shown under the name. */
+  TypeLabel?: string | null;
+  /** Its floors or layers once read; the chooser shows while the map is on and has two or more. */
+  Levels?: readonly MapFacilityLevel[];
+  /** The chosen floor or layer; null = the map's default (an indoor map's default floor, every layer of a custom map). */
+  LevelId?: string | null;
+  /** The label of the "every layer" choice (custom maps); none for indoor maps, which show one floor at a time. */
+  AllLevelsLabel?: string | null;
+}
+
+/** The facility maps section of the Layers sheet: the department's custom and indoor maps, each on or off. */
+export interface MapFacilitySectionProps {
+  items: readonly MapFacilityItem[];
+  /** Map id → shown on the map. */
+  toggles: Readonly<Record<string, boolean>>;
+  onToggle: (id: string) => void;
+  /** A floor or layer was chosen (null: the map's default). */
+  onSelectLevel: (id: string, levelId: string | null) => void;
+}
+
 export interface MapLayersSheetProps {
   isOpen: boolean;
   onClose: () => void;
@@ -98,24 +133,31 @@ export interface MapLayersSheetProps {
   /** Shown when the variant has `maps.customIndoor`: open the custom/indoor maps browser and search. */
   onBrowseMaps?: () => void;
   onSearchMaps?: () => void;
+  /** The department's custom and indoor maps, drawn over the map when switched on (every map surface, every app). */
+  facilityMaps?: MapFacilitySectionProps;
 }
 
-/** Toggle department GeoJSON layers and jump to the custom/indoor maps (baseline IC map-layers-sheet). */
-export const MapLayersSheet: React.FC<MapLayersSheetProps> = ({ isOpen, onClose, layers, toggles, onToggle, onShowDetails, onBrowseMaps, onSearchMaps }) => {
+/**
+ * Toggle department GeoJSON layers and the department's facility maps (custom and indoor maps, with a floor or layer
+ * chooser), and jump to the custom/indoor maps browser (baseline IC map-layers-sheet).
+ */
+export const MapLayersSheet: React.FC<MapLayersSheetProps> = ({ isOpen, onClose, layers, toggles, onToggle, onShowDetails, onBrowseMaps, onSearchMaps, facilityMaps }) => {
   const { t } = useTranslation();
   const { colors } = useMapTheme();
   const activeCount = layers.filter((layer) => toggles[layer.Id]).length;
+  const facilityItems = facilityMaps?.items ?? [];
+
   return (
     <MapSheet isOpen={isOpen} onClose={onClose} snapPoints={[70]} testID="map-layers-sheet">
       <SheetHeader title={t('maps.map_layers')} onClose={onClose} closeLabel={t('common.close')} testID="map-layers" />
-      {layers.length === 0 ? (
+      {layers.length === 0 && facilityItems.length === 0 ? (
         <Text style={StyleSheet.flatten([styles.empty, { color: colors.mutedText }])} testID="map-layers-empty">
           {t('maps.no_layers')}
         </Text>
       ) : (
         <>
-          <Text style={StyleSheet.flatten([styles.count, { color: colors.mutedText }])}>{t('maps.layers_on', { active: activeCount, total: layers.length })}</Text>
-          <ScrollView style={styles.list} nestedScrollEnabled={true}>
+          {layers.length > 0 ? <Text style={StyleSheet.flatten([styles.count, { color: colors.mutedText }])}>{t('maps.layers_on', { active: activeCount, total: layers.length })}</Text> : null}
+          <ScrollView style={facilityItems.length > 0 ? styles.longList : styles.list} nestedScrollEnabled={true}>
             {layers.map((layer) => (
               <View key={layer.Id} style={StyleSheet.flatten([styles.row, { backgroundColor: colors.surface }])} testID={`layer-row-${layer.Id}`}>
                 {layer.Color ? <View style={StyleSheet.flatten([styles.dot, { backgroundColor: layer.Color }])} /> : null}
@@ -147,12 +189,69 @@ export const MapLayersSheet: React.FC<MapLayersSheetProps> = ({ isOpen, onClose,
                 <Switch value={!!toggles[layer.Id]} onValueChange={() => onToggle(layer.Id)} accessibilityLabel={layer.Name} testID={`layer-toggle-${layer.Id}`} />
               </View>
             ))}
+            {facilityMaps && facilityItems.length > 0 ? <FacilityMapsSection {...facilityMaps} /> : null}
           </ScrollView>
         </>
       )}
       {onBrowseMaps ? <SheetButton label={t('maps.title')} onPress={onBrowseMaps} icon={<Building2 size={18} color={colors.primary} />} testID="browse-maps-button" /> : null}
       {onSearchMaps ? <SheetButton label={t('maps.search_maps')} onPress={onSearchMaps} icon={<Search size={18} color={colors.primary} />} testID="search-maps-button" /> : null}
     </MapSheet>
+  );
+};
+
+/** The Layers sheet's facility maps: each map on or off and, while on, its floor or layer. */
+const FacilityMapsSection: React.FC<MapFacilitySectionProps> = ({ items, toggles, onToggle, onSelectLevel }) => {
+  const { t } = useTranslation();
+  const { colors } = useMapTheme();
+
+  return (
+    <View style={styles.facilitySection} testID="facility-maps-section">
+      <Text style={StyleSheet.flatten([styles.sectionTitle, { color: colors.mutedText }])} accessibilityRole="header">
+        {t('maps.facility.title')}
+      </Text>
+      {items.map((item) => {
+        const isOn = !!toggles[item.Id];
+        const levels = item.Levels ?? [];
+        // Without an "every layer" choice the map shows one level: the chosen one, else its first (the default floor).
+        const shownLevelId = item.LevelId ?? (item.AllLevelsLabel ? null : (levels[0]?.Id ?? null));
+
+        return (
+          <View key={item.Id} style={StyleSheet.flatten([styles.facilityRow, { backgroundColor: colors.surface }])} testID={`facility-row-${item.Id}`}>
+            <View style={styles.facilityLine}>
+              <View style={styles.label}>
+                <Text style={StyleSheet.flatten([styles.name, { color: colors.text }])}>{item.Name}</Text>
+                {item.TypeLabel ? <Text style={StyleSheet.flatten([styles.detail, { color: colors.mutedText }])}>{item.TypeLabel}</Text> : null}
+              </View>
+              <Switch value={isOn} onValueChange={() => onToggle(item.Id)} accessibilityLabel={item.Name} testID={`facility-toggle-${item.Id}`} />
+            </View>
+            {isOn && levels.length > 1 ? (
+              <View style={styles.levels} accessibilityLabel={t('maps.facility.choose_level', { name: item.Name })} testID={`facility-levels-${item.Id}`}>
+                {item.AllLevelsLabel ? <LevelChip label={item.AllLevelsLabel} selected={shownLevelId === null} onPress={() => onSelectLevel(item.Id, null)} testID={`facility-level-${item.Id}-all`} /> : null}
+                {levels.map((level) => (
+                  <LevelChip key={level.Id} label={level.Name} selected={shownLevelId === level.Id} onPress={() => onSelectLevel(item.Id, level.Id)} testID={`facility-level-${item.Id}-${level.Id}`} />
+                ))}
+              </View>
+            ) : null}
+          </View>
+        );
+      })}
+    </View>
+  );
+};
+
+const LevelChip: React.FC<{ label: string; selected: boolean; onPress: () => void; testID?: string }> = ({ label, selected, onPress, testID }) => {
+  const { colors } = useMapTheme();
+
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
+      style={StyleSheet.flatten([styles.chip, { backgroundColor: selected ? colors.primary : 'transparent', borderColor: selected ? colors.primary : colors.border }])}
+      testID={testID}
+    >
+      <Text style={StyleSheet.flatten([styles.chipText, { color: selected ? colors.onPrimary : colors.text }])}>{label}</Text>
+    </Pressable>
   );
 };
 
@@ -196,6 +295,43 @@ const styles = StyleSheet.create({
   },
   list: {
     maxHeight: 260,
+  },
+  longList: {
+    maxHeight: 380,
+  },
+  facilitySection: {
+    marginTop: 8,
+  },
+  sectionTitle: {
+    marginBottom: 6,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  facilityRow: {
+    marginBottom: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  facilityLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  levels: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 6,
+  },
+  chip: {
+    marginRight: 6,
+    marginBottom: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  chipText: {
+    fontSize: 13,
   },
   row: {
     flexDirection: 'row',

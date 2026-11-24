@@ -74,13 +74,16 @@ export {
 
 // Components
 export { CustomMapRasterLayer, type CustomMapRasterLayerProps, GeoJsonMapLayer, type GeoJsonMapLayerProps, IndoorMapFloorLayer, type IndoorMapFloorLayerProps } from './components/department-map-layers';
-export { FullScreenLocationPicker, type FullScreenLocationPickerProps } from './components/full-screen-location-picker';
+export { FullScreenLocationPicker, type FullScreenLocationPickerProps, type LocationPickerContextValue, useLocationPickerContext } from './components/full-screen-location-picker';
 export { FullScreenMap, type FullScreenMapProps } from './components/full-screen-map';
 export { LocationPicker, type LocationPickerProps, type PickedLocation, PickerPin, type PickerState, usePickerState } from './components/location-picker';
 export { MapFocusBanner, type MapFocusBannerProps, MapOverlayLegend, type MapOverlayLegendItem } from './components/map-banners';
 export {
   MapControlButton,
   type MapControlButtonProps,
+  type MapFacilityItem,
+  type MapFacilityLevel,
+  type MapFacilitySectionProps,
   MapLayersButton,
   MapLayersSheet,
   type MapLayersSheetProps,

@@ -245,5 +245,13 @@
   "calls.intake_source.via_voice_named": "Via voice line: {{name}}",
   "calls.intake_screening.likely_not_incident": "Enhanced AI: likely not an incident",
   "calls.intake_screening.repeat_sender": "Repeat sender: over the hourly limit",
-  "calls.intake_screening.dismissed_as_spam": "Dismissed as spam"
+  "calls.intake_screening.dismissed_as_spam": "Dismissed as spam",
+  "calls.indoor_location_select": "Choose a room or area",
+  "calls.indoor_location_search": "Search rooms and areas",
+  "calls.indoor_location_search_hint": "Type the name of a room, area or building",
+  "calls.indoor_location_none_found": "No rooms or areas found",
+  "calls.indoor_location_offline": "Searching rooms needs a connection. You can still pick one on a facility map.",
+  "calls.indoor_location_pick_on_map": "Pick a room on a facility map",
+  "calls.indoor_location_clear": "Clear the indoor location",
+  "calls.indoor_location_unnamed": "Room on a facility map"
 }

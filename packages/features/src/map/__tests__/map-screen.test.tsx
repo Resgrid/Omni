@@ -1,5 +1,6 @@
 import './test-setup';
 
+import { useNetInfo } from '@react-native-community/netinfo';
 import type { VariantId } from '@resgrid/config';
 import { useCustomMapsStore, useMapMarkersStore } from '@resgrid/data';
 import { NavigationHandoffProvider } from '@resgrid/features/contacts';
@@ -15,6 +16,7 @@ import { Dimensions, Linking } from 'react-native';
 import { activateVariant, hidden, setRights } from '../../calls/__tests__/test-utils';
 import { useMapViewStore } from '../hooks/use-map-view-store';
 import MapScreen, { type MapScreenLinks } from '../screens/map-screen';
+import { facilityMapsState } from './facility-fixtures';
 import { pin } from './fixtures';
 
 const { mockCamera, mockMapStyle, mockMapView, useFollowCamera } = jest.requireMock('@resgrid/maps') as {
@@ -25,6 +27,14 @@ const { mockCamera, mockMapStyle, mockMapView, useFollowCamera } = jest.requireM
 };
 
 const { mockCurrentLocation } = jest.requireMock('@resgrid/location') as { mockCurrentLocation: { value: unknown } };
+
+// NetInfo is the calls test setup's mock (connected); a test switches it and re-renders.
+const setConnected = (isConnected: boolean) => {
+  // SAFETY: test-setup (through the calls test setup) mocks `useNetInfo` with a jest.fn.
+  const mockUseNetInfo = useNetInfo as jest.Mock;
+
+  mockUseNetInfo.mockReturnValue({ isConnected, isInternetReachable: isConnected });
+};
 
 const PINS = [
   pin('c12', 0, { Title: 'Structure fire', Address: '12 Main St' }),
@@ -43,6 +53,7 @@ const ALL_LINKS: MapScreenLinks = {
   customMaps: () => null,
   searchMaps: () => null,
 };
+
 const UNIT_LINKS: MapScreenLinks = { ...ALL_LINKS, unitDetail: () => null, personnelDetail: () => null, poiDetail: () => null, customMaps: () => '/maps' };
 
 const mocks = {
@@ -69,6 +80,7 @@ interface RenderOptions {
 
 const renderMap = async ({ variant = 'dispatch', links = ALL_LINKS, activeCallId = null, activeUnitId = null, realtime = false }: RenderOptions = {}) => {
   activateVariant(variant);
+
   return render(
     <NavigationHandoffProvider value={{ navigateTo: mocks.navigateTo }}>
       <StatusProvider activeCallId={activeCallId} activeUnitId={activeUnitId} onActiveCallChange={mocks.onActiveCallChange}>
@@ -468,5 +480,100 @@ describe('MapScreen focus links', () => {
     await renderMap();
     expect(screen.getByTestId('mock-focus-title')).toHaveTextContent('map.focus_not_found');
     expect(screen.queryByText('Pat Doe')).toBeNull();
+  });
+});
+
+describe('MapScreen facility maps', () => {
+  const facilityMocks = {
+    fetchCustomMaps: jest.fn(async () => undefined),
+    fetchIndoorMaps: jest.fn(async () => undefined),
+    fetchCustomMap: jest.fn(async () => undefined),
+    fetchIndoorMap: jest.fn(async () => undefined),
+    fetchIndoorFloor: jest.fn(async () => undefined),
+  };
+
+  beforeEach(() => {
+    useCustomMapsStore.setState({ ...facilityMapsState(), ...facilityMocks });
+    setConnected(true);
+  });
+
+  it('lists the department’s custom and indoor maps in the Layers sheet and draws one switched on, in every app', async () => {
+    await renderMap({ variant: 'responder' });
+    expect(facilityMocks.fetchCustomMaps).toHaveBeenCalled();
+    expect(facilityMocks.fetchIndoorMaps).toHaveBeenCalled();
+    expect(screen.queryByTestId('mock-indoor-floor-floor-1')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('map-screen-layers-button'));
+    expect(screen.getByTestId('facility-toggle-custom:site')).toHaveTextContent('Site emergency plan|maps.outdoor:off|level:all');
+    expect(screen.getByTestId('facility-toggle-indoor:bldg-a')).toHaveTextContent('Building A|maps.indoor:off|level:all');
+
+    await fireEvent.press(screen.getByTestId('facility-toggle-indoor:bldg-a'));
+    expect(screen.getByTestId('mock-indoor-floor-floor-1')).toBeTruthy();
+    // The floor chooser offers the map's floors, the default one shown.
+    expect(screen.getByTestId('facility-toggle-indoor:bldg-a')).toHaveTextContent('Building A|maps.indoor:on|level:floor-1');
+    expect(screen.queryByTestId('facility-level-indoor:bldg-a-all')).toBeNull();
+    await fireEvent.press(screen.getByTestId('facility-level-indoor:bldg-a-floor-2'));
+    expect(screen.getByTestId('mock-indoor-floor-floor-2')).toBeTruthy();
+    expect(facilityMocks.fetchIndoorFloor).toHaveBeenCalledWith('floor-2');
+
+    // The choice is the session's: the console and the IC maps follow it.
+    expect(useMapViewStore.getState().facilityMaps).toEqual({ 'indoor:bldg-a': 'floor-2' });
+  });
+
+  it('names a tapped room in the details panel and highlights it', async () => {
+    useMapViewStore.getState().toggleFacilityMap('custom:site');
+    await renderMap();
+    expect(screen.getByTestId('mock-custom-map-site-evac')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('mock-zone-yard'));
+    await act(async () => undefined);
+    expect(screen.getByTestId('layer-feature-title', hidden)).toHaveTextContent('Tank yard');
+    expect(screen.getByTestId('layer-feature-layer', hidden)).toHaveTextContent('Site emergency plan · Site plan');
+    expect(screen.getByTestId('mock-custom-map-site-base').props.accessibilityLabel).toBe('selected:yard');
+  });
+
+  it('closes a room’s details once its layer is not drawn, and does not bring them back with it', async () => {
+    useMapViewStore.getState().toggleFacilityMap('custom:site');
+    await renderMap();
+    await fireEvent.press(screen.getByTestId('mock-zone-yard'));
+    await act(async () => undefined);
+    expect(screen.getByTestId('layer-feature-title', hidden)).toHaveTextContent('Tank yard');
+
+    // Another layer chosen: the room's layer is no longer drawn.
+    await fireEvent.press(screen.getByTestId('map-screen-layers-button'));
+    await fireEvent.press(screen.getByTestId('facility-level-custom:site-site-evac'));
+    expect(screen.queryByTestId('mock-custom-map-site-base')).toBeNull();
+    expect(screen.queryByTestId('layer-feature-title', hidden)).toBeNull();
+
+    // Every layer again: the room is drawn, its details stay closed.
+    await fireEvent.press(screen.getByTestId('facility-level-custom:site-all'));
+    expect(screen.getByTestId('mock-custom-map-site-base').props.accessibilityLabel).toBe('selected:');
+    expect(screen.queryByTestId('layer-feature-title', hidden)).toBeNull();
+
+    // Switching the map off closes them too.
+    await fireEvent.press(screen.getByTestId('mock-zone-yard'));
+    await act(async () => undefined);
+    expect(screen.getByTestId('layer-feature-title', hidden)).toHaveTextContent('Tank yard');
+    await fireEvent.press(screen.getByTestId('facility-toggle-custom:site'));
+    expect(screen.queryByTestId('layer-feature-title', hidden)).toBeNull();
+  });
+
+  it('reads a facility map the device does not have once it is back online, not while it is offline', async () => {
+    setConnected(false);
+    useCustomMapsStore.setState({ customMapById: {} });
+    useMapViewStore.getState().toggleFacilityMap('custom:site');
+    await renderMap();
+    expect(facilityMocks.fetchCustomMap).not.toHaveBeenCalled();
+
+    // Back online (NetInfo re-renders the screen).
+    setConnected(true);
+    await act(async () => useCustomMapsStore.setState({ customMaps: [...useCustomMapsStore.getState().customMaps] }));
+    expect(facilityMocks.fetchCustomMap).toHaveBeenCalledWith('site');
+  });
+
+  it('offers them on BigBoard too, which has no custom maps browser', async () => {
+    await renderMap({ variant: 'bigboard' });
+    await fireEvent.press(screen.getByTestId('map-screen-layers-button'));
+    expect(screen.getByTestId('facility-toggle-indoor:bldg-a')).toBeTruthy();
+    expect(screen.queryByTestId('layers-browse-maps')).toBeNull();
   });
 });

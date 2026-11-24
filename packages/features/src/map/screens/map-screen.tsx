@@ -40,16 +40,19 @@ import { StyleSheet, View } from 'react-native';
 
 import { ActiveRouteOverlay } from '../components/active-route-overlay';
 import { DepartmentLayers } from '../components/department-layers';
+import { facilityFeaturePlace, FacilityMapsOverlay } from '../components/facility-maps-overlay';
 import { LayerDetailsSheet } from '../components/layer-details-sheet';
 import { LayerFeaturePanel, type LayerFeatureSelection } from '../components/layer-feature-details';
 import { MapHighlights } from '../components/map-highlights';
 import { type MapPinAction, MapPinPanel } from '../components/map-pin-details';
 import { useActiveRouteOverlay } from '../hooks/use-active-route-overlay';
 import { type DepartmentMapLayer, useDepartmentLayers } from '../hooks/use-department-layers';
+import { facilitySheetSection, useDrawnFacilityFeature, useFacilityFocus, useFacilityMaps } from '../hooks/use-facility-maps';
 import { useLiveMapPins } from '../hooks/use-live-map-pins';
 import { useMapLockStore } from '../hooks/use-map-lock';
 import { useMapViewStore } from '../hooks/use-map-view-store';
 import { TRAFFIC_SURFACES, useTrafficPreference } from '../hooks/use-traffic-preference';
+import type { FacilityFeature } from '../lib/facility-maps';
 import { eventPhaseAt, eventPhaseLabelKey, firstFeatureDetails, firstOfflineFeatureHit, formatLayerEventDates, hasLayerDetails, type LayerEventPhase } from '../lib/layer-details';
 import { departmentTarget, OWN_LOCATION_ZOOM, pinTarget, resolveHomeTarget } from '../lib/map-camera';
 import { filterMarkers, findEntityPin, findFocusPin, highlightTargets, markerKindOf, parseMapFocus, poiTypeLayers, presentMarkerKinds, type ToggleableMarkerKind } from '../lib/map-markers';
@@ -75,6 +78,9 @@ export interface MapScreenProps {
   realtime?: boolean;
 }
 
+/** A tapped layer shape, or a facility map's room or region (highlighted while its panel is open). */
+type MapFeatureSelection = LayerFeatureSelection & { facilityFeatureId?: string };
+
 const NO_LINKS: MapScreenLinks = {};
 const LAYER_ID_PREFIX = 'layer:';
 const KIND_ID_PREFIX = 'kind:';
@@ -84,6 +90,7 @@ const PHASE_BADGE_TONE: Record<Exclude<LayerEventPhase, 'none'>, 'primary' | 'ou
 /** A link builder's result, or null when it has none or refuses the id (unsafe ids throw in the features' builders). */
 const linkOf = <A,>(builder: ((arg: A) => string | null) | undefined, arg: A): string | null => {
   if (!builder) return null;
+
   try {
     return builder(arg);
   } catch {
@@ -96,7 +103,8 @@ const isPositiveInt = (value: string): boolean => /^[1-9]\d*$/.test(value);
 /**
  * The department map (omni-plan §7.10 "Maps", MapLibre through @resgrid/maps; legacy Unit map tab, Responder map panel,
  * Dispatch and BigBoard map screens): calls, units, members (with `CanViewPII`), stations and POIs from the persisted
- * map-markers store, kept live by SignalR pings and the geolocation feed; department layers, the icon legend, pin details
+ * map-markers store, kept live by SignalR pings and the geolocation feed; department layers and facility maps (custom and
+ * indoor maps switched on in the Layers sheet, a tapped room or region named in the details panel), the icon legend, pin details
  * with actions and recenter / follow; live traffic (hidden when the server has none; the member's choice is remembered on
  * the device). Style, attribution and offline packs come from the shell's MapProvider.
  *
@@ -140,6 +148,8 @@ export default function MapScreen({ links = NO_LINKS, realtime = true }: MapScre
   const hiddenKinds = useMapViewStore((state) => state.hiddenKinds);
   const hiddenPoiTypes = useMapViewStore((state) => state.hiddenPoiTypes);
   const { layers: departmentLayers, toggleLayer } = useDepartmentLayers(mapsCapability.layers);
+  // The department's custom and indoor maps the member switched on (Layers sheet), drawn under the layers and pins.
+  const facility = useFacilityMaps(mapsCapability.layers);
   // Unit: the device unit's running route (variants that ship the routes module).
   const hasUnitRoutes = useHasModule('unit-routes');
   const activeRoute = useActiveRouteOverlay(hasUnitRoutes && isUnitDevice, activeUnitId);
@@ -170,9 +180,11 @@ export default function MapScreen({ links = NO_LINKS, realtime = true }: MapScre
   const closePin = useCallback(() => setSelectedPinId(null), []);
   // A tapped layer shape (vendor, stop, zone) with a name or description. One panel at a time: a pin wins over a shape
   // under the same tap (the web map reports both; the native map only the topmost source).
-  const [selectedFeature, setSelectedFeature] = useState<LayerFeatureSelection | null>(null);
+  const [featureSelection, setSelectedFeature] = useState<MapFeatureSelection | null>(null);
   const [tapPriority] = useState(createTapPriority);
   const closeFeature = useCallback(() => setSelectedFeature(null), []);
+  // A room's details close with its floor or its map (another floor chosen, the map switched off in the Layers sheet).
+  const selectedFeature = useDrawnFacilityFeature(featureSelection, featureSelection?.facilityFeatureId, facility.layers, closeFeature);
 
   const handlePinPress = useCallback(
     (pin: MapMakerInfoData) => {
@@ -194,6 +206,23 @@ export default function MapScreen({ links = NO_LINKS, realtime = true }: MapScre
       });
     },
     [tapPriority]
+  );
+
+  // A room or region of a facility map: its name, where it is (map · floor) and its description, highlighted on the map.
+  const handleFacilityPress = useCallback(
+    (feature: FacilityFeature) => {
+      tapPriority.whenUnclaimed(() => {
+        setSelectedPinId(null);
+        setSelectedFeature({
+          name: feature.name || t(feature.kind === 'indoor' ? 'maps.zone' : 'maps.region'),
+          category: '',
+          description: feature.description,
+          layerName: facilityFeaturePlace(feature),
+          facilityFeatureId: feature.featureId,
+        });
+      });
+    },
+    [t, tapPriority]
   );
 
   // Offline, the layers are drawn from the department data bundle in the offline style's own source, which has no press
@@ -220,10 +249,12 @@ export default function MapScreen({ links = NO_LINKS, realtime = true }: MapScre
 
   const cameraRef = useRef<CameraRef>(null);
   const ownPosition = useMemo(() => (ownLocation ? { latitude: ownLocation.latitude, longitude: ownLocation.longitude } : null), [ownLocation]);
+
   const department = useMemo(
     () => departmentTarget({ centerLatitude: live.centerLatitude, centerLongitude: live.centerLongitude, zoomLevel: live.zoomLevel }, providerCenter),
     [live.centerLatitude, live.centerLongitude, live.zoomLevel, providerCenter]
   );
+
   const home = resolveHomeTarget({ focusPin, ownLocation: ownPosition, preferOwnLocation: isFieldDevice, department });
   const [initialCamera] = useState(() => home.target);
   const [isFollowing, setIsFollowing] = useState(() => isFieldDevice && focus === null);
@@ -287,21 +318,33 @@ export default function MapScreen({ links = NO_LINKS, realtime = true }: MapScre
   const recenter = useCallback(() => {
     hasUserMovedRef.current = false;
     setHasUserMoved(false);
+
     if (home.reason === 'own-location') {
       followZoomAppliedRef.current = false;
       setIsFollowing(true);
     }
+
     cameraRef.current?.setCamera({ ...home.target, animationDuration: 800 });
   }, [home.reason, home.target]);
 
   const flyToPin = useCallback((pin: MapMakerInfoData) => {
     const target = pinTarget(pin);
+
     if (!target) return;
     hasUserMovedRef.current = true;
     setHasUserMoved(true);
     setIsFollowing(false);
     cameraRef.current?.setCamera({ ...target, animationDuration: 800 });
   }, []);
+
+  // A facility map switched on (or a floor chosen) is framed, as a move of the member's: following stops, recentre shows.
+  const facilityFramed = useCallback(() => {
+    hasUserMovedRef.current = true;
+    setHasUserMoved(true);
+    setIsFollowing(false);
+  }, []);
+
+  useFacilityFocus(cameraRef, facility, facilityFramed, !isMapLocked);
 
   const showRecenter = !isMapLocked && (hasUserMoved || (home.reason === 'own-location' && !isFollowing));
 
@@ -340,6 +383,7 @@ export default function MapScreen({ links = NO_LINKS, realtime = true }: MapScre
   const setCurrentCall = useCallback(
     (callId: string) => {
       if (!onActiveCallChange) return;
+
       try {
         onActiveCallChange(callId);
         toast.success(t('map.call_set_as_current'));
@@ -355,10 +399,13 @@ export default function MapScreen({ links = NO_LINKS, realtime = true }: MapScre
     async (pin: MapMakerInfoData) => {
       if (!pinTarget(pin)) {
         toast.error(t('map.no_location_for_routing'));
+
         return;
       }
+
       closePin();
       const opened = await handoff.navigateTo({ latitude: pin.Latitude, longitude: pin.Longitude, label: pin.Title });
+
       if (!opened) toast.error(t('map.failed_to_open_maps'));
     },
     [closePin, handoff, t, toast]
@@ -369,13 +416,16 @@ export default function MapScreen({ links = NO_LINKS, realtime = true }: MapScre
     const kind = markerKindOf(selectedPin);
     const entityId = getPinEntityId(selectedPin);
     const actions: MapPinAction[] = [];
+
     const addLink = (id: string, label: string, icon: MapPinAction['icon'], href: string | null) => {
       if (href) actions.push({ id, label, icon, onPress: () => openLink(href) });
     };
+
     if (kind === 'call') {
       if (isFieldDevice && onActiveCallChange && entityId !== activeCallId) {
         actions.push({ id: 'set-current-call', label: t('map.set_as_current_call'), icon: CircleCheck, primary: true, onPress: () => setCurrentCall(entityId) });
       }
+
       addLink('view-call', t('map.view_call_details'), Phone, linkOf(links.callDetail, entityId));
     } else if (kind === 'unit') {
       addLink('view-unit', t('map.view_unit_details'), Truck, linkOf(links.unitDetail, entityId));
@@ -384,7 +434,9 @@ export default function MapScreen({ links = NO_LINKS, realtime = true }: MapScre
     } else if (kind === 'poi' && isPositiveInt(entityId)) {
       addLink('view-poi', t('map.view_poi_details'), PoiIcon, linkOf(links.poiDetail, Number(entityId)));
     }
+
     actions.push({ id: 'directions', label: t('common.route'), icon: Route, onPress: () => void directionsTo(selectedPin) });
+
     return actions;
   }, [activeCallId, directionsTo, isFieldDevice, links, onActiveCallChange, openLink, selectedPin, setCurrentCall, t]);
 
@@ -393,8 +445,11 @@ export default function MapScreen({ links = NO_LINKS, realtime = true }: MapScre
     const kind = markerKindOf(selectedPin);
     const entityId = getPinEntityId(selectedPin);
     const badges: string[] = [];
+
     if (kind === 'call' && activeCallId !== null && entityId === activeCallId) badges.push(t('map.current_call'));
+
     if (kind === 'unit' && isUnitDevice && activeUnitId !== null && entityId === activeUnitId) badges.push(t('map.your_unit'));
+
     return badges;
   }, [activeCallId, activeUnitId, isUnitDevice, selectedPin, t]);
 
@@ -423,10 +478,12 @@ export default function MapScreen({ links = NO_LINKS, realtime = true }: MapScre
 
   const kinds = useMemo(() => presentMarkerKinds(permittedPins, canUserViewPII), [canUserViewPII, permittedPins]);
   const poiLayers = useMemo(() => poiTypeLayers(permittedPins), [permittedPins]);
+
   const kindLabels = useMemo<Record<ToggleableMarkerKind, string>>(
     () => ({ call: callsTerm, unit: unitsTerm, personnel: personnelTerm, station: t('map.layer_stations'), poi: t('map.layer_pois'), hydrant: t('map.layer_hydrants') }),
     [callsTerm, personnelTerm, t, unitsTerm]
   );
+
   const layerItems = useMemo<MapLayerToggleItem[]>(
     () => [
       ...kinds.map((kind) => ({ Id: `${KIND_ID_PREFIX}${kind}`, Name: kindLabels[kind] })),
@@ -447,13 +504,19 @@ export default function MapScreen({ links = NO_LINKS, realtime = true }: MapScre
     ],
     [departmentLayers, departmentTimeZone, i18n.language, kindLabels, kinds, layersOpenedAt, poiLayers, t]
   );
+
   const layerToggles = useMemo<Record<string, boolean>>(() => {
     const toggles: Record<string, boolean> = {};
+
     for (const kind of kinds) toggles[`${KIND_ID_PREFIX}${kind}`] = hiddenKinds[kind] !== true;
+
     for (const layer of poiLayers) toggles[layer.id] = hiddenPoiTypes[layer.id] !== true;
+
     for (const layer of departmentLayers) toggles[`${LAYER_ID_PREFIX}${layer.id}`] = layer.isOn;
+
     return toggles;
   }, [departmentLayers, hiddenKinds, hiddenPoiTypes, kinds, poiLayers]);
+
   const handleToggleLayer = useCallback(
     (id: string) => {
       if (id.startsWith(KIND_ID_PREFIX)) {
@@ -466,8 +529,10 @@ export default function MapScreen({ links = NO_LINKS, realtime = true }: MapScre
     },
     [toggleLayer]
   );
+
   const customMapsHref = mapsCapability.customIndoor ? linkOf(links.customMaps, undefined) : null;
   const searchMapsHref = mapsCapability.customIndoor ? linkOf(links.searchMaps, undefined) : null;
+
   const browseMaps = useCallback(
     (href: string) => {
       setIsLayersOpen(false);
@@ -475,7 +540,9 @@ export default function MapScreen({ links = NO_LINKS, realtime = true }: MapScre
     },
     [router]
   );
+
   const legendTerms = useMemo(() => ({ calls: callsTerm, units: unitsTerm, personnel: personnelTerm }), [callsTerm, personnelTerm, unitsTerm]);
+
   const openLegend = useCallback(() => {
     setIsLegendMounted(true);
     setIsLegendOpen(true);
@@ -510,6 +577,7 @@ export default function MapScreen({ links = NO_LINKS, realtime = true }: MapScre
         unavailableFallback={<MapUnavailable label={t('maps.unavailable')} />}
       >
         <Camera ref={cameraRef} defaultSettings={initialCamera} />
+        <FacilityMapsOverlay layers={facility.layers} selectedFeatureId={selectedFeature?.facilityFeatureId ?? null} onFeaturePress={handleFacilityPress} />
         <TrafficLayer visible={isTrafficOn} idPrefix="map-screen-traffic" />
         <DepartmentLayers layers={departmentLayers} enabled={mapsCapability.layers} layerIdPrefix="map-layer" offlineIdPrefix={OFFLINE_LAYERS_ID_PREFIX} onFeaturePress={handleFeaturePress} />
         {activeRoute ? <ActiveRouteOverlay route={activeRoute} /> : null}
@@ -561,6 +629,7 @@ export default function MapScreen({ links = NO_LINKS, realtime = true }: MapScre
           onShowDetails={showLayerDetails}
           onBrowseMaps={customMapsHref ? () => browseMaps(customMapsHref) : undefined}
           onSearchMaps={searchMapsHref ? () => browseMaps(searchMapsHref) : undefined}
+          facilityMaps={facilitySheetSection(facility, t)}
         />
       ) : null}
       {mapsCapability.layers && detailsLayer ? <LayerDetailsSheet isOpen={true} layer={detailsLayer} onClose={() => setDetailsLayerId(null)} now={layersOpenedAt} timeZone={departmentTimeZone} /> : null}

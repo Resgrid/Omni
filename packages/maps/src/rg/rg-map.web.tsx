@@ -508,6 +508,26 @@ export const Camera = forwardRef<CameraRef, CameraProps>(function Camera(props, 
     [map]
   );
 
+  // The limits come before the placements below (effects run in order): a camera target placed while the old bounds are
+  // still on would be clamped to them and, its target unchanged, never placed again. Bounds this camera set are lifted
+  // again when the prop goes away (a board unlocks its view), as on native.
+  const appliedMaxBounds = useRef(false);
+  useEffect(() => {
+    if (!map) return;
+
+    if (typeof props.minZoomLevel === 'number') map.setMinZoom(props.minZoomLevel);
+
+    if (typeof props.maxZoomLevel === 'number') map.setMaxZoom(props.maxZoomLevel);
+
+    if (props.maxBounds) {
+      map.setMaxBounds([props.maxBounds.sw, props.maxBounds.ne]);
+      appliedMaxBounds.current = true;
+    } else if (appliedMaxBounds.current) {
+      map.setMaxBounds(null);
+      appliedMaxBounds.current = false;
+    }
+  }, [map, props.minZoomLevel, props.maxZoomLevel, props.maxBounds]);
+
   // Initial placement (defaultSettings), like the native Camera.
   useEffect(() => {
     if (!map || initialized.current) return;
@@ -548,13 +568,6 @@ export const Camera = forwardRef<CameraRef, CameraProps>(function Camera(props, 
     // targetKey is the serialized target.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, targetKey]);
-
-  useEffect(() => {
-    if (!map) return;
-    if (typeof props.minZoomLevel === 'number') map.setMinZoom(props.minZoomLevel);
-    if (typeof props.maxZoomLevel === 'number') map.setMaxZoom(props.maxZoomLevel);
-    if (props.maxBounds) map.setMaxBounds([props.maxBounds.sw, props.maxBounds.ne]);
-  }, [map, props.minZoomLevel, props.maxZoomLevel, props.maxBounds]);
 
   // Follow the user through the GeolocateControl (the web equivalent of trackUserLocation).
   const { followUserLocation } = props;

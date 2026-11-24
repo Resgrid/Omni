@@ -1,7 +1,7 @@
 import React, { act } from 'react';
 
 import { MapProvider } from '../provider/map-provider';
-import { Images, LineLayer, MapView, MarkerView, ShapeSource } from '../rg';
+import { Camera, Images, LineLayer, MapView, MarkerView, ShapeSource } from '../rg';
 import { loadMapLibre } from '../rg/maplibre-loader.web';
 import type { MapPressEvent, MapViewRef } from '../rg/types';
 import { type FakeMap, mockCalls, mockMaps, mockMarkers, resetMaplibreGlFakes } from './fakes/maplibre-gl';
@@ -171,6 +171,29 @@ describe('rg wrapper — web renderer (maplibre-gl)', () => {
     const element = marker.options.element as HTMLElement;
     expect(element.getAttribute('data-testid')).toBe('selected-marker');
     expect(element.querySelector('[data-testid="marker-content"]')?.textContent).toBe('pin');
+  });
+
+  it('applies a locked camera’s new bounds before it moves to its new spot, so the old bounds never clamp it', () => {
+    const lockedAt = (longitude: number) => {
+      const center: [number, number] = [longitude, 0];
+
+      return <Camera centerCoordinate={center} zoomLevel={12} animationDuration={0} maxBounds={{ ne: [longitude + 0.1, 0.1], sw: [longitude - 0.1, -0.1] }} />;
+    };
+
+    act(() => root.render(tree('light', undefined, lockedAt(0))));
+    const map = loadedMap();
+    const jumpTo = jest.spyOn(map, 'jumpTo');
+
+    act(() => root.render(tree('light', undefined, lockedAt(10))));
+    expect(map.setMaxBounds).toHaveBeenLastCalledWith([
+      [9.9, -0.1],
+      [10.1, 0.1],
+    ]);
+    expect(jumpTo).toHaveBeenLastCalledWith(expect.objectContaining({ center: [10, 0], zoom: 12 }), expect.anything());
+    const boundsOrder = map.setMaxBounds.mock.invocationCallOrder.at(-1) ?? 0;
+    const placeOrder = jumpTo.mock.invocationCallOrder.at(-1) ?? 0;
+
+    expect(boundsOrder).toBeLessThan(placeOrder);
   });
 
   it('shows the unavailable placeholder instead of a map when there is no style', () => {

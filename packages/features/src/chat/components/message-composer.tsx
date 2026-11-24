@@ -22,6 +22,8 @@ export interface MessageComposerProps {
    * its BottomAnchoredKeyboardView `offset`, as the keyboard covers that inset.
    */
   bottomInset?: number;
+  /** Shown above the input, e.g. the assistant's PII/PHI warning (`AiPromptWarning`). */
+  notice?: React.ReactNode;
 }
 
 /** Padding under the composer's controls (py-2). */
@@ -32,7 +34,7 @@ const COMPOSER_PADDING_BOTTOM = 8;
  * the message is queued through the outbox, so it shows as pending and is delivered when the connection allows.
  * Mounted inside a BottomAnchoredKeyboardView by the conversation screen.
  */
-export const MessageComposer: React.FC<MessageComposerProps> = ({ onSend, disabled = false, placeholder, initialValue = '', allowUrgent = true, onCancelEdit, onOpenGif, maxLength = 4000, bottomInset = 0 }) => {
+export const MessageComposer: React.FC<MessageComposerProps> = ({ onSend, disabled = false, placeholder, initialValue = '', allowUrgent = true, onCancelEdit, onOpenGif, maxLength = 4000, bottomInset = 0, notice }) => {
   const { t } = useTranslation();
   const colors = useThemeColors();
   const [text, setText] = useState(initialValue);
@@ -48,6 +50,7 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({ onSend, disabl
 
   return (
     <VStack className="border-t border-outline-200 bg-background-0 px-3 pt-2" style={{ paddingBottom: COMPOSER_PADDING_BOTTOM + bottomInset }} testID="chat-composer">
+      {notice ?? null}
       {urgent ? <Text className="mb-1 text-xs font-semibold text-error-600">{t('chat.urgent_will_send')}</Text> : null}
       {onCancelEdit ? (
         <HStack className="mb-1 items-center justify-between">

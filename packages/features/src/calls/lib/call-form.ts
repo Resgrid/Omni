@@ -104,7 +104,19 @@ export interface CallFormValues {
   /** Conditional run cards (hook point). */
   runCardOutcomeNodeKey: string;
   unitResponseCodes: string;
+  /** The indoor location: a room of an indoor map or a region of a custom map (Core `IndoorMapZoneId`); null when none. */
+  indoorMapZoneId: string | null;
+  /** The indoor floor or custom map layer that room is on (Core `IndoorMapFloorId`). */
+  indoorMapFloorId: string | null;
+  /** The room's name as picked ("Room, Map"); blank when only its id is known (an edit names it from the department's maps). */
+  indoorLocationName: string;
 }
+
+/** The indoor location fields. */
+export type IndoorLocationFields = Pick<CallFormValues, 'indoorMapZoneId' | 'indoorMapFloorId' | 'indoorLocationName'>;
+
+/** No indoor location. */
+export const NO_INDOOR_LOCATION: IndoorLocationFields = { indoorMapZoneId: null, indoorMapFloorId: null, indoorLocationName: '' };
 
 type DestinationFormFields = Pick<CallFormValues, 'destinationPoiId' | 'destinationKind' | 'destinationAddress' | 'destinationLatitude' | 'destinationLongitude' | 'destinationWhat3Words' | 'destinationPlusCode'>;
 
@@ -151,7 +163,39 @@ export const emptyCallFormValues = (priority: number | null = null): CallFormVal
   udfValues: [],
   runCardOutcomeNodeKey: '',
   unitResponseCodes: '',
+  ...NO_INDOOR_LOCATION,
 });
+
+/** A room or region picked as the call's indoor location (the map picker's facility maps, or the indoor location search). */
+export interface PickedIndoorLocation {
+  zoneId: string;
+  floorId: string;
+  /** "Room, Map". */
+  name: string;
+  /** The room's centre, when known: the call goes there. */
+  point?: FormPoint | null;
+}
+
+/**
+ * The call's indoor location set to a picked room: with its centre the call's point moves there (as a map pick does) and
+ * its name fills a blank address, or replaces the previous room's name there (a room changed); the address the caller gave
+ * is never replaced.
+ */
+export function applyIndoorLocation(values: CallFormValues, picked: PickedIndoorLocation): CallFormValues {
+  const point = picked.point && isUsablePoint(picked.point.latitude, picked.point.longitude) ? picked.point : null;
+  const coordinates = point ? toCoordinateFields(point.latitude, point.longitude) : { latitude: values.latitude, longitude: values.longitude };
+  const address = values.address.trim();
+  const addressFromRoom = !address || (!!values.indoorLocationName && address === values.indoorLocationName.trim());
+
+  return {
+    ...values,
+    ...coordinates,
+    address: addressFromRoom ? picked.name : values.address,
+    indoorMapZoneId: picked.zoneId,
+    indoorMapFloorId: picked.floorId || null,
+    indoorLocationName: picked.name,
+  };
+}
 
 /**
  * Who a new call is dispatched to, as the form shows and saves it. A pending call is not offered "Everyone" (the
@@ -410,6 +454,11 @@ export interface CallFormPickers {
   freeDestination?: boolean;
   /** Core M0322: the Route picker is shown (the department has eligible plans, or the call runs one). */
   route?: boolean;
+  /**
+   * The Indoor Location field is shown (`indoorLocation`): the room goes up as IndoorMapZoneId with its floor — "" when there
+   * is none, so the department's requirement applies and an edit clears it. Hidden, both are left out.
+   */
+  indoorLocation?: boolean;
 }
 
 export type CallFormErrorKey = 'name' | 'nature' | 'priority' | 'type' | 'latitude' | 'longitude' | 'destinationLatitude' | 'destinationLongitude' | 'dispatchOnUtc' | 'udf' | NewCallFieldKey;
@@ -482,6 +531,7 @@ export function policyValues(values: CallFormValues): PolicyFieldValues {
     [NewCallFieldKeys.LinkedCall]: values.linkedCall?.callId,
     [NewCallFieldKeys.DispatchOn]: values.dispatchOnUtc,
     [NewCallFieldKeys.DispatchList]: !isDispatchSelectionEmpty(values.dispatch),
+    [NewCallFieldKeys.IndoorLocation]: values.indoorMapZoneId,
   };
 }
 
@@ -524,12 +574,14 @@ export function editPolicyValues(values: CallFormValues, edit: CallFormEditConte
     [NewCallFieldKeys.Protocols]: (edit.storedProtocolCount ?? 0) > 0 || values.protocolIds.length > 0,
     [NewCallFieldKeys.LinkedCall]: !!values.linkedCall,
     [NewCallFieldKeys.DispatchList]: !isDispatchSelectionEmpty(values.dispatch),
+    // The form starts from the call's indoor location; a server that does not report it is left to judge it (the save leaves it as stored).
+    [NewCallFieldKeys.IndoorLocation]: values.indoorMapZoneId || call.IndoorMapZoneId === undefined,
   };
 }
 
 /**
  * The required fields the form leaves blank, by the rules Core applies (Dispatch new-call and `getEditCallMissingFields`):
- * - indoor location is never enforced (no indoor picker here, and the server skips it when no zone is sent);
+ * - a required indoor location needs a room (the field shows whenever it is required);
  * - a pending call is not dispatched or scheduled yet, so neither its dispatch list nor its dispatch time is required;
  * - on an edit the dispatch time is never required, the linked call is left to the server (it sees the links the call
  *   already has) and protocols are not judged when the attached ones could not be read.
@@ -539,8 +591,6 @@ export function missingPolicyFields(values: CallFormValues, policy: NewCallField
 
   return policy.missingRequired(edit ? editPolicyValues(values, edit) : policyValues(values)).filter((key) => {
     switch (key) {
-      case NewCallFieldKeys.IndoorLocation:
-        return false;
       case NewCallFieldKeys.DispatchOn:
         return !edit && !isPending;
       case NewCallFieldKeys.DispatchList:
@@ -698,7 +748,20 @@ const commonRequestFields = (values: CallFormValues, pickers: CallFormPickers) =
   ...callLocationRequestFields(values, pickers),
   ...(values.unitResponseCodes ? { unitResponseCodes: values.unitResponseCodes } : {}),
   ...(pickers.udf ? { udfValues: values.udfValues } : {}),
+  ...indoorLocationRequestFields(values, pickers),
 });
+
+/** The indoor location, only when the form shows its field (left out, the server neither enforces nor changes it). */
+const indoorLocationRequestFields = (values: CallFormValues, pickers: CallFormPickers): Pick<CreateCallRequest, 'indoorMapZoneId' | 'indoorMapFloorId'> => {
+  const fields: Pick<CreateCallRequest, 'indoorMapZoneId' | 'indoorMapFloorId'> = {};
+
+  if (pickers.indoorLocation) {
+    fields.indoorMapZoneId = values.indoorMapZoneId;
+    fields.indoorMapFloorId = values.indoorMapZoneId ? values.indoorMapFloorId : null;
+  }
+
+  return fields;
+};
 
 export function toCreateCallRequest(values: CallFormValues, pickers: CallFormPickers): CreateCallRequest {
   const dispatchOnUtc = values.isPending ? undefined : toDispatchOnUtc(values.dispatchOnUtc);
@@ -771,7 +834,22 @@ export function keepHiddenEditFieldsUnchanged(request: UpdateCallRequest, isVisi
 
   if (!isVisible(NewCallFieldKeys.DispatchOn)) next.dispatchOnUtc = undefined;
 
+  if (!isVisible(NewCallFieldKeys.IndoorLocation)) {
+    next.indoorMapZoneId = undefined;
+    next.indoorMapFloorId = undefined;
+  }
+
   return next;
+}
+
+/**
+ * Edit: a server that does not report a call's indoor location (no `IndoorMapZoneId` on the call) may still store one, so
+ * the edit leaves it as stored unless a room was picked here.
+ */
+export function keepUnreportedIndoorLocation(request: UpdateCallRequest, call: CallResultData): UpdateCallRequest {
+  if (call.IndoorMapZoneId !== undefined || request.indoorMapZoneId) return request;
+
+  return { ...request, indoorMapZoneId: undefined, indoorMapFloorId: undefined };
 }
 
 /**
@@ -846,7 +924,7 @@ export function toUpdateCallRequest(callId: string, values: CallFormValues, pick
 
   if (dispatchOnUtc) request.dispatchOnUtc = dispatchOnUtc;
 
-  return keepWithheldEditFieldsUnchanged(keepHiddenEditFieldsUnchanged(request, options.isVisible, call), call);
+  return keepUnreportedIndoorLocation(keepWithheldEditFieldsUnchanged(keepHiddenEditFieldsUnchanged(request, options.isVisible, call), call), call);
 }
 
 /** The call's current dispatch list as a picker selection (edit). */
@@ -978,8 +1056,16 @@ export function callToFormValues(call: CallResultData, dispatches: readonly Disp
     dispatch: dispatchSelectionFromDispatches(dispatches),
     dispatchOnUtc: getScheduledDispatchPrefill(scheduledDispatchUtc(call), options.now),
     udfValues: udfInputs(call.UdfValues),
+    ...storedIndoorLocation(call.IndoorMapZoneId, call.IndoorMapFloorId),
   };
 }
+
+/** The indoor location as stored (named later, from the department's maps). */
+const storedIndoorLocation = (zoneId: string | null | undefined, floorId: string | null | undefined): IndoorLocationFields => {
+  const zone = zoneId?.trim() ?? '';
+
+  return zone ? { indoorMapZoneId: zone, indoorMapFloorId: floorId?.trim() || null, indoorLocationName: '' } : NO_INDOOR_LOCATION;
+};
 
 /**
  * Edit: the form after a reveal or a conceal re-read the call. A field that was withheld and is readable now starts from
@@ -1072,5 +1158,6 @@ export function createRequestToFormValues(request: CreateCallRequest): CallFormV
     udfValues: request.udfValues ?? [],
     runCardOutcomeNodeKey: request.runCardOutcomeNodeKey ?? '',
     unitResponseCodes: request.unitResponseCodes ?? '',
+    ...storedIndoorLocation(request.indoorMapZoneId, request.indoorMapFloorId),
   };
 }

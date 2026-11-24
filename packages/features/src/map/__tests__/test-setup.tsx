@@ -7,6 +7,7 @@ import '../../calls/__tests__/test-setup';
 
 jest.mock('@resgrid/location', () => {
   const mockCurrentLocation: { value: unknown } = { value: null };
+
   return {
     mockCurrentLocation,
     useCurrentLocation: () => mockCurrentLocation.value,
@@ -21,6 +22,7 @@ jest.mock('@resgrid/maps', () => {
   const pinIds = jest.requireActual('@resgrid/maps/lib/pin-ids');
   const poi = jest.requireActual('@resgrid/maps/lib/poi');
   const mockCamera = { setCamera: jest.fn(), flyTo: jest.fn(), moveTo: jest.fn(), zoomTo: jest.fn(), fitBounds: jest.fn() };
+
   const theme = {
     background: '#ffffff',
     surface: '#f3f4f6',
@@ -33,6 +35,7 @@ jest.mock('@resgrid/maps', () => {
     overlay: '#000000',
     onOverlay: '#ffffff',
   };
+
   const control =
     (fallbackTestID: string) =>
     ({ onPress, testID, side = 'right', bottomOffset = 20 }: { onPress: () => void; testID?: string; side?: string; bottomOffset?: number }) =>
@@ -43,10 +46,27 @@ jest.mock('@resgrid/maps', () => {
   const mockMapView = { queryRenderedFeatures: jest.fn(async (): Promise<GeoJSON.Feature[]> => []) };
   const mockMapStyle = { isOffline: false };
 
+  type MockZone = { IndoorMapZoneId: string };
+
   return {
     __esModule: true,
     ...pinIds,
     ...poi,
+    ...jest.requireActual('@resgrid/maps/lib/pixel-frame'),
+    isSafeMapUrl: jest.requireActual('@resgrid/maps/provider/url-safety').isSafeMapUrl,
+    // A facility map's layer or floor, with one pressable per region or zone (`mock-zone-<id>`).
+    CustomMapRasterLayer: ({ layer, onRegionPress, selectedRegionId }: { layer: { IndoorMapFloorId: string; Regions?: MockZone[] }; onRegionPress?: (id: string) => void; selectedRegionId?: string | null }) =>
+      mockReact.createElement(
+        View,
+        { testID: `mock-custom-map-${layer.IndoorMapFloorId}`, accessibilityLabel: `selected:${selectedRegionId ?? ''}` },
+        (layer.Regions ?? []).map((region) => mockReact.createElement(Pressable, { key: region.IndoorMapZoneId, testID: `mock-zone-${region.IndoorMapZoneId}`, onPress: () => onRegionPress?.(region.IndoorMapZoneId) }))
+      ),
+    IndoorMapFloorLayer: ({ floor, onZonePress, selectedZoneId }: { floor: { IndoorMapFloorId: string; Zones?: MockZone[] }; onZonePress?: (id: string) => void; selectedZoneId?: string | null }) =>
+      mockReact.createElement(
+        View,
+        { testID: `mock-indoor-floor-${floor.IndoorMapFloorId}`, accessibilityLabel: `selected:${selectedZoneId ?? ''}` },
+        (floor.Zones ?? []).map((zone) => mockReact.createElement(Pressable, { key: zone.IndoorMapZoneId, testID: `mock-zone-${zone.IndoorMapZoneId}`, onPress: () => onZonePress?.(zone.IndoorMapZoneId) }))
+      ),
     mockCamera,
     mockMapView,
     mockMapStyle,
@@ -79,6 +99,7 @@ jest.mock('@resgrid/maps', () => {
     offlineDepartmentLayerIds: (idPrefix: string) => [`${idPrefix}-labels`, `${idPrefix}-points`, `${idPrefix}-line`, `${idPrefix}-fill`],
     Camera: mockReact.forwardRef(({ defaultSettings }: { defaultSettings?: { centerCoordinate?: number[]; zoomLevel?: number } }, ref: unknown) => {
       mockReact.useImperativeHandle(ref, () => mockCamera);
+
       return mockReact.createElement(Text, { testID: 'mock-camera' }, `${defaultSettings?.centerCoordinate?.join(',') ?? ''}@${defaultSettings?.zoomLevel ?? ''}`);
     }),
     MapPins: ({ pins, onPinPress, selectedPinId, canViewPersonnel }: { pins: { Id: string }[]; onPinPress?: (pin: unknown) => void; selectedPinId?: string | null; canViewPersonnel: boolean }) =>
@@ -125,6 +146,7 @@ jest.mock('@resgrid/maps', () => {
       onToggle,
       onShowDetails,
       onBrowseMaps,
+      facilityMaps,
     }: {
       isOpen: boolean;
       layers: { Id: string; Name: string; Detail?: string | null; Badge?: { label: string; tone: string } | null; HasDetails?: boolean }[];
@@ -132,6 +154,12 @@ jest.mock('@resgrid/maps', () => {
       onToggle: (id: string) => void;
       onShowDetails?: (id: string) => void;
       onBrowseMaps?: () => void;
+      facilityMaps?: {
+        items: { Id: string; Name: string; TypeLabel?: string | null; Levels?: { Id: string; Name: string }[]; LevelId?: string | null; AllLevelsLabel?: string | null }[];
+        toggles: Record<string, boolean>;
+        onToggle: (id: string) => void;
+        onSelectLevel: (id: string, levelId: string | null) => void;
+      };
     }) =>
       isOpen
         ? mockReact.createElement(
@@ -147,7 +175,21 @@ jest.mock('@resgrid/maps', () => {
                 layer.HasDetails && onShowDetails ? mockReact.createElement(Pressable, { testID: `layer-details-${layer.Id}`, onPress: () => onShowDetails(layer.Id) }) : null
               )
             ),
-            onBrowseMaps ? mockReact.createElement(Pressable, { testID: 'layers-browse-maps', onPress: onBrowseMaps }) : null
+            onBrowseMaps ? mockReact.createElement(Pressable, { testID: 'layers-browse-maps', onPress: onBrowseMaps }) : null,
+            // Facility maps: `facility-toggle-<key>` (text "Name|Type:on|level:<id or all>") and `facility-level-<key>-<id or all>`.
+            (facilityMaps?.items ?? []).map((item) =>
+              mockReact.createElement(
+                View,
+                { key: item.Id },
+                mockReact.createElement(
+                  Pressable,
+                  { testID: `facility-toggle-${item.Id}`, onPress: () => facilityMaps?.onToggle(item.Id) },
+                  mockReact.createElement(Text, null, `${item.Name}|${item.TypeLabel ?? ''}:${facilityMaps?.toggles[item.Id] ? 'on' : 'off'}|level:${item.LevelId ?? 'all'}`)
+                ),
+                item.AllLevelsLabel ? mockReact.createElement(Pressable, { testID: `facility-level-${item.Id}-all`, onPress: () => facilityMaps?.onSelectLevel(item.Id, null) }) : null,
+                (item.Levels ?? []).map((level) => mockReact.createElement(Pressable, { key: level.Id, testID: `facility-level-${item.Id}-${level.Id}`, onPress: () => facilityMaps?.onSelectLevel(item.Id, level.Id) }))
+              )
+            )
           )
         : null,
     MapLegendSheet: ({ isOpen, canViewPersonnel, terms }: { isOpen: boolean; canViewPersonnel: boolean; terms?: { calls?: string } }) =>

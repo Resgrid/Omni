@@ -3,12 +3,13 @@ import './test-setup';
 
 import { useCustomMapsStore } from '@resgrid/data';
 import { offlineFloorSourceId } from '@resgrid/maps';
-import { type CustomMapLayerResultData, CustomMapType, type IndoorMapFloorResultData } from '@resgrid/models';
+import { type CustomMapLayerResultData, CustomMapType, type IndoorMapFloorResultData, type MapFeatureResultData } from '@resgrid/models';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import React from 'react';
 
-import { layerViewMode, listedCustomMaps, searchResultRoute } from '../lib/map-viewer';
+import { uniqueMapFeatures } from '../lib/map-features';
+import { layerViewMode, listedCustomMaps, listedIndoorMaps, searchResultRoute } from '../lib/map-viewer';
 import { customMapsRoutes, readMapParam } from '../routes';
 import CustomMapScreen from '../screens/custom-map';
 import IndoorMapScreen from '../screens/indoor-map';
@@ -128,6 +129,31 @@ describe('custom map helpers', () => {
     expect(layerViewMode(layer('c'))).toBe('pixel');
     expect(layerViewMode(layer('d', { HasImage: false, IsTiled: true }))).toBe('none');
     expect(layerViewMode(layer('e', { MercatorTileUrl: 'http://evil.example/{z}/{x}/{y}', HasImage: false }))).toBe('none');
+  });
+
+  it('lists a map once although Core returns it from both lists and a room once although search returns it twice (one table)', () => {
+    const site = { ...customMap([]).Map, IndoorMapId: 'site', Name: 'Site plan', MapType: CustomMapType.Outdoor };
+    const building = { ...customMap([]).Map, IndoorMapId: 'bldg', Name: 'Building', MapType: CustomMapType.Indoor };
+    const asIndoor = (map: { IndoorMapId: string; Name: string }) => ({ IndoorMapId: map.IndoorMapId, Name: map.Name });
+    expect(listedIndoorMaps([asIndoor(site), asIndoor(building)], [site, building]).map((map) => map.IndoorMapId)).toEqual(['bldg']);
+
+    const found = (FeatureType: string, Id: string, MapId: string): MapFeatureResultData => ({
+      FeatureType,
+      Id,
+      MapId,
+      Name: Id,
+      Description: null,
+      MapName: null,
+      FloorOrLayerId: 'level',
+      FloorOrLayerName: null,
+      CenterLatitude: 0,
+      CenterLongitude: 0,
+      IsDispatchable: true,
+    });
+
+    const unique = uniqueMapFeatures([found('indoor_zone', 'room', 'bldg'), found('indoor_zone', 'yard', 'site'), found('custom_region', 'room', 'bldg'), found('custom_region', 'yard', 'site')], [site, building]);
+    // A room on an indoor map stays a zone; a region on an outdoor map a region; the order is the first sighting's.
+    expect(unique.map((item) => `${item.Id}:${item.FeatureType}`)).toEqual(['room:indoor_zone', 'yard:custom_region']);
   });
 
   it('lists custom maps without the indoor ones and routes search results to their map', () => {

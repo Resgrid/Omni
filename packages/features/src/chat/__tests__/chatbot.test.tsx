@@ -7,7 +7,7 @@ import { type ChatChannelResultData, ChatChannelType, type ChatMessageResultData
 import { defaultResetRegistry } from '@resgrid/offline';
 import { emitRealtimeEvent, signalRService, useRealtimeStore } from '@resgrid/realtime';
 import { GluestackUIProvider, useToastStore } from '@resgrid/ui';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import { router, useFocusEffect } from 'expo-router';
 import React from 'react';
 
@@ -174,6 +174,12 @@ describe('ChatbotScreen', () => {
     await waitFor(() => expect(sendChatbotMessage).toHaveBeenCalledWith('Who is on shift?'));
     expect(screen.getByTestId('chat-composer-input').props.value).toBe('');
     expect(useToastStore.getState().toasts).toHaveLength(0);
+  });
+
+  // Questions reach an AI model (Core decision 2026-11-23): the composer carries the PII/PHI warning.
+  it('warns inside the composer never to include PII or PHI', async () => {
+    await render(<ChatbotScreen />);
+    expect(within(screen.getByTestId('chat-composer')).getByTestId('ai-prompt-warning')).toBeOnTheScreen();
   });
 
   it('a refused question shows an error toast', async () => {

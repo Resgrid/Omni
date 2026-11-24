@@ -44,9 +44,14 @@ export interface LocationPickerProps {
   isOpen: boolean;
   onClose: () => void;
   initial?: { latitude: number; longitude: number } | null;
-  onSelect: (location: { latitude: number; longitude: number; address?: string }) => void;
+  /** `indoor`: a room or region picked on a facility map (absent: the call's indoor location is not changed). */
+  onSelect: (location: { latitude: number; longitude: number; address?: string; indoor?: { zoneId: string; floorId: string; name: string } }) => void;
   /** The nearest-unit board for the call's location (Dispatch): who can be sent and the group boundaries, to draw on the map. */
   overlay?: DispatchMapOverlay | null;
+  /** Offer the department's facility maps (custom and indoor maps) to pick a room or region from (the call location). */
+  facilityMaps?: boolean;
+  /** The call's indoor location: its map opens on its floor with the room highlighted. */
+  initialIndoor?: { zoneId: string; floorId: string | null } | null;
 }
 
 export interface StaticLocationMapProps {
