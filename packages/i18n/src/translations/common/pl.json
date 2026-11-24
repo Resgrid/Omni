@@ -743,7 +743,8 @@
     "load_failed": "Could not reach the assistant. Check your connection and try again.",
     "new_session_failed": "Could not start a new session",
     "thinking": "The assistant is thinking",
-    "unavailable": "The assistant is not available for your department."
+    "unavailable": "The assistant is not available for your department.",
+    "pii_warning": "Nigdy nie umieszczaj danych osobowych (PII) ani danych o zdrowiu (PHI) w zapytaniach do AI: żadnych imion i nazwisk, numerów telefonów, adresów, danych pacjentów ani opisów zdarzeń. To, co tu wpiszesz, może zostać wysłane do modelu AI."
   },
   "check_in": {
     "add_note": "Dodaj notatkę",

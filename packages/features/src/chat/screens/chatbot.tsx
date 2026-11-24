@@ -9,6 +9,7 @@ import { useFocusEffect } from 'expo-router';
 import { RefreshCw, Sparkles } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { AiPromptWarning } from '../components/ai-prompt-warning';
 import { ChatGate } from '../components/chat-gate';
 import { MessageActionsSheet } from '../components/message-actions-sheet';
 import { MessageBubble } from '../components/message-bubble';
@@ -196,7 +197,7 @@ function ChatbotContent({ keyboardOffset = 0 }: ChatbotScreenProps) {
             <TypingDots color={ASSISTANT_ACCENT} />
           </HStack>
         ) : null}
-        <MessageComposer onSend={(body) => void send(body)} allowUrgent={false} placeholder={t('chatbot.ask_placeholder')} bottomInset={bottomInset} />
+        <MessageComposer onSend={(body) => void send(body)} allowUrgent={false} placeholder={t('chatbot.ask_placeholder')} bottomInset={bottomInset} notice={<AiPromptWarning />} />
       </BottomAnchoredKeyboardView>
 
       {/* Assistant messages: copy, pin (moderator) and report only — no reactions, edits or deletes. */}

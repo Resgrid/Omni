@@ -6,7 +6,7 @@ import { setDataApiContext, useChatStore, usePersonnelStore } from '@resgrid/dat
 import { type ChatChannelResultData, ChatChannelType, type ChatMessageResultData, ChatMessageType, type DepartmentRightsResultData, type PersonnelInfoResultData } from '@resgrid/models';
 import { emitRealtimeEvent, signalRService, useRealtimeStore } from '@resgrid/realtime';
 import { BottomInsetConsumedContext, GluestackUIProvider, useToastStore } from '@resgrid/ui';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import { router, useFocusEffect } from 'expo-router';
 import React from 'react';
 import { StyleSheet, Text } from 'react-native';
@@ -290,6 +290,15 @@ describe('ChatConversationScreen', () => {
 
     await act(() => emitRealtimeEvent('chatMessageReceived', JSON.stringify({ ChatChannelId: 'c1' })));
     expect(loadNewerMessages).toHaveBeenCalledWith('c1');
+  });
+
+  it('shows the AI prompt PII/PHI warning only on an assistant channel', async () => {
+    const { unmount } = await render(<ChatConversationScreen channelId="c1" />);
+    expect(screen.queryByTestId('ai-prompt-warning')).toBeNull();
+    await unmount();
+    useChatStore.setState({ channels: [...useChatStore.getState().channels, channel('b1', 'Assistant', ChatChannelType.Chatbot)] });
+    await render(<ChatConversationScreen channelId="b1" />);
+    expect(within(screen.getByTestId('chat-composer')).getByTestId('ai-prompt-warning')).toBeOnTheScreen();
   });
 
   it('passes the unit identity to SetActiveChannel and sends (Unit)', async () => {

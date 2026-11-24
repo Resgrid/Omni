@@ -12,6 +12,7 @@
   "chat.unread_count": "{{count}} unread",
   "chatbot.load_failed": "Could not reach the assistant. Check your connection and try again.",
   "chatbot.new_session_failed": "Could not start a new session",
+  "chatbot.pii_warning": "Never include personal information (PII) or health information (PHI) in AI prompts: no names, phone numbers, addresses, patient details or incident narratives. What you type here may be sent to an AI model.",
   "chatbot.thinking": "The assistant is thinking",
   "chatbot.unavailable": "The assistant is not available for your department."
 }

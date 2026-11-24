@@ -11,6 +11,7 @@ import { MessagesSquare } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useChatIdentity } from '../chat-identity';
+import { AiPromptWarning } from '../components/ai-prompt-warning';
 import { ChatGate } from '../components/chat-gate';
 import { ChatImageViewer } from '../components/chat-image';
 import { GifPickerSheet } from '../components/gif-picker-sheet';
@@ -164,6 +165,8 @@ function ChatConversationContent({ channelId, keyboardOffset = 0 }: { channelId:
           bottomInset={bottomInset}
           {...(editing ? { onCancelEdit: () => setEditing(null) } : {})}
           {...(!isChatbot ? { onOpenGif: () => setGifPickerOpen(true) } : {})}
+          // An assistant channel opened from the list: what is typed goes to an AI model.
+          {...(isChatbot ? { notice: <AiPromptWarning /> } : {})}
         />
       </BottomAnchoredKeyboardView>
       <ChatImageViewer message={viewingImage} onClose={() => setViewingImage(null)} />
