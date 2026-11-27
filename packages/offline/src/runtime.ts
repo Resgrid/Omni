@@ -15,6 +15,7 @@ import { type ConnectivitySource, createNetInfoConnectivitySource } from './outb
 import { createOutbox, type Outbox, type OutboxOptions } from './outbox/outbox';
 import { defaultOutboxHandlerRegistry, type OutboxHandlerRegistry } from './outbox/registry';
 import { OUTBOX_DROPPED_TABLE, OUTBOX_TABLE, outboxSchemaModule } from './outbox/schema';
+import { beginPendingWipe } from './reset/pending-wipe';
 import { defaultResetRegistry, type ResetRegistry } from './reset/registry';
 import { createScopeWiper, type ScopeWiper } from './reset/wipe';
 import { createSyncOrchestrator, type SyncOrchestrator } from './sync/orchestrator';
@@ -55,6 +56,11 @@ export interface OfflineRuntime {
   storageManager: StorageManager;
   sync: SyncOrchestrator;
   connectivity: ConnectivitySource | null;
+  /**
+   * Startup has registered everything it registers: a wipe a killed sign-out left (run first thing in `initOffline`)
+   * stops applying itself to late registrations, and its mark goes. Idempotent; a no-op when there was none.
+   */
+  settlePendingWipe(): Promise<void>;
   dispose(): void;
 }
 
@@ -102,6 +108,10 @@ export async function initOffline(options: InitOfflineOptions): Promise<OfflineR
   const disposeApiCachePrune = registries.retention.registerHook({ id: 'api-cache.prune', apply: async () => apiCache.prune() });
 
   const wiper = createScopeWiper({ registry: registries.reset, kvInstances: () => storage.all(), db, outbox, variantId: manifest.id });
+  // A sign-out the app was killed in finishes here, before preferences, the session or any persisted store is read: the
+  // next person to sign in must never get the leaving user's data back from storage. What startup registers later
+  // (push and local-notification teardown, offline map packs) catches up as it registers, until settlePendingWipe().
+  const pendingWipe = await beginPendingWipe(storage.main, wiper);
   const sync = createSyncOrchestrator({ kv: storage.main });
 
   const storageManager = createStorageManager({
@@ -135,7 +145,11 @@ export async function initOffline(options: InitOfflineOptions): Promise<OfflineR
     storageManager,
     sync,
     connectivity,
+    settlePendingWipe: async () => {
+      await pendingWipe?.settle();
+    },
     dispose() {
+      pendingWipe?.abandon();
       stopTriggers();
       disposeSyncListener();
       disposeRetention();

@@ -9,8 +9,11 @@ import {
   isAccessTokenExpired,
   isFeatureEnabled,
   loadSessionGates,
+  onStepUpVerified,
   registerSharedSessionRealtimeControls,
   registerSignOutHook,
+  requestStepUp,
+  stepUpRequirementOf,
   useAuthStore,
 } from '@resgrid/auth';
 import type { VariantManifest } from '@resgrid/config';
@@ -18,7 +21,7 @@ import { analyticsService, getEnv, initSentry, logger, setSentryUser } from '@re
 import { configureData, refreshDataWorkingSet } from '@resgrid/data';
 import { getCurrentLanguage, initI18n, isSupportedLanguage, LEGACY_LANGUAGE_STORAGE_KEY, loadLanguage } from '@resgrid/i18n';
 import { configureLocation, type LocationSettings } from '@resgrid/location';
-import { configureNotifications, pushNotificationService, type WebPushFirebaseConfig } from '@resgrid/notifications';
+import { configureNotifications, NATIVE_PUSH_PENDING_SIGN_OUTS_KEY, pushNotificationService, type WebPushFirebaseConfig } from '@resgrid/notifications';
 import { apiCacheTtlFromManifest, CONTRACT_KEYS, defaultResetRegistry, initOffline, type OfflineRuntime, readLegacyString } from '@resgrid/offline';
 import { configureRealtime, teardownRealtime, useRealtimeStore } from '@resgrid/realtime';
 import { configureVoice, initializeVoice, registerVoiceResets } from '@resgrid/voice';
@@ -266,7 +269,17 @@ export function createStartupSteps(config: AppShellConfig): InitStep[] {
 
         const main = offline.storage.main;
 
-        await configureData({ manifest, api: auth.context, getSession: getSessionScope, outbox: offline.outbox, storage: main, sync: offline.sync, logger });
+        await configureData({
+          manifest,
+          api: auth.context,
+          getSession: getSessionScope,
+          outbox: offline.outbox,
+          storage: main,
+          sync: offline.sync,
+          logger,
+          // The department step-up (round 10 A5): held writes (acknowledgments) open the in-app sheet and wait for it.
+          stepUp: { requirementOf: stepUpRequirementOf, request: requestStepUp, onVerified: onStepUpVerified },
+        });
 
         configureRealtime({
           getAccessToken: () => useAuthStore.getState().accessToken,
@@ -470,8 +483,21 @@ export function registerDefaultInitSteps(startup: AppInit, session: AppInit, con
   }
 
   defaultStepsRegistered = true;
+  // Before startup.offline, whose first act can be a wipe a killed sign-out left: a push registration that sign-out has
+  // not taken off yet (with the ended session's token) must outlive every wipe until the server confirms it is gone.
+  defaultResetRegistry.registerPreservedKeys([NATIVE_PUSH_PENDING_SIGN_OUTS_KEY]);
   createStartupSteps(config).forEach((step) => startup.register(step));
   createSessionSteps(config).forEach((step) => session.register(step));
+  // A wipe a killed sign-out left runs as storage opens, before startup registers its device teardowns (push, local
+  // notifications) and late caches (offline map packs); each caught up as it registered. Ready means startup registered
+  // everything (variant steps included, wherever they sit) and nobody can sign in before it: the wipe is done.
+  startup.subscribe((status) => {
+    if (status.state === 'ready') {
+      void getShellRuntime()
+        .offline?.settlePendingWipe()
+        .catch(() => logger.warn({ message: 'The pending wipe could not be settled; the next launch runs it again' }));
+    }
+  });
   // In-app OTA updates: the launch report and foreground checks after Sentry, a background check after the bootstrap.
   registerAppUpdateSteps(startup, session);
 

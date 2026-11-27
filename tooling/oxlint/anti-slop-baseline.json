@@ -192,9 +192,6 @@
   "apps/omni/e2e/maestro/run-maestro.mjs": {
     "anti-slop/require-readable-spacing": 9
   },
-  "apps/omni/e2e/support/desktop-fixtures.ts": {
-    "anti-slop/require-readable-spacing": 3
-  },
   "apps/omni/e2e/support/electron-app.ts": {
     "anti-slop/require-readable-spacing": 18,
     "anti-slop/require-safety-comment-for-type-assertion": 1
@@ -568,7 +565,6 @@
     "anti-slop/require-safety-comment-for-type-assertion": 1
   },
   "packages/app-shell/src/routes/canonical.ts": {
-    "anti-slop/require-readable-spacing": 6,
     "anti-slop/require-safety-comment-for-type-assertion": 2
   },
   "packages/app-shell/src/routes/define-routes.ts": {
@@ -689,15 +685,12 @@
   },
   "packages/auth/src/__tests__/auth-session.test.ts": {
     "anti-slop/no-unsafe-dictionary-type": 2,
-    "anti-slop/require-readable-spacing": 5,
     "anti-slop/require-safety-comment-for-type-assertion": 2
   },
   "packages/auth/src/__tests__/contract.test.ts": {
     "anti-slop/no-chained-type-assertions": 1,
     "anti-slop/no-known-value-widening": 1,
-    "anti-slop/no-unsafe-dictionary-type": 1,
-    "anti-slop/require-readable-spacing": 17,
-    "anti-slop/require-safety-comment-for-type-assertion": 2
+    "anti-slop/no-unsafe-dictionary-type": 1
   },
   "packages/auth/src/__tests__/errors.test.ts": {
     "anti-slop/no-runtime-typeof": 2,
@@ -858,9 +851,6 @@
     "anti-slop/no-unknown-parameters": 1,
     "anti-slop/require-readable-spacing": 3
   },
-  "packages/auth/src/flags/feature-flags-store.ts": {
-    "anti-slop/require-readable-spacing": 18
-  },
   "packages/auth/src/hooks.ts": {
     "anti-slop/require-readable-spacing": 1
   },
@@ -882,7 +872,7 @@
   "packages/auth/src/mfa/login-mfa.ts": {
     "anti-slop/no-conditional-empty-object-spread": 3,
     "anti-slop/no-known-value-widening": 1,
-    "anti-slop/require-readable-spacing": 57
+    "anti-slop/require-readable-spacing": 55
   },
   "packages/auth/src/mfa/types.ts": {
     "anti-slop/no-array-filter-map": 1,
@@ -963,7 +953,6 @@
     "anti-slop/no-runtime-typeof": 7,
     "anti-slop/no-unknown-parameters": 2,
     "anti-slop/no-unsafe-dictionary-type": 1,
-    "anti-slop/require-readable-spacing": 35,
     "anti-slop/require-safety-comment-for-type-assertion": 2
   },
   "packages/auth/src/session/client-headers.ts": {
@@ -1113,8 +1102,7 @@
     "anti-slop/require-readable-spacing": 2
   },
   "packages/config/src/schema.ts": {
-    "anti-slop/no-unknown-parameters": 1,
-    "anti-slop/require-readable-spacing": 9
+    "anti-slop/no-unknown-parameters": 1
   },
   "packages/config/src/versioning.ts": {
     "anti-slop/require-readable-spacing": 2
@@ -1308,7 +1296,6 @@
     "anti-slop/require-safety-comment-for-type-assertion": 47
   },
   "packages/data/src/awaiting-resources/__tests__/awaiting-resources-store.test.ts": {
-    "anti-slop/require-readable-spacing": 2,
     "anti-slop/require-safety-comment-for-type-assertion": 10
   },
   "packages/data/src/awaiting-resources/awaiting-resources-alerts.ts": {
@@ -1321,8 +1308,7 @@
   "packages/data/src/awaiting-resources/awaiting-resources-store.ts": {
     "anti-slop/no-array-filter-map": 1,
     "anti-slop/no-conditional-empty-object-spread": 1,
-    "anti-slop/no-unknown-parameters": 2,
-    "anti-slop/require-readable-spacing": 18
+    "anti-slop/no-unknown-parameters": 2
   },
   "packages/data/src/awaiting-resources/index.ts": {
     "anti-slop/require-readable-spacing": 1
@@ -1435,8 +1421,7 @@
     "anti-slop/require-safety-comment-for-type-assertion": 2
   },
   "packages/data/src/core/outbox.ts": {
-    "anti-slop/no-unknown-parameters": 1,
-    "anti-slop/require-readable-spacing": 11
+    "anti-slop/no-unknown-parameters": 1
   },
   "packages/data/src/core/persist.ts": {
     "anti-slop/no-conditional-empty-object-spread": 3,
@@ -1446,7 +1431,6 @@
   "packages/data/src/core/runtime.ts": {
     "anti-slop/no-runtime-typeof": 1,
     "anti-slop/no-unsafe-dictionary-type": 1,
-    "anti-slop/require-readable-spacing": 7,
     "anti-slop/require-safety-comment-for-type-assertion": 1
   },
   "packages/data/src/core/slices.ts": {
@@ -1553,11 +1537,7 @@
   "packages/data/src/offline-scope/register.ts": {
     "anti-slop/no-chained-type-assertions": 18,
     "anti-slop/no-conditional-empty-object-spread": 1,
-    "anti-slop/require-readable-spacing": 7,
     "anti-slop/require-safety-comment-for-type-assertion": 36
-  },
-  "packages/data/src/offline-scope/scope.ts": {
-    "anti-slop/require-readable-spacing": 3
   },
   "packages/data/src/operations/operations-store.ts": {
     "anti-slop/no-conditional-empty-object-spread": 1,
@@ -1573,9 +1553,6 @@
   },
   "packages/data/src/personnel/personnel-store.ts": {
     "anti-slop/require-readable-spacing": 2
-  },
-  "packages/data/src/protocols/protocols-store.ts": {
-    "anti-slop/require-readable-spacing": 5
   },
   "packages/data/src/records/__tests__/records-store.test.ts": {
     "anti-slop/no-unknown-parameters": 1,
@@ -1809,9 +1786,6 @@
   "packages/features/src/awaiting-resources/components/awaiting-resources-host.tsx": {
     "anti-slop/require-readable-spacing": 1
   },
-  "packages/features/src/awaiting-resources/components/call-outstanding-requirements.tsx": {
-    "anti-slop/require-readable-spacing": 2
-  },
   "packages/features/src/awaiting-resources/hooks/use-awaiting-resources.ts": {
     "anti-slop/no-known-value-widening": 1,
     "anti-slop/require-readable-spacing": 5
@@ -2021,7 +1995,6 @@
     "anti-slop/require-readable-spacing": 1
   },
   "packages/features/src/certifications/__tests__/certifications.test.tsx": {
-    "anti-slop/require-readable-spacing": 7,
     "anti-slop/require-safety-comment-for-type-assertion": 10
   },
   "packages/features/src/certifications/components/form-alert.tsx": {
@@ -2041,9 +2014,6 @@
   },
   "packages/features/src/certifications/index.ts": {
     "anti-slop/require-readable-spacing": 7
-  },
-  "packages/features/src/certifications/lib/capture-photo.ts": {
-    "anti-slop/require-readable-spacing": 3
   },
   "packages/features/src/certifications/lib/certification-format.ts": {
     "anti-slop/no-known-value-widening": 3,
@@ -2455,7 +2425,7 @@
   },
   "packages/features/src/data-protection/components/step-up-prompt.tsx": {
     "anti-slop/no-known-value-widening": 1,
-    "anti-slop/require-readable-spacing": 10
+    "anti-slop/require-readable-spacing": 9
   },
   "packages/features/src/data-protection/hooks/use-protected-reveal.ts": {
     "anti-slop/require-readable-spacing": 5
@@ -2974,15 +2944,6 @@
   },
   "packages/features/src/protocols/__tests__/protocols.test.tsx": {
     "anti-slop/require-safety-comment-for-type-assertion": 1
-  },
-  "packages/features/src/protocols/components/protocol-card.tsx": {
-    "anti-slop/require-readable-spacing": 1
-  },
-  "packages/features/src/protocols/index.ts": {
-    "anti-slop/require-readable-spacing": 5
-  },
-  "packages/features/src/protocols/screens/protocol-list.tsx": {
-    "anti-slop/require-readable-spacing": 2
   },
   "packages/features/src/records/__tests__/records-lib.test.ts": {
     "anti-slop/no-chained-type-assertions": 1,
@@ -4793,7 +4754,7 @@
     "anti-slop/no-runtime-typeof": 2,
     "anti-slop/no-unknown-parameters": 2,
     "anti-slop/no-unsafe-dictionary-type": 1,
-    "anti-slop/require-readable-spacing": 68,
+    "anti-slop/require-readable-spacing": 65,
     "anti-slop/require-safety-comment-for-type-assertion": 1
   },
   "packages/notifications/src/push-notification.web.ts": {
@@ -4802,7 +4763,7 @@
     "anti-slop/no-runtime-typeof": 6,
     "anti-slop/no-unknown-parameters": 4,
     "anti-slop/no-unsafe-dictionary-type": 1,
-    "anti-slop/require-readable-spacing": 74,
+    "anti-slop/require-readable-spacing": 73,
     "anti-slop/require-safety-comment-for-type-assertion": 8
   },
   "packages/notifications/src/registration-storage.ts": {
@@ -5001,9 +4962,6 @@
     "anti-slop/no-unknown-parameters": 1
   },
   "packages/offline/src/reset/__tests__/wipe.test.ts": {
-    "anti-slop/require-readable-spacing": 3
-  },
-  "packages/offline/src/reset/registry.ts": {
     "anti-slop/require-readable-spacing": 3
   },
   "packages/offline/src/reset/wipe.ts": {

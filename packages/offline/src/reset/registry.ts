@@ -4,6 +4,9 @@ export type ResetReason = 'logout' | 'auth-rejected' | 'department-switch' | 'se
 
 export type ResetFunction = (reason: ResetReason) => void | Promise<void>;
 
+/** Something a wipe reaches, as it is registered. */
+export type ResetRegistration = { kind: 'teardown' | 'store-reset'; name: string; run: ResetFunction } | { kind: 'wipe-table'; table: string };
+
 /**
  * What a wipe must reach (Responder `registerStoreReset` + Dispatch `teardownSignedInSession`):
  * - teardowns run first — hubs, LiveKit rooms, audio, polling timers, push listeners;
@@ -24,6 +27,8 @@ export interface ResetRegistry {
   getWipeTables(): string[];
   getRegisteredStoreNames(): string[];
   getRegisteredStoreCount(): number;
+  /** Calls back for every teardown, store reset and wipe table registered from now on. Returns the unsubscribe. */
+  onRegister(listener: (registration: ResetRegistration) => void): () => void;
   clear(): void;
 }
 
@@ -33,11 +38,18 @@ export function createResetRegistry(): ResetRegistry {
   const preservedEverywhere = new Set<string>();
   const preservedPerInstance = new Map<string, Set<string>>();
   const wipeTables = new Set<string>();
+  const listeners = new Set<(registration: ResetRegistration) => void>();
+
+  const announce = (registration: ResetRegistration): void => {
+    listeners.forEach((listener) => listener(registration));
+  };
 
   return {
     registerStoreReset(name, reset) {
       storeResets.set(name, reset);
       getOfflineLogger().debug({ message: 'Store registered for reset', context: { storeName: name } });
+      announce({ kind: 'store-reset', name, run: reset });
+
       return () => {
         if (storeResets.get(name) === reset) storeResets.delete(name);
       };
@@ -47,6 +59,8 @@ export function createResetRegistry(): ResetRegistry {
     },
     registerTeardown(name, teardown) {
       teardowns.set(name, teardown);
+      announce({ kind: 'teardown', name, run: teardown });
+
       return () => {
         if (teardowns.get(name) === teardown) teardowns.delete(name);
       };
@@ -62,6 +76,8 @@ export function createResetRegistry(): ResetRegistry {
     },
     registerWipeTable(table) {
       wipeTables.add(table);
+      announce({ kind: 'wipe-table', table });
+
       return () => wipeTables.delete(table);
     },
     getStoreResets: () => storeResets,
@@ -70,7 +86,15 @@ export function createResetRegistry(): ResetRegistry {
     getWipeTables: () => Array.from(wipeTables),
     getRegisteredStoreNames: () => Array.from(storeResets.keys()),
     getRegisteredStoreCount: () => storeResets.size,
+    onRegister(listener) {
+      listeners.add(listener);
+
+      return () => {
+        listeners.delete(listener);
+      };
+    },
     clear() {
+      listeners.clear();
       storeResets.clear();
       teardowns.clear();
       preservedEverywhere.clear();

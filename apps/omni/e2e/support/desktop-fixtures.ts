@@ -17,10 +17,17 @@ interface DesktopTestFixtures {
 export const test = variantTest.extend<DesktopTestFixtures>({
   electronApp: async ({ manifest }, provide, testInfo) => {
     const app = findDesktopApp(manifest);
+
     if (!app) {
-      testInfo.skip(true, `No packaged ${manifest.identity.electron.productName} build found. Build apps/desktop for "${manifest.id}" or set E2E_DESKTOP_EXECUTABLE.`);
+      const reason = `No packaged ${manifest.identity.electron.productName} build found. Build apps/desktop for "${manifest.id}" or set E2E_DESKTOP_EXECUTABLE.`;
+
+      // The `electron (<variant>)` check (app-platforms.yml) must test a build: a skip there would read as a pass.
+      if (process.env.E2E_DESKTOP_REQUIRED) throw new Error(reason);
+      testInfo.skip(true, reason);
+
       return;
     }
+
     const env = Object.fromEntries(Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined));
     const electronApp = await electron.launch({ executablePath: app.executable, args: app.args, env, timeout: 60_000 });
     await provide(electronApp);

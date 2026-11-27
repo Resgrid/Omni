@@ -6,10 +6,23 @@
  * (AGENTS.md): never rename it, or the first Omni sign-out after an IC upgrade leaves the old token live.
  */
 import { IC_PUSH_SOURCE } from '@resgrid/api';
+import { z } from 'zod';
 
 export const NATIVE_PUSH_REGISTRATION_KEY = 'nativePushRegistration';
 /** Units/departments the device left whose removal the server has not confirmed (Unit's in-memory list, now durable). */
 export const NATIVE_PUSH_STALE_REGISTRATIONS_KEY = 'nativePushStaleRegistrations';
+
+/**
+ * Sign-outs whose registrations the server has not confirmed taken off yet. Kept through every wipe (the app shell
+ * preserves the key): an app killed or offline during sign-out still takes the ended session's token off later.
+ */
+export const NATIVE_PUSH_PENDING_SIGN_OUTS_KEY = 'nativePushPendingSignOuts';
+
+/**
+ * Core's access tokens last 24 hours (`OidcConfig.AccessTokenExpiryMinutes`). After that the ended session's token can no
+ * longer take anything off, and only a new device token stops the old registration delivering here.
+ */
+export const PENDING_SIGN_OUT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 /** Matches IC's `StoredNativePushRegistration` (Core `NativePushUnRegistrationInput` + the owning user). */
 export interface StoredNativePushRegistration {
@@ -59,6 +72,21 @@ export const isStoredNativePushRegistration = (value: unknown): value is StoredN
   return typeof record.UserId === 'string' && typeof record.Token === 'string' && record.Token !== '' && typeof record.Prefix === 'string' && optionalString(record.Source) && optionalString(record.UnitId);
 };
 
+const pendingSignOutSchema = z.object({
+  id: z.string().min(1),
+  /** The ended session's access token: Core takes a registration off only for the user who made it. */
+  accessToken: z.string().min(1).nullable(),
+  apiUrl: z.string(),
+  signedOutAt: z.number(),
+  registrations: z.array(z.unknown()).transform((entries) => entries.filter(isStoredNativePushRegistration)),
+});
+
+/** A sign-out whose registrations are still on the server, with what it takes to remove them as that session. */
+export type PendingPushSignOut = z.infer<typeof pendingSignOutSchema>;
+
+/** What became of one registration a sign-out tried to take off. */
+export type SignOutUnregisterOutcome = 'removed' | 'refused' | 'retry';
+
 /** Reads and writes the registration; every failure is a miss, never a crash. */
 export class RegistrationStore {
   constructor(private readonly kv: NotificationsKv) {}
@@ -96,6 +124,47 @@ export class RegistrationStore {
       else this.kv.delete(NATIVE_PUSH_STALE_REGISTRATIONS_KEY);
     } catch {
       // As above.
+    }
+  }
+
+  getPendingSignOuts(): PendingPushSignOut[] {
+    try {
+      const parsed = z.array(z.unknown()).safeParse(this.kv.getJSON<unknown>(NATIVE_PUSH_PENDING_SIGN_OUTS_KEY));
+
+      return parsed.success
+        ? parsed.data.flatMap((entry) => {
+            const record = pendingSignOutSchema.safeParse(entry);
+
+            return record.success && record.data.registrations.length > 0 ? [record.data] : [];
+          })
+        : [];
+    } catch {
+      return [];
+    }
+  }
+
+  /** Written synchronously, before any request: it is what survives an app killed during sign-out. */
+  addPendingSignOut(record: PendingPushSignOut): void {
+    this.setPendingSignOuts([...this.getPendingSignOuts().filter((entry) => entry.id !== record.id), record]);
+  }
+
+  /** Drops a registration the server took off (or that can never be taken off as that session); `retry` keeps it. */
+  settlePendingSignOut(id: string, registration: StoredNativePushRegistration, outcome: SignOutUnregisterOutcome): void {
+    if (outcome === 'retry') {
+      return;
+    }
+
+    this.setPendingSignOuts(this.getPendingSignOuts().map((entry) => (entry.id === id ? { ...entry, registrations: entry.registrations.filter((stored) => !isSameRegistration(stored, registration)) } : entry)));
+  }
+
+  private setPendingSignOuts(records: PendingPushSignOut[]): void {
+    const remaining = records.filter((entry) => entry.registrations.length > 0);
+
+    try {
+      if (remaining.length > 0) this.kv.setJSON(NATIVE_PUSH_PENDING_SIGN_OUTS_KEY, remaining);
+      else this.kv.delete(NATIVE_PUSH_PENDING_SIGN_OUTS_KEY);
+    } catch {
+      // As above: the sign-out still tries now, it just is not retried after a restart.
     }
   }
 }

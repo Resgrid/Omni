@@ -14,7 +14,8 @@ export interface AwaitingCallCardProps {
   call: AwaitingResourcesCallData;
   /** Dispatch and dismiss need the create-calls right. */
   canAct: boolean;
-  busyKey: string | null;
+  /** Actions in flight (the store's `busyKeys`): a row's button is off while its own key is in it. */
+  busyKeys: readonly string[];
   responseCodes: readonly DispatchResponseCodeData[];
   /** For "minutes waiting" (tests pin it). */
   now: number;
@@ -26,7 +27,7 @@ export interface AwaitingCallCardProps {
 const FALLBACK_PRIORITY_COLOR = '#6b7280';
 
 /** One requirement of a waiting call: what is awaited, what went instead, and the units that could go now. */
-const RequirementBlock: React.FC<Omit<AwaitingCallCardProps, 'onOpenCall'> & { requirement: AwaitingResourceRequirementData }> = ({ call, requirement, canAct, busyKey, responseCodes, now, onDispatch, onDismiss }) => {
+const RequirementBlock: React.FC<Omit<AwaitingCallCardProps, 'onOpenCall'> & { requirement: AwaitingResourceRequirementData }> = ({ call, requirement, canAct, busyKeys, responseCodes, now, onDispatch, onDismiss }) => {
   const { t } = useTranslation();
   const waiting = minutesSinceUtc(requirement.CreatedOn, now);
   const testID = `awaiting-requirement-${requirement.CallOutstandingRequirementId}`;
@@ -51,7 +52,7 @@ const RequirementBlock: React.FC<Omit<AwaitingCallCardProps, 'onOpenCall'> & { r
             variant="outline"
             action="secondary"
             onPress={() => onDismiss(call.CallId, requirement)}
-            isDisabled={busyKey === awaitingDismissKey(requirement.CallOutstandingRequirementId)}
+            isDisabled={busyKeys.includes(awaitingDismissKey(requirement.CallOutstandingRequirementId))}
             testID={`${testID}-dismiss`}
           >
             <ButtonText>{t('awaiting_resources.dismiss')}</ButtonText>
@@ -64,7 +65,7 @@ const RequirementBlock: React.FC<Omit<AwaitingCallCardProps, 'onOpenCall'> & { r
           <Text className="text-xs font-semibold uppercase text-typography-500">{t('awaiting_resources.available_units')}</Text>
           {units.map((unit) => {
             const response = formatResponseSeconds(unit.ResponseSeconds);
-            const isBusy = busyKey === awaitingDispatchKey(call.CallId, unit.UnitId);
+            const isBusy = busyKeys.includes(awaitingDispatchKey(call.CallId, unit.UnitId));
 
             return (
               <HStack key={`awaiting-unit-${requirement.CallOutstandingRequirementId}-${unit.UnitId}`} space="sm" className="items-center justify-between" testID={`${testID}-unit-${unit.UnitId}`}>

@@ -2,7 +2,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { isAllowedNavigation, isPermissionAllowed, isSafeExternalUrl, originOf, resolveBundleRequest, safeDevServerUrl, safeExternalUrl } = require('../url-guards');
+const { isAllowedNavigation, isFramedFullscreenAllowed, isPermissionAllowed, isSafeExternalUrl, originOf, resolveBundleRequest, safeDevServerUrl, safeExternalUrl } = require('../url-guards');
 
 describe('originOf', () => {
   it('derives scheme://host for custom schemes, where WHATWG origin is "null"', () => {
@@ -147,6 +147,19 @@ describe('isPermissionAllowed', () => {
     expect(isPermissionAllowed('geolocation', 'https://evil.com/', ['app://bundle'])).toBe(false);
     expect(isPermissionAllowed('display-capture', 'app://bundle/', ['app://bundle'])).toBe(false);
     expect(isPermissionAllowed('openExternal', 'app://bundle/', ['app://bundle'])).toBe(false);
+  });
+});
+
+describe('isFramedFullscreenAllowed', () => {
+  it('lets an https page the app frames (the LMS launch page) go fullscreen, and nothing else', () => {
+    expect(isFramedFullscreenAllowed('fullscreen', 'https://resgrid.com/lms-app/launch', false, 'app://bundle/training', ['app://bundle'])).toBe(true);
+    // Not a frame, not https, not fullscreen, not framed by the app, or credentials in the URL: refused.
+    expect(isFramedFullscreenAllowed('fullscreen', 'https://resgrid.com/', true, 'app://bundle/', ['app://bundle'])).toBe(false);
+    expect(isFramedFullscreenAllowed('fullscreen', 'http://resgrid.com/', false, 'app://bundle/', ['app://bundle'])).toBe(false);
+    expect(isFramedFullscreenAllowed('media', 'https://resgrid.com/', false, 'app://bundle/', ['app://bundle'])).toBe(false);
+    expect(isFramedFullscreenAllowed('fullscreen', 'https://resgrid.com/', false, 'https://evil.com/', ['app://bundle'])).toBe(false);
+    expect(isFramedFullscreenAllowed('fullscreen', 'https://user:pass@resgrid.com/', false, 'app://bundle/', ['app://bundle'])).toBe(false);
+    expect(isFramedFullscreenAllowed('fullscreen', undefined, false, 'app://bundle/', ['app://bundle'])).toBe(false);
   });
 });
 

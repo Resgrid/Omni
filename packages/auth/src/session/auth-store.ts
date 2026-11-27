@@ -1,5 +1,5 @@
-import type { ResetReason } from '@resgrid/offline';
-import { CONTRACT_KEYS } from '@resgrid/offline';
+import type { DurableKv, PendingWipeReason } from '@resgrid/offline';
+import { clearPendingWipe, CONTRACT_KEYS, markWipePending } from '@resgrid/offline';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
@@ -151,9 +151,21 @@ const SIGNED_OUT: Partial<AuthSessionState> = {
 
 /** The personal lock verifier for a password sign-in still waiting for its second factor (Dispatch). */
 let pendingPasswordVerification: PasswordVerification | null = null;
+
 /** The last legacy SSO exchange that asked for a code: the IdP token is a credential, held in memory only. */
 let pendingSsoExchange: Omit<ExternalTokenInput, 'otpCode'> | null = null;
 let logoutInFlight: Promise<void> | null = null;
+
+/**
+ * Resolves once no sign-out is running. A sign-in commits its tokens only after that: committed while a sign-out still
+ * waits on its hooks, the app would open on the leaving member's stores (in memory until the wipe resets them) and the
+ * wipe would then delete the new session's own data.
+ */
+const signOutFinished = async (): Promise<void> => {
+  while (logoutInFlight) {
+    await logoutInFlight.catch(() => undefined);
+  }
+};
 
 const personalLockApplies = (): boolean => {
   try {
@@ -181,15 +193,19 @@ const accessExpiryFrom = (response: AuthResponse): string => String(Date.now() +
 /** When the stored access token expires: its own `exp` claim, else the persisted expiry. Null when neither is usable. */
 export const getAccessTokenExpiryMs = (accessToken: string | null | undefined, storedExpiresOn: string | null | undefined): number | null => {
   const fromJwt = getJwtExpiryMs(accessToken);
+
   if (fromJwt !== null) {
     return fromJwt;
   }
+
   if (storedExpiresOn) {
     const parsed = Number(storedExpiresOn);
+
     if (Number.isFinite(parsed) && parsed > 0) {
       return parsed;
     }
   }
+
   return null;
 };
 
@@ -206,9 +222,11 @@ export const readPersistedAuth = (persisted: unknown): Partial<PersistedAuth> =>
   if (typeof persisted !== 'object' || persisted === null) {
     return {};
   }
+
   const raw = persisted as Record<string, unknown>;
   const profile = typeof raw.profile === 'object' && raw.profile !== null ? (raw.profile as ProfileModel) : null;
   const method = raw.authMethod;
+
   return {
     accessToken: str(raw.accessToken),
     refreshToken: str(raw.refreshToken),
@@ -230,22 +248,29 @@ export const useAuthStore = create<AuthState>()(
         pendingPasswordVerification = null;
         // A previous password failure's reason goes with it; an MFA code error (invalid_totp) stays until the retry answers.
         set({ status: 'loading', loginFailure: null, ...(isLoginErrorCode(get().error) ? { error: null } : {}) });
+
         try {
           const result = await passwordGrant(getAuthApiContext(), credentials);
+
           switch (result.kind) {
             case 'signed-in': {
+              await signOutFinished();
               signInWithTokens(result.tokens, null, 'password');
               // The personal lock screen's verifier; a shared installation never keeps one.
               settlePasswordVerification(personalLockApplies() ? await computePasswordVerification(credentials.password) : null);
+
               return;
             }
+
             case 'transaction':
               holdLoginTransaction(result.transaction.secret);
               pendingPasswordVerification = personalLockApplies() ? await computePasswordVerification(credentials.password) : null;
               set({ status: 'mfaRequired', error: null, mfaChallenge: result.transaction.challenge });
+
               return;
             case 'enrollment-required':
               set({ status: 'error', error: 'mfa_enrollment_required', mfaChallenge: null });
+
               return;
             case 'legacy-mfa':
               // The login screen prompts for the authenticator code and calls login() again with otpCode. Credentials are
@@ -255,9 +280,11 @@ export const useAuthStore = create<AuthState>()(
                 error: result.invalidOtp ? 'invalid_totp' : null,
                 mfaChallenge: { kind: 'legacy', methods: ['totp'], enrolled: ['totp'], preferred: 'totp', expiresAt: null, source: 'password' },
               });
+
               return;
             case 'failed':
               set({ status: 'error', error: result.failure.code, loginFailure: result.failure });
+
               return;
           }
         } catch (error) {
@@ -282,21 +309,26 @@ export const useAuthStore = create<AuthState>()(
         pendingPasswordVerification = null;
         set({ status: 'loading', error: null, mfaChallenge: null, loginFailure: null });
         const result = await signInWithBrokeredSso(ssoHost, department, options?.ephemeral);
+
         if (result.outcome === 'cancelled') {
           set({ status: 'signedOut' });
         } else if (result.outcome === 'failed') {
           set({ status: 'error', error: result.code });
         }
+
         return result;
       },
 
       loginWithExternalToken: async (input) => {
         pendingPasswordVerification = null;
         set({ status: 'loading', error: null, loginFailure: null });
+
         try {
           const result = await externalTokenGrant(getAuthApiContext(), input);
+
           if (result.kind === 'signed-in') {
             pendingSsoExchange = null;
+            await signOutFinished();
             signInWithTokens(result.tokens, null, 'external');
             settlePasswordVerification(null);
           } else if (result.kind === 'mfa-required') {
@@ -318,8 +350,10 @@ export const useAuthStore = create<AuthState>()(
       retrySsoWithOtp: async (otpCode) => {
         if (!pendingSsoExchange) {
           set({ status: 'error', error: 'mfa_transaction_invalid', isSsoMfaPending: false });
+
           return;
         }
+
         await get().loginWithExternalToken({ ...pendingSsoExchange, otpCode });
       },
 
@@ -332,9 +366,11 @@ export const useAuthStore = create<AuthState>()(
         if (logoutInFlight) {
           return logoutInFlight;
         }
+
         logoutInFlight = performLogout(typeof reason === 'string' ? reason : null, cause).finally(() => {
           logoutInFlight = null;
         });
+
         return logoutInFlight;
       },
 
@@ -365,6 +401,7 @@ export const useAuthStore = create<AuthState>()(
       // The persisted status is advisory: restoreSession() derives the real one from the tokens (Unit). Onboarding stays.
       merge: (persisted, current) => {
         const restored = readPersistedAuth(persisted);
+
         return { ...current, ...restored, status: restored.status === 'onboarding' ? 'onboarding' : current.status, hydrated: true };
       },
     }
@@ -376,6 +413,7 @@ export const useAuthStore = create<AuthState>()(
 /**
  * Signs in with a token response (password, completion or legacy SSO grant): the profile from the id token, the persisted
  * credentials and the proactive refresh. Throws on a missing or malformed id token, which no sign-in may continue without.
+ * Every caller first waits for a running sign-out to finish its wipe (`signOutFinished`, `LoginMfaHost.ready`).
  */
 export const signInWithTokens = (authResponse: AuthResponse, recoveryCodes: string[] | null, method: AuthMethod): void => {
   const profile = profileFromIdToken(authResponse.id_token ?? null);
@@ -396,14 +434,17 @@ export const signInWithTokens = (authResponse: AuthResponse, recoveryCodes: stri
     isSsoMfaPending: false,
   });
   identifyTelemetryUser(profile.sub);
+
   if (authResponse.refresh_token) {
     refreshEngine.schedule(authResponse.expires_in);
   }
+
   authLogger.info({ message: 'Signed in', context: { method } });
 };
 
 /** How the login transaction module moves this store. */
 const mfaHost: LoginMfaHost = {
+  ready: signOutFinished,
   signIn: (authResponse, recoveryCodes) => {
     signInWithTokens(authResponse, recoveryCodes, useAuthStore.getState().mfaChallenge?.source === 'sso' ? 'sso' : 'password');
     const verification = pendingPasswordVerification;
@@ -443,10 +484,12 @@ export const refreshEngine = createTokenRefreshEngine({
   getRefreshToken: () => useAuthStore.getState().refreshToken,
   applyAuthResponse: (response) => {
     const state = useAuthStore.getState();
+
     // A refresh that raced sign-out must not resurrect the session (Dispatch).
     if (state.status === 'signedOut' || !state.refreshToken) {
       throw new Error('Token refresh completed after sign-out');
     }
+
     useAuthStore.setState({
       accessToken: response.access_token,
       // Keep the current refresh token when the server did not rotate it (Responder).
@@ -474,10 +517,13 @@ export const refreshEngine = createTokenRefreshEngine({
 /** True when the stored access token is known to have expired (the HTTP client refreshes before sending). */
 export const isAccessTokenExpired = (now: number = Date.now()): boolean => {
   const { accessToken, refreshTokenExpiresOn } = useAuthStore.getState();
+
   if (!accessToken) {
     return false;
   }
+
   const expiresAt = getAccessTokenExpiryMs(accessToken, refreshTokenExpiresOn);
+
   return expiresAt !== null && now >= expiresAt;
 };
 
@@ -511,6 +557,7 @@ export const restoreSession = (now: number = Date.now()): void => {
     } else {
       useAuthStore.setState({ ...SIGNED_OUT, error: null });
     }
+
     return;
   }
 
@@ -524,6 +571,7 @@ export const restoreSession = (now: number = Date.now()): void => {
     useAuthStore.setState({ status: 'loading', error: null });
     refreshEngine.refreshSoon(0);
   }
+
   afterRestore(state.userId);
 };
 
@@ -532,6 +580,7 @@ const afterRestore = (userId: string | null): void => {
   // A shared session restored at launch locks before anyone can use it (passkey plan section 12.5.3): the screen is
   // concealed from the first frame, before the server is even asked.
   noteSessionRestoredAtLaunch();
+
   if (isSharedInstallation()) {
     markSharedSessionLocked(null);
   }
@@ -539,19 +588,40 @@ const afterRestore = (userId: string | null): void => {
 
 // ---- Signing out -----------------------------------------------------------------------------------------------------
 
-const wipeReasonFor = (cause: SignOutReason): ResetReason => (cause === 'auth-rejected' ? 'auth-rejected' : cause === 'server-switch' ? 'server-switch' : 'logout');
+const wipeReasonFor = (cause: SignOutReason): PendingWipeReason => (cause === 'auth-rejected' ? 'auth-rejected' : cause === 'server-switch' ? 'server-switch' : 'logout');
+
+/** Storage hygiene never stops a sign-out; a failure is logged. */
+const withMainKv = (action: (kv: DurableKv) => void, failure: string): void => {
+  try {
+    const kv = mainKv();
+
+    if (kv) {
+      action(kv);
+    }
+  } catch (error) {
+    authLogger.warn({ message: failure, context: describeError(error) });
+  }
+};
 
 /**
- * Dispatch's clear-state-first order: the session ends synchronously (so requests and routing cannot keep using its
- * credentials while cleanup runs), then whatever must still reach the server as the ended session runs with the token it
- * had (push unregister — before any server switch, which awaits this), then the legacy session copy and the lock
- * verifier go, then the scope wipe (teardowns, store resets, outbox hold, tables, MMKV except device preferences).
+ * Dispatch's clear-state-first order: the wipe is marked pending, the session ends synchronously (so requests and routing
+ * cannot keep using its credentials while cleanup runs) and the legacy session copy and the lock verifier go, then
+ * whatever must still reach the server as the ended session runs with the token it had (push unregister — before any
+ * server switch, which awaits this), then the scope wipe (teardowns, store resets, outbox hold, tables, MMKV except device
+ * preferences). Until that wipe has run the pending mark stays, so an app killed on the way finishes the wipe at its next
+ * launch (`initOffline()`), before any persisted store is read for whoever signs in next.
  */
 const performLogout = async (reason: string | null, cause: SignOutReason): Promise<void> => {
   const ending = useAuthStore.getState();
   const endingAccessToken = ending.accessToken;
   const baseUrl = getBaseApiUrl();
   const wasSignedIn = ending.status === 'signedIn';
+  const wipe = authServices().wipeScope;
+  const wipeReason = wipeReasonFor(cause);
+
+  if (wipe) {
+    withMainKv((kv) => markWipePending(kv, wipeReason), 'Failed to mark the sign-out wipe as pending');
+  }
 
   refreshEngine.endSession();
   forgetLoginSecrets();
@@ -564,24 +634,26 @@ const performLogout = async (reason: string | null, cause: SignOutReason): Promi
   authLogger.info({ message: 'Signed out', context: { cause, wasSignedIn } });
 
   try {
-    await runSignOutHooks({ accessToken: endingAccessToken, baseUrl });
-  } catch (error) {
-    authLogger.warn({ message: 'A sign-out hook failed', context: describeError(error) });
-  }
-
-  try {
-    // R/U/I also kept the token response under `authResponse`; no valid refresh token may stay on the device.
+    // R/U/I also kept the token response under `authResponse`; no valid refresh token may stay on the device. Gone before
+    // anything is awaited: a launch that finds it rebuilds the session from it (hydrateAuthSession).
     mainKv()?.delete(CONTRACT_KEYS.authResponse);
     clearPasswordVerification();
   } catch (error) {
     authLogger.warn({ message: 'Failed to remove the stored session copy', context: describeError(error) });
   }
 
-  const wipe = authServices().wipeScope;
+  try {
+    await runSignOutHooks({ accessToken: endingAccessToken, baseUrl });
+  } catch (error) {
+    authLogger.warn({ message: 'A sign-out hook failed', context: describeError(error) });
+  }
+
   if (wipe) {
     try {
-      await wipe(wipeReasonFor(cause));
+      await wipe(wipeReason);
+      withMainKv(clearPendingWipe, 'Failed to clear the pending sign-out wipe mark');
     } catch (error) {
+      // The mark stays: the next launch runs the wipe again before anything reads storage.
       authLogger.error({ message: 'Failed to clear local data on sign-out', context: describeError(error) });
     }
   }

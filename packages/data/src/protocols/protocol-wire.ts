@@ -67,3 +67,63 @@ export interface PersistedProtocolsV0 {
   protocolDetailsById?: Record<string, CallProtocolsResultData> | null;
   fetchedAt?: Record<string, number> | null;
 }
+
+/** A protocol attachment as the library lists it (metadata only; the bytes come from `Protocols/GetFile`). */
+export interface ProtocolLibraryAttachment {
+  Id: string;
+  FileName: string;
+  FileType: string;
+  Size: number | null;
+}
+
+/**
+ * What the library shows beside a protocol's text (protocols plan P1): its kind, number, the version in force with its
+ * effective date, whether that version asks for read-and-sign, and its attachments with their sizes. Kept beside the
+ * screen-shape protocol because `CallProtocolsResultData` (a call's protocols) carries none of it. Older servers send none
+ * of these fields: Kind 0 and no version.
+ */
+export interface ProtocolLibraryEntry {
+  Id: string;
+  Kind: number;
+  Number: string | null;
+  CurrentVersionId: string | null;
+  VersionLabel: string | null;
+  EffectiveOn: string | null;
+  RequiresAcknowledgment: boolean;
+  /** The department category (`Protocols/GetCategories`); null when uncategorized or from an older server. */
+  CategoryId: number | null;
+  Attachments: ProtocolLibraryAttachment[];
+}
+
+/** The library entry of a `Protocols` controller item, or null for an item in the screen shape (it has none of it). */
+export function toLibraryEntry(protocol: ProtocolResultData | CallProtocolsResultData | null | undefined): ProtocolLibraryEntry | null {
+  if (!protocol || !('ProtocolId' in protocol) || !protocol.ProtocolId) return null;
+
+  return {
+    Id: protocol.ProtocolId,
+    Kind: protocol.Kind ?? 0,
+    Number: protocol.Number ?? null,
+    CurrentVersionId: protocol.CurrentVersionId ? String(protocol.CurrentVersionId) : null,
+    VersionLabel: protocol.VersionLabel ?? null,
+    EffectiveOn: protocol.EffectiveOn ?? null,
+    RequiresAcknowledgment: protocol.RequiresAcknowledgment === true,
+    CategoryId: protocol.CategoryId ?? null,
+    Attachments: entriesOf(protocol.Attachments).map((attachment) => ({
+      Id: attachment.ProtocolTriggerAttachmentId ?? '',
+      FileName: attachment.FileName ?? '',
+      FileType: attachment.FileType ?? '',
+      Size: attachment.Size ?? null,
+    })),
+  };
+}
+
+/** Library entries by protocol id for a wire list (screen-shape items are skipped). */
+export function toLibraryEntries(list: readonly (ProtocolResultData | CallProtocolsResultData | null)[] | null | undefined): Record<string, ProtocolLibraryEntry> {
+  return Object.fromEntries(
+    entriesOf(list).flatMap((protocol) => {
+      const entry = toLibraryEntry(protocol);
+
+      return entry ? [[entry.Id, entry] as const] : [];
+    })
+  );
+}

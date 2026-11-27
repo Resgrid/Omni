@@ -68,6 +68,19 @@ export class ProtocolResultData {
   public Attachments: ProtocolTriggerAttachmentResult[] = [];
   public Questions: ProtocolTriggerQuestionResult[] = [];
   public State: number = 0;
+  /** Core `ProtocolKinds` (P1); 0 (Dispatch) from servers before P1. */
+  public Kind?: number;
+  /** Lifecycle status (P1): 0 draft, 1 published, 2 retired. */
+  public Status?: number;
+  /** The version in force (P1); null for a protocol never published. */
+  public CurrentVersionId?: string | null;
+  public VersionLabel?: string | null;
+  public EffectiveOn?: string | null;
+  public Number?: string | null;
+  public Tags?: string | null;
+  public CategoryId?: number | null;
+  public NextReviewOn?: string | null;
+  public RequiresAcknowledgment?: boolean;
 }
 
 export class ProtocolTriggerResult {
@@ -84,6 +97,8 @@ export class ProtocolTriggerAttachmentResult {
   public ProtocolTriggerAttachmentId: string = '';
   public FileName: string = '';
   public FileType: string = '';
+  /** Bytes (P0); absent from older servers. */
+  public Size?: number | null;
 }
 
 export class ProtocolTriggerQuestionResult {

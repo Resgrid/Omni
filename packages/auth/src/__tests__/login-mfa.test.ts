@@ -1,6 +1,7 @@
 import { abandonFactorRecovery, finishFactorRecovery, hasLoginTransaction, recoveryReplacementKey } from '../mfa/login-mfa';
 import { refreshEngine, useAuthStore } from '../session/auth-store';
 import { saveSharedInstallation } from '../session/shared-installation';
+import { registerSignOutHook } from '../session/sign-out-hooks';
 import { __resetWebBrowserFake, __setNextAuthSessionResult, calls as browserCalls } from './fakes/expo-web-browser';
 import { __setPasskeyOutcome } from './fakes/react-native-passkey';
 import { v4 } from './helpers/fake-server';
@@ -89,6 +90,43 @@ describe('finishing a sign-in on the login transaction', () => {
     release();
     await expect(pending).resolves.toEqual({ ok: false, code: 'mfa_transaction_invalid', restart: false });
     expect(useAuthStore.getState()).toMatchObject({ status: 'signedOut', accessToken: null });
+  });
+
+  describe('while a sign-out is still running (its hooks have not let the wipe run yet)', () => {
+    let unregistered: () => void = () => undefined;
+    let signingOut: Promise<void> = Promise.resolve();
+    beforeEach(async () => {
+      registerSignOutHook(() => new Promise<void>((resolve) => (unregistered = resolve)));
+      // The sign-out ends the transaction started above; the next member's sign-in starts while it runs.
+      signingOut = useAuthStore.getState().logout();
+      await startTransaction(h);
+      h.server.on('POST', '/Authentication/CompleteTotp', { data: completion() });
+      h.server.on('POST', '/connect/token', { data: tokenResponse() });
+    });
+
+    it('opens the session only once that sign-out has wiped', async () => {
+      const verifying = useAuthStore.getState().verifyLoginMfa({ method: 'totp', code: '123456' });
+      await flush(50);
+      expect(h.server.requestsTo('POST', '/connect/token')).toHaveLength(3);
+      expect(useAuthStore.getState().status).toBe('mfaRequired');
+      expect(h.wipeScope).not.toHaveBeenCalled();
+
+      unregistered();
+      await signingOut;
+      await expect(verifying).resolves.toEqual({ ok: true, recovery: false });
+      expect(useAuthStore.getState().status).toBe('signedIn');
+    });
+
+    it('does not sign in when the member cancels during that wait (Dispatch abandoned check)', async () => {
+      const verifying = useAuthStore.getState().verifyLoginMfa({ method: 'totp', code: '123456' });
+      await flush(50);
+      useAuthStore.getState().cancelLoginMfa();
+
+      unregistered();
+      await signingOut;
+      await expect(verifying).resolves.toEqual({ ok: false, code: 'mfa_transaction_invalid', restart: false });
+      expect(useAuthStore.getState()).toMatchObject({ status: 'signedOut', accessToken: null });
+    });
   });
 
   it('does not spend the completion when the member cancels while the second factor is in flight', async () => {
@@ -198,6 +236,27 @@ describe('brokered single sign-on (preferred SSO path)', () => {
     expect(begin.headers.Authorization).toBeUndefined();
     // Core sizes the session's refresh token from the client_id stored at redemption, not from the completion grant's.
     expect(h.server.requestsTo('POST', '/Sso/Redeem')[0].body).toMatchObject({ SsoTransactionId: 'sso-1', SsoCode: 'code-1', ClientId: 'dispatch' });
+    expect(useAuthStore.getState()).toMatchObject({ status: 'signedIn', authMethod: 'sso' });
+  });
+
+  it('opens the browser at once during a sign-out, and the session only once that sign-out has wiped', async () => {
+    h.server.on('POST', '/Sso/Redeem', {
+      data: v4({ Outcome: 'completed', Transaction: 'tx-sso', CompletionCode: 'cc', ExpiresIn: 60, MfaMethods: null, MfaEnrolled: null, MfaPreferred: null, MfaSatisfiedBy: null, VerifiedAt: null }),
+    });
+    h.server.on('POST', '/connect/token', { data: tokenResponse() });
+    let unregistered: () => void = () => undefined;
+    registerSignOutHook(() => new Promise<void>((resolve) => (unregistered = resolve)));
+    const signingOut = useAuthStore.getState().logout();
+
+    const signingIn = useAuthStore.getState().loginWithBrokeredSso({ departmentToken: 'dept-token' });
+    await flush(50);
+    expect(browserCalls).toHaveLength(1);
+    expect(h.server.requestsTo('POST', '/connect/token')).toHaveLength(1);
+    expect(useAuthStore.getState().status).toBe('loading');
+
+    unregistered();
+    await signingOut;
+    await expect(signingIn).resolves.toEqual({ outcome: 'signed_in' });
     expect(useAuthStore.getState()).toMatchObject({ status: 'signedIn', authMethod: 'sso' });
   });
 

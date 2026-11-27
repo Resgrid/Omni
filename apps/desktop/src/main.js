@@ -15,7 +15,7 @@ const { app, BrowserWindow, Menu, Notification, dialog, ipcMain, nativeTheme, ne
 const { buildContentSecurityPolicy } = require('./core/csp');
 const { createDeepLinkQueue, findDeepLink, parseDeepLink } = require('./core/deep-links');
 const { shouldEnableAutoUpdate } = require('./core/update-feed');
-const { isAllowedNavigation, isPermissionAllowed, originOf, safeDevServerUrl, safeExternalUrl } = require('./core/url-guards');
+const { isAllowedNavigation, isFramedFullscreenAllowed, isPermissionAllowed, originOf, safeDevServerUrl, safeExternalUrl } = require('./core/url-guards');
 const { migrateLegacyUserData } = require('./core/user-data');
 const { bundleOriginFor, loadVariantConfig } = require('./core/variant-config');
 const { registerAppProtocol, registerAppScheme } = require('./main/app-protocol');
@@ -347,9 +347,16 @@ function main() {
         callback({ responseHeaders });
       });
       session.defaultSession.setPermissionRequestHandler((contents, permission, callback, details) => {
-        callback(isPermissionAllowed(permission, (details && details.requestingUrl) || contents.getURL(), allowedOrigins()));
+        const requestingUrl = (details && details.requestingUrl) || contents.getURL();
+        // A framed lesson (the LMS launch page) may go fullscreen for its media; nothing else is granted to a frame.
+        const framedFullscreen = isFramedFullscreenAllowed(permission, requestingUrl, details ? details.isMainFrame : true, contents.getURL(), allowedOrigins());
+        callback(isPermissionAllowed(permission, requestingUrl, allowedOrigins()) || framedFullscreen);
       });
-      session.defaultSession.setPermissionCheckHandler((_contents, permission, requestingOrigin) => isPermissionAllowed(permission, requestingOrigin, allowedOrigins()));
+      session.defaultSession.setPermissionCheckHandler(
+        (contents, permission, requestingOrigin, details) =>
+          isPermissionAllowed(permission, requestingOrigin, allowedOrigins()) ||
+          isFramedFullscreenAllowed(permission, requestingOrigin, details ? details.isMainFrame : true, contents ? contents.getURL() : null, allowedOrigins())
+      );
 
       Menu.setApplicationMenu(Menu.buildFromTemplate(buildMenuTemplate({ platform: process.platform, isPackaged: app.isPackaged })));
 

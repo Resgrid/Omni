@@ -43,6 +43,12 @@ export const FeatureFlagKeys = {
    * needs the add-on, the operator's model and a department outside Advanced Data Protection.
    */
   AiDestinationAdvice: 'Ai.DestinationAdvice',
+  /**
+   * The LMS add-on's operator flag (Core `Training.Lms`, seeded off): department courses, paths and certification progress in
+   * Responder's Training. Necessary, not sufficient: Core also needs the Trainings module, the LMS add-on (or a lapse window)
+   * and a licensed seat, and says so per course (`CanRun`). The free baseline and the Resgrid Academy never need it.
+   */
+  TrainingLms: 'Training.Lms',
 } as const;
 
 export type FeatureFlagKey = (typeof FeatureFlagKeys)[keyof typeof FeatureFlagKeys];
@@ -75,6 +81,7 @@ export interface FeatureFlagsState {
 const currentIdentityKey = (): string | null => {
   const userId = useAuthStore.getState().userId;
   const departmentId = getActiveDepartmentId();
+
   return userId && departmentId ? `${userId}:${departmentId}` : null;
 };
 
@@ -84,14 +91,18 @@ const isPersistedIdentityStale = (persistedKey: string | null): boolean => {
   if (!persistedKey) {
     return false;
   }
+
   const userId = useAuthStore.getState().userId;
   const departmentId = getActiveDepartmentId();
+
   if (userId && departmentId) {
     return persistedKey !== `${userId}:${departmentId}`;
   }
+
   if (userId) {
     return !persistedKey.startsWith(`${userId}:`);
   }
+
   return false;
 };
 
@@ -107,34 +118,44 @@ export const featureFlagsStore = create<FeatureFlagsState>()(
       fetchFlags: async () => {
         requestGeneration += 1;
         const generation = requestGeneration;
+
         // Flags are keyed by department, and the department comes from the rights: load those first.
         if (!securityStore.getState().rights) {
           await securityStore.getState().getRights();
+
           if (generation !== requestGeneration) {
             return;
           }
         }
+
         const identityKey = currentIdentityKey();
+
         if (isPersistedIdentityStale(get().identityKey)) {
           // Another identity's flags must never gate this one, even if the fetch below fails.
           set({ flags: {}, isLoaded: false, identityKey: null });
         }
+
         try {
           const response = await getAllFeatureFlags(getAuthApiContext());
+
           if (generation !== requestGeneration || identityKey !== currentIdentityKey()) {
             return;
           }
+
           const flags: Record<string, FeatureFlagEntry> = {};
+
           for (const flag of response?.Data ?? []) {
             if (flag?.Key) {
               flags[flag.Key] = { enabled: flag.Enabled === true, value: flag.Value ?? null };
             }
           }
+
           set({ flags, isLoaded: true, error: null, identityKey });
         } catch (error) {
           if (generation !== requestGeneration) {
             return;
           }
+
           // Recoverable: persisted flags keep gating stable and the next fetch repairs it (not a Sentry issue). Marking
           // isLoaded resolves flags with no persisted entry fail-closed instead of leaving them 'unknown' forever.
           authLogger.warn({ message: 'Failed to fetch feature flags', context: describeError(error) });
@@ -172,9 +193,11 @@ export type FeatureFlagStatus = 'unknown' | 'enabled' | 'disabled';
 /** Tri-state for gating that must not act before flags resolve (e.g. redirecting away from a deep link). */
 export const getFeatureFlagStatus = (state: Pick<FeatureFlagsState, 'flags' | 'isLoaded'>, key: string): FeatureFlagStatus => {
   const entry = state.flags[key];
+
   if (entry) {
     return entry.enabled ? 'enabled' : 'disabled';
   }
+
   return state.isLoaded ? 'disabled' : 'unknown';
 };
 
@@ -186,5 +209,6 @@ export const useIsChatEnabled = (): boolean => useFeatureFlag(FeatureFlagKeys.Ch
 export const useIsRecordsFieldEnabled = (): boolean => {
   const system = useFeatureFlag(FeatureFlagKeys.RecordsSystem);
   const field = useFeatureFlag(recordsFieldFlagKey() ?? '__none__');
+
   return system && field;
 };

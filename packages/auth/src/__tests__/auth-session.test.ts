@@ -1,5 +1,5 @@
 import { getCurrentUsersRights } from '@resgrid/api';
-import { createScopeWiper, type DurableKv } from '@resgrid/offline';
+import { createScopeWiper, type DurableKv, finishPendingWipe, PENDING_WIPE_KEY } from '@resgrid/offline';
 
 import { getCurrentSession } from '../api/shared-session';
 import { getAuthApiContext } from '../runtime/api-context';
@@ -7,10 +7,10 @@ import { setAuthServices } from '../runtime/services';
 import { ACCESS_TOKEN_EXPIRY_SKEW_MS, refreshEngine, useAuthStore } from '../session/auth-store';
 import { hydrateAuthSession } from '../session/hydrate-session';
 import { saveSharedInstallation } from '../session/shared-installation';
-import { registerSignOutHook } from '../session/sign-out-hooks';
+import { registerSignOutHook, SIGN_OUT_HOOK_TIMEOUT_MS } from '../session/sign-out-hooks';
 import { useSharedSessionStore } from '../shared-session/shared-session-store';
 import { v4 } from './helpers/fake-server';
-import { DEFAULT_API_URL, flush, type Harness, setupHarness } from './helpers/harness';
+import { DEFAULT_API_URL, flush, type Harness, type MemoryStorage, setupHarness } from './helpers/harness';
 import { accessToken, idToken, tokenResponse } from './helpers/jwt';
 
 const nowSeconds = (): number => Math.floor(Date.now() / 1000);
@@ -179,9 +179,11 @@ describe('cold start (restoreSession, offline-safe)', () => {
     h.server.on('POST', '/connect/token', { status: 500, data: { error: 'server_error' } });
 
     await hydrateAuthSession();
+
     for (const delay of [0, 5_000, 10_000, 20_000, 40_000, 60_000, 60_000]) {
       await jest.advanceTimersByTimeAsync(delay);
     }
+
     expect(h.server.requestsTo('POST', '/connect/token').length).toBeGreaterThanOrEqual(6);
     expect(useAuthStore.getState().status).toBe('signedIn');
     expect(h.wipeScope).not.toHaveBeenCalled();
@@ -290,6 +292,7 @@ describe('upgrade continuity (legacy persisted sessions stay signed in)', () => 
     const h = setupHarness('dispatch', {
       seed: { 'auth-storage': { 'auth-storage': envelope({ accessToken: 'opaque-encrypted-token', refreshToken: 'r', refreshTokenExpiresOn: String(Date.now() + 3600_000), userId: 'u-d', status: 'signedIn' }) } },
     });
+
     await hydrateAuthSession();
     expect(useAuthStore.getState()).toMatchObject({ status: 'signedIn', userId: 'u-d' });
     expect(h.storage.main.getString('auth-storage')).toBeUndefined();
@@ -304,6 +307,7 @@ describe('upgrade continuity (legacy persisted sessions stay signed in)', () => 
 
   it('Responder: supplies the access-token expiry from authResponse.obtained_at when the store blob has none', async () => {
     const obtainedAt = Date.now() - 1000;
+
     const h = setupHarness('responder', {
       seed: {
         ResgridResponder: {
@@ -312,6 +316,7 @@ describe('upgrade continuity (legacy persisted sessions stay signed in)', () => 
         },
       },
     });
+
     h.server.on('POST', '/connect/token', { data: tokenResponse() });
     await hydrateAuthSession();
     expect(useAuthStore.getState().refreshTokenExpiresOn).toBe(String(obtainedAt + 86400_000));
@@ -351,6 +356,53 @@ describe('sign-out (clear state first, push unregister before any server switch,
     expect(order).toEqual(['hook', 'wipe:logout']);
     expect(h.storage.main.contains('authResponse')).toBe(false);
     expect(h.telemetry).toHaveBeenLastCalledWith(null);
+  });
+
+  it('marks the wipe pending and drops the legacy session copy before the hooks run, and removes the mark once the wipe has run', async () => {
+    const seen: unknown[] = [];
+    registerSignOutHook(async () => {
+      seen.push({ pending: h.storage.main.getString(PENDING_WIPE_KEY) ?? null, legacyCopy: h.storage.main.contains('authResponse') });
+    });
+    h.storage.main.set('authResponse', '{"refresh_token":"x"}');
+    await useAuthStore.getState().logout(undefined, 'server-switch');
+    expect(seen).toEqual([{ pending: 'server-switch', legacyCopy: false }]);
+    expect(h.wipeScope).toHaveBeenCalledWith('server-switch');
+    expect(h.storage.main.contains(PENDING_WIPE_KEY)).toBe(false);
+  });
+
+  it('keeps the mark when the wipe fails, so the next launch runs it again', async () => {
+    h.wipeScope.mockRejectedValueOnce(new Error('disk full'));
+    await useAuthStore.getState().logout(undefined, 'auth-rejected');
+    expect(useAuthStore.getState().status).toBe('signedOut');
+    expect(h.storage.main.getString(PENDING_WIPE_KEY)).toBe('auth-rejected');
+  });
+
+  it('opens a sign-in made during a sign-out only after its wipe, so the wipe never takes the new session', async () => {
+    const wiper = createScopeWiper({ kvInstances: () => h.storage.all(), variantId: 'unit' });
+    const statusAtWipe: string[] = [];
+    setAuthServices({
+      wipeScope: async (reason) => {
+        statusAtWipe.push(useAuthStore.getState().status);
+
+        return wiper.wipeScope(reason);
+      },
+      apiCache: h.apiCache,
+    });
+    let unregistered: () => void = () => undefined;
+    registerSignOutHook(() => new Promise<void>((resolve) => (unregistered = resolve)));
+    const signingOut = useAuthStore.getState().logout();
+
+    h.server.on('POST', '/connect/token', { data: tokenResponse({ access_token: 'access-next' }) });
+    const signingIn = useAuthStore.getState().login({ username: 'next', password: 'secret' });
+    await flush(50);
+    expect(h.server.requestsTo('POST', '/connect/token')).toHaveLength(2);
+    expect(useAuthStore.getState()).toMatchObject({ status: 'loading', accessToken: null });
+
+    unregistered();
+    await Promise.all([signingOut, signingIn]);
+    expect(statusAtWipe).toEqual(['loading']);
+    expect(useAuthStore.getState()).toMatchObject({ status: 'signedIn', accessToken: 'access-next' });
+    expect(h.storage.main.getString('auth-storage')).toContain('access-next');
   });
 
   it('is single-flight: concurrent sign-outs share one wipe', async () => {
@@ -426,5 +478,81 @@ describe('sign-out (clear state first, push unregister before any server switch,
     await expect(getCurrentUsersRights(getAuthApiContext())).resolves.toMatchObject({ Data: { DepartmentId: '1' } });
     const rights = h.server.requestsTo('GET', '/Security/GetCurrentUsersRights');
     expect(rights.map((r) => r.headers.Authorization)).toEqual(['Bearer access-at-logout', 'Bearer access-refreshed']);
+  });
+});
+
+describe('a sign-out the app is killed in (the pending wipe finishes at the next launch)', () => {
+  afterEach(() => {
+    refreshEngine.endSession();
+    jest.useRealTimers();
+  });
+
+  /** What a killed app leaves behind: every instance's keys and values as they stand at that moment. */
+  const leftOnDisk = (storage: MemoryStorage): Record<string, Record<string, string>> =>
+    Object.fromEntries(
+      storage.all().map((kv) => [
+        kv.id,
+        Object.fromEntries(
+          kv.keys().flatMap((key) => {
+            const value = kv.getString(key);
+
+            return value === undefined ? [] : [[key, value]];
+          })
+        ),
+      ])
+    );
+
+  // Dispatch keeps the session in its own `auth-storage` instance; Unit keeps it in the main one.
+  it.each(['unit', 'dispatch'] as const)('%s: nothing of the leaving member reaches the next sign-in when the app dies while the hooks run', async (variant) => {
+    const h = setupHarness(variant);
+    h.server.on('POST', '/connect/token', { data: tokenResponse() });
+    await useAuthStore.getState().login({ username: 'member', password: 'secret' });
+    h.storage.main.set('calls-storage', envelope({ calls: [{ CallId: '1' }] }));
+    h.storage.main.set('omni-recurring-calls-storage', envelope({ calls: [{ CallId: '2' }] }));
+    h.storage.main.setJSON('activeUnitId', '7');
+    h.storage.main.setJSON('local', 'de');
+
+    jest.useFakeTimers();
+    // Push unregister against a server that never answers: sign-out waits up to SIGN_OUT_HOOK_TIMEOUT_MS before wiping.
+    registerSignOutHook(() => new Promise<void>(() => undefined));
+    const signingOut = useAuthStore.getState().logout();
+    await jest.advanceTimersByTimeAsync(SIGN_OUT_HOOK_TIMEOUT_MS / 2);
+    expect(h.wipeScope).not.toHaveBeenCalled();
+    const killed = leftOnDisk(h.storage);
+    await jest.advanceTimersByTimeAsync(SIGN_OUT_HOOK_TIMEOUT_MS);
+    await signingOut;
+    jest.useRealTimers();
+
+    const main = killed[h.manifest.storage.mmkvId];
+    expect(main[PENDING_WIPE_KEY]).toBe('logout');
+    expect(main['calls-storage']).toBeDefined();
+    expect(main['omni-recurring-calls-storage']).toBeDefined();
+
+    // The next launch, on what the killed app left: initOffline() finishes the wipe before the session or any store is read.
+    const next = setupHarness(variant, { seed: killed });
+    await expect(finishPendingWipe(next.storage.main, createScopeWiper({ kvInstances: () => next.storage.all(), variantId: variant }))).resolves.toBe('logout');
+
+    for (const key of ['calls-storage', 'omni-recurring-calls-storage', 'activeUnitId', 'auth-storage', PENDING_WIPE_KEY]) {
+      expect(next.storage.all().flatMap((kv) => (kv.contains(key) ? [kv.id] : []))).toEqual([]);
+    }
+
+    expect(next.storage.main.getJSON('local')).toBe('de');
+
+    await hydrateAuthSession();
+    expect(useAuthStore.getState()).toMatchObject({ status: 'signedOut', accessToken: null, refreshToken: null, userId: null });
+  });
+
+  it('a launch with no pending wipe keeps the stored session and data', async () => {
+    const h = setupHarness('unit', {
+      seed: { ResgridUnit: { 'auth-storage': envelope({ accessToken: accessToken(nowSeconds() + 3600), refreshToken: 'refresh-1', userId: 'user-1' }), 'calls-storage': envelope({ calls: [] }) } },
+    });
+
+    const wiper = createScopeWiper({ kvInstances: () => h.storage.all(), variantId: 'unit' });
+    const wipeScope = jest.spyOn(wiper, 'wipeScope');
+    await expect(finishPendingWipe(h.storage.main, wiper)).resolves.toBeNull();
+    await hydrateAuthSession();
+    expect(wipeScope).not.toHaveBeenCalled();
+    expect(useAuthStore.getState()).toMatchObject({ status: 'signedIn', userId: 'user-1' });
+    expect(h.storage.main.contains('calls-storage')).toBe(true);
   });
 });

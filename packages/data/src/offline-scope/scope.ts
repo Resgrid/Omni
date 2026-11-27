@@ -42,6 +42,8 @@ export type DataOutboxType =
   | 'records.command'
   | 'workOrders.report'
   | 'checklists.run.save'
+  | 'protocols.step.record'
+  | 'protocols.acknowledge'
   | 'ic';
 
 interface ScopeDefinition {
@@ -70,6 +72,8 @@ const SCOPES: Record<VariantId, ScopeDefinition> = {
       'records.command',
       'workOrders.report',
       'checklists.run.save',
+      'protocols.step.record',
+      'protocols.acknowledge',
     ],
   },
   unit: {
@@ -89,18 +93,46 @@ const SCOPES: Record<VariantId, ScopeDefinition> = {
       'records.draft.save',
       'records.command',
       'checklists.run.save',
+      'protocols.step.record',
+      'protocols.acknowledge',
     ],
   },
   ic: {
     hydration: ['data.calls', 'data.units', 'data.personnel', 'data.incident-command', 'data.pois', 'data.protocols', 'data.custom-maps'],
     required: ['data.calls', 'data.units', 'data.personnel', 'data.incident-command'],
-    handlers: ['calls.create', 'calls.note.add', 'calls.file.upload', 'checkIn.perform', 'personnel.status.set', 'chat.message.send', 'operations.timeEntries.save', 'records.draft.save', 'records.command', 'ic'],
+    handlers: [
+      'calls.create',
+      'calls.note.add',
+      'calls.file.upload',
+      'checkIn.perform',
+      'personnel.status.set',
+      'chat.message.send',
+      'operations.timeEntries.save',
+      'records.draft.save',
+      'records.command',
+      'protocols.step.record',
+      'protocols.acknowledge',
+      'ic',
+    ],
   },
   dispatch: {
     hydration: ['data.calls', 'data.call-queues', 'data.units', 'data.personnel', 'data.pois', 'data.contacts', 'data.protocols', 'data.weather-alerts'],
     required: ['data.calls', 'data.units', 'data.personnel'],
     // `ic`: Dispatch's assist tier writes to the command board through the same handlers (gated by the server's capability mask).
-    handlers: ['calls.create', 'calls.note.add', 'calls.file.upload', 'checkIn.perform', 'units.status.set', 'personnel.status.set', 'chat.message.send', 'records.draft.save', 'records.command', 'ic'],
+    handlers: [
+      'calls.create',
+      'calls.note.add',
+      'calls.file.upload',
+      'checkIn.perform',
+      'units.status.set',
+      'personnel.status.set',
+      'chat.message.send',
+      'records.draft.save',
+      'records.command',
+      'protocols.step.record',
+      'protocols.acknowledge',
+      'ic',
+    ],
   },
   bigboard: {
     // Read-only durable dashboard; widget acknowledgements belong to the dashboard module.
@@ -112,6 +144,7 @@ const SCOPES: Record<VariantId, ScopeDefinition> = {
 
 const stepAllowed = (manifest: VariantManifest, step: DataHydrationStepId): boolean => {
   const { capabilities: caps, modules } = manifest;
+
   switch (step) {
     case 'data.call-queues':
       return caps.calls.queues;
@@ -140,6 +173,7 @@ const stepAllowed = (manifest: VariantManifest, step: DataHydrationStepId): bool
 
 const handlerAllowed = (manifest: VariantManifest, type: DataOutboxType): boolean => {
   const { capabilities: caps, modules } = manifest;
+
   switch (type) {
     case 'calls.create':
       return caps.calls.create !== 'none';
@@ -161,6 +195,10 @@ const handlerAllowed = (manifest: VariantManifest, type: DataOutboxType): boolea
       return modules.includes('inventory');
     case 'workOrders.report':
       return modules.includes('work-orders');
+    case 'protocols.step.record':
+      return caps.protocols.stepThrough;
+    case 'protocols.acknowledge':
+      return caps.protocols.acknowledgments;
     case 'ic':
       return caps.incidentCommand === 'command' || caps.incidentCommand === 'assist';
     default:
@@ -179,6 +217,7 @@ export interface DataOfflineScope {
 export function resolveDataOfflineScope(manifest: VariantManifest): DataOfflineScope {
   const definition = SCOPES[manifest.id];
   const hydration = definition.hydration.filter((step) => stepAllowed(manifest, step));
+
   return {
     variant: manifest.id,
     hydration,

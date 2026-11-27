@@ -22,6 +22,7 @@ import { toDevProxyUrl } from '@resgrid/core/env/dev-proxy';
 import { getApps, initializeApp } from 'firebase/app';
 import { deleteToken, getMessaging, getToken, isSupported, type Messaging } from 'firebase/messaging';
 import { useEffect, useState } from 'react';
+import { z } from 'zod';
 
 import {
   getOptionalNotificationsDependencies,
@@ -39,6 +40,7 @@ import { openNotification } from './deep-links';
 import { type PushNotificationData, usePushNotificationModalStore } from './push-modal-store';
 import { clearRegisteredPushToken, notifyPushTokenRegistered } from './push-token-listeners';
 import type { PushNotificationService, PushRegistrationTrigger, RegisterOptions, UsePushNotificationsResult } from './push-types';
+import { PENDING_SIGN_OUT_MAX_AGE_MS } from './registration-storage';
 
 /** One push as the service worker or the Electron main process hands it over (Core's webPush data block). */
 export interface WebPushPayload {
@@ -87,6 +89,12 @@ export const WEB_PUSH_PLATFORM = 3;
 export const SERVICE_WORKER_URL = '/service-worker.js';
 /** Unit's keys (kept, so an upgraded browser's registration is still found and taken off at sign-out). */
 export const WEB_PUSH_REGISTRATION_KEY = 'rg.webPush.registration';
+
+/**
+ * A sign-out whose cleanup has not run yet (the ended session's token and server): written before the cleanup is queued
+ * and removed once it ran, so a tab closed during sign-out still kills the token and takes it off on the next load.
+ */
+export const WEB_PUSH_PENDING_SIGN_OUT_KEY = 'rg.webPush.pendingSignOut';
 /** When the permission prompt was last dismissed without an answer. */
 export const WEB_PUSH_ASKED_KEY = 'rg.webPush.asked';
 /** A dismissed prompt waits a week: browsers stop a site's prompts for a while after a few dismissals. */
@@ -500,17 +508,52 @@ async function signOutCleanup(accessToken: string | null, config: WebPushFirebas
   notifyStatus();
 }
 
+const pendingSignOutSchema = z.object({ accessToken: z.string().min(1).nullable(), apiUrl: z.string(), signedOutAt: z.number() });
+
+const readPendingSignOut = (): z.infer<typeof pendingSignOutSchema> | null => {
+  const parsed = pendingSignOutSchema.safeParse(readJson<unknown>(WEB_PUSH_PENDING_SIGN_OUT_KEY));
+
+  return parsed.success ? parsed.data : null;
+};
+
+/** Runs a sign-out cleanup in the queue; its pending record goes once the cleanup has run, so a closed tab runs it again. */
+function runSignOutCleanup(accessToken: string | null, config: WebPushFirebaseConfig | null, apiUrl: string, headers: Record<string, string>): Promise<void> {
+  return enqueue(() => signOutCleanup(accessToken, config, apiUrl, headers))
+    .then(() => writeJson(WEB_PUSH_PENDING_SIGN_OUT_KEY, null))
+    .catch((error: unknown) => {
+      logger.warn({ message: 'Web push sign-out cleanup failed', context: { error } });
+    });
+}
+
 /** Sign-out: read the session's config and server NOW (a server switch applies once sign-out returns), then clean up in order. */
 function unregisterWebPushAtSignOut(accessToken: string | null): Promise<void> {
   const deps = getOptionalNotificationsDependencies();
   const config = getWebPushConfig(deps);
   const apiUrl = deps?.getBaseApiUrl() ?? '';
   const headers = deps?.getRequestHeaders?.() ?? {};
+
+  // Before anything is awaited: a tab or window closed during sign-out finishes this cleanup on its next load.
+  writeJson(WEB_PUSH_PENDING_SIGN_OUT_KEY, { accessToken, apiUrl, signedOutAt: Date.now() });
+
   // Queued behind any sync in flight, so the registration that sync is still writing is the one taken off. The next
   // sign-in's sync queues behind this in turn.
-  return enqueue(() => signOutCleanup(accessToken, config, apiUrl, headers)).catch((error: unknown) => {
-    logger.warn({ message: 'Web push sign-out cleanup failed', context: { error } });
-  });
+  return runSignOutCleanup(accessToken, config, apiUrl, headers);
+}
+
+/**
+ * A sign-out the last load did not finish: kill the token here and take the registration off as that session (its
+ * token, while Core still accepts it). Queued first, so no registration of the next session runs before it.
+ */
+function resumePendingSignOut(): void {
+  const pending = readPendingSignOut();
+
+  if (!pending) {
+    return;
+  }
+
+  const deps = getOptionalNotificationsDependencies();
+  const accessToken = Date.now() - pending.signedOutAt < PENDING_SIGN_OUT_MAX_AGE_MS ? pending.accessToken : null;
+  void runSignOutCleanup(accessToken, getWebPushConfig(deps), pending.apiUrl, deps?.getRequestHeaders?.() ?? {});
 }
 
 // --- Incoming pushes ---
@@ -609,7 +652,10 @@ export function resetWebPushForTests(): void {
 // --- The app's push API, as the native module offers it ---
 
 export const pushNotificationService: PushNotificationService & { resetForTests(): void } = {
-  initialize: async (): Promise<void> => attachWebPushListeners(),
+  initialize: async (): Promise<void> => {
+    resumePendingSignOut();
+    attachWebPushListeners();
+  },
   registerForPushNotifications: async (_options?: RegisterOptions): Promise<string | null> => {
     await syncWebPush();
     return readRegistration()?.token ?? null;

@@ -285,6 +285,20 @@ export const verifyStepUpFederated = (): Promise<boolean> =>
     return completeStepUpFederated(ctx, { SsoTransactionId: trip.trip.ssoTransactionId, SsoCode: trip.trip.ssoCode, CodeVerifier: trip.trip.codeVerifier });
   });
 
+/**
+ * Takes the grant a `StepUp/Verify` for protected data answered (round 10 A5: the one step-up sheet verifies every area). The same
+ * rules as any grant: memory only, an absolute window, refused once expired, dropped with the session.
+ */
+export function adoptProtectedGrant(grantToken: string, expiresAtUtc: string, now: number = Date.now()): boolean {
+  const expiresAt = parseUtc(expiresAtUtc);
+
+  if (!grantToken || expiresAt === null || expiresAt <= now || !canHoldGrants()) return false;
+  dataProtectionStore.setState({ grantToken, stepUpExpiresAt: expiresAt, isVerifying: false, lastError: null, isPromptOpen: false });
+  scheduleExpiry(expiresAt);
+
+  return true;
+}
+
 /** Opens the single step-up prompt — never for a reveal whose request outlived the session. */
 export function openStepUpPrompt(): void {
   if (!canHoldGrants()) {

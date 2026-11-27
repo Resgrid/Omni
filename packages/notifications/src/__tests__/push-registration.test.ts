@@ -7,7 +7,7 @@ import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 
 import { pushNotificationService, usePushNotifications } from '../push-notification';
 import type { PushRegistrationTrigger } from '../push-types';
-import { NATIVE_PUSH_REGISTRATION_KEY, NATIVE_PUSH_STALE_REGISTRATIONS_KEY } from '../registration-storage';
+import { NATIVE_PUSH_PENDING_SIGN_OUTS_KEY, NATIVE_PUSH_REGISTRATION_KEY, NATIVE_PUSH_STALE_REGISTRATIONS_KEY, PENDING_SIGN_OUT_MAX_AGE_MS } from '../registration-storage';
 import { BASE_API_URL, configureForTest, flushAll, selectVariant, type TestContext } from './helpers';
 import { mockSetAppActive } from './mocks/core';
 import { mockSetIsDevice } from './mocks/expo-device';
@@ -368,6 +368,98 @@ describe('sign-out', () => {
     await pushNotificationService.unregisterAtSignOut('access-token');
     await register();
     expect(registrations()).toHaveLength(2);
+  });
+
+  describe('a sign-out the server has not confirmed (app killed, offline, refused)', () => {
+    const pending = () => ctx.storage.getJSON<{ accessToken: string | null; apiUrl: string; registrations: unknown[] }[]>(NATIVE_PUSH_PENDING_SIGN_OUTS_KEY);
+    const unregisterCalls = () => signOutCalls().filter((call) => call.url.endsWith('/Devices/UnRegisterNativePush'));
+
+    it('records the ended session before any request, and drops the record once the server took the token off', async () => {
+      await register();
+      let answer: (value: { ok: boolean; status: number }) => void = () => undefined;
+      fetchMock.mockImplementationOnce(() => new Promise((resolve) => (answer = resolve)));
+      const signingOut = pushNotificationService.unregisterAtSignOut('access-token');
+      expect(pending()).toEqual([expect.objectContaining({ accessToken: 'access-token', apiUrl: BASE_API_URL, registrations: [{ UserId: 'user-1', Token: 'device-token', Prefix: 'DEPT', UnitId: '12' }] })]);
+
+      answer({ ok: true, status: 200 });
+      await signingOut;
+      expect(pending()).toBeNull();
+      expect(notifications.unregisterForNotificationsAsync).not.toHaveBeenCalled();
+    });
+
+    it('takes the token off as the ended session at the next launch when the app died during sign-out', async () => {
+      await register();
+      // The request never answers: the app is killed while sign-out waits on it.
+      fetchMock.mockImplementationOnce(() => new Promise(() => undefined));
+      void pushNotificationService.unregisterAtSignOut('ended-token');
+      await flushAll();
+
+      // The next launch: a new process on the same storage.
+      pushNotificationService.resetForTests();
+      ctx.state.signedIn = false;
+      await pushNotificationService.initialize();
+      await flushAll();
+
+      expect(unregisterCalls()).toHaveLength(2);
+      expect(unregisterCalls()[1]).toEqual({
+        url: `${BASE_API_URL}/Devices/UnRegisterNativePush`,
+        headers: { 'X-Resgrid-Client': 'test', 'Content-Type': 'application/json', Authorization: 'Bearer ended-token' },
+        body: { Token: 'device-token', Prefix: 'DEPT', UnitId: '12' },
+      });
+      expect(pending()).toBeNull();
+    });
+
+    it('keeps a sign-out the server could not answer and finishes it before the next registration', async () => {
+      await register();
+      fetchMock.mockRejectedValueOnce(new Error('Network Error'));
+      await pushNotificationService.unregisterAtSignOut('ended-token');
+      expect(pending()).toHaveLength(1);
+      expect(notifications.unregisterForNotificationsAsync).not.toHaveBeenCalled();
+
+      const order: string[] = [];
+      fetchMock.mockImplementation(async () => {
+        order.push('unregister previous session');
+
+        return { ok: true, status: 200 };
+      });
+      ctx.api.respond.mockImplementationOnce(async () => {
+        order.push('register next session');
+
+        return { Status: 'Queued' };
+      });
+      await register();
+      expect(order).toEqual(['unregister previous session', 'register next session']);
+      expect(pending()).toBeNull();
+    });
+
+    it('replaces the device token when the ended session can no longer take it off, and registers the new one next', async () => {
+      await register();
+      fetchMock.mockResolvedValueOnce({ ok: false, status: 401 });
+      await pushNotificationService.unregisterAtSignOut('expired-token');
+      expect(notifications.unregisterForNotificationsAsync).toHaveBeenCalledTimes(1);
+      expect(pending()).toBeNull();
+
+      await register();
+      expect(registrations().map((request) => request.data?.Token)).toEqual(['device-token', 'device-token-rotated']);
+    });
+
+    it('stops using the ended token after its lifetime and replaces the device token instead', async () => {
+      await register();
+      fetchMock.mockRejectedValueOnce(new Error('Network Error'));
+      await pushNotificationService.unregisterAtSignOut('ended-token');
+      const now = Date.now();
+      const clock = jest.spyOn(Date, 'now').mockReturnValue(now + PENDING_SIGN_OUT_MAX_AGE_MS + 1);
+
+      try {
+        await register();
+      } finally {
+        clock.mockRestore();
+      }
+
+      expect(unregisterCalls()).toHaveLength(1);
+      expect(notifications.unregisterForNotificationsAsync).toHaveBeenCalledTimes(1);
+      expect(pending()).toBeNull();
+    });
   });
 
   describe('while a registration is in flight', () => {

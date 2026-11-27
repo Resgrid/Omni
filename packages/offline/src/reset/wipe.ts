@@ -6,7 +6,8 @@ import type { ClearResult, DurableKv } from '../kv/durable-kv';
 import { ConfirmationRequiredError, type Outbox } from '../outbox/outbox';
 import { getOfflineLogger } from '../util/logger';
 import type { OfflineScope } from '../util/scope';
-import { defaultResetRegistry, type ResetReason, type ResetRegistry } from './registry';
+import { PENDING_WIPE_KEY } from './pending-wipe-key';
+import { defaultResetRegistry, type ResetReason, type ResetRegistration, type ResetRegistry } from './registry';
 
 /** Unsent writes on a wipe: kept for their owner (encrypted, scoped, never replayed for anyone else) or discarded. */
 export type UnsentWritesPolicy = 'hold' | 'discard';
@@ -44,6 +45,13 @@ export interface ScopeWiperOptions {
 
 export interface ScopeWiper {
   wipeScope(reason: ResetReason, options?: WipeOptions): Promise<WipeReport>;
+  /**
+   * Applies a wipe that already ran to what registers after it: each teardown, store reset and wipe table registered
+   * from now on runs for `reason` as it registers. The startup wipe a killed sign-out left runs before the app has
+   * registered its device teardowns (push, local notifications) and late caches (offline map packs). Returns the
+   * closer, which stops it and waits for the work it started.
+   */
+  catchUp(reason: ResetReason): () => Promise<void>;
   /** Keys a wipe for `reason` keeps in `instanceId`. */
   preservedKeysFor(reason: ResetReason, instanceId: string): Set<string>;
 }
@@ -60,7 +68,14 @@ export function createScopeWiper(options: ScopeWiperOptions = {}): ScopeWiper {
   const sessionInstances = new Set(options.sessionInstances ?? DEFAULT_SESSION_INSTANCES);
 
   const preservedKeysFor = (reason: ResetReason, instanceId: string): Set<string> => {
-    const keys = new Set<string>([...DEVICE_PREFERENCE_KEYS, ...(options.variantId ? (VARIANT_PRESERVED_KEYS[options.variantId] ?? []) : []), ...(options.preserveKeys ?? []), ...registry.getPreservedKeys(instanceId)]);
+    // The pending-wipe mark outlives the wipe it marks: only the owner of that wipe removes it, once it is complete.
+    const keys = new Set<string>([
+      PENDING_WIPE_KEY,
+      ...DEVICE_PREFERENCE_KEYS,
+      ...(options.variantId ? (VARIANT_PRESERVED_KEYS[options.variantId] ?? []) : []),
+      ...(options.preserveKeys ?? []),
+      ...registry.getPreservedKeys(instanceId),
+    ]);
     if (reason === 'department-switch') {
       SESSION_KEYS.forEach((key) => keys.add(key));
     }
@@ -137,5 +152,33 @@ export function createScopeWiper(options: ScopeWiperOptions = {}): ScopeWiper {
     return report;
   };
 
-  return { wipeScope, preservedKeysFor };
+  const applyLate = async (registration: ResetRegistration, reason: ResetReason): Promise<void> => {
+    const logger = getOfflineLogger();
+
+    try {
+      if (registration.kind !== 'wipe-table') {
+        await registration.run(reason);
+      } else if (options.db && (await options.db.listTables()).includes(registration.table)) {
+        await options.db.delete(registration.table);
+      }
+    } catch (error) {
+      const name = registration.kind === 'wipe-table' ? registration.table : registration.name;
+      logger.error({ message: 'A late part of a wipe failed', context: { name, reason, error: error instanceof Error ? error.name : 'unknown' } });
+    }
+  };
+
+  const catchUp = (reason: ResetReason): (() => Promise<void>) => {
+    const started: Promise<void>[] = [];
+
+    const unsubscribe = registry.onRegister((registration) => {
+      started.push(applyLate(registration, reason));
+    });
+
+    return async () => {
+      unsubscribe();
+      await Promise.all(started);
+    };
+  };
+
+  return { wipeScope, catchUp, preservedKeysFor };
 }

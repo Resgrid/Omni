@@ -42,7 +42,7 @@ export default function AwaitingResourcesScreen({ showHeader = false, now = Date
   const isLoading = useAwaitingResourcesStore((state) => state.loading.calls === true);
   const error = useAwaitingResourcesStore((state) => state.errors.calls ?? null);
   const fetchedAt = useAwaitingResourcesStore((state) => state.fetchedAt.calls ?? 0);
-  const busyKey = useAwaitingResourcesStore((state) => state.busyKey);
+  const busyKeys = useAwaitingResourcesStore((state) => state.busyKeys);
   const allResponseCodes = useAwaitingResourcesStore((state) => state.allResponseCodes);
   const { dispatchUnit, dismissRequirement } = useAwaitingResourceActions();
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -76,7 +76,7 @@ export default function AwaitingResourcesScreen({ showHeader = false, now = Date
       <AwaitingCallCard
         call={item}
         canAct={canUserCreateCalls}
-        busyKey={busyKey}
+        busyKeys={busyKeys}
         responseCodes={allResponseCodes}
         now={now()}
         onOpenCall={(callId) => pushRoutePath(router, callRoutes.callDetail(String(callId)))}
@@ -84,7 +84,7 @@ export default function AwaitingResourcesScreen({ showHeader = false, now = Date
         onDismiss={(callId, requirement) => setDismissTarget({ callId, requirement })}
       />
     ),
-    [allResponseCodes, busyKey, canUserCreateCalls, dispatchUnit, now, router]
+    [allResponseCodes, busyKeys, canUserCreateCalls, dispatchUnit, now, router]
   );
 
   const renderContent = () => {
@@ -140,7 +140,7 @@ export default function AwaitingResourcesScreen({ showHeader = false, now = Date
       <DismissRequirementDialog
         isOpen={dismissTarget !== null}
         requirementLabel={dismissTarget?.requirement.Label ?? null}
-        isSubmitting={dismissTarget !== null ? busyKey === awaitingDismissKey(dismissTarget.requirement.CallOutstandingRequirementId) : false}
+        isSubmitting={dismissTarget !== null ? busyKeys.includes(awaitingDismissKey(dismissTarget.requirement.CallOutstandingRequirementId)) : false}
         onConfirm={(note) => void confirmDismiss(note)}
         onClose={() => setDismissTarget(null)}
       />

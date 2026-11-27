@@ -1,5 +1,6 @@
 import { dismissRequirement, dispatchUnitToAwaitingCall, getAwaitingCalls, getAwaitingResourceResponseCodes, getCallRequirements } from '@resgrid/api';
 import {
+  type AwaitingResourcesActionResult,
   type AwaitingResourcesCallData,
   type CallOutstandingRequirementData,
   type DispatchResponseCodeData,
@@ -13,6 +14,7 @@ import { persist } from 'zustand/middleware';
 import { useBadgeCountsStore } from '../badge-counts/badge-counts-store';
 import { assertV4Success, unwrapItem, unwrapList } from '../core/envelope';
 import { type DataError, toDataError } from '../core/errors';
+import { createKeyedFlight } from '../core/keyed-flight';
 import { dataPersistOptions, registerPersistedStore } from '../core/persist';
 import { registerDataStoreReset } from '../core/reset';
 import { dataNow, getDataApiContext, getDataLogger } from '../core/runtime';
@@ -67,8 +69,11 @@ interface AwaitingResourcesData extends SliceMeta<AwaitingSlice> {
   unitAlerts: AwaitingUnitAlert[];
   /** When the last push arrived (epoch ms), so a call's own view can refetch on it. */
   lastPushAt: number;
-  /** The action in flight (`dispatch:<callId>:<unitId>` or `dismiss:<requirementId>`), so its button can spin. */
-  busyKey: string | null;
+  /**
+   * Every action in flight (`dispatch:<callId>:<unitId>` or `dismiss:<requirementId>`), so each button spins until its own
+   * request settles: overlapping actions on different rows never clear each other's.
+   */
+  busyKeys: string[];
   /** Pickable codes (retired left out). Empty means the department uses none: no code UI anywhere. */
   responseCodes: DispatchResponseCodeData[];
   /** Every code including retired ones, for showing the code a call was sent with. */
@@ -98,7 +103,7 @@ const initialData = (): AwaitingResourcesData => ({
   calls: [],
   unitAlerts: [],
   lastPushAt: 0,
-  busyKey: null,
+  busyKeys: [],
   responseCodes: [],
   allResponseCodes: [],
   showCodesToCrews: false,
@@ -109,12 +114,25 @@ const initialData = (): AwaitingResourcesData => ({
 /** Keeps each alert to the calls still awaiting resources, dropping alerts with nothing left to act on. */
 export const pruneUnitAlerts = (alerts: readonly AwaitingUnitAlert[], calls: readonly AwaitingResourcesCallData[]): AwaitingUnitAlert[] => {
   const waiting = new Set(calls.map((call) => call.CallId));
+
   return alerts.map((alert) => ({ ...alert, calls: alert.calls.filter((call) => waiting.has(call.callId)) })).filter((alert) => alert.calls.length > 0);
 };
 
 type PersistedAwaiting = Pick<AwaitingResourcesData, 'calls' | 'responseCodes' | 'allResponseCodes' | 'showCodesToCrews' | 'fetchedAt'>;
 
+/** The busy key for dispatching a unit to a waiting call (button spinners). */
+export const awaitingDispatchKey = (callId: number, unitId: number): string => `dispatch:${callId}:${unitId}`;
+
+/** The busy key for dismissing a requirement. */
+export const awaitingDismissKey = (requirementId: number): string => `dismiss:${requirementId}`;
+
 let runner: SliceRunner<AwaitingSlice, AwaitingResourcesState>;
+
+/**
+ * One action per busy key: a second press on the same row, or the same unit sent to the same call from the alert card and
+ * the screen, joins the request in flight instead of paging the unit again.
+ */
+const writes = createKeyedFlight();
 
 export const useAwaitingResourcesStore = create<AwaitingResourcesState>()(
   persist(
@@ -126,6 +144,35 @@ export const useAwaitingResourcesStore = create<AwaitingResourcesState>()(
         void get().fetchAwaitingCalls({ bypassCache: true });
       };
 
+      /**
+       * Runs an action under its busy key, then refreshes the list. Signing out or turning the feature off ends the session
+       * the action started in: a late answer then clears no busy state, changes no list and starts no read.
+       */
+      const runAction = (key: string, label: string, action: () => Promise<AwaitingResourcesActionResult>, onSuccess: () => void): Promise<AwaitingActionOutcome> =>
+        writes.run(key, async () => {
+          const generation = runner.generation();
+          set((state) => ({ busyKeys: [...state.busyKeys.filter((entry) => entry !== key), key] }));
+          let outcome: AwaitingActionOutcome;
+
+          try {
+            const result = assertV4Success(await action());
+            outcome = { ok: result?.Success === true, message: result?.Message ?? null, error: null };
+          } catch (error) {
+            const dataError = toDataError(error);
+            getDataLogger().warn({ message: label, context: { code: dataError.code, status: dataError.status } });
+            outcome = { ok: false, message: null, error: dataError };
+          }
+
+          if (generation === runner.generation()) {
+            if (outcome.ok) onSuccess();
+            // Only this action's key: an action still running on another row keeps its spinner.
+            set((state) => ({ busyKeys: state.busyKeys.filter((entry) => entry !== key) }));
+            refresh();
+          }
+
+          return outcome;
+        });
+
       return {
         ...initialData(),
 
@@ -135,6 +182,7 @@ export const useAwaitingResourcesStore = create<AwaitingResourcesState>()(
             'calls',
             async () => {
               const response = await getAwaitingCalls(getDataApiContext());
+
               // The server re-checks the flag: Enabled false with an empty list means the department turned it off.
               return response?.Enabled === false ? [] : unwrapList(response);
             },
@@ -146,8 +194,10 @@ export const useAwaitingResourcesStore = create<AwaitingResourcesState>()(
         fetchResponseCodes: async (force = false) => {
           if (get().responseCodesLoaded && !force) return;
           const startedIn = ++codesGeneration;
+
           try {
             const config = unwrapItem(await getAwaitingResourceResponseCodes(getDataApiContext()));
+
             if (startedIn !== codesGeneration) return;
             const codes = config?.Codes ?? [];
             set({ responseCodes: activeResponseCodes(codes), allResponseCodes: codes, showCodesToCrews: !!config?.ShowToCrews, responseCodesLoaded: true });
@@ -167,46 +217,28 @@ export const useAwaitingResourcesStore = create<AwaitingResourcesState>()(
           );
         },
 
-        dismissRequirement: async (callId, requirementId, note) => {
-          set({ busyKey: `dismiss:${requirementId}` });
-          try {
-            const result = assertV4Success(await dismissRequirement(getDataApiContext(), { CallId: callId, RequirementId: requirementId, ...(note ? { Note: note } : {}) }));
-            if (result?.Success) {
+        dismissRequirement: (callId, requirementId, note) =>
+          runAction(
+            awaitingDismissKey(requirementId),
+            'Dismissing an outstanding requirement failed',
+            () => dismissRequirement(getDataApiContext(), { CallId: callId, RequirementId: requirementId, ...(note ? { Note: note } : {}) }),
+            () =>
               set((state) => {
                 const key = String(callId);
                 const current = state.requirementsByCall[key];
-                return current ? { requirementsByCall: { ...state.requirementsByCall, [key]: current.filter((row) => row.CallOutstandingRequirementId !== requirementId) } } : {};
-              });
-            }
-            return { ok: !!result?.Success, message: result?.Message ?? null, error: null };
-          } catch (error) {
-            const dataError = toDataError(error);
-            getDataLogger().warn({ message: 'Dismissing an outstanding requirement failed', context: { code: dataError.code, status: dataError.status } });
-            return { ok: false, message: null, error: dataError };
-          } finally {
-            set({ busyKey: null });
-            refresh();
-          }
-        },
 
-        dispatchUnit: async (callId, unitId) => {
-          set({ busyKey: `dispatch:${callId}:${unitId}` });
-          try {
-            const result = assertV4Success(await dispatchUnitToAwaitingCall(getDataApiContext(), { CallId: callId, UnitId: unitId }));
-            if (result?.Success) {
-              // The unit is on its way: any alert offering it elsewhere is spent.
-              set((state) => ({ unitAlerts: state.unitAlerts.filter((alert) => alert.unitId !== unitId) }));
-            }
-            return { ok: !!result?.Success, message: result?.Message ?? null, error: null };
-          } catch (error) {
-            const dataError = toDataError(error);
-            getDataLogger().warn({ message: 'Dispatching a unit to an awaiting call failed', context: { code: dataError.code, status: dataError.status } });
-            return { ok: false, message: null, error: dataError };
-          } finally {
-            set({ busyKey: null });
-            refresh();
-          }
-        },
+                return current ? { requirementsByCall: { ...state.requirementsByCall, [key]: current.filter((row) => row.CallOutstandingRequirementId !== requirementId) } } : {};
+              })
+          ),
+
+        dispatchUnit: (callId, unitId) =>
+          runAction(
+            awaitingDispatchKey(callId, unitId),
+            'Dispatching a unit to an awaiting call failed',
+            () => dispatchUnitToAwaitingCall(getDataApiContext(), { CallId: callId, UnitId: unitId }),
+            // The unit is on its way: any alert offering it elsewhere is spent.
+            () => set((state) => ({ unitAlerts: state.unitAlerts.filter((alert) => alert.unitId !== unitId) }))
+          ),
 
         handleOutstandingRequirementsUpdated: (_id, payload) => {
           // Every kind changes the list somehow, and older servers send the call id alone: always refresh.
@@ -214,6 +246,7 @@ export const useAwaitingResourcesStore = create<AwaitingResourcesState>()(
           refresh();
 
           const alert = parseOutstandingRequirementsAlert(payload);
+
           if (!alert) return null;
 
           if (alert.kind === OutstandingRequirementsAlertKind.UnitAvailable && alert.unitId !== null && alert.calls.length > 0) {
@@ -226,10 +259,12 @@ export const useAwaitingResourcesStore = create<AwaitingResourcesState>()(
               calls: alert.calls,
               receivedAt: dataNow(),
             };
+
             set((state) => ({ unitAlerts: [unitAlert, ...state.unitAlerts.filter((existing) => existing.unitId !== alert.unitId)].slice(0, MAX_UNIT_ALERTS) }));
           } else if (alert.kind === OutstandingRequirementsAlertKind.AutoDispatched && alert.unitId !== null) {
             set((state) => ({ unitAlerts: state.unitAlerts.filter((existing) => existing.unitId !== alert.unitId) }));
           }
+
           return alert;
         },
 
@@ -237,6 +272,7 @@ export const useAwaitingResourcesStore = create<AwaitingResourcesState>()(
 
         disable: () => {
           runner.invalidate();
+          writes.clear();
           codesGeneration++;
           set(initialData());
         },
@@ -256,7 +292,11 @@ export const useAwaitingResourcesStore = create<AwaitingResourcesState>()(
 );
 
 registerPersistedStore('omni-awaiting-resources-storage', useAwaitingResourcesStore);
-registerDataStoreReset<AwaitingResourcesState>('awaiting-resources', useAwaitingResourcesStore, initialData, () => runner.invalidate());
+
+registerDataStoreReset<AwaitingResourcesState>('awaiting-resources', useAwaitingResourcesStore, initialData, () => {
+  runner.invalidate();
+  writes.clear();
+});
 
 // The menu's Awaiting Resources badge (Dispatch baseline side menu) counts the calls this store holds.
 useAwaitingResourcesStore.subscribe((state, previous) => {
@@ -265,8 +305,3 @@ useAwaitingResourcesStore.subscribe((state, previous) => {
 
 // Calls restored before the subscription existed (a module loaded after the storage was set rehydrates at once) count too.
 useBadgeCountsStore.getState().setAwaitingResources(useAwaitingResourcesStore.getState().calls.length);
-
-/** The busy key for dispatching a unit to a waiting call (button spinners). */
-export const awaitingDispatchKey = (callId: number, unitId: number): string => `dispatch:${callId}:${unitId}`;
-/** The busy key for dismissing a requirement. */
-export const awaitingDismissKey = (requirementId: number): string => `dismiss:${requirementId}`;

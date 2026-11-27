@@ -1,0 +1,315 @@
+# Every variant a pull request reaches, built and tested on iOS, Android and desktop, with screenshots (omni-plan §12).
+# The web leg of each variant is ci.yml's `variant (<variant>)`. These checks are required by the Software Factory, not
+# by branch protection: its PR evaluation requires the `<platform> (<variant>)` check of every variant and platform
+# the change reaches (int-RASF Repository.appChecks), so the job names below are part of that contract.
+#   plan        which variants the change reaches (scripts/ci/affected-variants.mjs, the factory's rule): a variant's
+#               own folder reaches that variant, anything else reaches all five
+#   ios         <variant>-dev-sim simulator build (eas build --local) on macOS, Maestro flows on an iPhone simulator
+#   android     <variant>-dev-sim APK (eas build --local), Maestro flows on an Android emulator
+#   electron    the web export packaged as the unpacked Linux desktop app, the desktop Playwright suite under Xvfb
+# Native legs need EXPO_TOKEN from the variant's environment, so a pull request from a fork fails them: a maintainer
+# pushes its branch to this repository to test it. Screenshots and reports: the <platform>-<variant> artifacts.
+name: App platforms
+
+# No merge_group: the factory judges the pull request's own head, so a queue run would only rebuild every leg again.
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      variants:
+        description: 'Variants: all, or comma-separated'
+        type: string
+        default: all
+      platforms:
+        description: 'Platforms: all, or comma-separated (ios,android,electron)'
+        type: string
+        default: all
+
+permissions:
+  contents: read
+
+concurrency:
+  group: app-platforms-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  EXPO_NO_TELEMETRY: '1'
+  EXPO_NO_DOTENV: '1'
+  EAS_CLI_VERSION: '27.3.0'
+  MAESTRO_VERSION: '2.11.0'
+  # Matches scripts/ci/run-playwright.mjs; bump both (and the root devDependency once added) together.
+  PLAYWRIGHT_VERSION: '1.64.1'
+
+jobs:
+  plan:
+    name: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      ios: ${{ steps.select.outputs.ios }}
+      android: ${{ steps.select.outputs.android }}
+      electron: ${{ steps.select.outputs.electron }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch the base commit
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: git fetch --no-tags --depth=1 origin "$BASE_SHA"
+      - name: Select variants
+        id: select
+        env:
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}
+          VARIANTS: ${{ inputs.variants || 'all' }}
+          PLATFORMS: ${{ inputs.platforms || 'all' }}
+        run: |
+          if [ -n "$BASE_SHA" ]; then
+            node scripts/ci/affected-variants.mjs --base "$BASE_SHA" --head HEAD --variants "$VARIANTS" --platforms "$PLATFORMS"
+          else
+            node scripts/ci/affected-variants.mjs --variants "$VARIANTS" --platforms "$PLATFORMS"
+          fi
+
+  ios:
+    name: ios (${{ matrix.variant }})
+    needs: plan
+    if: needs.plan.outputs.ios != '[]'
+    runs-on: macos-26
+    timeout-minutes: 120
+    # Only EXPO_TOKEN is used: simulator builds need no signing, and dev builds keep the development settings (QA API,
+    # no Firebase, no production keys).
+    environment: ${{ matrix.variant }}
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: ${{ fromJSON(needs.plan.outputs.ios) }}
+    env:
+      APP_VARIANT: ${{ matrix.variant }}
+      APP_ENV: development
+      BASE_API_URL: https://qaapi.resgrid.dev
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      NODE_OPTIONS: --max_old_space_size=4096
+    steps:
+      - uses: actions/checkout@v4
+      - name: EAS access
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "::error::EXPO_TOKEN is not available to this run (a pull request from a fork). Push the branch to Resgrid/Omni to build and test ${APP_VARIANT} on iOS."
+            exit 1
+          fi
+      # Maestro runs on Java.
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: ./.github/actions/setup-workspace
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: ${{ env.EAS_CLI_VERSION }}
+          token: ${{ secrets.EXPO_TOKEN }}
+          packager: npm
+      - name: Restore CocoaPods cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Caches/CocoaPods
+            ~/.cocoapods/repos
+          key: pods-dev-${{ matrix.variant }}-${{ hashFiles('pnpm-lock.yaml', format('apps/omni/variants/{0}/variant.json', matrix.variant), 'packages/config-plugins/**') }}
+          restore-keys: pods-dev-${{ matrix.variant }}-
+      - name: Restore EAS local build cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.eas-build-local
+          key: eas-build-local-ios-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: eas-build-local-ios-
+      - name: Profile
+        id: profile
+        run: node scripts/ci/eas-profile.mjs dev --variant "$APP_VARIANT" --platform ios
+      - name: Build for the simulator (eas build --local)
+        working-directory: apps/omni
+        env:
+          PROFILE: ${{ steps.profile.outputs.profile }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/app"
+          eas build --local --platform ios --profile "$PROFILE" --non-interactive --output "$RUNNER_TEMP/app/${APP_VARIANT}-dev-sim.tar.gz"
+      - name: Install Maestro
+        run: |
+          bash scripts/ci/retry.sh 3 15 bash -c 'curl -fsSL "https://get.maestro.mobile.dev" | bash'
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - name: Start Metro
+        run: bash scripts/ci/start-metro.sh ios "$RUNNER_TEMP/metro.log"
+      - name: Maestro on the iOS simulator
+        env:
+          APP_TARBALL: ${{ runner.temp }}/app/${{ matrix.variant }}-dev-sim.tar.gz
+          MAESTRO_OUTPUT: ${{ github.workspace }}/maestro-output
+        run: bash scripts/ci/maestro-ios.sh
+      - name: Upload screenshots and Maestro results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-${{ matrix.variant }}
+          path: |
+            maestro-output
+            ~/.maestro/tests
+            ${{ runner.temp }}/metro.log
+          retention-days: 14
+          if-no-files-found: ignore
+
+  android:
+    name: android (${{ matrix.variant }})
+    needs: plan
+    if: needs.plan.outputs.android != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    # Only EXPO_TOKEN is used: the dev-sim APK is debug-signed (android.withoutCredentials).
+    environment: ${{ matrix.variant }}
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: ${{ fromJSON(needs.plan.outputs.android) }}
+    env:
+      APP_VARIANT: ${{ matrix.variant }}
+      APP_ENV: development
+      BASE_API_URL: https://qaapi.resgrid.dev
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      NODE_OPTIONS: --max_old_space_size=4096
+      # The CI emulator is x86_64; building only that ABI overrides the store builds' ARM-only reactNativeArchitectures
+      # (nightly.yml explains why it must be set here) and halves the native build.
+      ORG_GRADLE_PROJECT_reactNativeArchitectures: x86_64
+      # adb without mDNS: its bridge can abort the server, which Maestro sees as "device offline" (nightly.yml).
+      ADB_MDNS: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - name: EAS access
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "::error::EXPO_TOKEN is not available to this run (a pull request from a fork). Push the branch to Resgrid/Omni to build and test ${APP_VARIANT} on Android."
+            exit 1
+          fi
+      - name: Free disk space and move temp dirs off tmpfs
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost /usr/share/swift /usr/local/.ghcup || true
+          mkdir -p "$RUNNER_TEMP/tmp" "$RUNNER_TEMP/eas-build"
+          echo "TMPDIR=$RUNNER_TEMP/tmp" >> "$GITHUB_ENV"
+          echo "EAS_LOCAL_BUILD_WORKINGDIR=$RUNNER_TEMP/eas-build" >> "$GITHUB_ENV"
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - uses: ./.github/actions/setup-workspace
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: ${{ env.EAS_CLI_VERSION }}
+          token: ${{ secrets.EXPO_TOKEN }}
+          packager: npm
+      - name: Restore EAS local build cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.eas-build-local
+          key: eas-build-local-android-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: eas-build-local-android-
+      - name: Profile
+        id: profile
+        run: node scripts/ci/eas-profile.mjs dev --variant "$APP_VARIANT" --platform android
+      - name: Build the APK (eas build --local)
+        working-directory: apps/omni
+        env:
+          PROFILE: ${{ steps.profile.outputs.profile }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/app"
+          eas build --local --platform android --profile "$PROFILE" --non-interactive --output "$RUNNER_TEMP/app/${APP_VARIANT}-dev-sim.apk"
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Install Maestro
+        run: |
+          bash scripts/ci/retry.sh 3 15 bash -c 'curl -fsSL "https://get.maestro.mobile.dev" | bash'
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - name: Start Metro
+        run: bash scripts/ci/start-metro.sh android "$RUNNER_TEMP/metro.log"
+      - name: Maestro on the Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          APK_PATH: ${{ runner.temp }}/app/${{ matrix.variant }}-dev-sim.apk
+          MAESTRO_OUTPUT: ${{ github.workspace }}/maestro-output
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: bash scripts/ci/maestro-android.sh
+      - name: Upload screenshots and Maestro results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-${{ matrix.variant }}
+          path: |
+            maestro-output
+            ~/.maestro/tests
+            ${{ runner.temp }}/metro.log
+            /tmp/adb.*.log
+          retention-days: 14
+          if-no-files-found: ignore
+
+  electron:
+    name: electron (${{ matrix.variant }})
+    needs: plan
+    if: needs.plan.outputs.electron != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: ${{ fromJSON(needs.plan.outputs.electron) }}
+    env:
+      APP_VARIANT: ${{ matrix.variant }}
+      APP_ENV: production
+      # apps/desktop/packaging/builder-config.js writes each variant's output to apps/desktop/release/<variant>. The
+      # unpacked Linux build is unsigned: it is tested and thrown away, never shipped.
+      ELECTRON_OUTPUT_DIR: apps/desktop/release/${{ matrix.variant }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Electron caches
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/electron-cache
+          key: electron-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: electron-${{ runner.os }}-
+      - name: Point Electron at the cache
+        run: |
+          echo "ELECTRON_CACHE=$RUNNER_TEMP/electron-cache/electron" >> "$GITHUB_ENV"
+          echo "ELECTRON_BUILDER_CACHE=$RUNNER_TEMP/electron-cache/electron-builder" >> "$GITHUB_ENV"
+      # The whole workspace: the web export needs React Native, the desktop build needs apps/desktop.
+      - uses: ./.github/actions/setup-workspace
+      - name: Web export
+        run: pnpm --filter @resgrid/omni web:export
+      # No `--` separator: pnpm 10 forwards it literally and scripts/build.mjs (strict parseArgs) rejects it.
+      - name: Build the unpacked Linux desktop app
+        run: pnpm --filter @resgrid/desktop build --variant "$APP_VARIANT" --linux --dir
+      # Electron needs the same system libraries as Chromium; it brings its own binary, so no browser is downloaded.
+      - name: Desktop system libraries
+        run: bash scripts/ci/retry.sh 3 15 node scripts/ci/run-playwright.mjs install-deps chromium
+      - name: Desktop acceptance tests (Playwright _electron, Xvfb)
+        env:
+          E2E_DESKTOP_DIR: ${{ env.ELECTRON_OUTPUT_DIR }}
+          E2E_DESKTOP_REQUIRED: '1'
+          E2E_OUTPUT_DIR: ${{ github.workspace }}/electron-output
+        run: xvfb-run -a node scripts/ci/run-playwright.mjs test -c apps/omni/e2e/playwright.config.ts --project "desktop-${APP_VARIANT}"
+      - name: Upload screenshots and Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: electron-${{ matrix.variant }}
+          path: electron-output
+          retention-days: 14
+          if-no-files-found: ignore

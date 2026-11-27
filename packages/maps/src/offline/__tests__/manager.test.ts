@@ -1,4 +1,4 @@
-import { createMemoryDb, createResetRegistry, createRetentionRegistry, createStorageAreaRegistry, type DurableDb, findTablesWithoutRetention } from '@resgrid/offline';
+import { createMemoryDb, createResetRegistry, createRetentionRegistry, createScopeWiper, createStorageAreaRegistry, type DurableDb, findTablesWithoutRetention } from '@resgrid/offline';
 
 import { createMemoryPackFileStore } from '../file-store';
 import { createMemoryOfflineMapsKv, createOfflinePackManager, OFFLINE_MAPS_WIFI_ONLY_KEY, type OfflineMapsState, type OfflinePackManagerOptions } from '../manager';
@@ -352,5 +352,22 @@ describe('OfflinePackManager', () => {
     expect(retention.ruleFor(OFFLINE_MAP_PACKS_TABLE)).toBeUndefined();
     expect(areas.list()).toHaveLength(0);
     expect(reset.getStoreResets().size).toBe(0);
+  });
+
+  // The app was killed during sign-out: the next launch wipes as storage opens, before this manager exists. Registering
+  // during that launch's startup catches the packs (files and rows) up with the wipe.
+  it('wipes the packs a killed sign-out left when it registers during the startup catch-up', async () => {
+    const { manager, db, fileStore } = await setup();
+    await manager.download();
+    expect(fileStore.files.size).toBeGreaterThan(0);
+
+    const reset = createResetRegistry();
+    const settle = createScopeWiper({ registry: reset, db }).catchUp('logout');
+    const dispose = registerOfflineMapPacks(manager, { reset, retention: createRetentionRegistry(), areas: createStorageAreaRegistry() });
+    await settle();
+
+    expect(fileStore.files.size).toBe(0);
+    expect(await rowsOf(db)).toHaveLength(0);
+    dispose();
   });
 });

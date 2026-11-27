@@ -24,6 +24,34 @@ export interface DataOutbox {
   findEventIds?(ids: readonly string[]): Promise<Set<string>>;
   /** Called after every change to the outbox (queued, delivered, retried, dropped). */
   subscribe?(listener: () => void): () => void;
+  /** Makes a failed or dead-lettered write due now, with a fresh retry budget (same id, same idempotency key). */
+  retry?(id: string): Promise<boolean>;
+}
+
+/** The areas a department can ask a step-up for (Core round 10 A5). */
+export type DataStepUpArea = 'signatures' | 'acknowledgments' | 'approvals' | 'protected_data';
+
+/** What a `step_up_required` refusal asks for: the area, the method classes (mfa, sso, password) and the MFA methods. */
+export interface DataStepUpRequirement {
+  area: DataStepUpArea;
+  required: boolean;
+  allowedMethods: string[];
+  usableMethods: string[];
+  mfaMethods: string[];
+  windowMinutes: number;
+  /** False: the member has nothing usable here (e.g. 2FA is required and not enrolled). */
+  canComplete: boolean;
+}
+
+/**
+ * The department step-up, from the app shell (`@resgrid/auth`: the refusal parser, the in-app step-up sheet and its "verified"
+ * signal). Without it a step-up refusal is an ordinary 403.
+ */
+export interface DataStepUp {
+  requirementOf: (cause: unknown) => DataStepUpRequirement | null;
+  /** Opens the step-up sheet; true once the member verified. `interactive: false` never reopens a sheet the member closed. */
+  request: (requirement: DataStepUpRequirement, options?: { interactive?: boolean }) => Promise<boolean>;
+  onVerified: (listener: (area: DataStepUpArea) => void) => () => void;
 }
 
 export interface DataLogEntry {
@@ -69,25 +97,57 @@ interface RuntimeState {
   now: () => number;
   generateId: () => string;
   variant: VariantManifest | null;
+  stepUp: DataStepUp | null;
 }
 
 const hex = (count: number): string => {
   let out = '';
+
   for (let i = 0; i < count; i++) out += Math.floor(Math.random() * 16).toString(16);
+
   return out;
 };
 
 /** RFC 4122 v4 from the platform when it has one (web, Electron, Hermes with crypto), else Math.random. */
 export const defaultIdGenerator = (): string => {
   const cryptoLike = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
+
   if (cryptoLike && typeof cryptoLike.randomUUID === 'function') return cryptoLike.randomUUID();
   const variantNibble = ((Math.random() * 4) | 8).toString(16);
+
   return `${hex(8)}-${hex(4)}-4${hex(3)}-${variantNibble}${hex(3)}-${hex(12)}`;
 };
 
-const initial = (): RuntimeState => ({ location: null, api: null, session: null, outbox: null, logger: noopDataLogger, now: () => Date.now(), generateId: defaultIdGenerator, variant: null });
+const initial = (): RuntimeState => ({ location: null, api: null, session: null, outbox: null, logger: noopDataLogger, now: () => Date.now(), generateId: defaultIdGenerator, variant: null, stepUp: null });
 
 let state: RuntimeState = initial();
+
+const stepUpVerifiedListeners = new Set<(area: DataStepUpArea) => void>();
+let stopStepUpSubscription: (() => void) | null = null;
+
+/** The department step-up (from `@resgrid/auth` through the app shell); stores told of a verification send what waited for it. */
+export function setDataStepUp(stepUp: DataStepUp | null): void {
+  stopStepUpSubscription?.();
+  state.stepUp = stepUp;
+  stopStepUpSubscription = stepUp
+    ? stepUp.onVerified((area) => {
+        for (const listener of [...stepUpVerifiedListeners]) listener(area);
+      })
+    : null;
+}
+
+/** The step-up a refusal asks for, or null (no step-up configured, or any other failure). */
+export const dataStepUpRequirementOf = (cause: unknown): DataStepUpRequirement | null => state.stepUp?.requirementOf(cause) ?? null;
+
+/** Asks the member for the step-up; false without a step-up configured. */
+export const requestDataStepUp = (requirement: DataStepUpRequirement, options?: { interactive?: boolean }): Promise<boolean> => (state.stepUp ? state.stepUp.request(requirement, options) : Promise.resolve(false));
+
+/** Runs after every completed step-up, whichever screen asked for it. */
+export function onDataStepUpVerified(listener: (area: DataStepUpArea) => void): () => void {
+  stepUpVerifiedListeners.add(listener);
+
+  return () => stepUpVerifiedListeners.delete(listener);
+}
 
 /** The API context every endpoint function receives (client + cache + per-variant cache policy). */
 export function setDataApiContext(ctx: ApiContext | null): void {
@@ -96,6 +156,7 @@ export function setDataApiContext(ctx: ApiContext | null): void {
 
 export function getDataApiContext(): ApiContext {
   if (!state.api) throw new DataNotConfiguredError('api');
+
   return state.api;
 }
 
@@ -123,6 +184,7 @@ export function setDataOutbox(outbox: DataOutbox | null): void {
 
 export function getDataOutbox(): DataOutbox {
   if (!state.outbox) throw new DataNotConfiguredError('outbox');
+
   return state.outbox;
 }
 
@@ -176,6 +238,7 @@ export function setDataVariant(manifest: VariantManifest | null): void {
 
 export function getDataVariant(): VariantManifest | null {
   if (state.variant) return state.variant;
+
   try {
     return getActiveVariant();
   } catch {
@@ -185,5 +248,7 @@ export function getDataVariant(): VariantManifest | null {
 
 /** Test helper: clears every injected dependency. Not for app code. */
 export function resetDataRuntimeForTests(): void {
+  stopStepUpSubscription?.();
+  stopStepUpSubscription = null;
   state = initial();
 }

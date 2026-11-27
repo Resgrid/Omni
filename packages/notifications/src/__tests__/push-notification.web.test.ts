@@ -6,6 +6,7 @@ import { configureNotificationSounds } from '../notification-sound';
 import { usePushNotificationModalStore } from '../push-modal-store';
 import * as web from '../push-notification.web';
 import { onPushTokenRegistered, resetPushTokenListenersForTests } from '../push-token-listeners';
+import { PENDING_SIGN_OUT_MAX_AGE_MS } from '../registration-storage';
 import { BASE_API_URL, configureForTest, flush, flushAll, selectVariant, type TestContext } from './helpers';
 import { routerPushWithRetry } from './mocks/core';
 import * as audio from './mocks/expo-audio';
@@ -265,6 +266,55 @@ describe('browser', () => {
     fetchMock.mockRejectedValueOnce(new Error('offline'));
     await web.pushNotificationService.unregisterAtSignOut('access-token');
     expect(mockFirebaseDeleteToken).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps a record of the sign-out until its cleanup has run', async () => {
+    permission = 'granted';
+    await web.syncWebPush();
+    let answer: (value: { ok: boolean }) => void = () => undefined;
+    fetchMock.mockImplementationOnce(() => new Promise((resolve) => (answer = resolve)));
+    const signOut = web.pushNotificationService.unregisterAtSignOut('access-token');
+    expect(JSON.parse(storage.get(web.WEB_PUSH_PENDING_SIGN_OUT_KEY) ?? 'null')).toEqual({ accessToken: 'access-token', apiUrl: BASE_API_URL, signedOutAt: expect.any(Number) });
+
+    while (fetchMock.mock.calls.length === 0) await flush();
+    answer({ ok: true });
+    await signOut;
+    expect(storage.has(web.WEB_PUSH_PENDING_SIGN_OUT_KEY)).toBe(false);
+  });
+
+  describe('a tab closed during sign-out', () => {
+    const leftByClosedTab = async (signedOutAt: number): Promise<void> => {
+      permission = 'granted';
+      await web.syncWebPush();
+      storage.set(web.WEB_PUSH_PENDING_SIGN_OUT_KEY, JSON.stringify({ accessToken: 'ended-token', apiUrl: BASE_API_URL, signedOutAt }));
+      // The next load: nobody signed in, no department config yet.
+      web.resetWebPushForTests();
+      ctx.state.signedIn = false;
+      webConfig = null;
+    };
+
+    it('kills the token and takes it off as the ended session on the next load', async () => {
+      await leftByClosedTab(Date.now());
+      await web.pushNotificationService.initialize();
+
+      while (storage.has(web.WEB_PUSH_PENDING_SIGN_OUT_KEY)) await flush();
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        `${BASE_API_URL}/Devices/UnRegisterWebPush`,
+        expect.objectContaining({ headers: expect.objectContaining({ Authorization: 'Bearer ended-token' }), body: JSON.stringify({ Token: 'browser-token', Prefix: 'DEPT', UnitId: '12' }) })
+      );
+      expect(web.pushNotificationService.getPushToken()).toBeNull();
+    });
+
+    it('no longer sends the ended token after its lifetime, but still forgets the registration here', async () => {
+      await leftByClosedTab(Date.now() - PENDING_SIGN_OUT_MAX_AGE_MS - 1);
+      await web.pushNotificationService.initialize();
+
+      while (storage.has(web.WEB_PUSH_PENDING_SIGN_OUT_KEY)) await flush();
+
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(web.pushNotificationService.getPushToken()).toBeNull();
+    });
   });
 
   it('takes off the registration a sync in flight at sign-out was still writing', async () => {

@@ -9,10 +9,12 @@ import { z } from 'zod';
 
 export const VARIANT_IDS = ['responder', 'unit', 'ic', 'dispatch', 'bigboard'] as const;
 export const variantIdSchema = z.enum(VARIANT_IDS);
+
 export type VariantId = z.infer<typeof variantIdSchema>;
 
 export const APP_ENVS = ['development', 'staging', 'internal', 'production'] as const;
 export const appEnvSchema = z.enum(APP_ENVS);
+
 export type AppEnv = z.infer<typeof appEnvSchema>;
 
 export const NATIVE_MODULES = [
@@ -33,7 +35,9 @@ export const NATIVE_MODULES = [
   'sqlite',
   'notifee',
 ] as const;
+
 export const nativeModuleSchema = z.enum(NATIVE_MODULES);
+
 export type NativeModuleId = z.infer<typeof nativeModuleSchema>;
 
 export const FEATURE_MODULES = [
@@ -44,6 +48,7 @@ export const FEATURE_MODULES = [
   'staffing',
   'work-orders',
   'certifications',
+  'training',
   'approve-sign-in',
   'unit-status',
   'unit-routes',
@@ -55,7 +60,9 @@ export const FEATURE_MODULES = [
   'awaiting-resources',
   'dashboard',
 ] as const;
+
 export const featureModuleSchema = z.enum(FEATURE_MODULES);
+
 export type FeatureModuleId = z.infer<typeof featureModuleSchema>;
 
 const identitySchema = z.object({
@@ -94,6 +101,7 @@ export const storageCarryOverSchema = z.discriminatedUnion('from', [
   // Written without encryption: encrypted in place with a device key.
   z.object({ from: z.literal('unencrypted') }),
 ]);
+
 export type StorageCarryOver = z.infer<typeof storageCarryOverSchema>;
 
 const storageSchema = z
@@ -215,8 +223,17 @@ export const capabilitiesSchema = z.object({
    * Active plans (Call_View), so drafts and archived plans show only to those with Route_View.
    */
   routes: z.object({ preview: z.boolean() }),
+  /**
+   * The department protocol library (`/Protocols/*`, `/ProtocolContent/*`, `/ProtocolAcknowledgments/*`, Core protocols plan P1–P3)
+   * is in every app that routes `/protocols`; these say what else a member does with it there.
+   * `acknowledgments`: the member's read-and-sign list and quiz-gated acknowledgments (a person's own obligations: not on a
+   * wall display). `stepThrough`: the protocol steps of a call (start an incident SOP, tick steps done, skipped or not
+   * applicable, complete), offered to members who may edit the call. Responder, Unit, IC and Dispatch; never BigBoard.
+   */
+  protocols: z.object({ acknowledgments: z.boolean(), stepThrough: z.boolean() }),
   platform: z.object({ webEdition: z.boolean(), electron: z.boolean(), onboarding: z.boolean(), maintenanceMode: z.boolean() }),
 });
+
 export type Capabilities = z.infer<typeof capabilitiesSchema>;
 
 const nativeSchema = z.object({
@@ -256,6 +273,7 @@ export const variantManifestSchema = z.object({
   offline: offlineSchema,
   shell: shellSchema,
 });
+
 export type VariantManifest = z.infer<typeof variantManifestSchema>;
 
 export function parseVariantManifest(input: unknown): VariantManifest {

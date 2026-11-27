@@ -21,6 +21,8 @@ import { expenseSaveHandler, timeEntriesSaveHandler } from '../operations/operat
 import { personnelStaffingSetHandler, personnelStatusSetHandler, usePersonnelStatusStore } from '../personnel/personnel-status-store';
 import { usePersonnelStore } from '../personnel/personnel-store';
 import { usePoisStore } from '../pois/pois-store';
+import { protocolStepRecordHandler } from '../protocols/call-protocol-steps-store';
+import { protocolAcknowledgeHandler } from '../protocols/protocol-acknowledgments-store';
 import { useProtocolsStore } from '../protocols/protocols-store';
 import { recordCommandHandler, recordDraftSaveHandler } from '../records/records-store';
 import { routeReachStartHandler, routeStopCheckInHandler, routeStopCheckOutHandler, routeStopSkipHandler, useRoutesStore } from '../routes/routes-store';
@@ -51,6 +53,10 @@ const HANDLERS: Record<DataOutboxType, OutboxHandler[]> = {
   'records.command': [recordCommandHandler as unknown as OutboxHandler],
   'workOrders.report': [workOrderReportHandler as unknown as OutboxHandler],
   'checklists.run.save': [checklistRunSaveHandler as unknown as OutboxHandler],
+  // SAFETY: the outbox gives a handler only events of its own type, whose payload this handler enqueued (as for every entry here).
+  'protocols.step.record': [protocolStepRecordHandler as OutboxHandler],
+  // SAFETY: as above.
+  'protocols.acknowledge': [protocolAcknowledgeHandler as OutboxHandler],
   ic: incidentCommandHandlers as unknown as OutboxHandler[],
 };
 
@@ -67,6 +73,7 @@ const defaultRegistry: HandlerRegistryLike = { register: (handler) => registerOu
 export function registerDataOutboxHandlers(manifest: VariantManifest, registry: HandlerRegistryLike = defaultRegistry): () => void {
   const scope = resolveDataOfflineScope(manifest);
   const disposers = scope.handlers.flatMap((type) => HANDLERS[type].map((handler) => registry.register(handler)));
+
   return () => disposers.forEach((dispose) => dispose());
 }
 
@@ -148,11 +155,13 @@ const STEPS: Record<DataHydrationStepId, StepDefinition> = {
   'data.routes': {
     run: async () => {
       const id = unitId();
+
       if (id === null) return;
       const store = useRoutesStore.getState();
       // The department's plans, as the routes list loads them (Core's per-unit list leaves out distance and duration).
       await Promise.all([store.fetchAllRoutePlans(bypass), store.fetchActiveRoute(id, bypass)]);
       const instanceId = useRoutesStore.getState().activeInstance?.RouteInstanceId;
+
       if (instanceId) await useRoutesStore.getState().fetchStopsForInstance(instanceId);
     },
     isCurrent: () => unitId() === null || fresh(useRoutesStore.getState(), ['plans', 'active']),
@@ -160,6 +169,7 @@ const STEPS: Record<DataHydrationStepId, StepDefinition> = {
   'data.inventory': {
     run: async () => {
       const id = unitId();
+
       if (id === null) return;
       await Promise.all([useInventoryStore.getState().fetchAccess(id, bypass), useInventoryStore.getState().fetchEquipment(id, bypass)]);
     },
@@ -185,8 +195,10 @@ export interface HydrationRegistryLike {
 /** Registers one shift-start hydration step per data store in the variant's scope (plan §8.4). */
 export function registerDataHydrationSteps(sync: HydrationRegistryLike, manifest: VariantManifest): () => void {
   const scope = resolveDataOfflineScope(manifest);
+
   const disposers = scope.hydration.map((id) => {
     const definition = STEPS[id];
+
     return sync.registerHydrationStep({
       id,
       required: scope.required.includes(id),
@@ -198,6 +210,7 @@ export function registerDataHydrationSteps(sync: HydrationRegistryLike, manifest
       ...(definition.dependsOn ? { dependsOn: definition.dependsOn.filter((dependency) => scope.hydration.includes(dependency)) } : {}),
     });
   });
+
   return () => disposers.forEach((dispose) => dispose());
 }
 

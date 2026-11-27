@@ -20,6 +20,7 @@ import { protocolsNav } from '@resgrid/features/protocols/nav';
 import { recordsNav } from '@resgrid/features/records/nav';
 import { settingsNavEntries } from '@resgrid/features/settings/nav';
 import { shiftsNav } from '@resgrid/features/shifts/nav';
+import { trainingNav } from '@resgrid/features/training/nav';
 import { weatherAlertsNav } from '@resgrid/features/weather-alerts/nav';
 import { workOrdersNav } from '@resgrid/features/work-orders/nav';
 
@@ -30,7 +31,7 @@ import variant from './variant';
 // per-variant route contract test (packages/app-shell) fails otherwise. Feature entries come from each feature's nav.ts
 // (imported directly so this file stays light); the menu follows the legacy Responder side menu, with chat beside
 // messages and no notifications entry (the app bar bell opens the inbox): home, messages, chat, contacts, map, notes,
-// protocols, calendar, shifts, weather alerts, checklists, records, operations, work orders, certifications, settings.
+// protocols, calendar, shifts, weather alerts, checklists, records, operations, work orders, certifications, training, settings.
 // Personnel, units and calls are the member home's nested tabs (/home/*).
 
 export const routes = defineRoutes([
@@ -81,6 +82,11 @@ export const routes = defineRoutes([
   'certifications',
   'certificationDetail',
   'certificationEdit',
+  'training',
+  'trainingDetail',
+  'trainingCourse',
+  'trainingSubmit',
+  'trainingSubmission',
   'chat',
   'chatChannel',
   'chatbot',
@@ -117,6 +123,7 @@ export const nav = defineNav([
   ...featureNav(operationsNav, 'sidebar', { order: 62 }),
   ...featureNav(workOrdersNav, 'sidebar', { order: 63 }),
   ...featureNav(certificationsNav, 'sidebar', { order: 64 }),
+  ...featureNav(trainingNav, 'sidebar', { order: 65 }),
   // The inbox is the app bar bell (with its unread count); the route stays for the bell and for push taps.
   ...featureNav(notificationsNav, 'hidden', { order: 80 }),
   ...featureNav(callsNav, { 'call-new': 'hidden' }),

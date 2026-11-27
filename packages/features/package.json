@@ -24,6 +24,7 @@
     "@resgrid/voice": "workspace:*",
     "expo-clipboard": "catalog:",
     "expo-document-picker": "catalog:",
+    "expo-image-manipulator": "catalog:",
     "expo-image-picker": "catalog:",
     "expo-linking": "catalog:",
     "expo-router": "catalog:",

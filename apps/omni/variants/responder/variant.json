@@ -116,6 +116,10 @@
     "routes": {
       "preview": false
     },
+    "protocols": {
+      "acknowledgments": true,
+      "stepThrough": true
+    },
     "platform": {
       "webEdition": true,
       "electron": true,
@@ -123,7 +127,7 @@
       "maintenanceMode": true
     }
   },
-  "modules": ["member-home", "calendar", "shifts", "messages", "staffing", "work-orders", "certifications", "approve-sign-in"],
+  "modules": ["member-home", "calendar", "shifts", "messages", "staffing", "work-orders", "certifications", "training", "approve-sign-in"],
   "native": {
     "modules": [
       "background-location",

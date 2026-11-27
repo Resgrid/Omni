@@ -38,7 +38,17 @@ import { cancelAllLocalNotifications } from './local-notifications';
 import { type PushNotificationData, usePushNotificationModalStore } from './push-modal-store';
 import { clearRegisteredPushToken, notifyPushTokenRegistered } from './push-token-listeners';
 import type { PushNotificationService, PushRegistrationTrigger, RegisterOptions, UsePushNotificationsResult } from './push-types';
-import { createMemoryNotificationsKv, isSameRegistration, isSameSubscriber, type NotificationsKv, RegistrationStore, type StoredNativePushRegistration } from './registration-storage';
+import {
+  createMemoryNotificationsKv,
+  isSameRegistration,
+  isSameSubscriber,
+  type NotificationsKv,
+  PENDING_SIGN_OUT_MAX_AGE_MS,
+  type PendingPushSignOut,
+  RegistrationStore,
+  type SignOutUnregisterOutcome,
+  type StoredNativePushRegistration,
+} from './registration-storage';
 
 /** Core push platform ids (`Devices/RegisterDevice` `Platform`). */
 export const PUSH_PLATFORM_IOS = 1;
@@ -48,6 +58,8 @@ export const PUSH_PLATFORM_ANDROID = 2;
 export const HANDLED_RESPONSE_LIMIT = 200;
 /** A stalled sign-out call must not hold sign-out up. */
 const SIGN_OUT_TIMEOUT_MS = 10_000;
+/** Keeps pending sign-out ids unique within one run of the app (the time alone can repeat). */
+let pendingSignOutSequence = 0;
 
 interface PushSession {
   /** Set at sign-out: how that session reached the server, for a registration that lands after it. */
@@ -147,6 +159,8 @@ class NativePushNotificationService implements PushNotificationService {
   private registeredKey: string | null = null;
   /** Replaced at sign-out, so a registration in flight can tell its session has ended. */
   private session: PushSession = {};
+  /** Pending sign-outs being taken off now, by record id. */
+  private settling = new Map<string, Promise<void>>();
   private registrationQueue: Promise<unknown> = Promise.resolve();
   private initialized = false;
   private notificationListener: { remove: () => void } | null = null;
@@ -198,6 +212,9 @@ class NativePushNotificationService implements PushNotificationService {
     this.notificationListener = Notifications.addNotificationReceivedListener(this.handleNotificationReceived);
     this.responseListener = Notifications.addNotificationResponseReceivedListener(this.handleNotificationResponse);
     this.setupNotifeeEvents();
+
+    // A sign-out the previous run could not finish (killed, offline) takes its token off now; never holds up startup.
+    void this.takeOffPendingSignOuts().catch(() => undefined);
 
     // Cold start before channel setup: the launch tap must not wait for 60 channels to be created.
     await this.handleLaunchResponse();
@@ -412,6 +429,10 @@ class NativePushNotificationService implements PushNotificationService {
       logger.warn({ message: 'Push notifications are not available on a simulator/emulator' });
       return null;
     }
+    // The previous session's registrations go first: a token this one registers must not still deliver theirs, and a
+    // device token replaced for them is replaced before this registration reads it.
+    await this.takeOffPendingSignOuts();
+
     const identity = currentIdentity(deps);
     if (!identity) {
       return null;
@@ -561,25 +582,95 @@ class NativePushNotificationService implements PushNotificationService {
     this.session.signOut = { accessToken, apiUrl, headers };
     this.session = {};
 
-    if (!accessToken || !apiUrl) {
-      return Promise.resolve();
-    }
     // Only the session that made a registration takes it off (IC): another user's token is not this one's to remove.
     const own = registrations.filter((entry) => !signingOutUserId || entry.UserId === signingOutUserId);
-    return Promise.all(own.map((entry) => this.unregisterAsSignedOutSession(entry, accessToken, apiUrl, headers))).then(() => undefined);
+
+    return this.takeOffAsEndedSession(accessToken, apiUrl, headers, own);
   }
 
   private async unregisterAfterSignOut(session: PushSession, registration: StoredNativePushRegistration): Promise<void> {
     const signOut = session.signOut;
-    if (!signOut?.accessToken || !signOut.apiUrl) {
-      logger.warn({ message: 'Push: a registration that landed after sign-out could not be taken off' });
+
+    await this.takeOffAsEndedSession(signOut?.accessToken ?? null, signOut?.apiUrl ?? '', signOut?.headers ?? {}, [registration]);
+  }
+
+  /**
+   * Takes an ended session's registrations off the server as that session. Core keeps a token on every user that
+   * registered it and removes it only for the user whose access token asks, so this is the one way the next person on
+   * the device stops getting the previous one's pushes. The record is written before any request, survives a killed
+   * app and every wipe, and is tried again at launch and before the next registration until the server answers.
+   */
+  private async takeOffAsEndedSession(accessToken: string | null, apiUrl: string, headers: Record<string, string>, registrations: StoredNativePushRegistration[]): Promise<void> {
+    if (registrations.length === 0) {
       return;
     }
-    await this.unregisterAsSignedOutSession(registration, signOut.accessToken, signOut.apiUrl, signOut.headers);
+
+    pendingSignOutSequence += 1;
+    const record: PendingPushSignOut = { id: `${Date.now()}-${pendingSignOutSequence}`, accessToken, apiUrl, signedOutAt: Date.now(), registrations };
+    this.getStore().addPendingSignOut(record);
+    await this.settleRecord(record, headers);
+  }
+
+  /** Tries every registration of a pending sign-out once; one already being tried is waited for, not sent twice. */
+  private settleRecord(record: PendingPushSignOut, headers: Record<string, string>): Promise<void> {
+    const running = this.settling.get(record.id);
+
+    if (running) {
+      return running;
+    }
+
+    const run = (async () => {
+      const usable = !!record.accessToken && !!record.apiUrl && Date.now() - record.signedOutAt < PENDING_SIGN_OUT_MAX_AGE_MS;
+      const outcomes = await Promise.all(
+        record.registrations.map(async (registration) => {
+          const outcome = usable && record.accessToken ? await this.unregisterAsSignedOutSession(registration, record.accessToken, record.apiUrl, headers) : 'refused';
+          this.getStore().settlePendingSignOut(record.id, registration, outcome);
+
+          return outcome;
+        })
+      );
+
+      if (outcomes.includes('refused')) {
+        await this.rotateDeviceToken();
+      }
+    })().finally(() => this.settling.delete(record.id));
+
+    this.settling.set(record.id, run);
+
+    return run;
+  }
+
+  /** Every sign-out the server has not confirmed yet (a killed app, no network, a server error), one pass at a time. */
+  private takeOffPendingSignOuts(): Promise<void> {
+    const headers = getOptionalNotificationsDependencies()?.getRequestHeaders?.() ?? {};
+
+    return Promise.all(
+      this.getStore()
+        .getPendingSignOuts()
+        .map((record) => this.settleRecord(record, headers))
+    ).then(() => undefined);
+  }
+
+  /**
+   * The ended session can no longer take its registration off (its token is refused or past its lifetime). A new device
+   * token leaves the old registration pointing at a dead one: Android deletes the FCM token; iOS stops delivery until
+   * the next registration (APNs may hand the same token back, so the server call above is what counts there).
+   */
+  private async rotateDeviceToken(): Promise<void> {
+    logger.warn({ message: 'Push: a signed-out registration could not be taken off; replacing the device token' });
+
+    try {
+      await Notifications.unregisterForNotificationsAsync();
+    } catch (error) {
+      logger.warn({ message: 'Push: the device token could not be replaced', context: errorContext(error) });
+    }
+
+    this.pushToken = null;
+    this.registeredKey = null;
   }
 
   /** Straight to the server, not through the api client: its 401 handling would re-enter logout. Quiet by design. */
-  private async unregisterAsSignedOutSession(registration: StoredNativePushRegistration, accessToken: string, apiUrl: string, headers: Record<string, string>): Promise<void> {
+  private async unregisterAsSignedOutSession(registration: StoredNativePushRegistration, accessToken: string, apiUrl: string, headers: Record<string, string>): Promise<SignOutUnregisterOutcome> {
     const controller = typeof AbortController === 'undefined' ? null : new AbortController();
     const timer = controller ? setTimeout(() => controller.abort(), SIGN_OUT_TIMEOUT_MS) : null;
     try {
@@ -594,11 +685,19 @@ class NativePushNotificationService implements PushNotificationService {
         }),
         ...(controller ? { signal: controller.signal } : {}),
       });
-      if (!response.ok) {
-        logger.warn({ message: 'Push: the server refused to unregister the device token at sign-out', context: { status: response.status } });
+      if (response.ok) {
+        return 'removed';
       }
+
+      logger.warn({ message: 'Push: the server refused to unregister the device token at sign-out', context: { status: response.status } });
+
+      // A server error is tried again. Any other refusal (the ended session's token no longer accepted, above all) is
+      // final: the registration stays on the server, and only a new device token stops it delivering here.
+      return response.status >= 500 ? 'retry' : 'refused';
     } catch (error) {
       logger.warn({ message: 'Push: the device token could not be unregistered at sign-out', context: errorContext(error) });
+
+      return 'retry';
     } finally {
       if (timer) clearTimeout(timer);
     }
@@ -636,6 +735,7 @@ class NativePushNotificationService implements PushNotificationService {
     this.registration = undefined;
     this.registeredKey = null;
     this.session = {};
+    this.settling = new Map();
     this.registrationQueue = Promise.resolve();
     this.handledResponseIds.clear();
   }

@@ -29,7 +29,7 @@ export const CallOutstandingRequirements: React.FC<CallOutstandingRequirementsPr
   const { t } = useTranslation();
   const isEnabled = useIsAwaitingResourcesEnabled();
   const lastPushAt = useAwaitingResourcesStore((state) => state.lastPushAt);
-  const busyKey = useAwaitingResourcesStore((state) => state.busyKey);
+  const busyKeys = useAwaitingResourcesStore((state) => state.busyKeys);
   const allResponseCodes = useAwaitingResourcesStore((state) => state.allResponseCodes);
   const requirements = useAwaitingResourcesStore((state) => state.requirementsByCall[callId] ?? EMPTY);
   const { dismissRequirement } = useAwaitingResourceActions();
@@ -43,6 +43,7 @@ export const CallOutstandingRequirements: React.FC<CallOutstandingRequirementsPr
     async (note: string) => {
       if (!target) return;
       const dismissed = await dismissRequirement(target.CallId, target.CallOutstandingRequirementId, note);
+
       if (dismissed) setTarget(null);
       void useAwaitingResourcesStore.getState().fetchCallRequirements(callId, { bypassCache: true });
     },
@@ -63,6 +64,7 @@ export const CallOutstandingRequirements: React.FC<CallOutstandingRequirementsPr
         {requirements.map((requirement) => {
           const code = findResponseCode(allResponseCodes, requirement.ResponseCode, requirement.ResponseCodeId);
           const rowTestID = `${testID}-${requirement.CallOutstandingRequirementId}`;
+
           return (
             <HStack key={`call-req-${requirement.CallOutstandingRequirementId}`} space="sm" className="items-center justify-between" testID={rowTestID}>
               <VStack className="flex-1">
@@ -78,7 +80,7 @@ export const CallOutstandingRequirements: React.FC<CallOutstandingRequirementsPr
                   variant="outline"
                   action="secondary"
                   onPress={() => setTarget(requirement)}
-                  isDisabled={busyKey === awaitingDismissKey(requirement.CallOutstandingRequirementId)}
+                  isDisabled={busyKeys.includes(awaitingDismissKey(requirement.CallOutstandingRequirementId))}
                   testID={`${rowTestID}-dismiss`}
                 >
                   <ButtonText>{t('awaiting_resources.dismiss')}</ButtonText>
@@ -91,7 +93,7 @@ export const CallOutstandingRequirements: React.FC<CallOutstandingRequirementsPr
       <DismissRequirementDialog
         isOpen={target !== null}
         requirementLabel={target?.Label ?? null}
-        isSubmitting={target !== null ? busyKey === awaitingDismissKey(target.CallOutstandingRequirementId) : false}
+        isSubmitting={target !== null ? busyKeys.includes(awaitingDismissKey(target.CallOutstandingRequirementId)) : false}
         onConfirm={(note) => void confirmDismiss(note)}
         onClose={() => setTarget(null)}
       />

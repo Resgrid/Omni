@@ -1,6 +1,6 @@
 # Nightly developer builds and device e2e (omni-plan §6.6.2 principle 3, §6.6.3, §12) — kept off the release path.
-#   dev-build    <variant>-dev-sim per variant: Android dev-client APK (emulator-installable). No iOS builds in CI:
-#                iOS dev, simulator and ad-hoc builds are made on a Mac (pnpm ios:adhoc, scripts/ci/maestro-ios.sh)
+#   dev-build    <variant>-dev-sim per variant: Android dev-client APK (emulator-installable). iOS simulator builds run
+#                per pull request in app-platforms.yml; ad-hoc builds are made on a Mac (pnpm ios:adhoc)
 #   e2e-android  Maestro flows on an Android emulator against the dev-client APK + Metro; one variant per night
 #                (rotates by UTC day) unless e2e_variants says otherwise
 #   warm-caches  pnpm stores, Electron and Playwright downloads on the default branch, so PR and release runs hit them

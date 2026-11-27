@@ -1,10 +1,10 @@
 import { dismissRequirement, dispatchUnitToAwaitingCall, getAwaitingCalls, getAwaitingResourceResponseCodes, getCallRequirements } from '@resgrid/api';
-import { OutstandingRequirementsAlertKind } from '@resgrid/models';
+import { AwaitingResourcesActionResult, OutstandingRequirementsAlertKind } from '@resgrid/models';
 import { defaultResetRegistry } from '@resgrid/offline';
 
 import { createDataTestRuntime, type DataTestRuntime, flush, httpError, networkError, ok, persisted } from '../../__tests__/helpers';
 import { activeResponseCodes, parseOutstandingRequirementsAlert } from '../awaiting-resources-alerts';
-import { MAX_UNIT_ALERTS, pruneUnitAlerts, useAwaitingResourcesStore } from '../awaiting-resources-store';
+import { awaitingDismissKey, awaitingDispatchKey, MAX_UNIT_ALERTS, pruneUnitAlerts, useAwaitingResourcesStore } from '../awaiting-resources-store';
 
 jest.mock('@resgrid/api', () => ({
   ...jest.requireActual('@resgrid/api'),
@@ -20,11 +20,32 @@ const call = (CallId: number) => ({ CallId, CallNumber: `C-${CallId}`, CallName:
 const alertPayload = (kind: number, unitId: number, callIds: number[]) =>
   JSON.stringify({ kind, unitId, unitName: `M-${unitId}`, unitTypeName: 'MUG', message: 'M available', calls: callIds.map((callId) => ({ callId, callNumber: `C-${callId}`, priority: 1, ageMinutes: 6 })) });
 
+const actionResult = (fields: Partial<AwaitingResourcesActionResult>): AwaitingResourcesActionResult => Object.assign(new AwaitingResourcesActionResult(), { Status: 'success', Success: true }, fields);
+
+/** A request the test answers when it chooses. */
+interface Deferred<T> {
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+}
+
+const deferred = <T>(): Deferred<T> => {
+  let resolve: (value: T) => void = () => undefined;
+
+  const promise = new Promise<T>((settle) => {
+    resolve = settle;
+  });
+
+  return { promise, resolve };
+};
+
+/** Sign-out: the reset every data store registers. */
+const resetStore = async () => defaultResetRegistry.getStoreResets().get('data.awaiting-resources')?.('logout');
+
 let runtime: DataTestRuntime;
 
 beforeEach(async () => {
   runtime = await createDataTestRuntime({ variant: 'dispatch' });
-  await defaultResetRegistry.getStoreResets().get('data.awaiting-resources')?.('logout');
+  await resetStore();
   jest.mocked(getAwaitingCalls).mockResolvedValue({ Enabled: true, Data: [call(1), call(2)], Status: 'success' } as never);
 });
 
@@ -43,6 +64,7 @@ describe('awaiting-resources helpers', () => {
       { Id: 2, Code: 'C2', SortOrder: 1, Retired: false },
       { Id: 3, Code: 'C1', SortOrder: 0, Retired: true },
     ] as never;
+
     expect(activeResponseCodes(codes).map((code) => code.Code)).toEqual(['C2', 'C3']);
   });
 
@@ -95,6 +117,7 @@ describe('awaiting-resources store', () => {
 
   it('adds one alert per unit (newest first, capped), drops it on auto-dispatch, and always refreshes', async () => {
     await useAwaitingResourcesStore.getState().fetchAwaitingCalls();
+
     for (let unit = 1; unit <= MAX_UNIT_ALERTS + 1; unit++) useAwaitingResourcesStore.getState().handleOutstandingRequirementsUpdated('0', alertPayload(1, unit, [1]));
     useAwaitingResourcesStore.getState().handleOutstandingRequirementsUpdated('0', alertPayload(1, 6, [2]));
     let alerts = useAwaitingResourcesStore.getState().unitAlerts;
@@ -119,10 +142,69 @@ describe('awaiting-resources store', () => {
     expect(dispatchUnitToAwaitingCall).toHaveBeenCalledWith(expect.anything(), { CallId: 1, UnitId: 4 });
     expect(outcome).toEqual({ ok: true, message: 'M-4 added to C-1', error: null });
     expect(useAwaitingResourcesStore.getState().unitAlerts).toEqual([]);
-    expect(useAwaitingResourcesStore.getState().busyKey).toBeNull();
+    expect(useAwaitingResourcesStore.getState().busyKeys).toEqual([]);
 
     jest.mocked(dispatchUnitToAwaitingCall).mockRejectedValueOnce(httpError(403));
     expect((await useAwaitingResourcesStore.getState().dispatchUnit(1, 4)).error?.code).toBe('forbidden');
+  });
+
+  it('keeps each action busy until that action finishes, and joins a second press on the same row', async () => {
+    const dispatch = deferred<AwaitingResourcesActionResult>();
+    const dismiss = deferred<AwaitingResourcesActionResult>();
+
+    jest.mocked(dispatchUnitToAwaitingCall).mockReturnValueOnce(dispatch.promise);
+    jest.mocked(dismissRequirement).mockReturnValueOnce(dismiss.promise);
+    const dispatching = useAwaitingResourcesStore.getState().dispatchUnit(1, 4);
+    const dismissing = useAwaitingResourcesStore.getState().dismissRequirement(2, 5);
+    const dispatchingAgain = useAwaitingResourcesStore.getState().dispatchUnit(1, 4);
+
+    expect(useAwaitingResourcesStore.getState().busyKeys).toEqual([awaitingDispatchKey(1, 4), awaitingDismissKey(5)]);
+    expect(dispatchUnitToAwaitingCall).toHaveBeenCalledTimes(1);
+
+    dismiss.resolve(actionResult({}));
+    await dismissing;
+
+    // The dismiss finishing first leaves the dispatch's button off, so a second press cannot page the unit again.
+    expect(useAwaitingResourcesStore.getState().busyKeys).toEqual([awaitingDispatchKey(1, 4)]);
+
+    dispatch.resolve(actionResult({ Message: 'M-4 added to C-1' }));
+
+    expect(await dispatching).toEqual({ ok: true, message: 'M-4 added to C-1', error: null });
+    expect(await dispatchingAgain).toEqual({ ok: true, message: 'M-4 added to C-1', error: null });
+    expect(useAwaitingResourcesStore.getState().busyKeys).toEqual([]);
+    expect(dispatchUnitToAwaitingCall).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves the next session alone when an action lands after sign-out', async () => {
+    const before = deferred<AwaitingResourcesActionResult>();
+    const after = deferred<AwaitingResourcesActionResult>();
+
+    jest.mocked(dispatchUnitToAwaitingCall).mockReturnValueOnce(before.promise);
+    const dispatching = useAwaitingResourcesStore.getState().dispatchUnit(1, 4);
+
+    await resetStore();
+    // The next session: a fresh alert offers the same unit and the dispatcher sends it, a new request of its own.
+    useAwaitingResourcesStore.getState().handleOutstandingRequirementsUpdated('0', alertPayload(1, 4, [1]));
+    await flush();
+    jest.mocked(dispatchUnitToAwaitingCall).mockReturnValueOnce(after.promise);
+    const dispatchingAfter = useAwaitingResourcesStore.getState().dispatchUnit(1, 4);
+
+    expect(dispatchUnitToAwaitingCall).toHaveBeenCalledTimes(2);
+    jest.mocked(getAwaitingCalls).mockClear();
+
+    before.resolve(actionResult({}));
+    await dispatching;
+    await flush();
+
+    expect(useAwaitingResourcesStore.getState().busyKeys).toEqual([awaitingDispatchKey(1, 4)]);
+    expect(useAwaitingResourcesStore.getState().unitAlerts).toHaveLength(1);
+    expect(getAwaitingCalls).not.toHaveBeenCalled();
+
+    after.resolve(actionResult({}));
+    await dispatchingAfter;
+
+    expect(useAwaitingResourcesStore.getState().busyKeys).toEqual([]);
+    expect(useAwaitingResourcesStore.getState().unitAlerts).toEqual([]);
   });
 
   it('loads a call’s requirements and removes a dismissed one', async () => {
