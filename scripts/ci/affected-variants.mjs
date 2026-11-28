@@ -35,8 +35,17 @@ export function platformMatrix(variants, platforms = TEST_PLATFORMS) {
   return Object.fromEntries(TEST_PLATFORMS.map((p) => [p, platforms.includes(p) ? variants : []]));
 }
 
+/** A commit or ref name for `git diff`: never an option (leading `-`) and never whitespace or control characters. */
+export function revision(value) {
+  const rev = String(value);
+
+  if (!/^[\w./~^@{}+-]+$/.test(rev) || rev.startsWith('-')) throw new Error(`Invalid revision "${rev}".`);
+
+  return rev;
+}
+
 function changedPaths(base, head) {
-  const result = spawnSync('git', ['diff', '--name-only', '--no-renames', base, head], { encoding: 'utf8' });
+  const result = spawnSync('git', ['diff', '--name-only', '--no-renames', '--end-of-options', revision(base), revision(head)], { encoding: 'utf8' });
 
   if (result.status !== 0) {
     console.error(`::warning::Could not diff ${base}..${head} (${(result.stderr || '').trim()}); testing every selected variant.`);
@@ -54,6 +63,8 @@ function main() {
   const platforms = pick(args.platforms, TEST_PLATFORMS);
 
   if (!selected.length) throw new Error('No variants selected.');
+
+  if (!platforms.length) throw new Error('No platforms selected.');
   const paths = args.base && args.base !== true ? changedPaths(String(args.base), String(args.head ?? 'HEAD')) : undefined;
   const reach = paths ? affectedVariants(paths, selected) : { variants: selected, shared: true };
   const matrix = platformMatrix(reach.variants, platforms);

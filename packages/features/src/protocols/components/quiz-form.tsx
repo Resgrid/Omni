@@ -56,7 +56,13 @@ export const QuizForm: React.FC<QuizFormProps> = ({ questions, onSubmit, isSubmi
   return (
     <VStack space="lg" testID={testID}>
       {questions.map((question, index) => (
-        <VStack key={question.id} space="sm" accessibilityRole={question.multiple ? undefined : 'radiogroup'} testID={`${testID}-question-${question.id}`}>
+        <VStack
+          key={question.id}
+          space="sm"
+          accessibilityRole={question.multiple ? undefined : 'radiogroup'}
+          accessibilityLabel={question.multiple ? undefined : question.text}
+          testID={`${testID}-question-${question.id}`}
+        >
           <Text className="font-semibold text-typography-900">{`${index + 1}. ${question.text}`}</Text>
           {question.multiple ? (
             <Text size="xs" className="text-typography-500">
@@ -83,7 +89,7 @@ export const QuizForm: React.FC<QuizFormProps> = ({ questions, onSubmit, isSubmi
                   key={option.key}
                   onPress={() => pick(question, option.key)}
                   accessibilityRole={question.multiple ? 'checkbox' : 'radio'}
-                  accessibilityState={question.multiple ? { checked: selected } : { selected }}
+                  accessibilityState={{ checked: selected }}
                   accessibilityLabel={option.text}
                   testID={`${testID}-option-${question.id}-${option.key}`}
                   className={`rounded-lg border p-3 ${selected ? 'border-primary-500 bg-primary-50' : 'border-outline-200 bg-background-0'}`}

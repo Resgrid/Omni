@@ -107,7 +107,7 @@ export {
   type ResetRegistry,
   unregisterStoreReset,
 } from './reset/registry';
-export { createScopeWiper, type ScopeWiper, type ScopeWiperOptions, type UnsentWritesPolicy, type WipeOptions, type WipeReport } from './reset/wipe';
+export { createScopeWiper, isWipeComplete, type ScopeWiper, type ScopeWiperOptions, type UnsentWritesPolicy, WipeIncompleteError, type WipeOptions, type WipeReport, wipeScopeCompletely } from './reset/wipe';
 
 // A wipe the app did not live through (sign-out marks it; initOffline finishes it)
 export { beginPendingWipe, clearPendingWipe, finishPendingWipe, markWipePending, PENDING_WIPE_KEY, type PendingWipeReason, type PendingWipeRun, readPendingWipe } from './reset/pending-wipe';

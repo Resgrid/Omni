@@ -61,6 +61,19 @@ describe('web and Electron', () => {
     expect(popup.close).toHaveBeenCalled();
   });
 
+  it('says the window is blocked instead of opening one late, when the browser refused it or the member closed it', async () => {
+    const closed = { closed: true, opener: {}, location: { href: '' }, close: jest.fn() };
+    const open = jest.fn((): typeof closed | null => null);
+    Object.defineProperty(globalThis, 'open', { value: open, configurable: true, writable: true });
+    await expect(prepareLaunchBrowser().open(launch().LaunchUrl)).resolves.toBe('blocked');
+    expect(open).toHaveBeenCalledTimes(1);
+
+    open.mockReturnValue(closed);
+    await expect(prepareLaunchBrowser().open(launch().LaunchUrl)).resolves.toBe('blocked');
+    expect(open).toHaveBeenCalledTimes(2);
+    expect(closed.location.href).toBe('');
+  });
+
   it('in Electron, hands the link to the system browser (the shell denies the window and opens it outside)', async () => {
     mockElectron.value = true;
     const open = jest.fn(() => null);

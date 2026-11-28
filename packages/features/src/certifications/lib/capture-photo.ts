@@ -39,19 +39,34 @@ export const asJpegName = (name: string): string => {
   return `${base || 'photo'}.jpg`;
 };
 
+/** The resize that brings an image's longest side down to PHOTO_MAX_DIMENSION; null when it is already within it (or unknown). */
+const boundedResize = (width: number, height: number): { width: number } | { height: number } | null =>
+  Math.max(width, height) > PHOTO_MAX_DIMENSION ? (width >= height ? { width: PHOTO_MAX_DIMENSION } : { height: PHOTO_MAX_DIMENSION }) : null;
+
 /**
  * Re-encodes an image as a JPEG on the device: HEIC/HEIF becomes JPEG (Core refuses HEIC so that location metadata never
  * reaches storage) and the new file carries no EXIF, GPS or device data, whatever the picker kept. Large photos are scaled
- * down. Throws PhotoFormatError when the image cannot be decoded here.
+ * down, by the picker's dimensions or, when it gave none (a document picked as a file), by the decoded image's. Throws
+ * PhotoFormatError when the image cannot be decoded here.
  */
 export async function toUploadJpeg(uri: string, width: number | undefined, height: number | undefined, name: string): Promise<CapturedPhoto> {
   try {
+    const known = width && height ? { width, height } : null;
     const context = ImageManipulator.manipulate(uri);
-    const longest = Math.max(width ?? 0, height ?? 0);
+    const resize = known ? boundedResize(known.width, known.height) : null;
 
-    if (longest > PHOTO_MAX_DIMENSION) context.resize((width ?? 0) >= (height ?? 0) ? { width: PHOTO_MAX_DIMENSION } : { height: PHOTO_MAX_DIMENSION });
+    if (resize) context.resize(resize);
 
-    const image = await context.renderAsync();
+    let image = await context.renderAsync();
+    const decodedResize = known ? null : boundedResize(image.width, image.height);
+
+    if (decodedResize) {
+      const scaled = ImageManipulator.manipulate(image);
+
+      scaled.resize(decodedResize);
+      image = await scaled.renderAsync();
+    }
+
     const saved = await image.saveAsync({ format: SaveFormat.JPEG, compress: 0.7, base64: true });
 
     if (!saved.base64) throw new PhotoFormatError();

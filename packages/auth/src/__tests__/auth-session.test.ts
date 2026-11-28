@@ -1,5 +1,5 @@
 import { getCurrentUsersRights } from '@resgrid/api';
-import { createScopeWiper, type DurableKv, finishPendingWipe, PENDING_WIPE_KEY } from '@resgrid/offline';
+import { createResetRegistry, createScopeWiper, type DurableKv, finishPendingWipe, PENDING_WIPE_KEY, wipeScopeCompletely } from '@resgrid/offline';
 
 import { getCurrentSession } from '../api/shared-session';
 import { getAuthApiContext } from '../runtime/api-context';
@@ -377,6 +377,18 @@ describe('sign-out (clear state first, push unregister before any server switch,
     expect(h.storage.main.getString(PENDING_WIPE_KEY)).toBe('auth-rejected');
   });
 
+  it('keeps the mark when the wipe resolves but left data behind (a store reset failed)', async () => {
+    const registry = createResetRegistry();
+    registry.registerStoreReset('broken', () => {
+      throw new Error('reset failed');
+    });
+    const wiper = createScopeWiper({ registry, kvInstances: () => h.storage.all(), variantId: 'unit' });
+    setAuthServices({ wipeScope: (reason) => wipeScopeCompletely(wiper, reason), apiCache: h.apiCache });
+    await useAuthStore.getState().logout(undefined, 'logout');
+    expect(useAuthStore.getState().status).toBe('signedOut');
+    expect(h.storage.main.getString(PENDING_WIPE_KEY)).toBe('logout');
+  });
+
   it('opens a sign-in made during a sign-out only after its wipe, so the wipe never takes the new session', async () => {
     const wiper = createScopeWiper({ kvInstances: () => h.storage.all(), variantId: 'unit' });
     const statusAtWipe: string[] = [];
@@ -403,6 +415,37 @@ describe('sign-out (clear state first, push unregister before any server switch,
     expect(statusAtWipe).toEqual(['loading']);
     expect(useAuthStore.getState()).toMatchObject({ status: 'signedIn', accessToken: 'access-next' });
     expect(h.storage.main.getString('auth-storage')).toContain('access-next');
+  });
+
+  it('never commits a sign-in while a sign-out that started after its wait is still running, at any moment it starts', async () => {
+    /** A password sign-in whose token response arrives, then a sign-out that starts `ticks` callbacks later. */
+    const raceAt = async (ticks: number): Promise<string[]> => {
+      const race = setupHarness('unit');
+      const statusAtWipe: string[] = [];
+      race.wipeScope.mockImplementation(async () => {
+        statusAtWipe.push(useAuthStore.getState().status);
+      });
+      let answer: () => void = () => undefined;
+      race.server.on('POST', '/connect/token', () => new Promise((resolve) => (answer = () => resolve({ data: tokenResponse({ access_token: 'access-next' }) }))));
+      let unregistered: () => void = () => undefined;
+      registerSignOutHook(() => new Promise<void>((resolve) => (unregistered = resolve)));
+      const signingIn = useAuthStore.getState().login({ username: 'next', password: 'secret' });
+      await flush(20);
+      answer();
+      await flush(ticks);
+      const signingOut = useAuthStore.getState().logout();
+      await flush(50);
+      unregistered();
+      await Promise.all([signingIn, signingOut]);
+      refreshEngine.endSession();
+
+      return statusAtWipe;
+    };
+
+    for (let ticks = 0; ticks <= 40; ticks++) {
+      // The wipe never runs over a session that opened while it waited on its hooks.
+      expect({ ticks, statusAtWipe: await raceAt(ticks) }).toEqual({ ticks, statusAtWipe: [expect.not.stringMatching(/^signedIn$/)] });
+    }
   });
 
   it('is single-flight: concurrent sign-outs share one wipe', async () => {

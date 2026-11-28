@@ -2685,7 +2685,8 @@
       "queued": "Su confirmación se guardó en este dispositivo y se enviará cuando vuelva a estar en línea.",
       "awaiting_step_up": "Su confirmación se guardó y se enviará en cuanto verifique que es usted.",
       "verify_now": "Verificar que es usted",
-      "status_held": "Esperando verificación"
+      "status_held": "Esperando verificación",
+      "content_needed": "La versión que debe leer aún no se ha cargado. Podrá confirmarla en cuanto se muestre."
     },
     "quiz": {
       "pick_all": "Elija todas las respuestas que correspondan.",
@@ -5756,7 +5757,8 @@
         "unavailable": "Esta lección no se puede abrir ahora. Inténtelo más tarde.",
         "rate_limited": "Se abrieron demasiadas lecciones en poco tiempo. Espere un minuto y vuelva a intentarlo.",
         "not_found": "Esta lección ya no está disponible.",
-        "expired": "El enlace de la lección caducó antes de abrirse. Vuelva a empezar la lección."
+        "expired": "El enlace de la lección caducó antes de abrirse. Vuelva a empezar la lección.",
+        "window_blocked": "No se pudo abrir la ventana de la lección. Permita las ventanas emergentes para este sitio si su navegador lo solicita y vuelva a empezar la lección."
       }
     }
   },

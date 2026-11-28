@@ -5,7 +5,7 @@ import { useTranslation } from '@resgrid/i18n';
 import type { ProtocolAcknowledgmentResultData, ProtocolQuizView, TrainingQuizData } from '@resgrid/models';
 import { Button, ButtonSpinner, ButtonText, HStack, Spinner, Text, useThemeColors, useToast, VStack } from '@resgrid/ui';
 import { BadgeCheck, ClipboardCheck } from 'lucide-react-native';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 
 import { acknowledgeOutcomeKey, acknowledgmentStatusKey } from '../lib/protocol-library';
@@ -13,7 +13,10 @@ import { QuizForm, type QuizQuestionView, type QuizSubmission } from './quiz-for
 
 export interface AcknowledgmentPanelProps {
   acknowledgment: ProtocolAcknowledgmentResultData;
-  /** The content hash of the version on screen (the source version's, which is what Core checks). */
+  /**
+   * The content hash of the owed version's loaded content (the source version's, which is what Core checks), or null while
+   * that content has not loaded. Signing waits for it: the member signs only the text they were shown.
+   */
   contentHash: string | null;
   testID?: string;
 }
@@ -56,40 +59,56 @@ export const AcknowledgmentPanel: React.FC<AcknowledgmentPanelProps> = ({ acknow
   const awaitingQuiz = acknowledgment.Status === AcknowledgmentStatus.AwaitingQuiz;
   const isHeld = useProtocolAcknowledgmentsStore((state) => state.held.some((item) => item.protocolVersionId === acknowledgment.ProtocolVersionId));
   const trainingQuizId = acknowledgment.QuizTrainingId && !acknowledgment.QuizPassed ? acknowledgment.QuizTrainingId : null;
+  // Each quiz load takes a ticket; only the latest one may install its quiz, so a load for an earlier acknowledgment (the
+  // panel stays mounted when the owed version changes) or a superseded retry never shows under the current one.
+  const quizTicket = useRef(0);
 
   const loadQuiz = useCallback(async () => {
-    setQuiz({ kind: 'loading' });
+    quizTicket.current += 1;
+    const ticket = quizTicket.current;
+
+    const install = (next: QuizState) => {
+      if (ticket === quizTicket.current) setQuiz(next);
+    };
+
+    install({ kind: 'loading' });
 
     if (acknowledgment.BankQuizOwed) {
       const started = await useProtocolAcknowledgmentsStore.getState().startBankQuiz(acknowledgment.ProtocolVersionId);
-      setQuiz(started.quiz ? { kind: 'bank', quiz: started.quiz } : { kind: 'unavailable' });
+      install(started.quiz ? { kind: 'bank', quiz: started.quiz } : { kind: 'unavailable' });
 
       return;
     }
 
     if (trainingQuizId) {
       const training = await useTrainingStore.getState().fetchTraining(trainingQuizId, { bypassCache: true });
-      setQuiz(training?.Quiz ? { kind: 'training', trainingId: trainingQuizId, quiz: training.Quiz } : { kind: 'unavailable' });
+      install(training?.Quiz ? { kind: 'training', trainingId: trainingQuizId, quiz: training.Quiz } : { kind: 'unavailable' });
 
       return;
     }
 
-    setQuiz({ kind: 'unavailable' });
+    install({ kind: 'unavailable' });
   }, [acknowledgment.BankQuizOwed, acknowledgment.ProtocolVersionId, trainingQuizId]);
 
   useEffect(() => {
-    if (awaitingQuiz) void loadQuiz();
-    else setQuiz({ kind: 'none' });
+    if (awaitingQuiz) {
+      void loadQuiz();
+
+      return;
+    }
+
+    // No quiz owed now: a load still in flight must not bring one back.
+    quizTicket.current += 1;
+    setQuiz({ kind: 'none' });
   }, [awaitingQuiz, loadQuiz]);
 
   const sign = async () => {
-    const hash = contentHash ?? acknowledgment.ContentHash;
-
-    if (!hash) return;
+    // Only the hash of the version content on screen: never the acknowledgment's own hash, which would sign text not yet shown.
+    if (!contentHash) return;
     setIsSigning(true);
 
     try {
-      const result = await useProtocolAcknowledgmentsStore.getState().acknowledge(acknowledgment.ProtocolVersionId, hash);
+      const result = await useProtocolAcknowledgmentsStore.getState().acknowledge(acknowledgment.ProtocolVersionId, contentHash);
 
       if (result.kind === 'answered') {
         const message = t(acknowledgeOutcomeKey(result.data.Outcome));
@@ -189,9 +208,16 @@ export const AcknowledgmentPanel: React.FC<AcknowledgmentPanelProps> = ({ acknow
               </Button>
             </VStack>
           ) : (
-            <Button onPress={() => void sign()} isDisabled={isSigning || !(contentHash ?? acknowledgment.ContentHash)} testID={`${testID}-sign`}>
-              {isSigning ? <ButtonSpinner color={colors.textInverse} /> : <ButtonText>{t('protocols.ack.sign')}</ButtonText>}
-            </Button>
+            <VStack space="sm">
+              {contentHash ? null : (
+                <Text size="sm" className="text-typography-500" testID={`${testID}-content-needed`}>
+                  {t('protocols.ack.content_needed')}
+                </Text>
+              )}
+              <Button onPress={() => void sign()} isDisabled={isSigning || !contentHash} testID={`${testID}-sign`}>
+                {isSigning ? <ButtonSpinner color={colors.textInverse} /> : <ButtonText>{t('protocols.ack.sign')}</ButtonText>}
+              </Button>
+            </VStack>
           )}
         </VStack>
       )}

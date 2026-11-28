@@ -167,6 +167,20 @@ const signOutFinished = async (): Promise<void> => {
   }
 };
 
+const signOutRunning = (): boolean => logoutInFlight !== null;
+
+/**
+ * Commits a sign-in once no sign-out is running. The last check and the commit run in one synchronous step: a sign-out
+ * that starts while the wait is settling (before the caller resumes) is waited for too, so its wipe never takes the new session.
+ */
+const commitAfterSignOut = async (commit: () => void): Promise<void> => {
+  do {
+    await signOutFinished();
+  } while (signOutRunning());
+
+  commit();
+};
+
 const personalLockApplies = (): boolean => {
   try {
     return authCapabilities().personalLock && !isSharedInstallation();
@@ -254,8 +268,7 @@ export const useAuthStore = create<AuthState>()(
 
           switch (result.kind) {
             case 'signed-in': {
-              await signOutFinished();
-              signInWithTokens(result.tokens, null, 'password');
+              await commitAfterSignOut(() => signInWithTokens(result.tokens, null, 'password'));
               // The personal lock screen's verifier; a shared installation never keeps one.
               settlePasswordVerification(personalLockApplies() ? await computePasswordVerification(credentials.password) : null);
 
@@ -328,8 +341,7 @@ export const useAuthStore = create<AuthState>()(
 
           if (result.kind === 'signed-in') {
             pendingSsoExchange = null;
-            await signOutFinished();
-            signInWithTokens(result.tokens, null, 'external');
+            await commitAfterSignOut(() => signInWithTokens(result.tokens, null, 'external'));
             settlePasswordVerification(null);
           } else if (result.kind === 'mfa-required') {
             // The rejected code is deliberately dropped: retrySsoWithOtp supplies a new one on every attempt.
@@ -413,7 +425,8 @@ export const useAuthStore = create<AuthState>()(
 /**
  * Signs in with a token response (password, completion or legacy SSO grant): the profile from the id token, the persisted
  * credentials and the proactive refresh. Throws on a missing or malformed id token, which no sign-in may continue without.
- * Every caller first waits for a running sign-out to finish its wipe (`signOutFinished`, `LoginMfaHost.ready`).
+ * Every caller first waits for a running sign-out to finish its wipe (`commitAfterSignOut`, `LoginMfaHost.ready` and
+ * `signingOut`), checked in the same synchronous step as this call.
  */
 export const signInWithTokens = (authResponse: AuthResponse, recoveryCodes: string[] | null, method: AuthMethod): void => {
   const profile = profileFromIdToken(authResponse.id_token ?? null);
@@ -445,6 +458,7 @@ export const signInWithTokens = (authResponse: AuthResponse, recoveryCodes: stri
 /** How the login transaction module moves this store. */
 const mfaHost: LoginMfaHost = {
   ready: signOutFinished,
+  signingOut: signOutRunning,
   signIn: (authResponse, recoveryCodes) => {
     signInWithTokens(authResponse, recoveryCodes, useAuthStore.getState().mfaChallenge?.source === 'sso' ? 'sso' : 'password');
     const verification = pendingPasswordVerification;

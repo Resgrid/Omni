@@ -2685,7 +2685,8 @@
       "queued": "Din kvittering är sparad på den här enheten och skickas när du är online igen.",
       "awaiting_step_up": "Din kvittering är sparad och skickas så snart du har bekräftat att det är du.",
       "verify_now": "Bekräfta att det är du",
-      "status_held": "Väntar på verifiering"
+      "status_held": "Väntar på verifiering",
+      "content_needed": "Versionen du ska läsa har inte lästs in än. Du kan kvittera den så snart den visas."
     },
     "quiz": {
       "pick_all": "Välj alla svar som stämmer.",
@@ -5756,7 +5757,8 @@
         "unavailable": "Den här lektionen kan inte öppnas just nu. Försök igen senare.",
         "rate_limited": "För många lektioner öppnades på kort tid. Vänta en minut och försök sedan igen.",
         "not_found": "Den här lektionen är inte längre tillgänglig.",
-        "expired": "Länken till lektionen gick ut innan den öppnades. Starta lektionen igen."
+        "expired": "Länken till lektionen gick ut innan den öppnades. Starta lektionen igen.",
+        "window_blocked": "Lektionsfönstret kunde inte öppnas. Tillåt popup-fönster för den här webbplatsen om webbläsaren frågar och starta sedan lektionen igen."
       }
     }
   },

@@ -2685,7 +2685,8 @@
       "queued": "Twoje potwierdzenie zapisano na tym urządzeniu i zostanie wysłane, gdy wrócisz do sieci.",
       "awaiting_step_up": "Twoje potwierdzenie zapisano i zostanie wysłane po potwierdzeniu tożsamości.",
       "verify_now": "Potwierdź tożsamość",
-      "status_held": "Oczekuje na weryfikację"
+      "status_held": "Oczekuje na weryfikację",
+      "content_needed": "Wersja, którą masz przeczytać, nie została jeszcze wczytana. Możesz ją potwierdzić, gdy tylko się wyświetli."
     },
     "quiz": {
       "pick_all": "Wybierz wszystkie pasujące odpowiedzi.",
@@ -5756,7 +5757,8 @@
         "unavailable": "Nie można teraz otworzyć tej lekcji. Spróbuj później.",
         "rate_limited": "W krótkim czasie otwarto zbyt wiele lekcji. Odczekaj minutę i spróbuj ponownie.",
         "not_found": "Ta lekcja nie jest już dostępna.",
-        "expired": "Link do lekcji wygasł, zanim się otworzyła. Rozpocznij lekcję ponownie."
+        "expired": "Link do lekcji wygasł, zanim się otworzyła. Rozpocznij lekcję ponownie.",
+        "window_blocked": "Nie udało się otworzyć okna lekcji. Zezwól na wyskakujące okienka dla tej witryny, jeśli przeglądarka o to poprosi, a następnie rozpocznij lekcję ponownie."
       }
     }
   },

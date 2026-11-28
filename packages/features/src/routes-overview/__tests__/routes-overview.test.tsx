@@ -18,6 +18,10 @@ import { runningRouteProgress, sortPlansForOverview, sortRunningRoutes } from '.
 import RouteInstanceViewScreen from '../screens/route-instance-view';
 import RoutesOverviewScreen from '../screens/routes-overview';
 
+// The view takes RouteInstanceScreen from the unit-routes barrel, which also loads the active-route screens and their
+// in-app navigation hook (MapLibre provider, analytics); the unit-routes suites stub the hook the same way.
+jest.mock('@resgrid/features/navigation/hooks/use-in-app-navigation', () => ({ useInAppNavigationAvailable: () => false }));
+
 const mapCalls: RouteMapSlotProps[] = [];
 
 const renderMap = (props: RouteMapSlotProps) => {

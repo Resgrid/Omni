@@ -1,8 +1,8 @@
 import type { DurableKv } from '../kv/durable-kv';
-import { getOfflineLogger } from '../util/logger';
+import { describeError, getOfflineLogger } from '../util/logger';
 import { PENDING_WIPE_KEY } from './pending-wipe-key';
 import type { ResetReason } from './registry';
-import type { ScopeWiper } from './wipe';
+import { isWipeComplete, type ScopeWiper, WipeIncompleteError, type WipeReport } from './wipe';
 
 export { PENDING_WIPE_KEY } from './pending-wipe-key';
 
@@ -35,7 +35,11 @@ export function readPendingWipe(kv: DurableKv): PendingWipeReason | null {
 /** A pending wipe the launch has run, still applying itself to what startup registers until it is settled. */
 export interface PendingWipeRun {
   reason: PendingWipeReason;
-  /** Startup has registered everything: stop catching up, wait for that work, and remove the mark. Idempotent. */
+  /**
+   * Startup has registered everything: stop catching up, wait for that work, and remove the mark. Rejects
+   * (WipeIncompleteError) and keeps the mark when a store reset or wipe table failed, in the wipe or as it caught up.
+   * Idempotent.
+   */
   settle(): Promise<void>;
   /** Stops catching up and keeps the mark, so the next launch runs it all again (teardown without settling). */
   abandon(): void;
@@ -48,8 +52,8 @@ export interface PendingWipeRun {
  * the rest, and the person signs in again.
  *
  * What startup registers after this (push and local-notification teardown, offline map packs) never saw the wipe, so
- * it catches up as it registers, until `settle()`. The mark stays until then, and when the wipe fails, so a launch that
- * dies first runs it all again.
+ * it catches up as it registers, until `settle()`. The mark stays until then, and when any part that removes data fails
+ * (here or as it catches up), so a launch that dies first, or follows a failure, runs it all again.
  */
 export async function beginPendingWipe(kv: DurableKv, wiper: Pick<ScopeWiper, 'wipeScope' | 'catchUp'>): Promise<PendingWipeRun | null> {
   const reason = readPendingWipe(kv);
@@ -61,12 +65,21 @@ export async function beginPendingWipe(kv: DurableKv, wiper: Pick<ScopeWiper, 'w
   const logger = getOfflineLogger();
   logger.warn({ message: 'Finishing a wipe the app exited during', context: { reason } });
 
+  let report: WipeReport;
+
   try {
-    await wiper.wipeScope(reason);
+    report = await wiper.wipeScope(reason);
   } catch (error) {
-    logger.error({ message: 'Failed to finish the pending wipe', context: { reason, error: error instanceof Error ? error.name : 'unknown' } });
+    logger.error({ message: 'Failed to finish the pending wipe', context: { reason, error: describeError(error) } });
 
     return null;
+  }
+
+  // The wipe isolates each step, so it resolves even when one failed: data it left behind keeps the mark.
+  const complete = isWipeComplete(report);
+
+  if (!complete) {
+    logger.error({ message: 'Part of the pending wipe failed; the next launch runs it again', context: { reason, storeFailures: report.stores.failed.length, tableFailures: report.tablesFailed.length } });
   }
 
   const close = wiper.catchUp(reason);
@@ -75,17 +88,24 @@ export async function beginPendingWipe(kv: DurableKv, wiper: Pick<ScopeWiper, 'w
   return {
     reason,
     settle: () => {
-      settling ??= close().then(() => clearPendingWipe(kv));
+      settling ??= close().then(() => {
+        if (!complete) {
+          throw new WipeIncompleteError();
+        }
+
+        clearPendingWipe(kv);
+      });
 
       return settling;
     },
     abandon: () => {
-      void close();
+      // The mark stays either way: a failure in the late work it waits for needs no report here.
+      void close().catch(() => undefined);
     },
   };
 }
 
-/** Runs a pending wipe and settles it at once (nothing registers late). */
+/** Runs a pending wipe and settles it at once (nothing registers late). Rejects, keeping the mark, as `settle()` does. */
 export async function finishPendingWipe(kv: DurableKv, wiper: Pick<ScopeWiper, 'wipeScope' | 'catchUp'>): Promise<PendingWipeReason | null> {
   const run = await beginPendingWipe(kv, wiper);
 

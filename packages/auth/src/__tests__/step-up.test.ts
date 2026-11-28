@@ -343,6 +343,103 @@ describe('step-up for an area (in the app, every method)', () => {
     stop();
   });
 
+  it('never lets a verification that finishes after its sheet was closed close or answer the next sheet', async () => {
+    const heard: string[] = [];
+    const stop = onStepUpVerified((area) => heard.push(area));
+    const { verified: first } = await openSheet();
+    let settledNext: boolean | null = null;
+    void requestStepUp(requirementFor({ area: 'signatures' })).then((value) => (settledNext = value));
+    let answer: () => void = () => undefined;
+    h.server.on('POST', '/StepUp/Verify', () => new Promise((resolve) => (answer = () => resolve({ data: verified() }))));
+    const verifying = verifyStepUpCode('123456');
+    await flush(10);
+
+    // Closed while the code is in flight: the queued area's sheet opens, and the closed area is asked for again behind it.
+    cancelStepUp();
+    await expect(first).resolves.toBe(false);
+    let settledAgain: boolean | null = null;
+    void requestStepUp(requirementFor()).then((value) => (settledAgain = value));
+    expect(stepUpStore.getState().pending?.requirement.area).toBe('signatures');
+
+    answer();
+    await expect(verifying).resolves.toBe(false);
+    await flush(10);
+    expect(stepUpStore.getState()).toMatchObject({ pending: { requirement: { area: 'signatures' } }, isVerifying: false, lastError: null });
+    expect(settledNext).toBeNull();
+    expect(settledAgain).toBeNull();
+    expect(heard).toEqual([]);
+
+    // A late failure does not show on the open sheet either.
+    h.server.on('POST', '/StepUp/Verify', () => new Promise((resolve) => (answer = () => resolve({ status: 401, data: { type: 'invalid_totp' } }))));
+    const failing = verifyStepUpCode('000000');
+    await flush(10);
+    cancelStepUp();
+    answer();
+    await expect(failing).resolves.toBe(false);
+    expect(settledNext).toBe(false);
+    expect(stepUpStore.getState()).toMatchObject({ pending: { requirement: { area: 'acknowledgments' } }, lastError: null, isVerifying: false });
+    stop();
+  });
+
+  it('does not report a protected-data step-up as done when its grant cannot be held (expired in transit, or none)', async () => {
+    h.server.on('GET', '/StepUp/Options', { data: options({ Area: 'protected_data' }) });
+    let settled: boolean | null = null;
+    void requestStepUp(requirementFor({ area: 'protected_data' })).then((value) => (settled = value));
+    await flush(10);
+    h.server.once('POST', '/StepUp/Verify', { data: verified('protected_data', 'totp', { GrantId: 'g-1', GrantToken: 'grant-token', GrantExpiresAt: new Date(Date.now() - 1_000).toISOString() }) });
+    await expect(verifyStepUpCode('123456')).resolves.toBe(false);
+    h.server.once('POST', '/StepUp/Verify', { data: verified('protected_data', 'totp') });
+    await expect(verifyStepUpCode('123456')).resolves.toBe(false);
+    await flush(10);
+    expect(settled).toBeNull();
+    expect(stepUpStore.getState()).toMatchObject({ pending: { requirement: { area: 'protected_data' } }, isVerifying: false, lastError: 'grant_not_adopted' });
+    expect(getProtectedGrantHeaders()).toEqual({});
+
+    // A grant that is still valid verifies as before.
+    h.server.once('POST', '/StepUp/Verify', { data: verified('protected_data', 'totp', { GrantId: 'g-2', GrantToken: 'grant-2', GrantExpiresAt: new Date(Date.now() + 15 * 60_000).toISOString() }) });
+    await expect(verifyStepUpCode('123456')).resolves.toBe(true);
+    await flush(10);
+    expect(settled).toBe(true);
+    expect(getProtectedGrantHeaders()).toEqual({ 'X-Resgrid-Protected-Grant': 'grant-2' });
+  });
+
+  it('discards a passkey, SSO or approval result that arrives after its sheet was replaced, without sending it', async () => {
+    h.server.on('POST', '/StepUp/Verify', { data: verified('signatures', 'passkey') });
+
+    // Passkey: the ceremony is still running when the member closes the sheet and the next area's opens.
+    await openSheet();
+    void requestStepUp(requirementFor({ area: 'signatures' }));
+    __setPasskeyOutcome({ ok: true, value: { id: 'cred', response: { authenticatorData: 'ad', clientDataJSON: 'cd', signature: 'sig' } } });
+    const passkey = verifyStepUpPasskey();
+    cancelStepUp();
+    await expect(passkey).resolves.toBe(false);
+    expect(stepUpStore.getState().pending?.requirement.area).toBe('signatures');
+
+    // SSO: the system auth session returns after the sheet changed.
+    void requestStepUp(requirementFor());
+    h.server.on('POST', '/Sso/Begin', { data: v4({ AuthorizeUrl: 'https://broker.resgrid.com/authorize', SsoTransactionId: 'sso-tx-3', ExpiresIn: 300 }) });
+    __setNextAuthSessionResult((_url, returnUrl) => {
+      cancelStepUp();
+
+      return { type: 'success', url: `${returnUrl}?sso_code=one-time&state=${String(h.server.requestsTo('POST', '/Sso/Begin').slice(-1)[0].body.State)}` };
+    });
+    await expect(verifyStepUpSso()).resolves.toBe(false);
+    expect(stepUpStore.getState()).toMatchObject({ pending: { requirement: { area: 'acknowledgments' } }, lastError: null });
+
+    // Approval: Responder approves after the sheet changed.
+    void requestStepUp(requirementFor({ area: 'approvals' }));
+    h.server.on('POST', '/MfaApproval/Request', { data: v4({ ApprovalRequestId: 'ap-9', MatchNumber: '5', ExpiresIn: 120 }) });
+    h.server.on('POST', '/MfaApproval/Status', () => {
+      cancelStepUp();
+
+      return { data: v4({ State: 'approved', ExpiresAt: null }) };
+    });
+    await expect(startStepUpApproval(() => undefined)).resolves.toBe(false);
+    expect(stepUpStore.getState().pending?.requirement.area).toBe('approvals');
+
+    expect(h.server.requestsTo('POST', '/StepUp/Verify')).toHaveLength(0);
+  });
+
   it('answers waiting callers false on sign-out and closes the sheet', async () => {
     const { verified: pending } = await openSheet();
     resetStepUp();

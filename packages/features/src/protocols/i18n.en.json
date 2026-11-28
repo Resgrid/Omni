@@ -69,5 +69,6 @@
   "protocols.ack.queued": "Your acknowledgment is saved on this device and will be sent when you are back online.",
   "protocols.ack.awaiting_step_up": "Your acknowledgment is saved and will be sent once you verify it is you.",
   "protocols.ack.verify_now": "Verify it is you",
-  "protocols.ack.status_held": "Waiting for verification"
+  "protocols.ack.status_held": "Waiting for verification",
+  "protocols.ack.content_needed": "The version you are asked to read has not loaded yet. You can acknowledge it once it shows."
 }

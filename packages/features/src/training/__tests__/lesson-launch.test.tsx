@@ -2,16 +2,17 @@ import '../../calls/__tests__/test-setup';
 
 import { useNetInfo } from '@react-native-community/netinfo';
 import { featureFlagsStore } from '@resgrid/auth';
+import { logger } from '@resgrid/core/logging/logger';
 import { useTrainingStore } from '@resgrid/data';
 import type { LmsCourseResult, LmsLessonData, LmsLessonLaunchData, LmsMyAccessData, LmsMyCourseData } from '@resgrid/models';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { useLocalSearchParams } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import React from 'react';
 
 import { activateVariant, hidden } from '../../calls/__tests__/test-utils';
 import { LessonLaunchSurface } from '../components/lesson-launch-surface';
-import { prepareLaunchBrowser } from '../lib/launch-browser';
+import { openInSystemBrowser, prepareLaunchBrowser } from '../lib/launch-browser';
 import { frameMessage, isFromLaunchOrigin, isLaunchLesson, isLaunchNavigationAllowed, isResultMessage, isTrustedLaunch, launchErrorKey, launchHttpFailure, originOf, parseLessonMessage } from '../lib/lesson-launch';
 import CoursePlayerScreen from '../screens/course-player';
 
@@ -174,6 +175,15 @@ describe('LTI fallback in the system browser (iOS / Android)', () => {
     jest.mocked(WebBrowser.openAuthSessionAsync).mockRejectedValueOnce(new Error('no browser'));
     await expect(prepareLaunchBrowser().open('https://resgrid.com/x')).resolves.toBe('failed');
   });
+
+  it("logs a lesson window the system browser could not open, by its origin only (never the link's token)", async () => {
+    const warn = jest.spyOn(logger, 'warn').mockImplementation(() => undefined);
+    jest.mocked(WebBrowser.openBrowserAsync).mockRejectedValueOnce(new Error('no browser'));
+    openInSystemBrowser('https://help.example/popup?token=secret');
+    await waitFor(() => expect(warn).toHaveBeenCalledWith(expect.objectContaining({ context: { origin: 'https://help.example' } })));
+    expect(JSON.stringify(warn.mock.calls)).not.toContain('secret');
+    warn.mockRestore();
+  });
 });
 
 describe('CoursePlayerScreen with SCORM, cmi5 and LTI lessons', () => {
@@ -242,6 +252,24 @@ describe('CoursePlayerScreen with SCORM, cmi5 and LTI lessons', () => {
     expect(screen.queryByTestId('lesson-launch-player', hidden)).toBeNull();
     expect(screen.getByTestId('course-launch-start', hidden)).toBeTruthy();
     expect(fetchCourse).toHaveBeenCalledTimes(2);
+  });
+
+  it('drops a launch that comes back after the member chose another lesson', async () => {
+    let release: (outcome: { value: LmsLessonLaunchData | null; error: string | null }) => void = () => undefined;
+    getLessonLaunch.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          release = resolve;
+        })
+    );
+    seed(lesson(), { Lessons: [lesson(), lesson({ LessonId: 10, Title: 'Doffing' })] });
+    await render(<CoursePlayerScreen />);
+    await fireEvent.press(screen.getByTestId('course-launch-start', hidden));
+    await fireEvent.press(screen.getByTestId('course-lesson-10', hidden));
+    await act(async () => release({ value: launch(), error: null }));
+    expect(screen.queryByTestId('lesson-launch-player', hidden)).toBeNull();
+    expect(screen.getByTestId('course-lesson-view-10', hidden)).toBeTruthy();
+    expect(screen.queryByTestId('course-launch-error', hidden)).toBeNull();
   });
 
   it('launches a cmi5 lesson the same way; a live session is still taken on the web', async () => {

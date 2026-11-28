@@ -3,7 +3,7 @@ import { formatFileSize } from '@resgrid/features/contacts/components/contact-fi
 import { useTranslation } from '@resgrid/i18n';
 import { Button, ButtonText, HStack, Pressable, showToast, Text, useThemeColors, View, VStack } from '@resgrid/ui';
 import { Camera, FilePlus, ImagePlus, X } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 
 import { type EvidenceFile, EvidenceTypeError, pickEvidenceDocument, pickEvidencePhoto } from '../lib/evidence';
 
@@ -25,6 +25,10 @@ export const EvidencePicker: React.FC<EvidencePickerProps> = ({ files, onChange,
   const { t } = useTranslation();
   const colors = useThemeColors();
   const [isPicking, setIsPicking] = useState(false);
+  // The files as they are now: a file removed while a pick or its conversion is pending stays removed.
+  const latest = useRef(files);
+
+  latest.current = files;
 
   const add = async (pick: () => Promise<EvidenceFile | null>) => {
     if (files.length >= max) {
@@ -38,7 +42,7 @@ export const EvidencePicker: React.FC<EvidencePickerProps> = ({ files, onChange,
     try {
       const file = await pick();
 
-      if (file) onChange([...files, file]);
+      if (file) onChange([...latest.current, file]);
     } catch (problem) {
       const key =
         problem instanceof PhotoPermissionError

@@ -28,6 +28,9 @@ export interface LessonLaunchControls {
   onFailure: (code: string) => void;
 }
 
+/** Which enrollment's lesson a launch is for (null when none is on screen). */
+const launchTarget = (enrollmentId: number | null, lesson: Pick<LmsLessonData, 'LessonId'> | null): string | null => (enrollmentId && lesson ? `${enrollmentId}:${lesson.LessonId}` : null);
+
 /**
  * One SCORM, cmi5 or LTI lesson's launch (round 10 A8). Online only: the connection is checked before Core is asked. The link is
  * opened the moment it arrives and lives only in this state while the player shows it (never stored or logged). The page's message
@@ -39,9 +42,14 @@ export function useLessonLaunch(enrollmentId: number | null, lesson: Pick<LmsLes
   const [lastMessage, setLastMessage] = useState<LessonLaunchMessage | null>(null);
   const reload = useRef(refresh);
   const current = useRef(state);
+  // The lesson on screen now: a launch that comes back for another one is dropped.
+  const shown = useRef(launchTarget(enrollmentId, lesson));
+  // Web: a launch came back on this app's own origin (never framed here), so later launches reserve their window before Core is asked.
+  const needsWindow = useRef(false);
 
   reload.current = refresh;
   current.current = state;
+  shown.current = launchTarget(enrollmentId, lesson);
 
   // A new lesson starts fresh.
   useEffect(() => {
@@ -65,7 +73,8 @@ export function useLessonLaunch(enrollmentId: number | null, lesson: Pick<LmsLes
       if (!enrollmentId || !lesson) return;
 
       // A browser window must open while the tap still counts (web), so it is prepared before anything is awaited.
-      const browser: LaunchBrowser | null = viaBrowser || !playsLessonInApp(lesson) ? prepareLaunchBrowser() : null;
+      const browser: LaunchBrowser | null = viaBrowser || needsWindow.current || !playsLessonInApp(lesson) ? prepareLaunchBrowser() : null;
+      const target = launchTarget(enrollmentId, lesson);
 
       if (!isOnline) {
         browser?.discard();
@@ -80,6 +89,13 @@ export function useLessonLaunch(enrollmentId: number | null, lesson: Pick<LmsLes
       const result = await useTrainingStore.getState().getLessonLaunch(enrollmentId, lesson.LessonId);
       const launch = result.value;
 
+      if (shown.current !== target) {
+        // The member moved to another lesson meanwhile: this launch is not for the lesson on screen.
+        browser?.discard();
+
+        return;
+      }
+
       if (!launch || !isTrustedLaunch(launch)) {
         browser?.discard();
         setState({ kind: 'error', code: result.error ?? 'MediaUnavailable' });
@@ -87,16 +103,20 @@ export function useLessonLaunch(enrollmentId: number | null, lesson: Pick<LmsLes
         return;
       }
 
-      if (!browser && canPlayInApp(launch)) {
+      if (!viaBrowser && canPlayInApp(launch)) {
+        browser?.discard();
         setState({ kind: 'playing', launch });
 
         return;
       }
 
+      if (!viaBrowser && playsLessonInApp(lesson)) needsWindow.current = true;
+
+      // No window was reserved (a launch on this app's origin, found only now): one opened this late may be blocked, and says so.
       const opened = await (browser ?? prepareLaunchBrowser()).open(launch.LaunchUrl);
 
-      if (opened === 'failed') {
-        setState({ kind: 'error', code: 'MediaUnavailable' });
+      if (opened === 'failed' || opened === 'blocked') {
+        setState({ kind: 'error', code: opened === 'blocked' ? 'WindowBlocked' : 'MediaUnavailable' });
 
         return;
       }

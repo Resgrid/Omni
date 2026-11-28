@@ -55,8 +55,14 @@ const options = (overrides: Partial<AreaStepUpOptionsData> = {}): AreaStepUpOpti
   ...overrides,
 });
 
-const open = (req: StepUpRequirement = requirement(), opts: AreaStepUpOptionsData | null = options()) =>
-  act(() => stepUpStore.setState({ pending: { requirement: req, options: opts }, lastError: null, isVerifying: false }));
+let sheetIds = 0;
+
+/** Opens a new sheet (each one its own id, as the step-up flow gives them). */
+const open = (req: StepUpRequirement = requirement(), opts: AreaStepUpOptionsData | null = options()) => {
+  sheetIds += 1;
+
+  return act(() => stepUpStore.setState({ pending: { id: sheetIds, requirement: req, options: opts }, lastError: null, isVerifying: false }));
+};
 
 beforeEach(() => {
   activateVariant('responder');
@@ -95,6 +101,34 @@ describe('StepUpSheet', () => {
     await fireEvent.changeText(field, ' pass word ');
     await fireEvent.press(screen.getByTestId('step-up-submit', hidden));
     expect(mockVerifyPassword).toHaveBeenCalledWith(' pass word ');
+  });
+
+  it('clears what was typed when switching between the code and the password, so a password never shows as a code', async () => {
+    await render(<StepUpSheet />);
+    await open();
+    await fireEvent.press(screen.getByTestId('step-up-switch-secret', hidden));
+    await fireEvent.changeText(screen.getByTestId('step-up-password-input', hidden), 'hunter2');
+    await fireEvent.press(screen.getByTestId('step-up-switch-secret', hidden));
+    const code = screen.getByTestId('step-up-code-input', hidden);
+    expect(code.props.secureTextEntry).toBe(false);
+    expect(code.props.value).toBe('');
+
+    await fireEvent.changeText(code, '1234');
+    await fireEvent.press(screen.getByTestId('step-up-switch-secret', hidden));
+    expect(screen.getByTestId('step-up-password-input', hidden).props.value).toBe('');
+  });
+
+  it('starts every new sheet empty: nothing typed for one area carries over to the next', async () => {
+    await render(<StepUpSheet />);
+    await open();
+    await fireEvent.press(screen.getByTestId('step-up-switch-secret', hidden));
+    await fireEvent.changeText(screen.getByTestId('step-up-password-input', hidden), 'hunter2');
+
+    // The sheet is replaced by the next area's without closing in between (cancel opens the queued one at once).
+    await open(requirement({ area: 'signatures' }));
+    expect(screen.getByText('step_up.area.signatures', hidden)).toBeTruthy();
+    expect(screen.queryByTestId('step-up-password-input', hidden)).toBeNull();
+    expect(screen.getByTestId('step-up-code-input', hidden).props.value).toBe('');
   });
 
   it('offers only the password and SSO when that is all the member can use (an SSO department without 2FA)', async () => {

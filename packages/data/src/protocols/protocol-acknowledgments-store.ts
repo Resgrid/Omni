@@ -8,7 +8,7 @@ import { type DataError, toDataError } from '../core/errors';
 import { classifyDataWriteError, defineDataHandler, retryWriteNow, submitWrite } from '../core/outbox';
 import { dataPersistOptions, registerPersistedStore } from '../core/persist';
 import { registerDataStoreReset } from '../core/reset';
-import { dataNow, type DataStepUpRequirement, dataStepUpRequirementOf, getDataApiContext, onDataStepUpVerified, requestDataStepUp } from '../core/runtime';
+import { dataNow, type DataStepUpRequirement, dataStepUpRequirementOf, getDataApiContext, getDataLogger, onDataStepUpVerified, requestDataStepUp } from '../core/runtime';
 import { createSliceRunner, emptySliceMeta, type FetchOptions, type SliceMeta, type SliceRunner } from '../core/slices';
 
 type AcknowledgmentsSlice = 'mine' | 'weekly';
@@ -85,7 +85,8 @@ export interface ProtocolAcknowledgmentsState extends AcknowledgmentsData {
   /** The member verifies for held signings now; once verified, they are sent. */
   verifyHeld: (protocolVersionId: number) => Promise<boolean>;
   holdForStepUp: (held: HeldAcknowledgment) => void;
-  settleAcknowledgment: (protocolVersionId: number, outcome: AcknowledgeProtocolResultData | null) => void;
+  /** Records Core's answer for a version and lifts the step-up hold `eventId` owns (another signing's hold stays). */
+  settleAcknowledgment: (protocolVersionId: number, outcome: AcknowledgeProtocolResultData | null, eventId: string) => void;
   startBankQuiz: (protocolVersionId: number, locale?: string) => Promise<BankQuizStart>;
   submitBankQuiz: (attemptId: number, answers: ProtocolQuizAnswer[]) => Promise<BankQuizOutcome>;
   fetchWeekly: (options?: FetchOptions) => Promise<void>;
@@ -110,8 +111,54 @@ let runner: SliceRunner<AcknowledgmentsSlice, ProtocolAcknowledgmentsState>;
 /** One order group per version: a held or queued signing never blocks another protocol's. */
 export const acknowledgeOrderKey = (protocolVersionId: number): string => `protocol-ack:${protocolVersionId}`;
 
-/** A signing sent within a minute of being made, on its first attempt, is the member reading online; anything later is a replay. */
+/** A signing sent within a minute of being made, from the member's own tap, is the member reading online; anything later is a replay. */
 const ONLINE_WINDOW_MS = 60_000;
+
+/**
+ * Which sends are the member's online read. Kept in memory on purpose: only a send made while the member's sign tap is still
+ * running (or its step-up retry soon after) is online; every other send, including one queued by an older build or replayed
+ * after the app restarted, is an offline signing with the device's time.
+ */
+const signing = {
+  /** Sign taps in progress, by version (how many). */
+  taps: new Map<number, number>(),
+  /** Outbox events queued by a tap still in progress, with their version (forgotten when that version's taps end). */
+  tapped: new Map<string, number>(),
+  /** Events whose first attempt was made during the tap: the online read, until delivered or abandoned. */
+  readOnline: new Set<string>(),
+  /** Tapped events the server refused for good while the tap waited on them (forgotten with `tapped`). */
+  refused: new Set<string>(),
+};
+
+const startSigningTap = (protocolVersionId: number): void => {
+  signing.taps.set(protocolVersionId, (signing.taps.get(protocolVersionId) ?? 0) + 1);
+};
+
+const endSigningTap = (protocolVersionId: number): void => {
+  const left = (signing.taps.get(protocolVersionId) ?? 1) - 1;
+
+  if (left > 0) {
+    signing.taps.set(protocolVersionId, left);
+
+    return;
+  }
+
+  signing.taps.delete(protocolVersionId);
+
+  for (const [eventId, version] of signing.tapped) {
+    if (version === protocolVersionId) {
+      signing.tapped.delete(eventId);
+      signing.refused.delete(eventId);
+    }
+  }
+};
+
+/** Keeps the locally answered copy of a weekly question a read that started before the answer still shows as open (answering is final). */
+export function mergeWeeklyAnswers(fetched: readonly ProtocolMicroLearningItem[], local: readonly ProtocolMicroLearningItem[]): ProtocolMicroLearningItem[] {
+  const answered = new Map(local.flatMap((item) => (item.AnsweredOn ? [[item.Id, item] as const] : [])));
+
+  return fetched.map((item) => (item.AnsweredOn ? item : (answered.get(item.Id) ?? item)));
+}
 
 /**
  * Protocol read-and-sign (protocols plan P2) for the apps with `capabilities.protocols.acknowledgments`: the member's
@@ -127,7 +174,9 @@ export const useProtocolAcknowledgmentsStore = create<ProtocolAcknowledgmentsSta
       const refresh = () => get().fetchAcknowledgments({ bypassCache: true });
       const isHeld = (protocolVersionId: number) => get().held.some((item) => item.protocolVersionId === protocolVersionId);
 
-      const answeredOrQueued = (protocolVersionId: number): AcknowledgeResult => {
+      // `failed` when the server refused this signing for good (after its step-up retry too); `queued` only while it can still be sent.
+      const answeredOrQueued = (protocolVersionId: number, eventId: string): AcknowledgeResult => {
+        if (signing.refused.has(eventId)) return { kind: 'failed' };
         const data = get().outcomes[protocolVersionId];
 
         return data ? { kind: 'answered', data } : { kind: 'queued' };
@@ -136,31 +185,40 @@ export const useProtocolAcknowledgmentsStore = create<ProtocolAcknowledgmentsSta
       return {
         ...initialData(),
         fetchAcknowledgments: async (options) => {
+          const includeCompleted = options?.includeCompleted === true;
+
           await runner.run(
             'mine',
-            async () => unwrapList(await getMyProtocolAcknowledgments(ctx(), options?.includeCompleted ? { includeCompleted: true } : {})),
+            async () => unwrapList(await getMyProtocolAcknowledgments(ctx(), includeCompleted ? { includeCompleted: true } : {})),
             (acknowledgments) => ({ acknowledgments }),
-            { trailing: options?.bypassCache === true }
+            // The two forms never share an answer; both fill one list, so the request made last wins (one race lane).
+            { flightKey: includeCompleted ? 'mine:all' : 'mine:owed', trailing: options?.bypassCache === true }
           );
         },
-        fetchWeekly: async () => {
+        fetchWeekly: async (options) => {
           await runner.run(
             'weekly',
             async () => unwrapList(await getWeeklyProtocolQuestions(ctx())),
-            (weekly) => ({ weekly })
+            // A read that started before an answer must not show that question as open again.
+            (weekly, state) => ({ weekly: mergeWeeklyAnswers(weekly, state.weekly) }),
+            { trailing: options?.bypassCache === true }
           );
         },
         answerWeekly: async (id, keys) => {
+          const startedIn = runner.generation();
+
           set({ actionError: null });
 
           try {
             const answered = (await answerWeeklyProtocolQuestion(ctx(), { Id: id, Keys: keys }))?.Data ?? null;
 
+            if (runner.generation() !== startedIn) return null;
+
             if (answered) set((state) => ({ weekly: state.weekly.map((item) => (item.Id === id ? answered : item)) }));
 
             return answered;
           } catch (error) {
-            set({ actionError: toDataError(error) });
+            if (runner.generation() === startedIn) set({ actionError: toDataError(error) });
 
             return null;
           }
@@ -168,22 +226,27 @@ export const useProtocolAcknowledgmentsStore = create<ProtocolAcknowledgmentsSta
         acknowledge: async (protocolVersionId, contentHash) => {
           // A new signing: an earlier answer for this version is not this one's.
           set((state) => ({ actionError: null, outcomes: Object.fromEntries(Object.entries(state.outcomes).filter(([id]) => Number(id) !== protocolVersionId)) }));
+          startSigningTap(protocolVersionId);
 
-          const write = await submitWrite<ProtocolAcknowledgePayload>({
-            type: PROTOCOL_ACKNOWLEDGE_EVENT,
-            payload: { protocolVersionId, contentHash, signedOnDevice: new Date(dataNow()).toISOString() },
-            orderKey: acknowledgeOrderKey(protocolVersionId),
-          });
+          try {
+            const write = await submitWrite<ProtocolAcknowledgePayload>({
+              type: PROTOCOL_ACKNOWLEDGE_EVENT,
+              payload: { protocolVersionId, contentHash, signedOnDevice: new Date(dataNow()).toISOString() },
+              orderKey: acknowledgeOrderKey(protocolVersionId),
+            });
 
-          if (write.outcome === 'rejected') return { kind: 'failed' };
+            if (write.outcome === 'rejected') return { kind: 'failed' };
 
-          // Not held: sent (by this drain or the outbox's own pass that started first) or queued for later.
-          if (write.outcome === 'sent' || !isHeld(protocolVersionId)) return answeredOrQueued(protocolVersionId);
+            // Not held: sent (by this drain or the outbox's own pass that started first) or queued for later.
+            if (write.outcome === 'sent' || !isHeld(protocolVersionId)) return answeredOrQueued(protocolVersionId, write.id);
 
-          // The member just tapped sign: ask for the step-up now (the drain never waits on the member), then send it again.
-          await get().verifyHeld(protocolVersionId);
+            // The member just tapped sign: ask for the step-up now (the drain never waits on the member), then send it again.
+            await get().verifyHeld(protocolVersionId);
 
-          return isHeld(protocolVersionId) ? { kind: 'awaiting_step_up' } : answeredOrQueued(protocolVersionId);
+            return isHeld(protocolVersionId) ? { kind: 'awaiting_step_up' } : answeredOrQueued(protocolVersionId, write.id);
+          } finally {
+            endSigningTap(protocolVersionId);
+          }
         },
         verifyHeld: async (protocolVersionId) => {
           const held = get().held.find((item) => item.protocolVersionId === protocolVersionId);
@@ -197,9 +260,9 @@ export const useProtocolAcknowledgmentsStore = create<ProtocolAcknowledgmentsSta
           return verified;
         },
         holdForStepUp: (held) => set((state) => ({ held: [...state.held.filter((item) => item.protocolVersionId !== held.protocolVersionId), held] })),
-        settleAcknowledgment: (protocolVersionId, outcome) =>
+        settleAcknowledgment: (protocolVersionId, outcome, eventId) =>
           set((state) => ({
-            held: state.held.filter((item) => item.protocolVersionId !== protocolVersionId),
+            held: state.held.filter((item) => item.eventId !== eventId),
             outcomes: outcome ? { ...state.outcomes, [protocolVersionId]: outcome } : state.outcomes,
           })),
         startBankQuiz: async (protocolVersionId, locale) => {
@@ -249,11 +312,18 @@ export const protocolAcknowledgeHandler = defineDataHandler<ProtocolAcknowledgeP
   type: PROTOCOL_ACKNOWLEDGE_EVENT,
   classify: (error) => (error instanceof AcknowledgmentHeldForStepUpError ? 'retry' : classifyDataWriteError(error)),
   maxAttemptsFor: (failure) => (failure.code === STEP_UP_HELD ? Number.MAX_SAFE_INTEGER : undefined),
+  optimisticApply: (event) => {
+    // Queued by the member's sign tap now running (enqueue hands only a new event to this, inside that tap's submitWrite).
+    if (signing.taps.has(event.payload.protocolVersionId)) signing.tapped.set(event.id, event.payload.protocolVersionId);
+  },
   send: async (event, context) => {
-    // A retry after a step-up hold is still the member's online read if it is sent soon after; a replay after a lost connection is not.
-    const heldForStepUp = useProtocolAcknowledgmentsStore.getState().held.some((item) => item.protocolVersionId === event.payload.protocolVersionId);
-    const replayed = context.attempt > 1 && !heldForStepUp;
-    const offline = replayed || dataNow() - event.createdAt > ONLINE_WINDOW_MS;
+    // Online only when the first attempt is made during the member's tap (a signing queued offline and sent on reconnect is not,
+    // however soon), or it is that read's retry after a step-up hold, sent soon after. A replay after a lost connection is not.
+    const heldForStepUp = useProtocolAcknowledgmentsStore.getState().held.some((item) => item.eventId === event.id);
+
+    if (context.attempt === 1 && signing.tapped.has(event.id)) signing.readOnline.add(event.id);
+    const online = signing.readOnline.has(event.id) && (context.attempt === 1 || heldForStepUp) && dataNow() - event.createdAt <= ONLINE_WINDOW_MS;
+    const offline = !online;
 
     const body = {
       ProtocolVersionId: event.payload.protocolVersionId,
@@ -276,17 +346,33 @@ export const protocolAcknowledgeHandler = defineDataHandler<ProtocolAcknowledgeP
     }
   },
   afterAck: (event, result) => {
-    useProtocolAcknowledgmentsStore.getState().settleAcknowledgment(event.payload.protocolVersionId, result?.Data ?? null);
+    signing.readOnline.delete(event.id);
+    useProtocolAcknowledgmentsStore.getState().settleAcknowledgment(event.payload.protocolVersionId, result?.Data ?? null, event.id);
   },
   refresh: () => useProtocolAcknowledgmentsStore.getState().fetchAcknowledgments({ bypassCache: true }),
-  rollback: (event) => {
-    useProtocolAcknowledgmentsStore.getState().settleAcknowledgment(event.payload.protocolVersionId, null);
+  rollback: (event, reason) => {
+    // The tap still waiting on this signing (its step-up retry) reports it refused, not queued.
+    if (reason === 'dead' && signing.tapped.has(event.id)) signing.refused.add(event.id);
+    signing.readOnline.delete(event.id);
+    // Only this signing's own hold: another signing of the version may still wait for the step-up behind it.
+    useProtocolAcknowledgmentsStore.getState().settleAcknowledgment(event.payload.protocolVersionId, null, event.id);
   },
 });
+
+/** Sends every held signing now. Nothing awaits the caller, so a failed retry is logged (the signing stays held and queued), never thrown. */
+async function retryHeldAcknowledgments(held: readonly HeldAcknowledgment[]): Promise<void> {
+  try {
+    await Promise.all(held.map((item) => retryWriteNow(item.eventId, acknowledgeOrderKey(item.protocolVersionId))));
+  } catch (error) {
+    getDataLogger().warn({
+      message: 'Held acknowledgments could not be sent after the step-up',
+      context: { operation: 'retryHeldAcknowledgments', count: held.length, error: error instanceof Error ? error.name : 'unknown' },
+    });
+  }
+}
 
 // A verification for acknowledgments (from this sheet or any other) sends every held signing now.
 onDataStepUpVerified((area) => {
   if (area !== 'acknowledgments') return;
-
-  for (const held of useProtocolAcknowledgmentsStore.getState().held) void retryWriteNow(held.eventId, acknowledgeOrderKey(held.protocolVersionId));
+  void retryHeldAcknowledgments(useProtocolAcknowledgmentsStore.getState().held);
 });

@@ -2685,7 +2685,8 @@
       "queued": "Your acknowledgment is saved on this device and will be sent when you are back online.",
       "awaiting_step_up": "Your acknowledgment is saved and will be sent once you verify it is you.",
       "verify_now": "Verify it is you",
-      "status_held": "Waiting for verification"
+      "status_held": "Waiting for verification",
+      "content_needed": "The version you are asked to read has not loaded yet. You can acknowledge it once it shows."
     },
     "quiz": {
       "pick_all": "Choose every answer that applies.",
@@ -5756,7 +5757,8 @@
         "unavailable": "This lesson cannot be opened right now. Try again later.",
         "rate_limited": "Too many lessons were opened in a short time. Wait a minute, then try again.",
         "not_found": "This lesson is no longer available.",
-        "expired": "The lesson link expired before it opened. Start the lesson again."
+        "expired": "The lesson link expired before it opened. Start the lesson again.",
+        "window_blocked": "The lesson window could not open. Allow pop-ups for this site if your browser asks, then start the lesson again."
       }
     }
   },

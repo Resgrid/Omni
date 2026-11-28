@@ -7,7 +7,7 @@ import { usePushNotificationModalStore } from '../push-modal-store';
 import * as web from '../push-notification.web';
 import { onPushTokenRegistered, resetPushTokenListenersForTests } from '../push-token-listeners';
 import { PENDING_SIGN_OUT_MAX_AGE_MS } from '../registration-storage';
-import { BASE_API_URL, configureForTest, flush, flushAll, selectVariant, type TestContext } from './helpers';
+import { BASE_API_URL, configureForTest, defaultSession, flush, flushAll, selectVariant, type TestContext } from './helpers';
 import { routerPushWithRetry } from './mocks/core';
 import * as audio from './mocks/expo-audio';
 
@@ -36,11 +36,23 @@ let permission: NotificationPermission;
 let requestPermission: jest.Mock;
 let clickListeners: Set<() => void>;
 let fetchMock: jest.Mock;
+let getWorkerRegistrations: jest.Mock;
 
 const registrations = () => ctx.api.requests.filter((request) => request.url.startsWith('/Devices/Register'));
 const webUnregistrations = () => ctx.api.requests.filter((request) => request.url === '/Devices/UnRegisterWebPush');
 const clickPage = () => [...clickListeners].forEach((listener) => listener());
 const modal = () => usePushNotificationModalStore.getState();
+
+interface PendingSignOutView {
+  id: string;
+  accessToken: string | null;
+  registration?: { token: string; unitId?: string } | null;
+}
+
+const pendingSignOuts = (): PendingSignOutView[] | null => JSON.parse(storage.get(web.WEB_PUSH_PENDING_SIGN_OUT_KEY) ?? 'null');
+
+/** Core's answer to UnRegisterWebPush: HTTP 200 either way, the outcome in `Status`. */
+const webUnregisterAnswer = (status: 'Success' | 'Failure') => ({ ok: true, status: 200, json: async () => ({ Status: status }) });
 
 function holdNextMint(): () => Promise<(token: string) => void> {
   const held: { release?: (token: string) => void } = {};
@@ -58,6 +70,7 @@ function installBrowser(): void {
   permission = 'default';
   requestPermission = jest.fn(async () => permission);
   const registration = { active: worker, pushManager: { getSubscription: async () => null } };
+  getWorkerRegistrations = jest.fn(async () => [registration]);
   globals.window = globalThis;
   globals.isSecureContext = true;
   globals.PushManager = function PushManager() {};
@@ -89,7 +102,7 @@ function installBrowser(): void {
         controller: null,
         ready: Promise.resolve(registration),
         register: jest.fn(async () => registration),
-        getRegistrations: jest.fn(async () => [registration]),
+        getRegistrations: getWorkerRegistrations,
         addEventListener: (_type: string, listener: (event: { data: unknown }) => void) => serviceWorkerListeners.push(listener),
         removeEventListener: jest.fn(),
       },
@@ -274,7 +287,7 @@ describe('browser', () => {
     let answer: (value: { ok: boolean }) => void = () => undefined;
     fetchMock.mockImplementationOnce(() => new Promise((resolve) => (answer = resolve)));
     const signOut = web.pushNotificationService.unregisterAtSignOut('access-token');
-    expect(JSON.parse(storage.get(web.WEB_PUSH_PENDING_SIGN_OUT_KEY) ?? 'null')).toEqual({ accessToken: 'access-token', apiUrl: BASE_API_URL, signedOutAt: expect.any(Number) });
+    expect(pendingSignOuts()).toEqual([{ id: expect.any(String), accessToken: 'access-token', apiUrl: BASE_API_URL, signedOutAt: expect.any(Number) }]);
 
     while (fetchMock.mock.calls.length === 0) await flush();
     answer({ ok: true });
@@ -282,11 +295,79 @@ describe('browser', () => {
     expect(storage.has(web.WEB_PUSH_PENDING_SIGN_OUT_KEY)).toBe(false);
   });
 
+  it('keeps the sign-out, with its registration, while neither the token was killed nor the server took it off', async () => {
+    permission = 'granted';
+    await web.syncWebPush();
+    getWorkerRegistrations.mockRejectedValueOnce(new Error('worker unavailable'));
+    fetchMock.mockResolvedValueOnce(webUnregisterAnswer('Failure'));
+    await web.pushNotificationService.unregisterAtSignOut('access-token');
+    expect(pendingSignOuts()).toEqual([expect.objectContaining({ accessToken: 'access-token', registration: expect.objectContaining({ token: 'browser-token', unitId: '12' }) })]);
+    expect(storage.has(web.WEB_PUSH_REGISTRATION_KEY)).toBe(false);
+
+    // The next load finishes it from the record (the registration's own slot is empty by now).
+    web.resetWebPushForTests();
+    ctx.state.signedIn = false;
+    fetchMock.mockResolvedValueOnce(webUnregisterAnswer('Success'));
+    await web.pushNotificationService.initialize();
+
+    while (storage.has(web.WEB_PUSH_PENDING_SIGN_OUT_KEY)) await flush();
+
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      `${BASE_API_URL}/Devices/UnRegisterWebPush`,
+      expect.objectContaining({ headers: expect.objectContaining({ Authorization: 'Bearer access-token' }), body: JSON.stringify({ Token: 'browser-token', Prefix: 'DEPT', UnitId: '12' }) })
+    );
+  });
+
+  it('keeps a second sign-out recorded until its own cleanup has run', async () => {
+    permission = 'granted';
+    await web.syncWebPush();
+    let answer: (value: { ok: boolean }) => void = () => undefined;
+    fetchMock.mockImplementationOnce(() => new Promise((resolve) => (answer = resolve)));
+    const first = web.pushNotificationService.unregisterAtSignOut('first-token');
+
+    while (fetchMock.mock.calls.length === 0) await flush();
+
+    // Signed in and out again while the first cleanup still waits on the server; the second kill is held.
+    let releaseKill: (value: boolean) => void = () => undefined;
+    mockFirebaseDeleteToken.mockImplementationOnce(() => new Promise<boolean>((resolve) => (releaseKill = resolve)));
+    const second = web.pushNotificationService.unregisterAtSignOut('second-token');
+    answer({ ok: true });
+    await first;
+
+    while (mockFirebaseDeleteToken.mock.calls.length < 2) await flush();
+
+    expect(pendingSignOuts()).toEqual([expect.objectContaining({ accessToken: 'second-token' })]);
+
+    releaseKill(true);
+    await second;
+    expect(storage.has(web.WEB_PUSH_PENDING_SIGN_OUT_KEY)).toBe(false);
+  });
+
+  it('never registers the next session with a token the ended session still holds, and registers once that is cleaned up', async () => {
+    permission = 'granted';
+    await web.syncWebPush();
+    getWorkerRegistrations.mockRejectedValue(new Error('worker unavailable'));
+    fetchMock.mockRejectedValue(new Error('offline'));
+    await web.pushNotificationService.unregisterAtSignOut('access-token');
+
+    ctx.state.session = { ...defaultSession(), userId: 'user-2' };
+    await web.syncWebPush();
+    expect(registrations()).toHaveLength(1);
+    expect(pendingSignOuts()).toHaveLength(1);
+
+    // The cleanup works on the next sync, before it registers.
+    getWorkerRegistrations.mockImplementation(async () => []);
+    fetchMock.mockImplementation(async () => webUnregisterAnswer('Success'));
+    await web.syncWebPush();
+    expect(pendingSignOuts()).toBeNull();
+    expect(registrations()).toHaveLength(2);
+  });
+
   describe('a tab closed during sign-out', () => {
     const leftByClosedTab = async (signedOutAt: number): Promise<void> => {
       permission = 'granted';
       await web.syncWebPush();
-      storage.set(web.WEB_PUSH_PENDING_SIGN_OUT_KEY, JSON.stringify({ accessToken: 'ended-token', apiUrl: BASE_API_URL, signedOutAt }));
+      storage.set(web.WEB_PUSH_PENDING_SIGN_OUT_KEY, JSON.stringify([{ id: 'closed-tab', accessToken: 'ended-token', apiUrl: BASE_API_URL, signedOutAt }]));
       // The next load: nobody signed in, no department config yet.
       web.resetWebPushForTests();
       ctx.state.signedIn = false;

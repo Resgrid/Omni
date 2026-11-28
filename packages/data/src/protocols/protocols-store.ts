@@ -62,7 +62,45 @@ export function migrateProtocolsStorage(persisted: PersistedProtocolsV0 | null):
   };
 }
 
+/** Whether a version is the one in force for some protocol of the library (what `retainCurrentVersions` keeps). */
+const isCurrentVersion = (library: Record<string, ProtocolLibraryEntry>, protocolVersionId: string): boolean => Object.values(library).some((entry) => entry.CurrentVersionId === protocolVersionId);
+
+/** A cached copy answers a request in `locale` when it is in that locale, and a source request (no locale) only when it is the source. */
+const answersLocale = (content: ProtocolVersionContentData, locale: string | undefined): boolean => (locale ? content.Locale === locale : content.TranslationId === null);
+
 let runner: SliceRunner<ProtocolsSlice, ProtocolsState>;
+
+/**
+ * The library entries come from two reads (the list and one protocol's detail) that race each other. Each read takes a ticket when
+ * it starts, and an entry is replaced only by a read that started after the one that wrote it, so an older answer landing last
+ * never brings back a superseded version in force.
+ */
+const library = { ticket: 0, writtenBy: new Map<string, number>() };
+
+/** The list's entries, except those a read that started after this list read already wrote. */
+function mergeLibrary(listed: Record<string, ProtocolLibraryEntry>, current: Record<string, ProtocolLibraryEntry>, ticket: number) {
+  const writtenLater = (protocolId: string): boolean => (library.writtenBy.get(protocolId) ?? 0) > ticket;
+  const merged = new Map<string, ProtocolLibraryEntry>();
+
+  for (const [protocolId, entry] of Object.entries(listed)) {
+    const newer = writtenLater(protocolId) ? current[protocolId] : undefined;
+
+    merged.set(protocolId, newer ?? entry);
+
+    if (!newer) library.writtenBy.set(protocolId, ticket);
+  }
+
+  // A protocol the list no longer has is gone, unless a later read found it.
+  for (const [protocolId, entry] of Object.entries(current)) {
+    if (!merged.has(protocolId) && writtenLater(protocolId)) merged.set(protocolId, entry);
+  }
+
+  for (const protocolId of [...library.writtenBy.keys()]) {
+    if (!merged.has(protocolId)) library.writtenBy.delete(protocolId);
+  }
+
+  return Object.fromEntries(merged);
+}
 
 export const useProtocolsStore = create<ProtocolsState>()(
   persist(
@@ -72,14 +110,22 @@ export const useProtocolsStore = create<ProtocolsState>()(
       return {
         ...initialData(),
         fetchProtocols: async (options) => {
+          let ticket = 0;
+
           await runner.run(
             'protocols',
             async () => {
+              // The ticket is taken when the read really starts (a trailing read waits for the one in flight first).
+              ticket = ++library.ticket;
               const list = unwrapList(await getAllProtocols(getDataApiContext(), cacheOptions(options)));
 
               return { protocols: toCallProtocols(list), libraryById: toLibraryEntries(list) };
             },
-            ({ protocols, libraryById }, state) => ({ protocols, libraryById, versionContentById: retainCurrentVersions(state.versionContentById, libraryById) }),
+            ({ protocols, libraryById }, state) => {
+              const merged = mergeLibrary(libraryById, state.libraryById, ticket);
+
+              return { protocols, libraryById: merged, versionContentById: retainCurrentVersions(state.versionContentById, merged) };
+            },
             { trailing: options?.bypassCache === true }
           );
         },
@@ -87,11 +133,13 @@ export const useProtocolsStore = create<ProtocolsState>()(
           const cached = get().protocolDetailsById[protocolId];
 
           if (cached && !options?.bypassCache) return cached;
+          let ticket = 0;
 
           const result = await runner.run(
             'detail',
             // GetProtocol answers one protocol in `Data` (not a list), so reading it as a list never kept a detail.
             async () => {
+              ticket = ++library.ticket;
               const protocol = unwrapItem(await getProtocol(getDataApiContext(), { protocolId }));
 
               return protocol ? { protocol: toCallProtocol(protocol), entry: toLibraryEntry(protocol) } : null;
@@ -100,7 +148,11 @@ export const useProtocolsStore = create<ProtocolsState>()(
               if (!found) return {};
               const patch: Partial<ProtocolsData> = { protocolDetailsById: { ...state.protocolDetailsById, [protocolId]: found.protocol } };
 
-              if (found.entry) patch.libraryById = { ...state.libraryById, [protocolId]: found.entry };
+              // A list read that started after this one already wrote the entry: its version in force is the newer one.
+              if (found.entry && (library.writtenBy.get(protocolId) ?? 0) < ticket) {
+                patch.libraryById = { ...state.libraryById, [protocolId]: found.entry };
+                library.writtenBy.set(protocolId, ticket);
+              }
 
               return patch;
             },
@@ -119,8 +171,10 @@ export const useProtocolsStore = create<ProtocolsState>()(
         fetchVersionContent: async (protocolVersionId, options) => {
           const cached = get().versionContentById[protocolVersionId];
 
-          if (cached && !options?.bypassCache && (!options?.locale || cached.Locale === options.locale)) return cached;
-          const key = `version:${protocolVersionId}:${options?.locale ?? ''}`;
+          if (cached && !options?.bypassCache && answersLocale(cached, options?.locale)) return cached;
+          // An owed version that is not (or no longer) in force may be read and kept for the reader; a version that stopped
+          // being in force while it was read was pruned by that library refresh, and is not written back.
+          const wasCurrent = isCurrentVersion(get().libraryById, protocolVersionId);
 
           const result = await runner.run(
             'version',
@@ -131,10 +185,12 @@ export const useProtocolsStore = create<ProtocolsState>()(
 
               return unwrapItem(await getProtocolVersionContent(getDataApiContext(), params));
             },
-            (content, state) => (content ? { versionContentById: { ...state.versionContentById, [protocolVersionId]: content } } : {}),
-            { flightKey: key, raceKey: key }
+            (content, state) => (content && !(wasCurrent && !isCurrentVersion(state.libraryById, protocolVersionId)) ? { versionContentById: { ...state.versionContentById, [protocolVersionId]: content } } : {}),
+            // One flight per language; one race lane per stored copy, so the language asked for last is the one kept.
+            { flightKey: `version:${protocolVersionId}:${options?.locale ?? ''}`, raceKey: `version:${protocolVersionId}` }
           );
 
+          // A source read that fails falls back to the stored copy in any language (documented on `fetchVersionContent`).
           return result.ok ? (result.value ?? cached ?? null) : (cached ?? null);
         },
       };
@@ -158,4 +214,7 @@ export const useProtocolsStore = create<ProtocolsState>()(
 
 registerPersistedStore('omni-protocols-storage', useProtocolsStore);
 
-registerDataStoreReset<ProtocolsState>('protocols', useProtocolsStore, initialData, () => runner.invalidate());
+registerDataStoreReset<ProtocolsState>('protocols', useProtocolsStore, initialData, () => {
+  runner.invalidate();
+  library.writtenBy.clear();
+});

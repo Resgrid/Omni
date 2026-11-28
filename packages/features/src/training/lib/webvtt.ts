@@ -1,3 +1,5 @@
+import { parseUtcMs } from '@resgrid/core/utils/dates';
+
 /** One caption cue of a WebVTT track (times in seconds). */
 export interface CaptionCue {
   start: number;
@@ -16,8 +18,40 @@ export function vttSeconds(stamp: string): number {
   return parts.reduce((total, part) => total * 60 + part, 0);
 }
 
-/** Strips WebVTT markup (`<v Speaker>`, `<b>`, `<00:01.000>`) so a cue renders as plain text, never as markup. */
-const plain = (line: string): string => line.replace(/<[^>]*>/g, '').trim();
+/** The character references caption files use (WebVTT reads HTML's), by name. */
+const NAMED_REFERENCES = new Map<string, string>([
+  ['amp', '&'],
+  ['lt', '<'],
+  ['gt', '>'],
+  ['quot', '"'],
+  ['apos', "'"],
+  ['nbsp', ' '],
+  ['lrm', '‎'],
+  ['rlm', '‏'],
+]);
+
+const REFERENCE = /&(?:#[xX]([0-9a-fA-F]{1,6})|#(\d{1,7})|([a-zA-Z]{2,8}));/g;
+const MAX_CODE_POINT = 0x10ffff;
+const SURROGATES = { from: 0xd800, to: 0xdfff };
+
+const isCharacter = (code: number): boolean => code > 0 && code <= MAX_CODE_POINT && (code < SURROGATES.from || code > SURROGATES.to);
+
+/** `&amp;` → `&`, `&#233;` / `&#xE9;` → `é`; a reference this does not know is left as written. */
+function decodeReferences(text: string): string {
+  return text.replace(REFERENCE, (whole: string, hex: string | undefined, decimal: string | undefined, name: string | undefined) => {
+    if (name) return NAMED_REFERENCES.get(name) ?? whole;
+
+    const code = hex ? Number.parseInt(hex, 16) : Number.parseInt(decimal ?? '', 10);
+
+    return isCharacter(code) ? String.fromCodePoint(code) : whole;
+  });
+}
+
+/**
+ * Strips WebVTT markup (`<v Speaker>`, `<b>`, `<00:01.000>`), then decodes character references, so a cue reads as written and
+ * renders as plain text, never as markup (a decoded `&lt;b&gt;` is shown as the characters `<b>`).
+ */
+const plain = (line: string): string => decodeReferences(line.replace(/<[^>]*>/g, '')).trim();
 
 /**
  * The cues of a WebVTT track, in order. Header, NOTE, STYLE and REGION blocks and cue settings are skipped; a cue's lines are
@@ -65,11 +99,17 @@ export function cueAt(cues: readonly CaptionCue[], seconds: number): CaptionCue 
 /** Signed media links stop at UrlExpiresOn: treat them as gone a little before, so a player never starts on a dying link. */
 export const PLAYLIST_EXPIRY_MARGIN_MS = 20_000;
 
-export const isPlaylistExpired = (expiresOn: string | null | undefined, now: number = Date.now()): boolean => {
-  const at = expiresOn ? Date.parse(expiresOn.endsWith('Z') || /[+-]\d{2}:?\d{2}$/.test(expiresOn) ? expiresOn : `${expiresOn}Z`) : Number.NaN;
+/** When signed links stop (UrlExpiresOn, UTC: "Z", an offset, or none), in epoch milliseconds; null when it cannot be read. */
+export const playlistExpiresAt = (expiresOn: string | null | undefined): number | null => parseUtcMs(expiresOn);
 
-  return !Number.isFinite(at) || at - PLAYLIST_EXPIRY_MARGIN_MS <= now;
+export const isPlaylistExpired = (expiresOn: string | null | undefined, now: number = Date.now()): boolean => {
+  const at = playlistExpiresAt(expiresOn);
+
+  return at === null || at - PLAYLIST_EXPIRY_MARGIN_MS <= now;
 };
+
+/** How long until the links are read again: just before they stop, and never sooner than a second (an unreadable stamp is "now"). */
+export const playlistRefreshDelay = (expiresOn: string | null | undefined, now: number = Date.now()): number => Math.max(1000, (playlistExpiresAt(expiresOn) ?? now) - PLAYLIST_EXPIRY_MARGIN_MS - now);
 
 /** Share of a video watched (0–100) from the furthest position reached. */
 export const watchedPercent = (furthestSeconds: number, durationSeconds: number): number => (durationSeconds > 0 ? Math.max(0, Math.min(100, Math.round((furthestSeconds / durationSeconds) * 100))) : 0);

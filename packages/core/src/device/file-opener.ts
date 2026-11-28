@@ -34,15 +34,22 @@ export async function openFile(file: OpenableFile): Promise<void> {
   await opener(file);
 }
 
-/** A file name without path parts or characters a file system refuses, never empty. */
-export function safeFileName(name: string | null | undefined, fallback = 'file'): string {
-  const base = (name ?? '').split(/[\\/]/).pop() ?? '';
+function cleanFileName(name: string): string {
+  const base = name.split(/[\\/]/).pop() ?? '';
 
-  const cleaned = base
+  // Leading dots and spaces go together, so ' ..', '. . .' or ' .env' cannot leave a hidden or dot-only name.
+  return base
     .replace(/[^\w.\- ()]+/g, '_')
-    .replace(/^\.+/, '')
-    .trim()
-    .slice(0, 120);
+    .replace(/^[. ]+/, '')
+    .slice(0, 120)
+    .trim();
+}
 
-  return cleaned || fallback;
+/** A file name without path parts, leading dots or characters a file system refuses, never empty or dot-only. */
+export function safeFileName(name: string | null | undefined, fallback = 'file'): string {
+  const cleaned = cleanFileName(name ?? '');
+
+  if (cleaned) return cleaned;
+
+  return cleanFileName(fallback) || 'file';
 }

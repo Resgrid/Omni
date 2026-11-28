@@ -24,6 +24,35 @@ const Section: React.FC<{ title: string; children: React.ReactNode; testID?: str
   </VStack>
 );
 
+interface BusyKeys {
+  has: (key: string) => boolean;
+  /** Marks `key` busy while `work` runs; each request clears only its own key. */
+  track: <T>(key: string, work: () => Promise<T>) => Promise<T>;
+}
+
+/** Busy rows by request (`training:<id>`, `course:<id>`, `weekly:<id>`): enrolling in one never frees or blocks another. */
+function useBusyKeys(): BusyKeys {
+  const [keys, setKeys] = useState<ReadonlySet<string>>(() => new Set());
+
+  const track = useCallback(async <T,>(key: string, work: () => Promise<T>): Promise<T> => {
+    setKeys((current) => new Set(current).add(key));
+
+    try {
+      return await work();
+    } finally {
+      setKeys((current) => {
+        const next = new Set(current);
+
+        next.delete(key);
+
+        return next;
+      });
+    }
+  }, []);
+
+  return useMemo(() => ({ has: (key: string) => keys.has(key), track }), [keys, track]);
+}
+
 /**
  * "Training" (Responder `training` module). Free for every department with the Trainings module on: the member's assigned
  * trainings, the open catalog, the free Resgrid Academy, the transcript, certifications due and outside CE/CPD submissions.
@@ -51,7 +80,7 @@ export default function TrainingHomeScreen() {
   const myError = useTrainingStore((state) => state.errors.mine ?? null);
   const isLoading = useTrainingStore((state) => state.loading.mine === true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [busyId, setBusyId] = useState<number | null>(null);
+  const busy = useBusyKeys();
   const routeTab = useRouteTab(HOME_TABS);
 
   const load = useCallback(
@@ -88,17 +117,11 @@ export default function TrainingHomeScreen() {
 
   const answerWeekly = useCallback(
     async (id: number, keys: string[]) => {
-      setBusyId(id);
+      const answered = await busy.track(`weekly:${id}`, () => useProtocolAcknowledgmentsStore.getState().answerWeekly(id, keys));
 
-      try {
-        const answered = await useProtocolAcknowledgmentsStore.getState().answerWeekly(id, keys);
-
-        if (!answered) showToast('error', t('training.errors.generic'));
-      } finally {
-        setBusyId(null);
-      }
+      if (!answered) showToast('error', t('training.errors.generic'));
     },
-    [t]
+    [busy, t]
   );
 
   useEffect(() => {
@@ -120,33 +143,22 @@ export default function TrainingHomeScreen() {
 
   const enrollTraining = useCallback(
     async (id: number) => {
-      setBusyId(id);
+      const done = await busy.track(`training:${id}`, () => useTrainingStore.getState().selfEnroll(id));
 
-      try {
-        const done = await useTrainingStore.getState().selfEnroll(id);
-        showToast(done ? 'success' : 'error', t(done ? 'training.enrolled' : 'training.errors.generic'));
-      } finally {
-        setBusyId(null);
-      }
+      showToast(done ? 'success' : 'error', t(done ? 'training.enrolled' : 'training.errors.generic'));
     },
-    [t]
+    [busy, t]
   );
 
   const enrollCourse = useCallback(
     async (courseId: number) => {
-      setBusyId(courseId);
+      const outcome = await busy.track(`course:${courseId}`, () => useTrainingStore.getState().enrollCourse(courseId));
+      const enrollmentId = outcome.value?.EnrollmentId;
 
-      try {
-        const outcome = await useTrainingStore.getState().enrollCourse(courseId);
-        const enrollmentId = outcome.value?.EnrollmentId;
-
-        if (enrollmentId) openCourse(enrollmentId);
-        else showToast('error', t('training.errors.generic'));
-      } finally {
-        setBusyId(null);
-      }
+      if (enrollmentId) openCourse(enrollmentId);
+      else showToast('error', t('training.errors.generic'));
     },
-    [openCourse, t]
+    [busy, openCourse, t]
   );
 
   const assignments = useMemo(() => my?.Assignments ?? [], [my]);
@@ -218,7 +230,7 @@ export default function TrainingHomeScreen() {
       {weeklyShown.length > 0 ? (
         <Section title={t('training.sections.weekly')} testID="training-section-weekly">
           {weeklyShown.map((item) => (
-            <WeeklyQuestionCard key={item.Id} item={item} onAnswer={(id, keys) => void answerWeekly(id, keys)} isBusy={busyId === item.Id} />
+            <WeeklyQuestionCard key={item.Id} item={item} onAnswer={(id, keys) => void answerWeekly(id, keys)} isBusy={busy.has(`weekly:${item.Id}`)} />
           ))}
         </Section>
       ) : null}
@@ -250,21 +262,21 @@ export default function TrainingHomeScreen() {
       {catalog.length > 0 ? (
         <Section title={t('training.sections.catalog')}>
           {catalog.map((item) => (
-            <CatalogRow key={item.TrainingId} item={item} onOpen={openTraining} onEnroll={(id) => void enrollTraining(id)} isBusy={busyId === item.TrainingId} />
+            <CatalogRow key={item.TrainingId} item={item} onOpen={openTraining} onEnroll={(id) => void enrollTraining(id)} isBusy={busy.has(`training:${item.TrainingId}`)} />
           ))}
         </Section>
       ) : null}
       {catalogShown.length > 0 ? (
         <Section title={t('training.sections.department_courses')} testID="training-section-department-courses">
           {catalogShown.map((item) => (
-            <CatalogCourseRow key={item.CourseId} course={item} onOpen={openCourse} onEnroll={(courseId) => void enrollCourse(courseId)} isBusy={busyId === item.CourseId} />
+            <CatalogCourseRow key={item.CourseId} course={item} onOpen={openCourse} onEnroll={(courseId) => void enrollCourse(courseId)} isBusy={busy.has(`course:${item.CourseId}`)} />
           ))}
         </Section>
       ) : null}
       {academyAvailable.length > 0 ? (
         <Section title={t('training.sections.academy')} testID="training-section-academy">
           {academyAvailable.map((lesson) => (
-            <AcademyRow key={lesson.LessonId} lesson={lesson} onOpen={openCourse} onEnroll={(courseId) => void enrollCourse(courseId)} isBusy={busyId === lesson.CourseId} />
+            <AcademyRow key={lesson.LessonId} lesson={lesson} onOpen={openCourse} onEnroll={(courseId) => void enrollCourse(courseId)} isBusy={busy.has(`course:${lesson.CourseId}`)} />
           ))}
         </Section>
       ) : null}

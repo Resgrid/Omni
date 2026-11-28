@@ -1,8 +1,14 @@
+import { logger } from '@resgrid/core/logging/logger';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 
-/** How a launch opened outside the app's own player: back in the app (`closed`), still open elsewhere (`opened`), or not at all. */
-export type LaunchBrowserResult = 'closed' | 'opened' | 'failed';
+import { originOf } from './lesson-launch';
+
+/**
+ * How a launch opened outside the app's own player: back in the app (`closed`), still open elsewhere (`opened`), no window to open
+ * it in (`blocked`: the browser refused the window or the member closed it; a new tap can try again), or not at all (`failed`).
+ */
+export type LaunchBrowserResult = 'closed' | 'opened' | 'blocked' | 'failed';
 
 export interface LaunchBrowser {
   /** Opens the launch link outside the app's player. */
@@ -33,5 +39,8 @@ export function prepareLaunchBrowser(): LaunchBrowser {
 
 /** A window the lesson opens (a SCORM popup, a tool's help page): the system browser, never another in-app view. */
 export function openInSystemBrowser(url: string): void {
-  void WebBrowser.openBrowserAsync(url).catch(() => undefined);
+  void WebBrowser.openBrowserAsync(url).catch(() => {
+    // The origin only: a lesson's links can carry tokens in the path or query.
+    logger.warn({ message: 'Could not open a lesson window in the system browser', context: { origin: originOf(url) ?? 'unknown' } });
+  });
 }

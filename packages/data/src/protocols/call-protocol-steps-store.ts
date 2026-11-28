@@ -5,8 +5,9 @@ import { persist } from 'zustand/middleware';
 
 import { assertV4Success, unwrapItem, unwrapList } from '../core/envelope';
 import { type DataError, toDataError } from '../core/errors';
-import { defineIdempotentDataHandler, submitWrite, type WriteResult } from '../core/outbox';
+import { defineIdempotentDataHandler, drainOrderGroup, submitWrite, type WriteResult } from '../core/outbox';
 import { dataPersistOptions, registerPersistedStore } from '../core/persist';
+import { registerQueuedMarkerSource } from '../core/queued-markers';
 import { registerDataStoreReset } from '../core/reset';
 import { dataNow, getDataApiContext } from '../core/runtime';
 import { createSliceRunner, emptySliceMeta, type FetchOptions, type SliceMeta, type SliceRunner } from '../core/slices';
@@ -84,6 +85,15 @@ export function withQueuedSteps(checklists: readonly CallProtocolChecklistResult
 
 let runner: SliceRunner<StepsSlice, CallProtocolStepsState>;
 
+/** One order group per checklist: its step events reach Core in the order they were ticked, and before its completion. */
+export const protocolStepsOrderKey = (callProtocolId: string): string => `protocol-steps:${callProtocolId}`;
+
+/** Step events of a checklist still waiting to be sent (a refused one no longer waits: it is shown as refused, not done). */
+const hasUnsentSteps = (queued: readonly QueuedStepEvent[], callProtocolId: string): boolean => queued.some((event) => event.callProtocolId === callProtocolId && !event.rejected);
+
+/** Completion waits for the checklist's queued steps; when they could not be sent (offline), the member is told to try again. */
+const STEPS_NOT_SENT: DataError = { code: 'network', messageKey: 'errors.data.network' };
+
 const keepCall = (state: StepsData, callId: string, checklists: CallProtocolChecklistResultData[]): Pick<StepsData, 'checklistsByCall' | 'callOrder'> => {
   const order = [...state.callOrder.filter((id) => id !== callId), callId];
   const dropped = order.slice(0, Math.max(0, order.length - CALL_CHECKLIST_CACHE_LIMIT));
@@ -105,16 +115,20 @@ export const useCallProtocolStepsStore = create<CallProtocolStepsState>()(
       runner = createSliceRunner<StepsSlice, CallProtocolStepsState>('callProtocolSteps', set);
       const ctx = () => getDataApiContext();
 
-      const act = async (callId: string, fn: () => Promise<CallProtocolChecklistResult>): Promise<CallProtocolChecklistResultData | null> => {
+      // An answer that lands after a reset (sign-out) belongs to the session that asked: it must not repopulate the store.
+      const act = async (callId: string, fn: () => Promise<CallProtocolChecklistResult>, startedIn = runner.generation()): Promise<CallProtocolChecklistResultData | null> => {
         set({ actionError: null });
 
         try {
           const checklist = unwrapItem(assertV4Success(await fn()));
 
+          if (runner.generation() !== startedIn) return null;
+
           if (checklist) get().keepChecklist(callId, checklist);
 
           return checklist;
         } catch (error) {
+          if (runner.generation() !== startedIn) return null;
           set({ actionError: toDataError(error) });
 
           return null;
@@ -123,12 +137,13 @@ export const useCallProtocolStepsStore = create<CallProtocolStepsState>()(
 
       return {
         ...initialData(),
-        fetchChecklists: async (callId) => {
+        fetchChecklists: async (callId, options) => {
           await runner.run(
             'checklists',
             async () => unwrapList(await getCallProtocolChecklists(ctx(), { callId })),
             (checklists, state) => keepCall(state, callId, checklists),
-            { flightKey: `checklists:${callId}`, raceKey: `checklists:${callId}` }
+            // A read asked for after a write (bypassCache) runs after the one in flight, which may predate the write.
+            { flightKey: `checklists:${callId}`, raceKey: `checklists:${callId}`, trailing: options?.bypassCache === true }
           );
         },
         fetchSopLibrary: async () => {
@@ -139,9 +154,28 @@ export const useCallProtocolStepsStore = create<CallProtocolStepsState>()(
           );
         },
         startChecklist: (callId, protocolId) => act(callId, () => startCallProtocolChecklist(ctx(), { CallId: Number(callId), ProtocolId: Number(protocolId) })),
-        completeChecklist: (callId, callProtocolId) => act(callId, () => completeCallProtocolChecklist(ctx(), { CallId: Number(callId), CallProtocolId: Number(callProtocolId) })),
+        completeChecklist: async (callId, callProtocolId) => {
+          const startedIn = runner.generation();
+
+          // Core takes no step for a completed checklist: the steps ticked before it (queued offline, or retrying) are sent first.
+          try {
+            await drainOrderGroup(protocolStepsOrderKey(callProtocolId));
+          } catch {
+            // Undelivered steps stay queued; the check below keeps the completion back.
+          }
+
+          if (runner.generation() !== startedIn) return null;
+
+          if (hasUnsentSteps(get().queuedSteps, callProtocolId)) {
+            set({ actionError: STEPS_NOT_SENT });
+
+            return null;
+          }
+
+          return act(callId, () => completeCallProtocolChecklist(ctx(), { CallId: Number(callId), CallProtocolId: Number(callProtocolId) }), startedIn);
+        },
         recordStep: (payload) =>
-          submitWrite<ProtocolStepPayload>({ type: PROTOCOL_STEP_RECORD_EVENT, payload: { ...payload, deviceTimestamp: new Date(dataNow()).toISOString() }, orderKey: `protocol-steps:${payload.callProtocolId}` }),
+          submitWrite<ProtocolStepPayload>({ type: PROTOCOL_STEP_RECORD_EVENT, payload: { ...payload, deviceTimestamp: new Date(dataNow()).toISOString() }, orderKey: protocolStepsOrderKey(payload.callProtocolId) }),
         applyQueuedStep: (step) => set((state) => ({ queuedSteps: [...state.queuedSteps.filter((event) => event.localId !== step.localId), step] })),
         settleQueuedStep: (localId, rejected) =>
           set((state) => ({
@@ -203,5 +237,12 @@ export const protocolStepRecordHandler = defineIdempotentDataHandler<ProtocolSte
 });
 
 registerPersistedStore('omni-call-protocol-steps-storage', useCallProtocolStepsStore);
+
+// A queued step whose outbox event is gone (the app closed between delivery and saving the cleared marker) is dropped, so it
+// neither shows as waiting nor holds a checklist's completion back for good.
+registerQueuedMarkerSource('call-protocol-steps', {
+  ids: () => useCallProtocolStepsStore.getState().queuedSteps.map((event) => event.localId),
+  remove: (ids) => useCallProtocolStepsStore.setState((state) => ({ queuedSteps: state.queuedSteps.filter((event) => !ids.includes(event.localId)) })),
+});
 
 registerDataStoreReset<CallProtocolStepsState>('callProtocolSteps', useCallProtocolStepsStore, initialData, () => runner.invalidate());

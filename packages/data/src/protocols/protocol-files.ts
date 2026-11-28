@@ -20,5 +20,5 @@ export const downloadTranscriptPdf = (locale?: string): Promise<BinaryResponse> 
 /** The certificate of completion of one of the member's verified records, in `locale` when Core has it (online only). */
 export const downloadCertificate = (learningRecordId: number, locale?: string): Promise<BinaryResponse> => getTrainingCertificate(getDataApiContext(), locale ? { learningRecordId, locale } : { learningRecordId });
 
-/** A WebVTT caption track from a signed playlist link (no bearer token; the API's own origin only). */
+/** A WebVTT caption track from a signed playlist link (the API's or an Academy track's host): https only, fetched anonymously (no bearer token). */
 export const fetchSignedCaptions = (url: string): Promise<string> => getLmsSignedCaptions(getDataApiContext(), url);

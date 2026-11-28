@@ -4,7 +4,7 @@ import { createMemoryKvBackend } from '../../kv/memory-backend';
 import { setOfflineLogger } from '../../util/logger';
 import { beginPendingWipe, clearPendingWipe, finishPendingWipe, markWipePending, PENDING_WIPE_KEY, readPendingWipe } from '../pending-wipe';
 import { createResetRegistry } from '../registry';
-import { createScopeWiper } from '../wipe';
+import { createScopeWiper, WipeIncompleteError } from '../wipe';
 
 const logger = { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() };
 
@@ -74,6 +74,39 @@ describe('finishPendingWipe (startup)', () => {
     await expect(finishPendingWipe(kv, wiper)).resolves.toBeNull();
     expect(readPendingWipe(kv)).toBe('logout');
     expect(logger.error).toHaveBeenCalledWith(expect.objectContaining({ message: 'Failed to finish the pending wipe' }));
+  });
+
+  it('keeps the mark when the wipe could not clear a table (it resolves all the same), so the next launch tries again', async () => {
+    const kv = kvWith({ [PENDING_WIPE_KEY]: 'logout', 'calls-storage': '{}' });
+    const registry = createResetRegistry();
+    const db = await createMemoryDb();
+    await db.createTable({ name: 'cache_calls', columns: [{ name: 'id', type: 'TEXT', primaryKey: true }] });
+    await db.insert('cache_calls', { id: 'c1' });
+    registry.registerWipeTable('cache_calls');
+    jest.spyOn(db, 'delete').mockRejectedValueOnce(new Error('SQLITE_BUSY'));
+
+    await expect(finishPendingWipe(kv, createScopeWiper({ registry, kvInstances: () => [kv], db }))).rejects.toBeInstanceOf(WipeIncompleteError);
+    expect(readPendingWipe(kv)).toBe('logout');
+    expect(kv.contains('calls-storage')).toBe(false);
+    expect(logger.error).toHaveBeenCalledWith(expect.objectContaining({ message: 'Part of the pending wipe failed; the next launch runs it again' }));
+  });
+
+  it('keeps the mark when a store reset fails, but not for a failed teardown', async () => {
+    const failing = kvWith({ [PENDING_WIPE_KEY]: 'logout' });
+    const resets = createResetRegistry();
+    resets.registerStoreReset('broken', () => {
+      throw new Error('reset failed');
+    });
+    await expect(finishPendingWipe(failing, createScopeWiper({ registry: resets, kvInstances: () => [failing] }))).rejects.toBeInstanceOf(WipeIncompleteError);
+    expect(readPendingWipe(failing)).toBe('logout');
+
+    const kv = kvWith({ [PENDING_WIPE_KEY]: 'logout' });
+    const teardowns = createResetRegistry();
+    teardowns.registerTeardown('livekit', () => {
+      throw new Error('room gone');
+    });
+    await expect(finishPendingWipe(kv, createScopeWiper({ registry: teardowns, kvInstances: () => [kv] }))).resolves.toBe('logout');
+    expect(readPendingWipe(kv)).toBeNull();
   });
 });
 
@@ -150,5 +183,31 @@ describe('beginPendingWipe (what startup registers after the wipe catches up)', 
     await run?.settle();
     expect(logger.error).toHaveBeenCalledWith(expect.objectContaining({ message: 'A late part of a wipe failed', context: expect.objectContaining({ name: 'notifications' }) }));
     expect(readPendingWipe(kv)).toBeNull();
+  });
+
+  it('keeps the mark when a late store reset fails, so the next launch runs it again', async () => {
+    const kv = kvWith({ [PENDING_WIPE_KEY]: 'logout' });
+    const registry = createResetRegistry();
+    const run = await beginPendingWipe(kv, createScopeWiper({ registry, kvInstances: () => [kv] }));
+    registry.registerStoreReset('maps.offline-packs', async () => {
+      throw new Error('EBUSY');
+    });
+
+    await expect(run?.settle()).rejects.toBeInstanceOf(WipeIncompleteError);
+    expect(readPendingWipe(kv)).toBe('logout');
+    expect(logger.error).toHaveBeenCalledWith(expect.objectContaining({ message: 'A late part of a wipe failed', context: expect.objectContaining({ kind: 'store-reset', name: 'maps.offline-packs' }) }));
+  });
+
+  it('keeps the mark when a late wipe table cannot be cleared', async () => {
+    const kv = kvWith({ [PENDING_WIPE_KEY]: 'logout' });
+    const registry = createResetRegistry();
+    const db = await createMemoryDb();
+    await db.createTable({ name: 'offline_map_packs', columns: [{ name: 'id', type: 'TEXT', primaryKey: true }] });
+    const run = await beginPendingWipe(kv, createScopeWiper({ registry, kvInstances: () => [kv], db }));
+    jest.spyOn(db, 'delete').mockRejectedValueOnce(new Error('SQLITE_BUSY'));
+    registry.registerWipeTable('offline_map_packs');
+
+    await expect(run?.settle()).rejects.toBeInstanceOf(WipeIncompleteError);
+    expect(readPendingWipe(kv)).toBe('logout');
   });
 });

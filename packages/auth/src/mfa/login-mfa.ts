@@ -60,6 +60,8 @@ export type LoginMfaResult = { ok: true; recovery: boolean } | { ok: false; code
 export interface LoginMfaHost {
   /** Resolves once the tokens may be committed: a sign-out still running has finished its wipe. */
   ready: () => Promise<void>;
+  /** True while a sign-out runs: checked again right before `signIn`, in the same synchronous step, after `ready` resolved. */
+  signingOut: () => boolean;
   /** Throws when the tokens cannot be used (no/malformed id token). */
   signIn: (authResponse: AuthResponse, recoveryCodes: string[] | null) => void;
   setChallenge: (challenge: MfaChallenge | null, error?: string | null) => void;
@@ -113,7 +115,8 @@ const finish = async (host: LoginMfaHost, secret: string, completion: Completion
   // A sign-out still running finishes its wipe before this session opens.
   await host.ready();
 
-  // Checked again after the grant and that wait: a cancel during them must not sign in after all (Dispatch).
+  // Checked again after the grant and that wait: a cancel during them must not sign in after all (Dispatch). A sign-out
+  // that starts while the wait settles forgets the transaction first, so it is caught here too.
   if (loginTransaction !== secret) {
     return abandoned;
   }
@@ -286,8 +289,12 @@ export const signInWithBrokeredSso = async (host: LoginMfaHost, department: SsoD
     if (redeemed.Outcome === 'completed' && redeemed.Transaction && redeemed.CompletionCode) {
       const tokens = await completionGrant(ctx, redeemed.Transaction, redeemed.CompletionCode);
 
-      // Waits here, not before the round trip: the provider window opens straight from the tap (popup blockers).
-      await host.ready();
+      // Waits here, not before the round trip: the provider window opens straight from the tap (popup blockers). Checked
+      // again in the step that signs in: a sign-out that starts while the wait settles is waited for too (no transaction
+      // here to catch it, unlike finish()).
+      do {
+        await host.ready();
+      } while (host.signingOut());
 
       try {
         host.signIn(tokens, null);

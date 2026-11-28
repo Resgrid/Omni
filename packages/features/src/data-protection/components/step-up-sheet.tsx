@@ -77,16 +77,17 @@ export const StepUpSheet: React.FC = () => {
   const [secretMethod, setSecretMethod] = useState<StepUpMethod | null>(null);
   const [approvalNumber, setApprovalNumber] = useState<string | null>(null);
   const approvalAbort = useRef<AbortController | null>(null);
-  const isOpen = pending !== null;
+  const sheetId = pending?.id ?? null;
 
+  // Closed, or replaced by the next sheet (another area, or this one asked for again): nothing typed or started for one
+  // sheet carries over to the next.
   useEffect(() => {
-    if (isOpen) return;
     setSecret('');
     setSecretMethod(null);
     approvalAbort.current?.abort();
     approvalAbort.current = null;
     setApprovalNumber(null);
-  }, [isOpen]);
+  }, [sheetId]);
 
   const close = useCallback(() => {
     approvalAbort.current?.abort();
@@ -124,6 +125,12 @@ export const StepUpSheet: React.FC = () => {
   const enroll = () => {
     cancelStepUp();
     pushRoutePath(router, '/settings/account-security');
+  };
+
+  // What was typed for one method never shows in the other's field (a password would show unmasked as a code).
+  const switchSecret = () => {
+    setSecret('');
+    setSecretMethod(activeSecret === 'totp' ? 'password' : 'totp');
   };
 
   return (
@@ -164,7 +171,7 @@ export const StepUpSheet: React.FC = () => {
             {canComplete && !approvalNumber ? (
               <VStack space="sm">
                 {secretMethods.length > 1 ? (
-                  <Button variant="link" onPress={() => setSecretMethod(activeSecret === 'totp' ? 'password' : 'totp')} testID="step-up-switch-secret">
+                  <Button variant="link" onPress={switchSecret} testID="step-up-switch-secret">
                     <ButtonText>{t(activeSecret === 'totp' ? 'step_up.use_password' : 'step_up.use_code')}</ButtonText>
                   </Button>
                 ) : null}

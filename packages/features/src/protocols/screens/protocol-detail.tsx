@@ -106,7 +106,9 @@ export default function ProtocolDetailScreen({ protocolId: protocolIdProp }: Pro
     <View className="flex-1 bg-background-50" testID="protocol-detail-screen">
       <ScreenHeader title={protocol.Name} onBack={back} />
       <ScrollView contentContainerStyle={styles.scroll}>
-        {owed ? <AcknowledgmentPanel acknowledgment={owed} contentHash={content?.ContentHash ?? null} testID="protocol-acknowledgment" /> : null}
+        {/* Keyed by the owed version: a different acknowledgment starts with a fresh panel (no earlier quiz or score). `content` is
+            that version's (`versionId` follows `owed`), so its hash is null until the text being signed has loaded. */}
+        {owed ? <AcknowledgmentPanel key={owed.ProtocolVersionId} acknowledgment={owed} contentHash={content?.ContentHash ?? null} testID="protocol-acknowledgment" /> : null}
         <View className="mb-3 rounded-xl border border-outline-200 bg-background-0 p-4">
           <HStack space="sm" className="mb-2 flex-wrap items-center" testID="protocol-version-stamp">
             <Text size="xs" className="text-typography-600">

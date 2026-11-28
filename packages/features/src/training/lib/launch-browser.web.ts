@@ -10,6 +10,8 @@ const LAUNCH_WINDOW_NAME = 'resgrid-lms-lesson';
  * Web and Electron: a top-level window, where an LTI tool may use its own cookies and sign-in. In Electron `window.open` reaches the
  * system browser (the shell's window-open handler). A browser blocks a window opened after the launch request returns, so the
  * window opens blank now, while the tap still counts, and is pointed at the link (cut off from this app first) once it arrives.
+ * With no window to point (the browser blocked it, or the member closed it), `open` says `blocked` instead of opening one late: a
+ * window opened then would be blocked too, and the member starts again with a new tap.
  */
 export function prepareLaunchBrowser(): LaunchBrowser {
   if (isElectron()) {
@@ -27,14 +29,10 @@ export function prepareLaunchBrowser(): LaunchBrowser {
 
   return {
     open: async (url) => {
-      if (popup && !popup.closed) {
-        popup.opener = null;
-        popup.location.href = url;
+      if (!popup || popup.closed) return 'blocked';
 
-        return 'opened';
-      }
-
-      window.open(url, '_blank', 'noopener,noreferrer');
+      popup.opener = null;
+      popup.location.href = url;
 
       return 'opened';
     },

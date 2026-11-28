@@ -189,6 +189,10 @@ export default function CoursePlayerScreen({ enrollmentId: enrollmentIdProp }: C
   const lessons = useMemo(() => course?.Lessons ?? [], [course]);
   const lesson = useMemo(() => lessons.find((item) => item.LessonId === selectedId) ?? currentLesson(lessons, course?.CurrentLessonId), [course?.CurrentLessonId, lessons, selectedId]);
   const isHostedVideo = lesson?.Kind === 'Video' && lesson.VideoSource === 'Hosted';
+  // The lesson on screen now: an answer that comes back after the member moved on is not shown under another lesson.
+  const shown = useRef<string | null>(null);
+
+  shown.current = enrollmentId && lesson ? `${enrollmentId}:${lesson.LessonId}` : null;
 
   useEffect(() => {
     video.current = isHostedVideo && lesson ? { position: lesson.VideoPositionSeconds, furthest: lesson.VideoPositionSeconds, duration: 0 } : null;
@@ -246,12 +250,13 @@ export default function CoursePlayerScreen({ enrollmentId: enrollmentIdProp }: C
     setIsBusy(true);
 
     try {
+      const target = shown.current;
       const extra = { responseText: response.trim() || undefined, file: file ? { name: file.name, contentType: file.contentType, base64: file.base64 } : undefined };
       const result = await useTrainingStore.getState().completeLesson(enrollmentId, lesson.LessonId, extra);
 
       report(result);
 
-      if (result.value) setUpload([]);
+      if (result.value && shown.current === target) setUpload([]);
     } finally {
       setIsBusy(false);
     }
@@ -271,7 +276,11 @@ export default function CoursePlayerScreen({ enrollmentId: enrollmentIdProp }: C
     setIsBusy(true);
 
     try {
+      const target = shown.current;
       const result = await useTrainingStore.getState().startAttempt(enrollmentId, lesson.LessonId, true);
+
+      // The member chose another lesson meanwhile: this attempt's questions belong to the one they left.
+      if (shown.current !== target) return;
 
       if (result.value) {
         setAttempt(result.value);
@@ -293,7 +302,15 @@ export default function CoursePlayerScreen({ enrollmentId: enrollmentIdProp }: C
         Text: submission.texts[String(question.QuestionId)] ?? null,
       }));
 
+      const target = shown.current;
       const result = await useTrainingStore.getState().submitAttempt(attempt.AttemptId, answers);
+
+      if (shown.current !== target) {
+        // Scored for the lesson the member left: the course is read again, but the outcome is not shown under this one.
+        if (result.value) void reload();
+
+        return;
+      }
 
       if (result.value) {
         setOutcome(result.value);
@@ -399,7 +416,7 @@ export default function CoursePlayerScreen({ enrollmentId: enrollmentIdProp }: C
           ) : null}
           {isSurvey && !completed && !lesson.IsLocked ? (
             <View style={styles.quiz}>
-              <SurveyForm questions={lesson.SurveyQuestions ?? []} onSubmit={(answers) => void submitSurvey(answers)} isSubmitting={isBusy} testID="course-survey" />
+              <SurveyForm key={lesson.LessonId} questions={lesson.SurveyQuestions ?? []} onSubmit={(answers) => void submitSurvey(answers)} isSubmitting={isBusy} testID="course-survey" />
             </View>
           ) : null}
           {outcome ? (

@@ -153,6 +153,9 @@ export function retainCourses(byEnrollment: Record<number, LmsCourseResult>, cou
   return Object.fromEntries(Object.entries(byEnrollment).filter(([id]) => keep.has(Number(id))));
 }
 
+/** A copy of `byId` without `id`. */
+const withoutKey = <T>(byId: Record<number, T>, id: number): Record<number, T> => Object.fromEntries(Object.entries(byId).filter(([key]) => Number(key) !== id));
+
 /** A file-request lesson's upload and a free response, sent with CompleteLesson. */
 export interface LessonCompletionExtra {
   responseText?: string;
@@ -214,17 +217,20 @@ export const useTrainingStore = create<TrainingState>()(
           const result = await runner.run(
             'detail',
             async () => unwrapItem(await getTraining(ctx(), { trainingId })),
-            (training, state) => (training ? { trainingsById: { ...state.trainingsById, [trainingId]: training } } : {}),
+            // Core answered that the training is gone (`not_found`): its offline copy goes too. A failed read keeps it.
+            (training, state) => ({ trainingsById: training ? { ...state.trainingsById, [trainingId]: training } : withoutKey(state.trainingsById, trainingId) }),
             { flightKey: `detail:${trainingId}`, raceKey: `detail:${trainingId}` }
           );
 
           return result.ok ? (result.value ?? null) : (cached ?? null);
         },
-        fetchTranscript: async () => {
+        fetchTranscript: async (options) => {
           await runner.run(
             'transcript',
             async () => unwrapList(await getTrainingTranscript(ctx())),
-            (transcript) => ({ transcript })
+            (transcript) => ({ transcript }),
+            // A refresh after a write must read after it, not join a read that started before it.
+            { trailing: options?.bypassCache === true }
           );
         },
         fetchCategories: async () => {

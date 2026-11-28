@@ -2685,7 +2685,8 @@
       "queued": "Votre prise de connaissance est enregistrée sur cet appareil et sera envoyée dès votre retour en ligne.",
       "awaiting_step_up": "Votre prise de connaissance est enregistrée et sera envoyée dès que vous aurez confirmé qu'il s'agit bien de vous.",
       "verify_now": "Confirmer qu'il s'agit de vous",
-      "status_held": "En attente de vérification"
+      "status_held": "En attente de vérification",
+      "content_needed": "La version que vous devez lire n'est pas encore chargée. Vous pourrez confirmer en avoir pris connaissance dès qu'elle s'affichera."
     },
     "quiz": {
       "pick_all": "Choisissez toutes les réponses qui s'appliquent.",
@@ -5756,7 +5757,8 @@
         "unavailable": "Cette leçon ne peut pas être ouverte pour le moment. Réessayez plus tard.",
         "rate_limited": "Trop de leçons ont été ouvertes en peu de temps. Patientez une minute, puis réessayez.",
         "not_found": "Cette leçon n'est plus disponible.",
-        "expired": "Le lien de la leçon a expiré avant son ouverture. Recommencez la leçon."
+        "expired": "Le lien de la leçon a expiré avant son ouverture. Recommencez la leçon.",
+        "window_blocked": "La fenêtre de la leçon n'a pas pu s'ouvrir. Autorisez les fenêtres pop-up pour ce site si votre navigateur le demande, puis recommencez la leçon."
       }
     }
   },

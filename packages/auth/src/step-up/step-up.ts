@@ -139,6 +139,8 @@ export function offeredMethods(requirement: Pick<StepUpRequirement, 'usableMetho
 }
 
 interface PendingStepUp {
+  /** Which sheet this is: a result that arrives after its sheet closed never closes, answers or marks a later one. */
+  id: number;
   requirement: StepUpRequirement;
   options: AreaStepUpOptionsData | null;
 }
@@ -165,6 +167,7 @@ let waiters: StepUpWaiter[] = [];
 
 /** Areas asked for while another area's sheet is open, in order; each opens when the one before it settles. */
 let queued: StepUpRequirement[] = [];
+let lastSheetId = 0;
 const verifiedListeners = new Set<(area: StepUpArea) => void>();
 
 /** Runs after every completed step-up (an outbox drains the writes that were waiting for it). */
@@ -174,23 +177,36 @@ export function onStepUpVerified(listener: (area: StepUpArea) => void): () => vo
   return () => verifiedListeners.delete(listener);
 }
 
-async function loadOptions(area: StepUpArea): Promise<void> {
+/** The sheet `id` while it is still the open one, else null (closed, or replaced by the next area's). */
+function openSheetOf(id: number): PendingStepUp | null {
+  const pending = stepUpStore.getState().pending;
+
+  return pending?.id === id ? pending : null;
+}
+
+async function loadOptions(id: number, area: StepUpArea): Promise<void> {
   try {
     const options = await authData<AreaStepUpOptionsData>(getAuthApiContext(), stepUpEndpoints.options, { params: { area } });
-    const pending = stepUpStore.getState().pending;
+    const pending = openSheetOf(id);
 
-    if (pending && pending.requirement.area === area) stepUpStore.setState({ pending: { ...pending, options } });
+    if (pending) stepUpStore.setState({ pending: { ...pending, options } });
   } catch (error) {
     // A refusal already carries the methods (the options only add the passkey ceremony); a sheet opened without them says why.
-    const pending = stepUpStore.getState().pending;
+    const pending = openSheetOf(id);
 
-    if (pending && pending.requirement.area === area && pending.requirement.usableMethods.length === 0) stepUpStore.setState({ lastError: stepUpErrorCode(error) });
+    if (pending && pending.requirement.usableMethods.length === 0) stepUpStore.setState({ lastError: stepUpErrorCode(error) });
   }
 }
 
 function openSheet(requirement: StepUpRequirement): void {
-  stepUpStore.setState({ pending: { requirement, options: null }, lastError: null, isVerifying: false });
-  void loadOptions(requirement.area);
+  lastSheetId += 1;
+  stepUpStore.setState({ pending: { id: lastSheetId, requirement, options: null }, lastError: null, isVerifying: false });
+  void loadOptions(lastSheetId, requirement.area);
+}
+
+/** Shows why an attempt failed, on its own sheet only: a later sheet keeps its own state. */
+function failOn(id: number, lastError: string): void {
+  if (openSheetOf(id)) stepUpStore.setState({ isVerifying: false, lastError });
 }
 
 /** Tells every caller waiting for an area how it ended, then opens the next area asked for meanwhile. */
@@ -265,9 +281,22 @@ export function stepUpErrorCode(cause: unknown): string {
   return failure.status === 429 ? 'too_many_attempts' : 'step_up_failed';
 }
 
-/** Verifies one method with `StepUp/Verify`; on success the sheet closes and every waiting caller sends its request again. */
-async function verify(body: StepUpVerifyFields, method: StepUpMethod): Promise<boolean> {
-  const pending = stepUpStore.getState().pending;
+/** Protected data is verified only once its grant is held: one that expired in transit (or none at all) leaves the reveal refused. */
+function holdsGrant(area: StepUpArea, data: AreaStepUpVerifyData | null | undefined): boolean {
+  if (area !== 'protected_data') return true;
+
+  if (!data?.GrantToken || !data.GrantExpiresAt) return false;
+
+  return adoptProtectedGrant(data.GrantToken, data.GrantExpiresAt);
+}
+
+/**
+ * Verifies one method with `StepUp/Verify` for the sheet `sheetId` (the open one by default); on success that sheet closes
+ * and every caller waiting for it sends its request again. Nothing is sent once that sheet is no longer the open one, and a
+ * result that comes back after it closed (cancelled, signed out, or replaced by the next area's) leaves the open sheet alone.
+ */
+async function verify(body: StepUpVerifyFields, method: StepUpMethod, sheetId: number | undefined = stepUpStore.getState().pending?.id): Promise<boolean> {
+  const pending = sheetId === undefined ? null : openSheetOf(sheetId);
 
   if (!pending) return false;
 
@@ -277,8 +306,18 @@ async function verify(body: StepUpVerifyFields, method: StepUpMethod): Promise<b
 
   try {
     const data = await authData<AreaStepUpVerifyData>(getAuthApiContext(), stepUpEndpoints.verify, { body: { Area: area, Method: method, ...body } });
+    // The server issued the grant either way: it is kept even when the sheet that asked for it has closed meanwhile.
+    const granted = holdsGrant(area, data);
 
-    if (area === 'protected_data' && data?.GrantToken && data.GrantExpiresAt) adoptProtectedGrant(data.GrantToken, data.GrantExpiresAt);
+    if (!openSheetOf(pending.id)) return false;
+
+    if (!granted) {
+      authLogger.warn({ message: 'Step-up verified but the protected-data grant could not be held', context: { area, method } });
+      failOn(pending.id, 'grant_not_adopted');
+
+      return false;
+    }
+
     stepUpStore.setState((state) => ({ pending: null, isVerifying: false, lastError: null, dismissedAreas: state.dismissedAreas.filter((item) => item !== area) }));
     settle(area, true);
 
@@ -290,7 +329,7 @@ async function verify(body: StepUpVerifyFields, method: StepUpMethod): Promise<b
 
     // The method and the refusal's type only: never the code, the password or the credential.
     authLogger.warn({ message: 'Step-up verification failed', context: { area, method, errorType: code } });
-    stepUpStore.setState({ isVerifying: false, lastError: code });
+    failOn(pending.id, code);
 
     return false;
   }
@@ -304,9 +343,10 @@ export const verifyStepUpPassword = (password: string): Promise<boolean> => veri
 
 /** A passkey of this app, with the ceremony `StepUp/Options` handed out. */
 export async function verifyStepUpPasskey(): Promise<boolean> {
-  const passkey = stepUpStore.getState().pending?.options?.Passkey;
+  const sheet = stepUpStore.getState().pending;
+  const passkey = sheet?.options?.Passkey;
 
-  if (!passkey?.RequestId || !passkey.Options) {
+  if (!sheet || !passkey?.RequestId || !passkey.Options) {
     stepUpStore.setState({ lastError: 'passkey_unavailable' });
 
     return false;
@@ -315,9 +355,10 @@ export async function verifyStepUpPasskey(): Promise<boolean> {
   try {
     const credential = await getPasskeyAssertion(passkey.Options);
 
-    return await verify({ RequestId: passkey.RequestId, Credential: credential }, 'passkey');
+    // The ceremony cannot be stopped: its assertion goes only to the sheet that started it.
+    return await verify({ RequestId: passkey.RequestId, Credential: credential }, 'passkey', sheet.id);
   } catch (error) {
-    stepUpStore.setState({ isVerifying: false, lastError: stepUpErrorCode(error) });
+    failOn(sheet.id, stepUpErrorCode(error));
 
     return false;
   }
@@ -333,9 +374,12 @@ const approvalBody = (area: StepUpArea): Record<string, string> => (area === 'pr
 
 /** Asks Responder to approve: the number to show on this screen, then the decision; a granted approval is verified. */
 export async function startStepUpApproval(onNumber: (number: string) => void, signal?: AbortSignal): Promise<boolean> {
-  const area = stepUpStore.getState().pending?.requirement.area;
+  const sheet = stepUpStore.getState().pending;
 
-  if (!area) return false;
+  if (!sheet) return false;
+
+  const area = sheet.requirement.area;
+
   stepUpStore.setState({ lastError: null });
 
   try {
@@ -353,14 +397,15 @@ export async function startStepUpApproval(onNumber: (number: string) => void, si
     }
 
     if (decided !== 'approved') {
-      stepUpStore.setState({ lastError: APPROVAL_ERRORS.get(decided) ?? 'approval_expired' });
+      failOn(sheet.id, APPROVAL_ERRORS.get(decided) ?? 'approval_expired');
 
       return false;
     }
 
-    return await verify({ ApprovalRequestId: started.ApprovalRequestId }, 'passkey_approval');
+    // Approved for this sheet's area: verified only while this sheet is still the open one.
+    return await verify({ ApprovalRequestId: started.ApprovalRequestId }, 'passkey_approval', sheet.id);
   } catch (error) {
-    stepUpStore.setState({ isVerifying: false, lastError: stepUpErrorCode(error) });
+    failOn(sheet.id, stepUpErrorCode(error));
 
     return false;
   }
@@ -373,17 +418,21 @@ const ssoBegin = (purpose: Record<string, string>) => (secrets: SsoRoundTripSecr
 
 /** The round trip through the system auth session (ASWebAuthenticationSession / Custom Tabs; the desktop loopback in Electron). */
 async function viaSso(method: 'sso' | 'federated', purpose: Record<string, string>): Promise<boolean> {
+  const sheet = stepUpStore.getState().pending;
+
+  if (!sheet) return false;
   stepUpStore.setState({ lastError: null });
 
   const trip = await runSsoRoundTrip(ssoBegin(purpose));
 
   if (!trip.ok) {
-    stepUpStore.setState({ lastError: trip.code ?? `sso_${trip.reason}` });
+    failOn(sheet.id, trip.code ?? `sso_${trip.reason}`);
 
     return false;
   }
 
-  return verify({ SsoTransactionId: trip.trip.ssoTransactionId, SsoCode: trip.trip.ssoCode, CodeVerifier: trip.trip.codeVerifier }, method);
+  // The round trip cannot be stopped: its result goes only to the sheet that started it.
+  return verify({ SsoTransactionId: trip.trip.ssoTransactionId, SsoCode: trip.trip.ssoCode, CodeVerifier: trip.trip.codeVerifier }, method, sheet.id);
 }
 
 /** Signing in again with the organization's SSO (the broker asks the provider for a fresh login). */

@@ -22,7 +22,7 @@ import { configureData, refreshDataWorkingSet } from '@resgrid/data';
 import { getCurrentLanguage, initI18n, isSupportedLanguage, LEGACY_LANGUAGE_STORAGE_KEY, loadLanguage } from '@resgrid/i18n';
 import { configureLocation, type LocationSettings } from '@resgrid/location';
 import { configureNotifications, NATIVE_PUSH_PENDING_SIGN_OUTS_KEY, pushNotificationService, type WebPushFirebaseConfig } from '@resgrid/notifications';
-import { apiCacheTtlFromManifest, CONTRACT_KEYS, defaultResetRegistry, initOffline, type OfflineRuntime, readLegacyString } from '@resgrid/offline';
+import { apiCacheTtlFromManifest, CONTRACT_KEYS, defaultResetRegistry, initOffline, type OfflineRuntime, readLegacyString, wipeScopeCompletely } from '@resgrid/offline';
 import { configureRealtime, teardownRealtime, useRealtimeStore } from '@resgrid/realtime';
 import { configureVoice, initializeVoice, registerVoiceResets } from '@resgrid/voice';
 import * as WebBrowser from 'expo-web-browser';
@@ -246,7 +246,7 @@ export function createStartupSteps(config: AppShellConfig): InitStep[] {
         const auth = await initAuth({
           storage: offline.storage,
           defaultServerUrl: env.BASE_API_URL,
-          services: { wipeScope: (reason) => offline.wiper.wipeScope(reason), apiCache: offline.apiCache },
+          services: { wipeScope: (reason) => wipeScopeCompletely(offline.wiper, reason), apiCache: offline.apiCache },
           logger,
           setTelemetryUser,
           isMobileApp: env.IS_MOBILE_APP,

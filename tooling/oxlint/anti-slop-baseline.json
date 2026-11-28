@@ -1393,9 +1393,6 @@
     "anti-slop/no-unsafe-dictionary-type": 2,
     "anti-slop/require-safety-comment-for-type-assertion": 6
   },
-  "packages/data/src/checklists/checklists-store.ts": {
-    "anti-slop/require-readable-spacing": 13
-  },
   "packages/data/src/configure.ts": {
     "anti-slop/require-readable-spacing": 1
   },
@@ -4754,7 +4751,7 @@
     "anti-slop/no-runtime-typeof": 2,
     "anti-slop/no-unknown-parameters": 2,
     "anti-slop/no-unsafe-dictionary-type": 1,
-    "anti-slop/require-readable-spacing": 65,
+    "anti-slop/require-readable-spacing": 63,
     "anti-slop/require-safety-comment-for-type-assertion": 1
   },
   "packages/notifications/src/push-notification.web.ts": {
@@ -4763,7 +4760,7 @@
     "anti-slop/no-runtime-typeof": 6,
     "anti-slop/no-unknown-parameters": 4,
     "anti-slop/no-unsafe-dictionary-type": 1,
-    "anti-slop/require-readable-spacing": 73,
+    "anti-slop/require-readable-spacing": 70,
     "anti-slop/require-safety-comment-for-type-assertion": 8
   },
   "packages/notifications/src/registration-storage.ts": {
@@ -4965,9 +4962,7 @@
     "anti-slop/require-readable-spacing": 3
   },
   "packages/offline/src/reset/wipe.ts": {
-    "anti-slop/no-runtime-typeof": 4,
-    "anti-slop/require-readable-spacing": 8,
-    "anti-slop/require-safety-comment-for-type-assertion": 1
+    "anti-slop/require-readable-spacing": 7
   },
   "packages/offline/src/runtime.ts": {
     "anti-slop/no-runtime-typeof": 1,

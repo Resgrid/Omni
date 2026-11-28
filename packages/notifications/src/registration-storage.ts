@@ -87,6 +87,23 @@ export type PendingPushSignOut = z.infer<typeof pendingSignOutSchema>;
 /** What became of one registration a sign-out tried to take off. */
 export type SignOutUnregisterOutcome = 'removed' | 'refused' | 'retry';
 
+const unregisterAnswerSchema = z.object({ Status: z.string() });
+
+/**
+ * Whether an HTTP 2xx answer to `UnRegisterNativePush` / `UnRegisterWebPush` means the token is off the server. Core
+ * answers 200 with `Status: Failure` when it could not remove it (DevicesController), so only `Success` counts, as for
+ * the api client's own unregister calls. An answer that cannot be read is not a removal.
+ */
+export async function isRemovalConfirmed(response: Response): Promise<boolean> {
+  try {
+    const answer = unregisterAnswerSchema.safeParse(await response.json());
+
+    return answer.success && answer.data.Status.toLowerCase() === 'success';
+  } catch {
+    return false;
+  }
+}
+
 /** Reads and writes the registration; every failure is a miss, never a crash. */
 export class RegistrationStore {
   constructor(private readonly kv: NotificationsKv) {}

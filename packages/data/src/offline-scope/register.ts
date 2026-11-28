@@ -7,7 +7,7 @@ import { callFileUploadHandler, callNoteAddHandler } from '../calls/call-write-h
 import { useCallsStore } from '../calls/calls-store';
 import { checkInPerformHandler } from '../calls/check-in-timers-store';
 import { chatMessageSendHandler, useChatStore } from '../chat/chat-store';
-import { checklistRunSaveHandler } from '../checklists/checklists-store';
+import { checklistRunSaveHandler, checklistRunStartHandler } from '../checklists/checklists-store';
 import { useContactsStore } from '../contacts/contacts-store';
 import { dataNow, getDataSessionScope } from '../core/runtime';
 import { type SliceMeta } from '../core/slices';
@@ -52,7 +52,8 @@ const HANDLERS: Record<DataOutboxType, OutboxHandler[]> = {
   'records.draft.save': [recordDraftSaveHandler as unknown as OutboxHandler],
   'records.command': [recordCommandHandler as unknown as OutboxHandler],
   'workOrders.report': [workOrderReportHandler as unknown as OutboxHandler],
-  'checklists.run.save': [checklistRunSaveHandler as unknown as OutboxHandler],
+  // RF-1: the start shares the save's scope (one feature) and order group.
+  'checklists.run.save': [checklistRunStartHandler, checklistRunSaveHandler] as unknown as OutboxHandler[],
   // SAFETY: the outbox gives a handler only events of its own type, whose payload this handler enqueued (as for every entry here).
   'protocols.step.record': [protocolStepRecordHandler as OutboxHandler],
   // SAFETY: as above.

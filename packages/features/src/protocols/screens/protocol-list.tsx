@@ -40,7 +40,20 @@ const ProtocolLibrary: React.FC = () => {
   const kinds = useMemo(() => kindsInLibrary(library, protocols), [library, protocols]);
   const kindOptions = useMemo(() => kinds.map((value) => ({ value, label: t(protocolKindKey(value)) })), [kinds, t]);
   const categoryOptions = useMemo(() => categoriesInLibrary(categories, library).map((category) => ({ value: category.CategoryId, label: category.Name ?? '' })), [categories, library]);
-  const visible = useMemo(() => filterLibrary(protocols, library, query, kind, categoryId), [protocols, library, query, kind, categoryId]);
+  const showKinds = kindOptions.length > 1;
+  // A filter applies only while its chip is on screen to remove it: after a refresh drops the picked kind or category (or
+  // hides the chips), the library shows unfiltered and the stale pick is cleared.
+  const activeKind = showKinds && kind !== null && kinds.includes(kind) ? kind : null;
+  const activeCategoryId = categoryId !== null && categoryOptions.some((option) => option.value === categoryId) ? categoryId : null;
+  const visible = useMemo(() => filterLibrary(protocols, library, query, activeKind, activeCategoryId), [protocols, library, query, activeKind, activeCategoryId]);
+
+  useEffect(() => {
+    if (kind !== null && activeKind === null) setKind(null);
+  }, [activeKind, kind]);
+
+  useEffect(() => {
+    if (categoryId !== null && activeCategoryId === null) setCategoryId(null);
+  }, [activeCategoryId, categoryId]);
 
   const open = useCallback((protocol: CallProtocolsResultData) => pushRoutePath(router, protocolRoutes.protocolDetail(protocol.Id)), []);
 
@@ -54,11 +67,11 @@ const ProtocolLibrary: React.FC = () => {
         <Input variant="outline" size="md">
           <InputField value={query} onChangeText={setQuery} placeholder={t('protocols.search')} accessibilityLabel={t('protocols.search')} testID="protocol-search" />
         </Input>
-        {kindOptions.length > 1 ? (
+        {showKinds ? (
           <View style={styles.chips}>
             <OptionChips
               options={kindOptions}
-              selected={kind === null ? [] : [kind]}
+              selected={activeKind === null ? [] : [activeKind]}
               onToggle={(value) => setKind((current) => (current === value ? null : value))}
               scroll
               accessibilityLabel={t('protocols.kinds.filter')}
@@ -70,7 +83,7 @@ const ProtocolLibrary: React.FC = () => {
           <View style={styles.chips}>
             <OptionChips
               options={categoryOptions}
-              selected={categoryId === null ? [] : [categoryId]}
+              selected={activeCategoryId === null ? [] : [activeCategoryId]}
               onToggle={(value) => setCategoryId((current) => (current === value ? null : value))}
               scroll
               accessibilityLabel={t('protocols.categories.filter')}

@@ -40,6 +40,7 @@ import { clearRegisteredPushToken, notifyPushTokenRegistered } from './push-toke
 import type { PushNotificationService, PushRegistrationTrigger, RegisterOptions, UsePushNotificationsResult } from './push-types';
 import {
   createMemoryNotificationsKv,
+  isRemovalConfirmed,
   isSameRegistration,
   isSameSubscriber,
   type NotificationsKv,
@@ -462,8 +463,23 @@ class NativePushNotificationService implements PushNotificationService {
         }
       }
 
-      const devicePushToken = await Notifications.getDevicePushTokenAsync();
-      const token = typeof devicePushToken.data === 'string' ? devicePushToken.data : '';
+      let token = await this.readDeviceToken();
+
+      // A previous session's registration of this token is still on the server (its removal failed and is retried):
+      // registered for this session too, the token would deliver both sessions' pushes here, and the retried removal
+      // would later take it off this session as well. A new device token first; when the device hands the same one back
+      // (iOS may), this registration waits for the removal, which runs again before every registration and at launch.
+      if (token && this.isPendingSignOutToken(token)) {
+        await this.rotateDeviceToken();
+        token = await this.readDeviceToken();
+
+        if (token && this.isPendingSignOutToken(token)) {
+          logger.warn({ message: 'Push: registration waits until the previous session has taken this device token off' });
+
+          return null;
+        }
+      }
+
       if (!token) {
         return null;
       }
@@ -621,17 +637,24 @@ class NativePushNotificationService implements PushNotificationService {
 
     const run = (async () => {
       const usable = !!record.accessToken && !!record.apiUrl && Date.now() - record.signedOutAt < PENDING_SIGN_OUT_MAX_AGE_MS;
-      const outcomes = await Promise.all(
+      const refused: StoredNativePushRegistration[] = [];
+
+      await Promise.all(
         record.registrations.map(async (registration) => {
           const outcome = usable && record.accessToken ? await this.unregisterAsSignedOutSession(registration, record.accessToken, record.apiUrl, headers) : 'refused';
-          this.getStore().settlePendingSignOut(record.id, registration, outcome);
 
-          return outcome;
+          if (outcome === 'refused') {
+            refused.push(registration);
+          } else {
+            this.getStore().settlePendingSignOut(record.id, registration, outcome);
+          }
         })
       );
 
-      if (outcomes.includes('refused')) {
-        await this.rotateDeviceToken();
+      // A refused registration stays recorded until the device token is replaced: an app killed before that, or a
+      // replacement that fails, tries again at the next launch or registration.
+      if (refused.length > 0 && (await this.rotateDeviceToken())) {
+        refused.forEach((registration) => this.getStore().settlePendingSignOut(record.id, registration, 'refused'));
       }
     })().finally(() => this.settling.delete(record.id));
 
@@ -656,17 +679,33 @@ class NativePushNotificationService implements PushNotificationService {
    * token leaves the old registration pointing at a dead one: Android deletes the FCM token; iOS stops delivery until
    * the next registration (APNs may hand the same token back, so the server call above is what counts there).
    */
-  private async rotateDeviceToken(): Promise<void> {
+  private async rotateDeviceToken(): Promise<boolean> {
     logger.warn({ message: 'Push: a signed-out registration could not be taken off; replacing the device token' });
+    this.pushToken = null;
+    this.registeredKey = null;
 
     try {
       await Notifications.unregisterForNotificationsAsync();
+
+      return true;
     } catch (error) {
       logger.warn({ message: 'Push: the device token could not be replaced', context: errorContext(error) });
-    }
 
-    this.pushToken = null;
-    this.registeredKey = null;
+      return false;
+    }
+  }
+
+  /** Whether a sign-out the server has not confirmed still has `token` registered for its ended session. */
+  private isPendingSignOutToken(token: string): boolean {
+    return this.getStore()
+      .getPendingSignOuts()
+      .some((record) => record.registrations.some((registration) => registration.Token === token));
+  }
+
+  private async readDeviceToken(): Promise<string> {
+    const devicePushToken = await Notifications.getDevicePushTokenAsync();
+
+    return typeof devicePushToken.data === 'string' ? devicePushToken.data : '';
   }
 
   /** Straight to the server, not through the api client: its 401 handling would re-enter logout. Quiet by design. */
@@ -686,7 +725,14 @@ class NativePushNotificationService implements PushNotificationService {
         ...(controller ? { signal: controller.signal } : {}),
       });
       if (response.ok) {
-        return 'removed';
+        if (await isRemovalConfirmed(response)) {
+          return 'removed';
+        }
+
+        // Core could not take it off (it answers 200 with `Failure`): tried again, as after a server error.
+        logger.warn({ message: 'Push: the server did not take the device token off at sign-out' });
+
+        return 'retry';
       }
 
       logger.warn({ message: 'Push: the server refused to unregister the device token at sign-out', context: { status: response.status } });

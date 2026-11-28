@@ -260,6 +260,42 @@ describe('brokered single sign-on (preferred SSO path)', () => {
     expect(useAuthStore.getState()).toMatchObject({ status: 'signedIn', authMethod: 'sso' });
   });
 
+  it('never opens the session while a sign-out that started after its wait is still running, at any moment it starts', async () => {
+    /** A brokered sign-in whose completion grant arrives, then a sign-out that starts `ticks` callbacks later. */
+    const raceAt = async (ticks: number): Promise<string[]> => {
+      const race = setupHarness('dispatch');
+      __resetWebBrowserFake();
+      race.server.on('POST', '/Sso/Begin', { data: v4({ AuthorizeUrl: 'https://broker.example/authorize', SsoTransactionId: 'sso-1', ExpiresIn: 300 }) });
+      __setNextAuthSessionResult((_url, returnUrl) => ({ type: 'success', url: `${returnUrl}?sso_code=code-1&state=${String(race.server.requestsTo('POST', '/Sso/Begin').slice(-1)[0].body.State)}` }));
+      race.server.on('POST', '/Sso/Redeem', {
+        data: v4({ Outcome: 'completed', Transaction: 'tx-sso', CompletionCode: 'cc', ExpiresIn: 60, MfaMethods: null, MfaEnrolled: null, MfaPreferred: null, MfaSatisfiedBy: null, VerifiedAt: null }),
+      });
+      const statusAtWipe: string[] = [];
+      race.wipeScope.mockImplementation(async () => {
+        statusAtWipe.push(useAuthStore.getState().status);
+      });
+      let answer: () => void = () => undefined;
+      race.server.on('POST', '/connect/token', () => new Promise((resolve) => (answer = () => resolve({ data: tokenResponse() }))));
+      let unregistered: () => void = () => undefined;
+      registerSignOutHook(() => new Promise<void>((resolve) => (unregistered = resolve)));
+      const signingIn = useAuthStore.getState().loginWithBrokeredSso({ departmentToken: 'dept-token' });
+      await flush(50);
+      answer();
+      await flush(ticks);
+      const signingOut = useAuthStore.getState().logout();
+      await flush(50);
+      unregistered();
+      await Promise.all([signingIn, signingOut]);
+      refreshEngine.endSession();
+
+      return statusAtWipe;
+    };
+
+    for (let ticks = 0; ticks <= 40; ticks++) {
+      expect({ ticks, statusAtWipe: await raceAt(ticks) }).toEqual({ ticks, statusAtWipe: [expect.not.stringMatching(/^signedIn$/)] });
+    }
+  });
+
   it('continues on the transaction the redemption started, with the methods as arrays', async () => {
     h.server.on('POST', '/Sso/Redeem', {
       data: v4({

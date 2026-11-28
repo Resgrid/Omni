@@ -7,7 +7,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Platform } from 'react-native';
 
 import { lmsErrorKey } from '../lib/training-format';
-import { type CaptionCue, cueAt, isPlaylistExpired, parseWebVtt, PLAYLIST_EXPIRY_MARGIN_MS } from '../lib/webvtt';
+import { type CaptionCue, cueAt, isPlaylistExpired, parseWebVtt, playlistRefreshDelay } from '../lib/webvtt';
 import { HostedVideoSurface } from './hosted-video-surface';
 
 export interface HostedVideoPlayerProps {
@@ -41,6 +41,13 @@ export const preferredTrack = (tracks: readonly LmsCaptionTrackData[], language:
 };
 
 /**
+ * The captions shown: the member's own choice while it is still offered (Off included, so a refreshed playlist never turns captions
+ * back on), else the track in the app's language. `chosen` is null until the member picks.
+ */
+export const shownTrack = (tracks: readonly LmsCaptionTrackData[], chosen: string | null, language: string | undefined): string =>
+  chosen !== null && (chosen === OFF || tracks.some((track) => track.Locale === chosen)) ? chosen : preferredTrack(tracks, language);
+
+/**
  * A hosted lesson video in the app (LMS): the signed HLS stream (MP4 on web, where browsers other than Safari do not play HLS)
  * from `Lms/GetLessonPlaylist`, with its WebVTT captions shown under the picture in the chosen language. The signed links stop at
  * UrlExpiresOn: they are read again once expired while the video is not playing, and whenever the player fails (playback
@@ -53,7 +60,7 @@ export const HostedVideoPlayer: React.FC<HostedVideoPlayerProps> = ({ enrollment
   const [isLoading, setIsLoading] = useState(true);
   const [generation, setGeneration] = useState(0);
   const [position, setPosition] = useState(resumeAt);
-  const [trackLocale, setTrackLocale] = useState<string>(OFF);
+  const [chosenTrack, setChosenTrack] = useState<string | null>(null);
   const [cues, setCues] = useState<CaptionCue[]>([]);
   const positionRef = useRef(resumeAt);
   const playingRef = useRef(false);
@@ -80,21 +87,17 @@ export const HostedVideoPlayer: React.FC<HostedVideoPlayerProps> = ({ enrollment
   // The links run out at UrlExpiresOn: read them again then, or as soon as the video stops if it is playing.
   useEffect(() => {
     if (!playlist) return undefined;
-    const wait = Math.max(1000, Date.parse(playlist.UrlExpiresOn.endsWith('Z') ? playlist.UrlExpiresOn : `${playlist.UrlExpiresOn}Z`) - PLAYLIST_EXPIRY_MARGIN_MS - Date.now());
 
     const timer = setTimeout(() => {
       if (playingRef.current) expiredRef.current = true;
       else void load();
-    }, wait);
+    }, playlistRefreshDelay(playlist.UrlExpiresOn));
 
     return () => clearTimeout(timer);
   }, [load, playlist]);
 
   const tracks = useMemo(() => captionTracks(playlist?.Captions, lessonCaptions), [lessonCaptions, playlist?.Captions]);
-
-  useEffect(() => {
-    setTrackLocale((current) => (current !== OFF && tracks.some((track) => track.Locale === current) ? current : preferredTrack(tracks, i18n?.language)));
-  }, [i18n?.language, tracks]);
+  const trackLocale = shownTrack(tracks, chosenTrack, i18n?.language);
 
   const trackUrl = tracks.find((track) => track.Locale === trackLocale)?.Url ?? null;
 
@@ -163,7 +166,7 @@ export const HostedVideoPlayer: React.FC<HostedVideoPlayerProps> = ({ enrollment
         <OptionChips
           options={[{ value: OFF, label: t('training.captions_off') }, ...tracks.map((track) => ({ value: track.Locale ?? '', label: track.Label || (track.Locale ?? '') }))]}
           selected={[trackLocale]}
-          onToggle={(value) => setTrackLocale(value)}
+          onToggle={(value) => setChosenTrack(value)}
           scroll
           accessibilityLabel={t('training.captions')}
           testID="hosted-video-captions"

@@ -63,6 +63,25 @@ forbidden.push({
   to: { path: '^apps/' },
 });
 
+// Folders in @resgrid/features import each other's index, routes, nav, lib/, hooks/ and components/ and three named
+// extension points, never screens/ (omni-plan §5.1). Leaf modules rather than barrels: every index.ts re-exports its
+// screens, so barrel imports between calls, pois, status, unit-routes, route-plans, navigation and protocols form cycles.
+forbidden.push({
+  name: 'features-cross-domain-public-modules',
+  comment: 'Another @resgrid/features folder may import index/routes/nav, lib/, hooks/, components/ and the named extension points only (omni-plan §5.1)',
+  severity: 'error',
+  from: { path: '^packages/features/src/([^/]+)/' },
+  to: {
+    path: '^packages/features/src/[^/]+/',
+    pathNot: [
+      '^packages/features/src/$1/',
+      '^packages/features/src/[^/]+/(index|routes|nav)\\.tsx?$',
+      '^packages/features/src/[^/]+/(lib|hooks|components)/',
+      '^packages/features/src/(unit-routes/map-slot|status/status-context|calls/detail-tabs/registry)\\.tsx?$',
+    ],
+  },
+});
+
 forbidden.push({ name: 'no-circular', severity: 'error', from: { path: '^packages/' }, to: { circular: true } });
 
 module.exports = {

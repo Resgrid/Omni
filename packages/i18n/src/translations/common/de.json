@@ -2685,7 +2685,8 @@
       "queued": "Ihre Kenntnisnahme ist auf diesem Gerät gespeichert und wird gesendet, sobald Sie wieder online sind.",
       "awaiting_step_up": "Ihre Kenntnisnahme ist gespeichert und wird gesendet, sobald Sie Ihre Identität bestätigt haben.",
       "verify_now": "Identität bestätigen",
-      "status_held": "Wartet auf Bestätigung"
+      "status_held": "Wartet auf Bestätigung",
+      "content_needed": "Die Version, die Sie lesen sollen, ist noch nicht geladen. Sie können sie bestätigen, sobald sie angezeigt wird."
     },
     "quiz": {
       "pick_all": "Wählen Sie alle zutreffenden Antworten aus.",
@@ -5756,7 +5757,8 @@
         "unavailable": "Diese Lektion kann gerade nicht geöffnet werden. Versuchen Sie es später erneut.",
         "rate_limited": "In kurzer Zeit wurden zu viele Lektionen geöffnet. Warten Sie eine Minute und versuchen Sie es dann erneut.",
         "not_found": "Diese Lektion ist nicht mehr verfügbar.",
-        "expired": "Der Link zur Lektion ist abgelaufen, bevor sie geöffnet wurde. Starten Sie die Lektion erneut."
+        "expired": "Der Link zur Lektion ist abgelaufen, bevor sie geöffnet wurde. Starten Sie die Lektion erneut.",
+        "window_blocked": "Das Lektionsfenster konnte nicht geöffnet werden. Erlauben Sie Pop-ups für diese Website, falls Ihr Browser danach fragt, und starten Sie die Lektion erneut."
       }
     }
   },

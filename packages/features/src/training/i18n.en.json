@@ -185,5 +185,6 @@
   "training.launch.errors.unavailable": "This lesson cannot be opened right now. Try again later.",
   "training.launch.errors.rate_limited": "Too many lessons were opened in a short time. Wait a minute, then try again.",
   "training.launch.errors.not_found": "This lesson is no longer available.",
-  "training.launch.errors.expired": "The lesson link expired before it opened. Start the lesson again."
+  "training.launch.errors.expired": "The lesson link expired before it opened. Start the lesson again.",
+  "training.launch.errors.window_blocked": "The lesson window could not open. Allow pop-ups for this site if your browser asks, then start the lesson again."
 }

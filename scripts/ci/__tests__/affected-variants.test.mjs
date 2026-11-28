@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { affectedVariants, platformMatrix } from '../affected-variants.mjs';
+import { affectedVariants, platformMatrix, revision } from '../affected-variants.mjs';
 import { VARIANT_IDS } from '../lib.mjs';
 
 describe('affectedVariants', () => {
@@ -29,5 +29,15 @@ describe('platformMatrix', () => {
   it('tests every variant on every selected platform', () => {
     assert.deepEqual(platformMatrix(['unit'], ['ios', 'electron']), { ios: ['unit'], android: [], electron: ['unit'] });
     assert.deepEqual(platformMatrix([]), { ios: [], android: [], electron: [] });
+  });
+});
+
+describe('revision', () => {
+  it('accepts commit ids and ref names', () => {
+    for (const rev of ['HEAD', 'b4fa845df86ad51e01e25adc08de0498710c3359', 'origin/master', 'HEAD~1', 'v1.2.3', 'HEAD@{1}']) assert.equal(revision(rev), rev);
+  });
+
+  it('refuses anything git could read as an option or that is not a revision', () => {
+    for (const rev of ['--output=/tmp/x', '-p', 'HEAD extra', 'a;b', '', 'a\nb']) assert.throws(() => revision(rev), /Invalid revision/, rev);
   });
 });

@@ -40,7 +40,7 @@ import { openNotification } from './deep-links';
 import { type PushNotificationData, usePushNotificationModalStore } from './push-modal-store';
 import { clearRegisteredPushToken, notifyPushTokenRegistered } from './push-token-listeners';
 import type { PushNotificationService, PushRegistrationTrigger, RegisterOptions, UsePushNotificationsResult } from './push-types';
-import { PENDING_SIGN_OUT_MAX_AGE_MS } from './registration-storage';
+import { isRemovalConfirmed, PENDING_SIGN_OUT_MAX_AGE_MS } from './registration-storage';
 
 /** One push as the service worker or the Electron main process hands it over (Core's webPush data block). */
 export interface WebPushPayload {
@@ -250,11 +250,18 @@ async function mintBrowserToken(config: WebPushFirebaseConfig): Promise<string |
   return (await withPushTimeout('mint browser token', () => getToken(messaging, { vapidKey: config.vapidKey, serviceWorkerRegistration }))) || null;
 }
 
-/** Kills the browser's token at FCM, so every channel still holding it stops delivering here. */
-async function deleteBrowserToken(config: WebPushFirebaseConfig | null): Promise<void> {
-  const registration = await findServiceWorker().catch(() => null);
+/** Kills the browser's token at FCM, so every channel still holding it stops delivering here. Resolves whether it did. */
+async function deleteBrowserToken(config: WebPushFirebaseConfig | null): Promise<boolean> {
+  let registration: ServiceWorkerRegistration | null;
+
+  try {
+    registration = await findServiceWorker();
+  } catch {
+    return false;
+  }
   if (!registration) {
-    return;
+    // No push worker: nothing in this browser receives with a token.
+    return true;
   }
   try {
     const messaging = config ? await loadMessaging(config) : null;
@@ -262,7 +269,7 @@ async function deleteBrowserToken(config: WebPushFirebaseConfig | null): Promise
       // deleteToken acts on the worker getToken last named; with a token stored this getToken is a local read.
       await withPushTimeout('read browser token', () => getToken(messaging, { vapidKey: config.vapidKey, serviceWorkerRegistration: registration }));
       await withPushTimeout('delete browser token', () => deleteToken(messaging));
-      return;
+      return true;
     }
   } catch (error) {
     logger.warn({ message: 'Web push: the FCM token could not be deleted', context: { error } });
@@ -270,9 +277,10 @@ async function deleteBrowserToken(config: WebPushFirebaseConfig | null): Promise
   // Without Firebase, dropping the push subscription still leaves FCM nowhere to deliver.
   try {
     const subscription = await registration.pushManager.getSubscription();
-    await subscription?.unsubscribe();
+
+    return subscription ? await subscription.unsubscribe() : true;
   } catch {
-    // Nothing more can be done from here.
+    return false;
   }
 }
 
@@ -287,16 +295,23 @@ async function startDesktop(bridge: DesktopPushBridge, config: WebPushFirebaseCo
   return result.token;
 }
 
-async function deleteLocalToken(config: WebPushFirebaseConfig | null): Promise<void> {
+/** Kills this device's token (browser or desktop receiver). Resolves whether nothing here can receive with it any more. */
+async function deleteLocalToken(config: WebPushFirebaseConfig | null): Promise<boolean> {
   const desktop = getDesktopPushBridge();
   if (desktop) {
     // Forgetting the credentials leaves nothing on this device able to receive with the old token.
-    await withPushTimeout('stop desktop receiver', () => desktop.pushStop(true)).catch(() => undefined);
-    return;
+    try {
+      await withPushTimeout('stop desktop receiver', () => desktop.pushStop(true));
+
+      return true;
+    } catch (error) {
+      logger.warn({ message: 'Desktop push: the receiver could not be stopped', context: { error } });
+
+      return false;
+    }
   }
-  if (browserCanPush()) {
-    await deleteBrowserToken(config);
-  }
+
+  return browserCanPush() ? deleteBrowserToken(config) : true;
 }
 
 // --- Registration ---
@@ -331,6 +346,12 @@ async function runSync(): Promise<void> {
     return;
   }
 
+  // A sign-out whose cleanup has not worked yet goes first: until it has, the ended session's registration may still
+  // deliver to the token this sync is about to register.
+  for (const pending of readPendingSignOuts()) {
+    await signOutCleanup(pending, config, deps.getRequestHeaders?.() ?? {});
+  }
+
   const stored = readRegistration();
   if (stored && stored.key !== keyOf(identity)) {
     // Another subject or department on this device: take the device off the old one, then rotate the token so the old
@@ -355,6 +376,15 @@ async function runSync(): Promise<void> {
   // the device now, and registering here would put the token on a session that has ended.
   const latest = currentIdentity(deps);
   if (!latest || keyOf(latest) !== keyOf(identity)) {
+    return;
+  }
+
+  // Still registered for an ended session whose cleanup failed: registering it here would deliver both sessions' pushes
+  // to this device. The next sync tries that cleanup again first.
+  if (readPendingSignOuts().some((pending) => pending.registration?.token === token)) {
+    logger.warn({ message: 'Web push: registration waits until the previous session has taken this token off' });
+    notifyStatus();
+
     return;
   }
 
@@ -476,13 +506,15 @@ export function askForPermissionOnce(): void {
   document.addEventListener('click', ask, true);
 }
 
-async function unregisterAtServer(registration: StoredRegistration, accessToken: string, apiUrl: string, headers: Record<string, string>): Promise<void> {
+/** Resolves whether the server confirmed the token is off the ended session (not just answered). */
+async function unregisterAtServer(registration: StoredRegistration, accessToken: string, apiUrl: string, headers: Record<string, string>): Promise<boolean> {
   // Straight to the server, not through the api client: its 401 handling would re-enter logout. Awaited (sign-out waits
   // on it), so no keepalive: some browsers refuse keepalive on a cross-origin call that needs a preflight.
   const subject = subjectOfStored(registration);
+
   try {
-    await withPushTimeout('unregister at sign-out', (signal) =>
-      fetch(toDevProxyUrl(`${apiUrl.replace(/\/+$/, '')}/Devices/UnRegisterWebPush`), {
+    const removed = await withPushTimeout('unregister at sign-out', async (signal) => {
+      const response = await fetch(toDevProxyUrl(`${apiUrl.replace(/\/+$/, '')}/Devices/UnRegisterWebPush`), {
         method: 'POST',
         headers: { ...headers, 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
         body: JSON.stringify({
@@ -492,37 +524,102 @@ async function unregisterAtServer(registration: StoredRegistration, accessToken:
           Source: pushSourceFor(subject),
         }),
         signal,
-      })
-    );
+      });
+
+      return response.ok && (await isRemovalConfirmed(response));
+    });
+
+    if (!removed) {
+      logger.warn({ message: 'Web push: the server did not take the token off at sign-out' });
+    }
+
+    return removed;
   } catch (error) {
     logger.warn({ message: 'Web push: the token could not be unregistered at sign-out', context: { error } });
+
+    return false;
   }
 }
 
-async function signOutCleanup(accessToken: string | null, config: WebPushFirebaseConfig | null, apiUrl: string, headers: Record<string, string>): Promise<void> {
-  const stored = readRegistration();
-  writeRegistration(null);
-  // Killing the token runs beside the server call, not after it: sign-out only waits so long, and this device has to
-  // stop showing the session's pushes even when the server is slow to answer.
-  await Promise.all([deleteLocalToken(config), stored && accessToken && apiUrl ? unregisterAtServer(stored, accessToken, apiUrl, headers) : undefined]);
-  notifyStatus();
-}
+/** A registration as a sign-out's record keeps it (the shape `readRegistration()` accepts, Unit's legacy records included). */
+const keptRegistrationSchema = z.object({
+  key: z.string().catch(''),
+  token: z.string().min(1),
+  prefix: z.string(),
+  registeredAt: z.number().catch(0),
+  kind: z.enum(['user', 'unit', 'icUser']).optional().catch(undefined),
+  unitId: z.string().optional().catch(undefined),
+  userId: z.string().optional().catch(undefined),
+  source: z.string().optional().catch(undefined),
+});
 
-const pendingSignOutSchema = z.object({ accessToken: z.string().min(1).nullable(), apiUrl: z.string(), signedOutAt: z.number() });
+const pendingSignOutSchema = z.object({
+  id: z.string().min(1),
+  accessToken: z.string().min(1).nullable(),
+  apiUrl: z.string(),
+  signedOutAt: z.number(),
+  /**
+   * The ended session's registration, moved here from its own slot when the cleanup first ran (null: none was stored).
+   * Absent until then: the cleanup reads it as it runs, behind any sync still writing it.
+   */
+  registration: keptRegistrationSchema.nullable().optional(),
+});
 
-const readPendingSignOut = (): z.infer<typeof pendingSignOutSchema> | null => {
-  const parsed = pendingSignOutSchema.safeParse(readJson<unknown>(WEB_PUSH_PENDING_SIGN_OUT_KEY));
+type PendingWebSignOut = z.infer<typeof pendingSignOutSchema>;
 
-  return parsed.success ? parsed.data : null;
+let pendingSignOutSequence = 0;
+
+const readPendingSignOuts = (): PendingWebSignOut[] => {
+  const parsed = z.array(z.unknown()).safeParse(readJson<unknown>(WEB_PUSH_PENDING_SIGN_OUT_KEY));
+
+  return parsed.success
+    ? parsed.data.flatMap((entry) => {
+        const record = pendingSignOutSchema.safeParse(entry);
+
+        return record.success ? [record.data] : [];
+      })
+    : [];
 };
 
-/** Runs a sign-out cleanup in the queue; its pending record goes once the cleanup has run, so a closed tab runs it again. */
-function runSignOutCleanup(accessToken: string | null, config: WebPushFirebaseConfig | null, apiUrl: string, headers: Record<string, string>): Promise<void> {
-  return enqueue(() => signOutCleanup(accessToken, config, apiUrl, headers))
-    .then(() => writeJson(WEB_PUSH_PENDING_SIGN_OUT_KEY, null))
-    .catch((error: unknown) => {
-      logger.warn({ message: 'Web push sign-out cleanup failed', context: { error } });
-    });
+const writePendingSignOuts = (records: PendingWebSignOut[]): void => writeJson(WEB_PUSH_PENDING_SIGN_OUT_KEY, records.length > 0 ? records : null);
+
+/**
+ * Kills the token here and takes the ended session's registration off the server as that session (its token, while Core
+ * still accepts it). Either one stops that session's pushes reaching this device, so the record goes once either has
+ * worked, or when nothing was registered; otherwise it stays, for the next load and the next sync (`runSync`).
+ */
+async function signOutCleanup(queued: PendingWebSignOut, config: WebPushFirebaseConfig | null, headers: Record<string, string>): Promise<void> {
+  const pending = readPendingSignOuts().find((entry) => entry.id === queued.id) ?? queued;
+  // The ended session's registration is read once, when its cleanup first runs, and kept with the record: its slot is
+  // freed now, and a later try must not take off whatever registers there after this.
+  const registration = pending.registration === undefined ? readRegistration() : pending.registration;
+
+  if (pending.registration === undefined) {
+    writePendingSignOuts(readPendingSignOuts().map((entry) => (entry.id === pending.id ? { ...entry, registration } : entry)));
+    writeRegistration(null);
+  }
+
+  const accessToken = Date.now() - pending.signedOutAt < PENDING_SIGN_OUT_MAX_AGE_MS ? pending.accessToken : null;
+  // Killing the token runs beside the server call, not after it: sign-out only waits so long, and this device has to
+  // stop showing the session's pushes even when the server is slow to answer.
+  const [tokenKilled, removed] = await Promise.all([deleteLocalToken(config), registration && accessToken && pending.apiUrl ? unregisterAtServer(registration, accessToken, pending.apiUrl, headers) : false]);
+
+  notifyStatus();
+
+  if (!registration || tokenKilled || removed) {
+    writePendingSignOuts(readPendingSignOuts().filter((entry) => entry.id !== pending.id));
+
+    return;
+  }
+
+  logger.warn({ message: 'Web push: the sign-out cleanup did not finish; it runs again before the next registration and on the next load' });
+}
+
+/** Runs a sign-out cleanup in the queue. Its record goes only once the cleanup has worked, so a closed tab runs it again. */
+function runSignOutCleanup(pending: PendingWebSignOut, config: WebPushFirebaseConfig | null, headers: Record<string, string>): Promise<void> {
+  return enqueue(() => signOutCleanup(pending, config, headers)).catch((error: unknown) => {
+    logger.warn({ message: 'Web push sign-out cleanup failed', context: { error } });
+  });
 }
 
 /** Sign-out: read the session's config and server NOW (a server switch applies once sign-out returns), then clean up in order. */
@@ -532,28 +629,25 @@ function unregisterWebPushAtSignOut(accessToken: string | null): Promise<void> {
   const apiUrl = deps?.getBaseApiUrl() ?? '';
   const headers = deps?.getRequestHeaders?.() ?? {};
 
-  // Before anything is awaited: a tab or window closed during sign-out finishes this cleanup on its next load.
-  writeJson(WEB_PUSH_PENDING_SIGN_OUT_KEY, { accessToken, apiUrl, signedOutAt: Date.now() });
+  pendingSignOutSequence += 1;
+  const pending: PendingWebSignOut = { id: `${Date.now()}-${pendingSignOutSequence}`, accessToken, apiUrl, signedOutAt: Date.now() };
+
+  // Before anything is awaited: a tab or window closed during sign-out finishes this cleanup on its next load. One record
+  // per sign-out, so a cleanup that finishes never takes another sign-out's record with it.
+  writePendingSignOuts([...readPendingSignOuts(), pending]);
 
   // Queued behind any sync in flight, so the registration that sync is still writing is the one taken off. The next
   // sign-in's sync queues behind this in turn.
-  return runSignOutCleanup(accessToken, config, apiUrl, headers);
+  return runSignOutCleanup(pending, config, headers);
 }
 
-/**
- * A sign-out the last load did not finish: kill the token here and take the registration off as that session (its
- * token, while Core still accepts it). Queued first, so no registration of the next session runs before it.
- */
-function resumePendingSignOut(): void {
-  const pending = readPendingSignOut();
-
-  if (!pending) {
-    return;
-  }
-
+/** Sign-outs the last load did not finish, queued first, so no registration of the next session runs before them. */
+function resumePendingSignOuts(): void {
   const deps = getOptionalNotificationsDependencies();
-  const accessToken = Date.now() - pending.signedOutAt < PENDING_SIGN_OUT_MAX_AGE_MS ? pending.accessToken : null;
-  void runSignOutCleanup(accessToken, getWebPushConfig(deps), pending.apiUrl, deps?.getRequestHeaders?.() ?? {});
+
+  readPendingSignOuts().forEach((pending) => {
+    void runSignOutCleanup(pending, getWebPushConfig(deps), deps?.getRequestHeaders?.() ?? {});
+  });
 }
 
 // --- Incoming pushes ---
@@ -653,7 +747,7 @@ export function resetWebPushForTests(): void {
 
 export const pushNotificationService: PushNotificationService & { resetForTests(): void } = {
   initialize: async (): Promise<void> => {
-    resumePendingSignOut();
+    resumePendingSignOuts();
     attachWebPushListeners();
   },
   registerForPushNotifications: async (_options?: RegisterOptions): Promise<string | null> => {

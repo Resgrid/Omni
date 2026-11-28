@@ -2685,7 +2685,8 @@
       "queued": "La tua presa visione è salvata su questo dispositivo e verrà inviata quando tornerai online.",
       "awaiting_step_up": "La tua presa visione è salvata e verrà inviata appena avrai verificato che sei tu.",
       "verify_now": "Verifica che sei tu",
-      "status_held": "In attesa di verifica"
+      "status_held": "In attesa di verifica",
+      "content_needed": "La versione che devi leggere non è ancora stata caricata. Potrai confermarne la presa visione appena viene mostrata."
     },
     "quiz": {
       "pick_all": "Scegli tutte le risposte pertinenti.",
@@ -5756,7 +5757,8 @@
         "unavailable": "Questa lezione non può essere aperta ora. Riprova più tardi.",
         "rate_limited": "Sono state aperte troppe lezioni in poco tempo. Attendi un minuto, poi riprova.",
         "not_found": "Questa lezione non è più disponibile.",
-        "expired": "Il link della lezione è scaduto prima dell'apertura. Inizia di nuovo la lezione."
+        "expired": "Il link della lezione è scaduto prima dell'apertura. Inizia di nuovo la lezione.",
+        "window_blocked": "Impossibile aprire la finestra della lezione. Consenti i pop-up per questo sito se il browser lo chiede, poi inizia di nuovo la lezione."
       }
     }
   },

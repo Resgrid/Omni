@@ -169,7 +169,7 @@ Omni/
     i18n/            @resgrid/i18n            i18next setup, `common` + per-variant namespaces, 10 languages
     ui/              @resgrid/ui              gluestack primitives, tokens, overlays, toast, layout hooks, HtmlRenderer
     app-shell/       @resgrid/app-shell       root providers, createAppShell, ShellGate, nav registry, route contract, init steps
-    features/        @resgrid/features        features/<domain>/{screens,components,hooks,routes.ts,nav.ts}
+    features/        @resgrid/features        features/<domain>/{screens,components,hooks,lib,routes.ts,nav.ts}
     config-plugins/  @resgrid/config-plugins  Expo config plugins (one copy each)
   tooling/  eslint-config/  tsconfig/  jest-preset/
   docker/  Dockerfile  nginx.conf  entrypoint.sh
@@ -177,7 +177,7 @@ Omni/
   scripts/  .github/workflows/  .claude/skills/  AGENTS.md  CLAUDE.md
 ```
 
-`@resgrid/features` is one package with one folder per domain (shared: calls, contacts, chat, notes, protocols, records, operations, checklists, weather-alerts, notifications, settings, status, roles, units, personnel, check-in, video-feeds, data-protection, auth-ui, shared-session, audio, pois, maps, incident-command; variant modules: dashboard, dispatch-console, runcards, call-queues, awaiting-resources, unit-status, unit-routes, inventory, member-home, calendar, shifts, messages, staffing, work-orders, certifications). Folders import each other only through their public `index.ts`.
+`@resgrid/features` is one package with one folder per domain (shared: calls, contacts, chat, notes, protocols, records, operations, checklists, weather-alerts, notifications, settings, status, roles, units, personnel, check-in, video-feeds, data-protection, auth-ui, shared-session, audio, pois, maps, incident-command; variant modules: dashboard, dispatch-console, runcards, call-queues, awaiting-resources, unit-status, unit-routes, inventory, member-home, calendar, shifts, messages, staffing, work-orders, certifications). A folder may import another folder's `index.ts`, `routes.ts`, `nav.ts`, `lib/**`, `hooks/**` and `components/**`, plus three named extension points (`unit-routes/map-slot`, `status/status-context`, `calls/detail-tabs/registry`). It never imports another folder's `screens/**`: only app route files import screens by path, and a folder that reuses another folder's screen takes it from that folder's `index.ts`. Source never imports `__tests__/**`. Every `index.ts` re-exports its folder's screens, so between folders that depend on each other (today calls, pois, status, unit-routes, route-plans, navigation and protocols) import the leaf module, not the barrel; a barrel import there closes a cycle that `no-circular` rejects. (Changed 2026-11-28: this used to say "only through their public `index.ts`". The code never followed that, with 132 imports into leaf modules, and enforcing it would have created those cycles.)
 
 ### 5.2 Layering and dependency rules
 
@@ -194,6 +194,7 @@ L8  apps/omni variants (routes, manifests) · apps/desktop
 ```
 
 - A package imports only from lower layers. Enforced by dependency-cruiser in CI.
+- Inside `@resgrid/features`, the cross-folder import rule in §5.1 is enforced by dependency-cruiser (`features-cross-domain-public-modules`).
 - `api` never imports stores or UI: token, refresh, base URL and lock state are injected into the client factory (today `client.tsx`, `callFiles` and `chat` import the auth store).
 - `data` never imports components, routes, hooks, features, i18n or React Native UI APIs (today 9 stores call `translate()`, Unit/IC's LiveKit store calls `Alert`/`Linking`, and three stores import component types).
 - Native modules are imported only by L1–L3 platform packages behind interfaces with `.native.ts` / `.web.ts` (and Electron bridge) implementations, so excluded modules can be stubbed per variant.

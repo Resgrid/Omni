@@ -3,10 +3,10 @@ import { FormField } from '@resgrid/features/certifications/components/form-fiel
 import { SectionCard } from '@resgrid/features/certifications/components/section-card';
 import { hoursOf } from '@resgrid/features/certifications/lib/certification-format';
 import { useTranslation } from '@resgrid/i18n';
-import { Button, ButtonSpinner, ButtonText, Input, InputField, KeyboardAwareScrollView, ScreenHeader, showToast, Text, Textarea, TextareaInput, useThemeColors, View, ZeroState } from '@resgrid/ui';
+import { Button, ButtonSpinner, ButtonText, Input, InputField, KeyboardAwareScrollView, Loading, ScreenHeader, showToast, Text, Textarea, TextareaInput, useThemeColors, View, ZeroState } from '@resgrid/ui';
 import { router, useLocalSearchParams } from 'expo-router';
 import { FileQuestion } from 'lucide-react-native';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet } from 'react-native';
 
 import { EvidencePicker } from '../components/evidence-picker';
@@ -40,8 +40,32 @@ export default function RespondSubmissionScreen() {
   const [problem, setProblem] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
 
+  // The transcript as read on opening (a reviewer's request opened from a notification is newer than the copy kept offline).
+  const [isChecked, setIsChecked] = useState(false);
+
   const back = () => (router.canGoBack() ? router.back() : router.replace(trainingRoutes.home()));
   const reload = useCallback(() => useTrainingStore.getState().fetchTranscript({ bypassCache: true }), []);
+
+  useEffect(() => {
+    let current = true;
+
+    void reload().finally(() => {
+      if (current) setIsChecked(true);
+    });
+
+    return () => {
+      current = false;
+    };
+  }, [reload]);
+
+  if (!record && recordId && !isChecked) {
+    return (
+      <View className="flex-1 bg-background-50" testID="respond-submission-screen">
+        <ScreenHeader title={t('training.respond.title')} onBack={back} />
+        <Loading />
+      </View>
+    );
+  }
 
   if (!record || !recordId) {
     return (

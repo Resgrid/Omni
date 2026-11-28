@@ -7,7 +7,7 @@ import { persist } from 'zustand/middleware';
 import { refreshBadgeCountsSoon } from '../badge-counts/badge-counts-store';
 import { assertV4Success, unwrapItem } from '../core/envelope';
 import { type DataError, toDataError } from '../core/errors';
-import { defineDataHandler, submitWrite, type WriteOutcome } from '../core/outbox';
+import { defineDataHandler, drainOrderGroup, submitWrite, type WriteOutcome } from '../core/outbox';
 import { dataPersistOptions, registerPersistedStore } from '../core/persist';
 import { registerDataStoreReset } from '../core/reset';
 import { getDataApiContext } from '../core/runtime';
@@ -16,6 +16,28 @@ import { createSliceRunner, emptySliceMeta, type FetchOptions, type SliceMeta, t
 type ChecklistsSlice = 'access' | 'run';
 
 export const CHECKLIST_RUN_SAVE_EVENT = 'checklists.run.save';
+
+/** RF-1: creates the server run for a previewed occurrence or a local on-demand run, queued ahead of its first save. */
+export const CHECKLIST_RUN_START_EVENT = 'checklists.run.start';
+
+export interface ChecklistRunStartPayload {
+  runId: string;
+  input: ChecklistStartInput;
+}
+
+/**
+ * RF-1 (readiness RDY0a): the StartChecklistRun command for a run Core does not hold yet, or null when it does. A previewed
+ * scheduled occurrence starts with its occurrence; a local on-demand run starts pinned to the published version it was opened
+ * on. Either way the client run id is the CompletionId, so a replayed start resumes the same run (Core is idempotent on it).
+ */
+export const checklistStartInput = (run: ChecklistRun): ChecklistStartInput | null => {
+  if (!run.IsPreview) return null;
+
+  return run.OccurrenceId ? { OccurrenceId: run.OccurrenceId, CompletionId: run.Id } : { DefinitionId: run.DefinitionId, VersionId: run.VersionId, TargetId: run.Target?.Id ?? null, CompletionId: run.Id };
+};
+
+/** Runs whose start was queued in this app session, so later saves do not queue it again (a repeat would only be idempotent noise). */
+const queuedStarts = new Set<string>();
 
 export interface ChecklistRunSavePayload {
   runId: string;
@@ -54,7 +76,11 @@ export interface ChecklistsState extends ChecklistsData {
   applySavedRun: (run: ChecklistRun) => void;
 }
 
-const initialData = (): ChecklistsData => ({ ...emptySliceMeta<ChecklistsSlice>(), access: null, runsById: {}, actionError: null });
+const initialData = (): ChecklistsData => {
+  queuedStarts.clear();
+
+  return { ...emptySliceMeta<ChecklistsSlice>(), access: null, runsById: {}, actionError: null };
+};
 
 let runner: SliceRunner<ChecklistsSlice, ChecklistsState>;
 
@@ -62,12 +88,16 @@ export const useChecklistsStore = create<ChecklistsState>()(
   persist(
     (set, get) => {
       runner = createSliceRunner<ChecklistsSlice, ChecklistsState>('checklists', set);
+
       const keepRun = (run: ChecklistRun | null) => {
         if (run) set((state) => ({ runsById: { ...state.runsById, [run.Id]: run } }));
+
         return run;
       };
+
       const act = async (fn: () => Promise<ChecklistRun | null>): Promise<ChecklistRun | null> => {
         set({ actionError: null });
+
         try {
           const run = keepRun(await fn());
 
@@ -77,9 +107,11 @@ export const useChecklistsStore = create<ChecklistsState>()(
           return run;
         } catch (error) {
           set({ actionError: toDataError(error) });
+
           return null;
         }
       };
+
       return {
         ...initialData(),
         fetchAccess: async () => {
@@ -91,7 +123,9 @@ export const useChecklistsStore = create<ChecklistsState>()(
         },
         fetchRun: async (id, occurrenceId, options) => {
           const cached = get().runsById[id];
+
           if (cached && !options?.bypassCache) return cached;
+
           const result = await runner.run(
             'run',
             async () => unwrapItem(await getChecklistRun(getDataApiContext(), occurrenceId ? { occurrenceId } : { id })),
@@ -100,6 +134,7 @@ export const useChecklistsStore = create<ChecklistsState>()(
               flightKey: `run:${id}`,
             }
           );
+
           return result.ok ? result.value : (cached ?? null);
         },
         startRun: (input) => act(async () => unwrapItem(assertV4Success(await startChecklistRun(getDataApiContext(), input)))),
@@ -107,6 +142,16 @@ export const useChecklistsStore = create<ChecklistsState>()(
         saveRun: async (run, input, submit) => {
           set({ actionError: null });
           const payload: ChecklistRunSavePayload = { runId: run.Id, input, submit };
+          // RF-1: Core has no run for a preview yet; start it first in the same order group, so offline the start replays
+          // ahead of the save (a save of an unknown run answers 404 and would be dead-lettered).
+          const known = get().runsById[run.Id];
+          const start = known && !known.IsPreview ? null : checklistStartInput(run);
+
+          if (start && !queuedStarts.has(run.Id)) {
+            queuedStarts.add(run.Id);
+            await submitWrite<ChecklistRunStartPayload>({ type: CHECKLIST_RUN_START_EVENT, payload: { runId: run.Id, input: start }, orderKey: `checklist-run:${run.Id}` }, { deliverNow: false });
+          }
+
           try {
             const { outcome } = await submitWrite<ChecklistRunSavePayload>({
               type: CHECKLIST_RUN_SAVE_EVENT,
@@ -124,7 +169,14 @@ export const useChecklistsStore = create<ChecklistsState>()(
             // No payload cipher (web has no secure key store): answers may be protected, so they are never written to
             // the device unencrypted — send online only.
             if (!(error instanceof ProtectedPayloadError)) throw error;
-            const saved = await act(async () => sendChecklistRunSave(payload));
+
+            const saved = await act(async () => {
+              // RF-1 online path: make sure the run exists before sending the save directly.
+              if (start) await drainOrderGroup(`checklist-run:${run.Id}`);
+
+              return sendChecklistRunSave(payload);
+            });
+
             return { outcome: saved ? 'sent' : 'rejected', run: saved };
           }
         },
@@ -143,15 +195,28 @@ export const useChecklistsStore = create<ChecklistsState>()(
 );
 
 registerPersistedStore('omni-checklists-storage', useChecklistsStore);
+
 registerDataStoreReset<ChecklistsState>('checklists', useChecklistsStore, initialData, () => runner.invalidate());
 
 async function sendChecklistRunSave(payload: ChecklistRunSavePayload): Promise<ChecklistRun | null> {
   const body = { Id: payload.runId, Input: payload.input };
   const ctx = getDataApiContext();
+
   return unwrapItem(assertV4Success(payload.submit ? await completeChecklistRun(ctx, body) : await saveChecklistRunProgress(ctx, body)));
 }
 
 /** Delivers a queued run save (SaveChecklistRunProgress / CompleteChecklistRun). */
+/** Delivers a queued run start (StartChecklistRun); the server's run replaces the preview so later saves skip the start. */
+export const checklistRunStartHandler = defineDataHandler<ChecklistRunStartPayload, ChecklistRun | null>({
+  type: CHECKLIST_RUN_START_EVENT,
+  send: async (event) => unwrapItem(assertV4Success(await startChecklistRun(getDataApiContext(), event.payload.input))),
+  afterAck: (event, run) => {
+    queuedStarts.delete(event.payload.runId);
+
+    if (run) useChecklistsStore.getState().applySavedRun(run);
+  },
+});
+
 export const checklistRunSaveHandler = defineDataHandler<ChecklistRunSavePayload, ChecklistRun | null>({
   type: CHECKLIST_RUN_SAVE_EVENT,
   send: async (event) => sendChecklistRunSave(event.payload),

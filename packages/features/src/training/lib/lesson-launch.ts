@@ -166,6 +166,7 @@ const LAUNCH_ERROR_KEYS = new Map<string, string>([
   ['NotFound', 'training.launch.errors.not_found'],
   ['CodeExpired', 'training.launch.errors.expired'],
   ['expired', 'training.launch.errors.expired'],
+  ['WindowBlocked', 'training.launch.errors.window_blocked'],
   ['offline', 'training.launch.offline'],
   ['network', 'training.launch.offline'],
 ]);
