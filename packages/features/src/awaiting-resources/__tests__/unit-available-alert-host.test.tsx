@@ -33,7 +33,7 @@ beforeEach(() => {
   activateVariant('dispatch');
   setRights({});
   featureFlagsStore.setState({ flags: { 'Dispatch.RunCards': { enabled: true }, 'Dispatch.RunCardConditions': { enabled: true } }, isLoaded: true });
-  useAwaitingResourcesStore.setState({ unitAlerts: [ALERT], busyKey: null });
+  useAwaitingResourcesStore.setState({ unitAlerts: [ALERT], busyKeys: [] });
 });
 
 afterEach(async () => {

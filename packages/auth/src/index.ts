@@ -197,6 +197,7 @@ export { definitionTermKey, getTerm, recordTypeTermKey, type TerminologyState, t
 // Data protection (ADP)
 export { readProtectedGrantHeaders } from './data-protection/grant-provider';
 export {
+  adoptProtectedGrant,
   cancelStepUpApprovalRequest,
   clearStepUp,
   closeStepUpPrompt,
@@ -225,3 +226,30 @@ export {
 } from './data-protection/grant-store';
 export { isFieldRedacted, isRedactedValue, type ProtectedFieldId, ProtectedFieldIds, REDACTION_VALUE, revealedValue } from './data-protection/redacted';
 export { GRANT_EXPIRY_MARGIN_MS, useProtectedGrantRefresh } from './data-protection/use-protected-grant-refresh';
+
+// Step-up for an area (round 10 A5): one sheet verifies signatures, acknowledgments, approvals and protected data, in the app.
+export {
+  type AreaStepUpOptionsData,
+  type AreaStepUpVerifyData,
+  cancelStepUp,
+  offeredMethods,
+  onStepUpVerified,
+  requestStepUp,
+  resetStepUp,
+  startStepUpApproval,
+  type StepUpArea,
+  StepUpCancelledError,
+  stepUpErrorCode,
+  type StepUpMethod,
+  type StepUpRequirement,
+  stepUpRequirementOf,
+  type StepUpState,
+  stepUpStore,
+  useStepUpPending,
+  verifyStepUpCode,
+  verifyStepUpPasskey,
+  verifyStepUpPassword,
+  verifyStepUpProvider,
+  verifyStepUpSso,
+  withStepUp,
+} from './step-up/step-up';

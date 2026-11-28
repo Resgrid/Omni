@@ -3,9 +3,262 @@
     "source": "Core develop f3b2fd24 + 34949e2d (RG-T152, MapLibre plan v1.7 §23); not on the QA API as of 2026-11-02",
     "addedAt": "2026-11-01",
     "checkedAt": "2026-11-02",
-    "note": "Core v4 routes and parameters Omni calls before they reach the QA Swagger snapshot. Counts/GetBadgeCounts: Core develop working tree, 2026-11-07 (Web/Resgrid.Web.Services/Controllers/v4/CountsController.cs). Mapping/GetMapDataAndMarkers fullSizeIcons: Core develop working tree, 2026-11-11 (MappingController.cs, LegacyOmniPinIcons). Mapping/GetNearestDestinations, GetPoiCapabilities, SetPoiAvailability: Core develop working tree, 2026-11-13 (MappingController.cs, destination capabilities M0315). Mapping/GetDestinationRules, GetSuggestedDestinations: Core develop working tree, 2026-11-19 (MappingController.cs, destination rules M0317). The contract test overlays these on swagger-v4.json and fails once the snapshot has an entry, so remove each entry after refreshing the snapshot. Hand-written from Web/Resgrid.Web.Services/Controllers/v4/{RoutingController,RoutesController,MappingController}.cs. Calls/ReleaseUnit and Calls/ReleasePersonnel: Core develop working tree, 2026-11-16 (CallsController.cs, releasing a unit or person from an open call; ReleasePersonnel built in parallel with Omni RO-T152). RecurringCalls/*: Core develop working tree, 2026-11-17 (RecurringCallsController.cs, recurring calls and their dispatcher alerts, M0319/M0320). Routes/GetCallRoutePlans, StartCallRoute, ReachRouteStart and GetInstanceDirections includeStart: Core develop working tree, 2026-11-19 (RoutesController.cs, call start/destination locations and call routes, M0322; coded against the contract before Core landed). AiDestinations/GetAdvice, RequestAdvice, ApplyAdvice, DismissAdvice: Core develop working tree, 2026-11-19 (AiDestinationsController.cs, Enhanced AI destination advice, M0323; call-intake-and-ai-destinations-plan.md §7). CallResultData CallSource, IntakeChannelName and IntakeChannelType (components below; GetCall, GetActiveCalls, GetPendingCalls, GetCalls): Core develop working tree, 2026-11-19 (Models/v4/Calls/CallResult.cs, M0323). IntakeScreening/DismissAsSpam and CallResultData IntakeScreening: Core develop working tree, 2026-11-20 (IntakeScreeningController.cs, Models/v4/Calls/CallResult.cs; intake spam screening, M0326, plan §9). The contract test reads only paths; the components entry records the response fields Omni reads, for the next snapshot refresh to confirm. DispatcherDesk/*: Core dispatcher desk (dispatchers-on-duty-plan.md §4, M0324; hand-written from Models/v4/DispatcherDesk/DispatcherDeskModels.cs; SignOff, Heartbeat and SetAvailable take no body). CallResultData IndoorMapZoneId and IndoorMapFloorId (GetCall, GetActiveCalls) and EditCall's IndoorMapZoneId \"\" clearing the indoor location: Core develop working tree, 2026-11-23 (Models/v4/Calls/CallResult.cs, CallsController.cs; facility maps on the call form)."
+    "note": "Core v4 routes and parameters Omni calls before they reach the QA Swagger snapshot. Counts/GetBadgeCounts: Core develop working tree, 2026-11-07 (Web/Resgrid.Web.Services/Controllers/v4/CountsController.cs). Mapping/GetMapDataAndMarkers fullSizeIcons: Core develop working tree, 2026-11-11 (MappingController.cs, LegacyOmniPinIcons). Mapping/GetNearestDestinations, GetPoiCapabilities, SetPoiAvailability: Core develop working tree, 2026-11-13 (MappingController.cs, destination capabilities M0315). Mapping/GetDestinationRules, GetSuggestedDestinations: Core develop working tree, 2026-11-19 (MappingController.cs, destination rules M0317). The contract test overlays these on swagger-v4.json and fails once the snapshot has an entry, so remove each entry after refreshing the snapshot. Hand-written from Web/Resgrid.Web.Services/Controllers/v4/{RoutingController,RoutesController,MappingController}.cs. Calls/ReleaseUnit and Calls/ReleasePersonnel: Core develop working tree, 2026-11-16 (CallsController.cs, releasing a unit or person from an open call; ReleasePersonnel built in parallel with Omni RO-T152). RecurringCalls/*: Core develop working tree, 2026-11-17 (RecurringCallsController.cs, recurring calls and their dispatcher alerts, M0319/M0320). Routes/GetCallRoutePlans, StartCallRoute, ReachRouteStart and GetInstanceDirections includeStart: Core develop working tree, 2026-11-19 (RoutesController.cs, call start/destination locations and call routes, M0322; coded against the contract before Core landed). AiDestinations/GetAdvice, RequestAdvice, ApplyAdvice, DismissAdvice: Core develop working tree, 2026-11-19 (AiDestinationsController.cs, Enhanced AI destination advice, M0323; call-intake-and-ai-destinations-plan.md §7). CallResultData CallSource, IntakeChannelName and IntakeChannelType (components below; GetCall, GetActiveCalls, GetPendingCalls, GetCalls): Core develop working tree, 2026-11-19 (Models/v4/Calls/CallResult.cs, M0323). IntakeScreening/DismissAsSpam and CallResultData IntakeScreening: Core develop working tree, 2026-11-20 (IntakeScreeningController.cs, Models/v4/Calls/CallResult.cs; intake spam screening, M0326, plan §9). The contract test reads only paths; the components entry records the response fields Omni reads, for the next snapshot refresh to confirm. DispatcherDesk/*: Core dispatcher desk (dispatchers-on-duty-plan.md §4, M0324; hand-written from Models/v4/DispatcherDesk/DispatcherDeskModels.cs; SignOff, Heartbeat and SetAvailable take no body). CallResultData IndoorMapZoneId and IndoorMapFloorId (GetCall, GetActiveCalls) and EditCall's IndoorMapZoneId \"\" clearing the indoor location: Core develop working tree, 2026-11-23 (Models/v4/Calls/CallResult.cs, CallsController.cs; facility maps on the call form). Protocol library, acknowledgments and call step-through (ProtocolContent/*, ProtocolAcknowledgments/*), baseline training (Trainings/*) and the LMS learner (Lms/*, LmsRequirements/GetMyPaths, LmsPrograms/GetMyCertificationProgress): Core lms branch working tree, 2026-11-26 (ProtocolContentController.cs, ProtocolAcknowledgmentsController.cs, TrainingsController.cs, LmsController.cs, LmsRequirementsController.cs, LmsProgramsController.cs; protocols-training-knowledge-plan P1-P3, T0-T2). Round 10 A4 (Core lms branch working tree, 2026-11-26): Lms/GetMyAccess, GetCatalog, GetLessonPlaylist, GetLessonFile, SubmitSurvey (LmsController.cs), Trainings/GetTranscriptPdf, GetCertificate (TrainingsController.cs), TrainingReviews/RespondToSubmission (TrainingReviewsController.cs), Protocols/GetCategories (ProtocolsController.cs), ProtocolAcknowledgments/GetWeeklyQuestions and AnswerWeeklyQuestion (ProtocolAcknowledgmentsController.cs); none is on the QA Swagger as of 2026-11-26. Round 10 A5 (Core working tree, 2026-11-26): StepUp/Options and StepUp/Verify (StepUpController.cs, Models/v4/StepUp/StepUpModels.cs; the in-app step-up for signatures, acknowledgments, approvals and protected data), not on the QA Swagger as of 2026-11-26. Round 10 A8 (Core working tree, 2026-11-26): Lms/GetLessonLaunch (LmsController.cs, the signed single-use in-app launch for SCORM, cmi5 and LTI lessons; supersedes LmsStandards/GetLaunch for the app), not on the QA Swagger as of 2026-11-26."
   },
   "paths": {
+    "/api/v{VersionId}/StepUp/Options": {
+      "get": {
+        "parameters": [
+          { "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "area", "in": "query", "schema": { "type": "string" } }
+        ]
+      }
+    },
+    "/api/v{VersionId}/StepUp/Verify": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/StepUpVerifyInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/Lms/GetLessonLaunch": {
+      "get": {
+        "parameters": [
+          { "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "enrollmentId", "in": "query", "schema": { "type": "integer" } },
+          { "name": "lessonId", "in": "query", "schema": { "type": "integer" } },
+          { "name": "item", "in": "query", "schema": { "type": "string" } }
+        ]
+      }
+    },
+    "/api/v{VersionId}/Lms/GetMyAccess": { "get": { "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }] } },
+    "/api/v{VersionId}/Lms/GetCatalog": { "get": { "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }] } },
+    "/api/v{VersionId}/Lms/GetLessonPlaylist": {
+      "get": {
+        "parameters": [
+          { "name": "enrollmentId", "in": "query", "schema": { "type": "integer", "format": "int32" } },
+          { "name": "lessonId", "in": "query", "schema": { "type": "integer", "format": "int32" } },
+          { "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ]
+      }
+    },
+    "/api/v{VersionId}/Lms/GetLessonFile": {
+      "get": {
+        "parameters": [
+          { "name": "lessonFileId", "in": "query", "schema": { "type": "integer", "format": "int32" } },
+          { "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ]
+      }
+    },
+    "/api/v{VersionId}/Lms/SubmitSurvey": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LmsSubmitSurveyInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/Trainings/GetTranscriptPdf": {
+      "get": {
+        "parameters": [
+          { "name": "from", "in": "query", "schema": { "type": "string", "format": "date-time" } },
+          { "name": "to", "in": "query", "schema": { "type": "string", "format": "date-time" } },
+          { "name": "categoryId", "in": "query", "schema": { "type": "integer", "format": "int32" } },
+          { "name": "source", "in": "query", "schema": { "type": "integer", "format": "int32" } },
+          { "name": "locale", "in": "query", "schema": { "type": "string" } },
+          { "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ]
+      }
+    },
+    "/api/v{VersionId}/Trainings/GetCertificate": {
+      "get": {
+        "parameters": [
+          { "name": "learningRecordId", "in": "query", "schema": { "type": "integer", "format": "int32" } },
+          { "name": "locale", "in": "query", "schema": { "type": "string" } },
+          { "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ]
+      }
+    },
+    "/api/v{VersionId}/TrainingReviews/RespondToSubmission": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RespondToTrainingSubmissionInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/Protocols/GetCategories": { "get": { "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }] } },
+    "/api/v{VersionId}/ProtocolAcknowledgments/GetWeeklyQuestions": { "get": { "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }] } },
+    "/api/v{VersionId}/ProtocolAcknowledgments/AnswerWeeklyQuestion": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AnswerWeeklyQuestionInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/ProtocolContent/GetVersionContent": {
+      "get": {
+        "parameters": [
+          { "name": "protocolVersionId", "in": "query", "schema": { "type": "integer", "format": "int32" } },
+          { "name": "locale", "in": "query", "schema": { "type": "string" } },
+          { "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ]
+      }
+    },
+    "/api/v{VersionId}/ProtocolAcknowledgments/GetVersionFile": {
+      "get": {
+        "parameters": [
+          { "name": "protocolVersionId", "in": "query", "schema": { "type": "integer", "format": "int32" } },
+          { "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ]
+      }
+    },
+    "/api/v{VersionId}/ProtocolAcknowledgments/GetMyAcknowledgments": {
+      "get": {
+        "parameters": [
+          { "name": "includeCompleted", "in": "query", "schema": { "type": "boolean", "default": false } },
+          { "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ]
+      }
+    },
+    "/api/v{VersionId}/ProtocolAcknowledgments/Acknowledge": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AcknowledgeProtocolInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/ProtocolAcknowledgments/GetBankQuiz": {
+      "get": {
+        "parameters": [
+          { "name": "protocolVersionId", "in": "query", "schema": { "type": "integer", "format": "int32" } },
+          { "name": "locale", "in": "query", "schema": { "type": "string" } },
+          { "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ]
+      }
+    },
+    "/api/v{VersionId}/ProtocolAcknowledgments/SubmitBankQuiz": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SubmitBankQuizInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/ProtocolContent/GetCallChecklists": {
+      "get": {
+        "parameters": [
+          { "name": "callId", "in": "query", "schema": { "type": "integer", "format": "int32" } },
+          { "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ]
+      }
+    },
+    "/api/v{VersionId}/ProtocolContent/GetSopLibrary": { "get": { "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }] } },
+    "/api/v{VersionId}/ProtocolContent/StartCallChecklist": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/StartCallChecklistInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/ProtocolContent/RecordCallStep": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RecordCallStepInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/ProtocolContent/CompleteCallChecklist": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CompleteCallChecklistInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/Trainings/GetMyTrainings": { "get": { "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }] } },
+    "/api/v{VersionId}/Trainings/GetTraining": {
+      "get": {
+        "parameters": [
+          { "name": "trainingId", "in": "query", "schema": { "type": "integer", "format": "int32" } },
+          { "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ]
+      }
+    },
+    "/api/v{VersionId}/Trainings/GetTrainingAttachment": {
+      "get": {
+        "parameters": [
+          { "name": "trainingAttachmentId", "in": "query", "schema": { "type": "integer", "format": "int32" } },
+          { "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ]
+      }
+    },
+    "/api/v{VersionId}/Trainings/SubmitQuiz": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SubmitTrainingQuizInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/Trainings/SelfEnroll": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TrainingIdInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/Trainings/AcknowledgeTraining": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TrainingIdInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/Trainings/GetTranscript": {
+      "get": {
+        "parameters": [
+          { "name": "userId", "in": "query", "schema": { "type": "string" } },
+          { "name": "from", "in": "query", "schema": { "type": "string", "format": "date-time" } },
+          { "name": "to", "in": "query", "schema": { "type": "string", "format": "date-time" } },
+          { "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ]
+      }
+    },
+    "/api/v{VersionId}/Trainings/GetTrainingCategories": { "get": { "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }] } },
+    "/api/v{VersionId}/Trainings/SubmitExternalTraining": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SubmitExternalTrainingInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/Lms/GetMyCourses": { "get": { "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }] } },
+    "/api/v{VersionId}/Lms/GetCourse": {
+      "get": {
+        "parameters": [
+          { "name": "enrollmentId", "in": "query", "schema": { "type": "integer", "format": "int32" } },
+          { "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ]
+      }
+    },
+    "/api/v{VersionId}/Lms/SaveProgress": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LmsProgressInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/Lms/CompleteLesson": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LmsCompleteLessonInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/Lms/StartAttempt": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LmsStartAttemptInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/Lms/SubmitAttempt": {
+      "post": {
+        "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LmsSubmitAttemptInput" } } } }
+      }
+    },
+    "/api/v{VersionId}/Lms/GetAcademy": { "get": { "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }] } },
+    "/api/v{VersionId}/Lms/Enroll": {
+      "post": {
+        "parameters": [
+          { "name": "courseId", "in": "query", "schema": { "type": "integer", "format": "int32" } },
+          { "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ]
+      }
+    },
+    "/api/v{VersionId}/LmsRequirements/GetMyPaths": { "get": { "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }] } },
+    "/api/v{VersionId}/LmsPrograms/GetMyCertificationProgress": { "get": { "parameters": [{ "name": "VersionId", "in": "path", "required": true, "schema": { "type": "string" } }] } },
     "/api/v{VersionId}/Counts/GetBadgeCounts": {
       "get": {
         "parameters": [
@@ -507,6 +760,21 @@
   },
   "components": {
     "schemas": {
+      "LmsSubmitSurveyInput": { "type": "object" },
+      "RespondToTrainingSubmissionInput": { "type": "object" },
+      "AnswerWeeklyQuestionInput": { "type": "object" },
+      "AcknowledgeProtocolInput": { "type": "object" },
+      "SubmitBankQuizInput": { "type": "object" },
+      "StartCallChecklistInput": { "type": "object" },
+      "RecordCallStepInput": { "type": "object" },
+      "CompleteCallChecklistInput": { "type": "object" },
+      "SubmitTrainingQuizInput": { "type": "object" },
+      "TrainingIdInput": { "type": "object" },
+      "SubmitExternalTrainingInput": { "type": "object" },
+      "LmsProgressInput": { "type": "object" },
+      "LmsCompleteLessonInput": { "type": "object" },
+      "LmsStartAttemptInput": { "type": "object" },
+      "LmsSubmitAttemptInput": { "type": "object" },
       "CallResultData": {
         "properties": {
           "CallSource": { "type": "integer", "format": "int32" },

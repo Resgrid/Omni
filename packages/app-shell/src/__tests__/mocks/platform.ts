@@ -24,6 +24,7 @@ export const notifications = {
   usePushNotifications: jest.fn(() => ({ pushToken: null })),
   useClearBadgeOnForeground: jest.fn(),
   configureNotifications: jest.fn(),
+  NATIVE_PUSH_PENDING_SIGN_OUTS_KEY: 'nativePushPendingSignOuts',
   pushNotificationService: {
     initialize: jest.fn(async () => undefined),
     unregisterAtSignOut: jest.fn(async () => undefined),

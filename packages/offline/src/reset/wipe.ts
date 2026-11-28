@@ -4,9 +4,10 @@ import type { DurableDb } from '../db/types';
 import { CONTRACT_KEYS, DEVICE_PREFERENCE_KEYS, SESSION_KEYS, VARIANT_PRESERVED_KEYS } from '../kv/contract-keys';
 import type { ClearResult, DurableKv } from '../kv/durable-kv';
 import { ConfirmationRequiredError, type Outbox } from '../outbox/outbox';
-import { getOfflineLogger } from '../util/logger';
+import { describeError, getOfflineLogger } from '../util/logger';
 import type { OfflineScope } from '../util/scope';
-import { defaultResetRegistry, type ResetReason, type ResetRegistry } from './registry';
+import { PENDING_WIPE_KEY } from './pending-wipe-key';
+import { defaultResetRegistry, type ResetReason, type ResetRegistration, type ResetRegistry } from './registry';
 
 /** Unsent writes on a wipe: kept for their owner (encrypted, scoped, never replayed for anyone else) or discarded. */
 export type UnsentWritesPolicy = 'hold' | 'discard';
@@ -25,6 +26,8 @@ export interface WipeReport {
   teardowns: { ok: string[]; failed: string[] };
   stores: { ok: string[]; failed: string[] };
   tablesCleared: string[];
+  /** Wipe tables that may still hold the scope's rows (a failed delete, or tables that could not be listed). */
+  tablesFailed: string[];
   kv: Record<string, ClearResult>;
   unsentWrites: { policy: UnsentWritesPolicy; discarded: number; held: number };
 }
@@ -44,11 +47,50 @@ export interface ScopeWiperOptions {
 
 export interface ScopeWiper {
   wipeScope(reason: ResetReason, options?: WipeOptions): Promise<WipeReport>;
+  /**
+   * Applies a wipe that already ran to what registers after it: each teardown, store reset and wipe table registered
+   * from now on runs for `reason` as it registers. The startup wipe a killed sign-out left runs before the app has
+   * registered its device teardowns (push, local notifications) and late caches (offline map packs). Returns the
+   * closer, which stops it and waits for the work it started. It rejects (WipeIncompleteError) when a late store reset or
+   * wipe table failed, so the wipe's pending mark stays.
+   */
+  catchUp(reason: ResetReason): () => Promise<void>;
   /** Keys a wipe for `reason` keeps in `instanceId`. */
   preservedKeysFor(reason: ResetReason, instanceId: string): Set<string>;
 }
 
 const DEFAULT_SESSION_INSTANCES: readonly string[] = [CONTRACT_KEYS.authStore];
+
+/** A wipe left some of the scope's data behind: its pending mark stays, so the next launch runs it again. */
+export class WipeIncompleteError extends Error {
+  constructor() {
+    super('Part of a wipe failed; its data may still be stored.');
+    this.name = 'WipeIncompleteError';
+  }
+}
+
+/**
+ * Whether a wipe removed everything it must: every store reset and wipe table. Teardowns stop the session's runtime work
+ * (hubs, timers, listeners) and hold no data, so one that fails is logged and the wipe still counts as complete.
+ */
+export function isWipeComplete(report: WipeReport): boolean {
+  return report.stores.failed.length === 0 && report.tablesFailed.length === 0;
+}
+
+/**
+ * Runs the scope wipe for a caller that clears a pending-wipe mark once it resolves (sign-out): resolves only when the
+ * wipe removed everything it must (`isWipeComplete`) and rejects with WipeIncompleteError otherwise, so the mark stays
+ * and the next launch runs the wipe again.
+ */
+export async function wipeScopeCompletely(wiper: Pick<ScopeWiper, 'wipeScope'>, reason: ResetReason): Promise<WipeReport> {
+  const report = await wiper.wipeScope(reason);
+
+  if (!isWipeComplete(report)) {
+    throw new WipeIncompleteError();
+  }
+
+  return report;
+}
 
 /**
  * Wipe the signed-in scope on logout, forced sign-out, department switch, server switch or "Clear all
@@ -60,7 +102,14 @@ export function createScopeWiper(options: ScopeWiperOptions = {}): ScopeWiper {
   const sessionInstances = new Set(options.sessionInstances ?? DEFAULT_SESSION_INSTANCES);
 
   const preservedKeysFor = (reason: ResetReason, instanceId: string): Set<string> => {
-    const keys = new Set<string>([...DEVICE_PREFERENCE_KEYS, ...(options.variantId ? (VARIANT_PRESERVED_KEYS[options.variantId] ?? []) : []), ...(options.preserveKeys ?? []), ...registry.getPreservedKeys(instanceId)]);
+    // The pending-wipe mark outlives the wipe it marks: only the owner of that wipe removes it, once it is complete.
+    const keys = new Set<string>([
+      PENDING_WIPE_KEY,
+      ...DEVICE_PREFERENCE_KEYS,
+      ...(options.variantId ? (VARIANT_PRESERVED_KEYS[options.variantId] ?? []) : []),
+      ...(options.preserveKeys ?? []),
+      ...registry.getPreservedKeys(instanceId),
+    ]);
     if (reason === 'department-switch') {
       SESSION_KEYS.forEach((key) => keys.add(key));
     }
@@ -75,7 +124,7 @@ export function createScopeWiper(options: ScopeWiperOptions = {}): ScopeWiper {
     }
     logger.info({ message: 'Wiping local data for scope change', context: { reason, unsentWrites: policy } });
 
-    const report: WipeReport = { reason, teardowns: { ok: [], failed: [] }, stores: { ok: [], failed: [] }, tablesCleared: [], kv: {}, unsentWrites: { policy, discarded: 0, held: 0 } };
+    const report: WipeReport = { reason, teardowns: { ok: [], failed: [] }, stores: { ok: [], failed: [] }, tablesCleared: [], tablesFailed: [], kv: {}, unsentWrites: { policy, discarded: 0, held: 0 } };
 
     for (const [name, teardown] of registry.getTeardowns()) {
       try {
@@ -83,7 +132,7 @@ export function createScopeWiper(options: ScopeWiperOptions = {}): ScopeWiper {
         report.teardowns.ok.push(name);
       } catch (error) {
         report.teardowns.failed.push(name);
-        logger.error({ message: 'Teardown failed during wipe', context: { name, reason, error: error instanceof Error ? error.name : typeof error } });
+        logger.error({ message: 'Teardown failed during wipe', context: { name, reason, error: describeError(error) } });
       }
     }
 
@@ -93,7 +142,7 @@ export function createScopeWiper(options: ScopeWiperOptions = {}): ScopeWiper {
         report.stores.ok.push(name);
       } catch (error) {
         report.stores.failed.push(name);
-        logger.error({ message: 'Failed to reset store', context: { storeName: name, reason, error: error instanceof Error ? error.name : typeof error } });
+        logger.error({ message: 'Failed to reset store', context: { storeName: name, reason, error: describeError(error) } });
       }
     }
 
@@ -105,19 +154,30 @@ export function createScopeWiper(options: ScopeWiperOptions = {}): ScopeWiper {
           report.unsentWrites.held = await options.outbox.countUnsent(wipeOptions.scope ?? null);
         }
       } catch (error) {
-        logger.error({ message: 'Outbox step failed during wipe', context: { reason, error: error instanceof Error ? error.name : typeof error } });
+        logger.error({ message: 'Outbox step failed during wipe', context: { reason, error: describeError(error) } });
       }
     }
 
     if (options.db) {
-      const existing = new Set(await options.db.listTables().catch(() => [] as string[]));
+      const db = options.db;
+      let existing = new Set<string>();
+
+      try {
+        existing = new Set(await db.listTables());
+      } catch (error) {
+        // Which wipe tables exist is unknown: each may still hold the scope's rows.
+        report.tablesFailed.push(...registry.getWipeTables());
+        logger.error({ message: 'Failed to list tables during wipe', context: { reason, error: describeError(error) } });
+      }
+
       for (const table of registry.getWipeTables()) {
         if (!existing.has(table)) continue;
         try {
-          await options.db.delete(table);
+          await db.delete(table);
           report.tablesCleared.push(table);
         } catch (error) {
-          logger.error({ message: 'Failed to clear table during wipe', context: { table, reason, error: error instanceof Error ? error.name : typeof error } });
+          report.tablesFailed.push(table);
+          logger.error({ message: 'Failed to clear table during wipe', context: { table, reason, error: describeError(error) } });
         }
       }
     }
@@ -132,10 +192,54 @@ export function createScopeWiper(options: ScopeWiperOptions = {}): ScopeWiper {
 
     logger.info({
       message: 'Local data wiped',
-      context: { reason, stores: report.stores.ok.length, storeFailures: report.stores.failed.length, tables: report.tablesCleared.length, discarded: report.unsentWrites.discarded, held: report.unsentWrites.held },
+      context: {
+        reason,
+        stores: report.stores.ok.length,
+        storeFailures: report.stores.failed.length,
+        tables: report.tablesCleared.length,
+        tableFailures: report.tablesFailed.length,
+        discarded: report.unsentWrites.discarded,
+        held: report.unsentWrites.held,
+      },
     });
     return report;
   };
 
-  return { wipeScope, preservedKeysFor };
+  /** Resolves false when a part that removes data (a store reset, a wipe table) failed; a failed teardown is only logged. */
+  const applyLate = async (registration: ResetRegistration, reason: ResetReason): Promise<boolean> => {
+    const logger = getOfflineLogger();
+
+    try {
+      if (registration.kind !== 'wipe-table') {
+        await registration.run(reason);
+      } else if (options.db && (await options.db.listTables()).includes(registration.table)) {
+        await options.db.delete(registration.table);
+      }
+
+      return true;
+    } catch (error) {
+      const name = registration.kind === 'wipe-table' ? registration.table : registration.name;
+      logger.error({ message: 'A late part of a wipe failed', context: { kind: registration.kind, name, reason, error: describeError(error) } });
+
+      return registration.kind === 'teardown';
+    }
+  };
+
+  const catchUp = (reason: ResetReason): (() => Promise<void>) => {
+    const started: Promise<boolean>[] = [];
+
+    const unsubscribe = registry.onRegister((registration) => {
+      started.push(applyLate(registration, reason));
+    });
+
+    return async () => {
+      unsubscribe();
+
+      if ((await Promise.all(started)).includes(false)) {
+        throw new WipeIncompleteError();
+      }
+    };
+  };
+
+  return { wipeScope, catchUp, preservedKeysFor };
 }

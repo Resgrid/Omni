@@ -10,6 +10,7 @@
     "@resgrid/config": "workspace:*",
     "@resgrid/models": "workspace:*",
     "@resgrid/offline": "workspace:*",
+    "zod": "catalog:",
     "zustand": "catalog:"
   }
 }

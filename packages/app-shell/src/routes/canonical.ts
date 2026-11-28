@@ -36,9 +36,11 @@ const route = <const P extends string, const A extends readonly string[] = reado
 
 const canCreateCalls = (m: VariantManifest): boolean => m.capabilities.calls.create !== 'none';
 const hasChatHub = (m: VariantManifest): boolean => m.capabilities.realtime.chatHub;
+
 /** Field Records exist where the variant has its own `Records.Field.<App>` flag (BigBoard has none). */
 const hasFieldRecords = (m: VariantManifest): boolean => recordsFieldFlagKey(m.id) !== null;
 const commandTier = { requires: (m: VariantManifest) => m.capabilities.incidentCommand === 'command', module: 'incident-command' } as const;
+
 /** The custom / indoor maps browser (`features/custom-maps`). */
 const customIndoorMaps = { requires: (m: VariantManifest) => m.capabilities.maps.customIndoor } as const;
 
@@ -109,6 +111,11 @@ export const CANONICAL_ROUTES = {
   certifications: route('/certifications', [], { module: 'certifications' }),
   certificationDetail: route('/certifications/[id]', ['id'], { module: 'certifications' }),
   certificationEdit: route('/certifications/edit', [], { module: 'certifications' }),
+  training: route('/training', [], { module: 'training' }),
+  trainingDetail: route('/training/[id]', ['id'], { module: 'training' }),
+  trainingCourse: route('/training/course/[id]', ['id'], { module: 'training' }),
+  trainingSubmit: route('/training/submit', [], { module: 'training' }),
+  trainingSubmission: route('/training/submission/[id]', ['id'], { module: 'training' }),
   shifts: route('/shifts', [], { module: 'shifts' }),
   shiftDay: route('/shifts/day/[id]', ['id'], { module: 'shifts' }),
   shiftTrade: route('/shifts/trade/[id]', ['id'], { module: 'shifts' }),
@@ -180,7 +187,9 @@ export const CANONICAL_ROUTES = {
 } as const;
 
 export type CanonicalRoutes = typeof CANONICAL_ROUTES;
+
 export type RouteKey = keyof CanonicalRoutes;
+
 export type RouteParamNames<K extends RouteKey> = CanonicalRoutes[K]['params'];
 
 export const ROUTE_KEYS = Object.keys(CANONICAL_ROUTES) as RouteKey[];
@@ -190,8 +199,10 @@ export const isRouteKey = (value: string): value is RouteKey => Object.prototype
 /** Whether a variant is entitled to a canonical route (its capability and module gates pass). */
 export function isRouteAvailableFor(key: RouteKey, manifest: VariantManifest): boolean {
   const spec: RouteSpec = CANONICAL_ROUTES[key];
+
   if (spec.module && !manifest.modules.includes(spec.module)) {
     return false;
   }
+
   return spec.requires ? spec.requires(manifest) : true;
 }

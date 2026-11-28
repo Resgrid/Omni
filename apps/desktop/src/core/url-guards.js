@@ -149,6 +149,25 @@ function isPermissionAllowed(permission, requestingUrl, allowedOrigins) {
 }
 
 /**
+ * Fullscreen for an https page the app frames (a lesson's video inside Resgrid's LMS launch frame): granted only to a sub-frame,
+ * only while the window's top document is the app's own. No other permission is ever granted to a frame.
+ * @param {string} permission Electron permission name
+ * @param {unknown} requestingUrl the requesting frame's URL (or origin)
+ * @param {unknown} isMainFrame whether the request came from the top document
+ * @param {unknown} topUrl the window's top document URL
+ * @param {string[]} allowedOrigins
+ */
+function isFramedFullscreenAllowed(permission, requestingUrl, isMainFrame, topUrl, allowedOrigins) {
+  if (permission !== 'fullscreen' || isMainFrame !== false) {
+    return false;
+  }
+
+  const origin = originOf(requestingUrl);
+
+  return origin !== null && origin.startsWith('https://') && isAllowedNavigation(topUrl, allowedOrigins);
+}
+
+/**
  * An http(s) URL on this computer's loopback, used for the Expo dev server in development. Null for anything else, so
  * an environment variable can never point the window at a remote page.
  * @param {unknown} value
@@ -173,6 +192,7 @@ function safeDevServerUrl(value) {
 module.exports = {
   ALLOWED_PERMISSIONS,
   isAllowedNavigation,
+  isFramedFullscreenAllowed,
   isPermissionAllowed,
   isSafeExternalUrl,
   originOf,

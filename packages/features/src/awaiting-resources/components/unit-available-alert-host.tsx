@@ -26,7 +26,7 @@ const HOST_SIDE_PHONE = 12;
 const UnitAvailableAlertCard: React.FC<{ alert: AwaitingUnitAlert; canDispatch: boolean }> = ({ alert, canDispatch }) => {
   const { t } = useTranslation();
   const router = useRouter();
-  const busyKey = useAwaitingResourcesStore((state) => state.busyKey);
+  const busyKeys = useAwaitingResourcesStore((state) => state.busyKeys);
   const { dispatchUnit } = useAwaitingResourceActions();
   const testID = `unit-available-alert-${alert.unitId}`;
 
@@ -54,7 +54,7 @@ const UnitAvailableAlertCard: React.FC<{ alert: AwaitingUnitAlert; canDispatch: 
           (part): part is string => !!part
         );
 
-        const isBusy = busyKey === awaitingDispatchKey(call.callId, alert.unitId);
+        const isBusy = busyKeys.includes(awaitingDispatchKey(call.callId, alert.unitId));
 
         return (
           <VStack key={`alert-${alert.unitId}-call-${call.callId}`} className="mt-2 border-t border-outline-100 pt-2">

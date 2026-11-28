@@ -2,7 +2,7 @@ import { getBaseApiUrl, switchServer, useAuthStore } from '@resgrid/auth';
 import { initI18n, loadLanguage } from '@resgrid/i18n';
 import { configureLocation } from '@resgrid/location';
 import { configureNotifications, type NotificationsDependencies, pushNotificationService } from '@resgrid/notifications';
-import { defaultResetRegistry, secureKeyName } from '@resgrid/offline';
+import { defaultResetRegistry, PENDING_WIPE_KEY, secureKeyName } from '@resgrid/offline';
 import { __resetSecureStoreFake, setItemAsync } from '@resgrid/offline/__tests__/fakes/expo-secure-store';
 import { __getMmkvFile, __resetMmkvFake, __seedMmkvFile } from '@resgrid/offline/__tests__/fakes/mmkv';
 import { configureRealtime, teardownRealtime } from '@resgrid/realtime';
@@ -14,7 +14,7 @@ import { setRouteContract } from '../../routes/href';
 import { getShellRuntime, resetShellRuntimeForTests } from '../../runtime/runtime-holder';
 import { getShellState, resetShellStateForTests } from '../../runtime/shell-state';
 import { createAppInit } from '../create-app-init';
-import { createStartupSteps, LANGUAGE_LOAD_BUDGET_MS, resetDefaultStepsForTests } from '../default-steps';
+import { createStartupSteps, LANGUAGE_LOAD_BUDGET_MS, registerDefaultInitSteps, resetDefaultStepsForTests } from '../default-steps';
 
 const LEGACY_KEY = '9f066882-5c07-47a4-9bf3-783074b590d5';
 const DEVICE_KEY = 'DEVICEKEY0123456';
@@ -119,6 +119,57 @@ describe('startup steps', () => {
     expect(getShellState().onboardingRequired).toBe(true);
     expect(__getMmkvFile('ResgridUnit')?.key).not.toBe(LEGACY_KEY);
     expect(__getMmkvFile('ResgridUnit')?.data.has('SELECTED_THEME')).toBe(false);
+  });
+
+  // A sign-out the app was killed in leaves its wipe pending, and its push registration (with the ended session's
+  // token) for the push service to take off. The launch's first act is that wipe: it must keep the push record.
+  it('keeps the push sign-out it has not confirmed through the wipe a killed sign-out left', async () => {
+    await setItemAsync(secureKeyName('ResgridUnit'), DEVICE_KEY);
+    __seedMmkvFile('ResgridUnit', DEVICE_KEY, { [PENDING_WIPE_KEY]: 'logout', nativePushPendingSignOuts: '[{"id":"1"}]', 'calls-storage': '{}', local: 'de' });
+    const variant = activateVariant('unit');
+    const init = createAppInit({ name: 'startup-test', retry: false });
+    registerDefaultInitSteps(init, createAppInit({ name: 'session-test', retry: false }), { variant, i18nResources: undefined });
+
+    await init.run();
+    await getShellRuntime().offline?.settlePendingWipe();
+
+    const main = __getMmkvFile('ResgridUnit')?.data;
+    expect(main?.has(PENDING_WIPE_KEY)).toBe(false);
+    expect(main?.has('calls-storage')).toBe(false);
+    expect(main?.get('nativePushPendingSignOuts')).toBe('[{"id":"1"}]');
+    expect(main?.get('local')).toBe('de');
+    // The notifications teardown registers after storage opened (startup.packages): it caught up with the wipe, so the
+    // ended session's scheduled local notifications, delivered pushes and badge are gone too.
+    expect(pushNotificationService.clearLocalState).toHaveBeenCalledTimes(1);
+  });
+
+  it('runs no teardown at startup when no wipe was left pending', async () => {
+    await setItemAsync(secureKeyName('ResgridUnit'), DEVICE_KEY);
+    __seedMmkvFile('ResgridUnit', DEVICE_KEY, { 'calls-storage': '{}' });
+    const variant = activateVariant('unit');
+    const init = createAppInit({ name: 'startup-test', retry: false });
+    registerDefaultInitSteps(init, createAppInit({ name: 'session-test', retry: false }), { variant, i18nResources: undefined });
+
+    await init.run();
+
+    expect(pushNotificationService.clearLocalState).not.toHaveBeenCalled();
+    expect(__getMmkvFile('ResgridUnit')?.data.has('calls-storage')).toBe(true);
+  });
+
+  it('settles the pending wipe once startup is ready, so nothing registered after sign-in is wiped', async () => {
+    await setItemAsync(secureKeyName('ResgridUnit'), DEVICE_KEY);
+    __seedMmkvFile('ResgridUnit', DEVICE_KEY, { [PENDING_WIPE_KEY]: 'logout' });
+    const variant = activateVariant('unit');
+    const init = createAppInit({ name: 'startup-test', retry: false });
+    registerDefaultInitSteps(init, createAppInit({ name: 'session-test', retry: false }), { variant, i18nResources: undefined });
+
+    await init.run();
+
+    while (__getMmkvFile('ResgridUnit')?.data.has(PENDING_WIPE_KEY)) await Promise.resolve();
+
+    const afterSignIn = jest.fn();
+    defaultResetRegistry.registerStoreReset('registered-after-sign-in', afterSignIn);
+    expect(afterSignIn).not.toHaveBeenCalled();
   });
 
   it('wires notifications deep links to the route contract', async () => {

@@ -99,6 +99,16 @@ export const sessionsEndpoints = defineEndpoints('auth.sessions', {
   revokeAll: { method: 'POST', path: '/sessions/revoke-all' },
 });
 
+/**
+ * Signed-in step-up for an area (Core round 10 A5): what the department asks for there and what this member can use, and verifying
+ * one method. Signatures, acknowledgments and approvals keep the evidence on the session (the refused request is simply sent again);
+ * protected data answers an ADP grant.
+ */
+export const stepUpEndpoints = defineEndpoints('auth.step-up', {
+  options: { method: 'GET', path: '/StepUp/Options', query: ['area'] },
+  verify: { method: 'POST', path: '/StepUp/Verify', body: 'json' },
+});
+
 /** Every auth endpoint definition, grouped by domain. */
 export const authEndpointDomains = {
   connect: connectEndpoints,
@@ -109,6 +119,7 @@ export const authEndpointDomains = {
   mfa: mfaEndpoints,
   passkeys: passkeysEndpoints,
   sessions: sessionsEndpoints,
+  'step-up': stepUpEndpoints,
 } as const;
 
 /** Flat list for the contract test (and any tooling that lists what the app calls). */

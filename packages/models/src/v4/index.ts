@@ -57,6 +57,9 @@ export * from './personnel';
 export * from './personnelLocation';
 export * from './personnelStaffing';
 export * from './personnelStatuses';
+
+// The protocol library: versions, acknowledgments and call step-through (protocols plan P1–P3); the domains stay alphabetical across this break.
+export * from './protocolLibrary';
 export * from './records';
 
 // Recurring call schedules, their calendar and alerts (Core M0319/M0320); the domains stay alphabetical across this break.
@@ -70,6 +73,9 @@ export * from './shifts';
 export * from './sso';
 export * from './statuses';
 export * from './templates';
+
+// Baseline training and the LMS learner (protocols-training-knowledge plan); the domains stay alphabetical across this break.
+export * from './training';
 export * from './unitLocation';
 export * from './unitRoles';
 export * from './units';

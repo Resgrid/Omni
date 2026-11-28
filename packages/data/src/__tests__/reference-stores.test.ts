@@ -4,7 +4,7 @@ import { createTestPayloadCipher } from '@resgrid/offline/testing';
 
 import { useCalendarStore } from '../calendar/calendar-store';
 import { useCertificationsStore } from '../certifications/certifications-store';
-import { useChecklistsStore } from '../checklists/checklists-store';
+import { checklistStartInput, useChecklistsStore } from '../checklists/checklists-store';
 import { useContactsStore } from '../contacts/contacts-store';
 import { useInventoryStore } from '../inventory/inventory-store';
 import { useCustomMapsStore } from '../mapping/custom-maps-store';
@@ -50,6 +50,7 @@ jest.mock('@resgrid/api', () => {
     'getChecklistAccess',
     'saveChecklistRunProgress',
     'completeChecklistRun',
+    'startChecklistRun',
     'signupForShiftDay',
     'getMyShifts',
   ]) {
@@ -497,6 +498,47 @@ describe('offline writes of the member/field modules', () => {
     expect(jest.mocked(api.saveChecklistRunProgress).mock.calls[0][1]).toEqual({ Id: 'run-1', Input: answers('b') });
     expect(jest.mocked(api.saveChecklistRunProgress).mock.invocationCallOrder[0]).toBeLessThan(jest.mocked(api.completeChecklistRun).mock.invocationCallOrder[0]);
     expect(useChecklistsStore.getState().runsById['run-1']).toEqual({ Id: 'run-1', Revision: 5 });
+  });
+
+  it('checklists (RF-1): a previewed occurrence is started on the server ahead of its first save, once', async () => {
+    const cipher = createTestPayloadCipher();
+    runtime = await createDataTestRuntime({ variant: 'responder', handlers: ALL_DATA_OUTBOX_HANDLERS, cipher });
+    runtime.connectivity.setOnline(false);
+    // SAFETY: the fixture fills only the run fields the store reads to start and save a previewed occurrence.
+    const preview = { Id: 'run-9', OccurrenceId: 'occ-1', DefinitionId: 'def-1', VersionId: 'ver-1', Revision: 0, IsPreview: true, Target: { Type: 1, Id: '10', Name: 'Engine 1' } } as never;
+    // SAFETY: the save input carries only the revision and answers the store queues.
+    const answers = (value: string) => ({ Revision: 0, Answers: [{ ItemId: 'i1', Value: value }] }) as never;
+    expect((await useChecklistsStore.getState().saveRun(preview, answers('a'), false)).outcome).toBe('queued');
+    runtime.clock.advance(1000);
+    await useChecklistsStore.getState().saveRun(preview, answers('b'), true);
+    const rows = await runtime.rows();
+    expect(rows.map((row) => row.type)).toEqual(['checklists.run.start', 'checklists.run.save', 'checklists.run.save']);
+
+    // SAFETY: the mocked endpoints return the v4 envelope the store unwraps; the test builds only the fields it checks.
+    jest.mocked(api.startChecklistRun).mockResolvedValue(ok({ Id: 'run-9', Revision: 1, IsPreview: false }) as never);
+    // SAFETY: as above, the v4 envelope with only the fields the test checks.
+    jest.mocked(api.saveChecklistRunProgress).mockResolvedValue(ok({ Id: 'run-9', Revision: 2, IsPreview: false }) as never);
+    // SAFETY: as above, the v4 envelope with only the fields the test checks.
+    jest.mocked(api.completeChecklistRun).mockResolvedValue(ok({ Id: 'run-9', Revision: 3, IsPreview: false }) as never);
+    runtime.connectivity.setOnline(true);
+    await runtime.outbox.drain();
+    await flush();
+    expect(jest.mocked(api.startChecklistRun)).toHaveBeenCalledTimes(1);
+    expect(jest.mocked(api.startChecklistRun).mock.calls[0][1]).toEqual({ OccurrenceId: 'occ-1', CompletionId: 'run-9' });
+    expect(jest.mocked(api.startChecklistRun).mock.invocationCallOrder[0]).toBeLessThan(jest.mocked(api.saveChecklistRunProgress).mock.invocationCallOrder[0]);
+
+    // The server's run replaced the preview: a later save does not start it again.
+    await useChecklistsStore.getState().saveRun(preview, answers('c'), false);
+    await flush();
+    expect(jest.mocked(api.startChecklistRun)).toHaveBeenCalledTimes(1);
+  });
+
+  it('checklists (RF-1): a local on-demand run starts pinned to its published version and target', () => {
+    // SAFETY: the fixture fills only the run fields checklistStartInput reads.
+    const local = { Id: 'run-7', OccurrenceId: null, DefinitionId: 'def-2', VersionId: 'ver-2', IsPreview: true, Target: { Type: 1, Id: '12', Name: 'Pump' } } as never;
+    expect(checklistStartInput(local)).toEqual({ DefinitionId: 'def-2', VersionId: 'ver-2', TargetId: '12', CompletionId: 'run-7' });
+    // SAFETY: a server run needs only Id and IsPreview for checklistStartInput to decide nothing starts.
+    expect(checklistStartInput({ Id: 'run-8', IsPreview: false } as never)).toBeNull();
   });
 
   it('checklists: without a payload cipher (web) a run save goes online only and never touches the outbox', async () => {

@@ -13,7 +13,10 @@ export interface ApiCacheScopeTarget {
 
 /** What the shell injects so sign-out can reach everything signed in (`@resgrid/offline` `initOffline()` provides both). */
 export interface AuthServices {
-  /** The scope wipe (`ScopeWiper.wipeScope`): teardowns → store resets → outbox policy → tables → MMKV except preferences. */
+  /**
+   * The scope wipe (`wipeScopeCompletely` over `ScopeWiper.wipeScope`): teardowns → store resets → outbox policy → tables →
+   * MMKV except preferences. Rejects when it left data behind, so sign-out keeps the pending-wipe mark for the next launch.
+   */
   wipeScope?: (reason: ResetReason) => Promise<unknown>;
   apiCache?: ApiCacheScopeTarget;
 }

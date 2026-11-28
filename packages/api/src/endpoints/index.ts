@@ -52,6 +52,9 @@ export * from './security';
 export * from './shifts';
 export * from './statuses';
 export * from './sync';
+
+// Baseline training and the LMS learner (protocols-training-knowledge plan); the domains stay alphabetical across this break.
+export * from './training';
 export * from './units';
 export * from './user-defined-fields';
 export * from './voice';

@@ -7,7 +7,7 @@ import { ConfirmationRequiredError, createOutbox, type Outbox } from '../../outb
 import { createOutboxHandlerRegistry } from '../../outbox/registry';
 import { setOfflineLogger } from '../../util/logger';
 import { createResetRegistry, defaultResetRegistry, getRegisteredStoreCount, getRegisteredStoreNames, registerStoreReset, type ResetRegistry, unregisterStoreReset } from '../registry';
-import { createScopeWiper } from '../wipe';
+import { createScopeWiper, isWipeComplete, WipeIncompleteError, wipeScopeCompletely } from '../wipe';
 
 const logger = { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() };
 beforeAll(() => setOfflineLogger(logger));
@@ -104,6 +104,52 @@ describe('wipeScope', () => {
     expect(report.teardowns).toEqual({ ok: ['signalr'], failed: ['livekit'] });
     expect(report.stores).toEqual({ ok: ['calls', 'units'], failed: ['broken'] });
     expect(logger.error).toHaveBeenCalledWith(expect.objectContaining({ message: 'Failed to reset store', context: expect.objectContaining({ storeName: 'broken' }) }));
+  });
+
+  it('reports a wipe table it could not clear, and every wipe table when it cannot list them, as incomplete', async () => {
+    expect(isWipeComplete(await wiper().wipeScope('logout'))).toBe(true);
+
+    await db.insert('cache_calls', { id: 'c2' });
+    jest.spyOn(db, 'delete').mockRejectedValueOnce(new Error('SQLITE_BUSY'));
+    const failedDelete = await wiper().wipeScope('logout');
+    expect(failedDelete.tablesFailed).toEqual(['cache_calls']);
+    expect(failedDelete.tablesCleared).toEqual([]);
+    expect(isWipeComplete(failedDelete)).toBe(false);
+
+    jest.spyOn(db, 'listTables').mockRejectedValueOnce(new Error('SQLITE_IOERR'));
+    const unlisted = await wiper().wipeScope('logout');
+    expect(unlisted.tablesFailed).toEqual(['cache_calls']);
+    expect(isWipeComplete(unlisted)).toBe(false);
+  });
+
+  it('counts a failed store reset as incomplete, but not a failed teardown', async () => {
+    registry.registerTeardown('livekit', () => {
+      throw new Error('room gone');
+    });
+    expect(isWipeComplete(await wiper().wipeScope('logout'))).toBe(true);
+
+    registry.registerStoreReset('broken', () => {
+      throw new Error('reset failed');
+    });
+    expect(isWipeComplete(await wiper().wipeScope('logout'))).toBe(false);
+  });
+
+  it('wipeScopeCompletely resolves with the report only when the wipe removed everything, so sign-out keeps its mark otherwise', async () => {
+    await expect(wipeScopeCompletely(wiper(), 'logout')).resolves.toMatchObject({ reason: 'logout', tablesFailed: [] });
+
+    registry.registerTeardown('livekit', () => {
+      throw new Error('room gone');
+    });
+    await expect(wipeScopeCompletely(wiper(), 'logout')).resolves.toMatchObject({ teardowns: { failed: ['livekit'] } });
+
+    await db.insert('cache_calls', { id: 'c3' });
+    jest.spyOn(db, 'delete').mockRejectedValueOnce(new Error('SQLITE_BUSY'));
+    await expect(wipeScopeCompletely(wiper(), 'logout')).rejects.toBeInstanceOf(WipeIncompleteError);
+
+    registry.registerStoreReset('broken', () => {
+      throw new Error('reset failed');
+    });
+    await expect(wipeScopeCompletely(wiper(), 'auth-rejected')).rejects.toBeInstanceOf(WipeIncompleteError);
   });
 
   it('passes the reason to every reset', async () => {

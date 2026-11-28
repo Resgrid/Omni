@@ -106,6 +106,13 @@ export const requestPermissionsAsync = jest.fn(async (_options?: unknown) => {
 });
 
 export const getDevicePushTokenAsync = jest.fn(async () => ({ type: 'ios', data: mockNotificationState.token }));
+
+/** Android deletes the FCM token: the next one asked for is new. */
+export const unregisterForNotificationsAsync = jest.fn(async () => {
+  mockNotificationState.calls.push('unregisterForNotificationsAsync');
+  mockNotificationState.token = `${String(mockNotificationState.token)}-rotated`;
+});
+
 export const setBadgeCountAsync = jest.fn(async (_count: number) => true);
 
 export const dismissAllNotificationsAsync = jest.fn(async () => {

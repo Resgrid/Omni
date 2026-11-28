@@ -21,11 +21,18 @@ jest.mock('expo-image-picker', () => ({
   requestMediaLibraryPermissionsAsync: jest.fn(async () => ({ granted: true })),
   launchCameraAsync: jest.fn(async () => ({ canceled: false, assets: [{ uri: 'file://photo.jpg', base64: 'QUJD', mimeType: 'image/jpeg' }] })),
   launchImageLibraryAsync: jest.fn(async () => ({ canceled: true, assets: null })),
+  UIImagePickerPreferredAssetRepresentationMode: { Compatible: 'compatible' },
 }));
+
+// Every photo is re-encoded on the device (HEIC → JPEG, metadata dropped) before upload.
+const mockManipulate = jest.fn((_uri: string) => ({ resize: jest.fn(), renderAsync: jest.fn(async () => ({ saveAsync: jest.fn(async () => ({ base64: 'QUJD' })) })) }));
+
+jest.mock('expo-image-manipulator', () => ({ SaveFormat: { JPEG: 'jpeg' }, ImageManipulator: { manipulate: (uri: string) => mockManipulate(uri) } }));
 
 const q = { includeHiddenElements: true } as const;
 
 const cert = (Id: number, extra: Partial<Certification> = {}): Certification => ({ Id, UserId: 'me', Name: `Cert ${Id}`, Status: 0, HasFile: false, CreditHours: 0, ...extra });
+
 const type = (Id: number, Name: string, extra: Partial<CertificationType> = {}): CertificationType => ({
   Id,
   Code: `T${Id}`,
@@ -41,12 +48,14 @@ const type = (Id: number, Name: string, extra: Partial<CertificationType> = {}):
 /** A calendar day `months` from today on the given day of the month, as the date picker produces it. */
 const pickedDay = (months: number, day: number): string => {
   const now = new Date();
+
   return todayKey(new Date(now.getFullYear(), now.getMonth() + months, day));
 };
 
 /** Opens a DateTimeField, moves `months` from the month it shows (its value, else today's), picks `day` and confirms. */
 const pickDate = async (testID: string, months: number, day: number) => {
   await fireEvent.press(screen.getByTestId(testID));
+
   for (let step = 0; step < Math.abs(months); step += 1) await fireEvent.press(screen.getByTestId(`${testID}-${months > 0 ? 'next' : 'previous'}`, q));
   await fireEvent.press(screen.getByTestId(`${testID}-day-${day}`, q));
   await fireEvent.press(screen.getByTestId(`${testID}-done`, q));
@@ -150,6 +159,7 @@ describe('certification format', () => {
 
   it('captures a photo as base64 and refuses without permission', async () => {
     await expect(capturePhoto('camera', 'card')).resolves.toEqual({ base64: 'QUJD', name: 'card.jpg', contentType: 'image/jpeg' });
+    expect(mockManipulate).toHaveBeenLastCalledWith('file://photo.jpg');
     await expect(capturePhoto('library', 'card.jpg')).resolves.toBeNull();
     (ImagePicker.requestCameraPermissionsAsync as jest.Mock).mockResolvedValueOnce({ granted: false });
     await expect(capturePhoto('camera', 'card')).rejects.toBeInstanceOf(PhotoPermissionError);
@@ -252,6 +262,7 @@ describe('CertificationDetailScreen', () => {
   it("shows Core's reason when a renewal is refused", async () => {
     store.renew.mockImplementationOnce(async () => {
       useCertificationsStore.setState({ actionError: { code: 'rejected', status: 400, problemType: 'certifications_expiry_not_later', messageKey: 'errors.data.rejected' } });
+
       return null;
     });
     useCertificationsStore.setState({ certificationsById: { 5: cert(5, { Status: 1, ExpiresOn: '2025-01-01', DaysUntilExpiry: -600 }) } });
@@ -281,6 +292,7 @@ describe('CertificationDetailScreen', () => {
   it('removes after confirmation, and keeps the screen with the reason on failure', async () => {
     store.remove.mockImplementationOnce(async () => {
       useCertificationsStore.setState({ actionError: { code: 'forbidden', status: 403, messageKey: 'errors.data.forbidden' } });
+
       return false;
     });
     await render(<CertificationDetailScreen />);
@@ -379,10 +391,12 @@ describe('CertificationEditScreen', () => {
   it('keeps the entries and says what to do when Core refuses the save, pointing at the field', async () => {
     store.save.mockImplementationOnce(async () => {
       useCertificationsStore.setState({ actionError: { code: 'rejected', status: 400, problemType: 'certifications_type_not_found', messageKey: 'errors.data.rejected' } });
+
       return null;
     });
     store.save.mockImplementationOnce(async () => {
       useCertificationsStore.setState({ actionError: { code: 'network', messageKey: 'errors.data.network' } });
+
       return null;
     });
     useCertificationsStore.setState({ types: [type(3, 'Paramedic')] });

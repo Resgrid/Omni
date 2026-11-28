@@ -32,6 +32,7 @@ import { messagesEndpoints } from './endpoints/messages/messages';
 import { notesEndpoints } from './endpoints/notes/notes';
 import { operationsEndpoints } from './endpoints/operations/operations';
 import { personnelEndpoints } from './endpoints/personnel/personnel';
+import { protocolLibraryEndpoints } from './endpoints/protocols/protocol-library';
 import { protocolsEndpoints } from './endpoints/protocols/protocols';
 import { recordsEndpoints } from './endpoints/records/records';
 import { recurringCallsEndpoints } from './endpoints/recurring-calls/recurring-calls';
@@ -42,6 +43,7 @@ import { securityEndpoints } from './endpoints/security/security';
 import { shiftsEndpoints } from './endpoints/shifts/shifts';
 import { statusesEndpoints } from './endpoints/statuses/statuses';
 import { syncEndpoints } from './endpoints/sync/sync';
+import { trainingEndpoints } from './endpoints/training/training';
 import { unitsEndpoints } from './endpoints/units/units';
 import { userDefinedFieldsEndpoints } from './endpoints/user-defined-fields/user-defined-fields';
 import { voiceEndpoints } from './endpoints/voice/voice';
@@ -84,6 +86,7 @@ export const endpointDomains = {
   operations: operationsEndpoints,
   personnel: personnelEndpoints,
   protocols: protocolsEndpoints,
+  'protocol-library': protocolLibraryEndpoints,
   records: recordsEndpoints,
   'recurring-calls': recurringCallsEndpoints,
   routes: routesEndpoints,
@@ -93,6 +96,7 @@ export const endpointDomains = {
   shifts: shiftsEndpoints,
   statuses: statusesEndpoints,
   sync: syncEndpoints,
+  training: trainingEndpoints,
   units: unitsEndpoints,
   'user-defined-fields': userDefinedFieldsEndpoints,
   voice: voiceEndpoints,

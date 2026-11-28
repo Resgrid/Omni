@@ -1335,6 +1335,9 @@ importers:
       '@resgrid/offline':
         specifier: workspace:*
         version: link:../offline
+      zod:
+        specifier: 'catalog:'
+        version: 4.6.7
       zustand:
         specifier: 'catalog:'
         version: 5.0.16(@types/react@19.3.0)(react@19.3.0)(use-sync-external-store@1.7.0(react@19.3.0))
@@ -1398,6 +1401,9 @@ importers:
       expo-document-picker:
         specifier: 'catalog:'
         version: 58.0.4(expo@58.0.23)
+      expo-image-manipulator:
+        specifier: 'catalog:'
+        version: 58.0.16(expo@58.0.23)(react-native@0.88.1(@babel/core@7.29.7)(@react-native/metro-config@0.88.1(@babel/core@7.29.7))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)
       expo-image-picker:
         specifier: 'catalog:'
         version: 58.0.10(expo@58.0.23)

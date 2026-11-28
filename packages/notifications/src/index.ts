@@ -107,7 +107,15 @@ export {
   resetPushTokenListenersForTests,
 } from './push-token-listeners';
 export type { PushNotificationService, PushRegistrationTrigger, RegisterOptions, UsePushNotificationsResult } from './push-types';
-export { createMemoryNotificationsKv, NATIVE_PUSH_REGISTRATION_KEY, NATIVE_PUSH_STALE_REGISTRATIONS_KEY, type NotificationsKv, type StoredNativePushRegistration } from './registration-storage';
+export {
+  createMemoryNotificationsKv,
+  NATIVE_PUSH_PENDING_SIGN_OUTS_KEY,
+  NATIVE_PUSH_REGISTRATION_KEY,
+  NATIVE_PUSH_STALE_REGISTRATIONS_KEY,
+  type NotificationsKv,
+  PENDING_SIGN_OUT_MAX_AGE_MS,
+  type StoredNativePushRegistration,
+} from './registration-storage';
 export {
   CUSTOM_TONE_COUNT,
   CUSTOM_TONES,

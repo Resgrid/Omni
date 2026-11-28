@@ -1,12 +1,10 @@
 import {
   cancelStepUpApprovalRequest,
-  closeStepUpPrompt,
   completeStepUpWithApproval,
   dataProtectionStore,
   loadStepUpMethods,
   mfaErrorKey,
   requestStepUpApprovalNumber,
-  useIsStepUpPromptOpen,
   verifyStepUpFederated,
   verifyStepUpOtp,
   verifyStepUpWithPasskey,
@@ -177,10 +175,4 @@ export const StepUpPrompt: React.FC<StepUpPromptProps> = ({ isOpen, onClose, onV
       </ModalContent>
     </Modal>
   );
-};
-
-/** Mounted once in the app shell: the single step-up prompt every reveal bar opens through the grant store. */
-export const StepUpPromptHost: React.FC = () => {
-  const isOpen = useIsStepUpPromptOpen();
-  return <StepUpPrompt isOpen={isOpen} onClose={closeStepUpPrompt} />;
 };

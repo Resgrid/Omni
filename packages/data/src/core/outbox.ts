@@ -10,6 +10,7 @@ import { getDataOutbox } from './runtime';
  */
 export function classifyDataWriteError(error: unknown): OutboxErrorClass {
   if (error instanceof V4FailureError) return 'permanent';
+
   if (isApiError(error)) {
     switch (error.kind) {
       case 'network':
@@ -20,15 +21,21 @@ export function classifyDataWriteError(error: unknown): OutboxErrorClass {
         return 'auth';
       case 'http': {
         const status = error.status ?? 0;
+
         if (status === 401) return 'auth';
+
         if (status === 408 || status === 429) return 'retry';
+
         if (status >= 400 && status < 500) return 'permanent';
+
         return 'retry';
       }
+
       default:
         return 'retry';
     }
   }
+
   return defaultClassify(error);
 }
 
@@ -89,16 +96,31 @@ export interface WriteResult {
 export async function submitWrite<P>(input: EnqueueInput<P>, options: { deliverNow?: boolean } = {}): Promise<WriteResult> {
   const outbox = getDataOutbox();
   const queued = await outbox.enqueue(input);
+
   if (queued.status !== 'queued' || options.deliverNow === false) return { outcome: 'queued', id: queued.id };
   const id = queued.id;
   const orderKey = input.orderKey;
   const result = await outbox.drain({ filter: (event) => event.id === id || (orderKey !== undefined && event.orderKey === orderKey) });
+
   if (result.sent.includes(id)) return { outcome: 'sent', id };
+
   if (result.dead.includes(id)) return { outcome: 'rejected', id };
+
   return { outcome: 'queued', id };
 }
 
 /** Delivers queued writes of one order group now (e.g. a unit's statuses before its next one). */
 export async function drainOrderGroup(orderKey: string): Promise<void> {
   await getDataOutbox().drain({ filter: (event) => event.orderKey === orderKey });
+}
+
+/**
+ * Sends a backing-off write now (one that waited for the member, e.g. a step-up they just completed): made due again with the
+ * same id and idempotency key, then delivered with the rest of its order group.
+ */
+export async function retryWriteNow(id: string, orderKey?: string): Promise<void> {
+  const outbox = getDataOutbox();
+
+  await outbox.retry?.(id);
+  await outbox.drain({ filter: (event) => event.id === id || (orderKey !== undefined && event.orderKey === orderKey) });
 }

@@ -10,11 +10,13 @@ import {
   type DataLogger,
   type DataOutbox,
   type DataSessionScope,
+  type DataStepUp,
   setDataApiContext,
   setDataLocationProvider,
   setDataLogger,
   setDataOutbox,
   setDataSessionScopeProvider,
+  setDataStepUp,
   setDataVariant,
 } from './core/runtime';
 import { type HandlerRegistryLike, type HydrationRegistryLike, registerDataHydrationSteps, registerDataOutboxHandlers } from './offline-scope/register';
@@ -34,6 +36,8 @@ export interface ConfigureDataOptions {
   handlerRegistry?: HandlerRegistryLike;
   logger?: DataLogger;
   getLocation?: () => DataLocationFix | null;
+  /** The department step-up (`@resgrid/auth`): writes it holds back wait for it instead of failing. */
+  stepUp?: DataStepUp;
 }
 
 /**
@@ -48,6 +52,7 @@ export async function configureData(options: ConfigureDataOptions): Promise<() =
   setDataOutbox(options.outbox);
   setDataLogger(options.logger ?? null);
   setDataLocationProvider(options.getLocation ?? null);
+  setDataStepUp(options.stepUp ?? null);
   // Handlers must exist before rehydration can surface queued work, and before the outbox drains.
   const disposeHandlers = registerDataOutboxHandlers(options.manifest, options.handlerRegistry);
   const disposeSteps = options.sync ? registerDataHydrationSteps(options.sync, options.manifest) : () => undefined;
@@ -58,6 +63,7 @@ export async function configureData(options: ConfigureDataOptions): Promise<() =
   // outbox change (another tab's markers, an expired event, a close between delivery and the marker's save).
   const disposeReconciliation = startQueuedMarkerReconciliation();
   return () => {
+    setDataStepUp(null);
     disposeReconciliation();
     disposeSteps();
     disposeHandlers();

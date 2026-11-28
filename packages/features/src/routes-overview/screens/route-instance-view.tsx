@@ -1,4 +1,4 @@
-import RouteInstanceScreen from '@resgrid/features/unit-routes/screens/route-instance';
+import { RouteInstanceScreen } from '@resgrid/features/unit-routes';
 import { router } from 'expo-router';
 import React, { useCallback } from 'react';
 

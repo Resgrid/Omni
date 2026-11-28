@@ -10,6 +10,7 @@ import { mapNav } from '@resgrid/features/map/nav';
 import { notificationsNav } from '@resgrid/features/notifications/nav';
 import { offlineMapsNav } from '@resgrid/features/offline-maps/nav';
 import { operationsNav } from '@resgrid/features/operations/nav';
+import { protocolsNav } from '@resgrid/features/protocols/nav';
 import { recordsNav } from '@resgrid/features/records/nav';
 import { routePlansNav } from '@resgrid/features/route-plans/nav';
 import { settingsNavEntries } from '@resgrid/features/settings/nav';
@@ -21,7 +22,7 @@ import variant from './variant';
 // ic navigation and route contract (omni-plan §5.3.4, §5.4). Only routes with a file in ./app belong here; the
 // per-variant route contract test (packages/app-shell) fails otherwise. Feature entries come from each feature's nav.ts
 // (imported directly so this file stays light); placement follows the legacy IC shell: map, calls and the command board
-// in the tab bar, everything else (incidents, contacts, records, operations, chat, weather, settings) in the side drawer.
+// in the tab bar, everything else (incidents, contacts, records, operations, protocols, chat, weather, settings) in the side drawer.
 
 export const routes = defineRoutes([
   'home',
@@ -42,6 +43,8 @@ export const routes = defineRoutes([
   'contacts',
   'contactDetail',
   'poiDetail',
+  'protocols',
+  'protocolDetail',
   'records',
   'recordNew',
   'recordDetail',
@@ -80,6 +83,7 @@ export const nav = defineNav([
   ...featureNav(contactsNav, 'sidebar', { order: 30 }),
   ...featureNav(recordsNav, 'sidebar', { order: 31, overrides: { records: { requiresFlag: [FeatureFlagKeys.RecordsSystem, FeatureFlagKeys.RecordsFieldIncidentCommand] } } }),
   ...featureNav(operationsNav, 'sidebar', { order: 32 }),
+  ...featureNav(protocolsNav, 'sidebar', { order: 33 }),
   ...featureNav(chatNav, { chat: 'sidebar', chatbot: 'hidden' }, { order: 40 }),
   ...featureNav(weatherAlertsNav, { 'weather-alerts': 'sidebar' }, { order: 50 }),
   ...featureNav(routePlansNav, 'hidden', { order: 51 }),
@@ -96,6 +100,7 @@ export const nav = defineNav([
   detailNav.resourceMap,
   detailNav.contactDetail,
   detailNav.poiDetail,
+  detailNav.protocolDetail,
   detailNav.weatherAlertDetail,
   detailNav.chatChannel,
 ]);

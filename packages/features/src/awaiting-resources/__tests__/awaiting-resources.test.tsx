@@ -1,7 +1,7 @@
 import '../../calls/__tests__/test-setup';
 
 import { featureFlagsStore } from '@resgrid/auth';
-import { useAwaitingResourcesStore } from '@resgrid/data';
+import { awaitingDispatchKey, useAwaitingResourcesStore } from '@resgrid/data';
 import { getCallDetailTabs } from '@resgrid/features/calls';
 import { OutstandingRequirementsAlertKind } from '@resgrid/models';
 import { emitRealtimeEvent } from '@resgrid/realtime';
@@ -62,7 +62,7 @@ beforeEach(() => {
   useAwaitingResourcesStore.setState({
     calls: [waitingCall(1) as never],
     unitAlerts: [],
-    busyKey: null,
+    busyKeys: [],
     loading: {},
     errors: {},
     fetchedAt: { calls: 1 },
@@ -123,6 +123,14 @@ describe('AwaitingResourcesScreen', () => {
     await fireEvent.changeText(screen.getByTestId('dismiss-requirement-note', hidden), '  covered by mutual aid ');
     await act(async () => fireEvent.press(screen.getByTestId('dismiss-requirement-dialog-confirm', hidden)));
     expect(mockDismiss).toHaveBeenCalledWith(1, 51, 'covered by mutual aid');
+  });
+
+  it('turns off only the buttons whose own action is still running', async () => {
+    useAwaitingResourcesStore.setState({ busyKeys: [awaitingDispatchKey(1, 7), awaitingDispatchKey(2, 7)] });
+    await render(<AwaitingResourcesScreen now={() => NOW} />);
+
+    expect(screen.getByTestId('awaiting-requirement-51-unit-7-dispatch')).toBeDisabled();
+    expect(screen.getByTestId('awaiting-requirement-51-dismiss')).toBeEnabled();
   });
 
   it('hides actions without the create-calls right and opens the call', async () => {

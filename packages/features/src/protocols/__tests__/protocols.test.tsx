@@ -34,6 +34,12 @@ const protocol = (Id: string, overrides: Partial<CallProtocolsResultData> = {}):
 
 const mockFetchProtocol = jest.fn();
 
+// The library alone (BigBoard's shape); the acknowledgment and step-through surfaces are covered in protocol-library.test.tsx.
+jest.mock('@resgrid/config', () => ({
+  ...jest.requireActual('@resgrid/config'),
+  useCapability: (key: string) => (key === 'protocols' ? { acknowledgments: false, stepThrough: false } : jest.requireActual('@resgrid/config').useCapability(key)),
+}));
+
 beforeEach(() => {
   jest.mocked(router.push).mockClear();
   jest.mocked(router.back).mockClear();

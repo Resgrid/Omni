@@ -94,12 +94,15 @@ describe('migrateProtocolsStorage', () => {
     expect(migrateProtocolsStorage({ protocols: [null, wireProtocol('11')], protocolDetailsById: null, fetchedAt: null })).toEqual({
       protocols: [expect.objectContaining({ Id: '11' })],
       protocolDetailsById: {},
+      libraryById: { '11': expect.objectContaining({ Id: '11', Kind: 0, CurrentVersionId: null }) },
+      categories: [],
+      versionContentById: {},
       fetchedAt: {},
     });
   });
 
   it('starts empty without a snapshot or a protocol list', () => {
-    expect(migrateProtocolsStorage(null)).toEqual({ protocols: [], protocolDetailsById: {}, fetchedAt: {} });
+    expect(migrateProtocolsStorage(null)).toEqual({ protocols: [], protocolDetailsById: {}, libraryById: {}, categories: [], versionContentById: {}, fetchedAt: {} });
 
     const notAList: PersistedProtocolsV0 = JSON.parse('{"protocols":{"ProtocolId":"12"}}');
     expect(migrateProtocolsStorage(notAList).protocols).toEqual([]);

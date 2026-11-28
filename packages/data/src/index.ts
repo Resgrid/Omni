@@ -18,6 +18,10 @@ export {
   dataNow,
   type DataOutbox,
   type DataSessionScope,
+  type DataStepUp,
+  type DataStepUpArea,
+  type DataStepUpRequirement,
+  dataStepUpRequirementOf,
   defaultIdGenerator,
   generateDataId,
   getDataApiContext,
@@ -29,6 +33,8 @@ export {
   hasDataApiContext,
   hasDataOutbox,
   noopDataLogger,
+  onDataStepUpVerified,
+  requestDataStepUp,
   resetDataRuntimeForTests,
   setDataApiContext,
   setDataClock,
@@ -37,6 +43,7 @@ export {
   setDataLogger,
   setDataOutbox,
   setDataSessionScopeProvider,
+  setDataStepUp,
   setDataVariant,
 } from './core/runtime';
 export { cacheOptions, createSliceRunner, emptySliceMeta, type FetchOptions, isSliceFresh, type SliceMeta, type SliceResult } from './core/slices';
@@ -75,6 +82,7 @@ export {
   type QueuedCallFile,
   type QueuedCallNote,
   type QueuedWriteState,
+  readQueuedFileData,
   searchCallNotes,
   selectCallNotes,
   setCallFileReader,
@@ -171,12 +179,66 @@ export {
 // Reference and department data
 export { CalendarAttendingType, type CalendarState, useCalendarStore } from './calendar/calendar-store';
 export { type CertificationsState, useCertificationsStore } from './certifications/certifications-store';
-export { CHECKLIST_RUN_SAVE_EVENT, checklistRunSaveHandler, type ChecklistRunSaveOutcome, type ChecklistRunSavePayload, type ChecklistsState, useChecklistsStore } from './checklists/checklists-store';
+export {
+  CHECKLIST_RUN_SAVE_EVENT,
+  CHECKLIST_RUN_START_EVENT,
+  checklistRunSaveHandler,
+  type ChecklistRunSaveOutcome,
+  type ChecklistRunSavePayload,
+  checklistRunStartHandler,
+  type ChecklistRunStartPayload,
+  type ChecklistsState,
+  checklistStartInput,
+  useChecklistsStore,
+} from './checklists/checklists-store';
 export { type ContactsState, useContactsStore } from './contacts/contacts-store';
 export { type CustomMapsState, type MapFeatureSearchScope, useCustomMapsStore } from './mapping/custom-maps-store';
 export { type NotesState, searchNotes, useNotesStore } from './notes/notes-store';
 export { type NearestDestinationsQuery, type PoisState, selectPoiById, type SetPoiAvailabilityOutcome, usePoisStore } from './pois/pois-store';
-export { type ProtocolsState, useProtocolsStore } from './protocols/protocols-store';
+export {
+  acknowledgeOrderKey,
+  type AcknowledgeResult,
+  AcknowledgmentHeldForStepUpError,
+  AcknowledgmentStatus,
+  type BankQuizOutcome,
+  type BankQuizStart,
+  CALL_CHECKLIST_CACHE_LIMIT,
+  type CallProtocolStepsState,
+  downloadCertificate,
+  downloadLessonFile,
+  downloadProtocolAttachment,
+  downloadProtocolVersionFile,
+  downloadTrainingAttachment,
+  downloadTranscriptPdf,
+  fetchSignedCaptions,
+  type HeldAcknowledgment,
+  isAcknowledgmentOwed,
+  isTrainingModuleOff,
+  type LessonCompletionExtra,
+  PROTOCOL_ACKNOWLEDGE_EVENT,
+  PROTOCOL_STEP_RECORD_EVENT,
+  protocolAcknowledgeHandler,
+  type ProtocolAcknowledgePayload,
+  type ProtocolAcknowledgmentsState,
+  type ProtocolLibraryAttachment,
+  type ProtocolLibraryEntry,
+  type ProtocolsState,
+  type ProtocolStepPayload,
+  protocolStepRecordHandler,
+  type QueuedStepEvent,
+  refusalCodeOf,
+  retainCourses,
+  retainCurrentVersions,
+  retainTrainings,
+  selectOwedAcknowledgment,
+  type TrainingActionOutcome,
+  type TrainingState,
+  useCallProtocolStepsStore,
+  useProtocolAcknowledgmentsStore,
+  useProtocolsStore,
+  useTrainingStore,
+  withQueuedSteps,
+} from './protocols';
 export {
   canAdministerWeatherAlerts,
   filterWeatherAlerts,

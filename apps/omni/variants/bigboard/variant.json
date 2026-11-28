@@ -111,6 +111,10 @@
     "routes": {
       "preview": false
     },
+    "protocols": {
+      "acknowledgments": false,
+      "stepThrough": false
+    },
     "platform": {
       "webEdition": true,
       "electron": true,

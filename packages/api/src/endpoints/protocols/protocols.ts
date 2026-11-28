@@ -18,3 +18,6 @@ export const getAllProtocols = (ctx: ApiContext, options?: CachedRequestOptions)
 
 /** Gets a single protocol by id. `GET /Protocols/GetProtocol` — legacy: BDIRU. `Data` is one protocol, not a list. */
 export const getProtocol = (ctx: ApiContext, params: { protocolId: number | string }, options?: RequestOptions): Promise<GetProtocolResult> => request<GetProtocolResult>(ctx, E.getProtocol, { params }, options);
+
+// The protocol library endpoints (versions, acknowledgments, call step-through) are part of this domain's public surface.
+export * from './protocol-library';

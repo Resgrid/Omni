@@ -7,6 +7,7 @@ import { createStorageAreaRegistry } from '../maintenance/areas';
 import { createRetentionRegistry } from '../maintenance/retention';
 import { createManualConnectivitySource } from '../outbox/connectivity';
 import { createOutboxHandlerRegistry } from '../outbox/registry';
+import { markWipePending, PENDING_WIPE_KEY } from '../reset/pending-wipe';
 import { createResetRegistry } from '../reset/registry';
 import { initOffline } from '../runtime';
 import { createTestPayloadCipher } from '../testing';
@@ -61,5 +62,51 @@ describe('initOffline', () => {
     expect(runtime.apiCache.keys()).toEqual([]);
 
     runtime.dispose();
+  });
+
+  it('finishes a sign-out wipe the previous launch was killed in before anything reads storage', async () => {
+    const backendFactory = createMemoryKvBackendFactory();
+    const secureStore = createMemorySecureKeyStore();
+    const reset = createResetRegistry();
+    const storeReset = jest.fn();
+    reset.registerStoreReset('calls', storeReset);
+
+    const launch = async () =>
+      initOffline({
+        manifest,
+        getScope: () => null,
+        storage: { platform: 'native', backendFactory, secureStore },
+        db: await createMemoryDb(),
+        cipher: createTestPayloadCipher(),
+        connectivity: createManualConnectivitySource(true),
+        registries: { outbox: createOutboxHandlerRegistry(), reset, retention: createRetentionRegistry(), areas: createStorageAreaRegistry() },
+        startTriggers: false,
+      });
+
+    // The killed run: signed out, its wipe marked, the member's stores still on disk.
+    const killed = await launch();
+    killed.storage.main.set('local', 'fr');
+    killed.storage.main.set('calls-storage', '{"state":{"calls":[1]}}');
+    killed.storage.main.set('auth-storage', '{"state":{"status":"signedOut"}}');
+    markWipePending(killed.storage.main, 'logout');
+    killed.dispose();
+    expect(storeReset).not.toHaveBeenCalled();
+
+    const next = await launch();
+    expect(storeReset).toHaveBeenCalledWith('logout');
+    expect(next.storage.main.getString('local')).toBe('fr');
+    expect(next.storage.main.contains('calls-storage')).toBe(false);
+    expect(next.storage.main.contains('auth-storage')).toBe(false);
+
+    // Startup goes on registering (the push teardown, offline map packs): each catches up with the wipe it missed, and
+    // the mark stays until startup is done, so a launch that dies here runs it all again.
+    const lateTeardown = jest.fn();
+    reset.registerTeardown('notifications', lateTeardown);
+    expect(lateTeardown).toHaveBeenCalledWith('logout');
+    expect(next.storage.main.getString(PENDING_WIPE_KEY)).toBe('logout');
+
+    await next.settlePendingWipe();
+    expect(next.storage.main.contains(PENDING_WIPE_KEY)).toBe(false);
+    next.dispose();
   });
 });

@@ -3,6 +3,7 @@
 // root layout imports it. Everything here is safe in every variant: features gate themselves on capabilities, modules
 // and department flags (a tab or watcher a variant cannot use stays hidden or inert).
 import './call-file-reader';
+import './file-opener';
 
 import type { ShellGateScreenProps, SidebarContentProps } from '@resgrid/app-shell';
 import { getShellOfflineRuntime, NavMenu, registerInitStep, registerShellBanner, registerShellOverlay, registerShellProvider, registerShellScreens, registerSidebarContent, useShellStore } from '@resgrid/app-shell';
@@ -20,6 +21,7 @@ import { DeskStatusBar, DispatcherDeskHost, registerDispatcherDeskSignOut } from
 import { createIncidentCommandCallTab } from '@resgrid/features/incident-command';
 import { DispatchBoardLayers, FacilityLocationPicker } from '@resgrid/features/map';
 import { registerOfflineMapsSettings } from '@resgrid/features/offline-maps';
+import { registerProtocolStepsCallDetailTab } from '@resgrid/features/protocols';
 import { CALL_RECORDS_TAB, configureRecords, registerRecordsContextHook } from '@resgrid/features/records';
 import { RecurringCallAlertsBanner, RecurringCallAlertsHost, recurringCallsRoutes, registerRecurringCallsHookPoints } from '@resgrid/features/recurring-calls';
 import { registerRunCardCallDetailTab, registerRunCardHookPoints } from '@resgrid/features/runcards';
@@ -189,6 +191,8 @@ registerCallDetailTab(CALL_RECORDS_TAB);
 registerCallDetailTab(createIncidentCommandCallTab());
 
 registerRunCardCallDetailTab();
+
+registerProtocolStepsCallDetailTab();
 
 registerAwaitingResourcesCallDetailTab();
 

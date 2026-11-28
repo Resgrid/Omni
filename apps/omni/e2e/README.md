@@ -2,11 +2,13 @@
 
 End-to-end checks that run the **built** apps, as opposed to the Jest suites in each package (omni-plan §12).
 
-| Suite      | Runs against                                                           | Tool                   | Where it runs in CI                                                |
-| ---------- | ---------------------------------------------------------------------- | ---------------------- | ------------------------------------------------------------------ |
-| `web/`     | `apps/omni/dist/<variant>` (web export) served by a tiny static server | Playwright (Chromium)  | `ci.yml`, per variant, on every PR                                 |
-| `desktop/` | The unpacked Electron build from `apps/desktop`                        | Playwright `_electron` | `release.yml`, Linux Electron leg (non-blocking for now)           |
-| `maestro/` | A dev-client build on an Android emulator or iOS simulator             | Maestro                | `nightly.yml`, one variant per night (rotates), or chosen variants |
+| Suite      | Runs against                                                           | Tool                   | Where it runs in CI                                                                                                      |
+| ---------- | ---------------------------------------------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `web/`     | `apps/omni/dist/<variant>` (web export) served by a tiny static server | Playwright (Chromium)  | `ci.yml`, `variant (<variant>)`, per variant, on every PR                                                                |
+| `desktop/` | The unpacked Electron build from `apps/desktop`                        | Playwright `_electron` | `app-platforms.yml`, `electron (<variant>)`, per variant a PR reaches; `release.yml`, Linux Electron leg (non-blocking)  |
+| `maestro/` | A dev-client build on an Android emulator or iOS simulator             | Maestro                | `app-platforms.yml`, `android (<variant>)` and `ios (<variant>)`, per variant a PR reaches; `nightly.yml`, one per night |
+
+`app-platforms.yml` tests every variant a pull request reaches: a change inside `apps/omni/variants/<v>/` reaches that variant, anything else reaches all five (`scripts/ci/affected-variants.mjs`, the same rule the Software Factory uses). The Software Factory requires each of those `<platform> (<variant>)` checks, so keep the job names. Screenshots (Maestro `takeScreenshot`, the desktop boot spec's attachment) and reports are in the `<platform>-<variant>` artifacts.
 
 ```
 e2e/
